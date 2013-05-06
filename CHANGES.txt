@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 1.2.0 - 2013.04.16
+Release 1.2.0 - 2013.05.05
 
   INCOMPATIBLE CHANGES
 
@@ -8,6 +8,9 @@ Release 1.2.0 - 2013.04.16
     independent. (Andrew Wang via suresh)
 
   NEW FEATURES
+
+    HADOOP-8817. Backport Network Topology Extension for Virtualization 
+    (from HADOOP-8468) to branch-1
 
     MAPREDUCE-4660. Update task placement policy for network topology
     with node group. (Junping Du via llu)
@@ -93,9 +96,6 @@ Release 1.2.0 - 2013.04.16
     HDFS-3596. Improve FSEditLog pre-allocation in branch-1
     (Colin Patrick McCabe via mattf)
 
-    HDFS-3617. Port HDFS-96 to branch-1 (support blocks greater than 2GB).
-    (Patrick Kling and harsh via eli)
-
     HADOOP-8586. Fixup a bunch of SPNEGO misspellings. (eli)
 
     HDFS-1957. Documentation for HFTP. (Ari Rabkin via eli)
@@ -126,6 +126,9 @@ Release 1.2.0 - 2013.04.16
     HADOOP-8832. Port generic service plugin mechanism from HADOOP-5257
     to branch-1. (backported by Brandon Li via suresh) 
 
+    HDFS-3963. Backport namenode/datanode serviceplugin from HADOOP-5257
+    to branch-1. (backported by Brandon Li via suresh)
+
     MAPREDUCE-2770. Improve hadoop.job.history.location doc in
     mapred-default.xml. (Sandy Ryza via tomwhite)
 
@@ -149,7 +152,7 @@ Release 1.2.0 - 2013.04.16
     from -1 to 0, i.e. enable the end of edit log check but do not tolerate
     any corruption.  (szetszwo)
 
-    HDFS-3062. Print logs outside the namesystem lock invalidateWorkForOneNode
+    HDFS-4062. Print logs outside the namesystem lock invalidateWorkForOneNode
     and computeReplicationWorkForBlock. (Jing Zhao via suresh)
 
     HADOOP-8968. Add a flag to completely disable the worker version check.
@@ -226,9 +229,6 @@ Release 1.2.0 - 2013.04.16
     MAPREDUCE-4904. OTHER_LOCAL_MAPS counter is not correct.
     (Junping Du via llu)
 
-    MAPREDUCE-4798. Updated TestJobHistoryServer test case for startup
-    race conditions.  (Sam Liu via eyang)
-
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
     HADOOP_SECURE_DN_PID_DIR (bobby)
 
@@ -288,9 +288,6 @@ Release 1.2.0 - 2013.04.16
     HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp 
     via bobby)
 
-    HDFS-2751. Backport: Datanode may incorrectly drop OS cache behind reads
-    even for short reads.  (Brandon Li via szetszwo)
-
     HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
     auth type. (daryn)
 
@@ -306,7 +303,7 @@ Release 1.2.0 - 2013.04.16
     HADOOP-8611. Allow fall-back to the shell-based implementation when
     JNI-based users-group mapping fails (Robert Parker via bobby)
 
-    HADOOP-4572. Can not access user logs - Jetty is not configured by default 
+    MAPREDUCE-4572. Can not access user logs - Jetty is not configured by default 
     to serve aliases/symlinks (ahmed via tucu)
 
     MAPREDUCE-4595. TestLostTracker failing - possibly due to a race in 
@@ -926,6 +923,9 @@ Release 1.1.0 - 2012.09.28
     HDFS-3814. Make the replication monitor multipliers configurable in 1.x.
     (Jing Zhao via suresh)
 
+    HDFS-3617. Port HDFS-96 to branch-1 (support blocks greater than 2GB).
+    (Patrick Kling and harsh via eli)
+
     MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
     (Todd Lipcon and Brandon Li via sseth)
 
@@ -955,6 +955,9 @@ Release 1.1.0 - 2012.09.28
     JobTracker is in SafeMode. (acmurthy)
 
   BUG FIXES
+
+    HDFS-2751. Backport: Datanode may incorrectly drop OS cache behind reads
+    even for short reads.  (Brandon Li via szetszwo)
 
     HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
     to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
