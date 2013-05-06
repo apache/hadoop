@@ -62,7 +62,8 @@ public class TestJHSSecurity {
   private static final Log LOG = LogFactory.getLog(TestJHSSecurity.class);
   
   @Test
-  public void testDelegationToken() throws IOException, InterruptedException {
+  public void testDelegationToken() throws IOException, InterruptedException,
+      YarnRemoteException {
 
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);

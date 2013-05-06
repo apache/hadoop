@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.junit.After;
@@ -59,7 +60,8 @@ public class TestResourceManager {
 
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager
       registerNode(String hostName, int containerManagerPort, int httpPort,
-          String rackName, Resource capability) throws IOException {
+          String rackName, Resource capability) throws IOException,
+          YarnRemoteException {
     return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
         hostName, containerManagerPort, httpPort, rackName, capability,
         resourceManager.getResourceTrackerService(), resourceManager
@@ -67,7 +69,8 @@ public class TestResourceManager {
   }
 
 //  @Test
-  public void testResourceAllocation() throws IOException {
+  public void testResourceAllocation() throws IOException,
+      YarnRemoteException {
     LOG.info("--- START: testResourceAllocation ---");
         
     final int memory = 4 * 1024;

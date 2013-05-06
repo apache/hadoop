@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
@@ -88,7 +89,7 @@ public class TestRMNMRPCResponseId {
   }
 
   @Test
-  public void testRPCResponseId() throws IOException {
+  public void testRPCResponseId() throws IOException, YarnRemoteException {
     String node = "localhost";
     Resource capability = BuilderUtils.newResource(1024, 1);
     RegisterNodeManagerRequest request = recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);

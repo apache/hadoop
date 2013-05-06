@@ -111,7 +111,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
   }
 
   @Test
-  public void testContainerSetup() throws IOException, InterruptedException {
+  public void testContainerSetup() throws IOException, InterruptedException,
+      YarnRemoteException {
 
     containerManager.start();
 
@@ -202,7 +203,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
   @Test
   public void testContainerLaunchAndStop() throws IOException,
-      InterruptedException {
+      InterruptedException, YarnRemoteException {
     containerManager.start();
 
     File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
@@ -309,7 +310,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
       DefaultContainerExecutor.containerIsAlive(pid));
   }
   
-  private void testContainerLaunchAndExit(int exitCode) throws IOException, InterruptedException {
+  private void testContainerLaunchAndExit(int exitCode) throws IOException,
+      InterruptedException, YarnRemoteException {
 
 	  File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
 	  PrintWriter fileWriter = new PrintWriter(scriptFile);
@@ -389,7 +391,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
   }
   
   @Test
-  public void testContainerLaunchAndExitSuccess() throws IOException, InterruptedException {
+  public void testContainerLaunchAndExitSuccess() throws IOException,
+      InterruptedException, YarnRemoteException {
 	  containerManager.start();
 	  int exitCode = 0; 
 
@@ -399,7 +402,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
   }
 
   @Test
-  public void testContainerLaunchAndExitFailure() throws IOException, InterruptedException {
+  public void testContainerLaunchAndExitFailure() throws IOException,
+      InterruptedException, YarnRemoteException {
 	  containerManager.start();
 	  int exitCode = 50; 
 
@@ -410,7 +414,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
   
   @Test
   public void testLocalFilesCleanup() throws InterruptedException,
-      IOException {
+      IOException, YarnRemoteException {
     // Real del service
     delSrvc = new DeletionService(exec);
     delSrvc.init(conf);

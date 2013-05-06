@@ -106,6 +106,9 @@ Release 2.0.5-beta - UNRELEASED
     favour of the copy present in the container token field. 
     (Vinod Kumar Vavilapalli via sseth)
 
+    YARN-629. Make YarnRemoteException not be rooted at IOException. (Xuan Gong
+    via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

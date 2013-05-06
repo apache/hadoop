@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
@@ -663,7 +664,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
   @Test
   public void testLogAggregationForRealContainerLaunch() throws IOException,
-      InterruptedException {
+      InterruptedException, YarnRemoteException {
 
     this.containerManager.start();
 

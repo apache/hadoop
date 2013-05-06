@@ -84,7 +84,7 @@ public class TestNodeManagerResync {
   @SuppressWarnings("unchecked")
   @Test
   public void testKillContainersOnResync() throws IOException,
-      InterruptedException {
+      InterruptedException, YarnRemoteException {
     NodeManager nm = new TestNodeManager1();
     YarnConfiguration conf = createNMConfig();
     nm.init(conf);
@@ -112,7 +112,7 @@ public class TestNodeManagerResync {
   @SuppressWarnings("unchecked")
   @Test
   public void testBlockNewContainerRequestsOnStartAndResync()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, YarnRemoteException {
     NodeManager nm = new TestNodeManager2();
     YarnConfiguration conf = createNMConfig();
     nm.init(conf);

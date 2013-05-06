@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
@@ -62,7 +63,7 @@ public class TestEventFlow {
 
   @Test
   public void testSuccessfulContainerLaunch() throws InterruptedException,
-      IOException {
+      IOException, YarnRemoteException {
 
     FileContext localFS = FileContext.getLocalFSFileContext();
 
