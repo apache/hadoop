@@ -331,9 +331,6 @@ Release 1.2.0 - unreleased
     HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp 
     via bobby)
 
-    HDFS-2751. Backport: Datanode may incorrectly drop OS cache behind reads
-    even for short reads.  (Brandon Li via szetszwo)
-
     HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
     auth type. (daryn)
 
@@ -998,6 +995,9 @@ Release 1.1.0 - 2012.09.28
     JobTracker is in SafeMode. (acmurthy)
 
   BUG FIXES
+
+    HDFS-2751. Backport: Datanode may incorrectly drop OS cache behind reads
+    even for short reads.  (Brandon Li via szetszwo)
 
     HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
     to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
