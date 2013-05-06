@@ -732,7 +732,7 @@ public class TestRumenJobTraces {
       HistoryEvent e;
       while ((e = parser.nextEvent()) != null) {
         String eventString = e.getEventType().toString();
-        System.out.println(eventString);
+        System.out.println("event " + eventString);
         seenEvents.add(eventString);
         if (builder != null) {
           builder.process(e);
@@ -762,13 +762,13 @@ public class TestRumenJobTraces {
     System.out.println("testCurrentJHParser validating using gold std ");
     String[] goldLines = new String[] {"JOB_SUBMITTED", "JOB_PRIORITY_CHANGED",
         "JOB_STATUS_CHANGED", "JOB_INITED", "JOB_INFO_CHANGED", "TASK_STARTED",
-        "MAP_ATTEMPT_STARTED", "MAP_ATTEMPT_FINISHED", "MAP_ATTEMPT_FINISHED",
+        "SETUP_ATTEMPT_STARTED", "SETUP_ATTEMPT_FINISHED", "MAP_ATTEMPT_FINISHED",
         "TASK_UPDATED", "TASK_FINISHED", "JOB_STATUS_CHANGED", "TASK_STARTED",
         "MAP_ATTEMPT_STARTED", "MAP_ATTEMPT_FINISHED", "MAP_ATTEMPT_FINISHED",
-        "TASK_UPDATED", "TASK_FINISHED", "TASK_STARTED", "MAP_ATTEMPT_STARTED",
-        "MAP_ATTEMPT_FINISHED", "REDUCE_ATTEMPT_FINISHED", "TASK_UPDATED",
-        "TASK_FINISHED", "TASK_STARTED", "MAP_ATTEMPT_STARTED", 
-        "MAP_ATTEMPT_FINISHED", "MAP_ATTEMPT_FINISHED", "TASK_UPDATED",
+        "TASK_UPDATED", "TASK_FINISHED", "TASK_STARTED", "REDUCE_ATTEMPT_STARTED",
+        "REDUCE_ATTEMPT_FINISHED", "REDUCE_ATTEMPT_FINISHED", "TASK_UPDATED",
+        "TASK_FINISHED", "TASK_STARTED", "CLEANUP_ATTEMPT_STARTED", 
+        "CLEANUP_ATTEMPT_FINISHED", "MAP_ATTEMPT_FINISHED", "TASK_UPDATED",
         "TASK_FINISHED", "JOB_STATUS_CHANGED", "JOB_FINISHED"};
     
     // Check the output with gold std
