@@ -624,6 +624,9 @@ Release 1.2.0 - 2013.05.05
 
     HADOOP-9544. Backport UTF8 encoding fixes.  (Chris Nauroth via szetszwo)
 
+    MAPREDUCE-5206. Ensure that a job doesn't get added to RetiredJobs
+    multiple times in JobTracker. (acmurthy)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
