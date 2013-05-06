@@ -22,7 +22,6 @@ import java.util.List;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap;
 import org.apache.hadoop.hdfs.server.namenode.Quota.Counts;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.GSet;
@@ -109,11 +108,6 @@ public class INodeMap {
       
       @Override
       public Content.Counts computeContentSummary(Content.Counts counts) {
-        return null;
-      }
-      
-      @Override
-      public CountsMap computeContentSummary(CountsMap countsMap) {
         return null;
       }
       

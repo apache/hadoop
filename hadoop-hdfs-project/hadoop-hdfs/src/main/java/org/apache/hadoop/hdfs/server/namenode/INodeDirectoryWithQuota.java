@@ -107,15 +107,6 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
   }
 
   @Override
-  public Content.CountsMap computeContentSummary(
-      final Content.CountsMap countsMap) {
-    final long original = countsMap.sum(Content.DISKSPACE);
-    super.computeContentSummary(countsMap);
-    checkDiskspace(countsMap.sum(Content.DISKSPACE) - original);
-    return countsMap;
-  }
-
-  @Override
   public Content.Counts computeContentSummary(
       final Content.Counts counts) {
     final long original = counts.get(Content.DISKSPACE);

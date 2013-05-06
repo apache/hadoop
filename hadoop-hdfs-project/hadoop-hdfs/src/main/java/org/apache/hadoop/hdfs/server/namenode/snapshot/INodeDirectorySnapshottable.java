@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.Content;
-import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -345,16 +344,6 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     counts.add(Content.SNAPSHOT, snapshotsByNames.size());
     counts.add(Content.SNAPSHOTTABLE_DIRECTORY, 1);
     return counts;
-  }
-
-  @Override
-  public Content.CountsMap computeContentSummary(
-      final Content.CountsMap countsMap) {
-    super.computeContentSummary(countsMap);
-    countsMap.getCounts(Key.SNAPSHOT).add(Content.SNAPSHOT,
-        snapshotsByNames.size());
-    countsMap.getCounts(Key.CURRENT).add(Content.SNAPSHOTTABLE_DIRECTORY, 1);
-    return countsMap;
   }
 
   /**

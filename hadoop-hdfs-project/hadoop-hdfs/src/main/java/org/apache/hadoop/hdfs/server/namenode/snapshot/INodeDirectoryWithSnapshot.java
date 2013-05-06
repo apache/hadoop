@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.Content;
-import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -817,14 +816,6 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     counts.add(Quota.NAMESPACE, diffs.asList().size());
     return counts;
-  }
-
-  @Override
-  public Content.CountsMap computeContentSummary(
-      final Content.CountsMap countsMap) {
-    super.computeContentSummary(countsMap);
-    computeContentSummary4Snapshot(countsMap.getCounts(Key.SNAPSHOT));
-    return countsMap;
   }
 
   @Override

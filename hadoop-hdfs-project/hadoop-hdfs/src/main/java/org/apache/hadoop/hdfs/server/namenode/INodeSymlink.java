@@ -24,7 +24,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 /**
@@ -95,13 +94,6 @@ public class INodeSymlink extends INodeWithAdditionalFields {
       boolean updateCache, int lastSnapshotId) {
     counts.add(Quota.NAMESPACE, 1);
     return counts;
-  }
-
-  @Override
-  public Content.CountsMap computeContentSummary(
-      final Content.CountsMap countsMap) {
-    computeContentSummary(countsMap.getCounts(Key.CURRENT));
-    return countsMap;
   }
 
   @Override

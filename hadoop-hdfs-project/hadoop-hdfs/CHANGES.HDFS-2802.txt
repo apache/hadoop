@@ -335,3 +335,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4791. Update and fix deletion of reference inode.  (Jing Zhao via
   szetszwo)
+
+  HDFS-4798. Update computeContentSummary() for the reference nodes in
+  snapshots.  (szetszwo)

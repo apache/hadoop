@@ -269,12 +269,7 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  public final Content.CountsMap computeContentSummary(Content.CountsMap countsMap) {
-    return referred.computeContentSummary(countsMap);
-  }
-
-  @Override
-  public final Content.Counts computeContentSummary(Content.Counts counts) {
+  public Content.Counts computeContentSummary(Content.Counts counts) {
     return referred.computeContentSummary(counts);
   }
 
@@ -462,6 +457,15 @@ public abstract class INodeReference extends INode {
       return lastSnapshotId;
     }
     
+    @Override
+    public final Content.Counts computeContentSummary(Content.Counts counts) {
+      //only count diskspace for WithName
+      final Quota.Counts q = Quota.Counts.newInstance();
+      computeQuotaUsage(q, false, lastSnapshotId);
+      counts.add(Content.DISKSPACE, q.get(Quota.DISKSPACE));
+      return counts;
+    }
+
     @Override
     public final Quota.Counts computeQuotaUsage(Quota.Counts counts,
         boolean useCache, int lastSnapshotId) {

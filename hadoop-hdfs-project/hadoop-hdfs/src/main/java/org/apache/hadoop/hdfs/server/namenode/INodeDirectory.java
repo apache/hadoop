@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
@@ -471,16 +470,6 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     }
     counts.add(Content.DIRECTORY, 1);
     return counts;
-  }
-
-  @Override
-  public Content.CountsMap computeContentSummary(
-      final Content.CountsMap countsMap) {
-    for (INode child : getChildrenList(null)) {
-      child.computeContentSummary(countsMap);
-    }
-    countsMap.getCounts(Key.CURRENT).add(Content.DIRECTORY, 1);
-    return countsMap;
   }
 
   /**

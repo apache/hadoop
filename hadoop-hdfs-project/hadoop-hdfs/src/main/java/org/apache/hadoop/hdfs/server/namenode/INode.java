@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
@@ -369,22 +368,13 @@ public abstract class INode implements Diff.Element<byte[]> {
 
   /** Compute {@link ContentSummary}. */
   public final ContentSummary computeContentSummary() {
-    final Content.Counts current = computeContentSummary(
-        new Content.CountsMap()).getCounts(Key.CURRENT);
-    return new ContentSummary(current.get(Content.LENGTH),
-        current.get(Content.FILE) + current.get(Content.SYMLINK),
-        current.get(Content.DIRECTORY), getNsQuota(),
-        current.get(Content.DISKSPACE), getDsQuota());
+    final Content.Counts counts = computeContentSummary(
+        Content.Counts.newInstance());
+    return new ContentSummary(counts.get(Content.LENGTH),
+        counts.get(Content.FILE) + counts.get(Content.SYMLINK),
+        counts.get(Content.DIRECTORY), getNsQuota(),
+        counts.get(Content.DISKSPACE), getDsQuota());
   }
-
-  /**
-   * Count subtree content summary with a {@link Content.CountsMap}.
-   *
-   * @param countsMap The subtree counts for returning.
-   * @return The same objects as the counts parameter.
-   */
-  public abstract Content.CountsMap computeContentSummary(
-      Content.CountsMap countsMap);
 
   /**
    * Count subtree content summary with a {@link Content.Counts}.

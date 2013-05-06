@@ -42,16 +42,20 @@ public enum Content {
 
   /** Content counts. */
   public static class Counts extends EnumCounters<Content> {
+    public static Counts newInstance() {
+      return new Counts();
+    }
+
     private Counts() {
       super(Content.values());
     }
   }
 
-  static final EnumCounters.Factory<Content, Counts> FACTORY
+  private static final EnumCounters.Factory<Content, Counts> FACTORY
       = new EnumCounters.Factory<Content, Counts>() {
     @Override
     public Counts newInstance() {
-      return new Counts();
+      return Counts.newInstance();
     }
   };
 

@@ -48,7 +48,7 @@ public class TestDiff {
   /** Test directory diff. */
   @Test(timeout=60000)
   public void testDiff() throws Exception {
-    for(int startSize = 0; startSize <= 1000; startSize = nextStep(startSize)) {
+    for(int startSize = 0; startSize <= 10000; startSize = nextStep(startSize)) {
       for(int m = 0; m <= 10000; m = nextStep(m)) {
         runDiffTest(startSize, m);
       }

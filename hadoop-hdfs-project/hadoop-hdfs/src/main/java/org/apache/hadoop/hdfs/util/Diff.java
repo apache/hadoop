@@ -353,13 +353,50 @@ public class Diff<K, E extends Diff.Element<K>> {
 
   private static <K, E extends Diff.Element<K>> List<E> apply2Previous(
       final List<E> previous, final List<E> clist, final List<E> dlist) {
-    final List<E> current = new ArrayList<E>(previous);
-    for(E d : dlist) {
-      current.remove(d);
+    // Assumptions:
+    // (A1) All lists are sorted.
+    // (A2) All elements in dlist must be in previous.
+    // (A3) All elements in clist must be not in tmp = previous - dlist.
+    final List<E> tmp = new ArrayList<E>();
+    {
+      // tmp = previous - dlist
+      final Iterator<E> i = previous.iterator();
+      for(E deleted : dlist) {
+        E e = i.next(); //since dlist is non-empty, e must exist by (A2).
+        int cmp = 0;
+        for(; (cmp = e.compareTo(deleted.getKey())) < 0; e = i.next()) {
+          tmp.add(e);
+        }
+        Preconditions.checkState(cmp == 0); // check (A2)
+      }
+      for(; i.hasNext(); ) {
+        tmp.add(i.next());
+      }
     }
-    for(E c : clist) {
-      final int i = search(current, c.getKey());
-      current.add(-i - 1, c);
+
+    final List<E> current = new ArrayList<E>();
+    {
+      // current = tmp + clist
+      final Iterator<E> tmpIterator = tmp.iterator();
+      final Iterator<E> cIterator = clist.iterator();
+
+      E t = tmpIterator.hasNext()? tmpIterator.next(): null;
+      E c = cIterator.hasNext()? cIterator.next(): null;
+      for(; t != null || c != null; ) {
+        final int cmp = c == null? 1
+            : t == null? -1
+            : c.compareTo(t.getKey());
+
+        if (cmp < 0) {
+          current.add(c);
+          c = cIterator.hasNext()? cIterator.next(): null;
+        } else if (cmp > 0) {
+          current.add(t);
+          t = tmpIterator.hasNext()? tmpIterator.next(): null;
+        } else {
+          throw new AssertionError("Violated assumption (A3).");
+        }
+      }
     }
     return current;
   }
