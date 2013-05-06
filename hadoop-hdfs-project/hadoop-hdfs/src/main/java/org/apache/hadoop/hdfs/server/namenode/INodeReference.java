@@ -482,15 +482,18 @@ public abstract class INodeReference extends INode {
     }
     
     @Override
-    public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
+    public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
         final BlocksMapUpdateInfo collectedBlocks,
         final List<INode> removedINodes) throws QuotaExceededException {
       // since WithName node resides in deleted list acting as a snapshot copy,
       // the parameter snapshot must be non-null
       Preconditions.checkArgument(snapshot != null);
-      // if prior is null, or if prior's id is <= dstSnapshotId, we will call
-      // destroyAndCollectBlocks method
-      Preconditions.checkArgument(prior != null);
+      // if prior is null, we need to check snapshot belonging to the previous
+      // WithName instance
+      if (prior == null) {
+        prior = getPriorSnapshot(this);
+      }
+
       Quota.Counts counts = getReferredINode().cleanSubtree(snapshot, prior,
           collectedBlocks, removedINodes);
       INodeReference ref = getReferredINode().getParentReference();
@@ -504,17 +507,26 @@ public abstract class INodeReference extends INode {
     @Override
     public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks,
         final List<INode> removedINodes) {
+      Snapshot snapshot = getSelfSnapshot();
       if (removeReference(this) <= 0) {
         getReferredINode().destroyAndCollectBlocks(collectedBlocks,
             removedINodes);
       } else {
         Snapshot prior = getPriorSnapshot(this);
         INode referred = getReferredINode().asReference().getReferredINode();
-        Snapshot snapshot = getSelfSnapshot();
         
         if (snapshot != null) {
-          Preconditions.checkState(prior == null || 
-              snapshot.getId() > prior.getId());
+          if (prior != null && snapshot.getId() <= prior.getId()) {
+            // the snapshot to be deleted has been deleted while traversing 
+            // the src tree of the previous rename operation. This usually 
+            // happens when rename's src and dst are under the same 
+            // snapshottable directory. E.g., the following operation sequence:
+            // 1. create snapshot s1 on /test
+            // 2. rename /test/foo/bar to /test/foo2/bar
+            // 3. create snapshot s2 on /test
+            // 4. delete snapshot s2
+            return;
+          }
           try {
             Quota.Counts counts = referred.cleanSubtree(snapshot, prior,
                 collectedBlocks, removedINodes);
@@ -579,6 +591,14 @@ public abstract class INodeReference extends INode {
         destroyAndCollectBlocks(collectedBlocks, removedINodes);
         return counts;
       } else {
+        // if prior is null, we need to check snapshot belonging to the previous
+        // WithName instance
+        if (prior == null) {
+          prior = getPriorSnapshot(this);
+        }
+        if (snapshot != null && snapshot.equals(prior)) {
+          return Quota.Counts.newInstance();
+        }
         return getReferredINode().cleanSubtree(snapshot, prior,
             collectedBlocks, removedINodes);
       }

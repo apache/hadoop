@@ -338,3 +338,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4798. Update computeContentSummary() for the reference nodes in
   snapshots.  (szetszwo)
+
+  HDFS-4800. Fix INodeDirectoryWithSnapshot#cleanDeletedINode.  (Jing Zhao via
+  szetszwo)
