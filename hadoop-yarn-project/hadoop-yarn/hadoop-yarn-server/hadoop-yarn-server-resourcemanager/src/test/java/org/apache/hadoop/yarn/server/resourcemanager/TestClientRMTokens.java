@@ -72,7 +72,8 @@ public class TestClientRMTokens {
   }
   
   @Test
-  public void testDelegationToken() throws IOException, InterruptedException {
+  public void testDelegationToken() throws IOException, InterruptedException,
+      YarnRemoteException {
     
     final YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_PRINCIPAL, "testuser/localhost@apache.org");

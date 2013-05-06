@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.yarn.exceptions;
 
-import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
-public abstract class YarnRemoteException extends IOException {
+public abstract class YarnRemoteException extends Exception {
   private static final long serialVersionUID = 1L;
   
   public YarnRemoteException() {

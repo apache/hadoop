@@ -310,8 +310,9 @@ public class Client extends YarnClientImpl {
    * Main run function for the client
    * @return true if application completed successfully
    * @throws IOException
+   * @throws YarnRemoteException
    */
-  public boolean run() throws IOException {
+  public boolean run() throws IOException, YarnRemoteException {
 
     LOG.info("Running Client");
     start();

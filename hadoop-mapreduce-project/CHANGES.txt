@@ -215,6 +215,9 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-5205. Fixed MR App to load tokens correctly. (vinodkv)
 
+    MAPREDUCE-5204. Handling YarnRemoteException separately from IOException in
+    MR app after YARN-629. (Xuan Gong via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

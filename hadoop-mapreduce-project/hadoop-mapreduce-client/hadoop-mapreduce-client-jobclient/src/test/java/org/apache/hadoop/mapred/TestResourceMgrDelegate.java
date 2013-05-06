@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -47,9 +48,12 @@ public class TestResourceMgrDelegate {
 
   /**
    * Tests that getRootQueues makes a request for the (recursive) child queues
+   * @throws YarnRemoteException
+   * @throws IOException
    */
   @Test
-  public void testGetRootQueues() throws IOException, InterruptedException {
+  public void testGetRootQueues() throws IOException, InterruptedException,
+      YarnRemoteException {
     final ClientRMProtocol applicationsManager = Mockito.mock(ClientRMProtocol.class);
     GetQueueInfoResponse response = Mockito.mock(GetQueueInfoResponse.class);
     org.apache.hadoop.yarn.api.records.QueueInfo queueInfo =

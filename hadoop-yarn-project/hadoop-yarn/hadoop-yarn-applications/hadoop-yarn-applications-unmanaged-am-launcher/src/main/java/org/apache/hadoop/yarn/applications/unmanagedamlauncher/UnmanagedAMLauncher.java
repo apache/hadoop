@@ -271,7 +271,7 @@ public class UnmanagedAMLauncher {
     amProc.destroy();
   }
   
-  public boolean run() throws IOException {
+  public boolean run() throws IOException, YarnRemoteException {
     LOG.info("Starting Client");
     
     // Connect to ResourceManager

@@ -115,8 +115,9 @@ public class TestClientServiceDelegate {
     try {
       clientServiceDelegate.getJobStatus(oldJobId);
       Assert.fail("Invoke should throw exception after retries.");
-    } catch (YarnRemoteException e) {
-      Assert.assertEquals("Job ID doesnot Exist", e.getMessage());
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "Job ID doesnot Exist"));
     }
   }
 
@@ -198,7 +199,8 @@ public class TestClientServiceDelegate {
   }
 
   @Test
-  public void testReconnectOnAMRestart() throws IOException {
+  public void testReconnectOnAMRestart() throws IOException,
+      YarnRemoteException {
     //test not applicable when AM not reachable
     //as instantiateAMProxy is not called at all
     if(!isAMReachableFromClient) {
@@ -265,7 +267,7 @@ public class TestClientServiceDelegate {
   }
   
   @Test
-  public void testAMAccessDisabled() throws IOException {
+  public void testAMAccessDisabled() throws IOException, YarnRemoteException {
     //test only applicable when AM not reachable
     if(isAMReachableFromClient) {
       return;
@@ -317,7 +319,8 @@ public class TestClientServiceDelegate {
   }
   
   @Test
-  public void testRMDownForJobStatusBeforeGetAMReport() throws IOException {
+  public void testRMDownForJobStatusBeforeGetAMReport() throws IOException,
+      YarnRemoteException {
     Configuration conf = new YarnConfiguration();
     testRMDownForJobStatusBeforeGetAMReport(conf,
         MRJobConfig.DEFAULT_MR_CLIENT_MAX_RETRIES);
@@ -325,7 +328,7 @@ public class TestClientServiceDelegate {
 
   @Test
   public void testRMDownForJobStatusBeforeGetAMReportWithRetryTimes()
-      throws IOException {
+      throws IOException, YarnRemoteException {
     Configuration conf = new YarnConfiguration();
     conf.setInt(MRJobConfig.MR_CLIENT_MAX_RETRIES, 2);
     testRMDownForJobStatusBeforeGetAMReport(conf, conf.getInt(
@@ -335,7 +338,7 @@ public class TestClientServiceDelegate {
   
   @Test
   public void testRMDownRestoreForJobStatusBeforeGetAMReport()
-      throws IOException {
+      throws IOException, YarnRemoteException {
     Configuration conf = new YarnConfiguration();
     conf.setInt(MRJobConfig.MR_CLIENT_MAX_RETRIES, 3);
 

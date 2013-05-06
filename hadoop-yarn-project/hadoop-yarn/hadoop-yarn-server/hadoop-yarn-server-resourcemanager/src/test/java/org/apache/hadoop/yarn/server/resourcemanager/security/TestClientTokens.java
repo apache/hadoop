@@ -78,7 +78,7 @@ public class TestClientTokens {
   private interface CustomProtocol {
     public static final long versionID = 1L;
 
-    public void ping();
+    public void ping() throws YarnRemoteException;
   }
 
   private static class CustomSecurityInfo extends SecurityInfo {
@@ -121,7 +121,7 @@ public class TestClientTokens {
     }
 
     @Override
-    public void ping() {
+    public void ping() throws YarnRemoteException {
       this.pinged = true;
     }
 
@@ -270,21 +270,24 @@ public class TestClientTokens {
     ugi.addToken(maliciousToken);
 
     try {
-      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      ugi.doAs(new PrivilegedExceptionAction<Void>()  {
         @Override
         public Void run() throws Exception {
-          CustomProtocol client =
-              (CustomProtocol) RPC.getProxy(CustomProtocol.class, 1L,
-                am.address, conf);
-          client.ping();
-          fail("Connection initiation with illegally modified "
-              + "tokens is expected to fail.");
-          return null;
+          try {
+            CustomProtocol client =
+                (CustomProtocol) RPC.getProxy(CustomProtocol.class, 1L,
+                  am.address, conf);
+            client.ping();
+            fail("Connection initiation with illegally modified "
+                + "tokens is expected to fail.");
+            return null;
+          } catch (YarnRemoteException ex) {
+            fail("Cannot get a YARN remote exception as "
+                + "it will indicate RPC success");
+            throw ex;
+          }
         }
       });
-    } catch (YarnRemoteException e) {
-      fail("Cannot get a YARN remote exception as "
-          + "it will indicate RPC success");
     } catch (Exception e) {
       Assert
         .assertEquals(java.lang.reflect.UndeclaredThrowableException.class

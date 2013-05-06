@@ -205,15 +205,19 @@ public class TestClientRMService {
       owner.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          checkTokenRenewal(owner, other);
-          return null;
+          try {
+            checkTokenRenewal(owner, other);
+            return null;
+          } catch (YarnRemoteException ex) {
+            Assert.assertEquals(ex.getMessage(),
+                "Client " + owner.getUserName() +
+                " tries to renew a token with renewer specified as " +
+                other.getUserName());
+            throw ex;
+          }
         }
       });
-    } catch (YarnRemoteException e) {
-      Assert.assertEquals(e.getMessage(),
-          "Client " + owner.getUserName() +
-          " tries to renew a token with renewer specified as " +
-          other.getUserName());
+    } catch (Exception e) {
       return;
     }
     Assert.fail("renew should have failed");
@@ -232,7 +236,7 @@ public class TestClientRMService {
   }
 
   private void checkTokenRenewal(UserGroupInformation owner,
-      UserGroupInformation renewer) throws IOException {
+      UserGroupInformation renewer) throws IOException, YarnRemoteException {
     RMDelegationTokenIdentifier tokenIdentifier =
         new RMDelegationTokenIdentifier(
             new Text(owner.getUserName()), new Text(renewer.getUserName()), null);
@@ -312,7 +316,8 @@ public class TestClientRMService {
   
   @Test(timeout=4000)
   public void testConcurrentAppSubmit()
-      throws IOException, InterruptedException, BrokenBarrierException {
+      throws IOException, InterruptedException, BrokenBarrierException,
+      YarnRemoteException {
     YarnScheduler yarnScheduler = mockYarnScheduler();
     RMContext rmContext = mock(RMContext.class);
     mockRMContext(yarnScheduler, rmContext);

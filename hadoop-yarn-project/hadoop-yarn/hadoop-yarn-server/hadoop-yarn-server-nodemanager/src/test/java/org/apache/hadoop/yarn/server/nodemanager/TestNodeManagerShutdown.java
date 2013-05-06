@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
@@ -93,7 +94,8 @@ public class TestNodeManagerShutdown {
   }
   
   @Test
-  public void testKillContainersOnShutdown() throws IOException {
+  public void testKillContainersOnShutdown() throws IOException,
+      YarnRemoteException {
     NodeManager nm = getNodeManager();
     nm.init(createNMConfig());
     nm.start();
@@ -132,7 +134,8 @@ public class TestNodeManagerShutdown {
   }
 
   public static void startContainer(NodeManager nm, FileContext localFS,
-      File scriptFileDir, File processStartFile) throws IOException {
+      File scriptFileDir, File processStartFile) throws IOException,
+      YarnRemoteException {
     ContainerManagerImpl containerManager = nm.getContainerManager();
     File scriptFile =
         createUnhaltingScriptFile(scriptFileDir, processStartFile);

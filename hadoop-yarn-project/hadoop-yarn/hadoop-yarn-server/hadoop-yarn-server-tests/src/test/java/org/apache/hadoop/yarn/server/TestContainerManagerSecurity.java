@@ -127,7 +127,7 @@ public class TestContainerManagerSecurity {
 
   @Test
   public void testAuthenticatedUser() throws IOException,
-      InterruptedException {
+      InterruptedException, YarnRemoteException {
 
     LOG.info("Running test for authenticated user");
 
@@ -179,7 +179,8 @@ public class TestContainerManagerSecurity {
   }
 
   @Test
-  public void testMaliceUser() throws IOException, InterruptedException {
+  public void testMaliceUser() throws IOException, InterruptedException,
+      YarnRemoteException {
 
     LOG.info("Running test for malice user");
 
@@ -265,7 +266,8 @@ public class TestContainerManagerSecurity {
   }
 
   @Test
-  public void testUnauthorizedUser() throws IOException, InterruptedException {
+  public void testUnauthorizedUser() throws IOException, InterruptedException,
+      YarnRemoteException {
 
     LOG.info("\n\nRunning test for malice user");
 
