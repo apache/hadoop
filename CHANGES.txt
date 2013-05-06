@@ -349,7 +349,7 @@ Release 1.2.0 - unreleased
     HADOOP-8611. Allow fall-back to the shell-based implementation when
     JNI-based users-group mapping fails (Robert Parker via bobby)
 
-    HADOOP-4572. Can not access user logs - Jetty is not configured by default 
+    MAPREDUCE-4572. Can not access user logs - Jetty is not configured by default 
     to serve aliases/symlinks (ahmed via tucu)
 
     MAPREDUCE-4595. TestLostTracker failing - possibly due to a race in 
