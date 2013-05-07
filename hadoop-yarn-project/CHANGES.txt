@@ -34,6 +34,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-629. Make YarnRemoteException not be rooted at IOException. (Xuan Gong
     via vinodkv)
 
+    YARN-633. Changed RMAdminProtocol api to throw IOException and
+    YarnRemoteException. (Xuan Gong via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
