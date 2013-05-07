@@ -47,7 +47,7 @@ import org.apache.hadoop.util.Time;
  * {@link NativeS3FileSystem} without actually connecting to S3.
  * </p>
  */
-class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
+public class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
   
   private Configuration conf;
   

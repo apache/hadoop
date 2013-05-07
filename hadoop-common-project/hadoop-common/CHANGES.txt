@@ -175,6 +175,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10758. KMS: add ACLs on per key basis. (tucu)
 
+    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
+    for Unit testing. (Steve Lougran)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

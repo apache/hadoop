@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.s3.INode.FileType;
  * A stub implementation of {@link FileSystemStore} for testing
  * {@link S3FileSystem} without actually connecting to S3.
  */
-class InMemoryFileSystemStore implements FileSystemStore {
+public class InMemoryFileSystemStore implements FileSystemStore {
   
   private Configuration conf;
   private SortedMap<Path, INode> inodes = new TreeMap<Path, INode>();
