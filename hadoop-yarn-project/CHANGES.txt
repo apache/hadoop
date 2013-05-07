@@ -10,6 +10,9 @@ Trunk - Unreleased
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
+    YARN-45. Add protocol for schedulers to request containers back from
+    ApplicationMasters. (Carlo Curino, cdouglas)
+
   IMPROVEMENTS
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
