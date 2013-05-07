@@ -759,6 +759,10 @@ public class ApplicationMaster {
             + container.getId());
         e.printStackTrace();
         // TODO do we need to release this container?
+      } catch (IOException e) {
+        LOG.info("Start container failed for :" + ", containerId="
+            + container.getId());
+        e.printStackTrace();
       }
 
       // Get container status?

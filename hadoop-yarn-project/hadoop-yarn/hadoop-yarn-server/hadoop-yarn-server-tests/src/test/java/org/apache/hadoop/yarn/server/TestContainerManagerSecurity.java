@@ -531,6 +531,9 @@ public class TestContainerManagerSecurity {
           "Unauthorized request to start container. "
               + "\nExpected containerId: " + tokenId.getContainerID()
               + " Found: " + newContainerId.toString()));
+    } catch (IOException e) {
+      LOG.info("Got IOException: ",e);
+      fail("IOException is not expected.");
     }
   }
 
@@ -557,6 +560,9 @@ public class TestContainerManagerSecurity {
       Assert.assertTrue(e.getMessage().contains(
           "\nExpected resource " + tokenId.getResource().toString()
               + " but found " + container.getResource().toString()));
+    } catch (IOException e) {
+      LOG.info("Got IOException: ",e);
+      fail("IOException is not expected.");
     }
   }
 
@@ -585,6 +591,9 @@ public class TestContainerManagerSecurity {
       Assert.assertTrue(e.getMessage().contains(
         "Expected user-name " + tokenId.getApplicationSubmitter()
             + " but found " + context.getUser()));
+    } catch (IOException e) {
+      LOG.info("Got IOException: ",e);
+      fail("IOException is not expected.");
     }
   }
 
