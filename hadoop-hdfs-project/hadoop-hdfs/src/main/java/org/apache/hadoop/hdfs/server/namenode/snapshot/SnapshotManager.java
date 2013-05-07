@@ -84,13 +84,13 @@ public class SnapshotManager implements SnapshotStats {
       if (s.isAncestorDirectory(dir)) {
         throw new SnapshotException(
             "Nested snapshottable directories not allowed: path=" + path
-            + ", the ancestor " + s.getFullPathName()
+            + ", the subdirectory " + s.getFullPathName()
             + " is already a snapshottable directory.");
       }
       if (dir.isAncestorDirectory(s)) {
         throw new SnapshotException(
             "Nested snapshottable directories not allowed: path=" + path
-            + ", the subdirectory " + s.getFullPathName()
+            + ", the ancestor " + s.getFullPathName()
             + " is already a snapshottable directory.");
       }
     }
@@ -156,6 +156,9 @@ public class SnapshotManager implements SnapshotStats {
     }
 
     if (s == fsdir.getRoot()) {
+      if (s.getSnapshotQuota() == 0) {
+        throw new SnapshotException("Root is not a snapshottable directory");
+      }
       s.setSnapshotQuota(0); 
     } else {
       s.replaceSelf(iip.getLatestSnapshot(), fsdir.getINodeMap());

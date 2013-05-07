@@ -344,3 +344,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4801. lsSnapshottableDir throws IllegalArgumentException when root is
   snapshottable.  (Jing Zhao via szetszwo)
+
+  HDFS-4802. Disallowing snapshot on / twice should throw SnapshotException
+  but not IllegalStateException.  (Jing Zhao via szetszwo)
