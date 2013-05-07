@@ -113,7 +113,7 @@ public class TestAMRMClientAsync {
   private AllocateResponse createAllocateResponse(
       List<ContainerStatus> completed, List<Container> allocated) {
     AllocateResponse response = BuilderUtils.newAllocateResponse(0, completed, allocated,
-        new ArrayList<NodeReport>(), null, false, 1);
+        new ArrayList<NodeReport>(), null, false, 1, null);
     return response;
   }
   
