@@ -64,6 +64,16 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
         " = " + balancedSpaceThreshold + ", " +
         DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_BALANCED_SPACE_PREFERENCE_PERCENT_KEY +
         " = " + balancedPreferencePercent);
+
+    if (balancedPreferencePercent > 1.0) {
+      LOG.warn("The value of " + DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_BALANCED_SPACE_PREFERENCE_PERCENT_KEY +
+               " is greater than 1.0 but should be in the range 0.0 - 1.0");
+    }
+
+    if (balancedPreferencePercent < 0.5) {
+      LOG.warn("The value of " + DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_BALANCED_SPACE_PREFERENCE_PERCENT_KEY +
+               " is less than 0.5 so volumes with less available disk space will receive more block allocations");
+    }
   }
   
   @Override
