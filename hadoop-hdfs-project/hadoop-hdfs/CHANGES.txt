@@ -496,6 +496,9 @@ Release 2.0.5-beta - UNRELEASED
     the datanode with the most recent heartbeat as the primary.  (Varun Sharma
     via szetszwo)
 
+    HDFS-4804. WARN when users set the block balanced preference percent below
+    0.5 or above 1.0. (Stephen Chu via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -626,9 +629,6 @@ Release 2.0.5-beta - UNRELEASED
     InodeMap. (suresh)
 
     HDFS-4784. NPE in FSDirectory.resolvePath(). (Brandon Li via suresh)
-
-    HDFS-4804. WARN when users set the block balanced preference percent below
-    0.5 or above 1.0. (Stephen Chu via atm)
 
 Release 2.0.4-alpha - UNRELEASED
 
