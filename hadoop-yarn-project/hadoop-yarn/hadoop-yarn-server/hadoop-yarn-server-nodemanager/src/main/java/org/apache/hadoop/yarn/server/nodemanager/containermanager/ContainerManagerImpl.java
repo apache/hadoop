@@ -396,7 +396,7 @@ public class ContainerManagerImpl extends CompositeService implements
   @SuppressWarnings("unchecked")
   @Override
   public StartContainerResponse startContainer(StartContainerRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
 
     if (blockNewContainerRequests.get()) {
       throw RPCUtil.getRemoteException(new NMNotYetReadyException(
@@ -503,7 +503,7 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   @SuppressWarnings("unchecked")
   public StopContainerResponse stopContainer(StopContainerRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
 
     ContainerId containerID = request.getContainerId();
     String containerIDStr = containerID.toString();
@@ -545,7 +545,8 @@ public class ContainerManagerImpl extends CompositeService implements
 
   @Override
   public GetContainerStatusResponse getContainerStatus(
-      GetContainerStatusRequest request) throws YarnRemoteException {
+      GetContainerStatusRequest request) throws YarnRemoteException,
+      IOException {
 
     ContainerId containerID = request.getContainerId();
     String containerIDStr = containerID.toString();

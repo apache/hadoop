@@ -185,13 +185,13 @@ public abstract class BaseContainerManagerTest {
 
   public static void waitForContainerState(ContainerManager containerManager,
       ContainerId containerID, ContainerState finalState)
-      throws InterruptedException, YarnRemoteException {
+      throws InterruptedException, YarnRemoteException, IOException {
     waitForContainerState(containerManager, containerID, finalState, 20);
   }
 
   public static void waitForContainerState(ContainerManager containerManager,
           ContainerId containerID, ContainerState finalState, int timeOutMax)
-          throws InterruptedException, YarnRemoteException {
+          throws InterruptedException, YarnRemoteException, IOException {
     GetContainerStatusRequest request =
         recordFactory.newRecordInstance(GetContainerStatusRequest.class);
         request.setContainerId(containerID);
