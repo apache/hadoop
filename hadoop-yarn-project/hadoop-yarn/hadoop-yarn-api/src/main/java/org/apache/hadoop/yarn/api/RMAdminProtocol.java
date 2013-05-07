@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api;
 
+import java.io.IOException;
+
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsRequest;
@@ -35,25 +37,25 @@ import org.apache.hadoop.yarn.api.protocolrecords.RefreshUserToGroupsMappingsRes
 
 public interface RMAdminProtocol extends GetUserMappingsProtocol {
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request) 
-  throws YarnRemoteException;
+  throws YarnRemoteException, IOException;
   
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
-  throws YarnRemoteException;
+  throws YarnRemoteException, IOException;
   
   public RefreshSuperUserGroupsConfigurationResponse 
   refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
-  throws YarnRemoteException;
+  throws YarnRemoteException, IOException;
 
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
-  throws YarnRemoteException;
+  throws YarnRemoteException, IOException;
   
   public RefreshAdminAclsResponse refreshAdminAcls(
       RefreshAdminAclsRequest request)
-  throws YarnRemoteException;
+  throws YarnRemoteException, IOException;
   
   public RefreshServiceAclsResponse refreshServiceAcls(
       RefreshServiceAclsRequest request)
-  throws YarnRemoteException;
+  throws YarnRemoteException, IOException;
 }
