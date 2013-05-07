@@ -547,7 +547,10 @@ Trunk (Unreleased)
 
     HADOOP-9483. winutils support for readlink command.
     (Arpit Agarwal via suresh)
-    
+
+    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations for Unit testing.
+    (Hari via stevel)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
