@@ -46,6 +46,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -114,7 +115,7 @@ public class TestMRJobsWithHistoryService {
 
   @Test (timeout = 30000)
   public void testJobHistoryData() throws IOException, InterruptedException,
-      AvroRemoteException, ClassNotFoundException {
+      AvroRemoteException, ClassNotFoundException, YarnRemoteException {
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
           + " not found. Not running test.");

@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
@@ -58,10 +59,11 @@ public class TestEventFlow {
       TestEventFlow.class.getName() + "-localLogDir").getAbsoluteFile();
   private static File remoteLogDir = new File("target",
       TestEventFlow.class.getName() + "-remoteLogDir").getAbsoluteFile();
+  private static final long SIMULATED_RM_IDENTIFIER = 1234;
 
   @Test
   public void testSuccessfulContainerLaunch() throws InterruptedException,
-      IOException {
+      IOException, YarnRemoteException {
 
     FileContext localFS = FileContext.getLocalFSFileContext();
 
@@ -100,6 +102,11 @@ public class TestEventFlow {
       protected void startStatusUpdater() {
         return; // Don't start any updating thread.
       }
+
+      @Override
+      public long getRMIdentifier() {
+        return SIMULATED_RM_IDENTIFIER;
+      }
     };
 
     DummyContainerManager containerManager =
@@ -124,6 +131,8 @@ public class TestEventFlow {
     when(mockContainer.getId()).thenReturn(cID);
     when(mockContainer.getResource()).thenReturn(recordFactory
         .newRecordInstance(Resource.class));
+    when(mockContainer.getRMIdentifer()).thenReturn(SIMULATED_RM_IDENTIFIER);
+
     launchContext.setUser("testing");
     StartContainerRequest request = 
         recordFactory.newRecordInstance(StartContainerRequest.class);

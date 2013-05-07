@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshSuperUserGroups
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshUserToGroupsMappingsRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshUserToGroupsMappingsResponsePBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.GetGroupsForUserRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.GetGroupsForUserResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshAdminAclsRequestProto;
@@ -94,7 +94,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshQueuesResponsePBImpl(
           proxy.refreshQueues(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -107,7 +107,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshNodesResponsePBImpl(
           proxy.refreshNodes(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -121,7 +121,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshSuperUserGroupsConfigurationResponsePBImpl(
           proxy.refreshSuperUserGroupsConfiguration(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -134,7 +134,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshUserToGroupsMappingsResponsePBImpl(
           proxy.refreshUserToGroupsMappings(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -147,7 +147,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshAdminAclsResponsePBImpl(
           proxy.refreshAdminAcls(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -160,7 +160,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshServiceAclsResponsePBImpl(proxy.refreshServiceAcls(
           null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 

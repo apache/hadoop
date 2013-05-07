@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.util.ReflectionUtils;
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -58,9 +59,7 @@ public class SSLFactory implements ConnectionConfigurator {
     "hadoop.ssl.client.conf";
   public static final String SSL_SERVER_CONF_KEY =
     "hadoop.ssl.server.conf";
-  private static final boolean IBMJAVA = 
-      System.getProperty("java.vendor").contains("IBM");
-  public static final String SSLCERTIFICATE = IBMJAVA?"ibmX509":"SunX509"; 
+  public static final String SSLCERTIFICATE = IBM_JAVA?"ibmX509":"SunX509"; 
 
   public static final boolean DEFAULT_SSL_REQUIRE_CLIENT_CERT = false;
 

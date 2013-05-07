@@ -153,7 +153,7 @@ public class ShuffleHandler extends AbstractService
     new JobTokenSecretManager();
 
   public static final String SHUFFLE_PORT_CONFIG_KEY = "mapreduce.shuffle.port";
-  public static final int DEFAULT_SHUFFLE_PORT = 8080;
+  public static final int DEFAULT_SHUFFLE_PORT = 11000;
 
   public static final String SUFFLE_SSL_FILE_BUFFER_SIZE_KEY =
     "mapreduce.shuffle.ssl.file.buffer.size";

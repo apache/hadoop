@@ -160,6 +160,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="readlink.c" />
     <ClCompile Include="symlink.c" />
     <ClCompile Include="systeminfo.c" />
     <ClCompile Include="chmod.c" />

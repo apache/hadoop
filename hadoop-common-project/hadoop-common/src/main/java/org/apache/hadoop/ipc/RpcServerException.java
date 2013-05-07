@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.ipc;
 
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
+
 /**
  * Indicates an exception on the RPC server 
  */
@@ -41,5 +44,19 @@ public class RpcServerException extends RpcException {
    */
   public RpcServerException(final String message, final Throwable cause) {
     super(message, cause);
+  }
+  
+  /**
+   * get the rpc status corresponding to this exception
+   */
+  public RpcStatusProto getRpcStatusProto() {
+    return RpcStatusProto.ERROR;
+  }
+
+  /**
+   * get the detailed rpc status corresponding to this exception
+   */
+  public RpcErrorCodeProto getRpcErrorCodeProto() {
+    return RpcErrorCodeProto.ERROR_RPC_SERVER;
   }
 }

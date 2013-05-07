@@ -66,8 +66,6 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
     return inode.asFile();
   }
 
-  static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
-
   /** Format: [16 bits for replication][48 bits for PreferredBlockSize] */
   private static class HeaderFormat {
     /** Number of bits for Block size */
@@ -165,27 +163,6 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
     } else {
       return this;
     }
-  }
-
-  /**
-   * Set the {@link FsPermission} of this {@link INodeFile}.
-   * Since this is a file,
-   * the {@link FsAction#EXECUTE} action, if any, is ignored.
-   */
-  @Override
-  final void setPermission(FsPermission permission) {
-    super.setPermission(permission.applyUMask(UMASK));
-  }
-
-  /**
-   * Set the {@link FsPermission} of this {@link INodeFile}.
-   * Since this is a file,
-   * the {@link FsAction#EXECUTE} action, if any, is ignored.
-   */
-  @Override
-  final INode setPermission(FsPermission permission, Snapshot latest,
-      final INodeMap inodeMap) throws QuotaExceededException {
-    return super.setPermission(permission.applyUMask(UMASK), latest, inodeMap);
   }
 
   /** @return the replication factor of the file. */

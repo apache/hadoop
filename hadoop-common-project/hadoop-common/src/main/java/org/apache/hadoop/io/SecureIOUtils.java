@@ -18,21 +18,22 @@
 package org.apache.hadoop.io;
 
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.nativeio.Errno;
 import org.apache.hadoop.io.nativeio.NativeIO;
-import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class provides secure APIs for opening and creating files on the local
@@ -90,6 +91,95 @@ public class SecureIOUtils {
   private final static FileSystem rawFilesystem;
 
   /**
+   * Open the given File for random read access, verifying the expected user/
+   * group constraints if security is enabled.
+   * 
+   * Note that this function provides no additional security checks if hadoop
+   * security is disabled, since doing the checks would be too expensive when
+   * native libraries are not available.
+   * 
+   * @param f file that we are trying to open
+   * @param mode mode in which we want to open the random access file
+   * @param expectedOwner the expected user owner for the file
+   * @param expectedGroup the expected group owner for the file
+   * @throws IOException if an IO error occurred or if the user/group does
+   * not match when security is enabled.
+   */
+  public static RandomAccessFile openForRandomRead(File f,
+      String mode, String expectedOwner, String expectedGroup)
+      throws IOException {
+    if (!UserGroupInformation.isSecurityEnabled()) {
+      return new RandomAccessFile(f, mode);
+    }
+    return forceSecureOpenForRandomRead(f, mode, expectedOwner, expectedGroup);
+  }
+
+  /**
+   * Same as openForRandomRead except that it will run even if security is off.
+   * This is used by unit tests.
+   */
+  @VisibleForTesting
+  protected static RandomAccessFile forceSecureOpenForRandomRead(File f,
+      String mode, String expectedOwner, String expectedGroup)
+      throws IOException {
+    RandomAccessFile raf = new RandomAccessFile(f, mode);
+    boolean success = false;
+    try {
+      Stat stat = NativeIO.POSIX.getFstat(raf.getFD());
+      checkStat(f, stat.getOwner(), stat.getGroup(), expectedOwner,
+          expectedGroup);
+      success = true;
+      return raf;
+    } finally {
+      if (!success) {
+        raf.close();
+      }
+    }
+  }
+
+  /**
+   * Opens the {@link FSDataInputStream} on the requested file on local file
+   * system, verifying the expected user/group constraints if security is
+   * enabled.
+   * @param file absolute path of the file
+   * @param expectedOwner the expected user owner for the file
+   * @param expectedGroup the expected group owner for the file
+   * @throws IOException if an IO Error occurred or the user/group does not
+   * match if security is enabled
+   */
+  public static FSDataInputStream openFSDataInputStream(File file,
+      String expectedOwner, String expectedGroup) throws IOException {
+    if (!UserGroupInformation.isSecurityEnabled()) {
+      return rawFilesystem.open(new Path(file.getAbsolutePath()));
+    }
+    return forceSecureOpenFSDataInputStream(file, expectedOwner, expectedGroup);
+  }
+
+  /**
+   * Same as openFSDataInputStream except that it will run even if security is
+   * off. This is used by unit tests.
+   */
+  @VisibleForTesting
+  protected static FSDataInputStream forceSecureOpenFSDataInputStream(
+      File file,
+      String expectedOwner, String expectedGroup) throws IOException {
+    final FSDataInputStream in =
+        rawFilesystem.open(new Path(file.getAbsolutePath()));
+    boolean success = false;
+    try {
+      Stat stat = NativeIO.POSIX.getFstat(in.getFileDescriptor());
+      checkStat(file, stat.getOwner(), stat.getGroup(), expectedOwner,
+          expectedGroup);
+      success = true;
+      return in;
+    } finally {
+      if (!success) {
+        in.close();
+      }
+    }
+  }
+
+  /**
    * Open the given File for read access, verifying the expected user/group
    * constraints if security is enabled.
    *
@@ -115,7 +205,8 @@ public class SecureIOUtils {
    * Same as openForRead() except that it will run even if security is off.
    * This is used by unit tests.
    */
-  static FileInputStream forceSecureOpenForRead(File f, String expectedOwner,
+  @VisibleForTesting
+  protected static FileInputStream forceSecureOpenForRead(File f, String expectedOwner,
       String expectedGroup) throws IOException {
 
     FileInputStream fis = new FileInputStream(f);

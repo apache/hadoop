@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.local;
 
 import java.io.IOException;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -90,8 +91,8 @@ public class RawLocalFs extends DelegateToFileSystem {
     // NB: Use createSymbolicLink in java.nio.file.Path once available
     try {
       Shell.execCommand(Shell.getSymlinkCommand(
-        getPathWithoutSchemeAndAuthority(target),
-        getPathWithoutSchemeAndAuthority(link)));
+        getPathWithoutSchemeAndAuthority(target).getPath(),
+        getPathWithoutSchemeAndAuthority(link).getPath()));
     } catch (IOException x) {
       throw new IOException("Unable to create symlink: "+x.getMessage());
     }
@@ -175,12 +176,12 @@ public class RawLocalFs extends DelegateToFileSystem {
     throw new AssertionError();
   }
 
-  private static String getPathWithoutSchemeAndAuthority(Path path) {
-    // This code depends on Path.toString() to remove the leading slash before
-    // the drive specification on Windows.
+  private static File getPathWithoutSchemeAndAuthority(Path path) {
     Path newPath = path.isUriPathAbsolute() ?
       new Path(null, null, path.toUri().getPath()) :
       path;
-    return newPath.toString();
+
+    // Path.toString() removes leading slash before drive spec on Windows.
+    return new File(newPath.toString());
   }
 }

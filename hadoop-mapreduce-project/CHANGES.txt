@@ -215,6 +215,12 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5069. add concrete common implementations of
     CombineFileInputFormat (Sangjin Lee via bobby)
 
+    MAPREDUCE-5145. Changed default max-attempts to be more than one for MR jobs
+    inline with YARN. (Zhijie Shen via vinodkv)
+
+    MAPREDUCE-5036. Default shuffle handler port should not be 8080.
+    (Sandy Ryza via tomwhite)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
@@ -365,6 +371,14 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5179. Fix unit test in TestHSWebServices which fails when
     versionInfo has parantheses like when running on a git checkout. (Hitesh Shah
     via vinodkv)
+
+    MAPREDUCE-5193. A few MR tests use block sizes which are smaller than the
+    default minimum block size. (Andrew Wang via atm)
+
+    MAPREDUCE-5205. Fixed MR App to load tokens correctly. (vinodkv)
+
+    MAPREDUCE-5204. Handling YarnRemoteException separately from IOException in
+    MR app after YARN-629. (Xuan Gong via vinodkv)
 
 Release 2.0.4-alpha - UNRELEASED
 

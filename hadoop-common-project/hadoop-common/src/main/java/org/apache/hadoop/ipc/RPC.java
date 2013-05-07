@@ -43,6 +43,8 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolInfoService;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -213,7 +215,7 @@ public class RPC {
   /**
    * A version mismatch for the RPC protocol.
    */
-  public static class VersionMismatch extends IOException {
+  public static class VersionMismatch extends RpcServerException {
     private static final long serialVersionUID = 0;
 
     private String interfaceName;
@@ -256,6 +258,19 @@ public class RPC {
      */
     public long getServerVersion() {
       return serverVersion;
+    }
+    /**
+     * get the rpc status corresponding to this exception
+     */
+    public RpcStatusProto getRpcStatusProto() {
+      return RpcStatusProto.ERROR;
+    }
+
+    /**
+     * get the detailed rpc status corresponding to this exception
+     */
+    public RpcErrorCodeProto getRpcErrorCodeProto() {
+      return RpcErrorCodeProto.ERROR_RPC_VERSION_MISMATCH;
     }
   }
 

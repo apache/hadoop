@@ -40,7 +40,6 @@ import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
 /**
  test CLI class. CLI class implemented  the Tool interface. 
@@ -155,7 +154,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     try {
       runTool(conf, jc, new String[] { "-fail-task", taid.toString() }, out);
       fail(" this task should field");
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       // task completed !
       assertTrue(e.getMessage().contains("_0001_m_000000_1"));
     }
@@ -175,7 +174,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     try {
       runTool(conf, jc, new String[] { "-kill-task", taid.toString() }, out);
       fail(" this task should be killed");
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       // task completed
       assertTrue(e.getMessage().contains("_0001_m_000000_1"));
     }

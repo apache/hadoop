@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMTokenSelector;
@@ -207,10 +208,15 @@ public class YARNRunner implements ClientProtocol {
     GetDelegationTokenRequest request = recordFactory
       .newRecordInstance(GetDelegationTokenRequest.class);
     request.setRenewer(Master.getMasterPrincipal(conf));
-    DelegationToken mrDelegationToken = hsProxy.getDelegationToken(request)
-      .getDelegationToken();
-    return ProtoUtils.convertFromProtoFormat(mrDelegationToken,
-                                             hsProxy.getConnectAddress());
+    DelegationToken mrDelegationToken;
+    try {
+      mrDelegationToken = hsProxy.getDelegationToken(request)
+        .getDelegationToken();
+      return ProtoUtils.convertFromProtoFormat(mrDelegationToken,
+          hsProxy.getConnectAddress());
+    } catch (YarnRemoteException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
@@ -295,19 +301,25 @@ public class YARNRunner implements ClientProtocol {
       createApplicationSubmissionContext(conf, jobSubmitDir, ts);
 
     // Submit to ResourceManager
-    ApplicationId applicationId = resMgrDelegate.submitApplication(appContext);
+    try {
+      ApplicationId applicationId =
+          resMgrDelegate.submitApplication(appContext);
 
-    ApplicationReport appMaster = resMgrDelegate
-        .getApplicationReport(applicationId);
-    String diagnostics =
-        (appMaster == null ?
-            "application report is null" : appMaster.getDiagnostics());
-    if (appMaster == null || appMaster.getYarnApplicationState() == YarnApplicationState.FAILED
-        || appMaster.getYarnApplicationState() == YarnApplicationState.KILLED) {
-      throw new IOException("Failed to run job : " +
-        diagnostics);
+      ApplicationReport appMaster = resMgrDelegate
+          .getApplicationReport(applicationId);
+      String diagnostics =
+          (appMaster == null ?
+              "application report is null" : appMaster.getDiagnostics());
+      if (appMaster == null
+          || appMaster.getYarnApplicationState() == YarnApplicationState.FAILED
+          || appMaster.getYarnApplicationState() == YarnApplicationState.KILLED) {
+        throw new IOException("Failed to run job : " +
+            diagnostics);
+      }
+      return clientCache.getClient(jobId).getJobStatus(jobId);
+    } catch (YarnRemoteException e) {
+      throw new IOException(e);
     }
-    return clientCache.getClient(jobId).getJobStatus(jobId);
   }
 
   private LocalResource createApplicationResource(FileContext fs, Path p, LocalResourceType type)
@@ -552,7 +564,11 @@ public class YARNRunner implements ClientProtocol {
     /* check if the status is not running, if not send kill to RM */
     JobStatus status = clientCache.getClient(arg0).getJobStatus(arg0);
     if (status.getState() != JobStatus.State.RUNNING) {
-      resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
+      try {
+        resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
+      } catch (YarnRemoteException e) {
+        throw new IOException(e);
+      }
       return;
     }
 
@@ -576,7 +592,11 @@ public class YARNRunner implements ClientProtocol {
       LOG.debug("Error when checking for application status", io);
     }
     if (status.getState() != JobStatus.State.KILLED) {
-      resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
+      try {
+        resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
+      } catch (YarnRemoteException e) {
+        throw new IOException(e);
+      }
     }
   }
 
@@ -607,7 +627,11 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public LogParams getLogFileParams(JobID jobID, TaskAttemptID taskAttemptID)
       throws IOException {
-    return clientCache.getClient(jobID).getLogFilePath(jobID, taskAttemptID);
+    try {
+      return clientCache.getClient(jobID).getLogFilePath(jobID, taskAttemptID);
+    } catch (YarnRemoteException e) {
+      throw new IOException(e);
+    }
   }
 
   private static void warnForJavaLibPath(String opts, String component, 

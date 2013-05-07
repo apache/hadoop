@@ -1360,8 +1360,13 @@ public class MRAppMaster extends CompositeService {
       final YarnConfiguration conf, String jobUserName) throws IOException,
       InterruptedException {
     UserGroupInformation.setConfiguration(conf);
+    // Security framework already loaded the tokens into current UGI, just use
+    // them
+    Credentials credentials =
+        UserGroupInformation.getCurrentUser().getCredentials();
     UserGroupInformation appMasterUgi = UserGroupInformation
         .createRemoteUser(jobUserName);
+    appMasterUgi.addCredentials(credentials);
     appMasterUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {

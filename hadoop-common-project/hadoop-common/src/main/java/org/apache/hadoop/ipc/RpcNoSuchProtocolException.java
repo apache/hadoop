@@ -15,15 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.ipc;
 
-package org.apache.hadoop.yarn.server.api;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 
-public interface ResourceManagerConstants {
+/**
+ * No such protocol (i.e. interface) for and Rpc Call
+ *
+ */
+public class RpcNoSuchProtocolException extends RpcServerException {
+  private static final long serialVersionUID = 1L;
+  public RpcNoSuchProtocolException(final String message) {
+    super(message);
+  }
+  
+  /**
+   * get the rpc status corresponding to this exception
+   */
+  public RpcStatusProto getRpcStatusProto() {
+    return RpcStatusProto.ERROR;
+  }
 
   /**
-   * This states the invalid identifier of Resource Manager. This is used as a
-   * default value for initializing RM identifier. Currently, RM is using time
-   * stamp as RM identifier.
+   * get the detailed rpc status corresponding to this exception
    */
-  public static final long RM_INVALID_IDENTIFIER = -1;
+  public RpcErrorCodeProto getRpcErrorCodeProto() {
+    return RpcErrorCodeProto.ERROR_NO_SUCH_PROTOCOL;
+  }
 }

@@ -18,10 +18,18 @@
 
 package org.apache.hadoop.yarn.ipc;
 
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.UndeclaredThrowableException;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.factories.YarnRemoteExceptionFactory;
 import org.apache.hadoop.yarn.factory.providers.YarnRemoteExceptionFactoryProvider;
+
+import com.google.protobuf.ServiceException;
 
 public class RPCUtil {
 
@@ -51,5 +59,47 @@ public class RPCUtil {
     return (e.getMessage() == null ? "" : e.getMessage()) + 
       (e.getRemoteTrace() == null ? "" : "\n StackTrace: " + e.getRemoteTrace()) + 
       (e.getCause() == null ? "" : "\n Caused by: " + toString(e.getCause()));
+  }
+  
+  /**
+   * Utility method that unwraps and throws appropriate exception.
+   * 
+   * @param se ServiceException
+   * @throws YarnRemoteException
+   * @throws UndeclaredThrowableException
+   */
+  public static YarnRemoteException unwrapAndThrowException(ServiceException se)
+      throws UndeclaredThrowableException {
+    if (se.getCause() instanceof RemoteException) {
+      try {
+        RemoteException re = (RemoteException) se.getCause();
+        Class<?> realClass = Class.forName(re.getClassName());
+        //YarnRemoteException is not rooted as IOException.
+        //Do the explicitly check if it is YarnRemoteException
+        if (YarnRemoteException.class.isAssignableFrom(realClass)) {
+          Constructor<? extends YarnRemoteException> cn =
+              realClass.asSubclass(YarnRemoteException.class).getConstructor(
+                  String.class);
+          cn.setAccessible(true);
+          YarnRemoteException ex = cn.newInstance(re.getMessage());
+          ex.initCause(re);
+          return ex;
+        } else {
+          throw ((RemoteException) se.getCause())
+              .unwrapRemoteException(YarnRemoteExceptionPBImpl.class);
+        }
+      } catch (IOException e1) {
+        throw new UndeclaredThrowableException(e1);
+      } catch (Exception ex) {
+        throw new UndeclaredThrowableException(
+            (RemoteException) se.getCause());
+      }
+    } else if (se.getCause() instanceof YarnRemoteException) {
+      return (YarnRemoteException) se.getCause();
+    } else if (se.getCause() instanceof UndeclaredThrowableException) {
+      throw (UndeclaredThrowableException) se.getCause();
+    } else {
+      throw new UndeclaredThrowableException(se);
+    }
   }
 }

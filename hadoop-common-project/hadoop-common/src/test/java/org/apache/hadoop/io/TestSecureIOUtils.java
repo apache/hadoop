@@ -17,73 +17,133 @@
  */
 package org.apache.hadoop.io;
 
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.nativeio.NativeIO;
-
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assume.*;
-import static org.junit.Assert.*;
-import java.io.IOException;
-import java.io.File;
-import java.io.FileOutputStream;
 
 public class TestSecureIOUtils {
-  private static String realOwner, realGroup; 
-  private static final File testFilePath =
-      new File(System.getProperty("test.build.data"), "TestSecureIOContext");
+
+  private static String realOwner, realGroup;
+  private static File testFilePathIs;
+  private static File testFilePathRaf;
+  private static File testFilePathFadis;
+  private static FileSystem fs;
 
   @BeforeClass
   public static void makeTestFile() throws Exception {
-    FileOutputStream fos = new FileOutputStream(testFilePath);
-    fos.write("hello".getBytes("UTF-8"));
-    fos.close();
-
     Configuration conf = new Configuration();
-    FileSystem rawFS = FileSystem.getLocal(conf).getRaw();
-    FileStatus stat = rawFS.getFileStatus(
-      new Path(testFilePath.toString()));
+    fs = FileSystem.getLocal(conf).getRaw();
+    testFilePathIs =
+        new File((new Path("target", TestSecureIOUtils.class.getSimpleName()
+            + "1")).toUri().getRawPath());
+    testFilePathRaf =
+        new File((new Path("target", TestSecureIOUtils.class.getSimpleName()
+            + "2")).toUri().getRawPath());
+    testFilePathFadis =
+        new File((new Path("target", TestSecureIOUtils.class.getSimpleName()
+            + "3")).toUri().getRawPath());
+    for (File f : new File[] { testFilePathIs, testFilePathRaf,
+        testFilePathFadis }) {
+      FileOutputStream fos = new FileOutputStream(f);
+      fos.write("hello".getBytes("UTF-8"));
+      fos.close();
+    }
+
+    FileStatus stat = fs.getFileStatus(
+        new Path(testFilePathIs.toString()));
+    // RealOwner and RealGroup would be same for all three files.
     realOwner = stat.getOwner();
     realGroup = stat.getGroup();
   }
 
-  @Test
+  @Test(timeout = 10000)
   public void testReadUnrestricted() throws IOException {
-    SecureIOUtils.openForRead(testFilePath, null, null).close();
+    SecureIOUtils.openForRead(testFilePathIs, null, null).close();
+    SecureIOUtils.openFSDataInputStream(testFilePathFadis, null, null).close();
+    SecureIOUtils.openForRandomRead(testFilePathRaf, "r", null, null).close();
   }
 
-  @Test
+  @Test(timeout = 10000)
   public void testReadCorrectlyRestrictedWithSecurity() throws IOException {
     SecureIOUtils
-      .openForRead(testFilePath, realOwner, realGroup).close();
+        .openForRead(testFilePathIs, realOwner, realGroup).close();
+    SecureIOUtils
+        .openFSDataInputStream(testFilePathFadis, realOwner, realGroup).close();
+    SecureIOUtils.openForRandomRead(testFilePathRaf, "r", realOwner, realGroup)
+        .close();
   }
 
-  @Test
+  @Test(timeout = 10000)
   public void testReadIncorrectlyRestrictedWithSecurity() throws IOException {
     // this will only run if libs are available
     assumeTrue(NativeIO.isAvailable());
 
     System.out.println("Running test with native libs...");
+    String invalidUser = "InvalidUser";
 
+    // We need to make sure that forceSecure.. call works only if
+    // the file belongs to expectedOwner.
+
+    // InputStream
     try {
       SecureIOUtils
-        .forceSecureOpenForRead(testFilePath, "invalidUser", null).close();
-      fail("Didn't throw expection for wrong ownership!");
+          .forceSecureOpenForRead(testFilePathIs, invalidUser, realGroup)
+          .close();
+      fail("Didn't throw expection for wrong user ownership!");
+
+    } catch (IOException ioe) {
+      // expected
+    }
+
+    // FSDataInputStream
+    try {
+      SecureIOUtils
+          .forceSecureOpenFSDataInputStream(testFilePathFadis, invalidUser,
+              realGroup).close();
+      fail("Didn't throw expection for wrong user ownership!");
+    } catch (IOException ioe) {
+      // expected
+    }
+
+    // RandomAccessFile
+    try {
+      SecureIOUtils
+          .forceSecureOpenForRandomRead(testFilePathRaf, "r", invalidUser,
+              realGroup).close();
+      fail("Didn't throw expection for wrong user ownership!");
     } catch (IOException ioe) {
       // expected
     }
   }
 
-  @Test
+  @Test(timeout = 10000)
   public void testCreateForWrite() throws IOException {
     try {
-      SecureIOUtils.createForWrite(testFilePath, 0777);
-      fail("Was able to create file at " + testFilePath);
+      SecureIOUtils.createForWrite(testFilePathIs, 0777);
+      fail("Was able to create file at " + testFilePathIs);
     } catch (SecureIOUtils.AlreadyExistsException aee) {
       // expected
+    }
+  }
+
+  @AfterClass
+  public static void removeTestFile() throws Exception {
+    // cleaning files
+    for (File f : new File[] { testFilePathIs, testFilePathRaf,
+        testFilePathFadis }) {
+      f.delete();
     }
   }
 }

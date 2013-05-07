@@ -19,6 +19,8 @@ Trunk (Unreleased)
 
     HADOOP-9194. RPC Support for QoS. (Junping Du via llu)
 
+    HADOOP-9425 Add error codes to rpc-response (sanjay Radia)
+
   NEW FEATURES
     
     HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
@@ -165,6 +167,8 @@ Trunk (Unreleased)
 
     HADOOP-9486. Promoted Windows and Shell related utils from YARN to Hadoop
     Common. (Chris Nauroth via vinodkv)
+
+    HADOOP-8608. Add Configuration API for parsing time durations. (cdouglas)
 
   BUG FIXES
 
@@ -534,6 +538,15 @@ Trunk (Unreleased)
 
     HADOOP-9413. Add common utils for File#setReadable/Writable/Executable &
     File#canRead/Write/Execute that work cross-platform. (Ivan Mitic via suresh)
+
+    HADOOP-9532. HADOOP_CLIENT_OPTS is appended twice by Windows cmd scripts.
+    (Chris Nauroth via suresh)
+
+    HADOOP-9043. Disallow in winutils creating symlinks with forwards slashes.
+    (Chris Nauroth and Arpit Agarwal via suresh)
+
+    HADOOP-9483. winutils support for readlink command.
+    (Arpit Agarwal via suresh)
     
 Release 2.0.5-beta - UNRELEASED
 
@@ -582,6 +595,13 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9322. LdapGroupsMapping doesn't seem to set a timeout for
     its directory search. (harsh)
+
+    HADOOP-9523. Provide a generic IBM java vendor flag in PlatformName.java
+    to support non-Sun JREs. (Tian Hong Wang via suresh)
+
+    HADOOP-9511. Adding support for additional input streams (FSDataInputStream
+    and RandomAccessFile) in SecureIOUtils so as to help YARN-578. (Omkar Vinit
+    Joshi via vinodkv)
 
   OPTIMIZATIONS
 
@@ -667,6 +687,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9504. MetricsDynamicMBeanBase has concurrency issues in
     createMBeanInfo (Liang Xie via jlowe)
+
+    HADOOP-9455. HADOOP_CLIENT_OPTS appended twice causes JVM failures.
+    (Chris Nauroth via suresh)
 
 Release 2.0.4-alpha - UNRELEASED
 

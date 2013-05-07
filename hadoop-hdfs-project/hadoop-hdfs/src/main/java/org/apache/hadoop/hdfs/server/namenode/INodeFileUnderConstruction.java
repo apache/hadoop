@@ -63,7 +63,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
     this(id, null, replication, modTime, preferredBlockSize, BlockInfo.EMPTY_ARRAY,
-        permissions.applyUMask(UMASK), clientName, clientMachine, clientNode);
+        permissions, clientName, clientMachine, clientNode);
   }
 
   INodeFileUnderConstruction(long id,

@@ -202,8 +202,6 @@ public abstract class FileContextPermissionBase {
   
   
   /*
-   * Some filesystem like HDFS ignore the "x" bit if the permission.
-   * Others like localFs does not.
    * Override the method below if the file system being tested masks our
    * certain bits for file masks.
    */

@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
@@ -87,7 +88,8 @@ public class TestNodeManagerReboot {
   }
 
   @Test(timeout = 20000)
-  public void testClearLocalDirWhenNodeReboot() throws IOException {
+  public void testClearLocalDirWhenNodeReboot() throws IOException,
+      YarnRemoteException {
     nm = new MyNodeManager();
     nm.start();
     // create files under fileCache

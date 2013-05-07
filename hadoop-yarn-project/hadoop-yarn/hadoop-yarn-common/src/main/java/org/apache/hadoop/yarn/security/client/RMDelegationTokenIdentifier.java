@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -105,6 +106,8 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
               Records.newRecord(RenewDelegationTokenRequest.class);
           request.setDelegationToken(convertToProtoToken(token));
           return rmClient.renewDelegationToken(request).getNextExpirationTime();
+        } catch (YarnRemoteException e) {
+          throw new IOException(e);
         } finally {
           RPC.stopProxy(rmClient);
         }
@@ -125,6 +128,8 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
               Records.newRecord(CancelDelegationTokenRequest.class);
           request.setDelegationToken(convertToProtoToken(token));
           rmClient.cancelDelegationToken(request);
+        } catch (YarnRemoteException e) {
+          throw new IOException(e);
         } finally {
           RPC.stopProxy(rmClient);
         }

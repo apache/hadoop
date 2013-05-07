@@ -1234,6 +1234,7 @@ public class FSDirectory implements Closeable {
       
       nodeToRemove.setBlocks(null);
       trgParent.removeChild(nodeToRemove, trgLatestSnapshot, null);
+      inodeMap.remove(nodeToRemove);
       count++;
     }
     
@@ -2684,14 +2685,18 @@ public class FSDirectory implements Closeable {
     try {
       id = Long.valueOf(inodeId);
     } catch (NumberFormatException e) {
-      throw new FileNotFoundException(
-          "File for given inode path does not exist: " + src);
+      throw new FileNotFoundException("Invalid inode path: " + src);
     }
     if (id == INodeId.ROOT_INODE_ID && pathComponents.length == 4) {
       return Path.SEPARATOR;
     }
+    INode inode = fsd.getInode(id);
+    if (inode == null) {
+      throw new FileNotFoundException(
+          "File for given inode path does not exist: " + src);
+    }
     StringBuilder path = id == INodeId.ROOT_INODE_ID ? new StringBuilder()
-        : new StringBuilder(fsd.getInode(id).getFullPathName());
+        : new StringBuilder(inode.getFullPathName());
     for (int i = 4; i < pathComponents.length; i++) {
       path.append(Path.SEPARATOR).append(DFSUtil.bytes2String(pathComponents[i]));
     }

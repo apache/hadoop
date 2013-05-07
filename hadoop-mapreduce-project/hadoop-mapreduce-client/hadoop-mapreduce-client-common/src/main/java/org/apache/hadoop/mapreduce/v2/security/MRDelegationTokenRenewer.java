@@ -37,6 +37,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -67,6 +68,8 @@ public class MRDelegationTokenRenewer extends TokenRenewer {
           .newRecord(RenewDelegationTokenRequest.class);
       request.setDelegationToken(dToken);
       return histProxy.renewDelegationToken(request).getNextExpirationTime();
+    } catch (YarnRemoteException e) {
+      throw new IOException(e);
     } finally {
       stopHistoryProxy(histProxy);
     }
@@ -88,6 +91,8 @@ public class MRDelegationTokenRenewer extends TokenRenewer {
           .newRecord(CancelDelegationTokenRequest.class);
       request.setDelegationToken(dToken);
       histProxy.cancelDelegationToken(request);
+    } catch (YarnRemoteException e) {
+      throw new IOException(e);
     } finally {
       stopHistoryProxy(histProxy);
     }

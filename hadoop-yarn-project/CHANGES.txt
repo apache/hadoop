@@ -106,6 +106,9 @@ Release 2.0.5-beta - UNRELEASED
     favour of the copy present in the container token field. 
     (Vinod Kumar Vavilapalli via sseth)
 
+    YARN-629. Make YarnRemoteException not be rooted at IOException. (Xuan Gong
+    via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
@@ -200,6 +203,15 @@ Release 2.0.5-beta - UNRELEASED
     YARN-599. Refactoring submitApplication in ClientRMService and RMAppManager
     to separate out various validation checks depending on whether they rely on
     RM configuration or not. (Zhijie Shen via vinodkv)
+
+    YARN-618. Modified RM_INVALID_IDENTIFIER to be -1 instead of zero. (Jian He
+    via vinodkv)
+
+    YARN-625. Move the utility method unwrapAndThrowException from
+    YarnRemoteExceptionPBImpl to RPCUtil. (Siddharth Seth via vinodkv)
+
+    YARN-645. Moved RMDelegationTokenSecretManager from yarn-server-common to
+    yarn-server-resourcemanager where it really belongs. (Jian He via vinodkv)
 
   OPTIMIZATIONS
 

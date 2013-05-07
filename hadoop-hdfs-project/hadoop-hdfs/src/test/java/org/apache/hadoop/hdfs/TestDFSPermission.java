@@ -63,7 +63,6 @@ public class TestDFSPermission {
 
   final private static short MAX_PERMISSION = 511;
   final private static short DEFAULT_UMASK = 022;
-  final private static short FILE_MASK = 0666;
   final private static FsPermission DEFAULT_PERMISSION = 
     FsPermission.createImmutable((short) 0777);
   final static private int NUM_TEST_PERMISSIONS = 
@@ -171,7 +170,7 @@ public class TestDFSPermission {
     uMask = (short) 0111;
     initFileSystem(uMask);
     fs.setPermission(FILE_DIR_PATH, new FsPermission(uMask));
-    short expectedPermission = (short) ((op == OpType.CREATE) ? 0 : 0111);
+    short expectedPermission = (short) 0111;
     checkPermission(FILE_DIR_PATH, expectedPermission, true);
     closeFileSystem();
 
@@ -234,7 +233,7 @@ public class TestDFSPermission {
 
     // get the expected permission
     short expectedPermission = (op == OpType.CREATE) ? (short) (~umask
-        & permissionNum & FILE_MASK) : (short) (~umask & permissionNum);
+        & permissionNum) : (short) (~umask & permissionNum);
 
     // check if permission is correctly set
     checkPermission(name, expectedPermission, delete);
