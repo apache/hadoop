@@ -96,8 +96,8 @@ public class InputSampler<K,V> extends Configured implements Tool  {
    */
   public static class SplitSampler<K,V> implements Sampler<K,V> {
 
-    private final int numSamples;
-    private final int maxSplitsSampled;
+    protected final int numSamples;
+    protected final int maxSplitsSampled;
 
     /**
      * Create a SplitSampler sampling <em>all</em> splits.
@@ -157,9 +157,9 @@ public class InputSampler<K,V> extends Configured implements Tool  {
    * each split.
    */
   public static class RandomSampler<K,V> implements Sampler<K,V> {
-    private double freq;
-    private final int numSamples;
-    private final int maxSplitsSampled;
+    protected double freq;
+    protected final int numSamples;
+    protected final int maxSplitsSampled;
 
     /**
      * Create a new RandomSampler sampling <em>all</em> splits.
@@ -249,8 +249,8 @@ public class InputSampler<K,V> extends Configured implements Tool  {
    * Useful for sorted data.
    */
   public static class IntervalSampler<K,V> implements Sampler<K,V> {
-    private final double freq;
-    private final int maxSplitsSampled;
+    protected final double freq;
+    protected final int maxSplitsSampled;
 
     /**
      * Create a new IntervalSampler sampling <em>all</em> splits.
