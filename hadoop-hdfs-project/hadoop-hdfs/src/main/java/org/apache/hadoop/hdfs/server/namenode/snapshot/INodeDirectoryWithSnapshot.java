@@ -550,7 +550,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       final INodeMap inodeMap) throws QuotaExceededException {
     ChildrenDiff diff = null;
     Integer undoInfo = null;
-    if (latest != null) {
+    if (isInLatestSnapshot(latest)) {
       diff = diffs.checkAndAddLatestSnapshotDiff(latest, this).diff;
       undoInfo = diff.create(inode);
     }
@@ -566,7 +566,18 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       final INodeMap inodeMap) throws QuotaExceededException {
     ChildrenDiff diff = null;
     UndoInfo<INode> undoInfo = null;
-    if (latest != null) {
+    // For a directory that is not a renamed node, if isInLatestSnapshot returns
+    // false, the directory is not in the latest snapshot, thus we do not need
+    // to record the removed child in any snapshot.
+    // For a directory that was moved/renamed, note that if the directory is in
+    // any of the previous snapshots, we will create a reference node for the 
+    // directory while rename, and isInLatestSnapshot will return true in that
+    // scenario (if all previous snapshots have been deleted, isInLatestSnapshot
+    // still returns false). Thus if isInLatestSnapshot returns false, the 
+    // directory node cannot be in any snapshot (not in current tree, nor in 
+    // previous src tree). Thus we do not need to record the removed child in 
+    // any snapshot.
+    if (isInLatestSnapshot(latest)) {
       diff = diffs.checkAndAddLatestSnapshotDiff(latest, this).diff;
       undoInfo = diff.delete(child);
     }

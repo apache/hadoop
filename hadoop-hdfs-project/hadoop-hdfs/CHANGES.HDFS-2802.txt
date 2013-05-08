@@ -347,3 +347,7 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4802. Disallowing snapshot on / twice should throw SnapshotException
   but not IllegalStateException.  (Jing Zhao via szetszwo)
+
+  HDFS-4806. In INodeDirectoryWithSnapshot, use isInLatestSnapshot() to 
+  determine if an added/removed child should be recorded in the snapshot diff.
+  (Jing Zhao via szetszwo)

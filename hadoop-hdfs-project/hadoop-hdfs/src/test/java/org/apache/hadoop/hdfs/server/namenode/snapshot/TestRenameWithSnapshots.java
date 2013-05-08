@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
@@ -1673,5 +1674,52 @@ public class TestRenameWithSnapshots {
     assertSame(fooRef2, wc.getParentReference());
     
     restartClusterAndCheckImage();
+  }
+  
+  /**
+   * This test demonstrates that 
+   * {@link INodeDirectoryWithSnapshot#removeChild(INode, Snapshot, INodeMap)}
+   * and 
+   * {@link INodeDirectoryWithSnapshot#addChild(INode, boolean, Snapshot, INodeMap)}
+   * should use {@link INode#isInLatestSnapshot(Snapshot)} to check if the 
+   * added/removed child should be recorded in snapshots.
+   */
+  @Test
+  public void testRenameAndDeleteSnapshot_5() throws Exception {
+    final Path dir1 = new Path("/dir1");
+    final Path dir2 = new Path("/dir2");
+    final Path dir3 = new Path("/dir3");
+    hdfs.mkdirs(dir1);
+    hdfs.mkdirs(dir2);
+    hdfs.mkdirs(dir3);
+    
+    final Path foo = new Path(dir1, "foo");
+    hdfs.mkdirs(foo);
+    SnapshotTestHelper.createSnapshot(hdfs, dir1, "s1");
+    final Path bar = new Path(foo, "bar");
+    // create file bar, and foo will become an INodeDirectoryWithSnapshot
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPL, SEED);
+    // delete snapshot s1. now foo is not in any snapshot
+    hdfs.deleteSnapshot(dir1, "s1");
+    
+    SnapshotTestHelper.createSnapshot(hdfs, dir2, "s2");
+    // rename /dir1/foo to /dir2/foo
+    final Path foo2 = new Path(dir2, foo.getName());
+    hdfs.rename(foo, foo2);
+    // rename /dir2/foo/bar to /dir3/foo/bar
+    final Path bar2 = new Path(dir2, "foo/bar");
+    final Path bar3 = new Path(dir3, "bar");
+    hdfs.rename(bar2, bar3);
+    
+    // delete /dir2/foo. Since it is not in any snapshot, we will call its 
+    // destroy function. If we do not use isInLatestSnapshot in removeChild and
+    // addChild methods in INodeDirectoryWithSnapshot, the file bar will be 
+    // stored in the deleted list of foo, and will be destroyed.
+    hdfs.delete(foo2, true);
+    
+    // check if /dir3/bar still exists
+    assertTrue(hdfs.exists(bar3));
+    INodeFile barNode = (INodeFile) fsdir.getINode4Write(bar3.toString());
+    assertSame(fsdir.getINode4Write(dir3.toString()), barNode.getParent());
   }
 }
