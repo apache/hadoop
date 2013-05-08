@@ -351,6 +351,8 @@ Release 2.0.5-beta - UNRELEASED
     YARN-576. Modified ResourceManager to reject NodeManagers that don't satisy
     minimum resource requirements. (Kenji Kikushima via vinodkv)
 
+    YARN-646. Fix two typos in Fair Scheduler user guide. (Dapeng Sun via atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
