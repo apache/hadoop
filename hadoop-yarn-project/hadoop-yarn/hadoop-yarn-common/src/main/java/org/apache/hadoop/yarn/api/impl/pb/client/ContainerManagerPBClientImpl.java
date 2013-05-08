@@ -86,7 +86,8 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
 
   @Override
   public GetContainerStatusResponse getContainerStatus(
-      GetContainerStatusRequest request) throws YarnRemoteException {
+      GetContainerStatusRequest request) throws YarnRemoteException,
+      IOException {
     GetContainerStatusRequestProto requestProto =
         ((GetContainerStatusRequestPBImpl) request).getProto();
     try {
@@ -99,7 +100,7 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
 
   @Override
   public StartContainerResponse startContainer(StartContainerRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     StartContainerRequestProto requestProto =
         ((StartContainerRequestPBImpl) request).getProto();
     try {
@@ -112,7 +113,7 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
 
   @Override
   public StopContainerResponse stopContainer(StopContainerRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     StopContainerRequestProto requestProto =
         ((StopContainerRequestPBImpl) request).getProto();
     try {
