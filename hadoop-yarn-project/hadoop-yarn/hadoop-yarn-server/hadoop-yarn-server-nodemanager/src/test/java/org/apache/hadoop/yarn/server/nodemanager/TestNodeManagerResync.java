@@ -301,6 +301,8 @@ public class TestNodeManagerResync {
               // class name after YARN-142
               Assert.assertTrue(e.getRemoteTrace().contains(
                 NMNotYetReadyException.class.getName()));
+            } catch (IOException e) {
+              assertionFailedInThread.set(true);
             }
           }
           // no. of containers to be launched should equal to no. of

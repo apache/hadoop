@@ -72,4 +72,5 @@ message ApplicationStateDataProto {
 message ApplicationAttemptStateDataProto {
   optional ApplicationAttemptIdProto attemptId = 1;
   optional ContainerProto master_container = 2;
+  optional bytes app_attempt_tokens = 3;
 }

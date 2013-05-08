@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
@@ -48,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
  *     </li>
  *     <li>A list of nodes whose status has been updated.</li>
  *     <li>The number of available nodes in a cluster.</li>
+ *     <li>A description of resources requested back by the cluster</li>
  *   </ul>
  * </p>
  * 
@@ -152,4 +154,27 @@ public interface AllocateResponse {
   @Private
   @Unstable
   public void setNumClusterNodes(int numNodes);
+
+  /**
+   * Get the description of containers owned by the AM, but requested back by
+   * the cluster. Note that the RM may have an inconsistent view of the
+   * resources owned by the AM. These messages are advisory, and the AM may
+   * elect to ignore them.
+   *
+   * The message is a snapshot of the resources the RM wants back from the AM.
+   * While demand persists, the RM will repeat its request; applications should
+   * not interpret each message as a request for <emph>additional<emph>
+   * resources on top of previous messages. Resources requested consistently
+   * over some duration may be forcibly killed by the RM.
+   *
+   * @return A specification of the resources to reclaim from this AM.
+   */
+  @Public
+  @Evolving
+  public PreemptionMessage getPreemptionMessage();
+
+  @Private
+  @Unstable
+  public void setPreemptionMessage(PreemptionMessage request);
+
 }

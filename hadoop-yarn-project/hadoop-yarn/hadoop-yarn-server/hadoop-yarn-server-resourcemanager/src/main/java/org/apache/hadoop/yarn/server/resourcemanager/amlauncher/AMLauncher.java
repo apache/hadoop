@@ -34,7 +34,6 @@ import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
@@ -48,7 +47,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -203,25 +201,16 @@ public class AMLauncher implements Runnable {
         credentials.readTokenStorageStream(dibb);
       }
 
-      ApplicationTokenIdentifier id = new ApplicationTokenIdentifier(
-          application.getAppAttemptId());
-      Token<ApplicationTokenIdentifier> appMasterToken =
-          new Token<ApplicationTokenIdentifier>(id,
-              this.rmContext.getApplicationTokenSecretManager());
-      InetSocketAddress serviceAddr = conf.getSocketAddr(
-          YarnConfiguration.RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
-      // normally the client should set the service after acquiring the token,
-      // but this token is directly provided to the AMs
-      SecurityUtil.setTokenService(appMasterToken, serviceAddr);
-
-      // Add the ApplicationMaster token
-      credentials.addToken(appMasterToken.getService(), appMasterToken);
+      // Add application token
+      Token<ApplicationTokenIdentifier> applicationToken =
+          application.getApplicationToken();
+      if(applicationToken != null) {
+        credentials.addToken(applicationToken.getService(), applicationToken);
+      }
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);
-      container.setContainerTokens(
-          ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
+      container.setContainerTokens(ByteBuffer.wrap(dob.getData(), 0,
+        dob.getLength()));
 
       SecretKey clientSecretKey =
           this.rmContext.getClientToAMTokenSecretManager().getMasterKey(

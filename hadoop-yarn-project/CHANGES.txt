@@ -10,6 +10,9 @@ Trunk - Unreleased
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
+    YARN-45. Add protocol for schedulers to request containers back from
+    ApplicationMasters. (Carlo Curino, cdouglas)
+
   IMPROVEMENTS
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
@@ -108,6 +111,12 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-629. Make YarnRemoteException not be rooted at IOException. (Xuan Gong
     via vinodkv)
+
+    YARN-633. Changed RMAdminProtocol api to throw IOException and
+    YarnRemoteException. (Xuan Gong via vinodkv)
+
+    YARN-632. Changed ContainerManager api to throw IOException and
+    YarnRemoteException. (Xuan Gong via vinodkv)
 
   NEW FEATURES
 
@@ -212,6 +221,13 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-645. Moved RMDelegationTokenSecretManager from yarn-server-common to
     yarn-server-resourcemanager where it really belongs. (Jian He via vinodkv)
+
+    YARN-651. Changed PBClientImpls of ContainerManager and RMAdmin to throw
+    IOExceptions also. (Xuan Gong via vinodkv)
+
+    YARN-582. Changed ResourceManager to recover Application token and client
+    tokens for app attempt so that RM can be restarted while preserving current
+    applications. (Jian He via vinodkv)
 
   OPTIMIZATIONS
 
@@ -334,6 +350,8 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-576. Modified ResourceManager to reject NodeManagers that don't satisy
     minimum resource requirements. (Kenji Kikushima via vinodkv)
+
+    YARN-646. Fix two typos in Fair Scheduler user guide. (Dapeng Sun via atm)
 
 Release 2.0.4-alpha - UNRELEASED
 

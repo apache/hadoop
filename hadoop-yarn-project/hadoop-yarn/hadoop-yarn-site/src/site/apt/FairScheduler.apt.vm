@@ -124,7 +124,7 @@ Hadoop MapReduce Next Generation - Fair Scheduler
 
     * The smallest container size the scheduler can allocate, in MB of memory.
 
- * <<<yarn.scheduler.fair.minimum-allocation-mb>>>
+ * <<<yarn.scheduler.fair.maximum-allocation-mb>>>
 
     * The largest container the scheduler can allocate, in MB of memory.
 
@@ -177,7 +177,7 @@ Hadoop MapReduce Next Generation - Fair Scheduler
 
 Allocation file format
 
-  The allocation file must be in XML format. The format contains three types of
+  The allocation file must be in XML format. The format contains four types of
   elements:
 
  * <<Queue elements>>, which represent queues. Each may contain the following

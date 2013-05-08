@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -39,7 +40,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProtoOrBuilder;
-
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionMessageProto;
 
     
 public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
@@ -54,6 +55,7 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
   private List<ContainerStatus> completedContainersStatuses = null;
 
   private List<NodeReport> updatedNodes = null;
+  private PreemptionMessage preempt;
   
   
   public AllocateResponsePBImpl() {
@@ -93,6 +95,9 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
     }
     if (this.limit != null) {
       builder.setLimit(convertToProtoFormat(this.limit));
+    }
+    if (this.preempt != null) {
+      builder.setPreempt(convertToProtoFormat(this.preempt));
     }
   }
 
@@ -215,6 +220,28 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
   public synchronized void setNumClusterNodes(int numNodes) {
     maybeInitBuilder();
     builder.setNumClusterNodes(numNodes);
+  }
+
+  @Override
+  public synchronized PreemptionMessage getPreemptionMessage() {
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.preempt != null) {
+      return this.preempt;
+    }
+    if (!p.hasPreempt()) {
+      return null;
+    }
+    this.preempt = convertFromProtoFormat(p.getPreempt());
+    return this.preempt;
+  }
+
+  @Override
+  public synchronized void setPreemptionMessage(PreemptionMessage preempt) {
+    maybeInitBuilder();
+    if (null == preempt) {
+      builder.clearPreempt();
+    }
+    this.preempt = preempt;
   }
 
   // Once this is called. updatedNodes will never be null - until a getProto is
@@ -393,4 +420,11 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
     return ((ResourcePBImpl) r).getProto();
   }
 
+  private synchronized PreemptionMessagePBImpl convertFromProtoFormat(PreemptionMessageProto p) {
+    return new PreemptionMessagePBImpl(p);
+  }
+
+  private synchronized PreemptionMessageProto convertToProtoFormat(PreemptionMessage r) {
+    return ((PreemptionMessagePBImpl)r).getProto();
+  }
 }  

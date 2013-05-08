@@ -63,6 +63,8 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
       return ((RefreshQueuesResponsePBImpl)response).getProto();
     } catch (YarnRemoteException e) {
       throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
     }
   }
 
@@ -77,6 +79,8 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
       return ((RefreshAdminAclsResponsePBImpl)response).getProto();
     } catch (YarnRemoteException e) {
       throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
     }
   }
 
@@ -88,6 +92,8 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
       RefreshNodesResponse response = real.refreshNodes(request);
       return ((RefreshNodesResponsePBImpl)response).getProto();
     } catch (YarnRemoteException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -106,6 +112,8 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
       return ((RefreshSuperUserGroupsConfigurationResponsePBImpl)response).getProto();
     } catch (YarnRemoteException e) {
       throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
     }
   }
 
@@ -121,6 +129,8 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
       return ((RefreshUserToGroupsMappingsResponsePBImpl)response).getProto();
     } catch (YarnRemoteException e) {
       throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
     }
   }
 
@@ -135,6 +145,8 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
           real.refreshServiceAcls(request);
         return ((RefreshServiceAclsResponsePBImpl)response).getProto();
       } catch (YarnRemoteException e) {
+        throw new ServiceException(e);
+      } catch (IOException e) {
         throw new ServiceException(e);
       }
   }
