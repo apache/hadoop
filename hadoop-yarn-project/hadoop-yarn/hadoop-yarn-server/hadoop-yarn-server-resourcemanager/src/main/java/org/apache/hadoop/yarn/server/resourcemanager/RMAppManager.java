@@ -334,10 +334,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     LOG.info("Recovering " + appStates.size() + " applications");
     for(ApplicationState appState : appStates.values()) {
       boolean shouldRecover = true;
-      // re-submit the application
-      // this is going to send an app start event but since the async dispatcher 
-      // has not started that event will be queued until we have completed re
-      // populating the state
       if(appState.getApplicationSubmissionContext().getUnmanagedAM()) {
         // do not recover unmanaged applications since current recovery 
         // mechanism of restarting attempts does not work for them.
@@ -367,6 +363,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         shouldRecover = false;
       }
 
+      // re-submit the application
+      // this is going to send an app start event but since the async dispatcher
+      // has not started that event will be queued until we have completed re
+      // populating the state
       if(shouldRecover) {
         LOG.info("Recovering application " + appState.getAppId());
         submitApplication(appState.getApplicationSubmissionContext(), 

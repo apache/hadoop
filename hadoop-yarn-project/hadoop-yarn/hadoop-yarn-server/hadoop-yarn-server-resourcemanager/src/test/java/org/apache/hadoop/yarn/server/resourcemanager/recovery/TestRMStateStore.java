@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-
-import org.junit.Test;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +39,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -44,13 +51,18 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.junit.Test;
 
 public class TestRMStateStore {
 
@@ -141,7 +153,7 @@ public class TestRMStateStore {
       ApplicationAttemptId attemptId = ConverterUtils.toApplicationAttemptId(
                                       "appattempt_1352994193343_0003_000001");
       storeAttempt(testStore, attemptId,
-          "container_1352994193343_0003_01_000001", dispatcher);
+          "container_1352994193343_0003_01_000001", null, null, dispatcher);
     }
 
     @Override
@@ -186,14 +198,17 @@ public class TestRMStateStore {
   }
 
   ContainerId storeAttempt(RMStateStore store, ApplicationAttemptId attemptId,
-                           String containerIdStr, TestDispatcher dispatcher)
-                                                             throws Exception {
+      String containerIdStr, Token<ApplicationTokenIdentifier> appToken,
+      Token<ClientTokenIdentifier> clientToken, TestDispatcher dispatcher)
+      throws Exception {
 
     Container container = new ContainerPBImpl();
     container.setId(ConverterUtils.toContainerId(containerIdStr));
     RMAppAttempt mockAttempt = mock(RMAppAttempt.class);
     when(mockAttempt.getAppAttemptId()).thenReturn(attemptId);
     when(mockAttempt.getMasterContainer()).thenReturn(container);
+    when(mockAttempt.getApplicationToken()).thenReturn(appToken);
+    when(mockAttempt.getClientToken()).thenReturn(clientToken);
     dispatcher.attemptId = attemptId;
     dispatcher.storedException = null;
     store.storeApplicationAttempt(mockAttempt);
@@ -201,30 +216,58 @@ public class TestRMStateStore {
     return container.getId();
   }
 
+  @SuppressWarnings("unchecked")
   void testRMStateStore(RMStateStoreHelper stateStoreHelper) throws Exception {
     long submitTime = System.currentTimeMillis();
+    Configuration conf = new YarnConfiguration();
     RMStateStore store = stateStoreHelper.getRMStateStore();
     TestDispatcher dispatcher = new TestDispatcher();
     store.setDispatcher(dispatcher);
+
+    ApplicationTokenSecretManager appTokenMgr =
+        new ApplicationTokenSecretManager(conf);
+    ClientToAMTokenSecretManagerInRM clientTokenMgr =
+        new ClientToAMTokenSecretManagerInRM();
 
     ApplicationAttemptId attemptId1 = ConverterUtils
         .toApplicationAttemptId("appattempt_1352994193343_0001_000001");
     ApplicationId appId1 = attemptId1.getApplicationId();
     storeApp(store, appId1, submitTime);
+
+    // create application token1 for attempt1
+    List<Token<?>> appAttemptToken1 =
+        generateTokens(attemptId1, appTokenMgr, clientTokenMgr, conf);
+    HashSet<Token<?>> attemptTokenSet1 = new HashSet<Token<?>>();
+    attemptTokenSet1.addAll(appAttemptToken1);
+
     ContainerId containerId1 = storeAttempt(store, attemptId1,
-                 "container_1352994193343_0001_01_000001", dispatcher);
+          "container_1352994193343_0001_01_000001",
+          (Token<ApplicationTokenIdentifier>) (appAttemptToken1.get(0)),
+          (Token<ClientTokenIdentifier>)(appAttemptToken1.get(1)),
+          dispatcher);
+
     String appAttemptIdStr2 = "appattempt_1352994193343_0001_000002";
     ApplicationAttemptId attemptId2 =
-                ConverterUtils.toApplicationAttemptId(appAttemptIdStr2);
+        ConverterUtils.toApplicationAttemptId(appAttemptIdStr2);
+
+    // create application token2 for attempt2
+    List<Token<?>> appAttemptToken2 =
+        generateTokens(attemptId2, appTokenMgr, clientTokenMgr, conf);
+    HashSet<Token<?>> attemptTokenSet2 = new HashSet<Token<?>>();
+    attemptTokenSet2.addAll(appAttemptToken2);
+
     ContainerId containerId2 = storeAttempt(store, attemptId2,
-                 "container_1352994193343_0001_02_000001", dispatcher);
+          "container_1352994193343_0001_02_000001",
+          (Token<ApplicationTokenIdentifier>) (appAttemptToken2.get(0)),
+          (Token<ClientTokenIdentifier>)(appAttemptToken2.get(1)),
+          dispatcher);
 
     ApplicationAttemptId attemptIdRemoved = ConverterUtils
         .toApplicationAttemptId("appattempt_1352994193343_0002_000001");
     ApplicationId appIdRemoved = attemptIdRemoved.getApplicationId();
     storeApp(store, appIdRemoved, submitTime);
     storeAttempt(store, attemptIdRemoved,
-        "container_1352994193343_0002_01_000001", dispatcher);
+        "container_1352994193343_0002_01_000001", null, null, dispatcher);
 
     RMApp mockRemovedApp = mock(RMApp.class);
     HashMap<ApplicationAttemptId, RMAppAttempt> attempts =
@@ -268,12 +311,21 @@ public class TestRMStateStore {
     assertEquals(attemptId1, attemptState.getAttemptId());
     // attempt1 container is loaded correctly
     assertEquals(containerId1, attemptState.getMasterContainer().getId());
+    // attempt1 applicationToken is loaded correctly
+    HashSet<Token<?>> savedTokens = new HashSet<Token<?>>();
+    savedTokens.addAll(attemptState.getAppAttemptTokens().getAllTokens());
+    assertEquals(attemptTokenSet1, savedTokens);
+
     attemptState = appState.getAttempt(attemptId2);
     // attempt2 is loaded correctly
     assertNotNull(attemptState);
     assertEquals(attemptId2, attemptState.getAttemptId());
     // attempt2 container is loaded correctly
     assertEquals(containerId2, attemptState.getMasterContainer().getId());
+    // attempt2 applicationToken is loaded correctly
+    savedTokens.clear();
+    savedTokens.addAll(attemptState.getAppAttemptTokens().getAllTokens());
+    assertEquals(attemptTokenSet2, savedTokens);
 
     // assert store is in expected state after everything is cleaned
     assertTrue(stateStoreHelper.isFinalStateValid());
@@ -281,4 +333,23 @@ public class TestRMStateStore {
     store.close();
   }
 
+  private List<Token<?>> generateTokens(ApplicationAttemptId attemptId,
+      ApplicationTokenSecretManager appTokenMgr,
+      ClientToAMTokenSecretManagerInRM clientTokenMgr, Configuration conf) {
+    ApplicationTokenIdentifier appTokenId =
+        new ApplicationTokenIdentifier(attemptId);
+    Token<ApplicationTokenIdentifier> appToken =
+        new Token<ApplicationTokenIdentifier>(appTokenId, appTokenMgr);
+    appToken.setService(new Text("appToken service"));
+
+    ClientTokenIdentifier clientTokenId = new ClientTokenIdentifier(attemptId);
+    clientTokenMgr.registerApplication(attemptId);
+    Token<ClientTokenIdentifier> clientToken =
+        new Token<ClientTokenIdentifier>(clientTokenId, clientTokenMgr);
+    clientToken.setService(new Text("clientToken service"));
+    List<Token<?>> tokenPair = new ArrayList<Token<?>>();
+    tokenPair.add(0, appToken);
+    tokenPair.add(1, clientToken);
+    return tokenPair;
+  }
 }

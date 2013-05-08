@@ -21,16 +21,18 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 
 /**
@@ -92,7 +94,7 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * The token required by the clients to talk to the application attempt
    * @return the token required by the clients to talk to the application attempt
    */
-  ClientToken getClientToken();
+  Token<ClientTokenIdentifier> getClientToken();
 
   /**
    * Diagnostics information for the application attempt.
@@ -145,6 +147,12 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @return the application submission context for this Application.
    */
   ApplicationSubmissionContext getSubmissionContext();
+
+  /**
+   * The application token belonging to this app attempt
+   * @return The application token belonging to this app attempt
+   */
+  Token<ApplicationTokenIdentifier> getApplicationToken();
 
   /**
    * Get application container and resource usage information.

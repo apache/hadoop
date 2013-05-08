@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +27,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -34,8 +38,10 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateDataPBImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateDataPBImpl;
+import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppStoredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -58,18 +64,24 @@ public abstract class RMStateStore {
   public static class ApplicationAttemptState {
     final ApplicationAttemptId attemptId;
     final Container masterContainer;
-    
+    final Credentials appAttemptTokens;
+
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
-                                   Container masterContainer) {
+        Container masterContainer,
+        Credentials appAttemptTokens) {
       this.attemptId = attemptId;
       this.masterContainer = masterContainer;
+      this.appAttemptTokens = appAttemptTokens;
     }
-    
+
     public Container getMasterContainer() {
       return masterContainer;
     }
     public ApplicationAttemptId getAttemptId() {
       return attemptId;
+    }
+    public Credentials getAppAttemptTokens() {
+      return appAttemptTokens;
     }
   }
   
@@ -199,10 +211,14 @@ public abstract class RMStateStore {
    * RMAppAttemptStoredEvent will be sent on completion to notify the RMAppAttempt
    */
   public synchronized void storeApplicationAttempt(RMAppAttempt appAttempt) {
-    ApplicationAttemptState attemptState = new ApplicationAttemptState(
-                appAttempt.getAppAttemptId(), appAttempt.getMasterContainer());
+    Credentials credentials = getTokensFromAppAttempt(appAttempt);
+
+    ApplicationAttemptState attemptState =
+        new ApplicationAttemptState(appAttempt.getAppAttemptId(),
+          appAttempt.getMasterContainer(), credentials);
+
     dispatcher.getEventHandler().handle(
-                                new RMStateStoreAppAttemptEvent(attemptState));
+      new RMStateStoreAppAttemptEvent(attemptState));
   }
   
   /**
@@ -226,8 +242,10 @@ public abstract class RMStateStore {
     ApplicationState appState = new ApplicationState(
         app.getSubmitTime(), app.getApplicationSubmissionContext());
     for(RMAppAttempt appAttempt : app.getAppAttempts().values()) {
-      ApplicationAttemptState attemptState = new ApplicationAttemptState(
-                appAttempt.getAppAttemptId(), appAttempt.getMasterContainer());
+      Credentials credentials = getTokensFromAppAttempt(appAttempt);
+      ApplicationAttemptState attemptState =
+          new ApplicationAttemptState(appAttempt.getAppAttemptId(),
+            appAttempt.getMasterContainer(), credentials);
       appState.attempts.put(attemptState.getAttemptId(), attemptState);
     }
     
@@ -249,7 +267,20 @@ public abstract class RMStateStore {
    */
   protected abstract void removeApplicationState(ApplicationState appState) 
                                                              throws Exception;
-  
+
+  private Credentials getTokensFromAppAttempt(RMAppAttempt appAttempt) {
+    Credentials credentials = new Credentials();
+    Token<ApplicationTokenIdentifier> appToken = appAttempt.getApplicationToken();
+    if(appToken != null){
+      credentials.addToken(appToken.getService(), appToken);
+    }
+    Token<ClientTokenIdentifier> clientToken = appAttempt.getClientToken();
+    if(clientToken != null){
+      credentials.addToken(clientToken.getService(), clientToken);
+    }
+    return credentials;
+  }
+
   // Dispatcher related code
   
   private synchronized void handleStoreEvent(RMStateStoreEvent event) {
@@ -283,13 +314,22 @@ public abstract class RMStateStore {
           ApplicationAttemptState attemptState = 
                     ((RMStateStoreAppAttemptEvent) event).getAppAttemptState();
           Exception storedException = null;
-          ApplicationAttemptStateDataPBImpl attemptStateData = 
-                                        new ApplicationAttemptStateDataPBImpl();
-          attemptStateData.setAttemptId(attemptState.getAttemptId());
-          attemptStateData.setMasterContainer(attemptState.getMasterContainer());
 
-          LOG.info("Storing info for attempt: " + attemptState.getAttemptId());
+          Credentials credentials = attemptState.getAppAttemptTokens();
+          ByteBuffer appAttemptTokens = null;
           try {
+            if(credentials != null){
+              DataOutputBuffer dob = new DataOutputBuffer();
+                credentials.writeTokenStorageToStream(dob);
+              appAttemptTokens =
+                  ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+            }
+            ApplicationAttemptStateDataPBImpl attemptStateData =
+              (ApplicationAttemptStateDataPBImpl) ApplicationAttemptStateDataPBImpl
+                  .newApplicationAttemptStateData(attemptState.getAttemptId(),
+                    attemptState.getMasterContainer(), appAttemptTokens);
+
+            LOG.info("Storing info for attempt: " + attemptState.getAttemptId());
             storeApplicationAttemptState(attemptState.getAttemptId().toString(), 
                                          attemptStateData);
           } catch (Exception e) {
@@ -358,7 +398,5 @@ public abstract class RMStateStore {
     public void handle(RMStateStoreEvent event) {
       handleStoreEvent(event);
     }
-    
   }
-
 }

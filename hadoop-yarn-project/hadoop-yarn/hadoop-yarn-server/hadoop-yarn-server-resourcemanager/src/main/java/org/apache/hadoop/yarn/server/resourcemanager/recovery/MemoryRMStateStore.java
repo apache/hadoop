@@ -23,10 +23,12 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateDataPBImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -79,8 +81,16 @@ public class MemoryRMStateStore extends RMStateStore {
                             throws Exception {
     ApplicationAttemptId attemptId = ConverterUtils
                                         .toApplicationAttemptId(attemptIdStr);
-    ApplicationAttemptState attemptState = new ApplicationAttemptState(
-                            attemptId, attemptStateData.getMasterContainer());
+    Credentials credentials = null;
+    if(attemptStateData.getAppAttemptTokens() != null){
+      DataInputByteBuffer dibb = new DataInputByteBuffer();
+      credentials = new Credentials();
+      dibb.reset(attemptStateData.getAppAttemptTokens());
+      credentials.readTokenStorageStream(dibb);
+    }
+    ApplicationAttemptState attemptState =
+        new ApplicationAttemptState(attemptId,
+          attemptStateData.getMasterContainer(), credentials);
 
     ApplicationState appState = state.getApplicationState().get(
         attemptState.getAttemptId().getApplicationId());

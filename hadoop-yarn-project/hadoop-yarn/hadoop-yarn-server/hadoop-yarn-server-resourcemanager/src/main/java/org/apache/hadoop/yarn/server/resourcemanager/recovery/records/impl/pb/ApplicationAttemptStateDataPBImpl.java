@@ -16,20 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.recovery.records;
+package org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb;
+
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProtoOrBuilder;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 
 public class ApplicationAttemptStateDataPBImpl
 extends ProtoBase<ApplicationAttemptStateDataProto> 
 implements ApplicationAttemptStateData {
-  
+  private static final RecordFactory recordFactory = RecordFactoryProvider
+      .getRecordFactory(null);
+
   ApplicationAttemptStateDataProto proto = 
       ApplicationAttemptStateDataProto.getDefaultInstance();
   ApplicationAttemptStateDataProto.Builder builder = null;
@@ -37,7 +44,8 @@ implements ApplicationAttemptStateData {
   
   private ApplicationAttemptId attemptId = null;
   private Container masterContainer = null;
-  
+  private ByteBuffer appAttemptTokens = null;
+
   public ApplicationAttemptStateDataPBImpl() {
     builder = ApplicationAttemptStateDataProto.newBuilder();
   }
@@ -61,6 +69,9 @@ implements ApplicationAttemptStateData {
     }
     if(this.masterContainer != null) {
       builder.setMasterContainer(((ContainerPBImpl)masterContainer).getProto());
+    }
+    if(this.appAttemptTokens != null) {
+      builder.setAppAttemptTokens(convertToProtoFormat(this.appAttemptTokens));
     }
   }
 
@@ -123,4 +134,36 @@ implements ApplicationAttemptStateData {
     this.masterContainer = container;
   }
 
+  @Override
+  public ByteBuffer getAppAttemptTokens() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    if(appAttemptTokens != null) {
+      return appAttemptTokens;
+    }
+    if(!p.hasAppAttemptTokens()) {
+      return null;
+    }
+    this.appAttemptTokens = convertFromProtoFormat(p.getAppAttemptTokens());
+    return appAttemptTokens;
+  }
+
+  @Override
+  public void setAppAttemptTokens(ByteBuffer attemptTokens) {
+    maybeInitBuilder();
+    if(attemptTokens == null) {
+      builder.clearAppAttemptTokens();
+    }
+    this.appAttemptTokens = attemptTokens;
+  }
+
+  public static ApplicationAttemptStateData newApplicationAttemptStateData(
+      ApplicationAttemptId attemptId, Container container,
+      ByteBuffer attemptTokens) {
+    ApplicationAttemptStateData attemptStateData =
+        recordFactory.newRecordInstance(ApplicationAttemptStateData.class);
+    attemptStateData.setAttemptId(attemptId);
+    attemptStateData.setMasterContainer(container);
+    attemptStateData.setAppAttemptTokens(attemptTokens);
+    return attemptStateData;
+  }
 }
