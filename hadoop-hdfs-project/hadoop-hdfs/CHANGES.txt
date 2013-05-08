@@ -230,6 +230,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4748. MiniJournalCluster#restartJournalNode leaks resources, which 
     causes sporadic test failures. (Chris Nauroth via suresh)
 
+    HDFS-4778. Fixes some issues that the first patch on HDFS-2576 missed.
+    (ddas)
+
     HDFS-4785. Concat operation does not remove concatenated files from
     InodeMap. (suresh)
 

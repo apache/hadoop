@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.Random;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -67,7 +69,7 @@ public class TestFavoredNodesEndToEnd {
     }
   }
 
-  @Test
+  @Test(timeout=180000)
   public void testFavoredNodesEndToEnd() throws Exception {
     //create 10 files with random preferred nodes
     for (int i = 0; i < NUM_FILES; i++) {
@@ -80,11 +82,7 @@ public class TestFavoredNodesEndToEnd {
           4096, (short)3, (long)4096, null, datanode);
       out.write(SOME_BYTES);
       out.close();
-      BlockLocation[] locations = 
-          dfs.getClient().getBlockLocations(p.toUri().getPath(), 0, 
-              Long.MAX_VALUE);
-      //make sure we have exactly one block location, and three hosts
-      assertTrue(locations.length == 1 && locations[0].getHosts().length == 3);
+      BlockLocation[] locations = getBlockLocations(p);
       //verify the files got created in the right nodes
       for (BlockLocation loc : locations) {
         String[] hosts = loc.getNames();
@@ -94,7 +92,7 @@ public class TestFavoredNodesEndToEnd {
     }
   }
 
-  @Test
+  @Test(timeout=180000)
   public void testWhenFavoredNodesNotPresent() throws Exception {
     //when we ask for favored nodes but the nodes are not there, we should
     //get some other nodes. In other words, the write to hdfs should not fail
@@ -110,13 +108,10 @@ public class TestFavoredNodesEndToEnd {
         4096, (short)3, (long)4096, null, arbitraryAddrs);
     out.write(SOME_BYTES);
     out.close();
-    BlockLocation[] locations = 
-        dfs.getClient().getBlockLocations(p.toUri().getPath(), 0, 
-            Long.MAX_VALUE);
-    assertTrue(locations.length == 1 && locations[0].getHosts().length == 3);
+    getBlockLocations(p);
   }
 
-  @Test
+  @Test(timeout=180000)
   public void testWhenSomeNodesAreNotGood() throws Exception {
     //make some datanode not "good" so that even if the client prefers it,
     //the namenode would not give it as a replica to write to
@@ -136,12 +131,9 @@ public class TestFavoredNodesEndToEnd {
         4096, (short)3, (long)4096, null, addrs);
     out.write(SOME_BYTES);
     out.close();
-    BlockLocation[] locations = 
-        dfs.getClient().getBlockLocations(p.toUri().getPath(), 0, 
-            Long.MAX_VALUE);
     //reset the state
     d.stopDecommission();
-    assertTrue(locations.length == 1 && locations[0].getHosts().length == 3);
+    BlockLocation[] locations = getBlockLocations(p);
     //also make sure that the datanode[0] is not in the list of hosts
     String datanode0 = 
         datanodes.get(0).getXferAddress().getAddress().getHostAddress()
@@ -151,6 +143,14 @@ public class TestFavoredNodesEndToEnd {
         fail(datanode0 + " not supposed to be a replica for the block");
       }
     }
+  }
+
+  private BlockLocation[] getBlockLocations(Path p) throws Exception {
+    DFSTestUtil.waitReplication(dfs, p, (short)3);
+    BlockLocation[] locations = dfs.getClient().getBlockLocations(
+        p.toUri().getPath(), 0, Long.MAX_VALUE);
+    assertTrue(locations.length == 1 && locations[0].getHosts().length == 3);
+    return locations;
   }
 
   private String[] getStringForInetSocketAddrs(InetSocketAddress[] datanode) {

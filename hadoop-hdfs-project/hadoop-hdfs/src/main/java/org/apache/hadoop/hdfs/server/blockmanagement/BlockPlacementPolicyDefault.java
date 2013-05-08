@@ -170,7 +170,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           results.add(remainingTargets[i]);
         }
       }
-      return results.toArray(new DatanodeDescriptor[results.size()]);
+      return getPipeline(writer,
+          results.toArray(new DatanodeDescriptor[results.size()]));
     } catch (NotEnoughReplicasException nr) {
       // Fall back to regular block placement disregarding favored nodes hint
       return chooseTarget(src, numOfReplicas, writer, 
