@@ -694,7 +694,7 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9455. HADOOP_CLIENT_OPTS appended twice causes JVM failures.
     (Chris Nauroth via suresh)
 
-Release 2.0.4-alpha - UNRELEASED
+Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
 

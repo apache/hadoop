@@ -630,7 +630,7 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4784. NPE in FSDirectory.resolvePath(). (Brandon Li via suresh)
 
-Release 2.0.4-alpha - UNRELEASED
+Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
 
