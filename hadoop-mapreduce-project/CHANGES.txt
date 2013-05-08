@@ -62,6 +62,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5159. Change ValueAggregatorJob to add APIs which can support
     binary compatibility with hadoop-1 examples. (Zhijie Shen via vinodkv)
 
+    MAPREDUCE-5157. Bring back old sampler related code so that we can support
+    binary compatibility with hadoop-1 sorter example. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
