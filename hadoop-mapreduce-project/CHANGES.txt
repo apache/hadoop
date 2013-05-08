@@ -221,6 +221,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5036. Default shuffle handler port should not be 8080.
     (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-5159. Change ValueAggregatorJob to add APIs which can support
+    binary compatibility with hadoop-1 examples. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 

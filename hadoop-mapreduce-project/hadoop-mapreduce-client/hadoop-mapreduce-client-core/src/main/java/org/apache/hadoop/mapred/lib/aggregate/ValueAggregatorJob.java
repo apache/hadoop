@@ -102,15 +102,17 @@ public class ValueAggregatorJob {
   
   /**
    * Create an Aggregate based map/reduce job.
-   * 
+   *
    * @param args the arguments used for job creation. Generic hadoop
    * arguments are accepted.
+   * @param caller the the caller class.
    * @return a JobConf object ready for submission.
-   * 
+   *
    * @throws IOException
    * @see GenericOptionsParser
    */
-  public static JobConf createValueAggregatorJob(String args[])
+  @SuppressWarnings("rawtypes")
+  public static JobConf createValueAggregatorJob(String args[], Class<?> caller)
     throws IOException {
 
     Configuration conf = new Configuration();
@@ -159,7 +161,7 @@ public class ValueAggregatorJob {
     }
     String userJarFile = theJob.get("user.jar.file");
     if (userJarFile == null) {
-      theJob.setJarByClass(ValueAggregator.class);
+      theJob.setJarByClass(caller != null ? caller : ValueAggregatorJob.class);
     } else {
       theJob.setJar(userJarFile);
     }
@@ -183,6 +185,21 @@ public class ValueAggregatorJob {
     return theJob;
   }
 
+  /**
+   * Create an Aggregate based map/reduce job.
+   * 
+   * @param args the arguments used for job creation. Generic hadoop
+   * arguments are accepted.
+   * @return a JobConf object ready for submission.
+   * 
+   * @throws IOException
+   * @see GenericOptionsParser
+   */
+  public static JobConf createValueAggregatorJob(String args[])
+    throws IOException {
+    return createValueAggregatorJob(args, ValueAggregator.class);
+  }
+
   public static JobConf createValueAggregatorJob(String args[]
     , Class<? extends ValueAggregatorDescriptor>[] descriptors)
   throws IOException {
@@ -199,7 +216,15 @@ public class ValueAggregatorJob {
       job.set("aggregator.descriptor." + i, "UserDefined," + descriptors[i].getName());
     }    
   }
-  
+
+  public static JobConf createValueAggregatorJob(String args[],
+      Class<? extends ValueAggregatorDescriptor>[] descriptors,
+      Class<?> caller) throws IOException {
+    JobConf job = createValueAggregatorJob(args, caller);
+    setAggregatorDescriptors(job, descriptors);
+    return job;
+  }
+
   /**
    * create and run an Aggregate based map/reduce job.
    * 
