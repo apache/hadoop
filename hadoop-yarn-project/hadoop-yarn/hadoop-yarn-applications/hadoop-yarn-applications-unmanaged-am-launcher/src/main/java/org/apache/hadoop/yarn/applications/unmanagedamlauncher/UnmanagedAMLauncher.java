@@ -357,9 +357,11 @@ public class UnmanagedAMLauncher {
    *          Application Id of application to be monitored
    * @return true if application completed successfully
    * @throws YarnRemoteException
+   * @throws IOException
    */
   private ApplicationReport monitorApplication(ApplicationId appId,
-      Set<YarnApplicationState> finalState) throws YarnRemoteException {
+      Set<YarnApplicationState> finalState) throws YarnRemoteException,
+      IOException {
 
     long foundAMCompletedTime = 0;
     final int timeToWaitMS = 10000;

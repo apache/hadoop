@@ -137,7 +137,7 @@ public class ClientServiceDelegate {
     }
   }
 
-  private MRClientProtocol getProxy() throws YarnRemoteException {
+  private MRClientProtocol getProxy() throws YarnRemoteException, IOException {
     if (realProxy != null) {
       return realProxy;
     }

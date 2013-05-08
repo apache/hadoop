@@ -339,7 +339,7 @@ public class TestClientRMTokens {
     DelegationToken token = loggedInUser
         .doAs(new PrivilegedExceptionAction<DelegationToken>() {
           @Override
-          public DelegationToken run() throws YarnRemoteException {
+          public DelegationToken run() throws YarnRemoteException, IOException {
             GetDelegationTokenRequest request = Records
                 .newRecord(GetDelegationTokenRequest.class);
             request.setRenewer(renewerString);
@@ -355,7 +355,7 @@ public class TestClientRMTokens {
       throws IOException, InterruptedException {
     long nextExpTime = loggedInUser.doAs(new PrivilegedExceptionAction<Long>() {
       @Override
-      public Long run() throws YarnRemoteException {
+      public Long run() throws YarnRemoteException, IOException {
         RenewDelegationTokenRequest request = Records
             .newRecord(RenewDelegationTokenRequest.class);
         request.setDelegationToken(dToken);
@@ -371,7 +371,7 @@ public class TestClientRMTokens {
       throws IOException, InterruptedException {
     loggedInUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
-      public Void run() throws YarnRemoteException {
+      public Void run() throws YarnRemoteException, IOException {
         CancelDelegationTokenRequest request = Records
             .newRecord(CancelDelegationTokenRequest.class);
         request.setDelegationToken(dToken);

@@ -84,8 +84,9 @@ public class NodeCLI extends YarnCLI {
    * Lists all the nodes present in the cluster
    * 
    * @throws YarnRemoteException
+   * @throws IOException
    */
-  private void listClusterNodes() throws YarnRemoteException {
+  private void listClusterNodes() throws YarnRemoteException, IOException {
     PrintWriter writer = new PrintWriter(sysout);
     List<NodeReport> nodesReport = client.getNodeReports();
     writer.println("Total Nodes:" + nodesReport.size());

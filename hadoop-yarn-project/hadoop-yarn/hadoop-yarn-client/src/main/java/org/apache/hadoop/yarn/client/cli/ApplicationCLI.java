@@ -91,8 +91,9 @@ public class ApplicationCLI extends YarnCLI {
    * Lists all the applications present in the Resource Manager
    * 
    * @throws YarnRemoteException
+   * @throws IOException
    */
-  private void listAllApplications() throws YarnRemoteException {
+  private void listAllApplications() throws YarnRemoteException, IOException {
     PrintWriter writer = new PrintWriter(sysout);
     List<ApplicationReport> appsReport = client.getApplicationList();
 
@@ -117,8 +118,10 @@ public class ApplicationCLI extends YarnCLI {
    * 
    * @param applicationId
    * @throws YarnRemoteException
+   * @throws IOException
    */
-  private void killApplication(String applicationId) throws YarnRemoteException {
+  private void killApplication(String applicationId)
+      throws YarnRemoteException, IOException {
     ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
     sysout.println("Killing application " + applicationId);
     client.killApplication(appId);
