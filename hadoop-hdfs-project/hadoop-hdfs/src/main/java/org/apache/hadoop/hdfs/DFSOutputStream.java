@@ -323,6 +323,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
             return key;
           }
         });
+    private String[] favoredNodes;
     volatile boolean hasError = false;
     volatile int errorIndex = -1;
     private BlockConstructionStage stage;  // block construction stage
@@ -399,7 +400,11 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
 
       }
     }
-    
+
+    private void setFavoredNodes(String[] favoredNodes) {
+      this.favoredNodes = favoredNodes;
+    }
+
     /**
      * Initialize for data streaming
      */
@@ -1181,7 +1186,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         while (true) {
           try {
             return dfsClient.namenode.addBlock(src, dfsClient.clientName,
-                block, excludedNodes, fileId);
+                block, excludedNodes, fileId, favoredNodes);
           } catch (RemoteException e) {
             IOException ue = 
               e.unwrapRemoteException(FileNotFoundException.class,
@@ -1321,7 +1326,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
   /** Construct a new output stream for creating a file. */
   private DFSOutputStream(DFSClient dfsClient, String src, HdfsFileStatus stat,
       EnumSet<CreateFlag> flag, Progressable progress,
-      DataChecksum checksum) throws IOException {
+      DataChecksum checksum, String[] favoredNodes) throws IOException {
     this(dfsClient, src, progress, stat, checksum);
     this.shouldSyncBlock = flag.contains(CreateFlag.SYNC_BLOCK);
 
@@ -1329,12 +1334,15 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         checksum.getBytesPerChecksum());
 
     streamer = new DataStreamer();
+    if (favoredNodes != null && favoredNodes.length != 0) {
+      streamer.setFavoredNodes(favoredNodes);
+    }
   }
 
   static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
       FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
       short replication, long blockSize, Progressable progress, int buffersize,
-      DataChecksum checksum) throws IOException {
+      DataChecksum checksum, String[] favoredNodes) throws IOException {
     final HdfsFileStatus stat;
     try {
       stat = dfsClient.namenode.create(src, masked, dfsClient.clientName,
@@ -1351,9 +1359,17 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
                                      UnresolvedPathException.class);
     }
     final DFSOutputStream out = new DFSOutputStream(dfsClient, src, stat,
-        flag, progress, checksum);
+        flag, progress, checksum, favoredNodes);
     out.start();
     return out;
+  }
+
+  static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
+      FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
+      short replication, long blockSize, Progressable progress, int buffersize,
+      DataChecksum checksum) throws IOException {
+    return newStreamForCreate(dfsClient, src, masked, flag, createParent, replication,
+        blockSize, progress, buffersize, checksum, null);
   }
 
   /** Construct a new output stream for append. */
