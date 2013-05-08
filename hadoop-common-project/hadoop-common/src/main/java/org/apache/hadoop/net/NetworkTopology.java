@@ -18,6 +18,7 @@
 package org.apache.hadoop.net;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.locks.ReadWriteLock;
