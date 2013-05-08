@@ -113,7 +113,7 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public KillApplicationResponse forceKillApplication(
-      KillApplicationRequest request) throws YarnRemoteException {
+      KillApplicationRequest request) throws YarnRemoteException, IOException {
     KillApplicationRequestProto requestProto =
         ((KillApplicationRequestPBImpl) request).getProto();
     try {
@@ -126,7 +126,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public GetApplicationReportResponse getApplicationReport(
-      GetApplicationReportRequest request) throws YarnRemoteException {
+      GetApplicationReportRequest request) throws YarnRemoteException,
+      IOException {
     GetApplicationReportRequestProto requestProto =
         ((GetApplicationReportRequestPBImpl) request).getProto();
     try {
@@ -139,7 +140,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public GetClusterMetricsResponse getClusterMetrics(
-      GetClusterMetricsRequest request) throws YarnRemoteException {
+      GetClusterMetricsRequest request) throws YarnRemoteException,
+      IOException {
     GetClusterMetricsRequestProto requestProto =
         ((GetClusterMetricsRequestPBImpl) request).getProto();
     try {
@@ -152,7 +154,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public GetNewApplicationResponse getNewApplication(
-      GetNewApplicationRequest request) throws YarnRemoteException {
+      GetNewApplicationRequest request) throws YarnRemoteException,
+      IOException {
     GetNewApplicationRequestProto requestProto =
         ((GetNewApplicationRequestPBImpl) request).getProto();
     try {
@@ -165,7 +168,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public SubmitApplicationResponse submitApplication(
-      SubmitApplicationRequest request) throws YarnRemoteException {
+      SubmitApplicationRequest request) throws YarnRemoteException,
+      IOException {
     SubmitApplicationRequestProto requestProto =
         ((SubmitApplicationRequestPBImpl) request).getProto();
     try {
@@ -178,7 +182,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public GetAllApplicationsResponse getAllApplications(
-      GetAllApplicationsRequest request) throws YarnRemoteException {
+      GetAllApplicationsRequest request) throws YarnRemoteException,
+      IOException {
     GetAllApplicationsRequestProto requestProto =
         ((GetAllApplicationsRequestPBImpl) request).getProto();
     try {
@@ -192,7 +197,7 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
   @Override
   public GetClusterNodesResponse
       getClusterNodes(GetClusterNodesRequest request)
-          throws YarnRemoteException {
+          throws YarnRemoteException, IOException {
     GetClusterNodesRequestProto requestProto =
         ((GetClusterNodesRequestPBImpl) request).getProto();
     try {
@@ -205,7 +210,7 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     GetQueueInfoRequestProto requestProto =
         ((GetQueueInfoRequestPBImpl) request).getProto();
     try {
@@ -218,7 +223,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
-      GetQueueUserAclsInfoRequest request) throws YarnRemoteException {
+      GetQueueUserAclsInfoRequest request) throws YarnRemoteException,
+      IOException {
     GetQueueUserAclsInfoRequestProto requestProto =
         ((GetQueueUserAclsInfoRequestPBImpl) request).getProto();
     try {
@@ -231,7 +237,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public GetDelegationTokenResponse getDelegationToken(
-      GetDelegationTokenRequest request) throws YarnRemoteException {
+      GetDelegationTokenRequest request) throws YarnRemoteException,
+      IOException {
     GetDelegationTokenRequestProto requestProto =
         ((GetDelegationTokenRequestPBImpl) request).getProto();
     try {
@@ -244,7 +251,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public RenewDelegationTokenResponse renewDelegationToken(
-      RenewDelegationTokenRequest request) throws YarnRemoteException {
+      RenewDelegationTokenRequest request) throws YarnRemoteException,
+      IOException {
     RenewDelegationTokenRequestProto requestProto = 
         ((RenewDelegationTokenRequestPBImpl) request).getProto();
     try {
@@ -257,7 +265,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
 
   @Override
   public CancelDelegationTokenResponse cancelDelegationToken(
-      CancelDelegationTokenRequest request) throws YarnRemoteException {
+      CancelDelegationTokenRequest request) throws YarnRemoteException,
+      IOException {
     CancelDelegationTokenRequestProto requestProto =
         ((CancelDelegationTokenRequestPBImpl) request).getProto();
     try {

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
@@ -78,9 +79,10 @@ public class AppReportFetcher {
    * @param appId the id of the application to get. 
    * @return the ApplicationReport for that app.
    * @throws YarnRemoteException on any error.
+   * @throws IOException
    */
   public ApplicationReport getApplicationReport(ApplicationId appId)
-  throws YarnRemoteException {
+  throws YarnRemoteException, IOException {
     GetApplicationReportRequest request = recordFactory
         .newRecordInstance(GetApplicationReportRequest.class);
     request.setApplicationId(appId);

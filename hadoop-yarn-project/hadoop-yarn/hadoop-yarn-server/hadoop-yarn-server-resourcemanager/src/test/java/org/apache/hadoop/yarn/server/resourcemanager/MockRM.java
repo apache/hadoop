@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.Map;
@@ -198,6 +199,8 @@ public class MockRM extends ResourceManager {
         try {
           return client.submitApplication(req);
         } catch (YarnRemoteException e) {
+          e.printStackTrace();
+        } catch (IOException e) {
           e.printStackTrace();
         }
         return null;
