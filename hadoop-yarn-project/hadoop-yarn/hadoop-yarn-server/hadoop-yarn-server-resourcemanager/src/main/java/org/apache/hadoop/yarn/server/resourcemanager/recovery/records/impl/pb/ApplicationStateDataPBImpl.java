@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.recovery.records;
+package org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProtoOrBuilder;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 
 public class ApplicationStateDataPBImpl 
 extends ProtoBase<ApplicationStateDataProto> 

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -38,6 +39,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
@@ -45,7 +49,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -58,7 +61,10 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.ApplicationTokenSelector;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.ClientTokenSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
@@ -123,8 +129,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final WriteLock writeLock;
 
   private final ApplicationAttemptId applicationAttemptId;
-  private ClientToken clientToken;
+  private Token<ClientTokenIdentifier> clientToken;
   private final ApplicationSubmissionContext submissionContext;
+  private Token<ApplicationTokenIdentifier> applicationToken = null;
 
   //nodes on while this attempt's containers ran
   private final Set<NodeId> ranNodes =
@@ -366,19 +373,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.scheduler = scheduler;
     this.masterService = masterService;
 
-    if (UserGroupInformation.isSecurityEnabled()) {
-
-      this.rmContext.getClientToAMTokenSecretManager().registerApplication(
-        appAttemptId);
-
-      Token<ClientTokenIdentifier> token =
-          new Token<ClientTokenIdentifier>(new ClientTokenIdentifier(
-            appAttemptId), this.rmContext.getClientToAMTokenSecretManager());
-      this.clientToken =
-          BuilderUtils.newClientToken(token.getIdentifier(), token.getKind()
-            .toString(), token.getPassword(), token.getService().toString());
-    }
-
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
@@ -502,8 +496,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public ClientToken getClientToken() {
+  public Token<ClientTokenIdentifier> getClientToken() {
     return this.clientToken;
+  }
+
+  @Override
+  public Token<ApplicationTokenIdentifier> getApplicationToken() {
+    return this.applicationToken;
   }
 
   @Override
@@ -657,14 +656,42 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     ApplicationAttemptState attemptState = appState.getAttempt(getAppAttemptId());
     assert attemptState != null;
     setMasterContainer(attemptState.getMasterContainer());
-    LOG.info("Recovered attempt: AppId: " + getAppAttemptId().getApplicationId() 
+    recoverAppAttemptTokens(attemptState.getAppAttemptTokens());
+    LOG.info("Recovered attempt: AppId: " + getAppAttemptId().getApplicationId()
              + " AttemptId: " + getAppAttemptId()
              + " MasterContainer: " + masterContainer);
     setDiagnostics("Attempt recovered after RM restart");
     handle(new RMAppAttemptEvent(getAppAttemptId(), 
                                  RMAppAttemptEventType.RECOVER));
   }
-  
+
+  private void recoverAppAttemptTokens(Credentials appAttemptTokens) {
+    if (appAttemptTokens == null) {
+      return;
+    }
+    if (UserGroupInformation.isSecurityEnabled()) {
+
+      ClientTokenSelector clientTokenSelector = new ClientTokenSelector();
+      this.clientToken =
+          clientTokenSelector.selectToken(new Text(),
+            appAttemptTokens.getAllTokens());
+
+      InetSocketAddress serviceAddr = conf.getSocketAddr(
+            YarnConfiguration.RM_SCHEDULER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+      ApplicationTokenSelector appTokenSelector = new ApplicationTokenSelector();
+      this.applicationToken =
+          appTokenSelector.selectToken(
+            SecurityUtil.buildTokenService(serviceAddr),
+            appAttemptTokens.getAllTokens());
+
+      // For now, no need to populate tokens back to
+      // ApplicationTokenSecretManager, because running attempts are rebooted
+      // Later in work-preserve restart, we'll create NEW->RUNNING transition
+      // in which the restored tokens will be added to the secret manager
+    }
+  }
   private static class BaseTransition implements
       SingleArcTransition<RMAppAttemptImpl, RMAppAttemptEvent> {
 
@@ -685,6 +712,36 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       // Register with the ApplicationMasterService
       appAttempt.masterService
           .registerAppAttempt(appAttempt.applicationAttemptId);
+
+      if (UserGroupInformation.isSecurityEnabled()) {
+
+        appAttempt.rmContext.getClientToAMTokenSecretManager()
+          .registerApplication(appAttempt.applicationAttemptId);
+
+        // create clientToken
+        appAttempt.clientToken =
+            new Token<ClientTokenIdentifier>(new ClientTokenIdentifier(
+              appAttempt.applicationAttemptId),
+              appAttempt.rmContext.getClientToAMTokenSecretManager());
+
+        // create application token
+        ApplicationTokenIdentifier id =
+            new ApplicationTokenIdentifier(appAttempt.applicationAttemptId);
+        Token<ApplicationTokenIdentifier> applicationToken =
+            new Token<ApplicationTokenIdentifier>(id,
+              appAttempt.rmContext.getApplicationTokenSecretManager());
+        InetSocketAddress serviceAddr =
+            appAttempt.conf.getSocketAddr(
+              YarnConfiguration.RM_SCHEDULER_ADDRESS,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+        // normally the client should set the service after acquiring the
+        // token, but this token is directly provided to the AMs
+        SecurityUtil.setTokenService(applicationToken, serviceAddr);
+
+        appAttempt.applicationToken = applicationToken;
+
+      }
 
       // Add the application to the scheduler
       appAttempt.eventHandler.handle(
@@ -992,7 +1049,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.rmContext.getAMFinishingMonitor().unregister(
           appAttempt.getAppAttemptId());
 
-      
       // Unregister from the ClientTokenSecretManager
       if (UserGroupInformation.isSecurityEnabled()) {
         appAttempt.rmContext.getClientToAMTokenSecretManager()
@@ -1191,7 +1247,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       this.readLock.unlock();
     }
   }
-  
+
   private void launchAttempt(){
     // Send event to launch the AM Container
     eventHandler.handle(new AMLauncherEvent(AMLauncherEventType.LAUNCH, this));

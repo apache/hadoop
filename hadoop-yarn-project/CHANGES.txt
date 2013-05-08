@@ -150,6 +150,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-651. Changed PBClientImpls of ContainerManager and RMAdmin to throw
     IOExceptions also. (Xuan Gong via vinodkv)
 
+    YARN-582. Changed ResourceManager to recover Application token and client
+    tokens for app attempt so that RM can be restarted while preserving current
+    applications. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

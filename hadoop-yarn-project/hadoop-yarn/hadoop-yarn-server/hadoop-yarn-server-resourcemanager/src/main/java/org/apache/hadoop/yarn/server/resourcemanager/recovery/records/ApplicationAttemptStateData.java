@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery.records;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -49,4 +51,14 @@ public interface ApplicationAttemptStateData {
   public Container getMasterContainer();
   
   public void setMasterContainer(Container container);
+
+  /**
+   * The application attempt tokens that belong to this attempt
+   * @return The application attempt tokens that belong to this attempt
+   */
+  @Public
+  @Unstable
+  public ByteBuffer getAppAttemptTokens();
+
+  public void setAppAttemptTokens(ByteBuffer attemptTokens);
 }

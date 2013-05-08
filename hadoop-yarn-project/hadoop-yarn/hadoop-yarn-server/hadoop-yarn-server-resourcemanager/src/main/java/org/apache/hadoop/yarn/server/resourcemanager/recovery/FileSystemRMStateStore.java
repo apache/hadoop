@@ -31,13 +31,15 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateDataPBImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -114,8 +116,17 @@ public class FileSystemRMStateStore extends RMStateStore {
           ApplicationAttemptStateDataPBImpl attemptStateData =
               new ApplicationAttemptStateDataPBImpl(
                   ApplicationAttemptStateDataProto.parseFrom(childData));
-          ApplicationAttemptState attemptState = new ApplicationAttemptState(
-                          attemptId, attemptStateData.getMasterContainer());
+          Credentials credentials = null;
+          if(attemptStateData.getAppAttemptTokens() != null){
+            credentials = new Credentials();
+            DataInputByteBuffer dibb = new DataInputByteBuffer();
+            dibb.reset(attemptStateData.getAppAttemptTokens());
+            credentials.readTokenStorageStream(dibb);
+          }
+          ApplicationAttemptState attemptState =
+              new ApplicationAttemptState(attemptId,
+                attemptStateData.getMasterContainer(), credentials);
+
           // assert child node name is same as application attempt id
           assert attemptId.equals(attemptState.getAttemptId());
           attempts.add(attemptState);
