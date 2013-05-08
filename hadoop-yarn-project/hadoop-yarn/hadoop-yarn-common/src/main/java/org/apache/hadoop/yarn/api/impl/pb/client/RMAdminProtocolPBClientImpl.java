@@ -87,7 +87,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
 
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     RefreshQueuesRequestProto requestProto = 
       ((RefreshQueuesRequestPBImpl)request).getProto();
     try {
@@ -100,7 +100,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
 
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
-  throws YarnRemoteException {
+  throws YarnRemoteException, IOException {
     RefreshNodesRequestProto requestProto = 
       ((RefreshNodesRequestPBImpl)request).getProto();
     try {
@@ -114,7 +114,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
   @Override
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     RefreshSuperUserGroupsConfigurationRequestProto requestProto = 
       ((RefreshSuperUserGroupsConfigurationRequestPBImpl)request).getProto();
     try {
@@ -127,7 +127,8 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
 
   @Override
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
-      RefreshUserToGroupsMappingsRequest request) throws YarnRemoteException {
+      RefreshUserToGroupsMappingsRequest request) throws YarnRemoteException,
+      IOException {
     RefreshUserToGroupsMappingsRequestProto requestProto = 
       ((RefreshUserToGroupsMappingsRequestPBImpl)request).getProto();
     try {
@@ -140,7 +141,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
 
   @Override
   public RefreshAdminAclsResponse refreshAdminAcls(
-      RefreshAdminAclsRequest request) throws YarnRemoteException {
+      RefreshAdminAclsRequest request) throws YarnRemoteException, IOException {
     RefreshAdminAclsRequestProto requestProto = 
       ((RefreshAdminAclsRequestPBImpl)request).getProto();
     try {
@@ -153,7 +154,8 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
 
   @Override
   public RefreshServiceAclsResponse refreshServiceAcls(
-      RefreshServiceAclsRequest request) throws YarnRemoteException {
+      RefreshServiceAclsRequest request) throws YarnRemoteException,
+      IOException {
     RefreshServiceAclsRequestProto requestProto = 
         ((RefreshServiceAclsRequestPBImpl)request).getProto();
     try {
