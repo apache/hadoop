@@ -227,7 +227,7 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5209. Fix units in a ShuffleScheduler log message.
     (Tsuyoshi OZAWA via cdouglas)
 
-Release 2.0.4-alpha - UNRELEASED
+Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
 

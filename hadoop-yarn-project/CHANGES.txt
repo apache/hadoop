@@ -278,7 +278,7 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-646. Fix two typos in Fair Scheduler user guide. (Dapeng Sun via atm)
 
-Release 2.0.4-alpha - UNRELEASED
+Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
 
