@@ -1,5 +1,22 @@
 Hadoop Change Log
 
+Release 1.2.1 - Unreleased 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
+    MAPREDUCE-5206. Ensure that a job doesn't get added to RetiredJobs
+    multiple times in JobTracker. (acmurthy)
+
+    MAPREDUCE-5148. Fix MAPREDUCE-4970 to ensure task-log4j.properties is
+    available for previous installs by putting it in hadoop-core.jar.
+    (acmurthy)
+
 Release 1.2.0 - 2013.05.05
 
   INCOMPATIBLE CHANGES
@@ -623,9 +640,6 @@ Release 1.2.0 - 2013.05.05
     is not a valid user in the loacl OS.  (szetszwo)
 
     HADOOP-9544. Backport UTF8 encoding fixes.  (Chris Nauroth via szetszwo)
-
-    MAPREDUCE-5206. Ensure that a job doesn't get added to RetiredJobs
-    multiple times in JobTracker. (acmurthy)
 
 Release 1.1.2 - 2013.01.30
 
