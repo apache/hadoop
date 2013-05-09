@@ -390,7 +390,10 @@ Release 2.0.5-beta - UNRELEASED
     (Tsuyoshi OZAWA via cdouglas)
 
     MAPREDUCE-5212. Handling YarnRemoteException separately from IOException in
-    MR App after YARN-631. (Xuan Gong via vinodkv)
+    MR App's use of ClientRMProtocol after YARN-631. (Xuan Gong via vinodkv)
+
+    MAPREDUCE-5226. Handling YarnRemoteException separately from IOException in
+    MR App's use of AMRMProtocol after YARN-630. (Xuan Gong via vinodkv)
 
 Release 2.0.4-alpha - 2013-04-25
 

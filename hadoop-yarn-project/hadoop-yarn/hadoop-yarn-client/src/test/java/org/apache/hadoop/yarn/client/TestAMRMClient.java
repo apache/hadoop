@@ -135,7 +135,7 @@ public class TestAMRMClient {
   }
 
   @Test (timeout=60000)
-  public void testAMRMClient() throws YarnRemoteException {
+  public void testAMRMClient() throws YarnRemoteException, IOException {
     AMRMClientImpl amClient = null;
     try {
       // start am rm client
@@ -159,7 +159,7 @@ public class TestAMRMClient {
   
   
   private void testAllocation(final AMRMClientImpl amClient)  
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     // setup container request
     final Resource capability = Records.newRecord(Resource.class);
     final Priority priority = Records.newRecord(Priority.class);

@@ -134,7 +134,7 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
       String appHostName, int appHostPort, String appTrackingUrl)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     // do this only once ???
     RegisterApplicationMasterRequest request = recordFactory
         .newRecordInstance(RegisterApplicationMasterRequest.class);
@@ -153,7 +153,7 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
 
   @Override
   public AllocateResponse allocate(float progressIndicator) 
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     AllocateResponse allocateResponse = null;
     ArrayList<ResourceRequest> askList = null;
     ArrayList<ContainerId> releaseList = null;
@@ -207,7 +207,8 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
 
   @Override
   public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
-      String appMessage, String appTrackingUrl) throws YarnRemoteException {
+      String appMessage, String appTrackingUrl) throws YarnRemoteException,
+      IOException {
     FinishApplicationMasterRequest request = recordFactory
                   .newRecordInstance(FinishApplicationMasterRequest.class);
     request.setAppAttemptId(appAttemptId);
