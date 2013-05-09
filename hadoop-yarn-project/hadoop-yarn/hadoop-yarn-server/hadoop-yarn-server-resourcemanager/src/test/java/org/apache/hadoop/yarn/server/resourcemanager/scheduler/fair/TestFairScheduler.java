@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
@@ -128,6 +129,7 @@ public class TestFairScheduler {
   public void tearDown() {
     scheduler = null;
     resourceManager = null;
+    QueueMetrics.clearQueueMetrics();
   }
 
   private Configuration createConfiguration() {
@@ -337,6 +339,13 @@ public class TestFairScheduler {
 
     assertEquals(1024, scheduler.getQueueManager().getQueue("queue1").
       getResourceUsage().getMemory());
+
+    // verify metrics
+    QueueMetrics queue1Metrics = scheduler.getQueueManager().getQueue("queue1")
+        .getMetrics();
+    assertEquals(1024, queue1Metrics.getAllocatedMB());
+    assertEquals(1024, scheduler.getRootQueueMetrics().getAllocatedMB());
+    assertEquals(512, scheduler.getRootQueueMetrics().getAvailableMB());
   }
 
   @Test (timeout = 5000)
@@ -1276,6 +1285,7 @@ public class TestFairScheduler {
     scheduler.handle(updateEvent);
 
     assertEquals(1, app.getLiveContainers().size());
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
     
     // Create request at higher priority
     createSchedulingRequestExistingApplication(1024, 1, attId);
@@ -1291,6 +1301,7 @@ public class TestFairScheduler {
     // Complete container
     scheduler.allocate(attId, new ArrayList<ResourceRequest>(),
         Arrays.asList(containerId));
+    assertEquals(1024, scheduler.getRootQueueMetrics().getAvailableMB());
     
     // Schedule at opening
     scheduler.update();
@@ -1302,6 +1313,7 @@ public class TestFairScheduler {
     for (RMContainer liveContainer : liveContainers) {
       Assert.assertEquals(2, liveContainer.getContainer().getPriority().getPriority());
     }
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
   }
   
   @Test
@@ -1605,5 +1617,25 @@ public class TestFairScheduler {
     
     assertEquals(1, app.getLiveContainers().size());
     assertEquals(0, app.getReservedContainers().size());
+  }
+  
+  @Test
+  public void testRemoveNodeUpdatesRootQueueMetrics() {
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
+    
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    NodeAddedSchedulerEvent addEvent = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(addEvent);
+    
+    assertEquals(1024, scheduler.getRootQueueMetrics().getAvailableMB());
+    scheduler.update(); // update shouldn't change things
+    assertEquals(1024, scheduler.getRootQueueMetrics().getAvailableMB());
+    
+    NodeRemovedSchedulerEvent removeEvent = new NodeRemovedSchedulerEvent(node1);
+    scheduler.handle(removeEvent);
+    
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
+    scheduler.update(); // update shouldn't change things
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
   }
 }

@@ -234,10 +234,6 @@ public class FairScheduler implements ResourceScheduler {
     // Recursively compute fair shares for all queues
     // and update metrics
     rootQueue.recomputeShares();
-
-    // Update recorded capacity of root queue (child queues are updated
-    // when fair share is calculated).
-    rootMetrics.setAvailableResourcesToQueue(clusterCapacity);
   }
 
   /**
@@ -670,6 +666,7 @@ public class FairScheduler implements ResourceScheduler {
     } else {
       application.containerCompleted(rmContainer, containerStatus, event);
       node.releaseContainer(container);
+      updateRootQueueMetrics();
     }
 
     LOG.info("Application " + applicationAttemptId +
@@ -681,6 +678,7 @@ public class FairScheduler implements ResourceScheduler {
   private synchronized void addNode(RMNode node) {
     nodes.put(node.getNodeID(), new FSSchedulerNode(node));
     Resources.addTo(clusterCapacity, node.getTotalCapability());
+    updateRootQueueMetrics();
 
     LOG.info("Added node " + node.getNodeAddress() +
         " cluster capacity: " + clusterCapacity);
@@ -689,6 +687,7 @@ public class FairScheduler implements ResourceScheduler {
   private synchronized void removeNode(RMNode rmNode) {
     FSSchedulerNode node = nodes.get(rmNode.getNodeID());
     Resources.subtractFrom(clusterCapacity, rmNode.getTotalCapability());
+    updateRootQueueMetrics();
 
     // Remove running containers
     List<RMContainer> runningContainers = node.getRunningContainers();
@@ -901,6 +900,7 @@ public class FairScheduler implements ResourceScheduler {
         if ((assignedContainers >= maxAssign) && (maxAssign > 0)) { break; }
       }
     }
+    updateRootQueueMetrics();
   }
 
   @Override
@@ -921,6 +921,18 @@ public class FairScheduler implements ResourceScheduler {
       return null;
     }
     return new SchedulerAppReport(applications.get(appAttemptId));
+  }
+  
+  /**
+   * Subqueue metrics might be a little out of date because fair shares are
+   * recalculated at the update interval, but the root queue metrics needs to
+   * be updated synchronously with allocations and completions so that cluster
+   * metrics will be consistent.
+   */
+  private void updateRootQueueMetrics() {
+    rootMetrics.setAvailableResourcesToQueue(
+        Resources.subtract(
+            clusterCapacity, rootMetrics.getAllocatedResources()));
   }
 
   @Override
