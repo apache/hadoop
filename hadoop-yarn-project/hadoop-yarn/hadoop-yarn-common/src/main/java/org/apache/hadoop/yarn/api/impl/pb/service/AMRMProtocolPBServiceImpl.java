@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.impl.pb.service;
 
+import java.io.IOException;
+
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.AMRMProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -57,6 +59,8 @@ public class AMRMProtocolPBServiceImpl implements AMRMProtocolPB {
       return ((AllocateResponsePBImpl)response).getProto();
     } catch (YarnRemoteException e) {
       throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
     }
   }
 
@@ -70,6 +74,8 @@ public class AMRMProtocolPBServiceImpl implements AMRMProtocolPB {
       return ((FinishApplicationMasterResponsePBImpl)response).getProto();
     } catch (YarnRemoteException e) {
       throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
     }
   }
 
@@ -82,6 +88,8 @@ public class AMRMProtocolPBServiceImpl implements AMRMProtocolPB {
       RegisterApplicationMasterResponse response = real.registerApplicationMaster(request);
       return ((RegisterApplicationMasterResponsePBImpl)response).getProto();
     } catch (YarnRemoteException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }

@@ -162,7 +162,8 @@ public class ApplicationMasterService extends AbstractService implements
 
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
-      RegisterApplicationMasterRequest request) throws YarnRemoteException {
+      RegisterApplicationMasterRequest request) throws YarnRemoteException,
+      IOException {
 
     ApplicationAttemptId applicationAttemptId = request
         .getApplicationAttemptId();
@@ -211,7 +212,8 @@ public class ApplicationMasterService extends AbstractService implements
 
   @Override
   public FinishApplicationMasterResponse finishApplicationMaster(
-      FinishApplicationMasterRequest request) throws YarnRemoteException {
+      FinishApplicationMasterRequest request) throws YarnRemoteException,
+      IOException {
 
     ApplicationAttemptId applicationAttemptId = request
         .getApplicationAttemptId();
@@ -243,7 +245,7 @@ public class ApplicationMasterService extends AbstractService implements
 
   @Override
   public AllocateResponse allocate(AllocateRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
 
     ApplicationAttemptId appAttemptId = request.getApplicationAttemptId();
     authorizeRequest(appAttemptId);

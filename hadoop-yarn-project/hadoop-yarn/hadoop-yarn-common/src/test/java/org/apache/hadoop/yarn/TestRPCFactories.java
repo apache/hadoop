@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import junit.framework.Assert;
@@ -107,21 +108,23 @@ public class TestRPCFactories {
 
     @Override
     public RegisterApplicationMasterResponse registerApplicationMaster(
-        RegisterApplicationMasterRequest request) throws YarnRemoteException {
+        RegisterApplicationMasterRequest request) throws YarnRemoteException,
+        IOException {
       // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public FinishApplicationMasterResponse finishApplicationMaster(
-        FinishApplicationMasterRequest request) throws YarnRemoteException {
+        FinishApplicationMasterRequest request) throws YarnRemoteException,
+        IOException {
       // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public AllocateResponse allocate(AllocateRequest request)
-        throws YarnRemoteException {
+        throws YarnRemoteException, IOException {
       // TODO Auto-generated method stub
       return null;
     }

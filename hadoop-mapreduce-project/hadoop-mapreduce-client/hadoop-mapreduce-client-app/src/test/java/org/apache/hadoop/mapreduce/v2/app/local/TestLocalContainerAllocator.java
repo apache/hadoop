@@ -100,6 +100,7 @@ public class TestLocalContainerAllocator {
         when(scheduler.allocate(isA(AllocateRequest.class)))
           .thenThrow(RPCUtil.getRemoteException(new IOException("forcefail")));
       } catch (YarnRemoteException e) {
+      } catch (IOException e) {
       }
       return scheduler;
     }

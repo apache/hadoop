@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -173,10 +174,12 @@ public class AMRMClientAsync extends AbstractService {
   /**
    * Registers this application master with the resource manager. On successful
    * registration, starts the heartbeating thread.
+   * @throws YarnRemoteException
+   * @throws IOException
    */
   public RegisterApplicationMasterResponse registerApplicationMaster(
       String appHostName, int appHostPort, String appTrackingUrl)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     RegisterApplicationMasterResponse response =
         client.registerApplicationMaster(appHostName, appHostPort, appTrackingUrl);
     heartbeatThread.start();
@@ -189,9 +192,10 @@ public class AMRMClientAsync extends AbstractService {
    * @param appMessage Diagnostics message on failure
    * @param appTrackingUrl New URL to get master info
    * @throws YarnRemoteException
+   * @throws IOException
    */
   public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
-      String appMessage, String appTrackingUrl) throws YarnRemoteException {
+      String appMessage, String appTrackingUrl) throws YarnRemoteException, IOException {
     synchronized (client) {
       keepRunning = false;
       client.unregisterApplicationMaster(appStatus, appMessage, appTrackingUrl);
@@ -264,6 +268,8 @@ public class AMRMClientAsync extends AbstractService {
             response = client.allocate(progress);
           } catch (YarnRemoteException ex) {
             LOG.error("Failed to heartbeat", ex);
+          } catch (IOException e) {
+            LOG.error("Failed to heartbeat", e);
           }
         }
         if (response != null) {
