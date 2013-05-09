@@ -209,11 +209,7 @@ public class JobClient extends CLI {
      * completed.
      */
     public float mapProgress() throws IOException {
-      try {
-        return job.mapProgress();
-      } catch (InterruptedException ie) {
-        throw new IOException(ie);
-      }
+      return job.mapProgress();
     }
 
     /**
@@ -221,11 +217,7 @@ public class JobClient extends CLI {
      * completed.
      */
     public float reduceProgress() throws IOException {
-      try {
-        return job.reduceProgress();
-      } catch (InterruptedException ie) {
-        throw new IOException(ie);
-      }
+      return job.reduceProgress();
     }
 
     /**
@@ -245,33 +237,21 @@ public class JobClient extends CLI {
      * completed.
      */
     public float setupProgress() throws IOException {
-      try {
-        return job.setupProgress();
-      } catch (InterruptedException ie) {
-        throw new IOException(ie);
-      }
+      return job.setupProgress();
     }
 
     /**
      * Returns immediately whether the whole job is done yet or not.
      */
     public synchronized boolean isComplete() throws IOException {
-      try {
-        return job.isComplete();
-      } catch (InterruptedException ie) {
-        throw new IOException(ie);
-      }
+      return job.isComplete();
     }
 
     /**
      * True iff job completed successfully.
      */
     public synchronized boolean isSuccessful() throws IOException {
-      try {
-        return job.isSuccessful();
-      } catch (InterruptedException ie) {
-        throw new IOException(ie);
-      }
+      return job.isSuccessful();
     }
 
     /**
@@ -302,11 +282,7 @@ public class JobClient extends CLI {
      * Tells the service to terminate the current job.
      */
     public synchronized void killJob() throws IOException {
-      try {
-        job.killJob();
-      } catch (InterruptedException ie) {
-        throw new IOException(ie);
-      }
+      job.killJob();
     }
    
     
@@ -331,14 +307,10 @@ public class JobClient extends CLI {
      */
     public synchronized void killTask(TaskAttemptID taskId,
         boolean shouldFail) throws IOException {
-      try {
-        if (shouldFail) {
-          job.failTask(taskId);
-        } else {
-          job.killTask(taskId);
-        }
-      } catch (InterruptedException ie) {
-        throw new IOException(ie);
+      if (shouldFail) {
+        job.failTask(taskId);
+      } else {
+        job.killTask(taskId);
       }
     }
 
@@ -378,16 +350,12 @@ public class JobClient extends CLI {
      * Returns the counters for this job
      */
     public Counters getCounters() throws IOException {
-      try { 
-        Counters result = null;
-        org.apache.hadoop.mapreduce.Counters temp = job.getCounters();
-        if(temp != null) {
-          result = Counters.downgrade(temp);
-        }
-        return result;
-      } catch (InterruptedException ie) {
-        throw new IOException(ie);
+      Counters result = null;
+      org.apache.hadoop.mapreduce.Counters temp = job.getCounters();
+      if(temp != null) {
+        result = Counters.downgrade(temp);
       }
+      return result;
     }
     
     @Override

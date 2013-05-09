@@ -346,7 +346,7 @@ public class TestGridmixSummary {
       };
       
       @Override
-      public boolean isSuccessful() throws IOException, InterruptedException {
+      public boolean isSuccessful() throws IOException {
         if (lost) {
           throw new IOException("Test failure!");
         }
