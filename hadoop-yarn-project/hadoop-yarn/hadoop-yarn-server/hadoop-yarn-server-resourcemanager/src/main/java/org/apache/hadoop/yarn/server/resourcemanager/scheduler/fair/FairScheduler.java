@@ -893,6 +893,7 @@ public class FairScheduler implements ResourceScheduler {
         if (Resources.greaterThan(RESOURCE_CALCULATOR, clusterCapacity,
               queueMgr.getRootQueue().assignContainer(node),
               Resources.none())) {
+          assignedContainers++;
           assignedContainer = true;
         }
         if (!assignedContainer) { break; }
