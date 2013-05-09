@@ -233,6 +233,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5226. Handling YarnRemoteException separately from IOException in
     MR App's use of AMRMProtocol after YARN-630. (Xuan Gong via vinodkv)
 
+    MAPREDUCE-4942. mapreduce.Job has a bunch of methods that throw 
+    InterruptedException so its incompatible with MR1. (rkanter via tucu)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
