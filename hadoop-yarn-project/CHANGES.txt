@@ -362,6 +362,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-646. Fix two typos in Fair Scheduler user guide. (Dapeng Sun via atm)
 
+    YARN-507. Add interface visibility and stability annotations to FS 
+    interfaces/classes. (kkambatl via tucu)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
