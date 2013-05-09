@@ -160,6 +160,9 @@ Release 2.0.5-beta - UNRELEASED
     tokens for app attempt so that RM can be restarted while preserving current
     applications. (Jian He via vinodkv)
 
+    YARN-568. Add support for work preserving preemption to the FairScheduler.
+    (Carlo Curino and Sandy Ryza via cdouglas)
+
     YARN-598. Add virtual cores to queue metrics. (sandyr via tucu)
 
   OPTIMIZATIONS

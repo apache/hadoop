@@ -30,6 +30,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -900,9 +901,16 @@ public class TestFairScheduler {
    */
   public void testChoiceOfPreemptedContainers() throws Exception {
     Configuration conf = createConfiguration();
+    
+    conf.setLong(FairSchedulerConfiguration.PREEMPTION_INTERVAL, 5000);
+    conf.setLong(FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL, 10000); 
+    
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE + ".allocation.file", ALLOC_FILE);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
-
+    
+    MockClock clock = new MockClock();
+    scheduler.setClock(clock);
+    
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
@@ -997,15 +1005,38 @@ public class TestFairScheduler {
         Resources.createResource(2 * 1024));
     assertEquals(1, scheduler.applications.get(app1).getLiveContainers().size());
     assertEquals(1, scheduler.applications.get(app2).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app3).getLiveContainers().size());
     assertEquals(1, scheduler.applications.get(app4).getLiveContainers().size());
     assertEquals(1, scheduler.applications.get(app5).getLiveContainers().size());
+    
+    // First verify we are adding containers to preemption list for the application
+    assertTrue(!Collections.disjoint(scheduler.applications.get(app3).getLiveContainers(),
+                                     scheduler.applications.get(app3).getPreemptionContainers()));
+    assertTrue(!Collections.disjoint(scheduler.applications.get(app6).getLiveContainers(),
+                                     scheduler.applications.get(app6).getPreemptionContainers()));
+
+    // Pretend 15 seconds have passed
+    clock.tick(15);
+
+    // Trigger a kill by insisting we want containers back
+    scheduler.preemptResources(scheduler.getQueueManager().getLeafQueues(),
+        Resources.createResource(2 * 1024));
+
+    // At this point the containers should have been killed (since we are not simulating AM)
     assertEquals(0, scheduler.applications.get(app6).getLiveContainers().size());
+    assertEquals(0, scheduler.applications.get(app3).getLiveContainers().size());
+
+    // Trigger a kill by insisting we want containers back
+    scheduler.preemptResources(scheduler.getQueueManager().getLeafQueues(),
+        Resources.createResource(2 * 1024));
+
+    // Pretend 15 seconds have passed
+    clock.tick(15);
 
     // We should be able to claw back another container from A and B each.
     // Make sure it is lowest priority container.
     scheduler.preemptResources(scheduler.getQueueManager().getLeafQueues(),
         Resources.createResource(2 * 1024));
+    
     assertEquals(1, scheduler.applications.get(app1).getLiveContainers().size());
     assertEquals(0, scheduler.applications.get(app2).getLiveContainers().size());
     assertEquals(0, scheduler.applications.get(app3).getLiveContainers().size());

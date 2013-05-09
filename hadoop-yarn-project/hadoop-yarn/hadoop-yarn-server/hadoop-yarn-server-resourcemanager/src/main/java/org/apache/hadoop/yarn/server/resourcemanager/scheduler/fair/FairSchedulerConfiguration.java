@@ -55,6 +55,11 @@ public class FairSchedulerConfiguration extends Configuration {
   /** Whether preemption is enabled. */
   protected static final String  PREEMPTION = CONF_PREFIX + "preemption";
   protected static final boolean DEFAULT_PREEMPTION = false;
+  
+  protected static final String PREEMPTION_INTERVAL = CONF_PREFIX + "preemptionInterval";
+  protected static final int DEFAULT_PREEMPTION_INTERVAL = 5000;
+  protected static final String WAIT_TIME_BEFORE_KILL = CONF_PREFIX + "waitTimeBeforeKill";
+  protected static final int DEFAULT_WAIT_TIME_BEFORE_KILL = 15000;
 
   /** Whether to assign multiple containers in one check-in. */
   protected static final String  ASSIGN_MULTIPLE = CONF_PREFIX + "assignmultiple";
@@ -122,5 +127,13 @@ public class FairSchedulerConfiguration extends Configuration {
   public String getEventlogDir() {
     return get(EVENT_LOG_DIR, new File(System.getProperty("hadoop.log.dir",
     		"/tmp/")).getAbsolutePath() + File.separator + "fairscheduler");
+  }
+  
+  public int getPreemptionInterval() {
+    return getInt(PREEMPTION_INTERVAL, DEFAULT_PREEMPTION_INTERVAL);
+  }
+  
+  public int getWaitTimeBeforeKill() {
+    return getInt(WAIT_TIME_BEFORE_KILL, DEFAULT_WAIT_TIME_BEFORE_KILL);
   }
 }

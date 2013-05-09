@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -86,7 +87,9 @@ public class FSSchedulerApp extends SchedulerApplication {
 
   final Map<Priority, Map<NodeId, RMContainer>> reservedContainers = 
       new HashMap<Priority, Map<NodeId, RMContainer>>();
-  
+
+  final Map<RMContainer, Long> preemptionMap = new HashMap<RMContainer, Long>();
+
   /**
    * Count how many times the application has been given an opportunity
    * to schedule a task at each priority. Each time the scheduler
@@ -233,6 +236,9 @@ public class FSSchedulerApp extends SchedulerApplication {
     Resource containerResource = rmContainer.getContainer().getResource();
     queue.getMetrics().releaseResources(getUser(), 1, containerResource);
     Resources.subtractFrom(currentConsumption, containerResource);
+
+    // remove from preemption map if it is completed
+    preemptionMap.remove(rmContainer);
   }
 
   synchronized public List<Container> pullNewlyAllocatedContainers() {
@@ -573,5 +579,19 @@ public class FSSchedulerApp extends SchedulerApplication {
     LOG.info("Raising locality level from " + old + " to " + level + " at " +
         " priority " + priority);
     allowedLocalityLevel.put(priority, level);
+  }
+
+  // related methods
+  public void addPreemption(RMContainer container, long time) {
+    assert preemptionMap.get(container) == null;
+    preemptionMap.put(container, time);
+  }
+
+  public Long getContainerPreemptionTime(RMContainer container) {
+    return preemptionMap.get(container);
+  }
+
+  public Set<RMContainer> getPreemptionContainers() {
+    return preemptionMap.keySet();
   }
 }
