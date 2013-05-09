@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -424,6 +425,10 @@ public class QueueMetrics implements MetricsSource {
 
   public int getAppsFailed() {
     return appsFailed.value();
+  }
+  
+  public Resource getAllocatedResources() {
+    return BuilderUtils.newResource(allocatedMB.value(), 0);
   }
 
   public int getAllocatedMB() {
