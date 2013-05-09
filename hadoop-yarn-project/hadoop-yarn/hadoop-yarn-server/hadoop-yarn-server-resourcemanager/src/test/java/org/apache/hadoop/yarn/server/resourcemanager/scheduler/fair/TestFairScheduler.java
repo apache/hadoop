@@ -30,6 +30,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -67,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
@@ -127,6 +129,7 @@ public class TestFairScheduler {
   public void tearDown() {
     scheduler = null;
     resourceManager = null;
+    QueueMetrics.clearQueueMetrics();
   }
 
   private Configuration createConfiguration() {
@@ -336,6 +339,13 @@ public class TestFairScheduler {
 
     assertEquals(1024, scheduler.getQueueManager().getQueue("queue1").
       getResourceUsage().getMemory());
+
+    // verify metrics
+    QueueMetrics queue1Metrics = scheduler.getQueueManager().getQueue("queue1")
+        .getMetrics();
+    assertEquals(1024, queue1Metrics.getAllocatedMB());
+    assertEquals(1024, scheduler.getRootQueueMetrics().getAllocatedMB());
+    assertEquals(512, scheduler.getRootQueueMetrics().getAvailableMB());
   }
 
   @Test (timeout = 5000)
@@ -891,9 +901,16 @@ public class TestFairScheduler {
    */
   public void testChoiceOfPreemptedContainers() throws Exception {
     Configuration conf = createConfiguration();
+    
+    conf.setLong(FairSchedulerConfiguration.PREEMPTION_INTERVAL, 5000);
+    conf.setLong(FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL, 10000); 
+    
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE + ".allocation.file", ALLOC_FILE);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
-
+    
+    MockClock clock = new MockClock();
+    scheduler.setClock(clock);
+    
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
@@ -988,15 +1005,38 @@ public class TestFairScheduler {
         Resources.createResource(2 * 1024));
     assertEquals(1, scheduler.applications.get(app1).getLiveContainers().size());
     assertEquals(1, scheduler.applications.get(app2).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app3).getLiveContainers().size());
     assertEquals(1, scheduler.applications.get(app4).getLiveContainers().size());
     assertEquals(1, scheduler.applications.get(app5).getLiveContainers().size());
+    
+    // First verify we are adding containers to preemption list for the application
+    assertTrue(!Collections.disjoint(scheduler.applications.get(app3).getLiveContainers(),
+                                     scheduler.applications.get(app3).getPreemptionContainers()));
+    assertTrue(!Collections.disjoint(scheduler.applications.get(app6).getLiveContainers(),
+                                     scheduler.applications.get(app6).getPreemptionContainers()));
+
+    // Pretend 15 seconds have passed
+    clock.tick(15);
+
+    // Trigger a kill by insisting we want containers back
+    scheduler.preemptResources(scheduler.getQueueManager().getLeafQueues(),
+        Resources.createResource(2 * 1024));
+
+    // At this point the containers should have been killed (since we are not simulating AM)
     assertEquals(0, scheduler.applications.get(app6).getLiveContainers().size());
+    assertEquals(0, scheduler.applications.get(app3).getLiveContainers().size());
+
+    // Trigger a kill by insisting we want containers back
+    scheduler.preemptResources(scheduler.getQueueManager().getLeafQueues(),
+        Resources.createResource(2 * 1024));
+
+    // Pretend 15 seconds have passed
+    clock.tick(15);
 
     // We should be able to claw back another container from A and B each.
     // Make sure it is lowest priority container.
     scheduler.preemptResources(scheduler.getQueueManager().getLeafQueues(),
         Resources.createResource(2 * 1024));
+    
     assertEquals(1, scheduler.applications.get(app1).getLiveContainers().size());
     assertEquals(0, scheduler.applications.get(app2).getLiveContainers().size());
     assertEquals(0, scheduler.applications.get(app3).getLiveContainers().size());
@@ -1245,6 +1285,7 @@ public class TestFairScheduler {
     scheduler.handle(updateEvent);
 
     assertEquals(1, app.getLiveContainers().size());
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
     
     // Create request at higher priority
     createSchedulingRequestExistingApplication(1024, 1, attId);
@@ -1260,6 +1301,7 @@ public class TestFairScheduler {
     // Complete container
     scheduler.allocate(attId, new ArrayList<ResourceRequest>(),
         Arrays.asList(containerId));
+    assertEquals(1024, scheduler.getRootQueueMetrics().getAvailableMB());
     
     // Schedule at opening
     scheduler.update();
@@ -1271,6 +1313,7 @@ public class TestFairScheduler {
     for (RMContainer liveContainer : liveContainers) {
       Assert.assertEquals(2, liveContainer.getContainer().getPriority().getPriority());
     }
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
   }
   
   @Test
@@ -1380,6 +1423,37 @@ public class TestFairScheduler {
     scheduler.handle(updateEvent);
     assertEquals(2, app1.getLiveContainers().size());
     assertEquals(1, app2.getLiveContainers().size());
+  }
+
+  @Test(timeout = 3000)
+  public void testMaxAssign() throws AllocationConfigurationException {
+    // set required scheduler configs
+    scheduler.assignMultiple = true;
+    scheduler.getQueueManager().getLeafQueue("root.default")
+        .setPolicy(SchedulingPolicy.getDefault());
+
+    RMNode node = MockNodes.newNodeInfo(1, Resources.createResource(16384));
+    NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
+    scheduler.handle(nodeEvent);
+
+    ApplicationAttemptId attId =
+        createSchedulingRequest(1024, "root.default", "user", 8);
+    FSSchedulerApp app = scheduler.applications.get(attId);
+
+    // set maxAssign to 2: only 2 containers should be allocated
+    scheduler.maxAssign = 2;
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Incorrect number of containers allocated", 2, app
+        .getLiveContainers().size());
+
+    // set maxAssign to -1: all remaining containers should be allocated
+    scheduler.maxAssign = -1;
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Incorrect number of containers allocated", 8, app
+        .getLiveContainers().size());
   }
 
   /**
@@ -1543,5 +1617,25 @@ public class TestFairScheduler {
     
     assertEquals(1, app.getLiveContainers().size());
     assertEquals(0, app.getReservedContainers().size());
+  }
+  
+  @Test
+  public void testRemoveNodeUpdatesRootQueueMetrics() {
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
+    
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    NodeAddedSchedulerEvent addEvent = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(addEvent);
+    
+    assertEquals(1024, scheduler.getRootQueueMetrics().getAvailableMB());
+    scheduler.update(); // update shouldn't change things
+    assertEquals(1024, scheduler.getRootQueueMetrics().getAvailableMB());
+    
+    NodeRemovedSchedulerEvent removeEvent = new NodeRemovedSchedulerEvent(node1);
+    scheduler.handle(removeEvent);
+    
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
+    scheduler.update(); // update shouldn't change things
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
   }
 }

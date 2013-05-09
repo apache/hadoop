@@ -592,8 +592,10 @@ public class Client extends YarnClientImpl {
    * @param appId Application Id of application to be monitored
    * @return true if application completed successfully
    * @throws YarnRemoteException
+   * @throws IOException
    */
-  private boolean monitorApplication(ApplicationId appId) throws YarnRemoteException {
+  private boolean monitorApplication(ApplicationId appId)
+      throws YarnRemoteException, IOException {
 
     while (true) {
 
@@ -655,8 +657,10 @@ public class Client extends YarnClientImpl {
    * Kill a submitted application by sending a call to the ASM
    * @param appId Application Id to be killed. 
    * @throws YarnRemoteException
+   * @throws IOException
    */
-  private void forceKillApplication(ApplicationId appId) throws YarnRemoteException {
+  private void forceKillApplication(ApplicationId appId)
+      throws YarnRemoteException, IOException {
     // TODO clarify whether multiple jobs with the same app id can be submitted and be running at 
     // the same time. 
     // If yes, can we kill a particular attempt only?

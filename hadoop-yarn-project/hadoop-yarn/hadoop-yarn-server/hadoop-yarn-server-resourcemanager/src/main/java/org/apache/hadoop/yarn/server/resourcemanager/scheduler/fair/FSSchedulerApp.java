@@ -23,11 +23,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -57,9 +58,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 
+@Private
+@Unstable
 public class FSSchedulerApp extends SchedulerApplication {
 
   private static final Log LOG = LogFactory.getLog(FSSchedulerApp.class);
@@ -83,7 +87,9 @@ public class FSSchedulerApp extends SchedulerApplication {
 
   final Map<Priority, Map<NodeId, RMContainer>> reservedContainers = 
       new HashMap<Priority, Map<NodeId, RMContainer>>();
-  
+
+  final Map<RMContainer, Long> preemptionMap = new HashMap<RMContainer, Long>();
+
   /**
    * Count how many times the application has been given an opportunity
    * to schedule a task at each priority. Each time the scheduler
@@ -230,6 +236,9 @@ public class FSSchedulerApp extends SchedulerApplication {
     Resource containerResource = rmContainer.getContainer().getResource();
     queue.getMetrics().releaseResources(getUser(), 1, containerResource);
     Resources.subtractFrom(currentConsumption, containerResource);
+
+    // remove from preemption map if it is completed
+    preemptionMap.remove(rmContainer);
   }
 
   synchronized public List<Container> pullNewlyAllocatedContainers() {
@@ -306,8 +315,7 @@ public class FSSchedulerApp extends SchedulerApplication {
    * Used only by unit tests
    * @return total current reservations
    */
-  @Stable
-  @Private
+  @VisibleForTesting
   public synchronized Resource getCurrentReservation() {
     return currentReservation;
   }
@@ -571,5 +579,19 @@ public class FSSchedulerApp extends SchedulerApplication {
     LOG.info("Raising locality level from " + old + " to " + level + " at " +
         " priority " + priority);
     allowedLocalityLevel.put(priority, level);
+  }
+
+  // related methods
+  public void addPreemption(RMContainer container, long time) {
+    assert preemptionMap.get(container) == null;
+    preemptionMap.put(container, time);
+  }
+
+  public Long getContainerPreemptionTime(RMContainer container) {
+    return preemptionMap.get(container);
+  }
+
+  public Set<RMContainer> getPreemptionContainers() {
+    return preemptionMap.keySet();
   }
 }

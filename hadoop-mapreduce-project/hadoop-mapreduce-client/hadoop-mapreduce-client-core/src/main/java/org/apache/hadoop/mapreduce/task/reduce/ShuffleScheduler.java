@@ -359,7 +359,7 @@ class ShuffleScheduler<K,V> {
       }
     }
     LOG.info(host + " freed by " + Thread.currentThread().getName() + " in " + 
-             (System.currentTimeMillis()-shuffleStart.get()) + "s");
+             (System.currentTimeMillis()-shuffleStart.get()) + "ms");
   }
     
   public synchronized void resetKnownMaps() {

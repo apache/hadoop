@@ -10,9 +10,6 @@ Trunk - Unreleased
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
-    YARN-45. Add protocol for schedulers to request containers back from
-    ApplicationMasters. (Carlo Curino, cdouglas)
-
   IMPROVEMENTS
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
@@ -118,10 +115,19 @@ Release 2.0.5-beta - UNRELEASED
     YARN-632. Changed ContainerManager api to throw IOException and
     YarnRemoteException. (Xuan Gong via vinodkv)
 
+    YARN-631. Changed ClientRMProtocol api to throw IOException and
+    YarnRemoteException. (Xuan Gong via vinodkv)
+
+    YARN-630. Changed AMRMProtocol api to throw IOException and
+    YarnRemoteException. (Xuan Gong via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
     (kkambatl via tucu)
+
+    YARN-45. Add protocol for schedulers to request containers back from
+    ApplicationMasters. (Carlo Curino, cdouglas)
 
   IMPROVEMENTS
 
@@ -228,6 +234,11 @@ Release 2.0.5-beta - UNRELEASED
     YARN-582. Changed ResourceManager to recover Application token and client
     tokens for app attempt so that RM can be restarted while preserving current
     applications. (Jian He via vinodkv)
+
+    YARN-568. Add support for work preserving preemption to the FairScheduler.
+    (Carlo Curino and Sandy Ryza via cdouglas)
+
+    YARN-598. Add virtual cores to queue metrics. (sandyr via tucu)
 
   OPTIMIZATIONS
 
@@ -353,7 +364,15 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-646. Fix two typos in Fair Scheduler user guide. (Dapeng Sun via atm)
 
-Release 2.0.4-alpha - UNRELEASED
+    YARN-507. Add interface visibility and stability annotations to FS 
+    interfaces/classes. (kkambatl via tucu)
+
+    YARN-637. FS: maxAssign is not honored. (kkambatl via tucu)
+
+    YARN-655. Fair scheduler metrics should subtract allocated memory from 
+    available memory. (sandyr via tucu)
+
+Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
 

@@ -362,7 +362,7 @@ public class TestClientServiceDelegate {
   }
 
   private void testRMDownForJobStatusBeforeGetAMReport(Configuration conf,
-      int noOfRetries) throws YarnRemoteException {
+      int noOfRetries) throws YarnRemoteException, IOException {
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     conf.setBoolean(MRJobConfig.JOB_AM_ACCESS_DISABLED,
         !isAMReachableFromClient);
@@ -429,7 +429,8 @@ public class TestClientServiceDelegate {
         "N/A", 0.0f);
   }
 
-  private ResourceMgrDelegate getRMDelegate() throws YarnRemoteException {
+  private ResourceMgrDelegate getRMDelegate() throws YarnRemoteException,
+      IOException {
     ResourceMgrDelegate rm = mock(ResourceMgrDelegate.class);
     when(rm.getApplicationReport(jobId.getAppId())).thenReturn(null);
     return rm;

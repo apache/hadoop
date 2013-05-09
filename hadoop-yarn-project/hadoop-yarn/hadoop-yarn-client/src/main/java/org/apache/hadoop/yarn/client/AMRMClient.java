@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.client;
 
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -72,12 +74,13 @@ public interface AMRMClient extends Service {
    * @param appTrackingUrl URL at which the master info can be seen
    * @return <code>RegisterApplicationMasterResponse</code>
    * @throws YarnRemoteException
+   * @throws IOException
    */
   public RegisterApplicationMasterResponse 
                registerApplicationMaster(String appHostName,
                                          int appHostPort,
                                          String appTrackingUrl) 
-               throws YarnRemoteException;
+               throws YarnRemoteException, IOException;
   
   /**
    * Request additional containers and receive new container allocations.
@@ -92,9 +95,10 @@ public interface AMRMClient extends Service {
    * @param progressIndicator Indicates progress made by the master
    * @return the response of the allocate request
    * @throws YarnRemoteException
+   * @throws IOException
    */
   public AllocateResponse allocate(float progressIndicator) 
-                           throws YarnRemoteException;
+                           throws YarnRemoteException, IOException;
   
   /**
    * Unregister the application master. This must be called in the end.
@@ -102,11 +106,12 @@ public interface AMRMClient extends Service {
    * @param appMessage Diagnostics message on failure
    * @param appTrackingUrl New URL to get master info
    * @throws YarnRemoteException
+   * @throws IOException
    */
   public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
                                            String appMessage,
                                            String appTrackingUrl) 
-               throws YarnRemoteException;
+               throws YarnRemoteException, IOException;
   
   /**
    * Request containers for resources before calling <code>allocate</code>

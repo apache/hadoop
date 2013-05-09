@@ -224,6 +224,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5159. Change ValueAggregatorJob to add APIs which can support
     binary compatibility with hadoop-1 examples. (Zhijie Shen via vinodkv)
 
+    MAPREDUCE-5157. Bring back old sampler related code so that we can support
+    binary compatibility with hadoop-1 sorter example. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
@@ -383,7 +386,19 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5204. Handling YarnRemoteException separately from IOException in
     MR app after YARN-629. (Xuan Gong via vinodkv)
 
-Release 2.0.4-alpha - UNRELEASED
+    MAPREDUCE-5209. Fix units in a ShuffleScheduler log message.
+    (Tsuyoshi OZAWA via cdouglas)
+
+    MAPREDUCE-5212. Handling YarnRemoteException separately from IOException in
+    MR App's use of ClientRMProtocol after YARN-631. (Xuan Gong via vinodkv)
+
+    MAPREDUCE-5226. Handling YarnRemoteException separately from IOException in
+    MR App's use of AMRMProtocol after YARN-630. (Xuan Gong via vinodkv)
+
+    MAPREDUCE-4942. mapreduce.Job has a bunch of methods that throw 
+    InterruptedException so its incompatible with MR1. (rkanter via tucu)
+
+Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
 

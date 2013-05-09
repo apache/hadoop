@@ -23,6 +23,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -89,6 +92,8 @@ public class TestYarnClient {
         client.submitApplication(context);
       } catch (YarnRemoteException e) {
         Assert.fail("Exception is not expected.");
+      } catch (IOException e) {
+        Assert.fail("Exception is not expected.");
       }
       verify(((MockYarnClient) client).mockReport,times(4 * i + 4))
           .getYarnApplicationState();
@@ -114,6 +119,8 @@ public class TestYarnClient {
         when(rmClient.getApplicationReport(any(
             GetApplicationReportRequest.class))).thenReturn(mockResponse);
       } catch (YarnRemoteException e) {
+        Assert.fail("Exception is not expected.");
+      } catch (IOException e) {
         Assert.fail("Exception is not expected.");
       }
       when(mockResponse.getApplicationReport()).thenReturn(mockReport);

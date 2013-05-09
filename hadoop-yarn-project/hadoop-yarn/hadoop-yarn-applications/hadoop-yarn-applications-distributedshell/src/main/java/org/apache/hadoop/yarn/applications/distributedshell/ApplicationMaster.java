@@ -433,8 +433,9 @@ public class ApplicationMaster {
    * Main run function for the application master
    *
    * @throws YarnRemoteException
+   * @throws IOException
    */
-  public boolean run() throws YarnRemoteException {
+  public boolean run() throws YarnRemoteException, IOException {
     LOG.info("Starting ApplicationMaster");
 
     AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
@@ -533,6 +534,8 @@ public class ApplicationMaster {
       resourceManager.unregisterApplicationMaster(appStatus, appMessage, null);
     } catch (YarnRemoteException ex) {
       LOG.error("Failed to unregister application", ex);
+    } catch (IOException e) {
+      LOG.error("Failed to unregister application", e);
     }
     
     done = true;

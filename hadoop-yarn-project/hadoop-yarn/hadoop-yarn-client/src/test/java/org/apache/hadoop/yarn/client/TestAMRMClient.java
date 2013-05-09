@@ -23,6 +23,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -69,7 +70,7 @@ public class TestAMRMClient {
   int nodeCount = 3;
   
   @Before
-  public void setup() throws YarnRemoteException {
+  public void setup() throws YarnRemoteException, IOException {
     // start minicluster
     conf = new YarnConfiguration();
     yarnCluster = new MiniYARNCluster(TestAMRMClient.class.getName(), nodeCount, 1, 1);
@@ -134,7 +135,7 @@ public class TestAMRMClient {
   }
 
   @Test (timeout=60000)
-  public void testAMRMClient() throws YarnRemoteException {
+  public void testAMRMClient() throws YarnRemoteException, IOException {
     AMRMClientImpl amClient = null;
     try {
       // start am rm client
@@ -158,7 +159,7 @@ public class TestAMRMClient {
   
   
   private void testAllocation(final AMRMClientImpl amClient)  
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     // setup container request
     final Resource capability = Records.newRecord(Resource.class);
     final Priority priority = Records.newRecord(Priority.class);

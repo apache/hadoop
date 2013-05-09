@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -57,10 +59,11 @@ public interface AMRMProtocol {
    * @param request registration request
    * @return registration respose
    * @throws YarnRemoteException
+   * @throws IOException
    */
   public RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request) 
-  throws YarnRemoteException;
+  throws YarnRemoteException, IOException;
   
   /**
    * <p>The interface used by an <code>ApplicationMaster</code> to notify the 
@@ -76,10 +79,11 @@ public interface AMRMProtocol {
    * @param request completion request
    * @return completion response
    * @throws YarnRemoteException
+   * @throws IOException
    */
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request) 
-  throws YarnRemoteException;
+  throws YarnRemoteException, IOException;
   
   /**
    * <p>The main interface between an <code>ApplicationMaster</code> 
@@ -105,7 +109,8 @@ public interface AMRMProtocol {
    * @param request allocation request
    * @return allocation response
    * @throws YarnRemoteException
+   * @throws IOException
    */
   public AllocateResponse allocate(AllocateRequest request) 
-  throws YarnRemoteException;
+  throws YarnRemoteException, IOException;
 }
