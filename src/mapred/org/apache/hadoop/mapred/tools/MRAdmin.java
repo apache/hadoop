@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred.tools;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -41,6 +42,7 @@ import org.apache.hadoop.util.ToolRunner;
  * and 1) refresh the service-level authorization policy, 2) refresh queue acl
  * properties.
  */
+@Private
 public class MRAdmin extends Configured implements Tool {
 
   public MRAdmin() {

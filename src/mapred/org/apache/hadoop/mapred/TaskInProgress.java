@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapred.TaskStatus.State;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -52,6 +53,7 @@ import org.apache.hadoop.net.Node;
  * ever have to handle.  Once those are up, the TIP is dead.
  * **************************************************************
  */
+@Private
 class TaskInProgress {
   static final int MAX_TASK_EXECS = 1;
   int maxTaskAttempts = 4;    
