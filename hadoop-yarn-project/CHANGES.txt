@@ -160,6 +160,8 @@ Release 2.0.5-beta - UNRELEASED
     tokens for app attempt so that RM can be restarted while preserving current
     applications. (Jian He via vinodkv)
 
+    YARN-598. Add virtual cores to queue metrics. (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
