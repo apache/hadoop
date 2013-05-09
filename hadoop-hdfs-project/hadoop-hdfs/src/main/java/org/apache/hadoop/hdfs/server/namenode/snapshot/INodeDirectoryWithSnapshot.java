@@ -855,7 +855,6 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   
   /**
    * Destroy a subtree under a DstReference node.
-   * @see INodeReference.DstReference#destroyAndCollectBlocks(BlocksMapUpdateInfo, List)
    */
   public static void destroyDstSubtree(INode inode, final Snapshot snapshot,
       final Snapshot prior, final BlocksMapUpdateInfo collectedBlocks,

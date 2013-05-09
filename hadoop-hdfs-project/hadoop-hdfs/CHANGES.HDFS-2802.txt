@@ -351,3 +351,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4806. In INodeDirectoryWithSnapshot, use isInLatestSnapshot() to 
   determine if an added/removed child should be recorded in the snapshot diff.
   (Jing Zhao via szetszwo)
+
+  HDFS-4809. When a QuotaExceededException is thrown during rename, the quota
+  usage should be subtracted back.  (Jing Zhao via szetszwo)

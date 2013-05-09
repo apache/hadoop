@@ -710,7 +710,7 @@ public class FSDirectory implements Closeable {
           ((INodeDirectoryWithSnapshot) srcParent).undoRename4ScrParent(
               oldSrcChild.asReference(), srcChild, srcIIP.getLatestSnapshot());
         } else {
-          // srcParent is not an INodeDirectoryWithSnapshot, we only need to add
+          // original srcChild is not in latest snapshot, we only need to add
           // the srcChild back
           addLastINodeNoQuotaCheck(srcIIP, srcChild);
         }
@@ -2185,8 +2185,15 @@ public class FSDirectory implements Closeable {
     updateCount(iip, pos,
         counts.get(Quota.NAMESPACE), counts.get(Quota.DISKSPACE), checkQuota);
     final INodeDirectory parent = inodes[pos-1].asDirectory();
-    final boolean added = parent.addChild(child, true, iip.getLatestSnapshot(),
-        inodeMap);
+    boolean added = false;
+    try {
+      added = parent.addChild(child, true, iip.getLatestSnapshot(),
+          inodeMap);
+    } catch (QuotaExceededException e) {
+      updateCountNoQuotaCheck(iip, pos,
+          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+      throw e;
+    }
     if (!added) {
       updateCountNoQuotaCheck(iip, pos,
           -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
