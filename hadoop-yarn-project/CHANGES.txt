@@ -287,6 +287,8 @@ Release 2.0.5-beta - UNRELEASED
     YARN-507. Add interface visibility and stability annotations to FS 
     interfaces/classes. (kkambatl via tucu)
 
+    YARN-637. FS: maxAssign is not honored. (kkambatl via tucu)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
