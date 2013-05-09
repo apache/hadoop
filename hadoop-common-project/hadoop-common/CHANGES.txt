@@ -694,6 +694,8 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9455. HADOOP_CLIENT_OPTS appended twice causes JVM failures.
     (Chris Nauroth via suresh)
 
+    HADOOP-9550. Remove aspectj dependency. (kkambatl via tucu)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
