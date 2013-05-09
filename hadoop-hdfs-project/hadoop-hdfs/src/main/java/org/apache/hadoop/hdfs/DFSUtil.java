@@ -85,12 +85,26 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.SignedBytes;
 import com.google.protobuf.BlockingService;
 
 @InterfaceAudience.Private
 public class DFSUtil {
   public static final Log LOG = LogFactory.getLog(DFSUtil.class.getName());
   
+  public static final byte[] EMPTY_BYTES = {};
+
+  /** Compare two byte arrays by lexicographical order. */
+  public static int compareBytes(byte[] left, byte[] right) {
+    if (left == null) {
+      left = EMPTY_BYTES;
+    }
+    if (right == null) {
+      right = EMPTY_BYTES;
+    }
+    return SignedBytes.lexicographicalComparator().compare(left, right);
+  }
+
   private DFSUtil() { /* Hidden constructor */ }
   private static final ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
     @Override
@@ -211,8 +225,21 @@ public class DFSUtil {
    * Converts a byte array to a string using UTF8 encoding.
    */
   public static String bytes2String(byte[] bytes) {
+    return bytes2String(bytes, 0, bytes.length);
+  }
+  
+  /**
+   * Decode a specific range of bytes of the given byte array to a string
+   * using UTF8.
+   * 
+   * @param bytes The bytes to be decoded into characters
+   * @param offset The index of the first byte to decode
+   * @param length The number of bytes to decode
+   * @return The decoded string
+   */
+  public static String bytes2String(byte[] bytes, int offset, int length) {
     try {
-      return new String(bytes, "UTF8");
+      return new String(bytes, offset, length, "UTF8");
     } catch(UnsupportedEncodingException e) {
       assert false : "UTF8 encoding is not supported ";
     }
@@ -230,9 +257,10 @@ public class DFSUtil {
    * Given a list of path components returns a path as a UTF8 String
    */
   public static String byteArray2PathString(byte[][] pathComponents) {
-    if (pathComponents.length == 0)
+    if (pathComponents.length == 0) {
       return "";
-    if (pathComponents.length == 1 && pathComponents[0].length == 0) {
+    } else if (pathComponents.length == 1
+        && (pathComponents[0] == null || pathComponents[0].length == 0)) {
       return Path.SEPARATOR;
     }
     StringBuilder result = new StringBuilder();
@@ -243,6 +271,37 @@ public class DFSUtil {
       }
     }
     return result.toString();
+  }
+  
+  /**
+   * Given a list of path components returns a byte array
+   */
+  public static byte[] byteArray2bytes(byte[][] pathComponents) {
+    if (pathComponents.length == 0) {
+      return EMPTY_BYTES;
+    } else if (pathComponents.length == 1
+        && (pathComponents[0] == null || pathComponents[0].length == 0)) {
+      return new byte[]{(byte) Path.SEPARATOR_CHAR};
+    }
+    int length = 0;
+    for (int i = 0; i < pathComponents.length; i++) {
+      length += pathComponents[i].length;
+      if (i < pathComponents.length - 1) {
+        length++; // for SEPARATOR
+      }
+    }
+    byte[] path = new byte[length];
+    int index = 0;
+    for (int i = 0; i < pathComponents.length; i++) {
+      System.arraycopy(pathComponents[i], 0, path, index,
+          pathComponents[i].length);
+      index += pathComponents[i].length;
+      if (i < pathComponents.length - 1) {
+        path[index] = (byte) Path.SEPARATOR_CHAR;
+        index++;
+      }
+    }
+    return path;
   }
 
   /** Convert an object representing a path to a string. */

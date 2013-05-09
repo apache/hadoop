@@ -24,17 +24,22 @@ import java.util.Arrays;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.MutableBlockCollection;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+
+import com.google.common.base.Preconditions;
 
 /**
  * I-node for file being written.
  */
 @InterfaceAudience.Private
-class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollection {
+public class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollection {
   /** Cast INode to INodeFileUnderConstruction. */
   public static INodeFileUnderConstruction valueOf(INode inode, String path
       ) throws FileNotFoundException {
@@ -57,11 +62,8 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
-    super(id, permissions, BlockInfo.EMPTY_ARRAY, replication, modTime,
-        modTime, preferredBlockSize);
-    this.clientName = clientName;
-    this.clientMachine = clientMachine;
-    this.clientNode = clientNode;
+    this(id, null, replication, modTime, preferredBlockSize, BlockInfo.EMPTY_ARRAY,
+        permissions, clientName, clientMachine, clientNode);
   }
 
   INodeFileUnderConstruction(long id,
@@ -74,15 +76,24 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
-    super(id, perm, blocks, blockReplication, modificationTime,
-        modificationTime, preferredBlockSize);
-    setLocalName(name);
+    super(id, name, perm, modificationTime, modificationTime,
+        blocks, blockReplication, preferredBlockSize);
+    this.clientName = clientName;
+    this.clientMachine = clientMachine;
+    this.clientNode = clientNode;
+  }
+  
+  public INodeFileUnderConstruction(final INodeFile that,
+      final String clientName,
+      final String clientMachine,
+      final DatanodeDescriptor clientNode) {
+    super(that);
     this.clientName = clientName;
     this.clientMachine = clientMachine;
     this.clientNode = clientNode;
   }
 
-  String getClientName() {
+  public String getClientName() {
     return clientName;
   }
 
@@ -90,51 +101,56 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
     this.clientName = clientName;
   }
 
-  String getClientMachine() {
+  public String getClientMachine() {
     return clientMachine;
   }
 
-  DatanodeDescriptor getClientNode() {
+  public DatanodeDescriptor getClientNode() {
     return clientNode;
   }
 
-  /**
-   * Is this inode being constructed?
-   */
+  /** @return true unconditionally. */
   @Override
-  public boolean isUnderConstruction() {
+  public final boolean isUnderConstruction() {
     return true;
   }
 
-  //
-  // converts a INodeFileUnderConstruction into a INodeFile
-  // use the modification time as the access time
-  //
-  INodeFile convertToInodeFile() {
-    assert allBlocksComplete() : "Can't finalize inode " + this
-      + " since it contains non-complete blocks! Blocks are "
-      + Arrays.asList(getBlocks());
-    INodeFile obj = new INodeFile(getId(),
-                                  getPermissionStatus(),
-                                  getBlocks(),
-                                  getBlockReplication(),
-                                  getModificationTime(),
-                                  getModificationTime(),
-                                  getPreferredBlockSize());
-    return obj;
-    
+  /**
+   * Converts an INodeFileUnderConstruction to an INodeFile.
+   * The original modification time is used as the access time.
+   * The new modification is the specified mtime.
+   */
+  protected INodeFile toINodeFile(long mtime) {
+    assertAllBlocksComplete();
+
+    final INodeFile f = new INodeFile(getId(), getLocalNameBytes(),
+        getPermissionStatus(), mtime, getModificationTime(),
+        getBlocks(), getFileReplication(), getPreferredBlockSize());
+    f.setParent(getParent());
+    return f;
   }
   
-  /**
-   * @return true if all of the blocks in this file are marked as completed.
-   */
-  private boolean allBlocksComplete() {
-    for (BlockInfo b : getBlocks()) {
-      if (!b.isComplete()) {
-        return false;
-      }
+  @Override
+  public INodeFileUnderConstruction recordModification(final Snapshot latest,
+      final INodeMap inodeMap) throws QuotaExceededException {
+    if (isInLatestSnapshot(latest)) {
+      INodeFileUnderConstructionWithSnapshot newFile = getParent()
+          .replaceChild4INodeFileUcWithSnapshot(this, inodeMap)
+          .recordModification(latest, inodeMap);
+      return newFile;
+    } else {
+      return this;
     }
-    return true;
+  }
+
+  /** Assert all blocks are complete. */
+  protected void assertAllBlocksComplete() {
+    final BlockInfo[] blocks = getBlocks();
+    for (int i = 0; i < blocks.length; i++) {
+      Preconditions.checkState(blocks[i].isComplete(), "Failed to finalize"
+          + " %s %s since blocks[%s] is non-complete, where blocks=%s.",
+          getClass().getSimpleName(), this, i, Arrays.asList(getBlocks()));
+    }
   }
 
   /**

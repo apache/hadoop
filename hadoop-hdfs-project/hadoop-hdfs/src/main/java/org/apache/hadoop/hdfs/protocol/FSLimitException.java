@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.Path;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -48,21 +47,29 @@ public abstract class FSLimitException extends QuotaExceededException {
   class PathComponentTooLongException extends FSLimitException {
     protected static final long serialVersionUID = 1L;
 
+    private String childName;
+
     protected PathComponentTooLongException() {}
 
     protected PathComponentTooLongException(String msg) {
       super(msg);
     }
     
-    public PathComponentTooLongException(long quota, long count) {
+    public PathComponentTooLongException(long quota, long count,
+        String parentPath, String childName) {
       super(quota, count);
+      setPathName(parentPath);
+      this.childName = childName;
+    }
+
+    String getParentPath() {
+      return pathName;
     }
 
     @Override
     public String getMessage() {
-      Path violator = new Path(pathName);
-      return "The maximum path component name limit of " + violator.getName() +
-      " in directory " + violator.getParent() +
+      return "The maximum path component name limit of " + childName +
+      " in directory " + getParentPath() +
       " is exceeded: limit=" + quota + " length=" + count; 
     }
   }
@@ -88,6 +95,17 @@ public abstract class FSLimitException extends QuotaExceededException {
     public String getMessage() {
       return "The directory item limit of " + pathName +
       " is exceeded: limit=" + quota + " items=" + count; 
+    }
+  }
+
+  /** The given name is illegal. */
+  public static final class IllegalNameException extends FSLimitException {
+    public static final long serialVersionUID = 1L;
+    
+    public IllegalNameException() {}
+
+    public IllegalNameException(String msg) {
+      super(msg);
     }
   }
 }

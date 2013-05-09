@@ -22,8 +22,10 @@ import static org.apache.hadoop.util.Time.now;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,16 +39,21 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.BlockListUpdatingOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CancelDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ClearNSQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ConcatDeleteOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CreateSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteSnapshotOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DisallowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.GetDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ReassignLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetNSQuotaOp;
@@ -58,6 +65,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.util.Holder;
 
@@ -268,7 +276,9 @@ public class FSEditLogLoader {
       // 3. OP_ADD to open file for append
 
       // See if the file already exists (persistBlocks call)
-      INodeFile oldFile = getINodeFile(fsDir, addCloseOp.path);
+      final INodesInPath iip = fsDir.getLastINodeInPath(addCloseOp.path);
+      final INodeFile oldFile = INodeFile.valueOf(
+          iip.getINode(0), addCloseOp.path, true);
       INodeFile newFile = oldFile;
       if (oldFile == null) { // this is OP_ADD on a new file (case 1)
         // versions > 0 support per file replication
@@ -280,7 +290,7 @@ public class FSEditLogLoader {
         // add to the file tree
         inodeId = getAndUpdateLastInodeId(addCloseOp.inodeId, logVersion,
             lastInodeId);
-        newFile = (INodeFile) fsDir.unprotectedAddFile(inodeId,
+        newFile = fsDir.unprotectedAddFile(inodeId,
             addCloseOp.path, addCloseOp.permissions, replication,
             addCloseOp.mtime, addCloseOp.atime, addCloseOp.blockSize, true,
             addCloseOp.clientName, addCloseOp.clientMachine);
@@ -295,8 +305,9 @@ public class FSEditLogLoader {
           }
           fsNamesys.prepareFileForWrite(addCloseOp.path, oldFile,
               addCloseOp.clientName, addCloseOp.clientMachine, null,
-              false);
-          newFile = getINodeFile(fsDir, addCloseOp.path);
+              false, iip.getLatestSnapshot());
+          newFile = INodeFile.valueOf(fsDir.getINode(addCloseOp.path),
+              addCloseOp.path, true);
         }
       }
       // Fall-through for case 2.
@@ -304,8 +315,8 @@ public class FSEditLogLoader {
       // update the block list.
       
       // Update the salient file attributes.
-      newFile.setAccessTime(addCloseOp.atime);
-      newFile.setModificationTimeForce(addCloseOp.mtime);
+      newFile.setAccessTime(addCloseOp.atime, null, fsDir.getINodeMap());
+      newFile.setModificationTime(addCloseOp.mtime, null, fsDir.getINodeMap());
       updateBlocks(fsDir, addCloseOp, newFile);
       break;
     }
@@ -319,15 +330,12 @@ public class FSEditLogLoader {
             " clientMachine " + addCloseOp.clientMachine);
       }
 
-      INodeFile oldFile = getINodeFile(fsDir, addCloseOp.path);
-      if (oldFile == null) {
-        throw new IOException("Operation trying to close non-existent file " +
-            addCloseOp.path);
-      }
-      
+      final INodesInPath iip = fsDir.getLastINodeInPath(addCloseOp.path);
+      final INodeFile oldFile = INodeFile.valueOf(iip.getINode(0), addCloseOp.path);
+
       // Update the salient file attributes.
-      oldFile.setAccessTime(addCloseOp.atime);
-      oldFile.setModificationTimeForce(addCloseOp.mtime);
+      oldFile.setAccessTime(addCloseOp.atime, null, fsDir.getINodeMap());
+      oldFile.setModificationTime(addCloseOp.mtime, null, fsDir.getINodeMap());
       updateBlocks(fsDir, addCloseOp, oldFile);
 
       // Now close the file
@@ -344,8 +352,8 @@ public class FSEditLogLoader {
       if (oldFile.isUnderConstruction()) {
         INodeFileUnderConstruction ucFile = (INodeFileUnderConstruction) oldFile;
         fsNamesys.leaseManager.removeLeaseWithPrefixPath(addCloseOp.path);
-        INodeFile newFile = ucFile.convertToInodeFile();
-        fsDir.unprotectedReplaceNode(addCloseOp.path, ucFile, newFile);
+        INodeFile newFile = ucFile.toINodeFile(ucFile.getModificationTime());
+        fsDir.unprotectedReplaceINodeFile(addCloseOp.path, ucFile, newFile);
       }
       break;
     }
@@ -355,13 +363,8 @@ public class FSEditLogLoader {
         FSNamesystem.LOG.debug(op.opCode + ": " + updateOp.path +
             " numblocks : " + updateOp.blocks.length);
       }
-      INodeFile oldFile = getINodeFile(fsDir, updateOp.path);
-      if (oldFile == null) {
-        throw new IOException(
-            "Operation trying to update blocks in non-existent file " +
-            updateOp.path);
-      }
-      
+      INodeFile oldFile = INodeFile.valueOf(fsDir.getINode(updateOp.path),
+          updateOp.path);
       // Update in-memory data structures
       updateBlocks(fsDir, updateOp, oldFile);
       break;
@@ -510,6 +513,44 @@ public class FSEditLogLoader {
       // no data in here currently.
       break;
     }
+    case OP_CREATE_SNAPSHOT: {
+      CreateSnapshotOp createSnapshotOp = (CreateSnapshotOp) op;
+      fsNamesys.getSnapshotManager().createSnapshot(
+          createSnapshotOp.snapshotRoot, createSnapshotOp.snapshotName);
+      break;
+    }
+    case OP_DELETE_SNAPSHOT: {
+      DeleteSnapshotOp deleteSnapshotOp = (DeleteSnapshotOp) op;
+      BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
+      List<INode> removedINodes = new ArrayList<INode>();
+      fsNamesys.getSnapshotManager().deleteSnapshot(
+          deleteSnapshotOp.snapshotRoot, deleteSnapshotOp.snapshotName,
+          collectedBlocks, removedINodes);
+      fsNamesys.removeBlocks(collectedBlocks);
+      collectedBlocks.clear();
+      fsNamesys.dir.removeFromInodeMap(removedINodes);
+      removedINodes.clear();
+      break;
+    }
+    case OP_RENAME_SNAPSHOT: {
+      RenameSnapshotOp renameSnapshotOp = (RenameSnapshotOp) op;
+      fsNamesys.getSnapshotManager().renameSnapshot(
+          renameSnapshotOp.snapshotRoot, renameSnapshotOp.snapshotOldName,
+          renameSnapshotOp.snapshotNewName);
+      break;
+    }
+    case OP_ALLOW_SNAPSHOT: {
+      AllowSnapshotOp allowSnapshotOp = (AllowSnapshotOp) op;
+      fsNamesys.getSnapshotManager().setSnapshottable(
+          allowSnapshotOp.snapshotRoot, false);
+      break;
+    }
+    case OP_DISALLOW_SNAPSHOT: {
+      DisallowSnapshotOp disallowSnapshotOp = (DisallowSnapshotOp) op;
+      fsNamesys.getSnapshotManager().resetSnapshottable(
+          disallowSnapshotOp.snapshotRoot);
+      break;
+    }
     default:
       throw new IOException("Invalid operation read " + op.opCode);
     }
@@ -532,18 +573,7 @@ public class FSEditLogLoader {
     }
     return sb.toString();
   }
-  
-  private static INodeFile getINodeFile(FSDirectory fsDir, String path)
-      throws IOException {
-    INode inode = fsDir.getINode(path);
-    if (inode != null) {
-      if (!(inode instanceof INodeFile)) {
-        throw new IOException("Operation trying to get non-file " + path);
-      }
-    }
-    return (INodeFile)inode;
-  }
-  
+
   /**
    * Update in-memory data structures with new block information.
    * @throws IOException

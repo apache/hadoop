@@ -218,6 +218,8 @@ public class TestFilterFileSystem {
         continue;
       if (Modifier.isPrivate(m.getModifiers()))
         continue;
+      if (Modifier.isFinal(m.getModifiers()))
+        continue;
       
       try {
         DontCheck.class.getMethod(m.getName(), m.getParameterTypes());

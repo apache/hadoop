@@ -41,18 +41,16 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPAC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
 
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -119,6 +117,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
@@ -135,6 +135,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -1354,7 +1355,8 @@ public class DFSClient implements java.io.Closeable {
                                      ParentNotDirectoryException.class,
                                      NSQuotaExceededException.class, 
                                      DSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 
@@ -1385,7 +1387,8 @@ public class DFSClient implements java.io.Closeable {
                                      SafeModeException.class,
                                      DSQuotaExceededException.class,
                                      UnsupportedOperationException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
     return DFSOutputStream.newStreamForAppend(this, src, buffersize, progress,
         lastBlock, stat, dfsClientConf.createChecksum());
@@ -1438,7 +1441,8 @@ public class DFSClient implements java.io.Closeable {
                                      FileNotFoundException.class,
                                      SafeModeException.class,
                                      DSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 
@@ -1456,7 +1460,8 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 
@@ -1470,7 +1475,8 @@ public class DFSClient implements java.io.Closeable {
       namenode.concat(trg, srcs);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
   /**
@@ -1490,7 +1496,8 @@ public class DFSClient implements java.io.Closeable {
                                      ParentNotDirectoryException.class,
                                      SafeModeException.class,
                                      NSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
   /**
@@ -1518,7 +1525,8 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
   
@@ -1941,7 +1949,8 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 
@@ -1962,7 +1971,8 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class);                                   
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);                                   
     }
   }
 
@@ -2037,7 +2047,121 @@ public class DFSClient implements java.io.Closeable {
   public boolean setSafeMode(SafeModeAction action, boolean isChecked) throws IOException{
     return namenode.setSafeMode(action, isChecked);    
   }
+ 
+  /**
+   * Create one snapshot.
+   * 
+   * @param snapshotRoot The directory where the snapshot is to be taken
+   * @param snapshotName Name of the snapshot
+   * @return the snapshot path.
+   * @see ClientProtocol#createSnapshot(String, String)
+   */
+  public String createSnapshot(String snapshotRoot, String snapshotName)
+      throws IOException {
+    checkOpen();
+    try {
+      return namenode.createSnapshot(snapshotRoot, snapshotName);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+  
+  /**
+   * Delete a snapshot of a snapshottable directory.
+   * 
+   * @param snapshotRoot The snapshottable directory that the 
+   *                    to-be-deleted snapshot belongs to
+   * @param snapshotName The name of the to-be-deleted snapshot
+   * @throws IOException
+   * @see ClientProtocol#deleteSnapshot(String, String)
+   */
+  public void deleteSnapshot(String snapshotRoot, String snapshotName)
+      throws IOException {
+    try {
+      namenode.deleteSnapshot(snapshotRoot, snapshotName);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+  
+  /**
+   * Rename a snapshot.
+   * @param snapshotDir The directory path where the snapshot was taken
+   * @param snapshotOldName Old name of the snapshot
+   * @param snapshotNewName New name of the snapshot
+   * @throws IOException
+   * @see ClientProtocol#renameSnapshot(String, String, String)
+   */
+  public void renameSnapshot(String snapshotDir, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    checkOpen();
+    try {
+      namenode.renameSnapshot(snapshotDir, snapshotOldName, snapshotNewName);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+  
+  /**
+   * Get all the current snapshottable directories.
+   * @return All the current snapshottable directories
+   * @throws IOException
+   * @see ClientProtocol#getSnapshottableDirListing()
+   */
+  public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
+      throws IOException {
+    checkOpen();
+    try {
+      return namenode.getSnapshottableDirListing();
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
 
+  /**
+   * Allow snapshot on a directory.
+   * 
+   * @see ClientProtocol#allowSnapshot(String snapshotRoot)
+   */
+  public void allowSnapshot(String snapshotRoot) throws IOException {
+    checkOpen();
+    try {
+      namenode.allowSnapshot(snapshotRoot);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+  
+  /**
+   * Disallow snapshot on a directory.
+   * 
+   * @see ClientProtocol#disallowSnapshot(String snapshotRoot)
+   */
+  public void disallowSnapshot(String snapshotRoot) throws IOException {
+    checkOpen();
+    try {
+      namenode.disallowSnapshot(snapshotRoot);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+  
+  /**
+   * Get the difference between two snapshots, or between a snapshot and the
+   * current tree of a directory.
+   * @see ClientProtocol#getSnapshotDiffReport(String, String, String)
+   */
+  public SnapshotDiffReport getSnapshotDiffReport(Path snapshotDir,
+      String fromSnapshot, String toSnapshot) throws IOException {
+    checkOpen();
+    try {
+      return namenode.getSnapshotDiffReport(snapshotDir.toString(),
+          fromSnapshot, toSnapshot);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+  
   /**
    * Save namespace image.
    * 
@@ -2179,7 +2303,8 @@ public class DFSClient implements java.io.Closeable {
                                      SafeModeException.class,
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
   
@@ -2222,7 +2347,8 @@ public class DFSClient implements java.io.Closeable {
                                      FileNotFoundException.class,
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 
@@ -2238,7 +2364,8 @@ public class DFSClient implements java.io.Closeable {
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 

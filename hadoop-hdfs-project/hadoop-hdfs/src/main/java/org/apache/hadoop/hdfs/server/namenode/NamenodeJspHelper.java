@@ -775,7 +775,16 @@ class NamenodeJspHelper {
       }
     }
   }
-  
+
+  private static String getLocalParentDir(INode inode) {
+    final INode parent = inode.isRoot() ? inode : inode.getParent();
+    String parentDir = "";
+    if (parent != null) {
+      parentDir = parent.getFullPathName();
+    }
+    return (parentDir != null) ? parentDir : "";
+  }
+
   // utility class used in block_info_xml.jsp
   static class XMLBlockInfo {
     final Block block;
@@ -790,7 +799,7 @@ class NamenodeJspHelper {
         this.inode = null;
       } else {
         this.block = new Block(blockId);
-        this.inode = (INodeFile) blockManager.getBlockCollection(block);
+        this.inode = ((INode)blockManager.getBlockCollection(block)).asFile();
       }
     }
 
@@ -817,7 +826,7 @@ class NamenodeJspHelper {
           doc.endTag();
 
           doc.startTag("local_directory");
-          doc.pcdata(inode.getLocalParentDir());
+          doc.pcdata(getLocalParentDir(inode));
           doc.endTag();
 
           doc.startTag("user_name");
@@ -849,7 +858,7 @@ class NamenodeJspHelper {
           doc.endTag();
 
           doc.startTag("replication");
-          doc.pcdata(""+inode.getBlockReplication());
+          doc.pcdata(""+inode.getFileReplication());
           doc.endTag();
 
           doc.startTag("disk_space_consumed");

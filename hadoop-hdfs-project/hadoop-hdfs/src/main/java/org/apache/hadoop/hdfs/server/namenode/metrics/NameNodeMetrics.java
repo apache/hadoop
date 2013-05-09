@@ -57,6 +57,20 @@ public class NameNodeMetrics {
   @Metric MutableCounterLong createSymlinkOps;
   @Metric MutableCounterLong getLinkTargetOps;
   @Metric MutableCounterLong filesInGetListingOps;
+  @Metric("Number of allowSnapshot operations")
+  MutableCounterLong allowSnapshotOps;
+  @Metric("Number of disallowSnapshot operations")
+  MutableCounterLong disallowSnapshotOps;
+  @Metric("Number of createSnapshot operations")
+  MutableCounterLong createSnapshotOps;
+  @Metric("Number of deleteSnapshot operations")
+  MutableCounterLong deleteSnapshotOps;
+  @Metric("Number of renameSnapshot operations")
+  MutableCounterLong renameSnapshotOps;
+  @Metric("Number of listSnapshottableDirectory operations")
+  MutableCounterLong listSnapshottableDirOps;
+  @Metric("Number of snapshotDiffReport operations")
+  MutableCounterLong snapshotDiffReportOps;
 
   @Metric("Journal transactions") MutableRate transactions;
   @Metric("Journal syncs") MutableRate syncs;
@@ -131,7 +145,7 @@ public class NameNodeMetrics {
     filesRenamed.incr();
   }
 
-  public void incrFilesDeleted(int delta) {
+  public void incrFilesDeleted(long delta) {
     filesDeleted.incr(delta);
   }
 
@@ -159,6 +173,34 @@ public class NameNodeMetrics {
     getLinkTargetOps.incr();
   }
 
+  public void incrAllowSnapshotOps() {
+    allowSnapshotOps.incr();
+  }
+  
+  public void incrDisAllowSnapshotOps() {
+    disallowSnapshotOps.incr();
+  }
+  
+  public void incrCreateSnapshotOps() {
+    createSnapshotOps.incr();
+  }
+  
+  public void incrDeleteSnapshotOps() {
+    deleteSnapshotOps.incr();
+  }
+  
+  public void incrRenameSnapshotOps() {
+    renameSnapshotOps.incr();
+  }
+  
+  public void incrListSnapshottableDirOps() {
+    listSnapshottableDirOps.incr();
+  }
+  
+  public void incrSnapshotDiffReportOps() {
+    snapshotDiffReportOps.incr();
+  }
+  
   public void addTransaction(long latency) {
     transactions.add(latency);
   }

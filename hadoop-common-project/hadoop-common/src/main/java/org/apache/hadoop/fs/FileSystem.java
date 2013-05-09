@@ -2265,6 +2265,51 @@ public abstract class FileSystem extends Configured implements Closeable {
       ) throws IOException {
   }
 
+  /**
+   * Create a snapshot with a default name.
+   * @param path The directory where snapshots will be taken.
+   * @return the snapshot path.
+   */
+  public final Path createSnapshot(Path path) throws IOException {
+    return createSnapshot(path, null);
+  }
+
+  /**
+   * Create a snapshot
+   * @param path The directory where snapshots will be taken.
+   * @param snapshotName The name of the snapshot
+   * @return the snapshot path.
+   */
+  public Path createSnapshot(Path path, String snapshotName)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support createSnapshot");
+  }
+  
+  /**
+   * Rename a snapshot
+   * @param path The directory path where the snapshot was taken
+   * @param snapshotOldName Old name of the snapshot
+   * @param snapshotNewName New name of the snapshot
+   * @throws IOException
+   */
+  public void renameSnapshot(Path path, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support renameSnapshot");
+  }
+  
+  /**
+   * Delete a snapshot of a directory
+   * @param path  The directory that the to-be-deleted snapshot belongs to
+   * @param snapshotName The name of the snapshot
+   */
+  public void deleteSnapshot(Path path, String snapshotName)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support deleteSnapshot");
+  }
+  
   // making it volatile to be able to do a double checked locking
   private volatile static boolean FILE_SYSTEMS_LOADED = false;
 

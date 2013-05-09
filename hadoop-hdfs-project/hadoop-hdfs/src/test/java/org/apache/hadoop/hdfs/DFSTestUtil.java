@@ -614,6 +614,25 @@ public class DFSTestUtil {
   }
   
   /**
+   * Append specified length of bytes to a given file
+   * @param fs The file system
+   * @param p Path of the file to append
+   * @param length Length of bytes to append to the file
+   * @throws IOException
+   */
+  public static void appendFile(FileSystem fs, Path p, int length)
+      throws IOException {
+    assert fs.exists(p);
+    assert length >= 0;
+    byte[] toAppend = new byte[length];
+    Random random = new Random();
+    random.nextBytes(toAppend);
+    FSDataOutputStream out = fs.append(p);
+    out.write(toAppend);
+    out.close();
+  }
+  
+  /**
    * @return url content as string (UTF-8 encoding assumed)
    */
   public static String urlGet(URL url) throws IOException {

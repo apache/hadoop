@@ -212,6 +212,21 @@ message GetListingResponseProto {
   optional DirectoryListingProto dirList = 1;
 }
 
+message GetSnapshottableDirListingRequestProto { // no input parameters
+}
+message GetSnapshottableDirListingResponseProto {
+  optional SnapshottableDirectoryListingProto snapshottableDirList = 1;
+}
+
+message GetSnapshotDiffReportRequestProto {
+  required string snapshotRoot = 1;
+  required string fromSnapshot = 2;
+  required string toSnapshot = 3;
+}
+message GetSnapshotDiffReportResponseProto {
+  required SnapshotDiffReportProto diffReport = 1;
+}
+
 message RenewLeaseRequestProto {
   required string clientName = 1;
 }
@@ -434,6 +449,46 @@ message GetDataEncryptionKeyResponseProto {
   optional DataEncryptionKeyProto dataEncryptionKey = 1;
 }
 
+message CreateSnapshotRequestProto {
+  required string snapshotRoot = 1;
+  optional string snapshotName = 2;
+}
+
+message CreateSnapshotResponseProto {
+  required string snapshotPath = 1;
+}
+
+message RenameSnapshotRequestProto {
+  required string snapshotRoot = 1;
+  required string snapshotOldName = 2;
+  required string snapshotNewName = 3;
+}
+
+message RenameSnapshotResponseProto { // void response
+}
+
+message AllowSnapshotRequestProto {
+  required string snapshotRoot = 1;
+}
+
+message AllowSnapshotResponseProto {
+}
+
+message DisallowSnapshotRequestProto {
+  required string snapshotRoot = 1;
+}
+
+message DisallowSnapshotResponseProto {
+}
+
+message DeleteSnapshotRequestProto {
+  required string snapshotRoot = 1;
+  required string snapshotName = 2;
+}
+
+message DeleteSnapshotResponseProto { // void response
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -507,6 +562,20 @@ service ClientNamenodeProtocol {
       returns(SetBalancerBandwidthResponseProto);
   rpc getDataEncryptionKey(GetDataEncryptionKeyRequestProto)
       returns(GetDataEncryptionKeyResponseProto);
+  rpc createSnapshot(CreateSnapshotRequestProto)
+      returns(CreateSnapshotResponseProto);
+  rpc renameSnapshot(RenameSnapshotRequestProto)
+      returns(RenameSnapshotResponseProto);
+  rpc allowSnapshot(AllowSnapshotRequestProto)
+      returns(AllowSnapshotResponseProto);
+  rpc disallowSnapshot(DisallowSnapshotRequestProto)
+      returns(DisallowSnapshotResponseProto);   
+  rpc getSnapshottableDirListing(GetSnapshottableDirListingRequestProto)
+      returns(GetSnapshottableDirListingResponseProto);
+  rpc deleteSnapshot(DeleteSnapshotRequestProto)
+      returns(DeleteSnapshotResponseProto);
+  rpc getSnapshotDiffReport(GetSnapshotDiffReportRequestProto)
+      returns(GetSnapshotDiffReportResponseProto);
   rpc isFileClosed(IsFileClosedRequestProto)
       returns(IsFileClosedResponseProto);
 }

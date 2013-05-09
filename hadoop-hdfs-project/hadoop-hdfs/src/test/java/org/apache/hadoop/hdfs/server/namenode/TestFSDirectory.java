@@ -51,7 +51,6 @@ public class TestFSDirectory {
 
   private final Path sub11 = new Path(sub1, "sub11");
   private final Path file3 = new Path(sub11, "file3");
-  private final Path file4 = new Path(sub1, "z_file4");
   private final Path file5 = new Path(sub1, "z_file5");
 
   private final Path sub2 = new Path(dir, "sub2");
@@ -106,27 +105,13 @@ public class TestFSDirectory {
 
     for(; (line = in.readLine()) != null; ) {
       line = line.trim();
-      Assert.assertTrue(line.startsWith(INodeDirectory.DUMPTREE_LAST_ITEM)
-          || line.startsWith(INodeDirectory.DUMPTREE_EXCEPT_LAST_ITEM));
-      checkClassName(line);
+      if (!line.isEmpty() && !line.contains("snapshot")) {
+        Assert.assertTrue("line=" + line,
+            line.startsWith(INodeDirectory.DUMPTREE_LAST_ITEM)
+            || line.startsWith(INodeDirectory.DUMPTREE_EXCEPT_LAST_ITEM));
+        checkClassName(line);
+      }
     }
-
-    LOG.info("Create a new file " + file4);
-    DFSTestUtil.createFile(hdfs, file4, 1024, REPLICATION, seed);
-
-    final StringBuffer b2 = root.dumpTreeRecursively();
-    System.out.println("b2=" + b2);
-
-    int i = 0;
-    int j = b1.length() - 1;
-    for(; b1.charAt(i) == b2.charAt(i); i++);
-    int k = b2.length() - 1;
-    for(; b1.charAt(j) == b2.charAt(k); j--, k--);
-    final String diff = b2.substring(i, k + 1);
-    System.out.println("i=" + i + ", j=" + j + ", k=" + k);
-    System.out.println("diff=" + diff);
-    Assert.assertTrue(i > j);
-    Assert.assertTrue(diff.contains(file4.getName()));
   }
   
   @Test
@@ -134,7 +119,7 @@ public class TestFSDirectory {
     fsdir.reset();
     Assert.assertFalse(fsdir.isReady());
     final INodeDirectory root = (INodeDirectory) fsdir.getINode("/");
-    Assert.assertTrue(root.getChildrenList().isEmpty());
+    Assert.assertTrue(root.getChildrenList(null).isEmpty());
     fsdir.imageLoadComplete();
     Assert.assertTrue(fsdir.isReady());
   }
@@ -143,8 +128,7 @@ public class TestFSDirectory {
     int i = line.lastIndexOf('(');
     int j = line.lastIndexOf('@');
     final String classname = line.substring(i+1, j);
-    Assert.assertTrue(classname.equals(INodeFile.class.getSimpleName())
-        || classname.equals(INodeDirectory.class.getSimpleName())
-        || classname.equals(INodeDirectoryWithQuota.class.getSimpleName()));
+    Assert.assertTrue(classname.startsWith(INodeFile.class.getSimpleName())
+        || classname.startsWith(INodeDirectory.class.getSimpleName()));
   }
 }
