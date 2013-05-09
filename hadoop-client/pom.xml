@@ -100,10 +100,6 @@
           <artifactId>core</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.aspectj</groupId>
-          <artifactId>aspectjrt</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro-ipc</artifactId>
         </exclusion>
