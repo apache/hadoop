@@ -33,4 +33,9 @@ public interface RegisterNodeManagerResponse {
   long getRMIdentifier();
 
   void setRMIdentifier(long rmIdentifier);
+
+  String getDiagnosticsMessage();
+
+  void setDiagnosticsMessage(String diagnosticsMessage);
+
 }

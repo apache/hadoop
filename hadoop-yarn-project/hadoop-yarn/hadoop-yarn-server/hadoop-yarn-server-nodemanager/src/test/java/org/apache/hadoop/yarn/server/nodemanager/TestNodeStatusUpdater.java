@@ -388,6 +388,7 @@ public class TestNodeStatusUpdater {
   private class MyResourceTracker2 implements ResourceTracker {
     public NodeAction heartBeatNodeAction = NodeAction.NORMAL;
     public NodeAction registerNodeAction = NodeAction.NORMAL;
+    public String shutDownMessage = "";
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
@@ -397,6 +398,7 @@ public class TestNodeStatusUpdater {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
       response.setNodeAction(registerNodeAction );
+      response.setDiagnosticsMessage(shutDownMessage);
       return response;
     }
     @Override
@@ -408,6 +410,7 @@ public class TestNodeStatusUpdater {
       NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils.
           newNodeHeartbeatResponse(heartBeatID, heartBeatNodeAction, null,
               null, null, 1000L);
+      nhResponse.setDiagnosticsMessage(shutDownMessage);
       return nhResponse;
     }
   }
@@ -737,12 +740,15 @@ public class TestNodeStatusUpdater {
             context, dispatcher, healthChecker, metrics);
         MyResourceTracker2 myResourceTracker2 = new MyResourceTracker2();
         myResourceTracker2.registerNodeAction = NodeAction.SHUTDOWN;
+        myResourceTracker2.shutDownMessage = "RM Shutting Down Node";
         nodeStatusUpdater.resourceTracker = myResourceTracker2;
         return nodeStatusUpdater;
       }
     };
     verifyNodeStartFailure("org.apache.hadoop.yarn.YarnException: "
-        + "Recieved SHUTDOWN signal from Resourcemanager ,Registration of NodeManager failed");
+        + "Recieved SHUTDOWN signal from Resourcemanager ,"
+        + "Registration of NodeManager failed, "
+        + "Message from ResourceManager: RM Shutting Down Node");
   }
 
   @Test (timeout = 15000)

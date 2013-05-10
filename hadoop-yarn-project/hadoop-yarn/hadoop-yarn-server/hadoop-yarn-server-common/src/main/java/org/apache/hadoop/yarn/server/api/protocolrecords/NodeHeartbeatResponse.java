@@ -45,4 +45,8 @@ public interface NodeHeartbeatResponse {
 
   long getNextHeartBeatInterval();
   void setNextHeartBeatInterval(long nextHeartBeatInterval);
+  
+  String getDiagnosticsMessage();
+
+  void setDiagnosticsMessage(String diagnosticsMessage);
 }

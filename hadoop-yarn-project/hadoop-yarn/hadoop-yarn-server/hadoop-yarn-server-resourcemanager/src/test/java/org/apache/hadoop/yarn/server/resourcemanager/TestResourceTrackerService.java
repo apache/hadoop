@@ -268,6 +268,10 @@ public class TestResourceTrackerService {
     // trying to register a invalid node.
     RegisterNodeManagerResponse response = resourceTrackerService.registerNodeManager(req);
     Assert.assertEquals(NodeAction.SHUTDOWN,response.getNodeAction());
+    Assert
+      .assertEquals(
+        "Disallowed NodeManager from  host2, Sending SHUTDOWN signal to the NodeManager.",
+        response.getDiagnosticsMessage());
   }
 
   @Test
@@ -344,6 +348,8 @@ public class TestResourceTrackerService {
     nodeHeartbeat = nm2.nodeHeartbeat(
       new HashMap<ApplicationId, List<ContainerStatus>>(), true, -100);
     Assert.assertTrue(NodeAction.RESYNC.equals(nodeHeartbeat.getNodeAction()));
+    Assert.assertEquals("Too far behind rm response id:0 nm response id:-100",
+      nodeHeartbeat.getDiagnosticsMessage());
     checkRebootedNMCount(rm, ++initialMetricCount);
   }
 

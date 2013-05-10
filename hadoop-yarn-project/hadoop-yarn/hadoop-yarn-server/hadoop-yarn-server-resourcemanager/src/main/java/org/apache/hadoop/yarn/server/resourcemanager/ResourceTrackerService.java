@@ -176,8 +176,11 @@ public class ResourceTrackerService extends AbstractService implements
 
     // Check if this node is a 'valid' node
     if (!this.nodesListManager.isValidNode(host)) {
-      LOG.info("Disallowed NodeManager from  " + host
-          + ", Sending SHUTDOWN signal to the NodeManager.");
+      String message =
+          "Disallowed NodeManager from  " + host
+              + ", Sending SHUTDOWN signal to the NodeManager.";
+      LOG.info(message);
+      response.setDiagnosticsMessage(message);
       response.setNodeAction(NodeAction.SHUTDOWN);
       return response;
     }
@@ -185,9 +188,12 @@ public class ResourceTrackerService extends AbstractService implements
     // Check if this node has minimum allocations
     if (capability.getMemory() < minAllocMb
         || capability.getVirtualCores() < minAllocVcores) {
-      LOG.info("NodeManager from  " + host
-          + " doesn't satisfy minimum allocations, Sending SHUTDOWN"
-          + " signal to the NodeManager.");
+      String message =
+          "NodeManager from  " + host
+              + " doesn't satisfy minimum allocations, Sending SHUTDOWN"
+              + " signal to the NodeManager.";
+      LOG.info(message);
+      response.setDiagnosticsMessage(message);
       response.setNodeAction(NodeAction.SHUTDOWN);
       return response;
     }
@@ -214,10 +220,11 @@ public class ResourceTrackerService extends AbstractService implements
 
     this.nmLivelinessMonitor.register(nodeId);
 
-    LOG.info("NodeManager from node " + host + "(cmPort: " + cmPort
-        + " httpPort: " + httpPort + ") " + "registered with capability: "
-        + capability + ", assigned nodeId " + nodeId);
-
+    String message =
+        "NodeManager from node " + host + "(cmPort: " + cmPort + " httpPort: "
+            + httpPort + ") " + "registered with capability: " + capability
+            + ", assigned nodeId " + nodeId;
+    LOG.info(message);
     response.setNodeAction(NodeAction.NORMAL);
     response.setRMIdentifier(ResourceManager.clusterTimeStamp);
     return response;
@@ -243,7 +250,9 @@ public class ResourceTrackerService extends AbstractService implements
     RMNode rmNode = this.rmContext.getRMNodes().get(nodeId);
     if (rmNode == null) {
       /* node does not exist */
-      LOG.info("Node not found rebooting " + remoteNodeStatus.getNodeId());
+      String message = "Node not found rebooting " + remoteNodeStatus.getNodeId();
+      LOG.info(message);
+      resync.setDiagnosticsMessage(message);
       return resync;
     }
 
@@ -252,8 +261,11 @@ public class ResourceTrackerService extends AbstractService implements
 
     // 2. Check if it's a valid (i.e. not excluded) node
     if (!this.nodesListManager.isValidNode(rmNode.getHostName())) {
-      LOG.info("Disallowed NodeManager nodeId: " + nodeId + " hostname: "
-          + rmNode.getNodeAddress());
+      String message =
+          "Disallowed NodeManager nodeId: " + nodeId + " hostname: "
+              + rmNode.getNodeAddress();
+      LOG.info(message);
+      shutDown.setDiagnosticsMessage(message);
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
       return shutDown;
@@ -268,9 +280,12 @@ public class ResourceTrackerService extends AbstractService implements
       return lastNodeHeartbeatResponse;
     } else if (remoteNodeStatus.getResponseId() + 1 < lastNodeHeartbeatResponse
         .getResponseId()) {
-      LOG.info("Too far behind rm response id:"
-          + lastNodeHeartbeatResponse.getResponseId() + " nm response id:"
-          + remoteNodeStatus.getResponseId());
+      String message =
+          "Too far behind rm response id:"
+              + lastNodeHeartbeatResponse.getResponseId() + " nm response id:"
+              + remoteNodeStatus.getResponseId();
+      LOG.info(message);
+      resync.setDiagnosticsMessage(message);
       // TODO: Just sending reboot is not enough. Think more.
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMNodeEvent(nodeId, RMNodeEventType.REBOOTING));

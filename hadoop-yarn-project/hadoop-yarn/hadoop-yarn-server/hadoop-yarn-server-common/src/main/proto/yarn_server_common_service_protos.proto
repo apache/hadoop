@@ -34,6 +34,7 @@ message RegisterNodeManagerResponseProto {
   optional MasterKeyProto master_key = 1;
   optional NodeActionProto nodeAction = 2;
   optional int64 rm_identifier = 3;
+  optional string diagnostics_message = 4;
 }
 
 message NodeHeartbeatRequestProto {
@@ -49,4 +50,5 @@ message NodeHeartbeatResponseProto {
   repeated ContainerIdProto containers_to_cleanup = 4;
   repeated ApplicationIdProto applications_to_cleanup = 5;
   optional int64 nextHeartBeatInterval = 6;
+  optional string diagnostics_message = 7;
 }

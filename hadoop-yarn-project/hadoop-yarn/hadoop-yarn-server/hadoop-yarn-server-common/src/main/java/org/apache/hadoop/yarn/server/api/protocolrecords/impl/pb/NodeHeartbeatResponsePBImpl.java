@@ -146,6 +146,25 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
   }
 
   @Override
+  public String getDiagnosticsMessage() {
+    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasDiagnosticsMessage()) {
+      return null;
+    }
+    return p.getDiagnosticsMessage();
+  }
+
+  @Override
+  public void setDiagnosticsMessage(String diagnosticsMessage) {
+    maybeInitBuilder();
+    if (diagnosticsMessage == null) {
+      builder.clearDiagnosticsMessage();
+      return;
+    }
+    builder.setDiagnosticsMessage((diagnosticsMessage));
+  }
+
+  @Override
   public List<ContainerId> getContainersToCleanup() {
     initContainersToCleanup();
     return this.containersToCleanup;

@@ -102,6 +102,25 @@ public class RegisterNodeManagerResponsePBImpl extends ProtoBase<RegisterNodeMan
   }
 
   @Override
+  public String getDiagnosticsMessage() {
+    RegisterNodeManagerResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasDiagnosticsMessage()) {
+      return null;
+    }
+    return p.getDiagnosticsMessage();
+  }
+
+  @Override
+  public void setDiagnosticsMessage(String diagnosticsMessage) {
+    maybeInitBuilder();
+    if (diagnosticsMessage == null) {
+      builder.clearDiagnosticsMessage();
+      return;
+    }
+    builder.setDiagnosticsMessage((diagnosticsMessage));
+  }
+
+  @Override
   public NodeAction getNodeAction() {
     RegisterNodeManagerResponseProtoOrBuilder p = viaProto ? proto : builder;
     if(!p.hasNodeAction()) {
