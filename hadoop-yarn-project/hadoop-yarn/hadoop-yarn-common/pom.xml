@@ -107,27 +107,6 @@
               </source>
             </configuration>
           </execution>
-          <execution>
-            <id>compile-protoc</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
-            <configuration>
-              <imports>
-                <param>${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>yarnprototunnelrpc.proto</include>
-                </includes>
-              </source>
-              <output>${project.build.directory}/generated-sources/java</output>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>

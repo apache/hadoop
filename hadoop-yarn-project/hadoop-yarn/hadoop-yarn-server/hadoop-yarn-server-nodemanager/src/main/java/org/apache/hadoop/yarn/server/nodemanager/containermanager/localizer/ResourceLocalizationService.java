@@ -716,8 +716,8 @@ public class ResourceLocalizationService extends CompositeService
               LOG.info("Failed to download rsrc " + assoc.getResource(),
                   e.getCause());
               LocalResourceRequest req = assoc.getResource().getRequest();
-              publicRsrc.handle(new ResourceFailedLocalizationEvent(req, e
-                .getCause()));
+              publicRsrc.handle(new ResourceFailedLocalizationEvent(req,
+                  e.getMessage()));
               assoc.getResource().unlock();
             } catch (CancellationException e) {
               // ignore; shutting down
@@ -908,11 +908,12 @@ public class ResourceLocalizationService extends CompositeService
             response.setLocalizerAction(LocalizerAction.LIVE);
             break;
           case FETCH_FAILURE:
-            LOG.info("DEBUG: FAILED " + req, stat.getException());
+            LOG.info("DEBUG: FAILED " + req 
+                + ", " + stat.getException().getMessage());
             response.setLocalizerAction(LocalizerAction.DIE);
             getLocalResourcesTracker(req.getVisibility(), user, applicationId)
-              .handle(
-                new ResourceFailedLocalizationEvent(req, stat.getException()));
+              .handle(new ResourceFailedLocalizationEvent(
+                  req, stat.getException().getMessage()));
 
             // unlocking the resource and removing it from scheduled resource
             // list
@@ -924,8 +925,8 @@ public class ResourceLocalizationService extends CompositeService
             LOG.info("Unknown status: " + stat.getStatus());
             response.setLocalizerAction(LocalizerAction.DIE);
             getLocalResourcesTracker(req.getVisibility(), user, applicationId)
-              .handle(
-                new ResourceFailedLocalizationEvent(req, stat.getException()));
+              .handle(new ResourceFailedLocalizationEvent(
+                  req, stat.getException().getMessage()));
             break;
         }
       }
@@ -991,7 +992,7 @@ public class ResourceLocalizationService extends CompositeService
         // 3.1) notify resource of failed localization
         ContainerId cId = context.getContainerId();
         dispatcher.getEventHandler().handle(
-            new ContainerResourceFailedEvent(cId, null, e));
+            new ContainerResourceFailedEvent(cId, null, e.getMessage()));
       } finally {
         for (LocalizerResourceRequestEvent event : scheduled.values()) {
           event.getResource().unlock();

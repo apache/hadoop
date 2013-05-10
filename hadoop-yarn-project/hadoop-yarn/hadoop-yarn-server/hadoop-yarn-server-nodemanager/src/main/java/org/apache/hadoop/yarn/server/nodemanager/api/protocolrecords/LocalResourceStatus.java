@@ -19,18 +19,18 @@ package org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords;
 
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.URL;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.server.api.records.SerializedException;
 
 public interface LocalResourceStatus {
   public LocalResource getResource();
   public ResourceStatusType getStatus();
   public URL getLocalPath();
   public long getLocalSize();
-  public YarnRemoteException getException();
+  public SerializedException getException();
 
   public void setResource(LocalResource resource);
   public void setStatus(ResourceStatusType status);
   public void setLocalPath(URL localPath);
   public void setLocalSize(long size);
-  public void setException(YarnRemoteException exception);
+  public void setException(SerializedException exception);
 }

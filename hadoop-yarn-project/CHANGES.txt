@@ -240,6 +240,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-598. Add virtual cores to queue metrics. (sandyr via tucu)
 
+    YARN-634. Modified YarnRemoteException to be not backed by PB and introduced
+    a separate SerializedException record. (Siddharth Seth via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

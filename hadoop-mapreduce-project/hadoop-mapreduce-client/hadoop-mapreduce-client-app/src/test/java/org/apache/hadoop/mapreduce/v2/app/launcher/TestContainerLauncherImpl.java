@@ -444,11 +444,6 @@ public class TestContainerLauncherImpl {
     }
 
     @Override
-    public String getRemoteTrace() {
-      return null;
-    }
-
-    @Override
     public YarnRemoteException getCause() {
       return null;
     }

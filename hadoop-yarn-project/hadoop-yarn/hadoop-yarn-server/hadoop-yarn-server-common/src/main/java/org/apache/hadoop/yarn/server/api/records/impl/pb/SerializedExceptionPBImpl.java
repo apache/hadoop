@@ -16,49 +16,49 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.exceptions.impl.pb;
+package org.apache.hadoop.yarn.server.api.records.impl.pb;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.reflect.UndeclaredThrowableException;
 
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.proto.YarnProtos.YarnRemoteExceptionProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.YarnRemoteExceptionProtoOrBuilder;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.yarn.proto.YarnProtos.SerializedExceptionProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.SerializedExceptionProtoOrBuilder;
+import org.apache.hadoop.yarn.server.api.records.SerializedException;
 
-public class YarnRemoteExceptionPBImpl extends YarnRemoteException {
+public class SerializedExceptionPBImpl extends SerializedException {
 
-  private static final long serialVersionUID = 1L;
-
-  YarnRemoteExceptionProto proto = YarnRemoteExceptionProto.getDefaultInstance();
-  YarnRemoteExceptionProto.Builder builder = null;
+  SerializedExceptionProto proto = SerializedExceptionProto
+      .getDefaultInstance();
+  SerializedExceptionProto.Builder builder = null;
   boolean viaProto = false;
 
-  public YarnRemoteExceptionPBImpl() {
+  public SerializedExceptionPBImpl() {
   }
 
-  public YarnRemoteExceptionPBImpl(YarnRemoteExceptionProto proto) {
+  public SerializedExceptionPBImpl(SerializedExceptionProto proto) {
     this.proto = proto;
     viaProto = true;
   }
-  
-  public YarnRemoteExceptionPBImpl(String message) {
-    super(message);
-    maybeInitBuilder();
-    builder.setMessage(super.getMessage());
+
+  private SerializedExceptionPBImpl(Throwable t) {
+    init(t);
   }
 
-  public YarnRemoteExceptionPBImpl(Throwable t) {
-    super(t);
+  public void init(String message) {
     maybeInitBuilder();
+    builder.setMessage(message);
+  }
 
-    if (t.getCause() == null) { 
+  public void init(Throwable t) {
+    maybeInitBuilder();
+    if (t == null) {
+      return;
+    }
+
+    if (t.getCause() == null) {
     } else {
-      builder.setCause(new YarnRemoteExceptionPBImpl(t.getCause()).getProto());
-      builder.setClassName(t.getClass().getName());
+      builder.setCause(new SerializedExceptionPBImpl(t.getCause()).getProto());
+      builder.setClassName(t.getClass().getCanonicalName());
     }
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
@@ -69,35 +69,36 @@ public class YarnRemoteExceptionPBImpl extends YarnRemoteException {
     if (t.getMessage() != null)
       builder.setMessage(t.getMessage());
   }
-  
-  public YarnRemoteExceptionPBImpl(String message, Throwable t) {
-    this(t);
-    if (message != null) 
+
+  public void init(String message, Throwable t) {
+    init(t);
+    if (message != null)
       builder.setMessage(message);
   }
+
   @Override
   public String getMessage() {
-    YarnRemoteExceptionProtoOrBuilder p = viaProto ? proto : builder;
+    SerializedExceptionProtoOrBuilder p = viaProto ? proto : builder;
     return p.getMessage();
   }
-  
+
   @Override
   public String getRemoteTrace() {
-    YarnRemoteExceptionProtoOrBuilder p = viaProto ? proto : builder;
+    SerializedExceptionProtoOrBuilder p = viaProto ? proto : builder;
     return p.getTrace();
   }
 
   @Override
-  public YarnRemoteException getCause() {
-    YarnRemoteExceptionProtoOrBuilder p = viaProto ? proto : builder;
+  public SerializedException getCause() {
+    SerializedExceptionProtoOrBuilder p = viaProto ? proto : builder;
     if (p.hasCause()) {
-      return new YarnRemoteExceptionPBImpl(p.getCause());
+      return new SerializedExceptionPBImpl(p.getCause());
     } else {
       return null;
     }
   }
 
-  public YarnRemoteExceptionProto getProto() {
+  public SerializedExceptionProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -105,9 +106,8 @@ public class YarnRemoteExceptionPBImpl extends YarnRemoteException {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = YarnRemoteExceptionProto.newBuilder(proto);
+      builder = SerializedExceptionProto.newBuilder(proto);
     }
     viaProto = false;
   }
-
 }

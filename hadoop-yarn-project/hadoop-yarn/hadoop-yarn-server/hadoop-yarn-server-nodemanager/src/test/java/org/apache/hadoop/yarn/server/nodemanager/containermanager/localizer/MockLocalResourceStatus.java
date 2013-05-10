@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.URL;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.server.api.records.SerializedException;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalResourceStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceStatusType;
 
@@ -29,11 +29,11 @@ public class MockLocalResourceStatus implements LocalResourceStatus {
   private ResourceStatusType tag = null;
   private URL localPath = null;
   private long size = -1L;
-  private YarnRemoteException ex = null;
+  private SerializedException ex = null;
 
   MockLocalResourceStatus() { }
   MockLocalResourceStatus(LocalResource rsrc, ResourceStatusType tag,
-      URL localPath, YarnRemoteException ex) {
+      URL localPath, SerializedException ex) {
     this.rsrc = rsrc;
     this.tag = tag;
     this.localPath = localPath;
@@ -49,7 +49,7 @@ public class MockLocalResourceStatus implements LocalResourceStatus {
   @Override
   public URL getLocalPath() { return localPath; }
   @Override
-  public YarnRemoteException getException() { return ex; }
+  public SerializedException getException() { return ex; }
   @Override
   public void setResource(LocalResource rsrc) { this.rsrc = rsrc; }
   @Override
@@ -59,7 +59,7 @@ public class MockLocalResourceStatus implements LocalResourceStatus {
   @Override
   public void setLocalSize(long size) { this.size = size; }
   @Override
-  public void setException(YarnRemoteException ex) { this.ex = ex; }
+  public void setException(SerializedException ex) { this.ex = ex; }
 
   @Override
   public boolean equals(Object o) {

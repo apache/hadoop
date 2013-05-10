@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,6 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Private
-package org.apache.hadoop.yarn.exceptions.impl.pb;
-import org.apache.hadoop.classification.InterfaceAudience;
+
+package org.apache.hadoop.yarn.server.api.records;
+
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
+@Private
+@Unstable
+public abstract class SerializedException {
+  
+  public abstract void init(String message, Throwable cause);
+  
+  public abstract void init(String message);
+  
+  public abstract void init(Throwable cause);
+  
+  public abstract String getMessage();
+  
+  public abstract String getRemoteTrace();
+  
+  public abstract SerializedException getCause();
+}

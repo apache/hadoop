@@ -25,15 +25,15 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Loca
  */
 public class ResourceFailedLocalizationEvent extends ResourceEvent {
 
-  private Throwable cause;
+  private final String diagnosticMesage;
 
   public ResourceFailedLocalizationEvent(LocalResourceRequest rsrc,
-      Throwable cause) {
+      String diagnosticMesage) {
     super(rsrc, ResourceEventType.LOCALIZATION_FAILED);
-    this.cause = cause;
+    this.diagnosticMesage = diagnosticMesage;
   }
 
-  public Throwable getCause() {
-    return cause;
+  public String getDiagnosticMessage() {
+    return diagnosticMesage;
   }
 }

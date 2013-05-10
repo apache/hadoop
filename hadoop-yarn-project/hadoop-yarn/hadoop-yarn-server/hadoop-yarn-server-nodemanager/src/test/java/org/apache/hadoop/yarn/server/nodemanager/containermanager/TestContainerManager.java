@@ -576,7 +576,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
         "Container " + cId1 + " rejected as it is allocated by a previous RM"));
       // TO DO: This should be replaced to explicitly check exception
       // class name after YARN-142
-      Assert.assertTrue(e.getRemoteTrace().contains(
+      Assert.assertTrue(e.getMessage().contains(
         InvalidContainerException.class.getName()));
     }
 

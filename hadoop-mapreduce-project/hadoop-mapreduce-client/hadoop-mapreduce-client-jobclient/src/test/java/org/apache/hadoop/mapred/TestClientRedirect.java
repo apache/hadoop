@@ -101,7 +101,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.factory.providers.YarnRemoteExceptionFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.junit.Test;
@@ -298,8 +297,7 @@ public class TestClientRedirect {
     @Override
     public SubmitApplicationResponse submitApplication(
         SubmitApplicationRequest request) throws YarnRemoteException {
-      throw YarnRemoteExceptionFactoryProvider.getYarnRemoteExceptionFactory(
-          null).createYarnRemoteException("Test");
+      throw new YarnRemoteException("Test");
     }
 
     @Override

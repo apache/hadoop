@@ -85,7 +85,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
@@ -117,6 +117,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerResourceRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceFailedLocalizationEvent;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.BeforeClass;
@@ -1012,7 +1013,8 @@ public class TestResourceLocalizationService {
       String localizerId, LocalResourceRequest req) {
     LocalizerStatus status = createLocalizerStatus(localizerId);
     LocalResourceStatus resourceStatus = new LocalResourceStatusPBImpl();
-    resourceStatus.setException(new YarnRemoteExceptionPBImpl("test"));
+    resourceStatus.setException(YarnServerBuilderUtils
+        .newSerializedException(new YarnRemoteException("test")));
     resourceStatus.setStatus(ResourceStatusType.FETCH_FAILURE);
     resourceStatus.setResource(req);
     status.addResourceStatus(resourceStatus);
@@ -1146,7 +1148,8 @@ public class TestResourceLocalizationService {
       // Now Failing the resource download. As a part of it
       // resource state is changed and then lock is released.
       ResourceFailedLocalizationEvent locFailedEvent =
-          new ResourceFailedLocalizationEvent(req, new Exception("test"));
+          new ResourceFailedLocalizationEvent(
+              req,new Exception("test").toString());
       spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC, user,
         null).handle(locFailedEvent);
 

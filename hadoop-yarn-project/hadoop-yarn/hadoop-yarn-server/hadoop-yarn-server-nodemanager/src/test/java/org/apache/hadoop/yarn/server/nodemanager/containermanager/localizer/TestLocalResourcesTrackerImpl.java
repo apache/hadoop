@@ -287,8 +287,8 @@ public class TestLocalResourcesTrackerImpl {
       Assert.assertTrue(localrsrc.get(lr).ref.contains(cId2));
 
       // Failing resource localization
-      ResourceEvent resourceFailedEvent =
-          new ResourceFailedLocalizationEvent(lr, new Exception("test"));
+      ResourceEvent resourceFailedEvent = new ResourceFailedLocalizationEvent(
+          lr,(new Exception("test").getMessage()));
       
       // Backing up the resource to track its state change as it will be
       // removed after the failed event.
@@ -420,7 +420,8 @@ public class TestLocalResourcesTrackerImpl {
       Path hierarchicalPath2 = tracker.getPathForLocalization(lr2, localDir);
       // localization failed.
       ResourceFailedLocalizationEvent rfe2 =
-          new ResourceFailedLocalizationEvent(lr2, new Exception("Test"));
+          new ResourceFailedLocalizationEvent(
+              lr2, new Exception("Test").toString());
       tracker.handle(rfe2);
 
       /*

@@ -22,45 +22,27 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
-import org.apache.hadoop.yarn.factories.YarnRemoteExceptionFactory;
-import org.apache.hadoop.yarn.factory.providers.YarnRemoteExceptionFactoryProvider;
 
 import com.google.protobuf.ServiceException;
 
 public class RPCUtil {
 
-
   /**
-   * Relying on the default factory configuration to be set correctly
-   * for the default configuration.
-   */
-  private static Configuration conf = new Configuration();
-  private static YarnRemoteExceptionFactory exceptionFactory = YarnRemoteExceptionFactoryProvider.getYarnRemoteExceptionFactory(conf);
-  
-  /**
-   * Returns the YarnRemoteException which is serializable. 
+   * Returns an instance of YarnRemoteException 
    */
   public static YarnRemoteException getRemoteException(Throwable t) {
-    return exceptionFactory.createYarnRemoteException(t);
+    return new YarnRemoteException(t);
   }
 
   /**
-   * Returns the YarnRemoteException which is serializable.
+   * Returns an instance of YarnRemoteException
    */
   public static YarnRemoteException getRemoteException(String message) {
-    return exceptionFactory.createYarnRemoteException(message);
+    return new YarnRemoteException(message);
   }
 
-  public static String toString(YarnRemoteException e) {
-    return (e.getMessage() == null ? "" : e.getMessage()) + 
-      (e.getRemoteTrace() == null ? "" : "\n StackTrace: " + e.getRemoteTrace()) + 
-      (e.getCause() == null ? "" : "\n Caused by: " + toString(e.getCause()));
-  }
-  
   /**
    * Utility method that unwraps and throws appropriate exception.
    * 
@@ -85,8 +67,8 @@ public class RPCUtil {
           ex.initCause(re);
           return ex;
         } else {
-          throw ((RemoteException) se.getCause())
-              .unwrapRemoteException(YarnRemoteExceptionPBImpl.class);
+          // TODO Fix in YARN-628.
+          throw new IOException((RemoteException) se.getCause());
         }
       } catch (IOException e1) {
         throw new UndeclaredThrowableException(e1);
