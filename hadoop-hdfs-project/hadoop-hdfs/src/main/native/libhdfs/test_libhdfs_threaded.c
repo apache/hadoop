@@ -116,6 +116,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
     hdfsFile file;
     int ret, expected;
     hdfsFileInfo *fileInfo;
+    struct hdfsReadStatistics *readStats = NULL;
 
     snprintf(prefix, sizeof(prefix), "/tlhData%04d", ti->threadIdx);
 
@@ -157,6 +158,12 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
     file = hdfsOpenFile(fs, tmp, O_RDONLY, 0, 0, 0);
     EXPECT_NONNULL(file);
 
+    EXPECT_ZERO(hdfsFileGetReadStatistics(file, &readStats));
+    errno = 0;
+    EXPECT_ZERO(readStats->totalBytesRead);
+    EXPECT_ZERO(readStats->totalLocalBytesRead);
+    EXPECT_ZERO(readStats->totalShortCircuitBytesRead);
+    hdfsFileFreeReadStatistics(readStats);
     /* TODO: implement readFully and use it here */
     ret = hdfsRead(fs, file, tmp, sizeof(tmp));
     if (ret < 0) {
@@ -169,6 +176,10 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
                 "it read %d\n", ret, expected);
         return EIO;
     }
+    EXPECT_ZERO(hdfsFileGetReadStatistics(file, &readStats));
+    errno = 0;
+    EXPECT_INT_EQ(expected, readStats->totalBytesRead);
+    hdfsFileFreeReadStatistics(readStats);
     EXPECT_ZERO(memcmp(prefix, tmp, expected));
     EXPECT_ZERO(hdfsCloseFile(fs, file));
 

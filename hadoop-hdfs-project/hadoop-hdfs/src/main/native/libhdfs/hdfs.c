@@ -81,6 +81,93 @@ int hdfsFileIsOpenForRead(hdfsFile file)
     return (file->type == INPUT);
 }
 
+int hdfsFileGetReadStatistics(hdfsFile file,
+                              struct hdfsReadStatistics **stats)
+{
+    jthrowable jthr;
+    jobject readStats = NULL;
+    jvalue jVal;
+    struct hdfsReadStatistics *s = NULL;
+    int ret;
+    JNIEnv* env = getJNIEnv();
+
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return -1;
+    }
+    if (file->type != INPUT) {
+        ret = EINVAL;
+        goto done;
+    }
+    jthr = invokeMethod(env, &jVal, INSTANCE, file->file, 
+                  "org/apache/hadoop/hdfs/client/HdfsDataInputStream",
+                  "getReadStatistics",
+                  "()Lorg/apache/hadoop/hdfs/DFSInputStream$ReadStatistics;");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsFileGetReadStatistics: getReadStatistics failed");
+        goto done;
+    }
+    readStats = jVal.l;
+    s = malloc(sizeof(struct hdfsReadStatistics));
+    if (!s) {
+        ret = ENOMEM;
+        goto done;
+    }
+    jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
+                  "org/apache/hadoop/hdfs/DFSInputStream$ReadStatistics",
+                  "getTotalBytesRead", "()J");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsFileGetReadStatistics: getTotalBytesRead failed");
+        goto done;
+    }
+    s->totalBytesRead = jVal.j;
+
+    jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
+                  "org/apache/hadoop/hdfs/DFSInputStream$ReadStatistics",
+                  "getTotalLocalBytesRead", "()J");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsFileGetReadStatistics: getTotalLocalBytesRead failed");
+        goto done;
+    }
+    s->totalLocalBytesRead = jVal.j;
+
+    jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
+                  "org/apache/hadoop/hdfs/DFSInputStream$ReadStatistics",
+                  "getTotalShortCircuitBytesRead", "()J");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsFileGetReadStatistics: getTotalShortCircuitBytesRead failed");
+        goto done;
+    }
+    s->totalShortCircuitBytesRead = jVal.j;
+    *stats = s;
+    s = NULL;
+    ret = 0;
+
+done:
+    destroyLocalReference(env, readStats);
+    free(s);
+    if (ret) {
+      errno = ret;
+      return -1;
+    }
+    return 0;
+}
+
+int64_t hdfsReadStatisticsGetRemoteBytesRead(
+                            const struct hdfsReadStatistics *stats)
+{
+  return stats->totalBytesRead - stats->totalLocalBytesRead;
+}
+
+void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats)
+{
+    free(stats);
+}
+
 int hdfsFileIsOpenForWrite(hdfsFile file)
 {
     return (file->type == OUTPUT);

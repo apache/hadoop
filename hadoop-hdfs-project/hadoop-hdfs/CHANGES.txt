@@ -844,6 +844,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4804. WARN when users set the block balanced preference percent below
     0.5 or above 1.0. (Stephen Chu via atm)
 
+    HDFS-4698. Provide client-side metrics for remote reads, local reads, and
+    short-circuit reads. (Colin Patrick McCabe via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES

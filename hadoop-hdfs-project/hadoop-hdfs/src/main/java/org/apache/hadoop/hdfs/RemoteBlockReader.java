@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -78,6 +79,11 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
    * at the beginning so that the read can begin on a chunk boundary.
    */
   private final long bytesNeededToFinish;
+  
+  /**
+   * True if we are reading from a local DataNode.
+   */
+  private final boolean isLocal;
 
   private boolean eos = false;
   private boolean sentStatusCode = false;
@@ -329,6 +335,9 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
           checksum.getChecksumSize() > 0? checksum : null, 
           checksum.getBytesPerChecksum(),
           checksum.getChecksumSize());
+
+    this.isLocal = DFSClient.isLocalAddress(NetUtils.
+        createSocketAddr(datanodeID.getXferAddr()));
     
     this.peer = peer;
     this.datanodeID = datanodeID;
@@ -476,5 +485,15 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     // An optimistic estimate of how much data is available
     // to us without doing network I/O.
     return DFSClient.TCP_WINDOW_SIZE;
+  }
+
+  @Override
+  public boolean isLocal() {
+    return isLocal;
+  }
+  
+  @Override
+  public boolean isShortCircuit() {
+    return false;
   }
 }

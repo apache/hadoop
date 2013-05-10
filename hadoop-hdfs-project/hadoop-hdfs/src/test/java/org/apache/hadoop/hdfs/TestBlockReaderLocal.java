@@ -25,14 +25,19 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.hdfs.DFSInputStream.ReadStatistics;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 public class TestBlockReaderLocal {
@@ -339,11 +344,81 @@ public class TestBlockReaderLocal {
       }
     }
   }
-
+  
   @Test
   public void testBlockReaderLocalReadCorrupt()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalReadCorrupt(), true);
     runBlockReaderLocalTest(new TestBlockReaderLocalReadCorrupt(), false);
+  }
+
+  @Test(timeout=60000)
+  public void TestStatisticsForShortCircuitLocalRead() throws Exception {
+    testStatistics(true);
+  }
+
+  @Test(timeout=60000)
+  public void TestStatisticsForLocalRead() throws Exception {
+    testStatistics(false);
+  }
+  
+  private void testStatistics(boolean isShortCircuit) throws Exception {
+    Assume.assumeTrue(DomainSocket.getLoadingFailureReason() == null);
+    HdfsConfiguration conf = new HdfsConfiguration();
+    TemporarySocketDirectory sockDir = null;
+    if (isShortCircuit) {
+      DFSInputStream.tcpReadsDisabledForTesting = true;
+      sockDir = new TemporarySocketDirectory();
+      conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
+        new File(sockDir.getDir(), "TestStatisticsForLocalRead.%d.sock").
+          getAbsolutePath());
+      conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
+      DomainSocket.disableBindPathValidation();
+    } else {
+      conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, false);
+    }
+    MiniDFSCluster cluster = null;
+    final Path TEST_PATH = new Path("/a");
+    final long RANDOM_SEED = 4567L;
+    FSDataInputStream fsIn = null;
+    byte original[] = new byte[BlockReaderLocalTest.TEST_LENGTH];
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.createFile(fs, TEST_PATH,
+          BlockReaderLocalTest.TEST_LENGTH, (short)1, RANDOM_SEED);
+      try {
+        DFSTestUtil.waitReplication(fs, TEST_PATH, (short)1);
+      } catch (InterruptedException e) {
+        Assert.fail("unexpected InterruptedException during " +
+            "waitReplication: " + e);
+      } catch (TimeoutException e) {
+        Assert.fail("unexpected TimeoutException during " +
+            "waitReplication: " + e);
+      }
+      fsIn = fs.open(TEST_PATH);
+      IOUtils.readFully(fsIn, original, 0,
+          BlockReaderLocalTest.TEST_LENGTH);
+      HdfsDataInputStream dfsIn = (HdfsDataInputStream)fsIn;
+      Assert.assertEquals(BlockReaderLocalTest.TEST_LENGTH, 
+          dfsIn.getReadStatistics().getTotalBytesRead());
+      Assert.assertEquals(BlockReaderLocalTest.TEST_LENGTH, 
+          dfsIn.getReadStatistics().getTotalLocalBytesRead());
+      if (isShortCircuit) {
+        Assert.assertEquals(BlockReaderLocalTest.TEST_LENGTH, 
+            dfsIn.getReadStatistics().getTotalShortCircuitBytesRead());
+      } else {
+        Assert.assertEquals(0,
+            dfsIn.getReadStatistics().getTotalShortCircuitBytesRead());
+      }
+      fsIn.close();
+      fsIn = null;
+    } finally {
+      DFSInputStream.tcpReadsDisabledForTesting = false;
+      if (fsIn != null) fsIn.close();
+      if (cluster != null) cluster.shutdown();
+      if (sockDir != null) sockDir.close();
+    }
   }
 }
