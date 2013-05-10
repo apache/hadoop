@@ -554,6 +554,8 @@ Trunk (Unreleased)
     HADOOP-9556. disable HA tests on Windows that fail due to ZooKeeper client
     connection management bug. (Chris Nauroth via suresh)
 
+    HADOOP-9553. TestAuthenticationToken fails on Windows.
+    (Arpit Agarwal via suresh)
 
 Release 2.0.5-beta - UNRELEASED
 
