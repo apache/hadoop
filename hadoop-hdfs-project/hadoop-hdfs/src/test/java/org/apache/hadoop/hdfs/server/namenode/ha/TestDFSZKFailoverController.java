@@ -121,7 +121,7 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
    * Test that automatic failover is triggered by shutting the
    * active NN down.
    */
-  @Test(timeout=30000)
+  @Test(timeout=60000)
   public void testFailoverAndBackOnNNShutdown() throws Exception {
     Path p1 = new Path("/dir1");
     Path p2 = new Path("/dir2");
@@ -191,7 +191,7 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
           return false;
         }
       }
-    }, 50, 5000);
+    }, 50, 15000);
   }
 
   /**
