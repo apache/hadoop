@@ -702,6 +702,8 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9550. Remove aspectj dependency. (kkambatl via tucu)
 
+    HADOOP-9549. WebHdfsFileSystem hangs on close(). (daryn via kihwal)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
