@@ -50,6 +50,7 @@ import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.SecurityUtil;
@@ -112,7 +113,9 @@ public class NetUtils {
    */
   public static SocketFactory getDefaultSocketFactory(Configuration conf) {
 
-    String propValue = conf.get("hadoop.rpc.socket.factory.class.default");
+    String propValue = conf.get(
+        CommonConfigurationKeysPublic.HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY,
+        CommonConfigurationKeysPublic.HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_DEFAULT);
     if ((propValue == null) || (propValue.length() == 0))
       return SocketFactory.getDefault();
 

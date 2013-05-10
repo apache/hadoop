@@ -213,6 +213,8 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY =
     "hadoop.rpc.socket.factory.class.default";
+  public static final String  HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_DEFAULT =
+    "org.apache.hadoop.net.StandardSocketFactory";
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_SOCKS_SERVER_KEY = "hadoop.socks.server";
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */

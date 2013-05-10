@@ -152,6 +152,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9549. WebHdfsFileSystem hangs on close(). (daryn via kihwal)
 
+    HADOOP-9485. No default value in the code for
+    hadoop.rpc.socket.factory.class.default. (Colin Patrick McCabe via atm)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES

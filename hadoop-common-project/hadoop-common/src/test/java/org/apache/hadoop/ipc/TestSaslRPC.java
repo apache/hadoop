@@ -41,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.net.NetUtils;
@@ -378,7 +379,8 @@ public class TestSaslRPC {
     current.addToken(token);
 
     Configuration newConf = new Configuration(conf);
-    newConf.set("hadoop.rpc.socket.factory.class.default", "");
+    newConf.set(CommonConfigurationKeysPublic.
+        HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY, "");
     newConf.set(SERVER_PRINCIPAL_KEY, SERVER_PRINCIPAL_1);
 
     TestSaslProtocol proxy1 = null;
