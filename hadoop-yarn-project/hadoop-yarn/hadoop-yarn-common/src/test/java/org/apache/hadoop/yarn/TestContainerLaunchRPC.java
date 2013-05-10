@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.factory.providers.YarnRemoteExceptionFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -165,8 +164,7 @@ public class TestContainerLaunchRPC {
         throws YarnRemoteException {
       Exception e = new Exception("Dummy function", new Exception(
           "Dummy function cause"));
-      throw YarnRemoteExceptionFactoryProvider.getYarnRemoteExceptionFactory(
-          null).createYarnRemoteException(e);
+      throw new YarnRemoteException(e);
     }
   }
 }

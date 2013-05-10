@@ -35,7 +35,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -45,8 +44,6 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
@@ -85,7 +82,6 @@ public class ContainerImpl implements Container {
   private final Configuration daemonConf;
 
   private static final Log LOG = LogFactory.getLog(Container.class);
-  private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private final Map<LocalResourceRequest,List<String>> pendingResources =
     new HashMap<LocalResourceRequest,List<String>>();
   private final Map<Path,List<String>> localizedResources =
@@ -703,9 +699,9 @@ public class ContainerImpl implements Container {
 
       ContainerResourceFailedEvent rsrcFailedEvent =
           (ContainerResourceFailedEvent) event;
-      container.diagnostics.append(
-          StringUtils.stringifyException(rsrcFailedEvent.getCause())).append(
-          "\n");
+      container.diagnostics.append(rsrcFailedEvent.getDiagnosticMessage()
+          + "\n");
+          
 
       // Inform the localizer to decrement reference counts and cleanup
       // resources.

@@ -49,9 +49,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.factory.providers.YarnRemoteExceptionFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -154,7 +152,7 @@ public class TestRPC {
       exception = true;
       Assert.assertTrue(e.getMessage().contains(EXCEPTION_MSG));
       Assert.assertTrue(e.getMessage().contains(EXCEPTION_CAUSE));
-      System.out.println("Test Exception is " + RPCUtil.toString(e));
+      System.out.println("Test Exception is " + e.getMessage());
     } catch (Exception ex) {
       ex.printStackTrace();
     }
@@ -196,8 +194,7 @@ public class TestRPC {
     throws YarnRemoteException {
       Exception e = new Exception(EXCEPTION_MSG, 
           new Exception(EXCEPTION_CAUSE));
-      throw YarnRemoteExceptionFactoryProvider
-          .getYarnRemoteExceptionFactory(null).createYarnRemoteException(e);
+      throw new YarnRemoteException(e);
     }
   }
 }

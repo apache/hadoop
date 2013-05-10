@@ -236,6 +236,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4942. mapreduce.Job has a bunch of methods that throw 
     InterruptedException so its incompatible with MR1. (rkanter via tucu)
 
+    MAPREDUCE-5239. Updated MR App to reflect YarnRemoteException changes after
+    YARN-634. (Siddharth Seth via vinodkv)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES

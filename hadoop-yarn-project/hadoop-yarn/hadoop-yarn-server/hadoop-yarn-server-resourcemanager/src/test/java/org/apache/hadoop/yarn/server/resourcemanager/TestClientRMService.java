@@ -209,10 +209,10 @@ public class TestClientRMService {
             checkTokenRenewal(owner, other);
             return null;
           } catch (YarnRemoteException ex) {
-            Assert.assertEquals(ex.getMessage(),
+            Assert.assertTrue(ex.getMessage().contains(
                 "Client " + owner.getUserName() +
                 " tries to renew a token with renewer specified as " +
-                other.getUserName());
+                other.getUserName()));
             throw ex;
           }
         }

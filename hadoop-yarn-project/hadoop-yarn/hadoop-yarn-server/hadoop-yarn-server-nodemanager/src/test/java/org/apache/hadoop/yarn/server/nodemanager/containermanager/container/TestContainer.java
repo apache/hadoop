@@ -25,11 +25,9 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.AbstractMap.SimpleEntry;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -56,10 +54,10 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
@@ -663,7 +661,7 @@ public class TestContainer {
       LocalResourceRequest req = new LocalResourceRequest(rsrc);
       Exception e = new Exception("Fake localization error");
       c.handle(new ContainerResourceFailedEvent(c.getContainer()
-          .getId(), req, e));
+          .getId(), req, e.getMessage()));
       drainDispatcherEvents();
     }
 
@@ -679,7 +677,7 @@ public class TestContainer {
         LocalResourceRequest req = new LocalResourceRequest(rsrc.getValue());
         Exception e = new Exception("Fake localization error");
         c.handle(new ContainerResourceFailedEvent(c.getContainer().getId(),
-                 req, e));
+                 req, e.getMessage()));
       }
       drainDispatcherEvents();     
     }

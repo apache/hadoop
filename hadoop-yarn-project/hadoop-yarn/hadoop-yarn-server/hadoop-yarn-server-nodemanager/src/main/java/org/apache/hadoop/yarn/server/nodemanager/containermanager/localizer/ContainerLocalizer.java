@@ -28,7 +28,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionService;
@@ -57,7 +56,6 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
 import org.apache.hadoop.yarn.server.nodemanager.api.ResourceLocalizationSpec;
@@ -67,6 +65,7 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerSt
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceStatusType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenSecretManager;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
 
@@ -295,10 +294,11 @@ public class ContainerLocalizer {
           stat.setStatus(ResourceStatusType.FETCH_SUCCESS);
         } catch (ExecutionException e) {
           stat.setStatus(ResourceStatusType.FETCH_FAILURE);
-          stat.setException(RPCUtil.getRemoteException(e.getCause()));
+          stat.setException(
+              YarnServerBuilderUtils.newSerializedException(e.getCause()));
         } catch (CancellationException e) {
           stat.setStatus(ResourceStatusType.FETCH_FAILURE);
-          stat.setException(RPCUtil.getRemoteException(e));
+          stat.setException(YarnServerBuilderUtils.newSerializedException(e));
         }
         // TODO shouldn't remove until ACK
         i.remove();

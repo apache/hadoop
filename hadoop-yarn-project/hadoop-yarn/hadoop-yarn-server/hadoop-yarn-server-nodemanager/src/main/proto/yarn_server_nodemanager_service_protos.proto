@@ -34,7 +34,7 @@ message LocalResourceStatusProto {
   optional ResourceStatusTypeProto status = 2;
   optional URLProto localPath = 3;
   optional int64 localSize = 4;
-  optional YarnRemoteExceptionProto exception = 5;
+  optional SerializedExceptionProto exception = 5;
 }
 
 message LocalizerStatusProto {

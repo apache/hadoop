@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalResourceStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalizerHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalizerStatusProto;
@@ -44,6 +43,7 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerAc
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHeartbeatResponse;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceStatusType;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 
@@ -82,7 +82,7 @@ public class TestPBRecordImpl {
     e.setStackTrace(new StackTraceElement[] {
         new StackTraceElement("foo", "bar", "baz", 10),
         new StackTraceElement("sbb", "one", "onm", 10) });
-    ret.setException(RPCUtil.getRemoteException(e));
+    ret.setException(YarnServerBuilderUtils.newSerializedException(e));
     return ret;
   }
 

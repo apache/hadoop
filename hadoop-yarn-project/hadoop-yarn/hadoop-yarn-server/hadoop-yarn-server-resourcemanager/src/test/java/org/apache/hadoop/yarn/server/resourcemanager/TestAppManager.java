@@ -467,9 +467,11 @@ public class TestAppManager{
           " request is invalid.");
     } catch (YarnRemoteException e) {
       // Exception is expected
+      // TODO Change this to assert the expected exception type - post YARN-142
+      // sub-task related to specialized exceptions.
       Assert.assertTrue("The thrown exception is not" +
           " InvalidResourceRequestException",
-          e.getMessage().startsWith("Invalid resource request"));
+          e.getMessage().contains("Invalid resource request"));
     }
   }
 

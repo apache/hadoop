@@ -277,4 +277,10 @@
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
 
+  <!-- Ignore SerializedException does not extend Exception -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.api.records.SerializedException" />
+    <Bug pattern="NM_CLASS_NOT_EXCEPTION" />
+  </Match>
+
 </FindBugsFilter>

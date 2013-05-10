@@ -17,7 +17,6 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
-import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.Semaphore;
@@ -42,7 +41,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceReleaseEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRequestEvent;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
-import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
@@ -251,11 +249,10 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
       ResourceFailedLocalizationEvent failedEvent =
           (ResourceFailedLocalizationEvent) event;
       Queue<ContainerId> containers = rsrc.ref;
-      Throwable failureCause = failedEvent.getCause();
       for (ContainerId container : containers) {
         rsrc.dispatcher.getEventHandler().handle(
           new ContainerResourceFailedEvent(container, failedEvent
-            .getLocalResourceRequest(), failureCause));
+            .getLocalResourceRequest(), failedEvent.getDiagnosticMessage()));
       }
     }
   }

@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
+import org.apache.hadoop.yarn.server.api.records.SerializedException;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Server Builder utilities to construct various objects.
@@ -54,5 +56,11 @@ public class YarnServerBuilderUtils {
       response.addAllApplicationsToCleanup(applicationsToCleanUp);
     }
     return response;
+  }
+  
+  public static SerializedException newSerializedException(Throwable e) {
+    SerializedException se = Records.newRecord(SerializedException.class);
+    se.init(e);
+    return se;
   }
 }

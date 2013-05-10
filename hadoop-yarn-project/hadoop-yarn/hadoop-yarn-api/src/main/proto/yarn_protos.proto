@@ -23,11 +23,11 @@ option java_generate_equals_and_hash = true;
 
 import "Security.proto";
 
-message YarnRemoteExceptionProto {
+message SerializedExceptionProto {
   optional string message = 1;
   optional string trace = 2;
   optional string class_name = 3;
-  optional YarnRemoteExceptionProto cause = 4;
+  optional SerializedExceptionProto cause = 4;
 }
 
 message ApplicationIdProto {
