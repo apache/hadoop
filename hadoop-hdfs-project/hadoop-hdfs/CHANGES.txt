@@ -978,6 +978,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4810. several HDFS HA tests have timeouts that are too short. (Chris
     Nauroth via atm)
 
+    HDFS-4799. Corrupt replica can be prematurely removed from 
+    corruptReplicas map. (todd via kihwal)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
