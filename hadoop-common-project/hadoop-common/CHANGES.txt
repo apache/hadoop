@@ -170,6 +170,9 @@ Trunk (Unreleased)
 
     HADOOP-8608. Add Configuration API for parsing time durations. (cdouglas)
 
+    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
+    for Unit testing. (Hari via stevel)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -548,8 +551,9 @@ Trunk (Unreleased)
     HADOOP-9483. winutils support for readlink command.
     (Arpit Agarwal via suresh)
 
-    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations for Unit testing.
-    (Hari via stevel)
+    HADOOP-9556. disable HA tests on Windows that fail due to ZooKeeper client
+    connection management bug. (Chris Nauroth via suresh)
+
 
 Release 2.0.5-beta - UNRELEASED
 
