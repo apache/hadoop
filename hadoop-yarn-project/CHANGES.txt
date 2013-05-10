@@ -246,6 +246,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-663. Changed ResourceTracker API and LocalizationProtocol API to throw
     YarnRemoteException and IOException. (Xuan Gong via vinodkv)
 
+    YARN-590. Added an optional mesage to be returned by ResourceMaanger when RM
+    asks an RM to shutdown/resync etc so that NMs can log this message locally
+    for better debuggability. (Mayank Bansal via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

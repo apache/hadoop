@@ -133,5 +133,7 @@ public class TestRMNMRPCResponseId {
     nodeStatus.setResponseId(0);
     response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest);
     Assert.assertTrue(NodeAction.RESYNC.equals(response.getNodeAction()));
+    Assert.assertEquals("Too far behind rm response id:2 nm response id:0",
+      response.getDiagnosticsMessage());
   }
 }
