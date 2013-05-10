@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -213,7 +214,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   }
 
   @VisibleForTesting
-  protected void registerWithRM() throws YarnRemoteException {
+  protected void registerWithRM() throws YarnRemoteException, IOException {
     Configuration conf = getConfig();
     rmConnectWaitMS =
         conf.getInt(

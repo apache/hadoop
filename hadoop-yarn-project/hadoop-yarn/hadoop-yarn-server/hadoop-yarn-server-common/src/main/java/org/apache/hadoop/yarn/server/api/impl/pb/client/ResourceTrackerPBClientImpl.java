@@ -53,7 +53,8 @@ private ResourceTrackerPB proxy;
   
   @Override
   public RegisterNodeManagerResponse registerNodeManager(
-      RegisterNodeManagerRequest request) throws YarnRemoteException {
+      RegisterNodeManagerRequest request) throws YarnRemoteException,
+      IOException {
     RegisterNodeManagerRequestProto requestProto = ((RegisterNodeManagerRequestPBImpl)request).getProto();
     try {
       return new RegisterNodeManagerResponsePBImpl(proxy.registerNodeManager(null, requestProto));
@@ -64,7 +65,7 @@ private ResourceTrackerPB proxy;
 
   @Override
   public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     NodeHeartbeatRequestProto requestProto = ((NodeHeartbeatRequestPBImpl)request).getProto();
     try {
       return new NodeHeartbeatResponsePBImpl(proxy.nodeHeartbeat(null, requestProto));

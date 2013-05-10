@@ -168,7 +168,7 @@ public class TestNodeManagerResync {
       }
 
       @Override
-      protected void registerWithRM() throws YarnRemoteException {
+      protected void registerWithRM() throws YarnRemoteException, IOException {
         super.registerWithRM();
         registrationCount++;
       }

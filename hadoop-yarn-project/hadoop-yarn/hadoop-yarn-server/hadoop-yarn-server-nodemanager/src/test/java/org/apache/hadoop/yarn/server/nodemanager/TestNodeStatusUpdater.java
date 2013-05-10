@@ -123,7 +123,8 @@ public class TestNodeStatusUpdater {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException {
+        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        IOException {
       NodeId nodeId = request.getNodeId();
       Resource resource = request.getResource();
       LOG.info("Registering " + nodeId.toString());
@@ -167,7 +168,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException {
+        throws YarnRemoteException, IOException {
       NodeStatus nodeStatus = request.getNodeStatus();
       LOG.info("Got heartbeat number " + heartBeatID);
       NodeManagerMetrics mockMetrics = mock(NodeManagerMetrics.class);
@@ -390,7 +391,8 @@ public class TestNodeStatusUpdater {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException {
+        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        IOException {
       
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
@@ -399,7 +401,7 @@ public class TestNodeStatusUpdater {
     }
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException {
+        throws YarnRemoteException, IOException {
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
       
@@ -424,7 +426,8 @@ public class TestNodeStatusUpdater {
     
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException {
+        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        IOException {
 
       RegisterNodeManagerResponse response =
           recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
@@ -434,7 +437,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException {
+        throws YarnRemoteException, IOException {
       LOG.info("Got heartBeatId: [" + heartBeatID +"]");
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
@@ -474,7 +477,8 @@ public class TestNodeStatusUpdater {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException {
+        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        IOException {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
       response.setNodeAction(registerNodeAction);
@@ -483,7 +487,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException {
+        throws YarnRemoteException, IOException {
       try {
         if (heartBeatID == 0) {
           Assert.assertEquals(request.getNodeStatus().getContainersStatuses()
@@ -564,7 +568,8 @@ public class TestNodeStatusUpdater {
     public NodeAction registerNodeAction = NodeAction.NORMAL;
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException {
+        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        IOException {
       
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
@@ -574,7 +579,7 @@ public class TestNodeStatusUpdater {
     
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException {
+        throws YarnRemoteException, IOException {
       heartBeatID++;
       throw RPCUtil.getRemoteException("NodeHeartbeat exception");
     }

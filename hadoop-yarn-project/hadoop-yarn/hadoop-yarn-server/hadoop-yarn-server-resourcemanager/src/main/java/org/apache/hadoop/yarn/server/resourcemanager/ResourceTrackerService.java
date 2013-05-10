@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
@@ -161,7 +162,8 @@ public class ResourceTrackerService extends AbstractService implements
   @SuppressWarnings("unchecked")
   @Override
   public RegisterNodeManagerResponse registerNodeManager(
-      RegisterNodeManagerRequest request) throws YarnRemoteException {
+      RegisterNodeManagerRequest request) throws YarnRemoteException,
+      IOException {
 
     NodeId nodeId = request.getNodeId();
     String host = nodeId.getHost();
@@ -224,7 +226,7 @@ public class ResourceTrackerService extends AbstractService implements
   @SuppressWarnings("unchecked")
   @Override
   public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
 
     NodeStatus remoteNodeStatus = request.getNodeStatus();
     /**

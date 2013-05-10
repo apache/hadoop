@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import java.io.IOException;
+
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -32,13 +34,16 @@ public class LocalRMInterface implements ResourceTracker {
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
   @Override
-  public RegisterNodeManagerResponse registerNodeManager(RegisterNodeManagerRequest request) throws YarnRemoteException {
+  public RegisterNodeManagerResponse registerNodeManager(
+      RegisterNodeManagerRequest request) throws YarnRemoteException,
+      IOException {
     RegisterNodeManagerResponse response = recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
     return response;
   }
 
   @Override
-  public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request) throws YarnRemoteException {
+  public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
+      throws YarnRemoteException, IOException {
     NodeHeartbeatResponse response = recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
     return response;
   }
