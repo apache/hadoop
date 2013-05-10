@@ -20,7 +20,7 @@
 # Optinally upgrade or rollback dfs state.
 # Run this on master node.
 
-usage="Usage: start-dfs.sh [-upgrade|-rollback]"
+usage="Usage: start-dfs.sh [-upgrade|-rollback] [other options such as -clusterId]"
 
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
@@ -45,6 +45,9 @@ if [ $# -ge 1 ]; then
 	    ;;
 	esac
 fi
+
+#Add other possible options
+nameStartOpt="$nameStartOpts $@"
 
 #---------------------------------------------------------
 # namenodes
