@@ -35,6 +35,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * <p>
@@ -321,6 +322,11 @@ class LeaseRenewer {
       dfsc.putFileBeingWritten(src, out);
       emptyTime = Long.MAX_VALUE;
     }
+  }
+
+  @VisibleForTesting
+  synchronized void setEmptyTime(long time) {
+    emptyTime = time;
   }
 
   /** Close a file. */
