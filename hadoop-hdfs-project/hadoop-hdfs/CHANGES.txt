@@ -390,6 +390,9 @@ Trunk (Unreleased)
     
     HDFS-4538. Allow use of legacy blockreader (Colin Patrick McCabe via todd)
 
+    HDFS-4661. A few little code cleanups of some HDFS-347-related code. (Colin
+    Patrick McCabe via atm)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -282,16 +282,10 @@ class DataXceiver extends Receiver implements Runnable {
         DatanodeRegistration dnR = datanode.getDNRegistrationForBP(blk
             .getBlockPoolId());
         BlockSender.ClientTraceLog.info(String.format(
-          String.format(
-            "src: %s, dest: %s, op: %s, blockid: %s, srvID: %s, " +
-              "success: %b",
-            "127.0.0.1",                   // src IP
-            "127.0.0.1",                   // dst IP
-            "REQUEST_SHORT_CIRCUIT_FDS",   // operation
-            blk.getBlockId(),             // block id
-            dnR.getStorageID(),
-            (fis != null)
-          )));
+            "src: 127.0.0.1, dest: 127.0.0.1, op: REQUEST_SHORT_CIRCUIT_FDS," +
+            " blockid: %s, srvID: %s, success: %b",
+            blk.getBlockId(), dnR.getStorageID(), (fis != null)
+          ));
       }
       if (fis != null) {
         IOUtils.cleanup(LOG, fis);

@@ -1700,27 +1700,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         datafile.getAbsolutePath(), metafile.getAbsolutePath());
     return info;
   }
-  
-  @Override // FsDatasetSpi
-  public FileInputStream[] getShortCircuitFdsForRead(ExtendedBlock block) 
-      throws IOException {
-    File datafile = getBlockFile(block);
-    File metafile = FsDatasetUtil.getMetaFile(datafile,
-        block.getGenerationStamp());
-    FileInputStream fis[] = new FileInputStream[2];
-    boolean success = false;
-    try {
-      fis[0] = new FileInputStream(datafile);
-      fis[1] = new FileInputStream(metafile);
-      success = true;
-      return fis;
-    } finally {
-      if (!success) {
-        IOUtils.cleanup(null, fis);
-      }
-    }
-  }
-    
+
   @Override // FsDatasetSpi
   public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks)
       throws IOException {

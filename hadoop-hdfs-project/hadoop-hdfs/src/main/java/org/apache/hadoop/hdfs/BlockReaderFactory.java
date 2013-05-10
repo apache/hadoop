@@ -87,6 +87,8 @@ public class BlockReaderFactory {
                                      Peer peer,
                                      DatanodeID datanodeID,
                                      DomainSocketFactory domSockFactory,
+                                     PeerCache peerCache,
+                                     FileInputStreamCache fisCache,
                                      boolean allowShortCircuitLocalReads)
   throws IOException {
     peer.setReadTimeout(conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
@@ -101,16 +103,15 @@ public class BlockReaderFactory {
         // enabled, try to set up a BlockReaderLocal.
         BlockReader reader = newShortCircuitBlockReader(conf, file,
             block, blockToken, startOffset, len, peer, datanodeID,
-            domSockFactory, verifyChecksum);
+            domSockFactory, verifyChecksum, fisCache);
         if (reader != null) {
           // One we've constructed the short-circuit block reader, we don't
           // need the socket any more.  So let's return it to the cache.
-          PeerCache peerCache = PeerCache.getInstance(
-              conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY, 
-                DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT),
-              conf.getLong(DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY, 
-                DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT));
-          peerCache.put(datanodeID, peer);
+          if (peerCache != null) {
+            peerCache.put(datanodeID, peer);
+          } else {
+            IOUtils.cleanup(null, peer);
+          }
           return reader;
         }
       }
@@ -131,11 +132,11 @@ public class BlockReaderFactory {
           block, blockToken, startOffset, len,
           conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
               DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT),
-          verifyChecksum, clientName, peer, datanodeID);
+          verifyChecksum, clientName, peer, datanodeID, peerCache);
     } else {
       return RemoteBlockReader2.newBlockReader(
           file, block, blockToken, startOffset, len,
-          verifyChecksum, clientName, peer, datanodeID);
+          verifyChecksum, clientName, peer, datanodeID, peerCache);
     }
   }
 
@@ -175,8 +176,8 @@ public class BlockReaderFactory {
       Configuration conf, String file, ExtendedBlock block,
       Token<BlockTokenIdentifier> blockToken, long startOffset,
       long len, Peer peer, DatanodeID datanodeID,
-      DomainSocketFactory domSockFactory, boolean verifyChecksum)
-          throws IOException {
+      DomainSocketFactory domSockFactory, boolean verifyChecksum,
+      FileInputStreamCache fisCache) throws IOException {
     final DataOutputStream out =
         new DataOutputStream(new BufferedOutputStream(
           peer.getOutputStream()));
@@ -194,7 +195,8 @@ public class BlockReaderFactory {
       sock.recvFileInputStreams(fis, buf, 0, buf.length);
       try {
         reader = new BlockReaderLocal(conf, file, block,
-            startOffset, len, fis[0], fis[1], datanodeID, verifyChecksum);
+            startOffset, len, fis[0], fis[1], datanodeID, verifyChecksum,
+            fisCache);
       } finally {
         if (reader == null) {
           IOUtils.cleanup(DFSClient.LOG, fis[0], fis[1]);

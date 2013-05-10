@@ -286,8 +286,8 @@ public class TestDataNodeVolumeFailure {
     BlockReader blockReader =
       BlockReaderFactory.newBlockReader(conf, file, block,
         lblock.getBlockToken(), 0, -1, true, "TestDataNodeVolumeFailure",
-        TcpPeerServer.peerFromSocket(s), datanode, null, false);
-    blockReader.close(null, null);
+        TcpPeerServer.peerFromSocket(s), datanode, null, null, null, false);
+    blockReader.close();
   }
   
   /**

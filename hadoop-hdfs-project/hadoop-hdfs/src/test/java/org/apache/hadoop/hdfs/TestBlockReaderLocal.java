@@ -127,7 +127,7 @@ public class TestBlockReaderLocal {
       checkIn = new FileInputStream(metaFile);
       blockReaderLocal = new BlockReaderLocal(conf,
           TEST_PATH.getName(), block, 0, -1,
-          dataIn, checkIn, datanodeID, checksum);
+          dataIn, checkIn, datanodeID, checksum, null);
       dataIn = null;
       checkIn = null;
       test.doTest(blockReaderLocal, original);
@@ -136,7 +136,7 @@ public class TestBlockReaderLocal {
       if (cluster != null) cluster.shutdown();
       if (dataIn != null) dataIn.close();
       if (checkIn != null) checkIn.close();
-      if (blockReaderLocal != null) blockReaderLocal.close(null, null);
+      if (blockReaderLocal != null) blockReaderLocal.close();
     }
   }
   

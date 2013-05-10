@@ -148,7 +148,7 @@ public class TestBlockTokenWithDFS {
       blockReader = BlockReaderFactory.newBlockReader(
           conf, file, block, lblock.getBlockToken(), 0, -1,
           true, "TestBlockTokenWithDFS", TcpPeerServer.peerFromSocket(s),
-          nodes[0], null, false);
+          nodes[0], null, null, null, false);
 
     } catch (IOException ex) {
       if (ex instanceof InvalidBlockTokenException) {
