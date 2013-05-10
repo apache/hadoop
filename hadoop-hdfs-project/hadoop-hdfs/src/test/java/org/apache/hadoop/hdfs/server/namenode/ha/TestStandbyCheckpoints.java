@@ -245,7 +245,7 @@ public class TestStandbyCheckpoints {
    * checkpoint is in progress on the SBN, and therefore the StandbyCheckpointer
    * thread will have FSNS lock. Regression test for HDFS-4591.
    */
-  @Test(timeout=120000)
+  @Test(timeout=300000)
   public void testStandbyExceptionThrownDuringCheckpoint() throws Exception {
     
     // Set it up so that we know when the SBN checkpoint starts and ends.
@@ -256,7 +256,7 @@ public class TestStandbyCheckpoints {
             Mockito.any(Canceler.class));
     
     // Perform some edits and wait for a checkpoint to start on the SBN.
-    doEdits(0, 2000);
+    doEdits(0, 1000);
     nn0.getRpcServer().rollEditLog();
     answerer.waitForCall();
     answerer.proceed();
