@@ -986,6 +986,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4751. TestLeaseRenewer#testThreadName flakes. (Andrew Wang via atm)
 
+    HDFS-4533. start-dfs.sh ignores additional parameters besides -upgrade.
+    (Fengdong Yu via suresh)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
