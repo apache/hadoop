@@ -56,7 +56,7 @@ public class LocalizationProtocolPBClientImpl implements LocalizationProtocol,
 
   @Override
   public LocalizerHeartbeatResponse heartbeat(LocalizerStatus status)
-    throws YarnRemoteException {
+    throws YarnRemoteException, IOException {
     LocalizerStatusProto statusProto = ((LocalizerStatusPBImpl)status).getProto();
     try {
       return new LocalizerHeartbeatResponsePBImpl(

@@ -168,6 +168,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-634. Modified YarnRemoteException to be not backed by PB and introduced
     a separate SerializedException record. (Siddharth Seth via vinodkv)
 
+    YARN-663. Changed ResourceTracker API and LocalizationProtocol API to throw
+    YarnRemoteException and IOException. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

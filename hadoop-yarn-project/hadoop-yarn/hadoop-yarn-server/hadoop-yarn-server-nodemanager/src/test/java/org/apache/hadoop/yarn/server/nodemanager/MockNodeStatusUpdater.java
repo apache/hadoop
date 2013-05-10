@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -61,7 +63,8 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException {
+        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        IOException {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
       return response;
@@ -69,7 +72,7 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException {
+        throws YarnRemoteException, IOException {
       NodeStatus nodeStatus = request.getNodeStatus();
       LOG.info("Got heartbeat number " + heartBeatID);
       nodeStatus.setResponseId(heartBeatID++);

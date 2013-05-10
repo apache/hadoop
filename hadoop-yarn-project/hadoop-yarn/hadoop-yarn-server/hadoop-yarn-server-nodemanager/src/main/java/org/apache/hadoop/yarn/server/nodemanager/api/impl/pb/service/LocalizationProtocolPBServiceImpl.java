@@ -17,6 +17,8 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.api.impl.pb.service;
 
+import java.io.IOException;
+
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.LocalizerHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.LocalizerStatusPBImpl;
 
@@ -46,6 +48,8 @@ public class LocalizationProtocolPBServiceImpl implements LocalizationProtocolPB
       LocalizerHeartbeatResponse response = real.heartbeat(request);
       return ((LocalizerHeartbeatResponsePBImpl)response).getProto();
     } catch (YarnRemoteException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }

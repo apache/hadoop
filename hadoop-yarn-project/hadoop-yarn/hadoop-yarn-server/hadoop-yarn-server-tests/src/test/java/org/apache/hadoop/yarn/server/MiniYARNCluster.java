@@ -306,7 +306,8 @@ public class MiniYARNCluster extends CompositeService {
 
             @Override
             public NodeHeartbeatResponse nodeHeartbeat(
-                NodeHeartbeatRequest request) throws YarnRemoteException {
+                NodeHeartbeatRequest request) throws YarnRemoteException,
+                IOException {
               NodeHeartbeatResponse response = recordFactory.newRecordInstance(
                   NodeHeartbeatResponse.class);
               try {
@@ -322,7 +323,7 @@ public class MiniYARNCluster extends CompositeService {
             @Override
             public RegisterNodeManagerResponse registerNodeManager(
                 RegisterNodeManagerRequest request)
-                throws YarnRemoteException {
+                throws YarnRemoteException, IOException {
               RegisterNodeManagerResponse response = recordFactory.
                   newRecordInstance(RegisterNodeManagerResponse.class);
               try {

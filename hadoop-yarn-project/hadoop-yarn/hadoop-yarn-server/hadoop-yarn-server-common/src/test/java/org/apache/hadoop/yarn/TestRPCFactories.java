@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import junit.framework.Assert;
@@ -102,14 +103,15 @@ public class TestRPCFactories {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException {
+        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        IOException {
       // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException {
+        throws YarnRemoteException, IOException {
       // TODO Auto-generated method stub
       return null;
     }
