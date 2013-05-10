@@ -979,6 +979,15 @@ public class DistCp implements Tool {
 
     jobconf.setMapperClass(CopyFilesMapper.class);
     jobconf.setNumReduceTasks(0);
+    // Propagate delegation related props to DistCp job
+    String tokenFile = System.getenv("HADOOP_TOKEN_FILE_LOCATION");
+    if (tokenFile != null) {
+      LOG
+        .info("Setting env property for mapreduce.job.credentials.binary to: "
+          + tokenFile);
+      jobconf.set("mapreduce.job.credentials.binary", tokenFile);
+    }
+
     return jobconf;
   }
 
