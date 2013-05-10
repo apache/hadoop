@@ -244,6 +244,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4799. Corrupt replica can be prematurely removed from 
     corruptReplicas map. (todd via kihwal)
 
+    HDFS-4751. TestLeaseRenewer#testThreadName flakes. (Andrew Wang via atm)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
