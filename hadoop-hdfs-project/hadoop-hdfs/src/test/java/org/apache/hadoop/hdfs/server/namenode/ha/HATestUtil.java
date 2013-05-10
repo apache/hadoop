@@ -91,7 +91,7 @@ public abstract class HATestUtil {
    * Wait for the datanodes in the cluster to process any block
    * deletions that have already been asynchronously queued.
    */
-  static void waitForDNDeletions(final MiniDFSCluster cluster)
+  public static void waitForDNDeletions(final MiniDFSCluster cluster)
       throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
