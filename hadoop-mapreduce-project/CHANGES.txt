@@ -401,6 +401,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5239. Updated MR App to reflect YarnRemoteException changes after
     YARN-634. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-5208. Modified ShuffleHandler to use SecureIOUtils for reading
+    local files. (Omkar Vinit Joshi via vinodkv)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES

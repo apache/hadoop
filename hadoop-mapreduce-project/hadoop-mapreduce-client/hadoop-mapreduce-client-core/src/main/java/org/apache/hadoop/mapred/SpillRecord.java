@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import static org.apache.hadoop.mapred.MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.util.PureJavaCrc32;
 
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
@@ -65,17 +67,19 @@ public class SpillRecord {
       throws IOException {
 
     final FileSystem rfs = FileSystem.getLocal(job).getRaw();
-    final FSDataInputStream in = rfs.open(indexFileName);
+    final FSDataInputStream in =
+        SecureIOUtils.openFSDataInputStream(new File(indexFileName.toUri()
+            .getRawPath()), expectedIndexOwner, null);
     try {
       final long length = rfs.getFileStatus(indexFileName).getLen();
       final int partitions = (int) length / MAP_OUTPUT_INDEX_RECORD_LENGTH;
       final int size = partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH;
-
       buf = ByteBuffer.allocate(size);
       if (crc != null) {
         crc.reset();
         CheckedInputStream chk = new CheckedInputStream(in, crc);
         IOUtils.readFully(chk, buf.array(), 0, size);
+        
         if (chk.getChecksum().getValue() != in.readLong()) {
           throw new ChecksumException("Checksum error reading spill index: " +
                                 indexFileName, -1);
