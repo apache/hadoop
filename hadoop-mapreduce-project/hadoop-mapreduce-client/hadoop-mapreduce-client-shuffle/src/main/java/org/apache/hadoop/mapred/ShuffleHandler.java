@@ -58,9 +58,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.ReadaheadPool;
+import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
-import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.task.reduce.ShuffleHeader;
@@ -71,6 +71,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -490,8 +491,14 @@ public class ShuffleHandler extends AbstractService
             return;
           }
         } catch (IOException e) {
-          LOG.error("Shuffle error ", e);
-          sendError(ctx, e.getMessage(), INTERNAL_SERVER_ERROR);
+          LOG.error("Shuffle error :", e);
+          StringBuffer sb = new StringBuffer(e.getMessage());
+          Throwable t = e;
+          while (t.getCause() != null) {
+            sb.append(t.getCause().getMessage());
+            t = t.getCause();
+          }
+          sendError(ctx,sb.toString() , INTERNAL_SERVER_ERROR);
           return;
         }
       }
@@ -572,7 +579,7 @@ public class ShuffleHandler extends AbstractService
       final File spillfile = new File(mapOutputFileName.toString());
       RandomAccessFile spill;
       try {
-        spill = new RandomAccessFile(spillfile, "r");
+        spill = SecureIOUtils.openForRandomRead(spillfile, "r", user, null);
       } catch (FileNotFoundException e) {
         LOG.info(spillfile + " not found");
         return null;
