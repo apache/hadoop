@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -98,7 +99,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -257,13 +257,14 @@ public class TestClientRedirect {
     }
 
     @Override
-    public GetNewApplicationResponse getNewApplication(GetNewApplicationRequest request) throws YarnRemoteException {
+    public GetNewApplicationResponse getNewApplication(
+        GetNewApplicationRequest request) throws IOException {
       return null;
     }
 
     @Override
     public GetApplicationReportResponse getApplicationReport(
-        GetApplicationReportRequest request) throws YarnRemoteException {
+        GetApplicationReportRequest request) throws IOException {
       ApplicationId applicationId = request.getApplicationId();
       ApplicationReport application = recordFactory
           .newRecordInstance(ApplicationReport.class);
@@ -296,61 +297,61 @@ public class TestClientRedirect {
 
     @Override
     public SubmitApplicationResponse submitApplication(
-        SubmitApplicationRequest request) throws YarnRemoteException {
-      throw new YarnRemoteException("Test");
+        SubmitApplicationRequest request) throws IOException {
+      throw new IOException("Test");
     }
 
     @Override
     public KillApplicationResponse forceKillApplication(
-        KillApplicationRequest request) throws YarnRemoteException {
+        KillApplicationRequest request) throws IOException {
       return recordFactory.newRecordInstance(KillApplicationResponse.class);
     }
 
     @Override
     public GetClusterMetricsResponse getClusterMetrics(
-        GetClusterMetricsRequest request) throws YarnRemoteException {
+        GetClusterMetricsRequest request) throws IOException {
       return null;
     }
 
     @Override
     public GetAllApplicationsResponse getAllApplications(
-        GetAllApplicationsRequest request) throws YarnRemoteException {
+        GetAllApplicationsRequest request) throws IOException {
       return null;
     }
 
     @Override
     public GetClusterNodesResponse getClusterNodes(
-        GetClusterNodesRequest request) throws YarnRemoteException {
+        GetClusterNodesRequest request) throws IOException {
       return null;
     }
 
     @Override
     public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public GetQueueUserAclsInfoResponse getQueueUserAcls(
-        GetQueueUserAclsInfoRequest request) throws YarnRemoteException {
+        GetQueueUserAclsInfoRequest request) throws IOException {
       return null;
     }
 
     @Override
     public GetDelegationTokenResponse getDelegationToken(
-        GetDelegationTokenRequest request) throws YarnRemoteException {
+        GetDelegationTokenRequest request) throws IOException {
       return null;
     }
 
     @Override
     public RenewDelegationTokenResponse renewDelegationToken(
-        RenewDelegationTokenRequest request) throws YarnRemoteException {
+        RenewDelegationTokenRequest request) throws IOException {
       return null;
     }
 
     @Override
     public CancelDelegationTokenResponse cancelDelegationToken(
-        CancelDelegationTokenRequest request) throws YarnRemoteException {
+        CancelDelegationTokenRequest request) throws IOException {
       return null;
     }
   }
@@ -362,7 +363,8 @@ public class TestClientRedirect {
     }
 
     @Override
-    public GetCountersResponse getCounters(GetCountersRequest request) throws YarnRemoteException {
+    public GetCountersResponse getCounters(GetCountersRequest request)
+        throws IOException {
       hsContact = true;
       Counters counters = getMyCounters();
       GetCountersResponse response = recordFactory.newRecordInstance(GetCountersResponse.class);
@@ -422,7 +424,7 @@ public class TestClientRedirect {
 
     @Override
     public GetCountersResponse getCounters(GetCountersRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       JobId jobID = request.getJobId();
 
       amContact = true;
@@ -436,7 +438,7 @@ public class TestClientRedirect {
 
     @Override
     public GetJobReportResponse getJobReport(GetJobReportRequest request)
-        throws YarnRemoteException {
+        throws IOException {
 
       amContact = true;
 
@@ -456,13 +458,13 @@ public class TestClientRedirect {
 
     @Override
     public GetTaskReportResponse getTaskReport(GetTaskReportRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public GetTaskAttemptReportResponse getTaskAttemptReport(
-        GetTaskAttemptReportRequest request) throws YarnRemoteException {
+        GetTaskAttemptReportRequest request) throws IOException {
       return null;
     }
 
@@ -470,66 +472,66 @@ public class TestClientRedirect {
     public GetTaskAttemptCompletionEventsResponse
         getTaskAttemptCompletionEvents(
             GetTaskAttemptCompletionEventsRequest request)
-            throws YarnRemoteException {
+            throws IOException {
       return null;
     }
 
     @Override
     public GetTaskReportsResponse
         getTaskReports(GetTaskReportsRequest request)
-            throws YarnRemoteException {
+            throws IOException {
       return null;
     }
 
     @Override
     public GetDiagnosticsResponse
         getDiagnostics(GetDiagnosticsRequest request)
-            throws YarnRemoteException {
+            throws IOException {
       return null;
     }
 
     @Override
     public KillJobResponse killJob(KillJobRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return recordFactory.newRecordInstance(KillJobResponse.class);
     }
 
     @Override
     public KillTaskResponse killTask(KillTaskRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public KillTaskAttemptResponse killTaskAttempt(
-        KillTaskAttemptRequest request) throws YarnRemoteException {
+        KillTaskAttemptRequest request) throws IOException {
       return null;
     }
 
     @Override
     public FailTaskAttemptResponse failTaskAttempt(
-        FailTaskAttemptRequest request) throws YarnRemoteException {
+        FailTaskAttemptRequest request) throws IOException {
       return null;
     }
 
     @Override
     public org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse getDelegationToken(
         org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenResponse renewDelegationToken(
         org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenRequest request)
-        throws YarnRemoteException { 
+        throws IOException {
       return null;
     }
 
     @Override
     public org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenResponse cancelDelegationToken(
         org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
   }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2;
 
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import junit.framework.Assert;
@@ -56,7 +57,6 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenRe
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
 import org.junit.Test;
@@ -133,86 +133,86 @@ public class TestRPCFactories {
     
     @Override
     public GetJobReportResponse getJobReport(GetJobReportRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public GetTaskReportResponse getTaskReport(GetTaskReportRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public GetTaskAttemptReportResponse getTaskAttemptReport(
-        GetTaskAttemptReportRequest request) throws YarnRemoteException {
+        GetTaskAttemptReportRequest request) throws IOException {
       return null;
     }
 
     @Override
     public GetCountersResponse getCounters(GetCountersRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public GetTaskAttemptCompletionEventsResponse getTaskAttemptCompletionEvents(
         GetTaskAttemptCompletionEventsRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public KillJobResponse killJob(KillJobRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public KillTaskResponse killTask(KillTaskRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       return null;
     }
 
     @Override
     public KillTaskAttemptResponse killTaskAttempt(
-        KillTaskAttemptRequest request) throws YarnRemoteException {
+        KillTaskAttemptRequest request) throws IOException {
       return null;
     }
 
     @Override
     public FailTaskAttemptResponse failTaskAttempt(
-        FailTaskAttemptRequest request) throws YarnRemoteException {
+        FailTaskAttemptRequest request) throws IOException {
       return null;
     }
 
     @Override
     public GetDelegationTokenResponse getDelegationToken(
-        GetDelegationTokenRequest request) throws YarnRemoteException {
+        GetDelegationTokenRequest request) throws IOException {
       return null;
     }
 
     @Override
     public RenewDelegationTokenResponse renewDelegationToken(
-        RenewDelegationTokenRequest request) throws YarnRemoteException {
+        RenewDelegationTokenRequest request) throws IOException {
       return null;
     }
 
     @Override
     public CancelDelegationTokenResponse cancelDelegationToken(
-        CancelDelegationTokenRequest request) throws YarnRemoteException {
+        CancelDelegationTokenRequest request) throws IOException {
       return null;
     }   
   }

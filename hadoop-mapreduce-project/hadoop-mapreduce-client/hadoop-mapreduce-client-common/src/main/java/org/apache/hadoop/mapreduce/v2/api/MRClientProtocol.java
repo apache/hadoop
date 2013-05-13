@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.api;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenRequest;
@@ -48,7 +49,6 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenResponse;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
 public interface MRClientProtocol {
   /**
@@ -56,36 +56,36 @@ public interface MRClientProtocol {
    * @return InetSocketAddress
    */
   public InetSocketAddress getConnectAddress();
-  public GetJobReportResponse getJobReport(GetJobReportRequest request) throws YarnRemoteException;
-  public GetTaskReportResponse getTaskReport(GetTaskReportRequest request) throws YarnRemoteException;
-  public GetTaskAttemptReportResponse getTaskAttemptReport(GetTaskAttemptReportRequest request) throws YarnRemoteException;
-  public GetCountersResponse getCounters(GetCountersRequest request) throws YarnRemoteException;
-  public GetTaskAttemptCompletionEventsResponse getTaskAttemptCompletionEvents(GetTaskAttemptCompletionEventsRequest request) throws YarnRemoteException;
-  public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request) throws YarnRemoteException;
-  public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request) throws YarnRemoteException;
-  public KillJobResponse killJob(KillJobRequest request) throws YarnRemoteException;
-  public KillTaskResponse killTask(KillTaskRequest request) throws YarnRemoteException;
-  public KillTaskAttemptResponse killTaskAttempt(KillTaskAttemptRequest request) throws YarnRemoteException;
-  public FailTaskAttemptResponse failTaskAttempt(FailTaskAttemptRequest request) throws YarnRemoteException;
-  public GetDelegationTokenResponse getDelegationToken(GetDelegationTokenRequest request) throws YarnRemoteException;
+  public GetJobReportResponse getJobReport(GetJobReportRequest request) throws IOException;
+  public GetTaskReportResponse getTaskReport(GetTaskReportRequest request) throws IOException;
+  public GetTaskAttemptReportResponse getTaskAttemptReport(GetTaskAttemptReportRequest request) throws IOException;
+  public GetCountersResponse getCounters(GetCountersRequest request) throws IOException;
+  public GetTaskAttemptCompletionEventsResponse getTaskAttemptCompletionEvents(GetTaskAttemptCompletionEventsRequest request) throws IOException;
+  public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request) throws IOException;
+  public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request) throws IOException;
+  public KillJobResponse killJob(KillJobRequest request) throws IOException;
+  public KillTaskResponse killTask(KillTaskRequest request) throws IOException;
+  public KillTaskAttemptResponse killTaskAttempt(KillTaskAttemptRequest request) throws IOException;
+  public FailTaskAttemptResponse failTaskAttempt(FailTaskAttemptRequest request) throws IOException;
+  public GetDelegationTokenResponse getDelegationToken(GetDelegationTokenRequest request) throws IOException;
   
   /**
    * Renew an existing delegation token.
    * 
    * @param request the delegation token to be renewed.
    * @return the new expiry time for the delegation token.
-   * @throws YarnRemoteException
+   * @throws IOException
    */
   public RenewDelegationTokenResponse renewDelegationToken(
-      RenewDelegationTokenRequest request) throws YarnRemoteException;
+      RenewDelegationTokenRequest request) throws IOException;
 
   /**
    * Cancel an existing delegation token.
    * 
    * @param request the delegation token to be cancelled.
    * @return an empty response.
-   * @throws YarnRemoteException
+   * @throws IOException
    */
   public CancelDelegationTokenResponse cancelDelegationToken(
-      CancelDelegationTokenRequest request) throws YarnRemoteException;
+      CancelDelegationTokenRequest request) throws IOException;
 }

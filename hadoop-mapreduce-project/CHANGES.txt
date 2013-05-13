@@ -4,6 +4,9 @@ Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    MAPREDUCE-4067. Changed MRClientProtocol api to throw IOException only (Xuan
+    Gong via vinodkv)
+
   NEW FEATURES
 
   IMPROVEMENTS

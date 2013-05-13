@@ -63,7 +63,6 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
@@ -366,7 +365,7 @@ public class TestContainerLauncher {
 
     @Override
     public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnRemoteException {
+        GetContainerStatusRequest request) throws IOException {
       GetContainerStatusResponse response = recordFactory
           .newRecordInstance(GetContainerStatusResponse.class);
       response.setStatus(status);
@@ -375,38 +374,38 @@ public class TestContainerLauncher {
 
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request)
-        throws YarnRemoteException {
+        throws IOException {
 
       // Validate that the container is what RM is giving.
       Assert.assertEquals(MRApp.NM_HOST, request.getContainer().getNodeId()
-        .getHost());
+          .getHost());
       Assert.assertEquals(MRApp.NM_PORT, request.getContainer().getNodeId()
-        .getPort());
+          .getPort());
       Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_HTTP_PORT, request
-        .getContainer().getNodeHttpAddress());
+          .getContainer().getNodeHttpAddress());
 
       StartContainerResponse response = recordFactory
           .newRecordInstance(StartContainerResponse.class);
       status = recordFactory.newRecordInstance(ContainerStatus.class);
-          try {
+      try {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(15000);
       } catch (Exception e) {
         LOG.error(e);
         throw new UndeclaredThrowableException(e);
-            }
+      }
       status.setState(ContainerState.RUNNING);
       status.setContainerId(request.getContainer().getId());
       status.setExitStatus(0);
       return response;
-            }
+    }
 
     @Override
     public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       Exception e = new Exception("Dummy function", new Exception(
           "Dummy function cause"));
-      throw new YarnRemoteException(e);
-          }
-        }
+      throw new IOException(e);
+    }
   }
+}

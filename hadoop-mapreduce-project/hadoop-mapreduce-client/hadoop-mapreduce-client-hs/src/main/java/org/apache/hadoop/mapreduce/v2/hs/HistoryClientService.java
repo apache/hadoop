@@ -80,10 +80,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -187,7 +185,7 @@ public class HistoryClientService extends AbstractService {
       return getBindAddress();
     }
     
-    private Job verifyAndGetJob(final JobId jobID) throws YarnRemoteException {
+    private Job verifyAndGetJob(final JobId jobID) throws IOException {
       UserGroupInformation loginUgi = null;
       Job job = null;
       try {
@@ -200,10 +198,8 @@ public class HistoryClientService extends AbstractService {
             return job;
           }
         });
-      } catch (IOException e) {
-        throw RPCUtil.getRemoteException(e);
       } catch (InterruptedException e) {
-        throw RPCUtil.getRemoteException(e);
+        throw new IOException(e);
       }
       if (job != null) {
         JobACL operation = JobACL.VIEW_JOB;
@@ -213,7 +209,8 @@ public class HistoryClientService extends AbstractService {
     }
 
     @Override
-    public GetCountersResponse getCounters(GetCountersRequest request) throws YarnRemoteException {
+    public GetCountersResponse getCounters(GetCountersRequest request)
+        throws IOException {
       JobId jobId = request.getJobId();
       Job job = verifyAndGetJob(jobId);
       GetCountersResponse response = recordFactory.newRecordInstance(GetCountersResponse.class);
@@ -222,7 +219,8 @@ public class HistoryClientService extends AbstractService {
     }
 
     @Override
-    public GetJobReportResponse getJobReport(GetJobReportRequest request) throws YarnRemoteException {
+    public GetJobReportResponse getJobReport(GetJobReportRequest request)
+        throws IOException {
       JobId jobId = request.getJobId();
       Job job = verifyAndGetJob(jobId);
       GetJobReportResponse response = recordFactory.newRecordInstance(GetJobReportResponse.class);
@@ -236,7 +234,8 @@ public class HistoryClientService extends AbstractService {
     }
 
     @Override
-    public GetTaskAttemptReportResponse getTaskAttemptReport(GetTaskAttemptReportRequest request) throws YarnRemoteException {
+    public GetTaskAttemptReportResponse getTaskAttemptReport(
+        GetTaskAttemptReportRequest request) throws IOException {
       TaskAttemptId taskAttemptId = request.getTaskAttemptId();
       Job job = verifyAndGetJob(taskAttemptId.getTaskId().getJobId());
       GetTaskAttemptReportResponse response = recordFactory.newRecordInstance(GetTaskAttemptReportResponse.class);
@@ -245,7 +244,8 @@ public class HistoryClientService extends AbstractService {
     }
 
     @Override
-    public GetTaskReportResponse getTaskReport(GetTaskReportRequest request) throws YarnRemoteException {
+    public GetTaskReportResponse getTaskReport(GetTaskReportRequest request)
+        throws IOException {
       TaskId taskId = request.getTaskId();
       Job job = verifyAndGetJob(taskId.getJobId());
       GetTaskReportResponse response = recordFactory.newRecordInstance(GetTaskReportResponse.class);
@@ -254,7 +254,9 @@ public class HistoryClientService extends AbstractService {
     }
 
     @Override
-    public GetTaskAttemptCompletionEventsResponse getTaskAttemptCompletionEvents(GetTaskAttemptCompletionEventsRequest request) throws YarnRemoteException {
+    public GetTaskAttemptCompletionEventsResponse
+        getTaskAttemptCompletionEvents(
+            GetTaskAttemptCompletionEventsRequest request) throws IOException {
       JobId jobId = request.getJobId();
       int fromEventId = request.getFromEventId();
       int maxEvents = request.getMaxEvents();
@@ -266,22 +268,25 @@ public class HistoryClientService extends AbstractService {
     }
 
     @Override
-    public KillJobResponse killJob(KillJobRequest request) throws YarnRemoteException {
-      throw RPCUtil.getRemoteException("Invalid operation on completed job");
+    public KillJobResponse killJob(KillJobRequest request) throws IOException {
+      throw new IOException("Invalid operation on completed job");
     }
 
     @Override
-    public KillTaskResponse killTask(KillTaskRequest request) throws YarnRemoteException {
-      throw RPCUtil.getRemoteException("Invalid operation on completed job");
+    public KillTaskResponse killTask(KillTaskRequest request)
+        throws IOException {
+      throw new IOException("Invalid operation on completed job");
     }
 
     @Override
-    public KillTaskAttemptResponse killTaskAttempt(KillTaskAttemptRequest request) throws YarnRemoteException {
-      throw RPCUtil.getRemoteException("Invalid operation on completed job");
+    public KillTaskAttemptResponse killTaskAttempt(
+        KillTaskAttemptRequest request) throws IOException {
+      throw new IOException("Invalid operation on completed job");
     }
 
     @Override
-    public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request) throws YarnRemoteException {
+    public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request)
+        throws IOException {
       TaskAttemptId taskAttemptId = request.getTaskAttemptId();
 
       Job job = verifyAndGetJob(taskAttemptId.getTaskId().getJobId());
@@ -292,12 +297,14 @@ public class HistoryClientService extends AbstractService {
     }
 
     @Override
-    public FailTaskAttemptResponse failTaskAttempt(FailTaskAttemptRequest request) throws YarnRemoteException {
-      throw RPCUtil.getRemoteException("Invalid operation on completed job");
+    public FailTaskAttemptResponse failTaskAttempt(
+        FailTaskAttemptRequest request) throws IOException {
+      throw new IOException("Invalid operation on completed job");
     }
 
     @Override
-    public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request) throws YarnRemoteException {
+    public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request)
+        throws IOException {
       JobId jobId = request.getJobId();
       TaskType taskType = request.getTaskType();
 
@@ -312,9 +319,7 @@ public class HistoryClientService extends AbstractService {
     
     @Override
     public GetDelegationTokenResponse getDelegationToken(
-        GetDelegationTokenRequest request) throws YarnRemoteException {
-
-      try {
+        GetDelegationTokenRequest request) throws IOException {
 
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
@@ -344,25 +349,22 @@ public class HistoryClientService extends AbstractService {
         realJHSToken.getPassword(), realJHSToken.getService().toString());
       response.setDelegationToken(mrDToken);
       return response;
-      } catch (IOException i) {
-        throw RPCUtil.getRemoteException(i);
-      }
     }
 
     @Override
     public RenewDelegationTokenResponse renewDelegationToken(
-        RenewDelegationTokenRequest request) throws YarnRemoteException {
-      try {
+        RenewDelegationTokenRequest request) throws IOException {
         if (!isAllowedDelegationTokenOp()) {
           throw new IOException(
               "Delegation Token can be renewed only with kerberos authentication");
         }
 
         DelegationToken protoToken = request.getDelegationToken();
-        Token<MRDelegationTokenIdentifier> token = new Token<MRDelegationTokenIdentifier>(
-            protoToken.getIdentifier().array(), protoToken.getPassword()
-                .array(), new Text(protoToken.getKind()), new Text(
-                protoToken.getService()));
+        Token<MRDelegationTokenIdentifier> token =
+            new Token<MRDelegationTokenIdentifier>(
+                protoToken.getIdentifier().array(), protoToken.getPassword()
+                    .array(), new Text(protoToken.getKind()), new Text(
+                    protoToken.getService()));
 
         String user = UserGroupInformation.getCurrentUser().getShortUserName();
         long nextExpTime = jhsDTSecretManager.renewToken(token, user);
@@ -370,45 +372,36 @@ public class HistoryClientService extends AbstractService {
             .newRecord(RenewDelegationTokenResponse.class);
         renewResponse.setNextExpirationTime(nextExpTime);
         return renewResponse;
-      } catch (IOException e) {
-        throw RPCUtil.getRemoteException(e);
-      }
     }
 
     @Override
     public CancelDelegationTokenResponse cancelDelegationToken(
-        CancelDelegationTokenRequest request) throws YarnRemoteException {
-      try {
+        CancelDelegationTokenRequest request) throws IOException {
         if (!isAllowedDelegationTokenOp()) {
           throw new IOException(
               "Delegation Token can be cancelled only with kerberos authentication");
         }
-        
+
         DelegationToken protoToken = request.getDelegationToken();
-        Token<MRDelegationTokenIdentifier> token = new Token<MRDelegationTokenIdentifier>(
-            protoToken.getIdentifier().array(), protoToken.getPassword()
-                .array(), new Text(protoToken.getKind()), new Text(
-                protoToken.getService()));
+        Token<MRDelegationTokenIdentifier> token =
+            new Token<MRDelegationTokenIdentifier>(
+                protoToken.getIdentifier().array(), protoToken.getPassword()
+                    .array(), new Text(protoToken.getKind()), new Text(
+                    protoToken.getService()));
 
         String user = UserGroupInformation.getCurrentUser().getShortUserName();
         jhsDTSecretManager.cancelToken(token, user);
         return Records.newRecord(CancelDelegationTokenResponse.class);
-      } catch (IOException e) {
-        throw RPCUtil.getRemoteException(e);
-      }
     }
 
     private void checkAccess(Job job, JobACL jobOperation)
-        throws YarnRemoteException {
+        throws IOException {
 
       UserGroupInformation callerUGI;
-      try {
-        callerUGI = UserGroupInformation.getCurrentUser();
-      } catch (IOException e) {
-        throw RPCUtil.getRemoteException(e);
-      }
+      callerUGI = UserGroupInformation.getCurrentUser();
+
       if (!job.checkAccess(callerUGI, jobOperation)) {
-        throw RPCUtil.getRemoteException(new AccessControlException("User "
+        throw new IOException(new AccessControlException("User "
             + callerUGI.getShortUserName() + " cannot perform operation "
             + jobOperation.name() + " on " + job.getID()));
       }

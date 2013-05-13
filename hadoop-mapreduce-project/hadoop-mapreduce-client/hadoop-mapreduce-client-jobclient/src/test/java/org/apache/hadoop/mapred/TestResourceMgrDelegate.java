@@ -48,19 +48,21 @@ public class TestResourceMgrDelegate {
 
   /**
    * Tests that getRootQueues makes a request for the (recursive) child queues
-   * @throws YarnRemoteException
    * @throws IOException
    */
   @Test
-  public void testGetRootQueues() throws IOException, InterruptedException,
-      YarnRemoteException {
+  public void testGetRootQueues() throws IOException, InterruptedException {
     final ClientRMProtocol applicationsManager = Mockito.mock(ClientRMProtocol.class);
     GetQueueInfoResponse response = Mockito.mock(GetQueueInfoResponse.class);
     org.apache.hadoop.yarn.api.records.QueueInfo queueInfo =
       Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
     Mockito.when(response.getQueueInfo()).thenReturn(queueInfo);
-    Mockito.when(applicationsManager.getQueueInfo(Mockito.any(
-      GetQueueInfoRequest.class))).thenReturn(response);
+    try {
+      Mockito.when(applicationsManager.getQueueInfo(Mockito.any(
+        GetQueueInfoRequest.class))).thenReturn(response);
+    } catch (YarnRemoteException e) {
+      throw new IOException(e);
+    }
 
     ResourceMgrDelegate delegate = new ResourceMgrDelegate(
       new YarnConfiguration()) {
@@ -73,8 +75,12 @@ public class TestResourceMgrDelegate {
 
     ArgumentCaptor<GetQueueInfoRequest> argument =
       ArgumentCaptor.forClass(GetQueueInfoRequest.class);
-    Mockito.verify(applicationsManager).getQueueInfo(
-      argument.capture());
+    try {
+      Mockito.verify(applicationsManager).getQueueInfo(
+        argument.capture());
+    } catch (YarnRemoteException e) {
+      throw new IOException(e);
+    }
 
     Assert.assertTrue("Children of root queue not requested",
       argument.getValue().getIncludeChildQueues());

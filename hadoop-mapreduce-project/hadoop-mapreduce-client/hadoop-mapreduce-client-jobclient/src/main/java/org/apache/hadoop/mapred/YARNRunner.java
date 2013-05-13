@@ -209,14 +209,10 @@ public class YARNRunner implements ClientProtocol {
       .newRecordInstance(GetDelegationTokenRequest.class);
     request.setRenewer(Master.getMasterPrincipal(conf));
     DelegationToken mrDelegationToken;
-    try {
-      mrDelegationToken = hsProxy.getDelegationToken(request)
+    mrDelegationToken = hsProxy.getDelegationToken(request)
         .getDelegationToken();
-      return ProtoUtils.convertFromProtoFormat(mrDelegationToken,
-          hsProxy.getConnectAddress());
-    } catch (YarnRemoteException e) {
-      throw new IOException(e);
-    }
+    return ProtoUtils.convertFromProtoFormat(mrDelegationToken,
+        hsProxy.getConnectAddress());
   }
 
   @Override
@@ -627,11 +623,7 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public LogParams getLogFileParams(JobID jobID, TaskAttemptID taskAttemptID)
       throws IOException {
-    try {
-      return clientCache.getClient(jobID).getLogFilePath(jobID, taskAttemptID);
-    } catch (YarnRemoteException e) {
-      throw new IOException(e);
-    }
+    return clientCache.getClient(jobID).getLogFilePath(jobID, taskAttemptID);
   }
 
   private static void warnForJavaLibPath(String opts, String component, 
