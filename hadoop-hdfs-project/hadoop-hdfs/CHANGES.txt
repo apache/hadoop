@@ -3043,6 +3043,9 @@ Release 0.23.8 - UNRELEASED
     HDFS-4699. TestPipelinesFailover#testPipelineRecoveryStress fails
     sporadically (Chris Nauroth via kihwal)
 
+    HDFS-4805. Webhdfs client is fragile to token renewal errors 
+    (daryn via kihwal)
+
 Release 0.23.7 - UNRELEASED
 
   INCOMPATIBLE CHANGES

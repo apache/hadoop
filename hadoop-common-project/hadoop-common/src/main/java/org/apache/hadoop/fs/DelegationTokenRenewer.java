@@ -55,13 +55,14 @@ public class DelegationTokenRenewer
    * An action that will renew and replace the file system's delegation 
    * tokens automatically.
    */
-  private static class RenewAction<T extends FileSystem & Renewable>
+  public static class RenewAction<T extends FileSystem & Renewable>
       implements Delayed {
     /** when should the renew happen */
     private long renewalTime;
     /** a weak reference to the file system so that it can be garbage collected */
     private final WeakReference<T> weakFs;
     private Token<?> token; 
+    boolean isValid = true;
 
     private RenewAction(final T fs) {
       this.weakFs = new WeakReference<T>(fs);
@@ -69,6 +70,10 @@ public class DelegationTokenRenewer
       updateRenewalTime(renewCycle);
     }
  
+    public boolean isValid() {
+      return isValid;
+    }
+    
     /** Get the delay until this event should happen. */
     @Override
     public long getDelay(final TimeUnit unit) {
@@ -132,6 +137,7 @@ public class DelegationTokenRenewer
               updateRenewalTime(renewCycle);
               fs.setDelegationToken(token);
             } catch (IOException ie2) {
+              isValid = false;
               throw new IOException("Can't renew or get new delegation token ", ie);
             }
           }
@@ -160,7 +166,8 @@ public class DelegationTokenRenewer
   private static final long RENEW_CYCLE = 24 * 60 * 60 * 1000; 
 
   @InterfaceAudience.Private
-  protected static long renewCycle = RENEW_CYCLE;
+  @VisibleForTesting
+  public static long renewCycle = RENEW_CYCLE;
 
   /** Queue to maintain the RenewActions to be processed by the {@link #run()} */
   private volatile DelayQueue<RenewAction<?>> queue = new DelayQueue<RenewAction<?>>();
@@ -206,7 +213,7 @@ public class DelegationTokenRenewer
   
   /** Add a renew action to the queue. */
   @SuppressWarnings("static-access")
-  public <T extends FileSystem & Renewable> void addRenewAction(final T fs) {
+  public <T extends FileSystem & Renewable> RenewAction<T> addRenewAction(final T fs) {
     synchronized (this) {
       if (!isAlive()) {
         start();
@@ -218,6 +225,7 @@ public class DelegationTokenRenewer
     } else {
       fs.LOG.error("does not have a token for renewal");
     }
+    return action;
   }
 
   /**
