@@ -338,7 +338,7 @@ public class TestShuffleHandler {
       }
       // Retrieve file owner name
       FileInputStream is = new FileInputStream(fileMap.get(0));
-      String owner = NativeIO.POSIX.getFstat(is.getFD()).getOwner();
+      String owner = NativeIO.getFstat(is.getFD()).getOwner();
       is.close();
 
       String message =
@@ -355,9 +355,9 @@ public class TestShuffleHandler {
       List<File> fileMap) throws IOException {
     String attemptDir =
         StringUtils.join(Path.SEPARATOR,
-            new String[] { logDir.getAbsolutePath(),
+            Arrays.asList(new String[] { logDir.getAbsolutePath(),
                 ContainerLocalizer.USERCACHE, user,
-                ContainerLocalizer.APPCACHE, appId, "output", appAttemptId });
+                ContainerLocalizer.APPCACHE, appId, "output", appAttemptId }));
     File appAttemptDir = new File(attemptDir);
     appAttemptDir.mkdirs();
     System.out.println(appAttemptDir.getAbsolutePath());
