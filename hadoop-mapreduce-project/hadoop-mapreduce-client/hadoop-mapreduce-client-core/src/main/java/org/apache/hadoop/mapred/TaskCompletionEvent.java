@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
@@ -117,7 +118,8 @@ public class TaskCompletionEvent
    * Set task status. 
    * @param status
    */
-  protected void setTaskStatus(Status status) {
+  @Private
+  public void setTaskStatus(Status status) {
     super.setTaskStatus(org.apache.hadoop.mapreduce.
       TaskCompletionEvent.Status.valueOf(status.name()));
   }
@@ -126,7 +128,8 @@ public class TaskCompletionEvent
    * Set the task completion time
    * @param taskCompletionTime time (in millisec) the task took to complete
    */
-  protected void setTaskRunTime(int taskCompletionTime) {
+  @Private
+  public void setTaskRunTime(int taskCompletionTime) {
     super.setTaskRunTime(taskCompletionTime);
   }
 
@@ -134,7 +137,8 @@ public class TaskCompletionEvent
    * set event Id. should be assigned incrementally starting from 0. 
    * @param eventId
    */
-  protected void setEventId(int eventId) {
+  @Private
+  public void setEventId(int eventId) {
     super.setEventId(eventId);
   }
 
@@ -142,7 +146,8 @@ public class TaskCompletionEvent
    * Set task tracker http location. 
    * @param taskTrackerHttp
    */
-  protected void setTaskTrackerHttp(String taskTrackerHttp) {
+  @Private
+  public void setTaskTrackerHttp(String taskTrackerHttp) {
     super.setTaskTrackerHttp(taskTrackerHttp);
   }
 }
