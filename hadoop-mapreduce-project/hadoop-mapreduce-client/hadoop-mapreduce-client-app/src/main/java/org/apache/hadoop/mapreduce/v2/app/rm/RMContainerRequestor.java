@@ -145,13 +145,17 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     LOG.info("blacklistDisablePercent is " + blacklistDisablePercent);
   }
 
-  protected AllocateResponse makeRemoteRequest() throws YarnRemoteException,
-      IOException {
+  protected AllocateResponse makeRemoteRequest() throws IOException {
     AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
         applicationAttemptId, lastResponseID, super.getApplicationProgress(),
         new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
             release));
-    AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
+    AllocateResponse allocateResponse;
+    try {
+      allocateResponse = scheduler.allocate(allocateRequest);
+    } catch (YarnRemoteException e) {
+      throw new IOException(e);
+    }
     lastResponseID = allocateResponse.getResponseId();
     availableResources = allocateResponse.getAvailableResources();
     lastClusterNmCount = clusterNmCount;

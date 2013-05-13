@@ -405,7 +405,7 @@ public class TestContainerLauncherImpl {
     }
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       try {
         startLaunchBarrier.await();
         completeLaunchBarrier.await();
@@ -417,20 +417,20 @@ public class TestContainerLauncherImpl {
         e.printStackTrace();
       } 
       
-      throw new ContainerException("Force fail CM");
+      throw new IOException(new ContainerException("Force fail CM"));
       
     }
 
     @Override
     public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnRemoteException {
+        throws IOException {
     
       return null;
     }
 
     @Override
     public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnRemoteException {
+        GetContainerStatusRequest request) throws IOException {
     
       return null;
     }

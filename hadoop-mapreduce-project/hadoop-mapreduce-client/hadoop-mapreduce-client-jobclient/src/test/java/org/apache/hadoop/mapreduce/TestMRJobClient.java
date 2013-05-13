@@ -175,6 +175,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
       runTool(conf, jc, new String[] { "-kill-task", taid.toString() }, out);
       fail(" this task should be killed");
     } catch (IOException e) {
+      System.out.println(e);
       // task completed
       assertTrue(e.getMessage().contains("_0001_m_000000_1"));
     }

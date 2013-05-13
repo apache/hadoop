@@ -20,11 +20,13 @@ package org.apache.hadoop.mapreduce.v2.api.impl.pb.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocolPB;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenRequest;
@@ -97,9 +99,6 @@ import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskRequestProto
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
-
 import com.google.protobuf.ServiceException;
 
 public class MRClientProtocolPBClientImpl implements MRClientProtocol,
@@ -128,154 +127,154 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
 
   @Override
   public GetJobReportResponse getJobReport(GetJobReportRequest request)
-      throws YarnRemoteException {
+      throws IOException {
     GetJobReportRequestProto requestProto = ((GetJobReportRequestPBImpl)request).getProto();
     try {
       return new GetJobReportResponsePBImpl(proxy.getJobReport(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
 
   @Override
   public GetTaskReportResponse getTaskReport(GetTaskReportRequest request)
-      throws YarnRemoteException {
+      throws IOException {
     GetTaskReportRequestProto requestProto = ((GetTaskReportRequestPBImpl)request).getProto();
     try {
       return new GetTaskReportResponsePBImpl(proxy.getTaskReport(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
 
   @Override
   public GetTaskAttemptReportResponse getTaskAttemptReport(
-      GetTaskAttemptReportRequest request) throws YarnRemoteException {
+      GetTaskAttemptReportRequest request) throws IOException {
     GetTaskAttemptReportRequestProto requestProto = ((GetTaskAttemptReportRequestPBImpl)request).getProto();
     try {
       return new GetTaskAttemptReportResponsePBImpl(proxy.getTaskAttemptReport(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
 
   @Override
   public GetCountersResponse getCounters(GetCountersRequest request)
-      throws YarnRemoteException {
+      throws IOException {
     GetCountersRequestProto requestProto = ((GetCountersRequestPBImpl)request).getProto();
     try {
       return new GetCountersResponsePBImpl(proxy.getCounters(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
 
   @Override
   public GetTaskAttemptCompletionEventsResponse getTaskAttemptCompletionEvents(
-      GetTaskAttemptCompletionEventsRequest request) throws YarnRemoteException {
+      GetTaskAttemptCompletionEventsRequest request) throws IOException {
     GetTaskAttemptCompletionEventsRequestProto requestProto = ((GetTaskAttemptCompletionEventsRequestPBImpl)request).getProto();
     try {
       return new GetTaskAttemptCompletionEventsResponsePBImpl(proxy.getTaskAttemptCompletionEvents(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
 
   @Override
   public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request)
-      throws YarnRemoteException {
+      throws IOException {
     GetTaskReportsRequestProto requestProto = ((GetTaskReportsRequestPBImpl)request).getProto();
     try {
       return new GetTaskReportsResponsePBImpl(proxy.getTaskReports(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
 
   @Override
   public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request)
-      throws YarnRemoteException {
+      throws IOException {
     GetDiagnosticsRequestProto requestProto = ((GetDiagnosticsRequestPBImpl)request).getProto();
     try {
       return new GetDiagnosticsResponsePBImpl(proxy.getDiagnostics(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
   
   @Override
   public GetDelegationTokenResponse getDelegationToken(
-      GetDelegationTokenRequest request) throws YarnRemoteException {
+      GetDelegationTokenRequest request) throws IOException {
     GetDelegationTokenRequestProto requestProto = ((GetDelegationTokenRequestPBImpl)
         request).getProto();
     try {
       return new GetDelegationTokenResponsePBImpl(proxy.getDelegationToken(
           null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
   
   @Override
   public KillJobResponse killJob(KillJobRequest request)
-      throws YarnRemoteException {
+      throws IOException {
     KillJobRequestProto requestProto = ((KillJobRequestPBImpl)request).getProto();
     try {
       return new KillJobResponsePBImpl(proxy.killJob(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
 
   @Override
   public KillTaskResponse killTask(KillTaskRequest request)
-      throws YarnRemoteException {
+      throws IOException {
     KillTaskRequestProto requestProto = ((KillTaskRequestPBImpl)request).getProto();
     try {
       return new KillTaskResponsePBImpl(proxy.killTask(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
 
   @Override
   public KillTaskAttemptResponse killTaskAttempt(KillTaskAttemptRequest request)
-      throws YarnRemoteException {
+      throws IOException {
     KillTaskAttemptRequestProto requestProto = ((KillTaskAttemptRequestPBImpl)request).getProto();
     try {
       return new KillTaskAttemptResponsePBImpl(proxy.killTaskAttempt(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
 
   @Override
   public FailTaskAttemptResponse failTaskAttempt(FailTaskAttemptRequest request)
-      throws YarnRemoteException {
+      throws IOException {
     FailTaskAttemptRequestProto requestProto = ((FailTaskAttemptRequestPBImpl)request).getProto();
     try {
       return new FailTaskAttemptResponsePBImpl(proxy.failTaskAttempt(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
  
   @Override
   public RenewDelegationTokenResponse renewDelegationToken(
-      RenewDelegationTokenRequest request) throws YarnRemoteException {
+      RenewDelegationTokenRequest request) throws IOException {
     RenewDelegationTokenRequestProto requestProto = 
         ((RenewDelegationTokenRequestPBImpl) request).getProto();
     try {
       return new RenewDelegationTokenResponsePBImpl(proxy.renewDelegationToken(
           null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
     }
   }
 
   @Override
   public CancelDelegationTokenResponse cancelDelegationToken(
-      CancelDelegationTokenRequest request) throws YarnRemoteException {
+      CancelDelegationTokenRequest request) throws IOException {
     CancelDelegationTokenRequestProto requestProto =
         ((CancelDelegationTokenRequestPBImpl) request).getProto();
     try {
@@ -283,7 +282,17 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
           proxy.cancelDelegationToken(null, requestProto));
 
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      throw unwrapAndThrowException(e);
+    }
+  }
+
+  private IOException unwrapAndThrowException(ServiceException se) {
+    if (se.getCause() instanceof RemoteException) {
+      return ((RemoteException) se.getCause()).unwrapRemoteException();
+    } else if (se.getCause() instanceof IOException) {
+      return (IOException)se.getCause();
+    } else {
+      throw new UndeclaredThrowableException(se.getCause());
     }
   }
 }

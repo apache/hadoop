@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.api.impl.pb.service;
 
+import java.io.IOException;
+
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocolPB;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenResponse;
@@ -101,8 +103,6 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequest
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -121,7 +121,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       GetJobReportResponse response = real.getJobReport(request);
       return ((GetJobReportResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -133,7 +133,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       GetTaskReportResponse response = real.getTaskReport(request);
       return ((GetTaskReportResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -146,7 +146,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       GetTaskAttemptReportResponse response = real.getTaskAttemptReport(request);
       return ((GetTaskAttemptReportResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -158,7 +158,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       GetCountersResponse response = real.getCounters(request);
       return ((GetCountersResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -172,7 +172,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       GetTaskAttemptCompletionEventsResponse response = real.getTaskAttemptCompletionEvents(request);
       return ((GetTaskAttemptCompletionEventsResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -184,7 +184,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       GetTaskReportsResponse response = real.getTaskReports(request);
       return ((GetTaskReportsResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -196,7 +196,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       GetDiagnosticsResponse response = real.getDiagnostics(request);
       return ((GetDiagnosticsResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -209,7 +209,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       GetDelegationTokenResponse response = real.getDelegationToken(request);
       return ((GetDelegationTokenResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -221,7 +221,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       KillJobResponse response = real.killJob(request);
       return ((KillJobResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -233,7 +233,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       KillTaskResponse response = real.killTask(request);
       return ((KillTaskResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -245,7 +245,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       KillTaskAttemptResponse response = real.killTaskAttempt(request);
       return ((KillTaskAttemptResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -257,7 +257,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
     try {
       FailTaskAttemptResponse response = real.failTaskAttempt(request);
       return ((FailTaskAttemptResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
@@ -271,7 +271,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
       try {
         RenewDelegationTokenResponse response = real.renewDelegationToken(request);
         return ((RenewDelegationTokenResponsePBImpl)response).getProto();
-      } catch (YarnRemoteException e) {
+      } catch (IOException e) {
         throw new ServiceException(e);
       }
   }
@@ -285,7 +285,7 @@ public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
       try {
         CancelDelegationTokenResponse response = real.cancelDelegationToken(request);
         return ((CancelDelegationTokenResponsePBImpl)response).getProto();
-      } catch (YarnRemoteException e) {
+      } catch (IOException e) {
         throw new ServiceException(e);
       }
   }

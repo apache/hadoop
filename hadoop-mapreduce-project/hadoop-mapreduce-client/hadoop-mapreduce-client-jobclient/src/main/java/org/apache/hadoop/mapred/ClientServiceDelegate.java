@@ -75,7 +75,6 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -137,14 +136,19 @@ public class ClientServiceDelegate {
     }
   }
 
-  private MRClientProtocol getProxy() throws YarnRemoteException, IOException {
+  private MRClientProtocol getProxy() throws IOException {
     if (realProxy != null) {
       return realProxy;
     }
     
     // Possibly allow nulls through the PB tunnel, otherwise deal with an exception
     // and redirect to the history server.
-    ApplicationReport application = rm.getApplicationReport(appId);
+    ApplicationReport application = null;
+    try {
+      application = rm.getApplicationReport(appId);
+    } catch (YarnRemoteException e2) {
+      throw new IOException(e2);
+    }
     if (application != null) {
       trackingUrl = application.getTrackingUrl();
     }
@@ -213,7 +217,11 @@ public class ClientServiceDelegate {
           LOG.warn("getProxy() call interruped", e1);
           throw new YarnException(e1);
         }
-        application = rm.getApplicationReport(appId);
+        try {
+          application = rm.getApplicationReport(appId);
+        } catch (YarnRemoteException e1) {
+          throw new IOException(e1);
+        }
         if (application == null) {
           LOG.info("Could not get Job info from RM for job " + jobId
               + ". Redirecting to job history server.");
@@ -222,6 +230,8 @@ public class ClientServiceDelegate {
       } catch (InterruptedException e) {
         LOG.warn("getProxy() call interruped", e);
         throw new YarnException(e);
+      } catch (YarnRemoteException e) {
+        throw new IOException(e);
       }
     }
 
@@ -231,7 +241,7 @@ public class ClientServiceDelegate {
      */
     String user = application.getUser();
     if (user == null) {
-      throw RPCUtil.getRemoteException("User is not set in the application report");
+      throw new IOException("User is not set in the application report");
     }
     if (application.getYarnApplicationState() == YarnApplicationState.NEW
         || application.getYarnApplicationState() ==
@@ -300,23 +310,15 @@ public class ClientServiceDelegate {
     while (maxRetries > 0) {
       try {
         return methodOb.invoke(getProxy(), args);
-      } catch (YarnRemoteException yre) {
-        LOG.warn("Exception thrown by remote end.", yre);
-        throw new IOException(yre);
       } catch (InvocationTargetException e) {
-        if (e.getTargetException() instanceof YarnRemoteException) {
-          LOG.warn("Error from remote end: " + e
-              .getTargetException().getLocalizedMessage());
-          LOG.debug("Tracing remote error ", e.getTargetException());
-          throw new IOException(e.getTargetException());
-        }
+        // Will not throw out YarnRemoteException anymore
         LOG.debug("Failed to contact AM/History for job " + jobId + 
             " retrying..", e.getTargetException());
         // Force reconnection by setting the proxy to null.
         realProxy = null;
         // HS/AMS shut down
         maxRetries--;
-        lastException = new IOException(e.getMessage());
+        lastException = new IOException(e.getTargetException());
         
       } catch (Exception e) {
         LOG.debug("Failed to contact AM/History for job " + jobId
@@ -447,7 +449,7 @@ public class ClientServiceDelegate {
   }
 
   public LogParams getLogFilePath(JobID oldJobID, TaskAttemptID oldTaskAttemptID)
-      throws YarnRemoteException, IOException {
+      throws IOException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobId =
         TypeConverter.toYarn(oldJobID);
     GetJobReportRequest request =
