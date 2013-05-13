@@ -989,6 +989,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4533. start-dfs.sh ignores additional parameters besides -upgrade.
     (Fengdong Yu via suresh)
 
+    HDFS-4765. Permission check of symlink deletion incorrectly throws
+    UnresolvedLinkException. (Andrew Wang via atm)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES

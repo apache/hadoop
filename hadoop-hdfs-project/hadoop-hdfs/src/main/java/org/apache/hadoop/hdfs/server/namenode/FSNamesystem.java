@@ -2849,7 +2849,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Remove the indicated file from namespace.
    * 
-   * @see ClientProtocol#delete(String, boolean) for detailed descriptoin and 
+   * @see ClientProtocol#delete(String, boolean) for detailed description and 
    * description of exceptions
    */
   boolean delete(String src, boolean recursive)
@@ -2911,7 +2911,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new IOException(src + " is non empty");
       }
       if (enforcePermission && isPermissionEnabled) {
-        checkPermission(pc, src, false, null, FsAction.WRITE, null, FsAction.ALL);
+        checkPermission(pc, src, false, null, FsAction.WRITE, null,
+            FsAction.ALL, false);
       }
       // Unlink the target directory from directory tree
       if (!dir.delete(src, collectedBlocks, removedINodes)) {
@@ -4801,12 +4802,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String path, boolean doCheckOwner, FsAction ancestorAccess,
       FsAction parentAccess, FsAction access, FsAction subAccess)
       throws AccessControlException, UnresolvedLinkException {
+        checkPermission(pc, path, doCheckOwner, ancestorAccess,
+            parentAccess, access, subAccess, true);
+  }
+
+  /**
+   * Check whether current user have permissions to access the path. For more
+   * details of the parameters, see
+   * {@link FSPermissionChecker#checkPermission()}.
+   */
+  private void checkPermission(FSPermissionChecker pc,
+      String path, boolean doCheckOwner, FsAction ancestorAccess,
+      FsAction parentAccess, FsAction access, FsAction subAccess,
+      boolean resolveLink)
+      throws AccessControlException, UnresolvedLinkException {
     if (!pc.isSuperUser()) {
       dir.waitForReady();
       readLock();
       try {
         pc.checkPermission(path, dir.rootDir, doCheckOwner, ancestorAccess,
-            parentAccess, access, subAccess);
+            parentAccess, access, subAccess, resolveLink);
       } finally {
         readUnlock();
       }
