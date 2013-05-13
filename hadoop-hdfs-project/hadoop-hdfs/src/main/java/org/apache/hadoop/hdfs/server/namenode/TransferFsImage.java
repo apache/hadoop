@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
@@ -96,25 +97,48 @@ public class TransferFsImage {
       "bad log: " + log;
     String fileid = GetImageServlet.getParamStringForLog(
         log, dstStorage);
-    String fileName = NNStorage.getFinalizedEditsFileName(
+    String finalFileName = NNStorage.getFinalizedEditsFileName(
         log.getStartTxId(), log.getEndTxId());
 
-    List<File> dstFiles = dstStorage.getFiles(NameNodeDirType.EDITS, fileName);
-    assert !dstFiles.isEmpty() : "No checkpoint targets.";
+    List<File> finalFiles = dstStorage.getFiles(NameNodeDirType.EDITS,
+        finalFileName);
+    assert !finalFiles.isEmpty() : "No checkpoint targets.";
     
-    for (File f : dstFiles) {
+    for (File f : finalFiles) {
       if (f.exists() && FileUtil.canRead(f)) {
         LOG.info("Skipping download of remote edit log " +
             log + " since it already is stored locally at " + f);
         return;
-      } else {
+      } else if (LOG.isDebugEnabled()) {
         LOG.debug("Dest file: " + f);
       }
     }
 
-    getFileClient(fsName, fileid, dstFiles, dstStorage, false);
-    LOG.info("Downloaded file " + dstFiles.get(0).getName() + " size " +
-        dstFiles.get(0).length() + " bytes.");
+    final long milliTime = System.currentTimeMillis();
+    String tmpFileName = NNStorage.getTemporaryEditsFileName(
+        log.getStartTxId(), log.getEndTxId(), milliTime);
+    List<File> tmpFiles = dstStorage.getFiles(NameNodeDirType.EDITS,
+        tmpFileName);
+    getFileClient(fsName, fileid, tmpFiles, dstStorage, false);
+    LOG.info("Downloaded file " + tmpFiles.get(0).getName() + " size " +
+        finalFiles.get(0).length() + " bytes.");
+
+    CheckpointFaultInjector.getInstance().beforeEditsRename();
+
+    for (StorageDirectory sd : dstStorage.dirIterable(NameNodeDirType.EDITS)) {
+      File tmpFile = NNStorage.getTemporaryEditsFile(sd,
+          log.getStartTxId(), log.getEndTxId(), milliTime);
+      File finalizedFile = NNStorage.getFinalizedEditsFile(sd,
+          log.getStartTxId(), log.getEndTxId());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Renaming " + tmpFile + " to " + finalizedFile);
+      }
+      boolean success = tmpFile.renameTo(finalizedFile);
+      if (!success) {
+        LOG.warn("Unable to rename edits file from " + tmpFile
+            + " to " + finalizedFile);
+      }
+    }
   }
  
   /**

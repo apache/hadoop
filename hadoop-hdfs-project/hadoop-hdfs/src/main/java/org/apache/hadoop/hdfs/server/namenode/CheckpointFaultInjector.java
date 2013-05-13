@@ -45,4 +45,5 @@ class CheckpointFaultInjector {
   }
   
   public void afterMD5Rename() throws IOException {}
+  public void beforeEditsRename() throws IOException {}
 }
