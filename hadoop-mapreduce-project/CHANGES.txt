@@ -24,6 +24,9 @@ Release 0.23.8 - UNRELEASED
     MAPREDUCE-5147. Maven build should create 
     hadoop-mapreduce-client-app-VERSION.jar directly (Robert Parker via tgraves)
 
+    MAPREDUCE-5211. Reducer intermediate files can collide during merge
+    (jlowe)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
