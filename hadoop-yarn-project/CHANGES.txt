@@ -41,6 +41,9 @@ Trunk - Unreleased
     classpath with new process's environment variables and localized resources
     (Chris Nauroth via bikas)
 
+    YARN-597. TestFSDownload fails on Windows due to dependencies on
+    tar/gzip/jar tools. (Ivan Mitic via acmurthy) 
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.

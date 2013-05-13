@@ -25,7 +25,6 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -36,11 +35,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import junit.framework.Assert;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -49,12 +53,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -122,32 +124,20 @@ public class TestFSDownload {
   static LocalResource createTarFile(FileContext files, Path p, int len,
       Random r, LocalResourceVisibility vis) throws IOException,
       URISyntaxException {
+    byte[] bytes = new byte[len];
+    r.nextBytes(bytes);
 
-    FSDataOutputStream outFile = null;
-    try {
-      byte[] bytes = new byte[len];
-      Path tarPath = new Path(p.toString());
-      outFile = files.create(tarPath, EnumSet.of(CREATE, OVERWRITE));
-      r.nextBytes(bytes);
-      outFile.write(bytes);
-    } finally {
-      if (outFile != null)
-        outFile.close();
-    }
-    StringBuffer tarCommand = new StringBuffer();
-    URI u = new URI(p.getParent().toString());
-    tarCommand.append("cd '");
-    tarCommand.append(FileUtil.makeShellPath(u.getPath().toString()));
-    tarCommand.append("' ; ");
-    tarCommand.append("tar -czf " + p.getName() + ".tar " + p.getName());
-    String[] shellCmd = { "bash", "-c", tarCommand.toString() };
-    ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
-    shexec.execute();
-    int exitcode = shexec.getExitCode();
-    if (exitcode != 0) {
-      throw new IOException("Error untarring file " + p
-          + ". Tar process exited with exit code " + exitcode);
-    }
+    File archiveFile = new File(p.toUri().getPath() + ".tar");
+    archiveFile.createNewFile();
+    TarArchiveOutputStream out = new TarArchiveOutputStream(
+        new FileOutputStream(archiveFile));
+    TarArchiveEntry entry = new TarArchiveEntry(p.getName());
+    entry.setSize(bytes.length);
+    out.putArchiveEntry(entry);
+    out.write(bytes);
+    out.closeArchiveEntry();
+    out.close();
+
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
     ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
         + ".tar")));
@@ -162,32 +152,18 @@ public class TestFSDownload {
   static LocalResource createJarFile(FileContext files, Path p, int len,
       Random r, LocalResourceVisibility vis) throws IOException,
       URISyntaxException {
+    byte[] bytes = new byte[len];
+    r.nextBytes(bytes);
 
-    FSDataOutputStream outFile = null;
-    try {
-      byte[] bytes = new byte[len];
-      Path tarPath = new Path(p.toString());
-      outFile = files.create(tarPath, EnumSet.of(CREATE, OVERWRITE));
-      r.nextBytes(bytes);
-      outFile.write(bytes);
-    } finally {
-      if (outFile != null)
-        outFile.close();
-    }
-    StringBuffer tarCommand = new StringBuffer();
-    URI u = new URI(p.getParent().toString());
-    tarCommand.append("cd '");
-    tarCommand.append(FileUtil.makeShellPath(u.getPath().toString()));
-    tarCommand.append("' ; ");
-    tarCommand.append("jar cf " + p.getName() + ".jar " + p.getName());
-    String[] shellCmd = { "bash", "-c", tarCommand.toString() };
-    ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
-    shexec.execute();
-    int exitcode = shexec.getExitCode();
-    if (exitcode != 0) {
-      throw new IOException("Error untarring file " + p
-          + ". Tar process exited with exit code " + exitcode);
-    }
+    File archiveFile = new File(p.toUri().getPath() + ".jar");
+    archiveFile.createNewFile();
+    JarOutputStream out = new JarOutputStream(
+        new FileOutputStream(archiveFile));
+    out.putNextEntry(new JarEntry(p.getName()));
+    out.write(bytes);
+    out.closeEntry();
+    out.close();
+
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
     ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
         + ".jar")));
@@ -202,39 +178,25 @@ public class TestFSDownload {
   static LocalResource createZipFile(FileContext files, Path p, int len,
       Random r, LocalResourceVisibility vis) throws IOException,
       URISyntaxException {
+    byte[] bytes = new byte[len];
+    r.nextBytes(bytes);
 
-    FSDataOutputStream outFile = null;
-    try {
-      byte[] bytes = new byte[len];
-      Path tarPath = new Path(p.toString());
-      outFile = files.create(tarPath, EnumSet.of(CREATE, OVERWRITE));
-      r.nextBytes(bytes);
-      outFile.write(bytes);
-    } finally {
-      if (outFile != null)
-        outFile.close();
-    }
-    StringBuffer zipCommand = new StringBuffer();
-    URI u = new URI(p.getParent().toString());
-    zipCommand.append("cd '");
-    zipCommand.append(FileUtil.makeShellPath(u.getPath().toString()));
-    zipCommand.append("' ; ");
-    zipCommand.append("gzip " + p.getName());
-    String[] shellCmd = { "bash", "-c", zipCommand.toString() };
-    ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
-    shexec.execute();
-    int exitcode = shexec.getExitCode();
-    if (exitcode != 0) {
-      throw new IOException("Error untarring file " + p
-          + ". Tar process exited with exit code " + exitcode);
-    }
+    File archiveFile = new File(p.toUri().getPath() + ".zip");
+    archiveFile.createNewFile();
+    ZipOutputStream out = new ZipOutputStream(
+        new FileOutputStream(archiveFile));
+    out.putNextEntry(new ZipEntry(p.getName()));
+    out.write(bytes);
+    out.closeEntry();
+    out.close();
+
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
     ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
         + ".zip")));
     ret.setSize(len);
     ret.setType(LocalResourceType.ARCHIVE);
     ret.setVisibility(vis);
-    ret.setTimestamp(files.getFileStatus(new Path(p.toString() + ".gz"))
+    ret.setTimestamp(files.getFileStatus(new Path(p.toString() + ".zip"))
         .getModificationTime());
     return ret;
   }
