@@ -407,6 +407,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5208. Modified ShuffleHandler to use SecureIOUtils for reading
     local files. (Omkar Vinit Joshi via vinodkv)
 
+    MAPREDUCE-5220. Setter methods in TaskCompletionEvent are public in MR1 and 
+    protected in MR2. (sandyr via tucu)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
