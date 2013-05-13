@@ -75,7 +75,8 @@ public class NNStorage extends Storage implements Closeable,
     EDITS     ("edits"),
     IMAGE_NEW ("fsimage.ckpt"),
     EDITS_NEW ("edits.new"), // from "old" pre-HDFS-1073 format
-    EDITS_INPROGRESS ("edits_inprogress");
+    EDITS_INPROGRESS ("edits_inprogress"),
+    EDITS_TMP ("edits_tmp");
 
     private String fileName = null;
     private NameNodeFile(String name) { this.fileName = name; }
@@ -679,6 +680,12 @@ public class NNStorage extends Storage implements Closeable,
     return new File(sd.getCurrentDir(),
         getFinalizedEditsFileName(startTxId, endTxId));
   }
+
+  static File getTemporaryEditsFile(StorageDirectory sd,
+      long startTxId, long endTxId, long timestamp) {
+    return new File(sd.getCurrentDir(),
+        getTemporaryEditsFileName(startTxId, endTxId, timestamp));
+  }
   
   static File getImageFile(StorageDirectory sd, long txid) {
     return new File(sd.getCurrentDir(),
@@ -689,6 +696,12 @@ public class NNStorage extends Storage implements Closeable,
   public static String getFinalizedEditsFileName(long startTxId, long endTxId) {
     return String.format("%s_%019d-%019d", NameNodeFile.EDITS.getName(),
                          startTxId, endTxId);
+  }
+
+  public static String getTemporaryEditsFileName(long startTxId, long endTxId,
+      long timestamp) {
+    return String.format("%s_%019d-%019d_%019d", NameNodeFile.EDITS_TMP.getName(),
+                         startTxId, endTxId, timestamp);
   }
   
   /**
