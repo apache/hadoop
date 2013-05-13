@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.DelegationTokenRenewer;
+import org.apache.hadoop.fs.DelegationTokenRenewer.RenewAction;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
@@ -198,5 +200,51 @@ public class TestWebHdfsTokens {
     for (HttpOpParam.Op op : DeleteOpParam.Op.values()) {
       assertFalse(op.getRequireAuth());
     }
+  }
+  
+  @Test
+  public void testGetTokenAfterFailure() throws Exception {
+    Configuration conf = mock(Configuration.class);
+    Token<?> token1 = mock(Token.class);
+    Token<?> token2 = mock(Token.class);
+    long renewCycle = 1000;
+    
+    DelegationTokenRenewer.renewCycle = renewCycle;
+    WebHdfsFileSystem fs = spy(new WebHdfsFileSystem());
+    doReturn(conf).when(fs).getConf();
+    doReturn(token1).doReturn(token2).when(fs).getDelegationToken(null);
+    // cause token renewer to abandon the token
+    doThrow(new IOException("renew failed")).when(token1).renew(conf);
+    doThrow(new IOException("get failed")).when(fs).addDelegationTokens(null, null);
+
+    // trigger token acquisition
+    Token<?> token = fs.getDelegationToken();
+    RenewAction<?> action = fs.action; 
+    assertSame(token1, token);
+    assertTrue(action.isValid());
+
+    // fetch again and make sure it's the same as before
+    token = fs.getDelegationToken();
+    assertSame(token1, token);
+    assertSame(action, fs.action);
+    assertTrue(fs.action.isValid());
+    
+    // upon renewal, token will go bad based on above stubbing
+    Thread.sleep(renewCycle);
+    assertSame(action, fs.action);
+    assertFalse(fs.action.isValid());
+    
+    // now that token is invalid, should get a new one
+    token = fs.getDelegationToken();
+    assertSame(token2, token);
+    assertNotSame(action, fs.action);
+    assertTrue(fs.action.isValid());
+    action = fs.action;
+    
+    // should get same one again
+    token = fs.getDelegationToken();
+    assertSame(token2, token);
+    assertSame(action, fs.action);
+    assertTrue(fs.action.isValid());
   }
 }
