@@ -112,6 +112,8 @@ class FSPermissionChecker {
    * @param subAccess If path is a directory,
    * it is the access required of the path and all the sub-directories.
    * If path is not a directory, there is no effect.
+   * @param resolveLink whether to resolve the final path component if it is
+   * a symlink
    * @throws AccessControlException
    * @throws UnresolvedLinkException
    * 
@@ -120,7 +122,7 @@ class FSPermissionChecker {
    */
   void checkPermission(String path, INodeDirectory root, boolean doCheckOwner,
       FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-      FsAction subAccess) 
+      FsAction subAccess, boolean resolveLink)
       throws AccessControlException, UnresolvedLinkException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("ACCESS CHECK: " + this
@@ -128,35 +130,36 @@ class FSPermissionChecker {
           + ", ancestorAccess=" + ancestorAccess
           + ", parentAccess=" + parentAccess
           + ", access=" + access
-          + ", subAccess=" + subAccess);
+          + ", subAccess=" + subAccess
+          + ", resolveLink=" + resolveLink);
     }
     // check if (parentAccess != null) && file exists, then check sb
-      // Resolve symlinks, the check is performed on the link target.
-      final INode[] inodes = root.getExistingPathINodes(path, true).getINodes();
-      int ancestorIndex = inodes.length - 2;
-      for(; ancestorIndex >= 0 && inodes[ancestorIndex] == null;
-          ancestorIndex--);
-      checkTraverse(inodes, ancestorIndex);
+    // If resolveLink, the check is performed on the link target.
+    final INode[] inodes = root.getExistingPathINodes(path, resolveLink).getINodes();
+    int ancestorIndex = inodes.length - 2;
+    for(; ancestorIndex >= 0 && inodes[ancestorIndex] == null;
+        ancestorIndex--);
+    checkTraverse(inodes, ancestorIndex);
 
-      if (parentAccess != null && parentAccess.implies(FsAction.WRITE)
-          && inodes.length > 1 && inodes[inodes.length - 1] != null) {
-        checkStickyBit(inodes[inodes.length - 2], inodes[inodes.length - 1]);
-      }
-      if (ancestorAccess != null && inodes.length > 1) {
-        check(inodes, ancestorIndex, ancestorAccess);
-      }
-      if (parentAccess != null && inodes.length > 1) {
-        check(inodes, inodes.length - 2, parentAccess);
-      }
-      if (access != null) {
-        check(inodes[inodes.length - 1], access);
-      }
-      if (subAccess != null) {
-        checkSubAccess(inodes[inodes.length - 1], subAccess);
-      }
-      if (doCheckOwner) {
-        checkOwner(inodes[inodes.length - 1]);
-      }
+    if (parentAccess != null && parentAccess.implies(FsAction.WRITE)
+        && inodes.length > 1 && inodes[inodes.length - 1] != null) {
+      checkStickyBit(inodes[inodes.length - 2], inodes[inodes.length - 1]);
+    }
+    if (ancestorAccess != null && inodes.length > 1) {
+      check(inodes, ancestorIndex, ancestorAccess);
+    }
+    if (parentAccess != null && inodes.length > 1) {
+      check(inodes, inodes.length - 2, parentAccess);
+    }
+    if (access != null) {
+      check(inodes[inodes.length - 1], access);
+    }
+    if (subAccess != null) {
+      checkSubAccess(inodes[inodes.length - 1], subAccess);
+    }
+    if (doCheckOwner) {
+      checkOwner(inodes[inodes.length - 1]);
+    }
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
