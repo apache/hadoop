@@ -717,6 +717,9 @@ Release 2.0.5-beta - UNRELEASED
     Service HEALTHY, and results in null data at ActiveBreadCrumb.
     (Vinay and todd via todd)
 
+    HADOOP-9307. BufferedFSInputStream.read returns wrong results
+    after certain seeks. (todd)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
