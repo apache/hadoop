@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
@@ -27,6 +31,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestJobClient {
+  final static String TEST_DIR = new File(System.getProperty("test.build.data",
+      "/tmp")).getAbsolutePath();
+
   @Test
   public void testGetClusterStatusWithLocalJobRunner() throws Exception {
     Configuration conf = new Configuration();
@@ -42,5 +49,33 @@ public class TestJobClient {
     Collection<BlackListInfo> blackListedTrackersInfo = clusterStatus
         .getBlackListedTrackersInfo();
     Assert.assertEquals(0, blackListedTrackersInfo.size());
+  }
+
+  @Test(timeout = 1000)
+  public void testIsJobDirValid() throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path testDir = new Path(TEST_DIR);
+    Assert.assertFalse(JobClient.isJobDirValid(testDir, fs));
+
+    Path jobconf = new Path(testDir, "job.xml");
+    Path jobsplit = new Path(testDir, "job.split");
+    fs.create(jobconf);
+    fs.create(jobsplit);
+    Assert.assertTrue(JobClient.isJobDirValid(testDir, fs));
+    
+    fs.delete(jobconf, true);
+    fs.delete(jobsplit, true);
+  }
+  
+  @Test(timeout = 1000)
+  public void testGetStagingAreaDir() throws IOException, InterruptedException {
+    Configuration conf = new Configuration();
+    JobClient client = new JobClient(conf);
+
+    Assert.assertTrue(
+        "Mismatch in paths",
+        client.getClusterHandle().getStagingAreaDir().toString()
+            .equals(client.getStagingAreaDir().toString()));
   }
 }
