@@ -49,6 +49,7 @@ class DummyHAService extends HAServiceTarget {
   
   DummySharedResource sharedResource;
   public int fenceCount = 0;
+  public int activeTransitionCount = 0;
   
   static ArrayList<DummyHAService> instances = Lists.newArrayList();
   int index;
@@ -139,6 +140,7 @@ class DummyHAService extends HAServiceTarget {
     @Override
     public void transitionToActive(StateChangeRequestInfo req) throws ServiceFailedException,
         AccessControlException, IOException {
+      activeTransitionCount++;
       checkUnreachable();
       if (failToBecomeActive) {
         throw new ServiceFailedException("injected failure");
