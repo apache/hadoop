@@ -410,6 +410,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5220. Setter methods in TaskCompletionEvent are public in MR1 and 
     protected in MR2. (sandyr via tucu)
 
+    MAPREDUCE-5240. Fix a bug in MRAppMaster because of which OutputCommitter
+    could not access credentials set by the user. (vinodkv)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
