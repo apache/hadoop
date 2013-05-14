@@ -69,12 +69,17 @@ implements Seekable, PositionedReadable, HasFileDescriptor {
     if( pos<0 ) {
       return;
     }
-    // optimize: check if the pos is in the buffer
-    long end = ((FSInputStream)in).getPos();
-    long start = end - count;
-    if( pos>=start && pos<end) {
-      this.pos = (int)(pos-start);
-      return;
+    if (this.pos != this.count) {
+      // optimize: check if the pos is in the buffer
+      // This optimization only works if pos != count -- if they are
+      // equal, it's possible that the previous reads were just
+      // longer than the total buffer size, and hence skipped the buffer.
+      long end = ((FSInputStream)in).getPos();
+      long start = end - count;
+      if( pos>=start && pos<end) {
+        this.pos = (int)(pos-start);
+        return;
+      }
     }
 
     // invalidate buffer
