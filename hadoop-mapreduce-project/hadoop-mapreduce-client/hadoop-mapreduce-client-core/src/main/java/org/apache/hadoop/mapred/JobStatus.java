@@ -381,8 +381,14 @@ public class JobStatus extends org.apache.hadoop.mapreduce.JobStatus {
 
    /**
     * Change the current run state of the job.
+    *
+    * The setter is public to be compatible with M/R 1.x, however, it should be
+    * used internally.
+    *
+    * @param state the state of the job
     */
-   protected synchronized void setRunState(int state) {
+   @InterfaceAudience.Private
+   public synchronized void setRunState(int state) {
      super.setState(getEnum(state));
    }
 
@@ -409,10 +415,14 @@ public class JobStatus extends org.apache.hadoop.mapreduce.JobStatus {
 
    /**
     * Used to set the scheduling information associated to a particular Job.
-    * 
+    *
+    * The setter is public to be compatible with M/R 1.x, however, it should be
+    * used internally.
+    *
     * @param schedulingInfo Scheduling information of the job
     */
-   protected synchronized void setSchedulingInfo(String schedulingInfo) {
+   @InterfaceAudience.Private
+   public synchronized void setSchedulingInfo(String schedulingInfo) {
      super.setSchedulingInfo(schedulingInfo);
    }
 
