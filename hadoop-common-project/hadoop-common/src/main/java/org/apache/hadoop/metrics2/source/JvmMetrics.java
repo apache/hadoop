@@ -98,10 +98,12 @@ public class JvmMetrics implements MetricsSource {
   private void getMemoryUsage(MetricsRecordBuilder rb) {
     MemoryUsage memNonHeap = memoryMXBean.getNonHeapMemoryUsage();
     MemoryUsage memHeap = memoryMXBean.getHeapMemoryUsage();
+    Runtime runtime = Runtime.getRuntime();
     rb.addGauge(MemNonHeapUsedM, memNonHeap.getUsed() / M)
       .addGauge(MemNonHeapCommittedM, memNonHeap.getCommitted() / M)
       .addGauge(MemHeapUsedM, memHeap.getUsed() / M)
-      .addGauge(MemHeapCommittedM, memHeap.getCommitted() / M);
+      .addGauge(MemHeapCommittedM, memHeap.getCommitted() / M)
+      .addGauge(MemMaxM, runtime.maxMemory() / M);
   }
 
   private void getGcUsage(MetricsRecordBuilder rb) {

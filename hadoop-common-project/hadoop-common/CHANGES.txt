@@ -615,6 +615,9 @@ Release 2.0.5-beta - UNRELEASED
     and RandomAccessFile) in SecureIOUtils so as to help YARN-578. (Omkar Vinit
     Joshi via vinodkv)
 
+    HADOOP-9560. metrics2#JvmMetrics should have max memory size of JVM.
+    (Tsuyoshi Ozawa via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
