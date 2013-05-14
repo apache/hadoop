@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
@@ -56,7 +55,7 @@ class MapOutput<K,V> {
   private final FileSystem localFS;
   private final Path tmpOutputPath;
   private final Path outputPath;
-  private final OutputStream disk; 
+  private OutputStream disk; 
   
   private final Type type;
   
@@ -193,6 +192,7 @@ class MapOutput<K,V> {
     } else if (type == Type.DISK) {
       localFS.rename(tmpOutputPath, outputPath);
       merger.closeOnDiskFile(this);
+      disk = null;
     } else {
       throw new IOException("Cannot commit MapOutput of type WAIT!");
     }
@@ -207,6 +207,7 @@ class MapOutput<K,V> {
       } catch (IOException ie) {
         LOG.info("failure to clean up " + tmpOutputPath, ie);
       }
+      disk = null;
     } else {
       throw new IllegalArgumentException
                    ("Cannot commit MapOutput with of type WAIT!");

@@ -27,6 +27,9 @@ Release 0.23.8 - UNRELEASED
     MAPREDUCE-5211. Reducer intermediate files can collide during merge
     (jlowe)
 
+    MAPREDUCE-5168. Reducer can OOM during shuffle because on-disk output
+    stream not released (jlowe)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
