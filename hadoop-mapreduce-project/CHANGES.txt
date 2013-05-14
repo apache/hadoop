@@ -189,6 +189,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6382. Don't escape HTML links in Diagnostics in JHS job overview.
     (Siqi Li via gera)
 
+    MAPREDUCE-5232. Add a configuration to be able to log classpath and other
+    system properties on mapreduce JVMs startup.  (Sangjin Lee via vinodkv)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

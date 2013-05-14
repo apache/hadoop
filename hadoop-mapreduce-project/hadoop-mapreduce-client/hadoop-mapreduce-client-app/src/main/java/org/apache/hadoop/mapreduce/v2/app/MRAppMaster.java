@@ -1495,6 +1495,12 @@ public class MRAppMaster extends CompositeService {
       conf.addResource(new Path(MRJobConfig.JOB_CONF_FILE));
       
       MRWebAppUtil.initialize(conf);
+      // log the system properties
+      String systemPropsToLog = MRApps.getSystemPropertiesToLog(conf);
+      if (systemPropsToLog != null) {
+        LOG.info(systemPropsToLog);
+      }
+
       String jobUserName = System
           .getenv(ApplicationConstants.Environment.USER.name());
       conf.set(MRJobConfig.USER_NAME, jobUserName);
