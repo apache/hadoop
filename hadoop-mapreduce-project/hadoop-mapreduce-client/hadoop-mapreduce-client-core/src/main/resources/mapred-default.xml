@@ -1014,6 +1014,12 @@
   </description>
 </property>
 
+<property>
+   <name>mapreduce.jvm.system-properties-to-log</name>
+   <value>os.name,os.version,java.home,java.runtime.version,java.vendor,java.version,java.vm.name,java.class.path,java.io.tmpdir,user.dir,user.name</value>
+   <description>Comma-delimited list of system properties to log on mapreduce JVM start</description>
+</property>
+
 <!-- jobhistory properties -->
 
 <property>

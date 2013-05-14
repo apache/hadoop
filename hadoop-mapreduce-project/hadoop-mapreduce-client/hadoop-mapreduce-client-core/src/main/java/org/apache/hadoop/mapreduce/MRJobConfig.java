@@ -134,6 +134,11 @@ public interface MRJobConfig {
 
   public static final String MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES = "mapreduce.job.classloader.system.classes";
 
+  public static final String MAPREDUCE_JVM_SYSTEM_PROPERTIES_TO_LOG = "mapreduce.jvm.system-properties-to-log";
+  public static final String DEFAULT_MAPREDUCE_JVM_SYSTEM_PROPERTIES_TO_LOG =
+    "os.name,os.version,java.home,java.runtime.version,java.vendor," +
+    "java.version,java.vm.name,java.class.path,java.io.tmpdir,user.dir,user.name";
+
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
 
   public static final String IO_SORT_MB = "mapreduce.task.io.sort.mb";

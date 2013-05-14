@@ -463,4 +463,35 @@ public class MRApps extends Apps {
     vargs.add("-D" + MRJobConfig.TASK_LOG_SIZE + "=" + logSize);
     vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA"); 
   }
+
+  /**
+   * Return lines for system property keys and values per configuration.
+   *
+   * @return the formatted string for the system property lines or null if no
+   * properties are specified.
+   */
+  public static String getSystemPropertiesToLog(Configuration conf) {
+    String key = conf.get(MRJobConfig.MAPREDUCE_JVM_SYSTEM_PROPERTIES_TO_LOG,
+      MRJobConfig.DEFAULT_MAPREDUCE_JVM_SYSTEM_PROPERTIES_TO_LOG);
+    if (key != null) {
+      key = key.trim(); // trim leading and trailing whitespace from the config
+      if (!key.isEmpty()) {
+        String[] props = key.split(",");
+        if (props.length > 0) {
+          StringBuilder sb = new StringBuilder();
+          sb.append("\n/************************************************************\n");
+          sb.append("[system properties]\n");
+          for (String prop: props) {
+            prop = prop.trim(); // trim leading and trailing whitespace
+            if (!prop.isEmpty()) {
+              sb.append(prop).append(": ").append(System.getProperty(prop)).append('\n');
+            }
+          }
+          sb.append("************************************************************/");
+          return sb.toString();
+        }
+      }
+    }
+    return null;
+  }
 }

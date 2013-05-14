@@ -142,6 +142,12 @@ class YarnChild {
       // Create the job-conf and set credentials
       final JobConf job = configureTask(task, credentials, jt);
 
+      // log the system properties
+      String systemPropsToLog = MRApps.getSystemPropertiesToLog(job);
+      if (systemPropsToLog != null) {
+        LOG.info(systemPropsToLog);
+      }
+
       // Initiate Java VM metrics
       JvmMetrics.initSingleton(jvmId.toString(), job.getSessionId());
       childUGI = UserGroupInformation.createRemoteUser(System

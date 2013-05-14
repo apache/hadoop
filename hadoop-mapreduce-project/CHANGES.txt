@@ -18,6 +18,9 @@ Trunk (Unreleased)
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
+    MAPREDUCE-5232. Add a configuration to be able to log classpath and other
+    system properties on mapreduce JVMs startup.  (Sangjin Lee via vinodkv)
+
   IMPROVEMENTS
 
     MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
