@@ -416,6 +416,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5240. Fix a bug in MRAppMaster because of which OutputCommitter
     could not access credentials set by the user. (vinodkv)
 
+    MAPREDUCE-5244. Two functions changed their visibility in JobStatus. 
+    (zjshen via tucu)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
