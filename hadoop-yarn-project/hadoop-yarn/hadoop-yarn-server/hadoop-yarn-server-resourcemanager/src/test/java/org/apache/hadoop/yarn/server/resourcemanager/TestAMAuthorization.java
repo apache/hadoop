@@ -78,7 +78,7 @@ public class TestAMAuthorization {
     public StartContainerResponse
         startContainer(StartContainerRequest request)
             throws YarnRemoteException {
-      amTokens = request.getContainerLaunchContext().getContainerTokens();
+      amTokens = request.getContainerLaunchContext().getTokens();
       return null;
     }
 

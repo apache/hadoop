@@ -269,7 +269,7 @@ message QueueUserACLInfoProto {
 message ContainerLaunchContextProto {
   optional string user = 1;
   repeated StringLocalResourceMapProto localResources = 2;
-  optional bytes container_tokens = 3;
+  optional bytes tokens = 3;
   repeated StringBytesMapProto service_data = 4;
   repeated StringStringMapProto environment = 5;
   repeated string command = 6;

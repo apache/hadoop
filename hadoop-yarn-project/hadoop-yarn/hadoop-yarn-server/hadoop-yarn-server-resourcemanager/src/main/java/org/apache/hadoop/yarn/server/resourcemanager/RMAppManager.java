@@ -316,7 +316,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       throws IOException {
     Credentials credentials = new Credentials();
     DataInputByteBuffer dibb = new DataInputByteBuffer();
-    ByteBuffer tokens = application.getAMContainerSpec().getContainerTokens();
+    ByteBuffer tokens = application.getAMContainerSpec().getTokens();
     if (tokens != null) {
       dibb.reset(tokens);
       credentials.readTokenStorageStream(dibb);

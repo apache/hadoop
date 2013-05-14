@@ -47,7 +47,7 @@ implements ContainerLaunchContext {
   boolean viaProto = false;
   
   private Map<String, LocalResource> localResources = null;
-  private ByteBuffer containerTokens = null;
+  private ByteBuffer tokens = null;
   private Map<String, ByteBuffer> serviceData = null;
   private Map<String, String> environment = null;
   private List<String> commands = null;
@@ -73,8 +73,8 @@ implements ContainerLaunchContext {
     if (this.localResources != null) {
       addLocalResourcesToProto();
     }
-    if (this.containerTokens != null) {
-      builder.setContainerTokens(convertToProtoFormat(this.containerTokens));
+    if (this.tokens != null) {
+      builder.setTokens(convertToProtoFormat(this.tokens));
     }
     if (this.serviceData != null) {
       addServiceDataToProto();
@@ -226,25 +226,25 @@ implements ContainerLaunchContext {
   }
   
   @Override
-  public ByteBuffer getContainerTokens() {
+  public ByteBuffer getTokens() {
     ContainerLaunchContextProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.containerTokens != null) {
-      return this.containerTokens;
+    if (this.tokens != null) {
+      return this.tokens;
     }
-    if (!p.hasContainerTokens()) {
+    if (!p.hasTokens()) {
       return null;
     }
-    this.containerTokens =  convertFromProtoFormat(p.getContainerTokens());
-    return this.containerTokens;
+    this.tokens =  convertFromProtoFormat(p.getTokens());
+    return this.tokens;
   }
 
   @Override
-  public void setContainerTokens(ByteBuffer containerTokens) {
+  public void setTokens(ByteBuffer tokens) {
     maybeInitBuilder();
-    if (containerTokens == null) {
-      builder.clearContainerTokens();
+    if (tokens == null) {
+      builder.clearTokens();
     }
-    this.containerTokens = containerTokens;
+    this.tokens = tokens;
   }
 
   @Override

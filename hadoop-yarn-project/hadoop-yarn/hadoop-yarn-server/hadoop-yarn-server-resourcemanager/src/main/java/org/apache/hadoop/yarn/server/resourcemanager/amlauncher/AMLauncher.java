@@ -195,9 +195,9 @@ public class AMLauncher implements Runnable {
       Credentials credentials = new Credentials();
 
       DataInputByteBuffer dibb = new DataInputByteBuffer();
-      if (container.getContainerTokens() != null) {
+      if (container.getTokens() != null) {
         // TODO: Don't do this kind of checks everywhere.
-        dibb.reset(container.getContainerTokens());
+        dibb.reset(container.getTokens());
         credentials.readTokenStorageStream(dibb);
       }
 
@@ -209,7 +209,7 @@ public class AMLauncher implements Runnable {
       }
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);
-      container.setContainerTokens(ByteBuffer.wrap(dob.getData(), 0,
+      container.setTokens(ByteBuffer.wrap(dob.getData(), 0,
         dob.getLength()));
 
       SecretKey clientSecretKey =

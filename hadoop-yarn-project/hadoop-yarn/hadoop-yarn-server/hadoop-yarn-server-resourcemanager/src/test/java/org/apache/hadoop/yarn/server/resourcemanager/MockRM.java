@@ -184,7 +184,7 @@ public class MockRM extends ResourceManager {
       DataOutputBuffer dob = new DataOutputBuffer();
       ts.writeTokenStorageToStream(dob);
       ByteBuffer securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-      clc.setContainerTokens(securityTokens);
+      clc.setTokens(securityTokens);
     }
     sub.setAMContainerSpec(clc);
     req.setApplicationSubmissionContext(sub);
