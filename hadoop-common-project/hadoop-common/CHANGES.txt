@@ -155,6 +155,10 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9485. No default value in the code for
     hadoop.rpc.socket.factory.class.default. (Colin Patrick McCabe via atm)
 
+    HADOOP-9459. ActiveStandbyElector can join election even before
+    Service HEALTHY, and results in null data at ActiveBreadCrumb.
+    (Vinay and todd via todd)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES

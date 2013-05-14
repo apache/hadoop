@@ -643,6 +643,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   }
 
   private void joinElectionInternal() {
+    Preconditions.checkState(appData != null,
+        "trying to join election without any app data");
     if (zkClient == null) {
       if (!reEstablishSession()) {
         fatalError("Failed to reEstablish connection with ZooKeeper");
@@ -669,8 +671,14 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     try {
       terminateConnection();
       sleepFor(sleepTime);
-      
-      joinElectionInternal();
+      // Should not join election even before the SERVICE is reported
+      // as HEALTHY from ZKFC monitoring.
+      if (appData != null) {
+        joinElectionInternal();
+      } else {
+        LOG.info("Not joining election since service has not yet been " +
+            "reported as healthy.");
+      }
     } finally {
       sessionReestablishLockForTests.unlock();
     }
@@ -798,6 +806,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    */
   private void writeBreadCrumbNode(Stat oldBreadcrumbStat)
       throws KeeperException, InterruptedException {
+    Preconditions.checkState(appData != null, "no appdata");
+    
     LOG.info("Writing znode " + zkBreadCrumbPath +
         " to indicate that the local node is the most recent active...");
     if (oldBreadcrumbStat == null) {
