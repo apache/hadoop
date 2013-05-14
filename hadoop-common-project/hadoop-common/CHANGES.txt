@@ -720,6 +720,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9307. BufferedFSInputStream.read returns wrong results
     after certain seeks. (todd)
 
+    HADOOP-9220. Unnecessary transition to standby in ActiveStandbyElector.
+    (tom and todd via todd)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
