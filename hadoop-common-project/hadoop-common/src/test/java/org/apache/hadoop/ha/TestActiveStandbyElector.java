@@ -721,4 +721,22 @@ public class TestActiveStandbyElector {
       GenericTestUtils.assertExceptionContains( "ConnectionLoss", ke);
     }
   }
+
+  /**
+   * joinElection(..) should happen only after SERVICE_HEALTHY.
+   */
+  @Test
+  public void testBecomeActiveBeforeServiceHealthy() throws Exception {
+    mockNoPriorActive();
+    WatchedEvent mockEvent = Mockito.mock(WatchedEvent.class);
+    Mockito.when(mockEvent.getType()).thenReturn(Event.EventType.None);
+    // session expired should enter safe mode
+    // But for first time, before the SERVICE_HEALTY i.e. appData is set,
+    // should not enter the election.
+    Mockito.when(mockEvent.getState()).thenReturn(Event.KeeperState.Expired);
+    elector.processWatchEvent(mockZK, mockEvent);
+    // joinElection should not be called.
+    Mockito.verify(mockZK, Mockito.times(0)).create(ZK_LOCK_NAME, null,
+        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
+  }
 }
