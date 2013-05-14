@@ -68,20 +68,24 @@ public interface ContainerLaunchContext {
   void setUser(String user);
 
   /**
-   * Get security tokens (if security is enabled).
-   * @return security tokens (if security is enabled)
+   * Get all the tokens needed by this container. It may include file-system
+   * tokens, ApplicationMaster related tokens if this container is an
+   * ApplicationMaster or framework level tokens needed by this container to
+   * communicate to various services in a secure manner.
+   * 
+   * @return tokens needed by this container.
    */
   @Public
   @Stable
-  ByteBuffer getContainerTokens();
+  ByteBuffer getTokens();
 
   /**
-   * Set security tokens (if security is enabled).
-   * @param containerToken security tokens 
+   * Set security tokens needed by this container.
+   * @param tokens security tokens 
    */
   @Public
   @Stable
-  void setContainerTokens(ByteBuffer containerToken);
+  void setTokens(ByteBuffer tokens);
 
   /**
    * Get <code>LocalResource</code> required by the container.

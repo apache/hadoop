@@ -810,7 +810,7 @@ public abstract class TaskAttemptImpl implements
     ContainerLaunchContext container = BuilderUtils.newContainerLaunchContext(
         commonContainerSpec.getUser(),
         commonContainerSpec.getLocalResources(), myEnv, commands,
-        myServiceData, commonContainerSpec.getContainerTokens().duplicate(),
+        myServiceData, commonContainerSpec.getTokens().duplicate(),
         applicationACLs);
 
     return container;

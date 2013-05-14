@@ -427,7 +427,7 @@ public class ContainerManagerImpl extends CompositeService implements
         + launchContext.getUser());
 
     // //////////// Parse credentials
-    ByteBuffer tokens = launchContext.getContainerTokens();
+    ByteBuffer tokens = launchContext.getTokens();
     Credentials credentials = new Credentials();
     if (tokens != null) {
       DataInputByteBuffer buf = new DataInputByteBuffer();

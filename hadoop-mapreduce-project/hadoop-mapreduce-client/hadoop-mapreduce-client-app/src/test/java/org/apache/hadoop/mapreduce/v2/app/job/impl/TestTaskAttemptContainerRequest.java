@@ -123,7 +123,7 @@ public class TestTaskAttemptContainerRequest {
     Credentials launchCredentials = new Credentials();
 
     DataInputByteBuffer dibb = new DataInputByteBuffer();
-    dibb.reset(launchCtx.getContainerTokens());
+    dibb.reset(launchCtx.getTokens());
     launchCredentials.readTokenStorageStream(dibb);
 
     // verify all tokens specified for the task attempt are in the launch context

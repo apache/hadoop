@@ -474,7 +474,7 @@ public class TestRMRestart {
     securityTokens.rewind();
     Assert.assertEquals(securityTokens, appState
       .getApplicationSubmissionContext().getAMContainerSpec()
-      .getContainerTokens());
+      .getTokens());
 
     // start new RM
     MockRM rm2 = new TestSecurityMockRM(conf, memStore);
