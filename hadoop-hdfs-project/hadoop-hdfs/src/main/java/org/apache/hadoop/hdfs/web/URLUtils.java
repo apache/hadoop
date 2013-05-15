@@ -44,8 +44,17 @@ public class URLUtils {
    */
   public static URLConnection openConnection(URL url) throws IOException {
     URLConnection connection = url.openConnection();
+    setTimeouts(connection);
+    return connection;    
+  }
+
+  /**
+   * Sets timeout parameters on the given URLConnection.
+   * 
+   * @param connection URLConnection to set
+   */
+  static void setTimeouts(URLConnection connection) {
     connection.setConnectTimeout(SOCKET_TIMEOUT);
     connection.setReadTimeout(SOCKET_TIMEOUT);
-    return connection;    
   }
 }

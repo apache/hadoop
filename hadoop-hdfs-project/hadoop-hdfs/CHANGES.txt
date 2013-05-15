@@ -998,6 +998,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4813. Add volatile to BlocksMap.blocks so that the replication thread
     can see the updated value.  (Jing Zhao via szetszwo)
 
+    HDFS-3180. Add socket timeouts to WebHdfsFileSystem.  (Chris Nauroth via
+    szetszwo)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
