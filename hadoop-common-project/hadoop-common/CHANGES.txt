@@ -168,6 +168,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9220. Unnecessary transition to standby in ActiveStandbyElector.
     (tom and todd via todd)
 
+    HADOOP-9563. Fix incompatibility introduced by HADOOP-9523.
+    (Tian Hong Wang via suresh)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES

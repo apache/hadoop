@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * A helper class for getting build-info of the java-vm. 
  * 
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({"HBase"})
 @InterfaceStability.Unstable
 public class PlatformName {
   /**
@@ -48,7 +48,6 @@ public class PlatformName {
   public static final boolean IBM_JAVA = JAVA_VENDOR_NAME.contains("IBM");
   
   public static void main(String[] args) {
-    System.out.println("platform name: " + PLATFORM_NAME);
-    System.out.println("java vendor name: " + JAVA_VENDOR_NAME);
+    System.out.println(PLATFORM_NAME);
   }
 }
