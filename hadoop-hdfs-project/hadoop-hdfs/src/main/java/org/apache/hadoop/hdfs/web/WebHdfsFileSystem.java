@@ -101,6 +101,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -126,6 +127,16 @@ public class WebHdfsFileSystem extends FileSystem
 
   /** SPNEGO authenticator */
   private static final KerberosUgiAuthenticator AUTH = new KerberosUgiAuthenticator();
+  /** Configures connections for AuthenticatedURL */
+  private static final ConnectionConfigurator CONN_CONFIGURATOR =
+    new ConnectionConfigurator() {
+      @Override
+      public HttpURLConnection configure(HttpURLConnection conn)
+          throws IOException {
+        URLUtils.setTimeouts(conn);
+        return conn;
+      }
+    };
   /** Delegation token kind */
   public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
   /** Token selector */
@@ -485,10 +496,12 @@ public class WebHdfsFileSystem extends FileSystem
           LOG.debug("open AuthenticatedURL connection");
           UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
           final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
-          conn = new AuthenticatedURL(AUTH).openConnection(url, authToken);
+          conn = new AuthenticatedURL(AUTH, CONN_CONFIGURATOR).openConnection(
+            url, authToken);
+          URLUtils.setTimeouts(conn);
         } else {
           LOG.debug("open URL connection");
-          conn = (HttpURLConnection)url.openConnection();
+          conn = (HttpURLConnection)URLUtils.openConnection(url);
         }
       } catch (AuthenticationException e) {
         throw new IOException(e);
@@ -583,7 +596,7 @@ public class WebHdfsFileSystem extends FileSystem
       checkRetry = false;
       
       //Step 2) Submit another Http request with the URL from the Location header with data.
-      conn = (HttpURLConnection)new URL(redirect).openConnection();
+      conn = (HttpURLConnection)URLUtils.openConnection(new URL(redirect));
       conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
       conn.setChunkedStreamingMode(32 << 10); //32kB-chunk
       connect();
@@ -606,7 +619,7 @@ public class WebHdfsFileSystem extends FileSystem
           disconnect();
   
           checkRetry = false;
-          conn = (HttpURLConnection)new URL(redirect).openConnection();
+          conn = (HttpURLConnection)URLUtils.openConnection(new URL(redirect));
           connect();
         }
 
