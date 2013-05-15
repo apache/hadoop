@@ -255,6 +255,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4300. TransferFsImage.downloadEditsToStorage should use a tmp file for
     destination. (Andrew Wang via atm)
 
+    HDFS-4813. Add volatile to BlocksMap.blocks so that the replication thread
+    can see the updated value.  (Jing Zhao via szetszwo)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
