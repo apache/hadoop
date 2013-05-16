@@ -21,6 +21,8 @@ Release 0.23.8 - UNRELEASED
     use the stored generation stamp to check if the block is valid.  (Vinay
     via szetszwo)
 
+    HDFS-4477. Secondary namenode may retain old tokens. (daryn via kihwal)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
