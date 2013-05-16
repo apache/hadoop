@@ -4,6 +4,9 @@ Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
+    avoid an extra copy (Sanjay Radia)
+
   NEW FEATURES
 
     HADOOP-9194. RPC support for QoS. (Junping Du via llu)
