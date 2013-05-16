@@ -65,6 +65,8 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9140 Cleanup rpc PB protos (sanjay Radia)
 
+    HADOOP-9218 Document the Rpc-wrappers used internally (sanjay Radia)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
