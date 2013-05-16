@@ -948,6 +948,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4787. Create a new HdfsConfiguration before each TestDFSClientRetries
     testcases. (Tian Hong Wang via atm)
 
+    HDFS-4830. Typo in config settings for AvailableSpaceVolumeChoosingPolicy
+    in hdfs-default.xml. (atm)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.

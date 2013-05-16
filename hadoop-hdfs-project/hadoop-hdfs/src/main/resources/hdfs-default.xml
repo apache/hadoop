@@ -1263,7 +1263,7 @@
 </property>
 
 <property>
-  <name>dfs.datanode.fsdataset.volume.choosing.balanced-space-threshold</name>
+  <name>dfs.datanode.available-space-volume-choosing-policy.balanced-space-threshold</name>
   <value>10737418240</value> <!-- 10 GB -->
   <description>
     Only used when the dfs.datanode.fsdataset.volume.choosing.policy is set to
@@ -1277,7 +1277,7 @@
 </property>
 
 <property>
-  <name>dfs.datanode.fsdataset.volume.choosing.balanced-space-preference-percent</name>
+  <name>dfs.datanode.available-space-volume-choosing-policy.balanced-space-preference-fraction</name>
   <value>0.75f</value>
   <description>
     Only used when the dfs.datanode.fsdataset.volume.choosing.policy is set to
