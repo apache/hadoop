@@ -241,6 +241,9 @@ public class DelegationTokenRenewer extends AbstractService {
         } catch (IOException e) {
           LOG.warn("Failed to cancel token " + tokenWithConf.token + " " +  
               StringUtils.stringifyException(e));
+        } catch (RuntimeException e) {
+          LOG.warn("Failed to cancel token " + tokenWithConf.token + " " +  
+              StringUtils.stringifyException(e));
         } catch (InterruptedException ie) {
           return;
         } catch (Throwable t) {
