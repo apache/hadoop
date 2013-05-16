@@ -30,6 +30,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-2576. Enhances the DistributedFileSystem's create API so that clients
     can specify favored datanodes for a file's blocks. (ddas)
 
+    HDFS-347. DFS read performance suboptimal when client co-located on nodes
+    with data. (Colin Patrick McCabe via todd and atm)
+
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
@@ -260,6 +263,65 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-3180. Add socket timeouts to WebHdfsFileSystem.  (Chris Nauroth via
     szetszwo)
+
+  BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
+
+    HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4354. Create DomainSocket and DomainPeer and associated unit tests.
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4356. BlockReaderLocal should use passed file descriptors rather than paths.
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4388. DomainSocket should throw AsynchronousCloseException when appropriate.
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4390. Bypass UNIX domain socket unit tests when they cannot be run.
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4400. DFSInputStream#getBlockReader: last retries should ignore the cache
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4401. Fix bug in DomainSocket path validation
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4402. Some small DomainSocket fixes: avoid findbugs warning, change
+    log level, etc. (Colin Patrick McCabe via todd)
+    
+    HDFS-4418. increase default FileInputStreamCache size (todd)
+    
+    HDFS-4416. Rename dfs.datanode.domain.socket.path to dfs.domain.socket.path
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4417. Fix case where local reads get disabled incorrectly
+    (Colin Patrick McCabe and todd via todd)
+    
+    HDFS-4433. Make TestPeerCache not flaky (Colin Patrick McCabe via todd)
+    
+    HDFS-4438. TestDomainSocket fails when system umask is set to 0002. (Colin
+    Patrick McCabe via atm)
+    
+    HDFS-4440. Avoid annoying log message when dfs.domain.socket.path is not
+    set. (Colin Patrick McCabe via atm)
+    
+    HDFS-4473. Don't create domain socket unless we need it. (Colin Patrick McCabe via atm)
+    
+    HDFS-4485. DN should chmod socket path a+w. (Colin Patrick McCabe via atm)
+    
+    HDFS-4453. Make a simple doc to describe the usage and design of the
+    shortcircuit read feature. (Colin Patrick McCabe via atm)
+    
+    HDFS-4496. DFSClient: don't create a domain socket unless we need it (Colin
+    Patrick McCabe via todd)
+    
+    HDFS-347: style cleanups (Colin Patrick McCabe via atm)
+    
+    HDFS-4538. Allow use of legacy blockreader (Colin Patrick McCabe via todd)
+
+    HDFS-4661. A few little code cleanups of some HDFS-347-related code. (Colin
+    Patrick McCabe via atm)
 
 Release 2.0.4-alpha - 2013-04-25
 
