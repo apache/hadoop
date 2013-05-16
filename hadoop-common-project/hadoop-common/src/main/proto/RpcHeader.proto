@@ -62,27 +62,55 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
 
 /**
  * Rpc Response Header
- * ** If request is successfull response is returned as below ********
  * +------------------------------------------------------------------+
- * | Rpc reponse length in bytes (4 bytes int)                        |
+ * | Rpc total response length in bytes (4 bytes int)                 |
  * |  (sum of next two parts)                                         |
  * +------------------------------------------------------------------+
  * | RpcResponseHeaderProto - serialized delimited ie has len         |
  * +------------------------------------------------------------------+
  * | if request is successful:                                        |
  * |   - RpcResponse -  The actual rpc response  bytes follow         |
- *       the response header                                          |
+ * |     the response header                                          |
  * |     This response is serialized based on RpcKindProto            |
  * | if request fails :                                               |
  * |   The rpc response header contains the necessary info            |
  * +------------------------------------------------------------------+
  *
+ * Note that rpc response header is also used when connection setup fails. 
+ * Ie the response looks like a rpc response with a fake callId.
  */
 message RpcResponseHeaderProto {
+  /**
+    * 
+    * RpcStastus - success or failure
+    * The reponseHeader's errDetail,  exceptionClassName and errMsg contains
+    * further details on the error
+    **/
+
   enum RpcStatusProto {
    SUCCESS = 0;  // RPC succeeded
-   ERROR = 1;    // RPC Failed
-   FATAL = 2;    // Fatal error - connection is closed
+   ERROR = 1;    // RPC or error - connection left open for future calls
+   FATAL = 2;    // Fatal error - connection closed
+  }
+
+  enum RpcErrorCodeProto {
+
+   // Non-fatal Rpc error - connection left open for future rpc calls
+   ERROR_APPLICATION = 1;      // RPC Failed - rpc app threw exception
+   ERROR_NO_SUCH_METHOD = 2;   // Rpc error - no such method
+   ERROR_NO_SUCH_PROTOCOL = 3; // Rpc error - no such protocol
+   ERROR_RPC_SERVER  = 4;      // Rpc error on server side
+   ERROR_SERIALIZING_RESPONSE = 5; // error serializign response
+   ERROR_RPC_VERSION_MISMATCH = 6; // Rpc protocol version mismatch
+
+
+   // Fatal Server side Rpc error - connection closed
+   FATAL_UNKNOWN = 10;                   // unknown Fatal error
+   FATAL_UNSUPPORTED_SERIALIZATION = 11; // IPC layer serilization type invalid
+   FATAL_INVALID_RPC_HEADER = 12;        // fields of RpcHeader are invalid
+   FATAL_DESERIALIZING_REQUEST = 13;     // could not deserilize rpc request
+   FATAL_VERSION_MISMATCH = 14;          // Ipc Layer version mismatch
+   FATAL_UNAUTHORIZED = 15;              // Auth failed
   }
 
   required uint32 callId = 1; // callId used in Request
@@ -90,4 +118,5 @@ message RpcResponseHeaderProto {
   optional uint32 serverIpcVersionNum = 3; // Sent if success or fail
   optional string exceptionClassName = 4;  // if request fails
   optional string errorMsg = 5;  // if request fails, often contains strack trace
+  optional RpcErrorCodeProto errorDetail = 6; // in case of error
 }

@@ -21,21 +21,37 @@ package org.apache.hadoop.ipc;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.xml.sax.Attributes;
 
 public class RemoteException extends IOException {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
+  private final int errorCode;
 
   private String className;
   
   public RemoteException(String className, String msg) {
     super(msg);
     this.className = className;
+    errorCode = -1;
+  }
+  
+  public RemoteException(String className, String msg, RpcErrorCodeProto erCode) {
+    super(msg);
+    this.className = className;
+    if (erCode != null)
+      errorCode = erCode.getNumber();
+    else 
+      errorCode = -1;
   }
   
   public String getClassName() {
     return className;
+  }
+  
+  public RpcErrorCodeProto getErrorCode() {
+    return RpcErrorCodeProto.valueOf(errorCode);
   }
 
   /**
