@@ -10,6 +10,8 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9151 Include RPC error info in RpcResponseHeader instead of sending
     it separately (sanjay Radia)
 
+    HADOOP-9380 Add totalLength to rpc response  (sanjay Radia)
+
   NEW FEATURES
 
     HADOOP-9194. RPC support for QoS. (Junping Du via llu)

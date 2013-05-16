@@ -48,7 +48,9 @@ import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.AbstractMessageLite;
 import com.google.protobuf.BlockingService;
+import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.ServiceException;
@@ -226,7 +228,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       Message returnMessage;
       try {
         returnMessage = prototype.newBuilderForType()
-            .mergeFrom(val.responseMessage).build();
+            .mergeFrom(val.theResponseRead).build();
 
         if (LOG.isTraceEnabled()) {
           LOG.trace(Thread.currentThread().getId() + ": Response <- " +
@@ -267,6 +269,9 @@ public class ProtobufRpcEngine implements RpcEngine {
     }
   }
 
+  interface RpcWrapper extends Writable {
+    int getLength();
+  }
   /**
    * Wrapper for Protocol Buffer Requests
    * 
@@ -274,7 +279,7 @@ public class ProtobufRpcEngine implements RpcEngine {
    * Protobuf. Several methods on {@link org.apache.hadoop.ipc.Server and RPC} 
    * use type Writable as a wrapper to work across multiple RpcEngine kinds.
    */
-  private static class RpcRequestWrapper implements Writable {
+  private static class RpcRequestWrapper implements RpcWrapper {
     RequestHeaderProto requestHeader;
     Message theRequest; // for clientSide, the request is here
     byte[] theRequestRead; // for server side, the request is here
@@ -312,6 +317,22 @@ public class ProtobufRpcEngine implements RpcEngine {
       return requestHeader.getDeclaringClassProtocolName() + "." +
           requestHeader.getMethodName();
     }
+
+    @Override
+    public int getLength() {
+      int headerLen = requestHeader.getSerializedSize();
+      int reqLen;
+      if (theRequest != null) {
+        reqLen = theRequest.getSerializedSize();
+      } else if (theRequestRead != null ) {
+        reqLen = theRequestRead.length;
+      } else {
+        throw new IllegalArgumentException(
+            "getLenght on uninilialized RpcWrapper");      
+      }
+      return CodedOutputStream.computeRawVarint32Size(headerLen) +  headerLen
+          + CodedOutputStream.computeRawVarint32Size(reqLen) + reqLen;
+    }
   }
 
   /**
@@ -321,29 +342,43 @@ public class ProtobufRpcEngine implements RpcEngine {
    * Protobuf. Several methods on {@link org.apache.hadoop.ipc.Server and RPC} 
    * use type Writable as a wrapper to work across multiple RpcEngine kinds.
    */
-  private static class RpcResponseWrapper implements Writable {
-    byte[] responseMessage;
+  private static class RpcResponseWrapper implements RpcWrapper {
+    Message theResponse; // for senderSide, the response is here
+    byte[] theResponseRead; // for receiver side, the response is here
 
     @SuppressWarnings("unused")
     public RpcResponseWrapper() {
     }
 
     public RpcResponseWrapper(Message message) {
-      this.responseMessage = message.toByteArray();
+      this.theResponse = message;
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(responseMessage.length);
-      out.write(responseMessage);     
+      OutputStream os = DataOutputOutputStream.constructOutputStream(out);
+      theResponse.writeDelimitedTo(os);   
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      int length = in.readInt();
-      byte[] bytes = new byte[length];
-      in.readFully(bytes);
-      responseMessage = bytes;
+      int length = ProtoUtil.readRawVarint32(in);
+      theResponseRead = new byte[length];
+      in.readFully(theResponseRead);
+    }
+    
+    @Override
+    public int getLength() {
+      int resLen;
+      if (theResponse != null) {
+        resLen = theResponse.getSerializedSize();
+      } else if (theResponseRead != null ) {
+        resLen = theResponseRead.length;
+      } else {
+        throw new IllegalArgumentException(
+            "getLenght on uninilialized RpcWrapper");      
+      }
+      return CodedOutputStream.computeRawVarint32Size(resLen) + resLen;
     }
   }
 
