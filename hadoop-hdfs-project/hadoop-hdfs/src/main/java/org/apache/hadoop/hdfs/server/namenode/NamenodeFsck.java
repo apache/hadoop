@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -559,9 +560,10 @@ public class NamenodeFsck {
         String file = BlockReaderFactory.getFileName(targetAddr, block.getBlockPoolId(),
             block.getBlockId());
         blockReader = BlockReaderFactory.newBlockReader(
-            conf, s, file, block, lblock
-            .getBlockToken(), 0, -1,
-            namenode.getRpcServer().getDataEncryptionKey());
+            conf, file, block, lblock.getBlockToken(), 0, -1, true, "fsck",
+            TcpPeerServer.peerFromSocketAndKey(s, namenode.getRpcServer().
+                getDataEncryptionKey()),
+            chosenNode, null, false);
         
       }  catch (IOException ex) {
         // Put chosen node into dead list, continue

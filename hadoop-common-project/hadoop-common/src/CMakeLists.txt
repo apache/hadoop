@@ -163,10 +163,10 @@ add_executable(test_bulk_crc32
     ${D}/util/bulk_crc32.c
     ${T}/util/test_bulk_crc32.c
 )
-set_property(SOURCE main.cpp PROPERTY INCLUDE_DIRECTORIES "\"-Werror\" \"-Wall\"")
 
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 add_dual_library(hadoop
+    main/native/src/exception.c
     ${D}/io/compress/lz4/Lz4Compressor.c
     ${D}/io/compress/lz4/Lz4Decompressor.c
     ${D}/io/compress/lz4/lz4.c
@@ -177,6 +177,7 @@ add_dual_library(hadoop
     ${D}/io/nativeio/NativeIO.c
     ${D}/io/nativeio/errno_enum.c
     ${D}/io/nativeio/file_descriptor.c
+    ${D}/net/unix/DomainSocket.c
     ${D}/security/JniBasedUnixGroupsMapping.c
     ${D}/security/JniBasedUnixGroupsNetgroupMapping.c
     ${D}/security/getGroup.c

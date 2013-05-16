@@ -108,6 +108,18 @@ public interface DataTransferProtocol {
       final DatanodeInfo[] targets) throws IOException;
 
   /**
+   * Request short circuit access file descriptors from a DataNode.
+   *
+   * @param blk             The block to get file descriptors for.
+   * @param blockToken      Security token for accessing the block.
+   * @param maxVersion      Maximum version of the block data the client 
+   *                        can understand.
+   */
+  public void requestShortCircuitFds(final ExtendedBlock blk,
+      final Token<BlockTokenIdentifier> blockToken,
+      int maxVersion) throws IOException;
+
+  /**
    * Receive a block from a source datanode
    * and then notifies the namenode
    * to remove the copy from the original datanode.

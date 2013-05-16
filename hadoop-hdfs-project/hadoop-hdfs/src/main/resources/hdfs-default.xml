@@ -1252,6 +1252,17 @@
 </property>
 
 <property>
+  <name>dfs.domain.socket.path</name>
+  <value></value>
+  <description>
+    Optional.  This is a path to a UNIX domain socket that will be used for
+    communication between the DataNode and local HDFS clients.
+    If the string "_PORT" is present in this path, it will be replaced by the
+    TCP port of the DataNode.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.fsdataset.volume.choosing.balanced-space-threshold</name>
   <value>10737418240</value> <!-- 10 GB -->
   <description>

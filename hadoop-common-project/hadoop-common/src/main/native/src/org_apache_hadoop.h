@@ -99,6 +99,10 @@ void *do_dlsym(JNIEnv *env, void *handle, const char *symbol) {
     THROW(env, "java/lang/InternalError", exception_msg); \
   }
 
+#define RETRY_ON_EINTR(ret, expr) do { \
+  ret = expr; \
+} while ((ret == -1) && (errno == EINTR));
+
 #endif
 
 //vim: sw=2: ts=2: et

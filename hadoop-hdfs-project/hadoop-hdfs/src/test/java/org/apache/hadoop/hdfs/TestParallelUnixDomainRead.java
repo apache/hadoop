@@ -17,52 +17,42 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.IOException;
+import java.io.File;
 
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.junit.AfterClass;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.hamcrest.CoreMatchers.*;
 
-public class TestParallelLocalRead extends TestParallelReadUtil {
+public class TestParallelUnixDomainRead extends TestParallelReadUtil {
+  private static TemporarySocketDirectory sockDir;
 
   @BeforeClass
   static public void setupCluster() throws Exception {
+    if (DomainSocket.getLoadingFailureReason() != null) return;
+    DFSInputStream.tcpReadsDisabledForTesting = true;
+    sockDir = new TemporarySocketDirectory();
     HdfsConfiguration conf = new HdfsConfiguration();
-
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY,
-        false);
-    conf.set(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY,
-        UserGroupInformation.getCurrentUser().getShortUserName());
-
+    conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
+      new File(sockDir.getDir(), "TestParallelLocalRead.%d.sock").getAbsolutePath());
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, false);
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC, true);
+    DomainSocket.disableBindPathValidation();
     setupCluster(1, conf);
+  }
+
+  @Before
+  public void before() {
+    Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
   }
 
   @AfterClass
   static public void teardownCluster() throws Exception {
+    if (DomainSocket.getLoadingFailureReason() != null) return;
+    sockDir.close();
     TestParallelReadUtil.teardownCluster();
-  }
-
-  /**
-   * Do parallel read several times with different number of files and threads.
-   *
-   * Note that while this is the only "test" in a junit sense, we're actually
-   * dispatching a lot more. Failures in the other methods (and other threads)
-   * need to be manually collected, which is inconvenient.
-   */
-  @Test
-  public void testParallelReadCopying() throws IOException {
-    runTestWorkload(new CopyingReadWorkerHelper());
-  }
-
-  @Test
-  public void testParallelReadByteBuffer() throws IOException {
-    runTestWorkload(new DirectReadWorkerHelper());
-  }
-
-  @Test
-  public void testParallelReadMixed() throws IOException {
-    runTestWorkload(new MixedWorkloadHelper());
   }
 }

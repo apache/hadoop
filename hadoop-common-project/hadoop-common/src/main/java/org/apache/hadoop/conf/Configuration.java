@@ -737,6 +737,21 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return value.trim();
     }
   }
+  
+  /**
+   * Get the value of the <code>name</code> property as a trimmed <code>String</code>, 
+   * <code>defaultValue</code> if no such property exists. 
+   * See @{Configuration#getTrimmed} for more details.
+   * 
+   * @param name          the property name.
+   * @param defaultValue  the property default value.
+   * @return              the value of the <code>name</code> or defaultValue
+   *                      if it is not set.
+   */
+  public String getTrimmed(String name, String defaultValue) {
+    String ret = getTrimmed(name);
+    return ret == null ? defaultValue : ret;
+  }
 
   /**
    * Get the value of the <code>name</code> property, without doing
@@ -871,7 +886,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     return result;
   }
-    
+
   /** 
    * Get the value of the <code>name</code> property as an <code>int</code>.
    *   
