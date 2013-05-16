@@ -94,7 +94,8 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshQueuesResponsePBImpl(
           proxy.refreshQueues(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -107,7 +108,8 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshNodesResponsePBImpl(
           proxy.refreshNodes(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -121,7 +123,8 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshSuperUserGroupsConfigurationResponsePBImpl(
           proxy.refreshSuperUserGroupsConfiguration(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -135,7 +138,8 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshUserToGroupsMappingsResponsePBImpl(
           proxy.refreshUserToGroupsMappings(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -148,7 +152,8 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshAdminAclsResponsePBImpl(
           proxy.refreshAdminAcls(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -162,7 +167,8 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
       return new RefreshServiceAclsResponsePBImpl(proxy.refreshServiceAcls(
           null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 

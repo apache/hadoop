@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn;
 
-import java.lang.reflect.UndeclaredThrowableException;
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 
 import junit.framework.Assert;
 
@@ -61,7 +62,6 @@ public class TestContainerLaunchRPC {
 
   static final Log LOG = LogFactory.getLog(TestContainerLaunchRPC.class);
 
-  private static final String EXCEPTION_CAUSE = "java.net.SocketTimeoutException";
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
@@ -114,10 +114,9 @@ public class TestContainerLaunchRPC {
         proxy.startContainer(scRequest);
       } catch (Exception e) {
         LOG.info(StringUtils.stringifyException(e));
-        Assert.assertTrue("Error, exception does not contain: "
-            + EXCEPTION_CAUSE,
-            e.getCause().getMessage().contains(EXCEPTION_CAUSE));
-
+        Assert.assertEquals("Error, exception is not: "
+            + SocketTimeoutException.class.getName(),
+            SocketTimeoutException.class.getName(), e.getClass().getName());
         return;
       }
     } finally {
@@ -142,7 +141,7 @@ public class TestContainerLaunchRPC {
 
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request)
-        throws YarnRemoteException {
+        throws YarnRemoteException, IOException {
       StartContainerResponse response = recordFactory
           .newRecordInstance(StartContainerResponse.class);
       status = recordFactory.newRecordInstance(ContainerStatus.class);
@@ -151,7 +150,7 @@ public class TestContainerLaunchRPC {
         Thread.sleep(10000);
       } catch (Exception e) {
         LOG.error(e);
-        throw new UndeclaredThrowableException(e);
+        throw new YarnRemoteException(e);
       }
       status.setState(ContainerState.RUNNING);
       status.setContainerId(request.getContainer().getId());

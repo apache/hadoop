@@ -74,7 +74,8 @@ public class AMRMProtocolPBClientImpl implements AMRMProtocol, Closeable {
     try {
       return new AllocateResponsePBImpl(proxy.allocate(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -88,7 +89,8 @@ public class AMRMProtocolPBClientImpl implements AMRMProtocol, Closeable {
       return new FinishApplicationMasterResponsePBImpl(
         proxy.finishApplicationMaster(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -102,7 +104,8 @@ public class AMRMProtocolPBClientImpl implements AMRMProtocol, Closeable {
       return new RegisterApplicationMasterResponsePBImpl(
         proxy.registerApplicationMaster(null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 }

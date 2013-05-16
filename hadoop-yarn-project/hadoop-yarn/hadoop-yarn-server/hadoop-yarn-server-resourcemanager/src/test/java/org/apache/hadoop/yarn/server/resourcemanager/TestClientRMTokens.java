@@ -17,11 +17,19 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
@@ -40,6 +48,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
@@ -72,8 +81,7 @@ public class TestClientRMTokens {
   }
   
   @Test
-  public void testDelegationToken() throws IOException, InterruptedException,
-      YarnRemoteException {
+  public void testDelegationToken() throws IOException, InterruptedException {
     
     final YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_PRINCIPAL, "testuser/localhost@apache.org");
@@ -123,7 +131,9 @@ public class TestClientRMTokens {
       
       try {
         clientRMWithDT.getNewApplication(request);
-      } catch (UndeclaredThrowableException e) {
+      } catch (IOException e) {
+        fail("Unexpected exception" + e);
+      }  catch (YarnRemoteException e) {
         fail("Unexpected exception" + e);
       }
       
@@ -146,7 +156,9 @@ public class TestClientRMTokens {
       // Valid token because of renewal.
       try {
         clientRMWithDT.getNewApplication(request);
-      } catch (UndeclaredThrowableException e) {
+      } catch (IOException e) {
+        fail("Unexpected exception" + e);
+      } catch (YarnRemoteException e) {
         fail("Unexpected exception" + e);
       }
       
@@ -160,9 +172,10 @@ public class TestClientRMTokens {
       try {
         clientRMWithDT.getNewApplication(request);
         fail("Should not have succeeded with an expired token");
-      } catch (UndeclaredThrowableException e) {
-        assertTrue(e.getCause().getMessage().contains("is expired"));
-      }
+      } catch (Exception e) {
+        assertEquals(InvalidToken.class.getName(), e.getClass().getName());
+        assertTrue(e.getMessage().contains("is expired"));
+      } 
 
       // Test cancellation
       // Stop the existing proxy, start another.
@@ -183,7 +196,9 @@ public class TestClientRMTokens {
       
       try {
         clientRMWithDT.getNewApplication(request);
-      } catch (UndeclaredThrowableException e) {
+      } catch (IOException e) {
+        fail("Unexpected exception" + e);
+      } catch (YarnRemoteException e) {
         fail("Unexpected exception" + e);
       }
       cancelDelegationToken(loggedInUser, clientRMService, token);
@@ -200,7 +215,8 @@ public class TestClientRMTokens {
       try {
         clientRMWithDT.getNewApplication(request);
         fail("Should not have succeeded with a cancelled delegation token");
-      } catch (UndeclaredThrowableException e) {
+      } catch (IOException e) {
+      } catch (YarnRemoteException e) {
       }
 
 

@@ -120,7 +120,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new KillApplicationResponsePBImpl(proxy.forceKillApplication(null,
         requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -134,7 +135,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new GetApplicationReportResponsePBImpl(proxy.getApplicationReport(
         null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -148,7 +150,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new GetClusterMetricsResponsePBImpl(proxy.getClusterMetrics(null,
         requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -162,7 +165,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new GetNewApplicationResponsePBImpl(proxy.getNewApplication(null,
         requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -176,7 +180,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new SubmitApplicationResponsePBImpl(proxy.submitApplication(null,
         requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -190,7 +195,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new GetAllApplicationsResponsePBImpl(proxy.getAllApplications(
         null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -204,7 +210,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new GetClusterNodesResponsePBImpl(proxy.getClusterNodes(null,
         requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -217,7 +224,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new GetQueueInfoResponsePBImpl(proxy.getQueueInfo(null,
         requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -231,7 +239,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new GetQueueUserAclsInfoResponsePBImpl(proxy.getQueueUserAcls(
         null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -245,7 +254,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new GetDelegationTokenResponsePBImpl(proxy.getDelegationToken(
         null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -259,7 +269,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
       return new RenewDelegationTokenResponsePBImpl(proxy.renewDelegationToken(
           null, requestProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 
@@ -274,7 +285,8 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
           proxy.cancelDelegationToken(null, requestProto));
 
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 }
