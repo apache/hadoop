@@ -144,6 +144,9 @@ Trunk (Unreleased)
     HDFS-347. DFS read performance suboptimal when client co-located on nodes
     with data. (Colin Patrick McCabe via todd and atm)
 
+    HDFS-4826. TestNestedSnapshots times out due to repeated slow edit log
+    flushes when running on virtualized disk.  (Chris Nauroth via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

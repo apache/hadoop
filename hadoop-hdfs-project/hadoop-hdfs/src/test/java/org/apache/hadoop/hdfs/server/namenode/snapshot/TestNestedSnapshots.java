@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -48,6 +49,12 @@ import org.junit.Test;
 
 /** Testing nested snapshots. */
 public class TestNestedSnapshots {
+  static {
+    // These tests generate a large number of edits, and repeated edit log
+    // flushes can be a bottleneck.
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
+  }
+
   {
     SnapshotTestHelper.disableLogs();
   }
