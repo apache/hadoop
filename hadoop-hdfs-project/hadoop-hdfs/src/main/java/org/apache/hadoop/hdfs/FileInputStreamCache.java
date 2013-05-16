@@ -118,8 +118,8 @@ class FileInputStreamCache {
         return false;
       }
       FileInputStreamCache.Key otherKey = (FileInputStreamCache.Key)other;
-      return (block.equals(otherKey.block) & 
-          (block.getGenerationStamp() == otherKey.block.getGenerationStamp()) &
+      return (block.equals(otherKey.block) &&
+          (block.getGenerationStamp() == otherKey.block.getGenerationStamp()) &&
           datanodeID.equals(otherKey.datanodeID));
     }
 
@@ -233,8 +233,7 @@ class FileInputStreamCache {
       executor.remove(cacheCleaner);
     }
     for (Iterator<Entry<Key, Value>> iter = map.entries().iterator();
-          iter.hasNext();
-          iter = map.entries().iterator()) {
+          iter.hasNext();) {
       Entry<Key, Value> entry = iter.next();
       entry.getValue().close();
       iter.remove();

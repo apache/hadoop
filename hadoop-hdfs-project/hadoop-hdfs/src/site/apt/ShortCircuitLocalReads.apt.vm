@@ -66,3 +66,33 @@ HDFS Short-Circuit Local Reads
   </property>
 </configuration>
 ----
+
+* {Configuration Keys}
+
+  * dfs.client.read.shortcircuit
+
+  This configuration parameter turns on short-circuit local reads.
+
+  * dfs.client.read.shortcircuit.skip.checkusm
+
+  If this configuration parameter is set, short-circuit local reads will skip
+  checksums.  This is normally not recommended, but it may be useful for
+  special setups.  You might consider using this if you are doing your own
+  checksumming outside of HDFS.
+
+  * dfs.client.read.shortcircuit.streams.cache.size
+
+  The DFSClient maintains a cache of recently opened file descriptors.  This
+  parameter controls the size of that cache.  Setting this higher will use more
+  file descriptors, but potentially provide better performance on workloads
+  involving lots of seeks.
+
+  * dfs.client.read.shortcircuit.streams.cache.expiry.ms
+
+  This controls the minimum amount of time file descriptors need to sit in the
+  FileInputStreamCache before they can be closed for being inactive for too long.
+
+  * dfs.client.domain.socket.data.traffic
+
+  This control whether we will try to pass normal data traffic over UNIX domain
+  sockets.

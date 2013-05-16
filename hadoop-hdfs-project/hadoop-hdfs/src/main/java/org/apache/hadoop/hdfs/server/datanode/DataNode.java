@@ -1137,7 +1137,17 @@ public class DataNode extends Configured
         maxVersion);
     }
     metrics.incrBlocksGetLocalPathInfo();
-    return data.getShortCircuitFdsForRead(blk);
+    FileInputStream fis[] = new FileInputStream[2];
+    
+    try {
+      fis[0] = (FileInputStream)data.getBlockInputStream(blk, 0);
+      fis[1] = (FileInputStream)data.getMetaDataInputStream(blk).getWrappedStream();
+    } catch (ClassCastException e) {
+      LOG.debug("requestShortCircuitFdsForRead failed", e);
+      throw new ShortCircuitFdsUnsupportedException("This DataNode's " +
+          "FsDatasetSpi does not support short-circuit local reads");
+    }
+    return fis;
   }
 
   @Override

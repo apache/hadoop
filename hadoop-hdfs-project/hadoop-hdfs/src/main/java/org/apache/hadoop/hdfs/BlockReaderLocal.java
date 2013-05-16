@@ -88,6 +88,8 @@ class BlockReaderLocal implements BlockReader {
   private final DatanodeID datanodeID;
   private final ExtendedBlock block;
   
+  private final FileInputStreamCache fisCache;
+  
   private static int getSlowReadBufferNumChunks(Configuration conf,
       int bytesPerChecksum) {
 
@@ -109,13 +111,15 @@ class BlockReaderLocal implements BlockReader {
   public BlockReaderLocal(Configuration conf, String filename,
       ExtendedBlock block, long startOffset, long length,
       FileInputStream dataIn, FileInputStream checksumIn,
-      DatanodeID datanodeID, boolean verifyChecksum) throws IOException {
+      DatanodeID datanodeID, boolean verifyChecksum,
+      FileInputStreamCache fisCache) throws IOException {
     this.dataIn = dataIn;
     this.checksumIn = checksumIn;
     this.startOffset = Math.max(startOffset, 0);
     this.filename = filename;
     this.datanodeID = datanodeID;
     this.block = block;
+    this.fisCache = fisCache;
 
     // read and handle the common header here. For now just a version
     checksumIn.getChannel().position(0);
@@ -489,8 +493,7 @@ class BlockReaderLocal implements BlockReader {
   }
 
   @Override
-  public synchronized void close(PeerCache peerCache,
-      FileInputStreamCache fisCache) throws IOException {
+  public synchronized void close() throws IOException {
     if (fisCache != null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("putting FileInputStream for " + filename +

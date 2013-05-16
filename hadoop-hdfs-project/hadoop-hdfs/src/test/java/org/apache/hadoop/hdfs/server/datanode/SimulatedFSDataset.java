@@ -965,12 +965,6 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public FileInputStream[] getShortCircuitFdsForRead(ExtendedBlock block)
-      throws IOException {
-    throw new UnsupportedOperationException();
-  }
-  
-  @Override
   public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks)
       throws IOException {
     throw new UnsupportedOperationException();
