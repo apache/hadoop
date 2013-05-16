@@ -247,10 +247,9 @@ public class TestContainerManagerSecurity {
               + "it will indicate RPC success");
         } catch (Exception e) {
           Assert.assertEquals(
-            java.lang.reflect.UndeclaredThrowableException.class
+              javax.security.sasl.SaslException.class
               .getCanonicalName(), e.getClass().getCanonicalName());
           Assert.assertTrue(e
-            .getCause()
             .getMessage()
             .contains(
               "DIGEST-MD5: digest response format violation. "

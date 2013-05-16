@@ -62,7 +62,8 @@ public class LocalizationProtocolPBClientImpl implements LocalizationProtocol,
       return new LocalizerHeartbeatResponsePBImpl(
           proxy.heartbeat(null, statusProto));
     } catch (ServiceException e) {
-      throw RPCUtil.unwrapAndThrowException(e);
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
     }
   }
 

@@ -388,6 +388,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-655. Fair scheduler metrics should subtract allocated memory from 
     available memory. (sandyr via tucu)
 
+    YARN-628. Fix the way YarnRemoteException is being unrolled to extract out
+    the underlying exception. (Siddharth Seth via vinodkv)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES

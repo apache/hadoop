@@ -25,12 +25,15 @@ import java.lang.annotation.Annotation;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 
+import javax.security.sasl.SaslException;
+
 import junit.framework.Assert;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
@@ -53,7 +56,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -76,9 +78,10 @@ import org.junit.Test;
 public class TestClientTokens {
 
   private interface CustomProtocol {
+    @SuppressWarnings("unused")
     public static final long versionID = 1L;
 
-    public void ping() throws YarnRemoteException;
+    public void ping() throws YarnRemoteException, IOException;
   }
 
   private static class CustomSecurityInfo extends SecurityInfo {
@@ -121,7 +124,7 @@ public class TestClientTokens {
     }
 
     @Override
-    public void ping() throws YarnRemoteException {
+    public void ping() throws YarnRemoteException, IOException {
       this.pinged = true;
     }
 
@@ -289,11 +292,13 @@ public class TestClientTokens {
         }
       });
     } catch (Exception e) {
+      Assert.assertEquals(RemoteException.class.getName(), e.getClass()
+          .getName());
+      e = ((RemoteException)e).unwrapRemoteException();
       Assert
-        .assertEquals(java.lang.reflect.UndeclaredThrowableException.class
+        .assertEquals(SaslException.class
           .getCanonicalName(), e.getClass().getCanonicalName());
       Assert.assertTrue(e
-        .getCause()
         .getMessage()
         .contains(
           "DIGEST-MD5: digest response format violation. "

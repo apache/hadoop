@@ -19,6 +19,10 @@
 package org.apache.hadoop.yarn;
 
 /** Base Yarn Exception.
+ * 
+ * NOTE: All derivatives of this exception, which may be thrown by a remote
+ * service, must include a String only constructor for the exception to be 
+ * unwrapped on the client.
  */
 public class YarnException extends RuntimeException {
   public YarnException(Throwable cause) { super(cause); }
