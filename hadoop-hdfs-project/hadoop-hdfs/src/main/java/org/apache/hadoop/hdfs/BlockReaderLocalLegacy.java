@@ -700,4 +700,14 @@ class BlockReaderLocalLegacy implements BlockReader {
     // We never do network I/O in BlockReaderLocalLegacy.
     return Integer.MAX_VALUE;
   }
+
+  @Override
+  public boolean isLocal() {
+    return true;
+  }
+  
+  @Override
+  public boolean isShortCircuit() {
+    return true;
+  }
 }

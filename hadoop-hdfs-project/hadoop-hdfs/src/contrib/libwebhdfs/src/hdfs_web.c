@@ -1197,6 +1197,24 @@ int hdfsFileIsOpenForRead(hdfsFile file)
     return (file->type == INPUT);
 }
 
+int hdfsFileGetReadStatistics(hdfsFile file,
+                              struct hdfsReadStatistics **stats)
+{
+    errno = ENOTSUP;
+    return -1;
+}
+
+int64_t hdfsReadStatisticsGetRemoteBytesRead(
+                            const struct hdfsReadStatistics *stats)
+{
+  return stats->totalBytesRead - stats->totalLocalBytesRead;
+}
+
+void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats)
+{
+    free(stats);
+}
+
 int hdfsFileIsOpenForWrite(hdfsFile file)
 {
     return (file->type == OUTPUT);

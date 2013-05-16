@@ -68,4 +68,14 @@ public class HdfsDataInputStream extends FSDataInputStream {
   public long getVisibleLength() throws IOException {
     return ((DFSInputStream) in).getFileLength();
   }
+
+  /**
+   * Get statistics about the reads which this DFSInputStream has done.
+   * Note that because HdfsDataInputStream is buffered, these stats may
+   * be higher than you would expect just by adding up the number of
+   * bytes read through HdfsDataInputStream.
+   */
+  public synchronized DFSInputStream.ReadStatistics getReadStatistics() {
+    return ((DFSInputStream) in).getReadStatistics();
+  }
 }

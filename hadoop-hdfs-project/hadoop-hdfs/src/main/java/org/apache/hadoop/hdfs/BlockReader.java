@@ -70,4 +70,15 @@ public interface BlockReader extends ByteBufferReadable {
    * filled or the next call will return EOF.
    */
   int readAll(byte[] buf, int offset, int len) throws IOException;
+
+  /**
+   * @return              true only if this is a local read.
+   */
+  boolean isLocal();
+  
+  /**
+   * @return              true only if this is a short-circuit read.
+   *                      All short-circuit reads are also local.
+   */
+  boolean isShortCircuit();
 }

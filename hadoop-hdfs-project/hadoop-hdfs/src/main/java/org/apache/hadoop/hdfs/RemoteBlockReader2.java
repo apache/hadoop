@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -105,6 +106,11 @@ public class RemoteBlockReader2  implements BlockReader {
    * at the beginning so that the read can begin on a chunk boundary.
    */
   private long bytesNeededToFinish;
+
+  /**
+   * True if we are reading from a local DataNode.
+   */
+  private final boolean isLocal;
 
   private final boolean verifyChecksum;
 
@@ -255,6 +261,8 @@ public class RemoteBlockReader2  implements BlockReader {
       DataChecksum checksum, boolean verifyChecksum,
       long startOffset, long firstChunkOffset, long bytesToRead, Peer peer,
       DatanodeID datanodeID, PeerCache peerCache) {
+    this.isLocal = DFSClient.isLocalAddress(NetUtils.
+        createSocketAddr(datanodeID.getXferAddr()));
     // Path is used only for printing block and file information in debug
     this.peer = peer;
     this.datanodeID = datanodeID;
@@ -430,5 +438,15 @@ public class RemoteBlockReader2  implements BlockReader {
     // An optimistic estimate of how much data is available
     // to us without doing network I/O.
     return DFSClient.TCP_WINDOW_SIZE;
+  }
+  
+  @Override
+  public boolean isLocal() {
+    return isLocal;
+  }
+  
+  @Override
+  public boolean isShortCircuit() {
+    return false;
   }
 }
