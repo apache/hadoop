@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_BALANCED_SPACE_THRESHOLD_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_BALANCED_SPACE_PREFERENCE_PERCENT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,10 +43,10 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     Configuration conf = new Configuration();
     // Set the threshold to consider volumes imbalanced to 1MB
     conf.setLong(
-        DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_BALANCED_SPACE_THRESHOLD_KEY,
+        DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY,
         1024 * 1024); // 1MB
     conf.setFloat(
-        DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_BALANCED_SPACE_PREFERENCE_PERCENT_KEY,
+        DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
         preferencePercent);
     ((Configurable) policy).setConf(conf);
   }
