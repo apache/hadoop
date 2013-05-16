@@ -63,6 +63,8 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9560. metrics2#JvmMetrics should have max memory size of JVM.
     (Tsuyoshi Ozawa via suresh)
 
+    HADOOP-9140 Cleanup rpc PB protos (sanjay Radia)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs

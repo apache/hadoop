@@ -317,9 +317,9 @@
                   <include>HAServiceProtocol.proto</include>
                   <include>IpcConnectionContext.proto</include>
                   <include>ProtocolInfo.proto</include>
-                  <include>RpcPayloadHeader.proto</include>
+                  <include>RpcHeader.proto</include>
                   <include>ZKFCProtocol.proto</include>
-                  <include>hadoop_rpc.proto</include>
+                  <include>ProtobufRpcEngine.proto</include>
                   <include>Security.proto</include>
                 </includes>
               </source>

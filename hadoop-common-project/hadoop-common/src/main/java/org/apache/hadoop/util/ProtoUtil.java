@@ -24,7 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.UserInformationProto;
-import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.*;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.*;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -157,9 +157,9 @@ public abstract class ProtoUtil {
     return null;
   }
  
-  public static RpcPayloadHeaderProto makeRpcPayloadHeader(RPC.RpcKind rpcKind,
-      RpcPayloadOperationProto operation, int callId) {
-    RpcPayloadHeaderProto.Builder result = RpcPayloadHeaderProto.newBuilder();
+  public static RpcRequestHeaderProto makeRpcRequestHeader(RPC.RpcKind rpcKind,
+      RpcRequestHeaderProto.OperationProto operation, int callId) {
+    RpcRequestHeaderProto.Builder result = RpcRequestHeaderProto.newBuilder();
     result.setRpcKind(convert(rpcKind)).setRpcOp(operation).setCallId(callId);
     return result.build();
   }

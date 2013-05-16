@@ -1,0 +1,92 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+option java_package = "org.apache.hadoop.ipc.protobuf";
+option java_outer_classname = "RpcHeaderProtos";
+option java_generate_equals_and_hash = true;
+package hadoop.common;
+
+/**
+ * This is the rpc request header. It is sent with every rpc call.
+ * 
+ * The format of RPC call is as follows:
+ * +--------------------------------------------------------------+
+ * | Rpc length in bytes (4 bytes int) sum of next two parts      |
+ * +--------------------------------------------------------------+
+ * | RpcRequestHeaderProto - serialized delimited ie has len      |
+ * +--------------------------------------------------------------+
+ * | RpcRequest The actual rpc request                            |
+ * | This request is serialized based on RpcKindProto             |
+ * +--------------------------------------------------------------+
+ *
+ */
+
+/**
+ * RpcKind determine the rpcEngine and the serialization of the rpc request
+ */
+enum RpcKindProto {
+  RPC_BUILTIN          = 0;  // Used for built in calls by tests
+  RPC_WRITABLE         = 1;  // Use WritableRpcEngine 
+  RPC_PROTOCOL_BUFFER  = 2;  // Use ProtobufRpcEngine
+}
+
+
+   
+message RpcRequestHeaderProto { // the header for the RpcRequest
+  enum OperationProto {
+    RPC_FINAL_PACKET        = 0; // The final RPC Packet
+    RPC_CONTINUATION_PACKET = 1; // not implemented yet
+    RPC_CLOSE_CONNECTION     = 2; // close the rpc connection
+  }
+
+  optional RpcKindProto rpcKind = 1;
+  optional OperationProto rpcOp = 2;
+  required uint32 callId = 3; // each rpc has a callId that is also used in response
+}
+
+
+
+/**
+ * Rpc Response Header
+ * ** If request is successfull response is returned as below ********
+ * +------------------------------------------------------------------+
+ * | Rpc reponse length in bytes (4 bytes int)                        |
+ * |  (sum of next two parts)                                         |
+ * +------------------------------------------------------------------+
+ * | RpcResponseHeaderProto - serialized delimited ie has len         |
+ * +------------------------------------------------------------------+
+ * | if request is successful:                                        |
+ * |   - RpcResponse -  The actual rpc response  bytes                 |
+ * |     This response is serialized based on RpcKindProto             |
+ * | if request fails :                                               |
+ * |   - length (4 byte int) + Class name of exception - UTF-8 string |
+ * |   - length (4 byte int) + Stacktrace - UTF-8 string              |
+ * |   if the strings are null then the length is -1                  |
+ * +------------------------------------------------------------------+
+ *
+ */
+message RpcResponseHeaderProto {
+  enum RpcStatusProto {
+   SUCCESS = 0;  // RPC succeeded
+   ERROR = 1;    // RPC Failed
+   FATAL = 2;    // Fatal error - connection is closed
+  }
+
+  required uint32 callId = 1; // callId used in Request
+  required RpcStatusProto status = 2;
+  optional uint32 serverIpcVersionNum = 3; // in case of an fatal IPC error 
+}

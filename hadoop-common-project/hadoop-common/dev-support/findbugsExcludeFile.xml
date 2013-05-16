@@ -272,7 +272,7 @@
     </Match>
     <Match>
       <!-- protobuf generated code -->
-      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.HadoopRpcProtos.*"/>
+      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.ProtobufRpcEngineProtos.*"/>
     </Match>
     <Match>
       <!-- protobuf generated code -->
@@ -284,7 +284,7 @@
     </Match>
         <Match>
       <!-- protobuf generated code -->
-      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.RpcPayloadHeaderProtos.*"/>
+      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.RpcHeaderProtos.*"/>
     </Match>
     <Match>
       <!-- protobuf generated code -->
