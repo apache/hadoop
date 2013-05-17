@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.Closeable;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -80,23 +84,43 @@ class FileInputStreamCache {
    * Expiry thread which makes sure that the file descriptors get closed
    * after a while.
    */
-  class CacheCleaner implements Runnable {
+  private static class CacheCleaner implements Runnable, Closeable {
+    private WeakReference<FileInputStreamCache> cacheRef;
+    private ScheduledFuture<?> future;
+    
+    CacheCleaner(FileInputStreamCache cache) {
+      this.cacheRef = new WeakReference<FileInputStreamCache>(cache);
+    }
+    
     @Override
     public void run() {
-      synchronized(FileInputStreamCache.this) {
-        if (closed) return;
+      FileInputStreamCache cache = cacheRef.get();
+      if (cache == null) return;
+      synchronized(cache) {
+        if (cache.closed) return;
         long curTime = Time.monotonicNow();
-        for (Iterator<Entry<Key, Value>> iter = map.entries().iterator();
-              iter.hasNext();
-              iter = map.entries().iterator()) {
+        for (Iterator<Entry<Key, Value>> iter =
+                  cache.map.entries().iterator(); iter.hasNext();
+              iter = cache.map.entries().iterator()) {
           Entry<Key, Value> entry = iter.next();
-          if (entry.getValue().getTime() + expiryTimeMs >= curTime) {
+          if (entry.getValue().getTime() + cache.expiryTimeMs >= curTime) {
             break;
           }
           entry.getValue().close();
           iter.remove();
         }
       }
+    }
+
+    @Override
+    public void close() throws IOException {
+      if (future != null) {
+        future.cancel(false);
+      }
+    }
+    
+    public void setFuture(ScheduledFuture<?> future) {
+      this.future = future;
     }
   }
 
@@ -189,9 +213,11 @@ class FileInputStreamCache {
           iter.remove();
         }
         if (cacheCleaner == null) {
-          cacheCleaner = new CacheCleaner();
-          executor.scheduleAtFixedRate(cacheCleaner, expiryTimeMs, expiryTimeMs, 
-              TimeUnit.MILLISECONDS);
+          cacheCleaner = new CacheCleaner(this);
+          ScheduledFuture<?> future = 
+              executor.scheduleAtFixedRate(cacheCleaner, expiryTimeMs, expiryTimeMs,
+                  TimeUnit.MILLISECONDS);
+          cacheCleaner.setFuture(future);
         }
         map.put(new Key(datanodeID, block), new Value(fis));
         inserted = true;
@@ -229,9 +255,7 @@ class FileInputStreamCache {
   public synchronized void close() {
     if (closed) return;
     closed = true;
-    if (cacheCleaner != null) {
-      executor.remove(cacheCleaner);
-    }
+    IOUtils.cleanup(LOG, cacheCleaner);
     for (Iterator<Entry<Key, Value>> iter = map.entries().iterator();
           iter.hasNext();) {
       Entry<Key, Value> entry = iter.next();
