@@ -59,6 +59,7 @@ public class TestRMNMRPCResponseId {
 
   @Before
   public void setUp() {
+    Configuration conf = new Configuration();
     // Dispatcher that processes events inline
     Dispatcher dispatcher = new InlineDispatcher();
     dispatcher.register(SchedulerEventType.class, new EventHandler<Event>() {
@@ -69,17 +70,16 @@ public class TestRMNMRPCResponseId {
     });
     RMContext context =
         new RMContextImpl(dispatcher, null, null, null, null,
-          null, null, null);
+          null, new RMContainerTokenSecretManager(conf), null);
     dispatcher.register(RMNodeEventType.class,
         new ResourceManager.NodeEventDispatcher(context));
     NodesListManager nodesListManager = new NodesListManager(context);
-    Configuration conf = new Configuration();
     nodesListManager.init(conf);
-    RMContainerTokenSecretManager containerTokenSecretManager =
-        new RMContainerTokenSecretManager(conf);
+    
+    context.getContainerTokenSecretManager().rollMasterKey();
     resourceTrackerService = new ResourceTrackerService(context,
         nodesListManager, new NMLivelinessMonitor(dispatcher),
-        containerTokenSecretManager);
+        context.getContainerTokenSecretManager());
     resourceTrackerService.init(conf);
   }
   

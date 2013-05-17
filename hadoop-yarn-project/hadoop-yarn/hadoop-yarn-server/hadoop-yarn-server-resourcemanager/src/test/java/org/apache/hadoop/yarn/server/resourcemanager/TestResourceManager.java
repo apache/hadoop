@@ -52,6 +52,7 @@ public class TestResourceManager {
     Configuration conf = new YarnConfiguration();
     resourceManager = new ResourceManager();
     resourceManager.init(conf);
+    resourceManager.getRMContainerTokenSecretManager().rollMasterKey();
   }
 
   @After

@@ -95,8 +95,10 @@ public class TestRMRestart {
     // start like normal because state is empty
     rm1.start();
     
-    MockNM nm1 = new MockNM("h1:1234", 15120, rm1.getResourceTrackerService());
-    MockNM nm2 = new MockNM("h2:5678", 15120, rm1.getResourceTrackerService());
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    MockNM nm2 =
+        new MockNM("127.0.0.2:5678", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
     nm2.registerNode(); // nm2 will not heartbeat with RM1
     
@@ -145,7 +147,7 @@ public class TestRMRestart {
     am1.registerAppAttempt();
 
     // AM request for containers
-    am1.allocate("h1" , 1000, 1, new ArrayList<ContainerId>());    
+    am1.allocate("127.0.0.1" , 1000, 1, new ArrayList<ContainerId>());    
     // kick the scheduler
     nm1.nodeHeartbeat(true);
     List<Container> conts = am1.allocate(new ArrayList<ResourceRequest>(),
@@ -244,8 +246,8 @@ public class TestRMRestart {
     Assert.assertEquals(NodeAction.RESYNC, hbResponse.getNodeAction());
     
     // new NM to represent NM re-register
-    nm1 = rm2.registerNode("h1:1234", 15120);
-    nm2 = rm2.registerNode("h2:5678", 15120);
+    nm1 = rm2.registerNode("127.0.0.1:1234", 15120);
+    nm2 = rm2.registerNode("127.0.0.2:5678", 15120);
 
     // verify no more reboot response sent
     hbResponse = nm1.nodeHeartbeat(true);
@@ -265,7 +267,8 @@ public class TestRMRestart {
 
     // Nodes on which the AM's run 
     MockNM am1Node = nm1;
-    if(attemptState.getMasterContainer().getNodeId().toString().contains("h2")){
+    if (attemptState.getMasterContainer().getNodeId().toString()
+        .contains("127.0.0.2")) {
       am1Node = nm2;
     }
 
@@ -280,7 +283,8 @@ public class TestRMRestart {
                         attemptState.getMasterContainer().getId());
 
     MockNM am2Node = nm1;
-    if(attemptState.getMasterContainer().getNodeId().toString().contains("h2")){
+    if (attemptState.getMasterContainer().getNodeId().toString()
+        .contains("127.0.0.2")) {
       am2Node = nm2;
     }
     
@@ -292,8 +296,8 @@ public class TestRMRestart {
     am2.registerAppAttempt();
 
     //request for containers
-    am1.allocate("h1" , 1000, 3, new ArrayList<ContainerId>());
-    am2.allocate("h2" , 1000, 1, new ArrayList<ContainerId>());
+    am1.allocate("127.0.0.1" , 1000, 3, new ArrayList<ContainerId>());
+    am2.allocate("127.0.0.2" , 1000, 1, new ArrayList<ContainerId>());
     
     // verify container allocate continues to work
     nm1.nodeHeartbeat(true);
@@ -346,7 +350,8 @@ public class TestRMRestart {
         rmState.getApplicationState();  
     MockRM rm1 = new MockRM(conf, memStore);
     rm1.start();
-    MockNM nm1 = new MockNM("h1:1234", 15120, rm1.getResourceTrackerService());
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
 
     // submit an app with maxAppAttempts equals to 1

@@ -29,10 +29,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -40,6 +43,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -147,7 +151,52 @@ public abstract class BaseContainerManagerTest {
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogDir.getAbsolutePath());
 
     // Default delSrvc
-    delSrvc = new DeletionService(exec) {
+    delSrvc = createDeletionService();
+    delSrvc.init(conf);
+
+    exec = createContainerExecutor();
+    nodeHealthChecker = new NodeHealthCheckerService();
+    nodeHealthChecker.init(conf);
+    dirsHandler = nodeHealthChecker.getDiskHandler();
+    containerManager = createContainerManager(delSrvc);
+    ((NMContext)context).setContainerManager(containerManager);
+    nodeStatusUpdater.init(conf);
+    containerManager.init(conf);
+    nodeStatusUpdater.start();
+  }
+
+  protected ContainerManagerImpl
+      createContainerManager(DeletionService delSrvc) {
+    return new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
+      metrics, new ApplicationACLsManager(conf), dirsHandler) {
+      @Override
+      public void
+          setBlockNewContainerRequests(boolean blockNewContainerRequests) {
+        // do nothing
+      }
+
+      @Override
+      protected void authorizeRequest(String containerIDStr,
+          ContainerLaunchContext launchContext, Container container,
+          UserGroupInformation remoteUgi, ContainerTokenIdentifier tokenId)
+          throws YarnRemoteException {
+        // do nothing
+      }
+
+      @Override
+      protected ContainerTokenIdentifier getContainerTokenIdentifier(
+          UserGroupInformation remoteUgi,
+          org.apache.hadoop.yarn.api.records.Container container)
+          throws YarnRemoteException {
+        return new ContainerTokenIdentifier(container.getId(),
+          container.getNodeHttpAddress(), remoteUgi.getUserName(),
+          container.getResource(), System.currentTimeMillis(), 123);
+      }
+    };
+  }
+
+  protected DeletionService createDeletionService() {
+    return new DeletionService(exec) {
       @Override
       public void delete(String user, Path subDir, Path[] baseDirs) {
         // Don't do any deletions.
@@ -155,22 +204,6 @@ public abstract class BaseContainerManagerTest {
             + ", baseDirs - " + baseDirs); 
       };
     };
-    delSrvc.init(conf);
-
-    exec = createContainerExecutor();
-    nodeHealthChecker = new NodeHealthCheckerService();
-    nodeHealthChecker.init(conf);
-    dirsHandler = nodeHealthChecker.getDiskHandler();
-    containerManager =
-        new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
-          metrics, new ApplicationACLsManager(conf), dirsHandler) {
-          @Override
-          public void setBlockNewContainerRequests(
-              boolean blockNewContainerRequests) {
-            // do nothing
-          }
-        };
-    containerManager.init(conf);
   }
 
   @After

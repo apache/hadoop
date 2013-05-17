@@ -90,10 +90,10 @@ public class TestAMRMRPCNodeUpdates {
   @Test
   public void testAMRMUnusableNodes() throws Exception {
     
-    MockNM nm1 = rm.registerNode("h1:1234", 10000);
-    MockNM nm2 = rm.registerNode("h2:1234", 10000);
-    MockNM nm3 = rm.registerNode("h3:1234", 10000);
-    MockNM nm4 = rm.registerNode("h4:1234", 10000);
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10000);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
+    MockNM nm3 = rm.registerNode("127.0.0.3:1234", 10000);
+    MockNM nm4 = rm.registerNode("127.0.0.4:1234", 10000);
 
     RMApp app1 = rm.submitApp(2000);
 

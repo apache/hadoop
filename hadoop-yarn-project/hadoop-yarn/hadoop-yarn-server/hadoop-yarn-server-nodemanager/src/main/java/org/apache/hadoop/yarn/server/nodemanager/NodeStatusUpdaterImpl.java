@@ -194,16 +194,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       throw new AvroRuntimeException(e);
     }
   }
-  
-  private boolean isSecurityEnabled() {
-    return UserGroupInformation.isSecurityEnabled();
-  }
 
   @Private
   protected boolean isTokenKeepAliveEnabled(Configuration conf) {
     return conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
         YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)
-        && isSecurityEnabled();
+        && UserGroupInformation.isSecurityEnabled();
   }
 
   protected ResourceTracker getRMClient() {
@@ -303,16 +299,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             + message);
     }
 
-    if (UserGroupInformation.isSecurityEnabled()) {
-      MasterKey masterKey = regNMResponse.getMasterKey();
-      // do this now so that its set before we start heartbeating to RM
-      LOG.info("Security enabled - updating secret keys now");
-      // It is expected that status updater is started by this point and
-      // RM gives the shared secret in registration during
-      // StatusUpdater#start().
-      if (masterKey != null) {
-        this.context.getContainerTokenSecretManager().setMasterKey(masterKey);
-      }
+    MasterKey masterKey = regNMResponse.getMasterKey();
+    // do this now so that its set before we start heartbeating to RM
+    // It is expected that status updater is started by this point and
+    // RM gives the shared secret in registration during
+    // StatusUpdater#start().
+    if (masterKey != null) {
+      this.context.getContainerTokenSecretManager().setMasterKey(masterKey);
     }
 
     LOG.info("Registered with ResourceManager as " + this.nodeId
@@ -443,10 +436,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             NodeHeartbeatRequest request = recordFactory
                 .newRecordInstance(NodeHeartbeatRequest.class);
             request.setNodeStatus(nodeStatus);
-            if (isSecurityEnabled()) {
-              request.setLastKnownMasterKey(NodeStatusUpdaterImpl.this.context
-                .getContainerTokenSecretManager().getCurrentKey());
-            }
+            request.setLastKnownMasterKey(NodeStatusUpdaterImpl.this.context
+              .getContainerTokenSecretManager().getCurrentKey());
             while (!isStopped) {
               try {
                 rmRetryCount++;
@@ -475,13 +466,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             //get next heartbeat interval from response
             nextHeartBeatInterval = response.getNextHeartBeatInterval();
             // See if the master-key has rolled over
-            if (isSecurityEnabled()) {
-              MasterKey updatedMasterKey = response.getMasterKey();
-              if (updatedMasterKey != null) {
-                // Will be non-null only on roll-over on RM side
-                context.getContainerTokenSecretManager().setMasterKey(
-                  updatedMasterKey);
-              }
+            MasterKey updatedMasterKey = response.getMasterKey();
+            if (updatedMasterKey != null) {
+              // Will be non-null only on roll-over on RM side
+              context.getContainerTokenSecretManager().setMasterKey(
+                updatedMasterKey);
             }
 
             if (response.getNodeAction() == NodeAction.SHUTDOWN) {

@@ -27,13 +27,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The NM maintains only two master-keys. The current key that RM knows and the
@@ -134,10 +135,6 @@ public class NMContainerTokenSecretManager extends
    */
   public synchronized void startContainerSuccessful(
       ContainerTokenIdentifier tokenId) {
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      return;
-    }
-
     int keyId = tokenId.getMasterKeyId();
     if (currentMasterKey.getMasterKey().getKeyId() == keyId) {
       addKeyForContainerId(tokenId.getContainerID(), currentMasterKey);
@@ -154,8 +151,7 @@ public class NMContainerTokenSecretManager extends
    * via retrievePassword.
    */
   public synchronized boolean isValidStartContainerRequest(
-      ContainerTokenIdentifier tokenId) {
-    ContainerId containerID = tokenId.getContainerID();
+      ContainerId containerID) {
     ApplicationId applicationId =
         containerID.getApplicationAttemptId().getApplicationId();
     return !this.oldMasterKeys.containsKey(applicationId)

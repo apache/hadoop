@@ -48,13 +48,13 @@ public class TestApplicationMasterService {
       ResourceScheduler.class);
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 3000000)
   public void testRMIdentifierOnContainerAllocation() throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();
 
     // Register node1
-    MockNM nm1 = rm.registerNode("h1:1234", 6 * GB);
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
     // Submit an application
     RMApp app1 = rm.submitApp(2048);
@@ -65,7 +65,7 @@ public class TestApplicationMasterService {
     MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
     am1.registerAppAttempt();
 
-    am1.addRequests(new String[] { "h1" }, GB, 1, 1);
+    am1.addRequests(new String[] { "127.0.0.1" }, GB, 1, 1);
     AllocateResponse alloc1Response = am1.schedule(); // send the request
 
     // kick the scheduler

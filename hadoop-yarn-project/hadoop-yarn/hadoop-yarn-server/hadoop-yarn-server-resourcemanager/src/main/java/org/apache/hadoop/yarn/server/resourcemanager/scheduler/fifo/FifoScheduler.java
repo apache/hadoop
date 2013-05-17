@@ -552,15 +552,12 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
             .getApplicationAttemptId(), application.getNewContainerId());
         ContainerToken containerToken = null;
 
-        // If security is enabled, send the container-tokens too.
-        if (UserGroupInformation.isSecurityEnabled()) {
-          containerToken =
-              this.rmContext.getContainerTokenSecretManager()
+        containerToken =
+            this.rmContext.getContainerTokenSecretManager()
                 .createContainerToken(containerId, nodeId,
-                  application.getUser(), capability);
-          if (containerToken == null) {
-            return i; // Try again later.
-          }
+                    application.getUser(), capability);
+        if (containerToken == null) {
+          return i; // Try again later.
         }
 
         // Create the container

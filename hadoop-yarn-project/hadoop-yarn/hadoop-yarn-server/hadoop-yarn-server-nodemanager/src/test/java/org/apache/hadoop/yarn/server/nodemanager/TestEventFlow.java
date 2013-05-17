@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -45,7 +48,6 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.Test;
-import static org.mockito.Mockito.*;
 
 
 public class TestEventFlow {
@@ -75,6 +77,7 @@ public class TestEventFlow {
     remoteLogDir.mkdir();
 
     YarnConfiguration conf = new YarnConfiguration();
+    
     Context context = new NMContext(new NMContainerTokenSecretManager(conf));
 
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
@@ -112,6 +115,9 @@ public class TestEventFlow {
     DummyContainerManager containerManager =
         new DummyContainerManager(context, exec, del, nodeStatusUpdater,
           metrics, new ApplicationACLsManager(conf), dirsHandler);
+    nodeStatusUpdater.init(conf);
+    ((NMContext)context).setContainerManager(containerManager);
+    nodeStatusUpdater.start();
     containerManager.init(conf);
     containerManager.start();
 
@@ -132,7 +138,6 @@ public class TestEventFlow {
     when(mockContainer.getResource()).thenReturn(recordFactory
         .newRecordInstance(Resource.class));
     when(mockContainer.getRMIdentifer()).thenReturn(SIMULATED_RM_IDENTIFIER);
-
     launchContext.setUser("testing");
     StartContainerRequest request = 
         recordFactory.newRecordInstance(StartContainerRequest.class);

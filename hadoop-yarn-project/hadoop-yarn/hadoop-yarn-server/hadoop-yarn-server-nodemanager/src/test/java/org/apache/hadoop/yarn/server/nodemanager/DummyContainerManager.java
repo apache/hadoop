@@ -26,7 +26,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -172,5 +176,24 @@ public class DummyContainerManager extends ContainerManagerImpl {
   @Override
   public void setBlockNewContainerRequests(boolean blockNewContainerRequests) {
     // do nothing
+  }
+  
+  @Override
+  protected void authorizeRequest(String containerIDStr,
+      ContainerLaunchContext launchContext,
+      org.apache.hadoop.yarn.api.records.Container container,
+      UserGroupInformation remoteUgi, ContainerTokenIdentifier tokenId)
+      throws YarnRemoteException {
+    // do Nothing
+  }
+
+  @Override
+  protected ContainerTokenIdentifier getContainerTokenIdentifier(
+      UserGroupInformation remoteUgi,
+      org.apache.hadoop.yarn.api.records.Container container)
+      throws YarnRemoteException {
+    return new ContainerTokenIdentifier(container.getId(),
+      container.getNodeHttpAddress(), remoteUgi.getUserName(),
+      container.getResource(), System.currentTimeMillis(), 123);
   }
 }

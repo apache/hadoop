@@ -1296,16 +1296,13 @@ public class LeafQueue implements CSQueue {
         unreserve(application, priority, node, rmContainer);
       }
 
-      // Create container tokens in secure-mode
-      if (UserGroupInformation.isSecurityEnabled()) {
-        ContainerToken containerToken = 
-            createContainerToken(application, container);
-        if (containerToken == null) {
-          // Something went wrong...
-          return Resources.none();
-        }
-        container.setContainerToken(containerToken);
+      ContainerToken containerToken =
+          createContainerToken(application, container);
+      if (containerToken == null) {
+        // Something went wrong...
+        return Resources.none();
       }
+      container.setContainerToken(containerToken);
       
       // Inform the application
       RMContainer allocatedContainer = 

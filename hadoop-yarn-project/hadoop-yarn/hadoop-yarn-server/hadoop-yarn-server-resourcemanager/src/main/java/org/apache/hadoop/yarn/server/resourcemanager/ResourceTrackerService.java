@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
@@ -198,11 +197,9 @@ public class ResourceTrackerService extends AbstractService implements
       return response;
     }
 
-    if (isSecurityEnabled()) {
-      MasterKey nextMasterKeyForNode =
-          this.containerTokenSecretManager.getCurrentKey();
-      response.setMasterKey(nextMasterKeyForNode);
-    }
+    MasterKey nextMasterKeyForNode =
+        this.containerTokenSecretManager.getCurrentKey();
+    response.setMasterKey(nextMasterKeyForNode);
 
     RMNode rmNode = new RMNodeImpl(nodeId, rmContext, host, cmPort, httpPort,
         resolve(host), capability);
@@ -298,25 +295,23 @@ public class ResourceTrackerService extends AbstractService implements
             getResponseId() + 1, NodeAction.NORMAL, null, null, null,
             nextHeartBeatInterval);
     rmNode.updateNodeHeartbeatResponseForCleanup(nodeHeartBeatResponse);
+
     // Check if node's masterKey needs to be updated and if the currentKey has
     // roller over, send it across
-    if (isSecurityEnabled()) {
+    boolean shouldSendMasterKey = false;
 
-      boolean shouldSendMasterKey = false;
-
-      MasterKey nextMasterKeyForNode =
-          this.containerTokenSecretManager.getNextKey();
-      if (nextMasterKeyForNode != null) {
-        // nextMasterKeyForNode can be null if there is no outstanding key that
-        // is in the activation period.
-        MasterKey nodeKnownMasterKey = request.getLastKnownMasterKey();
-        if (nodeKnownMasterKey.getKeyId() != nextMasterKeyForNode.getKeyId()) {
-          shouldSendMasterKey = true;
-        }
+    MasterKey nextMasterKeyForNode =
+        this.containerTokenSecretManager.getNextKey();
+    if (nextMasterKeyForNode != null) {
+      // nextMasterKeyForNode can be null if there is no outstanding key that
+      // is in the activation period.
+      MasterKey nodeKnownMasterKey = request.getLastKnownMasterKey();
+      if (nodeKnownMasterKey.getKeyId() != nextMasterKeyForNode.getKeyId()) {
+        shouldSendMasterKey = true;
       }
-      if (shouldSendMasterKey) {
-        nodeHeartBeatResponse.setMasterKey(nextMasterKeyForNode);
-      }
+    }
+    if (shouldSendMasterKey) {
+      nodeHeartBeatResponse.setMasterKey(nextMasterKeyForNode);
     }
 
     // 4. Send status to RMNode, saving the latest response.
@@ -340,9 +335,5 @@ public class ResourceTrackerService extends AbstractService implements
   void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
     this.server.refreshServiceAcl(configuration, policyProvider);
-  }
-
-  protected boolean isSecurityEnabled() {
-    return UserGroupInformation.isSecurityEnabled();
   }
 }
