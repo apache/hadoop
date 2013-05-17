@@ -26,6 +26,11 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.JobStatus.State;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -52,5 +57,21 @@ public class TestJobInfo {
         .getName());
     assertEquals(info.getUser().toString(), copyinfo.getUser().toString());
 
+  }
+  
+  @Test(timeout = 5000)
+  public void testTaskID() throws IOException, InterruptedException {
+    JobID jobid = new JobID("1014873536921", 6);
+    TaskID tid = new TaskID(jobid, TaskType.MAP, 0);
+    org.apache.hadoop.mapred.TaskID tid1 =
+        org.apache.hadoop.mapred.TaskID.downgrade(tid);
+    org.apache.hadoop.mapred.TaskReport treport =
+        new org.apache.hadoop.mapred.TaskReport(tid1, 0.0f,
+          State.FAILED.toString(), null, TIPStatus.FAILED, 100, 100,
+          new org.apache.hadoop.mapred.Counters());
+    Assert
+      .assertEquals(treport.getTaskId(), "task_1014873536921_0006_m_000000");
+    Assert.assertEquals(treport.getTaskID().toString(),
+      "task_1014873536921_0006_m_000000");
   }
 }

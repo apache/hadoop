@@ -75,7 +75,7 @@ public class TaskReport extends org.apache.hadoop.mapreduce.TaskReport {
   
   static TaskReport downgrade(
       org.apache.hadoop.mapreduce.TaskReport report) {
-    return new TaskReport(TaskID.downgrade(report.getTaskId()),
+    return new TaskReport(TaskID.downgrade(report.getTaskID()),
       report.getProgress(), report.getState(), report.getDiagnostics(),
       report.getCurrentStatus(), report.getStartTime(), report.getFinishTime(),
       Counters.downgrade(report.getTaskCounters()));
@@ -90,9 +90,16 @@ public class TaskReport extends org.apache.hadoop.mapreduce.TaskReport {
     return ret.toArray(new TaskReport[0]);
   }
   
+  /** The string of the task id. */
+  public String getTaskId() {
+    return TaskID.downgrade(super.getTaskID()).toString();
+  }
+
   /** The id of the task. */
-  public TaskID getTaskID() { return TaskID.downgrade(super.getTaskId()); }
-  
+  public TaskID getTaskID() {
+    return TaskID.downgrade(super.getTaskID());
+  }
+
   public Counters getCounters() { 
     return Counters.downgrade(super.getTaskCounters()); 
   }
