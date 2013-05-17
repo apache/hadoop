@@ -34,6 +34,9 @@ Release 0.23.8 - UNRELEASED
     MAPREDUCE-5168. Reducer can OOM during shuffle because on-disk output
     stream not released (jlowe)
 
+    MAPREDUCE-4927. Historyserver 500 error due to NPE when accessing specific
+    counters page for failed job. (Ashwin Shankar via jlowe)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES

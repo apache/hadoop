@@ -182,6 +182,11 @@ public class TestAMWebApp {
   
   @Test public void testSingleCounterView() {
     AppContext appContext = new TestAppContext();
+    Job job = appContext.getAllJobs().values().iterator().next();
+    // add a failed task to the job without any counters
+    Task failedTask = MockJobs.newTask(job.getID(), 2, 1, true);
+    Map<TaskId,Task> tasks = job.getTasks();
+    tasks.put(failedTask.getID(), failedTask);
     Map<String, String> params = getJobParams(appContext);
     params.put(AMParams.COUNTER_GROUP, 
         "org.apache.hadoop.mapreduce.FileSystemCounter");
