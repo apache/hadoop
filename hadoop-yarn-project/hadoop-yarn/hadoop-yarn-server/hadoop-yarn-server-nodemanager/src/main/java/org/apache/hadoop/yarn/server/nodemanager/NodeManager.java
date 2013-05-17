@@ -135,13 +135,8 @@ public class NodeManager extends CompositeService
 
     conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
-    // Create the secretManager if need be.
-    NMContainerTokenSecretManager containerTokenSecretManager = null;
-    if (UserGroupInformation.isSecurityEnabled()) {
-      LOG.info("Security is enabled on NodeManager. "
-          + "Creating ContainerTokenSecretManager");
-      containerTokenSecretManager = new NMContainerTokenSecretManager(conf);
-    }
+    NMContainerTokenSecretManager containerTokenSecretManager =
+        new NMContainerTokenSecretManager(conf);
 
     this.context = createNMContext(containerTokenSecretManager);
 

@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -42,7 +43,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -63,8 +63,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -95,7 +97,7 @@ public class TestNodeStatusUpdater {
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
-  int heartBeatID = 0;
+  volatile int heartBeatID = 0;
   volatile Throwable nmStartError = null;
   private final List<NodeId> registeredNodes = new ArrayList<NodeId>();
   private final Configuration conf = createNMConfig();
@@ -113,6 +115,14 @@ public class TestNodeStatusUpdater {
     DefaultMetricsSystem.shutdown();
   }
 
+  public static MasterKey createMasterKey() {
+    MasterKey masterKey = new MasterKeyPBImpl();
+    masterKey.setKeyId(123);
+    masterKey.setBytes(ByteBuffer.wrap(new byte[] { new Integer(123)
+      .byteValue() }));
+    return masterKey;
+  }
+  
   private class MyResourceTracker implements ResourceTracker {
 
     private final Context context;
@@ -137,6 +147,7 @@ public class TestNodeStatusUpdater {
 
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
+      response.setMasterKey(createMasterKey());
       return response;
     }
 
@@ -398,6 +409,7 @@ public class TestNodeStatusUpdater {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
       response.setNodeAction(registerNodeAction );
+      response.setMasterKey(createMasterKey());
       response.setDiagnosticsMessage(shutDownMessage);
       return response;
     }
@@ -435,6 +447,7 @@ public class TestNodeStatusUpdater {
       RegisterNodeManagerResponse response =
           recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
       response.setNodeAction(registerNodeAction);
+      response.setMasterKey(createMasterKey());
       return response;
     }
 
@@ -485,6 +498,7 @@ public class TestNodeStatusUpdater {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
       response.setNodeAction(registerNodeAction);
+      response.setMasterKey(createMasterKey());
       return response;
     }
 
@@ -577,6 +591,8 @@ public class TestNodeStatusUpdater {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
       response.setNodeAction(registerNodeAction );
+      response.setMasterKey(createMasterKey());
+
       return response;
     }
     
@@ -635,13 +651,13 @@ public class TestNodeStatusUpdater {
         + nm.getServiceState());
 
     int waitCount = 0;
-    while (nm.getServiceState() == STATE.INITED && waitCount++ != 20) {
+    while (nm.getServiceState() == STATE.INITED && waitCount++ != 50) {
       LOG.info("Waiting for NM to start..");
       if (nmStartError != null) {
         LOG.error("Error during startup. ", nmStartError);
         Assert.fail(nmStartError.getCause().getMessage());
       }
-      Thread.sleep(1000);
+      Thread.sleep(2000);
     }
     if (nm.getServiceState() != STATE.STARTED) {
       // NM could have failed.
@@ -686,7 +702,7 @@ public class TestNodeStatusUpdater {
     nm.start();
     
     int waitCount = 0;
-    while (heartBeatID < 1 && waitCount++ != 20) {
+    while (heartBeatID < 1 && waitCount++ != 200) {
       Thread.sleep(500);
     }
     Assert.assertFalse(heartBeatID < 1);
@@ -714,7 +730,7 @@ public class TestNodeStatusUpdater {
     nm.start();
 
     int waitCount = 0;
-    while (heartBeatID < 1 && waitCount++ != 20) {
+    while (heartBeatID < 1 && waitCount++ != 200) {
       Thread.sleep(500);
     }
     Assert.assertFalse(heartBeatID < 1);
@@ -751,9 +767,9 @@ public class TestNodeStatusUpdater {
         + "Message from ResourceManager: RM Shutting Down Node");
   }
 
-  @Test (timeout = 15000)
+  @Test (timeout = 150000)
   public void testNMConnectionToRM() {
-    final long delta = 1500;
+    final long delta = 50000;
     final long connectionWaitSecs = 5;
     final long connectionRetryIntervalSecs = 1;
     //Waiting for rmStartIntervalMS, RM will be started
@@ -891,7 +907,7 @@ public class TestNodeStatusUpdater {
   /**
    * Test completed containerStatus get back up when heart beat lost
    */
-  @Test(timeout = 20000)
+  @Test(timeout = 200000)
   public void testCompletedContainerStatusBackup() throws Exception {
     nm = new NodeManager() {
       @Override
@@ -925,7 +941,7 @@ public class TestNodeStatusUpdater {
     nm.stop();
   }
 
-  @Test(timeout = 20000)
+  @Test(timeout = 200000)
   public void testNodeStatusUpdaterRetryAndNMShutdown() 
       throws InterruptedException {
     final long connectionWaitSecs = 1;

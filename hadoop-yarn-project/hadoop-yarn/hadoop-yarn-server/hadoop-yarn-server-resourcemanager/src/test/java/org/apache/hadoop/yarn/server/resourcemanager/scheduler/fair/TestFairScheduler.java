@@ -123,6 +123,8 @@ public class TestFairScheduler {
     resourceManager.init(conf);
     ((AsyncDispatcher)resourceManager.getRMContext().getDispatcher()).start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
+    // to initialize the master key
+    resourceManager.getRMContainerTokenSecretManager().rollMasterKey();
   }
 
   @After
@@ -221,13 +223,16 @@ public class TestFairScheduler {
   @Test
   public void testAggregateCapacityTracking() throws Exception {
     // Add a node
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
     assertEquals(1024, scheduler.getClusterCapacity().getMemory());
 
     // Add another node
-    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(512));
+    RMNode node2 =
+        MockNodes.newNodeInfo(1, Resources.createResource(512), 2, "127.0.0.2");
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
     scheduler.handle(nodeEvent2);
     assertEquals(1536, scheduler.getClusterCapacity().getMemory());
@@ -241,7 +246,9 @@ public class TestFairScheduler {
   @Test
   public void testSimpleFairShareCalculation() {
     // Add one big node (only care about aggregate capacity)
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(10 * 1024));
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(10 * 1024), 1,
+            "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
@@ -265,7 +272,9 @@ public class TestFairScheduler {
   public void testSimpleHierarchicalFairShareCalculation() {
     // Add one big node (only care about aggregate capacity)
     int capacity = 10 * 24;
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(capacity));
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(capacity), 1,
+            "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
@@ -313,12 +322,15 @@ public class TestFairScheduler {
   @Test (timeout = 5000)
   public void testSimpleContainerAllocation() {
     // Add a node
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
     // Add another node
-    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(512));
+    RMNode node2 =
+        MockNodes.newNodeInfo(1, Resources.createResource(512), 2, "127.0.0.2");
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
     scheduler.handle(nodeEvent2);
 
@@ -351,7 +363,9 @@ public class TestFairScheduler {
   @Test (timeout = 5000)
   public void testSimpleContainerReservation() throws InterruptedException {
     // Add a node
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
@@ -359,6 +373,7 @@ public class TestFairScheduler {
     createSchedulingRequest(1024, "queue1", "user1", 1);
     scheduler.update();
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
+    
     scheduler.handle(updateEvent);
 
     // Make sure queue 1 is allocated app capacity
@@ -376,7 +391,9 @@ public class TestFairScheduler {
     assertEquals(1024, scheduler.applications.get(attId).getCurrentReservation().getMemory());
 
     // Now another node checks in with capacity
-    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    RMNode node2 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(1024), 2, "127.0.0.2");
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
     NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
     scheduler.handle(nodeEvent2);
@@ -442,7 +459,9 @@ public class TestFairScheduler {
     queueManager.initialize();
 
     // Add one big node (only care about aggregate capacity)
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(3 * 1024));
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(3 * 1024), 1,
+            "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
@@ -799,7 +818,9 @@ public class TestFairScheduler {
     queueManager.initialize();
 
     // Add one big node (only care about aggregate capacity)
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(4 * 1024));
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(4 * 1024), 1,
+            "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
@@ -857,7 +878,9 @@ public class TestFairScheduler {
     queueManager.initialize();
 
     // Add one big node (only care about aggregate capacity)
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(4 * 1024));
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(4 * 1024), 1,
+            "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
@@ -933,15 +956,21 @@ public class TestFairScheduler {
     queueManager.initialize();
 
     // Create four nodes
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024));
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024), 1,
+            "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
-    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024));
+    RMNode node2 =
+        MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024), 2,
+            "127.0.0.2");
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
     scheduler.handle(nodeEvent2);
 
-    RMNode node3 = MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024));
+    RMNode node3 =
+        MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024), 3,
+            "127.0.0.3");
     NodeAddedSchedulerEvent nodeEvent3 = new NodeAddedSchedulerEvent(node3);
     scheduler.handle(nodeEvent3);
 
@@ -1094,15 +1123,21 @@ public class TestFairScheduler {
     queueManager.initialize();
 
     // Create four nodes
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024));
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024), 1,
+            "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
-    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024));
+    RMNode node2 =
+        MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024), 2,
+            "127.0.0.2");
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
     scheduler.handle(nodeEvent2);
 
-    RMNode node3 = MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024));
+    RMNode node3 =
+        MockNodes.newNodeInfo(1, Resources.createResource(2 * 1024), 3,
+            "127.0.0.3");
     NodeAddedSchedulerEvent nodeEvent3 = new NodeAddedSchedulerEvent(node3);
     scheduler.handle(nodeEvent3);
 
@@ -1183,7 +1218,9 @@ public class TestFairScheduler {
   @Test (timeout = 5000)
   public void testMultipleContainersWaitingForReservation() {
     // Add a node
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
@@ -1226,7 +1263,9 @@ public class TestFairScheduler {
     queueManager.initialize();
     
     // Add a node
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(8192));
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(8192), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
     
@@ -1263,7 +1302,9 @@ public class TestFairScheduler {
   @Test (timeout = 5000)
   public void testReservationWhileMultiplePriorities() {
     // Add a node
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
@@ -1348,9 +1389,15 @@ public class TestFairScheduler {
   
   @Test (timeout = 5000)
   public void testMultipleNodesSingleRackRequest() throws Exception {
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
-    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
-    RMNode node3 = MockNodes.newNodeInfo(2, Resources.createResource(1024));
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
+    RMNode node2 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(1024), 2, "127.0.0.2");
+    RMNode node3 =
+        MockNodes
+            .newNodeInfo(2, Resources.createResource(1024), 3, "127.0.0.3");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
@@ -1388,7 +1435,9 @@ public class TestFairScheduler {
   
   @Test (timeout = 5000)
   public void testFifoWithinQueue() throws Exception {
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(3072));
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(3072), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
     
@@ -1432,7 +1481,9 @@ public class TestFairScheduler {
     scheduler.getQueueManager().getLeafQueue("root.default")
         .setPolicy(SchedulingPolicy.getDefault());
 
-    RMNode node = MockNodes.newNodeInfo(1, Resources.createResource(16384));
+    RMNode node =
+        MockNodes.newNodeInfo(1, Resources.createResource(16384), 0,
+            "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
     scheduler.handle(nodeEvent);
@@ -1477,8 +1528,12 @@ public class TestFairScheduler {
     final String fairChild1 = fairParent + ".fairChild1";
     final String fairChild2 = fairParent + ".fairChild2";
 
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(8192));
-    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(8192));
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(8192), 1, "127.0.0.1");
+    RMNode node2 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(8192), 2, "127.0.0.2");
 
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
@@ -1597,7 +1652,9 @@ public class TestFairScheduler {
   
   @Test
   public void testReservationThatDoesntFit() {
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
     

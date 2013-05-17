@@ -202,15 +202,18 @@ public class MockNodes {
   };
 
   private static RMNode buildRMNode(int rack, final Resource perNode, NodeState state, String httpAddr) {
-    return buildRMNode(rack, perNode, state, httpAddr, NODE_ID++);
+    return buildRMNode(rack, perNode, state, httpAddr, NODE_ID++, null);
   }
 
-  private static RMNode buildRMNode(int rack, final Resource perNode, NodeState state, String httpAddr, int hostnum) {
+  private static RMNode buildRMNode(int rack, final Resource perNode,
+      NodeState state, String httpAddr, int hostnum, String hostName) {
     final String rackName = "rack"+ rack;
     final int nid = hostnum;
-    final String hostName = "host"+ nid;
     final String nodeAddr = hostName + ":" + nid;
     final int port = 123;
+    if (hostName == null) {
+      hostName = "host"+ nid;
+    }
     final NodeId nodeID = newNodeID(hostName, port);
     final String httpAddress = httpAddr;
     final NodeHealthStatus nodeHealthStatus =
@@ -233,6 +236,12 @@ public class MockNodes {
   }
 
   public static RMNode newNodeInfo(int rack, final Resource perNode, int hostnum) {
-    return buildRMNode(rack, perNode, null, "localhost:0", hostnum);
+    return buildRMNode(rack, perNode, null, "localhost:0", hostnum, null);
   }
+  
+  public static RMNode newNodeInfo(int rack, final Resource perNode,
+      int hostnum, String hostName) {
+    return buildRMNode(rack, perNode, null, "localhost:0", hostnum, hostName);
+  }
+
 }

@@ -18,10 +18,16 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isNull;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +38,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -41,16 +49,17 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
@@ -69,7 +78,6 @@ public class TestNodeManagerReboot {
 
   static final String user = System.getProperty("user.name");
   private FileContext localFS;
-
   private MyNodeManager nm;
   private DeletionService delService;
   static final Log LOG = LogFactory.getLog(TestNodeManagerReboot.class);
@@ -87,23 +95,25 @@ public class TestNodeManagerReboot {
     }
   }
 
-  @Test(timeout = 20000)
+  @Test(timeout = 2000000)
   public void testClearLocalDirWhenNodeReboot() throws IOException,
-      YarnRemoteException {
+      YarnRemoteException, InterruptedException {
     nm = new MyNodeManager();
     nm.start();
+
+    final ContainerManager containerManager = nm.getContainerManager();
+
     // create files under fileCache
     createFiles(nmLocalDir.getAbsolutePath(), ContainerLocalizer.FILECACHE, 100);
     localResourceDir.mkdirs();
-    ContainerManagerImpl containerManager = nm.getContainerManager();
 
     ContainerLaunchContext containerLaunchContext =
         Records.newRecord(ContainerLaunchContext.class);
     // Construct the Container-id
     ContainerId cId = createContainerId();
     org.apache.hadoop.yarn.api.records.Container mockContainer =
-        mock(org.apache.hadoop.yarn.api.records.Container.class);
-    when(mockContainer.getId()).thenReturn(cId);
+        Records.newRecord(org.apache.hadoop.yarn.api.records.Container.class);
+    mockContainer.setId(cId);
 
     containerLaunchContext.setUser(user);
 
@@ -123,17 +133,31 @@ public class TestNodeManagerReboot {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, localResource);
     containerLaunchContext.setLocalResources(localResources);
-    containerLaunchContext.setUser(containerLaunchContext.getUser());
     List<String> commands = new ArrayList<String>();
     containerLaunchContext.setCommands(commands);
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(1024);
-    when(mockContainer.getResource()).thenReturn(resource);
-    StartContainerRequest startRequest =
+    mockContainer.setResource(resource);
+    NodeId nodeId = BuilderUtils.newNodeId("127.0.0.1", 12345);
+    mockContainer.setContainerToken(nm.getNMContext()
+      .getContainerTokenSecretManager()
+      .createContainerToken(cId, nodeId, user, resource));
+    mockContainer.setNodeHttpAddress("127.0.0.1");
+    mockContainer.setNodeId(nodeId);
+    
+    final StartContainerRequest startRequest =
         Records.newRecord(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
     startRequest.setContainer(mockContainer);
-    containerManager.startContainer(startRequest);
+    final UserGroupInformation currentUser = UserGroupInformation
+        .createRemoteUser(cId.toString());
+    currentUser.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws YarnRemoteException, IOException {
+        containerManager.startContainer(startRequest);
+        return null;
+      }
+    });
 
     GetContainerStatusRequest request =
         Records.newRecord(GetContainerStatusRequest.class);

@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -122,6 +123,11 @@ public class TestLeafQueue {
         thenReturn(CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
+    RMContainerTokenSecretManager containerTokenSecretManager =
+        new RMContainerTokenSecretManager(conf);
+    containerTokenSecretManager.rollMasterKey();
+    when(csContext.getContainerTokenSecretManager()).thenReturn(
+        containerTokenSecretManager);
 
     root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, 
@@ -275,7 +281,7 @@ public class TestLeafQueue {
 
     
     // Setup some nodes
-    String host_0 = "host_0";
+    String host_0 = "127.0.0.1";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 8*GB);
     
     final int numNodes = 1;
@@ -397,7 +403,7 @@ public class TestLeafQueue {
 
     
     // Setup some nodes
-    String host_0 = "host_0";
+    String host_0 = "127.0.0.1";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 8*GB);
     
     final int numNodes = 1;
@@ -528,9 +534,9 @@ public class TestLeafQueue {
     a.submitApplication(app_2, user_1, A);
 
     // Setup some nodes
-    String host_0 = "host_0";
+    String host_0 = "127.0.0.1";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 8*GB);
-    String host_1 = "host_1";
+    String host_1 = "127.0.0.2";
     FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0, 8*GB);
     
     final int numNodes = 2;
@@ -622,9 +628,9 @@ public class TestLeafQueue {
     a.submitApplication(app_2, user_1, A);
 
     // Setup some nodes
-    String host_0 = "host_0";
+    String host_0 = "127.0.0.1";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 8*GB);
-    String host_1 = "host_1";
+    String host_1 = "127.0.0.2";
     FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0, 8*GB);
     
     final int numNodes = 2;
@@ -740,7 +746,7 @@ public class TestLeafQueue {
     a.submitApplication(app_3, user_2, A);
     
     // Setup some nodes
-    String host_0 = "host_0";
+    String host_0 = "127.0.0.1";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 8*GB);
     
     final int numNodes = 1;
@@ -902,7 +908,7 @@ public class TestLeafQueue {
     a.submitApplication(app_1, user_1, A);  
 
     // Setup some nodes
-    String host_0 = "host_0";
+    String host_0 = "127.0.0.1";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 4*GB);
     
     final int numNodes = 2;
@@ -1002,9 +1008,9 @@ public class TestLeafQueue {
     a.submitApplication(app_1, user_1, A);
 
     // Setup some nodes
-    String host_0 = "host_0";
+    String host_0 = "127.0.0.1";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 4*GB);
-    String host_1 = "host_1";
+    String host_1 = "127.0.0.2";
     FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0, 4*GB);
 
     final int numNodes = 3;
@@ -1102,10 +1108,10 @@ public class TestLeafQueue {
     a.submitApplication(app_1, user_1, A);  
 
     // Setup some nodes
-    String host_0 = "host_0";
+    String host_0 = "127.0.0.1";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 4*GB);
     
-    String host_1 = "host_1";
+    String host_1 = "127.0.0.2";
     FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0, 4*GB);
     
     final int numNodes = 3;
@@ -1214,15 +1220,15 @@ public class TestLeafQueue {
     a.submitApplication(app_0, user_0, A);
     
     // Setup some nodes and racks
-    String host_0 = "host_0";
+    String host_0 = "127.0.0.1";
     String rack_0 = "rack_0";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, rack_0, 0, 8*GB);
     
-    String host_1 = "host_1";
+    String host_1 = "127.0.0.2";
     String rack_1 = "rack_1";
     FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, rack_1, 0, 8*GB);
     
-    String host_2 = "host_2";
+    String host_2 = "127.0.0.3";
     String rack_2 = "rack_2";
     FiCaSchedulerNode node_2 = TestUtils.getMockNode(host_2, rack_2, 0, 8*GB);
 
@@ -1317,7 +1323,7 @@ public class TestLeafQueue {
     app_0.updateResourceRequests(app_0_requests_0);
     assertEquals(2, app_0.getTotalRequiredResources(priority));
     
-    String host_3 = "host_3"; // on rack_1
+    String host_3 = "127.0.0.4"; // on rack_1
     FiCaSchedulerNode node_3 = TestUtils.getMockNode(host_3, rack_1, 0, 8*GB);
     
     // Rack-delay
@@ -1355,15 +1361,15 @@ public class TestLeafQueue {
     a.submitApplication(app_0, user_0, A);
     
     // Setup some nodes and racks
-    String host_0 = "host_0";
+    String host_0 = "127.0.0.1";
     String rack_0 = "rack_0";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, rack_0, 0, 8*GB);
     
-    String host_1 = "host_1";
+    String host_1 = "127.0.0.2";
     String rack_1 = "rack_1";
     FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, rack_1, 0, 8*GB);
     
-    String host_2 = "host_2";
+    String host_2 = "127.0.0.3";
     String rack_2 = "rack_2";
     FiCaSchedulerNode node_2 = TestUtils.getMockNode(host_2, rack_2, 0, 8*GB);
 
@@ -1486,14 +1492,14 @@ public class TestLeafQueue {
     a.submitApplication(app_0, user_0, A);
     
     // Setup some nodes and racks
-    String host_0_0 = "host_0_0";
+    String host_0_0 = "127.0.0.1";
     String rack_0 = "rack_0";
     FiCaSchedulerNode node_0_0 = TestUtils.getMockNode(host_0_0, rack_0, 0, 8*GB);
-    String host_0_1 = "host_0_1";
+    String host_0_1 = "127.0.0.2";
     FiCaSchedulerNode node_0_1 = TestUtils.getMockNode(host_0_1, rack_0, 0, 8*GB);
     
     
-    String host_1_0 = "host_1_0";
+    String host_1_0 = "127.0.0.3";
     String rack_1 = "rack_1";
     FiCaSchedulerNode node_1_0 = TestUtils.getMockNode(host_1_0, rack_1, 0, 8*GB);
     

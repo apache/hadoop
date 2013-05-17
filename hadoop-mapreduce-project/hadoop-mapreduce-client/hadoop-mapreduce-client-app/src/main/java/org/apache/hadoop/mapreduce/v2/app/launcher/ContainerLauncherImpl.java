@@ -350,15 +350,14 @@ public class ContainerLauncherImpl extends AbstractService implements
 
     final InetSocketAddress cmAddr =
         NetUtils.createSocketAddr(containerManagerBindAddr);
-    UserGroupInformation user = UserGroupInformation.getCurrentUser();
 
-    if (UserGroupInformation.isSecurityEnabled()) {
-      Token<ContainerTokenIdentifier> token =
-          ProtoUtils.convertFromProtoFormat(containerToken, cmAddr);
-      // the user in createRemoteUser in this context has to be ContainerID
-      user = UserGroupInformation.createRemoteUser(containerID.toString());
-      user.addToken(token);
-    }
+    // the user in createRemoteUser in this context has to be ContainerID
+    UserGroupInformation user =
+        UserGroupInformation.createRemoteUser(containerID.toString());
+
+    Token<ContainerTokenIdentifier> token =
+        ProtoUtils.convertFromProtoFormat(containerToken, cmAddr);
+    user.addToken(token);
 
     ContainerManager proxy = user
         .doAs(new PrivilegedAction<ContainerManager>() {

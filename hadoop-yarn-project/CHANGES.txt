@@ -178,6 +178,10 @@ Release 2.0.5-beta - UNRELEASED
     asks an RM to shutdown/resync etc so that NMs can log this message locally
     for better debuggability. (Mayank Bansal via vinodkv)
 
+    YARN-617. Made ContainerTokens to be used for validation at NodeManager
+    also in unsecure mode to prevent AMs from faking resource requirements in
+    unsecure mode. (Omkar Vinit Joshi via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -74,8 +74,8 @@ public class TestFifoScheduler {
     rootLogger.setLevel(Level.DEBUG);
     MockRM rm = new MockRM(conf);
     rm.start();
-    MockNM nm1 = rm.registerNode("h1:1234", 6 * GB);
-    MockNM nm2 = rm.registerNode("h2:5678", 4 * GB);
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
+    MockNM nm2 = rm.registerNode("127.0.0.2:5678", 4 * GB);
 
     RMApp app1 = rm.submitApp(2048);
     // kick the scheduling, 2 GB given to AM1, remaining 4GB on nm1
@@ -98,10 +98,10 @@ public class TestFifoScheduler {
     Assert.assertEquals(2 * GB, report_nm2.getUsedResource().getMemory());
 
     // add request for containers
-    am1.addRequests(new String[] { "h1", "h2" }, GB, 1, 1);
+    am1.addRequests(new String[] { "127.0.0.1", "127.0.0.2" }, GB, 1, 1);
     AllocateResponse alloc1Response = am1.schedule(); // send the request
     // add request for containers
-    am2.addRequests(new String[] { "h1", "h2" }, 3 * GB, 0, 1);
+    am2.addRequests(new String[] { "127.0.0.1", "127.0.0.2" }, 3 * GB, 0, 1);
     AllocateResponse alloc2Response = am2.schedule(); // send the request
 
     // kick the scheduler, 1 GB and 3 GB given to AM1 and AM2, remaining 0
@@ -163,7 +163,7 @@ public class TestFifoScheduler {
     rm.start();
 
     // Register node1
-    MockNM nm1 = rm.registerNode("h1:1234", 6 * GB);
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
     // Submit an application
     RMApp app1 = rm.submitApp(testAlloc);
@@ -212,8 +212,10 @@ public class TestFifoScheduler {
     FifoScheduler fs = new FifoScheduler();
     fs.reinitialize(conf, null);
 
-    RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
-    RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2);
+    RMNode n1 =
+        MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1, "127.0.0.2");
+    RMNode n2 =
+        MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2, "127.0.0.3");
 
     fs.handle(new NodeAddedSchedulerEvent(n1));
     fs.handle(new NodeAddedSchedulerEvent(n2));
@@ -222,7 +224,8 @@ public class TestFifoScheduler {
     Assert.assertEquals(6 * GB, fs.getRootQueueMetrics().getAvailableMB());
 
     // reconnect n1 with downgraded memory
-    n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 1);
+    n1 =
+        MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 1, "127.0.0.2");
     fs.handle(new NodeRemovedSchedulerEvent(n1));
     fs.handle(new NodeAddedSchedulerEvent(n1));
     fs.handle(new NodeUpdateSchedulerEvent(n1));
@@ -241,7 +244,8 @@ public class TestFifoScheduler {
     FifoScheduler fs = (FifoScheduler) rm.getResourceScheduler();
 
     // Add a node
-    RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
+    RMNode n1 =
+        MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1, "127.0.0.2");
     fs.handle(new NodeAddedSchedulerEvent(n1));
     
     // Add two applications

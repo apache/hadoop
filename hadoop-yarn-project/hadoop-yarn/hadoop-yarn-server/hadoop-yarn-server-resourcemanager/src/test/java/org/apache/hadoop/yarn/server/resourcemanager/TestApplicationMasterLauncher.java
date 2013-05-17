@@ -112,7 +112,7 @@ public class TestApplicationMasterLauncher {
     MockRMWithCustomAMLauncher rm = new MockRMWithCustomAMLauncher(
         containerManager);
     rm.start();
-    MockNM nm1 = rm.registerNode("h1:1234", 5120);
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
 
     RMApp app = rm.submitApp(2000);
 
