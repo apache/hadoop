@@ -11,6 +11,10 @@ Release 0.23.8 - UNRELEASED
     MAPREDUCE-5065. DistCp should skip checksum comparisons if block-sizes
     are different on source/target (Mithun Radhakrishnan via kihwal)
 
+    MAPREDUCE-5059. Change average merge time on Job overview page to be the
+    time delta between the end of the shuffle and the start of the reduce.
+    (Omkar Vinit Joshi via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
