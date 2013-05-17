@@ -143,8 +143,9 @@ public class SingleCounterBlock extends HtmlBlock {
     Map<TaskId, Task> tasks = job.getTasks();
     for(Map.Entry<TaskId, Task> entry : tasks.entrySet()) {
       long value = 0;
-      CounterGroup group = entry.getValue().getCounters()
-        .getGroup($(COUNTER_GROUP));
+      Counters counters = entry.getValue().getCounters();
+      CounterGroup group = (counters != null) ? counters
+        .getGroup($(COUNTER_GROUP)) : null;
       if(group != null)  {
         Counter c = group.findCounter($(COUNTER_NAME));
         if(c != null) {

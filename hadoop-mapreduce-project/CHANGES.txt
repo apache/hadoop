@@ -261,6 +261,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5244. Two functions changed their visibility in JobStatus. 
     (zjshen via tucu)
 
+    MAPREDUCE-4927. Historyserver 500 error due to NPE when accessing specific
+    counters page for failed job. (Ashwin Shankar via jlowe)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
@@ -832,6 +835,8 @@ Release 0.23.8 - UNRELEASED
     MAPREDUCE-5147. Maven build should create 
     hadoop-mapreduce-client-app-VERSION.jar directly (Robert Parker via tgraves)
 
+    MAPREDUCE-4927. Historyserver 500 error due to NPE when accessing specific
+    counters page for failed job. (Ashwin Shankar via jlowe)
 
 Release 0.23.7 - UNRELEASED
 
