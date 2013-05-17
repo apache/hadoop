@@ -172,6 +172,10 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4067. Changed MRClientProtocol api to throw IOException only (Xuan
     Gong via vinodkv)
 
+    MAPREDUCE-5234. Change mapred.TaskReport and mapreduce.TaskReport for binary
+    compatibility with mapred in 1.x but incompatible with 0.23.x. (Mayank Bansal
+    via vinodkv)
+
   NEW FEATURES
 
   IMPROVEMENTS
