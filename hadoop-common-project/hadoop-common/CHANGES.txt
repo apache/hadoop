@@ -185,6 +185,10 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9563. Fix incompatibility introduced by HADOOP-9523.
     (Tian Hong Wang via suresh)
 
+    HADOOP-9566. Performing direct read using libhdfs sometimes raises SIGPIPE
+    (which in turn throws SIGABRT) causing client crashes. (Colin Patrick
+    McCabe via atm)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
