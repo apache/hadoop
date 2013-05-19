@@ -264,6 +264,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4927. Historyserver 500 error due to NPE when accessing specific
     counters page for failed job. (Ashwin Shankar via jlowe)
 
+    MAPREDUCE-5257. Fix issues in TestContainerLauncherImpl after YARN-617.
+    (Omkar Vinit Joshi via vinodkv)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
