@@ -21,21 +21,19 @@ package org.apache.hadoop.yarn.api;
 
 import junit.framework.Assert;
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestContainerId {
 
   @Test
   public void testContainerId() {
-    ContainerId c1 = createContainerId(10l, 1, 1, 1);
-    ContainerId c2 = createContainerId(10l, 1, 1, 2);
-    ContainerId c3 = createContainerId(10l, 1, 1, 1);
-    ContainerId c4 = createContainerId(10l, 1, 3, 1);
-    ContainerId c5 = createContainerId(8l, 1, 3, 1);
+    ContainerId c1 = BuilderUtils.newContainerId(1, 1, 10l, 1);
+    ContainerId c2 = BuilderUtils.newContainerId(1, 1, 10l, 2);
+    ContainerId c3 = BuilderUtils.newContainerId(1, 1, 10l, 1);
+    ContainerId c4 = BuilderUtils.newContainerId(1, 3, 10l, 1);
+    ContainerId c5 = BuilderUtils.newContainerId(1, 3, 8l, 1);
 
     Assert.assertTrue(c1.equals(c3));
     Assert.assertFalse(c1.equals(c2));
@@ -53,36 +51,10 @@ public class TestContainerId {
     Assert.assertFalse(c1.hashCode() == c5.hashCode());
     
     long ts = System.currentTimeMillis();
-    ContainerId c6 = createContainerId(ts, 36473, 4365472, 25645811);
+    ContainerId c6 = BuilderUtils.newContainerId(36473, 4365472, ts, 25645811);
     Assert.assertEquals("container_10_0001_01_000001", c1.toString());
     Assert.assertEquals("container_" + ts + "_36473_4365472_25645811",
         c6.toString());
   }
 
-  private ContainerId createContainerId(long clusterTimestamp, int appIdInt,
-      int appAttemptIdInt, int containerIdInt) {
-    ApplicationId appId = createAppId(clusterTimestamp, appIdInt);
-    ApplicationAttemptId appAttemptId =
-        createAppAttemptId(appId, appAttemptIdInt);
-    ContainerId containerId = Records.newRecord(ContainerId.class);
-    containerId.setApplicationAttemptId(appAttemptId);
-    containerId.setId(containerIdInt);
-    return containerId;
-  }
-
-  private ApplicationId createAppId(long clusterTimeStamp, int id) {
-    ApplicationId appId = Records.newRecord(ApplicationId.class);
-    appId.setClusterTimestamp(clusterTimeStamp);
-    appId.setId(id);
-    return appId;
-  }
-
-  private ApplicationAttemptId createAppAttemptId(ApplicationId appId,
-      int attemptId) {
-    ApplicationAttemptId appAttemptId =
-        Records.newRecord(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(attemptId);
-    return appAttemptId;
-  }
 }
