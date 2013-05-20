@@ -141,6 +141,9 @@ Trunk (Unreleased)
     classpath problems and unexpected behavior of symlinks (Chris Nauroth via
     bikas)
 
+    MAPREDUCE-5191. TestQueue#testQueue fails with timeout on Windows. (Ivan
+    Mitic via hitesh)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
