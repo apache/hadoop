@@ -223,15 +223,15 @@ implements ApplicationReport {
   public void setApplicationId(ApplicationId applicationId) {
     maybeInitBuilder();
     if (applicationId == null)
-      builder.clearStatus();
+      builder.clearApplicationId();
     this.applicationId = applicationId;
   }
 
   @Override
   public void setCurrentApplicationAttemptId(ApplicationAttemptId applicationAttemptId) {
     maybeInitBuilder();
-    if (applicationId == null)
-      builder.clearStatus();
+    if (applicationAttemptId == null)
+      builder.clearCurrentApplicationAttemptId();
     this.currentApplicationAttemptId = applicationAttemptId;
   }
 

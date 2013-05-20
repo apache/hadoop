@@ -395,6 +395,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-628. Fix the way YarnRemoteException is being unrolled to extract out
     the underlying exception. (Siddharth Seth via vinodkv)
 
+    YARN-695. Remove masterContainer and status unused fields from
+    ApplicationReportProto and fix bugs in ApplicationReportPBImpl. (Zhijie Shen
+    via vinodkv)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES

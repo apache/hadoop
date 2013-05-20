@@ -23,7 +23,7 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestApplicationAttemptId {
@@ -57,18 +57,12 @@ public class TestApplicationAttemptId {
     Assert.assertEquals("appattempt_" + ts + "_543627_33492611", a6.toString());
   }
 
-  private ApplicationAttemptId createAppAttemptId(long clusterTimeStamp,
-      int id, int attemptId) {
-    ApplicationAttemptId appAttemptId =
-        Records.newRecord(ApplicationAttemptId.class);
-    ApplicationId appId = Records.newRecord(ApplicationId.class);
-    appId.setClusterTimestamp(clusterTimeStamp);
-    appId.setId(id);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(attemptId);
-    return appAttemptId;
+  private ApplicationAttemptId createAppAttemptId(
+      long clusterTimeStamp, int id, int attemptId) {
+    ApplicationId appId = BuilderUtils.newApplicationId(clusterTimeStamp, id);
+    return BuilderUtils.newApplicationAttemptId(appId, attemptId);
   }
-  
+
   public static void main(String[] args) throws Exception {
     TestApplicationAttemptId t = new TestApplicationAttemptId();
     t.testApplicationAttemptId();

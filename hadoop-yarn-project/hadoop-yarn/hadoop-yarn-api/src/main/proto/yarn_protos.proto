@@ -152,18 +152,16 @@ message ApplicationReportProto {
   optional string host = 5;
   optional int32 rpc_port = 6;
   optional hadoop.common.TokenProto client_token = 7;
-  optional ApplicationStatusProto status = 8;
-  optional YarnApplicationStateProto yarn_application_state = 9;
-  optional ContainerProto masterContainer = 10;
-  optional string trackingUrl = 11;
-  optional string diagnostics = 12 [default = "N/A"];
-  optional int64 startTime = 13;
-  optional int64 finishTime = 14;
-  optional FinalApplicationStatusProto final_application_status = 15;
-  optional ApplicationResourceUsageReportProto app_resource_Usage = 16;
-  optional string originalTrackingUrl = 17;
-  optional ApplicationAttemptIdProto currentApplicationAttemptId = 18;
-  optional float progress = 19;
+  optional YarnApplicationStateProto yarn_application_state = 8;
+  optional string trackingUrl = 9;
+  optional string diagnostics = 10 [default = "N/A"];
+  optional int64 startTime = 11;
+  optional int64 finishTime = 12;
+  optional FinalApplicationStatusProto final_application_status = 13;
+  optional ApplicationResourceUsageReportProto app_resource_Usage = 14;
+  optional string originalTrackingUrl = 15;
+  optional ApplicationAttemptIdProto currentApplicationAttemptId = 16;
+  optional float progress = 17;
 }
 
 enum NodeStateProto {
