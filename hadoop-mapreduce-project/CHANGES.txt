@@ -28,6 +28,9 @@ Release 2.0.4-alpha - UNRELEASED
     MAPREDUCE-5094. Disabled memory monitoring by default in MiniMRYarnCluster
     to avoid some downstream tests failing. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-5240. inside of FileOutputCommitter the initialized Credentials
+    cache appears to be empty (vinodkv, rvs via cos)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
