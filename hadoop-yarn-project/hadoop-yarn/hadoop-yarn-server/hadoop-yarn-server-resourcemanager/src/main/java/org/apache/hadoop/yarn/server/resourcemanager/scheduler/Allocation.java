@@ -15,7 +15,6 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.List;
@@ -29,9 +28,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
 public class Allocation {
-  
-  private final RecordFactory recordFactory =
-      RecordFactoryProvider.getRecordFactory(null);
 
   final List<Container> containers;
   final Resource resourceLimit;
@@ -77,5 +73,5 @@ public class Allocation {
   public List<ResourceRequest> getResourcePreemptions() {
     return fungibleResources;
   }
-    
+
 }
