@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestShuffleExceptionCount {
@@ -31,8 +31,8 @@ public class TestShuffleExceptionCount {
   static boolean abortCalled = false;
   private final float epsilon = 1e-5f;
 
-  @BeforeClass
-  public static void initialize() throws Exception {
+  @Before
+  public void initialize() throws Exception {
     abortCalled = false;
   }
     
@@ -52,7 +52,6 @@ public class TestShuffleExceptionCount {
 
   @Test
   public void testCheckException() throws IOException, InterruptedException {
-
     // first test with only MsgRegex set but doesn't match
     String exceptionMsgRegex = "Broken pipe";
     String exceptionStackRegex = null;
