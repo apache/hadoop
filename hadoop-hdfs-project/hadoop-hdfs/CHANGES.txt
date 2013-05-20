@@ -23,6 +23,9 @@ Release 0.23.8 - UNRELEASED
 
     HDFS-4477. Secondary namenode may retain old tokens. (daryn via kihwal)
 
+    HDFS-4835. Port trunk WebHDFS changes to branch-0.23. Includes backport
+    of HDFS-4805 and HADOOP-9549. (Robert Parker via kihwal)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES

@@ -105,16 +105,17 @@ public class WebHdfsFileSystem extends FileSystem
   public static final WebHdfsDelegationTokenSelector DT_SELECTOR
       = new WebHdfsDelegationTokenSelector();
 
-  private static DelegationTokenRenewer<WebHdfsFileSystem> DT_RENEWER = null;
+  private  DelegationTokenRenewer dtRenewer = null;
+  @VisibleForTesting
+  DelegationTokenRenewer.RenewAction<?> action;
 
   @VisibleForTesting
   protected synchronized void addRenewAction(final WebHdfsFileSystem webhdfs) {
-    if (DT_RENEWER == null) {
-      DT_RENEWER = new DelegationTokenRenewer<WebHdfsFileSystem>(WebHdfsFileSystem.class);
-      DT_RENEWER.start();
+    if (dtRenewer == null) {
+      dtRenewer = DelegationTokenRenewer.getInstance();
     }
 
-    DT_RENEWER.addRenewAction(webhdfs);
+    action = dtRenewer.addRenewAction(webhdfs);
   }
 
   /** Is WebHDFS enabled in conf? */
@@ -162,7 +163,8 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   protected synchronized Token<?> getDelegationToken() throws IOException {
-    if (!hasInitedToken) {
+    // we haven't inited yet, or we used to have a token but it expired
+    if (!hasInitedToken || (action != null && !action.isValid())) {
       //since we don't already have a token, go get one
       Token<?> token = getDelegationToken(null);
       // security might be disabled
