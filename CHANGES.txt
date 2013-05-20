@@ -69,6 +69,9 @@ Release 1.2.1 - Unreleased
     available for previous installs by putting it in hadoop-core.jar.
     (acmurthy)
 
+    MAPREDUCE-3859. Fix CapacityScheduler to correctly compute runtime queue
+    limits for high-ram jobs. (Sergey Tryuber via acmurthy)
+
 Release 1.2.0 - 2013.05.05
 
   INCOMPATIBLE CHANGES
