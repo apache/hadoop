@@ -26,9 +26,12 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.Counters.Counter;
+import org.apache.hadoop.mapred.Counters.CountersExceededException;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobCounter;
@@ -43,6 +46,12 @@ public class TestCounters {
   private static final long MAX_VALUE = 10;
   private static final Log LOG = LogFactory.getLog(TestCounters.class);
   
+  static final Enum<?> FRAMEWORK_COUNTER = TaskCounter.CPU_MILLISECONDS;
+  static final long FRAMEWORK_COUNTER_VALUE = 8;
+  static final String FS_SCHEME = "HDFS";
+  static final FileSystemCounter FS_COUNTER = FileSystemCounter.BYTES_READ;
+  static final long FS_COUNTER_VALUE = 10;
+
   // Generates enum based counters
   private Counters getEnumCounters(Enum[] keys) {
     Counters counters = new Counters();
@@ -253,6 +262,60 @@ public class TestCounters {
     String cs = counters.makeCompactString();
     assertTrue("Bad compact string",
         cs.equals(GC1 + ',' + GC2) || cs.equals(GC2 + ',' + GC1));
+  }
+  
+  @Test
+  public void testCounterLimits() {
+    testMaxCountersLimits(new Counters());
+    testMaxGroupsLimits(new Counters());
+  }
+
+  private void testMaxCountersLimits(final Counters counters) {
+    for (int i = 0; i < org.apache.hadoop.mapred.Counters.MAX_COUNTER_LIMIT; ++i) {
+      counters.findCounter("test", "test" + i);
+    }
+    setExpected(counters);
+    shouldThrow(CountersExceededException.class, new Runnable() {
+      public void run() {
+        counters.findCounter("test", "bad");
+      }
+    });
+    checkExpected(counters);
+  }
+
+  private void testMaxGroupsLimits(final Counters counters) {
+    for (int i = 0; i < org.apache.hadoop.mapred.Counters.MAX_GROUP_LIMIT; ++i) {
+      // assuming COUNTERS_MAX > GROUPS_MAX
+      counters.findCounter("test" + i, "test");
+    }
+    setExpected(counters);
+    shouldThrow(CountersExceededException.class, new Runnable() {
+      public void run() {
+        counters.findCounter("bad", "test");
+      }
+    });
+    checkExpected(counters);
+  }
+
+  private void setExpected(Counters counters) {
+    counters.findCounter(FRAMEWORK_COUNTER).setValue(FRAMEWORK_COUNTER_VALUE);
+    counters.findCounter(FS_SCHEME, FS_COUNTER).setValue(FS_COUNTER_VALUE);
+  }
+
+  private void checkExpected(Counters counters) {
+    assertEquals(FRAMEWORK_COUNTER_VALUE,
+      counters.findCounter(FRAMEWORK_COUNTER).getValue());
+    assertEquals(FS_COUNTER_VALUE, counters.findCounter(FS_SCHEME, FS_COUNTER)
+      .getValue());
+  }
+
+  private void shouldThrow(Class<? extends Exception> ecls, Runnable runnable) {
+    try {
+      runnable.run();
+    } catch (CountersExceededException e) {
+      return;
+    }
+    Assert.fail("Should've thrown " + ecls.getSimpleName());
   }
 
   public static void main(String[] args) throws IOException {

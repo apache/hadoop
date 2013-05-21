@@ -243,6 +243,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5222. Bring back some methods and constants in Jobclient for
     binary compatibility with mapred in 1.x. (Karthik Kambatla via vinodkv)
 
+    MAPREDUCE-5235. Bring back old fields and exceptions in Counters for
+    binary compatibility with mapred in 1.x. (Mayank Bansal via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
