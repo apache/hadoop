@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.counters.CounterGroupFactory;
 import org.apache.hadoop.mapreduce.counters.FileSystemCounterGroup;
 import org.apache.hadoop.mapreduce.counters.FrameworkCounterGroup;
 import org.apache.hadoop.mapreduce.counters.GenericCounter;
+import org.apache.hadoop.mapreduce.counters.LimitExceededException;
 import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.util.CountersStrings;
@@ -62,6 +63,7 @@ public class Counters
     extends AbstractCounters<Counters.Counter, Counters.Group> {
   
   public static int MAX_COUNTER_LIMIT = Limits.COUNTERS_MAX;
+  public static int MAX_GROUP_LIMIT = Limits.GROUPS_MAX;
   
   public Counters() {
     super(groupFactory);
@@ -594,5 +596,22 @@ public class Counters
   public static Counters fromEscapedCompactString(String compactString)
       throws ParseException {
     return parseEscapedCompactString(compactString, new Counters());
+  }
+
+  /**
+   * Counter exception thrown when the number of counters exceed the limit
+   */
+  public static class CountersExceededException extends RuntimeException {
+
+    private static final long serialVersionUID = 1L;
+
+    public CountersExceededException(String msg) {
+      super(msg);
+    }
+
+    // Only allows chaining of related exceptions
+    public CountersExceededException(CountersExceededException cause) {
+      super(cause);
+    }
   }
 }
