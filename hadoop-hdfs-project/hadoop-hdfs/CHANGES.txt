@@ -3064,6 +3064,8 @@ Release 0.23.8 - UNRELEASED
     HDFS-4805. Webhdfs client is fragile to token renewal errors 
     (daryn via kihwal)
 
+    HDFS-3875. Issue handling checksum errors in write pipeline. (kihwal)
+
 Release 0.23.7 - UNRELEASED
 
   INCOMPATIBLE CHANGES

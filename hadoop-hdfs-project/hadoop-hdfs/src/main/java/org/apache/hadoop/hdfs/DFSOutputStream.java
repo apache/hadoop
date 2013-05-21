@@ -254,8 +254,18 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       System.arraycopy(header.getBytes(), 0, buf, headerStart,
           header.getSerializedSize());
       
+      // corrupt the data for testing.
+      if (DFSClientFaultInjector.get().corruptPacket()) {
+        buf[headerStart+header.getSerializedSize() + checksumLen + dataLen-1] ^= 0xff;
+      }
+
       // Write the now contiguous full packet to the output stream.
       stm.write(buf, headerStart, header.getSerializedSize() + checksumLen + dataLen);
+
+      // undo corruption.
+      if (DFSClientFaultInjector.get().uncorruptPacket()) {
+        buf[headerStart+header.getSerializedSize() + checksumLen + dataLen-1] ^= 0xff;
+      }
     }
     
     // get the packet's last byte's offset in the block
@@ -323,6 +333,9 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
 
     /** Nodes have been used in the pipeline before and have failed. */
     private final List<DatanodeInfo> failed = new ArrayList<DatanodeInfo>();
+    /** The last ack sequence number before pipeline failure. */
+    private long lastAckedSeqnoBeforeFailure = -1;
+    private int pipelineRecoveryCount = 0;
     /** Has the current block been hflushed? */
     private boolean isHflushed = false;
     /** Append on an existing block? */
@@ -779,6 +792,23 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         ackQueue.clear();
       }
 
+      // Record the new pipeline failure recovery.
+      if (lastAckedSeqnoBeforeFailure != lastAckedSeqno) {
+         lastAckedSeqnoBeforeFailure = lastAckedSeqno;
+         pipelineRecoveryCount = 1;
+      } else {
+        // If we had to recover the pipeline five times in a row for the
+        // same packet, this client likely has corrupt data or corrupting
+        // during transmission.
+        if (++pipelineRecoveryCount > 5) {
+          DFSClient.LOG.warn("Error recovering pipeline for writing " +
+              block + ". Already retried 5 times for the same packet.");
+          lastException = new IOException("Failing write. Tried pipeline " +
+              "recovery 5 times without success.");
+          streamerClosed = true;
+          return false;
+        }
+      }
       boolean doSleep = setupPipelineForAppendOrRecovery();
       
       if (!streamerClosed && dfsClient.clientRunning) {
