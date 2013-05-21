@@ -292,6 +292,9 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     private ArrayList<DatanodeInfo> excludedNodes = new ArrayList<DatanodeInfo>();
     volatile boolean hasError = false;
     volatile int errorIndex = -1;
+    /** The last ack sequence number before pipeline failure. */
+    private long lastAckedSeqnoBeforeFailure = -1;
+    private int pipelineRecoveryCount = 0;
     private BlockConstructionStage stage;  // block construction stage
     private long bytesSent = 0; // number of bytes that've been sent
 
@@ -506,10 +509,22 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                 " sending packet " + one);
           }
 
+          int cIdx = 0;
+          if (DFSClientFaultInjector.get().corruptPacket()) {
+            // flip a byte
+            cIdx = buf.position()+buf.remaining()-1;
+            buf.array()[cIdx] ^= 0xff;
+          }
+
           // write out data to remote datanode
           blockStream.write(buf.array(), buf.position(), buf.remaining());
           blockStream.flush();
           lastPacket = System.currentTimeMillis();
+
+          if (DFSClientFaultInjector.get().uncorruptPacket()) {
+            // flip back before retransmission
+            buf.array()[cIdx] ^= 0xff;
+          }
           
           if (one.isHeartbeatPacket()) {  //heartbeat packet
           }
@@ -736,6 +751,24 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       synchronized (dataQueue) {
         dataQueue.addAll(0, ackQueue);
         ackQueue.clear();
+      }
+
+      // Record the new pipeline failure recovery.
+      if (lastAckedSeqnoBeforeFailure != lastAckedSeqno) {
+         lastAckedSeqnoBeforeFailure = lastAckedSeqno;
+         pipelineRecoveryCount = 1;
+      } else {
+        // If we had to recover the pipeline five times in a row for the
+        // same packet, this client likely has corrupt data or corrupting
+        // during transmission.
+        if (++pipelineRecoveryCount > 5) {
+          DFSClient.LOG.warn("Error recovering pipeline for writing " +
+              block + ". Already retried 5 times for the same packet.");
+          lastException = new IOException("Failing write. Tried pipeline " +
+              "recovery 5 times without success.");
+          streamerClosed = true;
+          return false;
+        }
       }
 
       boolean doSleep = setupPipelineForAppendOrRecovery();
