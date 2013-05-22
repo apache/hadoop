@@ -22,12 +22,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.junit.Test;
 
 /**
  * This class performs unit test for Job/JobControl classes.
@@ -186,5 +189,21 @@ public class TestMapReduceJobControl extends HadoopTestCase {
     assertEquals("Some jobs failed", 0, theControl.getFailedJobList().size());
     
     theControl.stop();
+  }
+  
+  @Test(timeout = 30000)
+  public void testControlledJob() throws Exception {
+    Configuration conf = createJobConf();
+    cleanupData(conf);
+    Job job1 = MapReduceTestUtil.createCopyJob(conf, outdir_1, indir);
+    createDependencies(conf, job1);
+    while (cjob1.getJobState() != ControlledJob.State.RUNNING) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        break;
+      }
+    }
+    Assert.assertNotNull(cjob1.getMapredJobId());
   }
 }

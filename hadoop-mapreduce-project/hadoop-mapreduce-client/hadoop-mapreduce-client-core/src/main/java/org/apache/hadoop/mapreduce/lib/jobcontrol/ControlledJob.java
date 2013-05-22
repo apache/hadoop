@@ -138,12 +138,11 @@ public class ControlledJob {
   public void setJobID(String id) {
     this.controlID = id;
   }
-	
+
   /**
-   * @return the mapred ID of this job as assigned by the 
-   * mapred framework.
+   * @return the mapred ID of this job as assigned by the mapred framework.
    */
-  public JobID getMapredJobID() {
+  public synchronized JobID getMapredJobId() {
     return this.job.getJobID();
   }
   
