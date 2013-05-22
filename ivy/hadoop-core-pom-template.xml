@@ -116,17 +116,7 @@
     <dependency>
       <groupId>net.java.dev.jets3t</groupId>
       <artifactId>jets3t</artifactId>
-      <version>0.7.1</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-net</groupId>
-      <artifactId>commons-net</artifactId>
-      <version>1.4.1</version>
-    </dependency>
-    <dependency>
-      <groupId>net.sf.kosmosfs</groupId>
-      <artifactId>kfs</artifactId>
-      <version>0.3</version>
+      <version>0.6.1</version>
     </dependency>
     <dependency>
       <groupId>hsqldb</groupId>
@@ -146,7 +136,7 @@
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-mapper-asl</artifactId>
-      <version>1.0.1</version>
+      <version>1.8.8</version>
     </dependency>
   </dependencies>
 </project>

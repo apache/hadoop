@@ -396,3 +396,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HDFS-4782. Backport edit log corruption toleration. (Chris Nauroth via
     szetszwo)
+
+    HADOOP-8745. Incorrect version numbers in hadoop-core POM.
+    (Matthias Friedrich via eli)
