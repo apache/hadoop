@@ -42,8 +42,11 @@ public class TestRpcFactoryProvider {
     serverFactory = RpcFactoryProvider.getServerFactory(conf);
     Assert.assertEquals(RpcClientFactoryPBImpl.class, clientFactory.getClass());
     Assert.assertEquals(RpcServerFactoryPBImpl.class, serverFactory.getClass());
-    
-    conf.set(YarnConfiguration.IPC_SERIALIZER_TYPE, "writable");
+
+    conf.set(YarnConfiguration.IPC_CLIENT_FACTORY_CLASS, "unknown");
+    conf.set(YarnConfiguration.IPC_SERVER_FACTORY_CLASS, "unknown");
+    conf.set(YarnConfiguration.IPC_RECORD_FACTORY_CLASS, "unknown");
+
     try {
       clientFactory = RpcFactoryProvider.getClientFactory(conf);
       Assert.fail("Expected an exception - unknown serializer");
@@ -56,8 +59,8 @@ public class TestRpcFactoryProvider {
     }
     
     conf = new Configuration();
-    conf.set(YarnConfiguration.IPC_CLIENT_FACTORY, "NonExistantClass");
-    conf.set(YarnConfiguration.IPC_SERVER_FACTORY, RpcServerFactoryPBImpl.class.getName());
+    conf.set(YarnConfiguration.IPC_CLIENT_FACTORY_CLASS, "NonExistantClass");
+    conf.set(YarnConfiguration.IPC_SERVER_FACTORY_CLASS, RpcServerFactoryPBImpl.class.getName());
     
     try {
       clientFactory = RpcFactoryProvider.getClientFactory(conf);

@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
 
 public class RecordFactoryProvider {
   private static Configuration defaultConf;
@@ -43,17 +42,10 @@ public class RecordFactoryProvider {
       //Users can specify a particular factory by providing a configuration.
       conf = defaultConf;
     }
-    String recordFactoryClassName = conf.get(YarnConfiguration.IPC_RECORD_FACTORY);
-    if (recordFactoryClassName == null) {
-      String serializer = conf.get(YarnConfiguration.IPC_SERIALIZER_TYPE, YarnConfiguration.DEFAULT_IPC_SERIALIZER_TYPE);
-      if (serializer.equals(YarnConfiguration.DEFAULT_IPC_SERIALIZER_TYPE)) {
-        return RecordFactoryPBImpl.get();
-      } else {
-        throw new YarnException("Unknown serializer: [" + conf.get(YarnConfiguration.IPC_SERIALIZER_TYPE) + "]. Use keys: [" + YarnConfiguration.IPC_RECORD_FACTORY + "] to specify Record factory");
-      }
-    } else {
-      return (RecordFactory) getFactoryClassInstance(recordFactoryClassName);
-    }
+    String recordFactoryClassName = conf.get(
+        YarnConfiguration.IPC_RECORD_FACTORY_CLASS,
+        YarnConfiguration.DEFAULT_IPC_RECORD_FACTORY_CLASS);
+    return (RecordFactory) getFactoryClassInstance(recordFactoryClassName);
   }
   
   private static Object getFactoryClassInstance(String factoryClassName) {

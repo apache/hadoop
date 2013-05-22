@@ -56,26 +56,23 @@ public class YarnConfiguration extends Configuration {
   public static final String IPC_PREFIX = YARN_PREFIX + "ipc.";
 
   /** Factory to create client IPC classes.*/
-  public static final String IPC_CLIENT_FACTORY = 
+  public static final String IPC_CLIENT_FACTORY_CLASS = 
     IPC_PREFIX + "client.factory.class";
-  
-  /** Type of serialization to use.*/
-  public static final String IPC_SERIALIZER_TYPE = 
-    IPC_PREFIX + "serializer.type";
-  public static final String DEFAULT_IPC_SERIALIZER_TYPE = "protocolbuffers";
-  
+  public static final String DEFAULT_IPC_CLIENT_FACTORY_CLASS = 
+      "org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl";
+
   /** Factory to create server IPC classes.*/
-  public static final String IPC_SERVER_FACTORY = 
+  public static final String IPC_SERVER_FACTORY_CLASS = 
     IPC_PREFIX + "server.factory.class";
-  
-  /** Factory to create IPC exceptions.*/
-  public static final String IPC_EXCEPTION_FACTORY = 
-    IPC_PREFIX + "exception.factory.class";
-  
+  public static final String DEFAULT_IPC_SERVER_FACTORY_CLASS = 
+      "org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl";
+
   /** Factory to create serializeable records.*/
-  public static final String IPC_RECORD_FACTORY = 
+  public static final String IPC_RECORD_FACTORY_CLASS = 
     IPC_PREFIX + "record.factory.class";
-  
+  public static final String DEFAULT_IPC_RECORD_FACTORY_CLASS = 
+      "org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl";
+
   /** RPC class implementation*/
   public static final String IPC_RPC_IMPL =
     IPC_PREFIX + "rpc.class";

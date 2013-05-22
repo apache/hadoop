@@ -31,7 +31,6 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalResourceStatusProto;
@@ -53,7 +52,6 @@ public class TestPBRecordImpl {
 
   static RecordFactory createPBRecordFactory() {
     Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.IPC_SERIALIZER_TYPE, "protocolbuffers");
     return RecordFactoryProvider.getRecordFactory(conf);
   }
 
