@@ -500,9 +500,15 @@ public class BookKeeperJournalManager implements JournalManager {
     } 
   }
 
-  @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
       long fromTxId, boolean inProgressOk) throws IOException {
+    selectInputStreams(streams, fromTxId, inProgressOk, true);
+  }
+
+  @Override
+  public void selectInputStreams(Collection<EditLogInputStream> streams,
+      long fromTxId, boolean inProgressOk, boolean forReading)
+      throws IOException {
     List<EditLogLedgerMetadata> currentLedgerList = getLedgerList(fromTxId,
         inProgressOk);
     try {

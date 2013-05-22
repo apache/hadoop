@@ -73,7 +73,7 @@ public class TestFileJournalManager {
     final PriorityQueue<EditLogInputStream> allStreams = 
         new PriorityQueue<EditLogInputStream>(64,
             JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
-    jm.selectInputStreams(allStreams, fromTxId, inProgressOk);
+    jm.selectInputStreams(allStreams, fromTxId, inProgressOk, true);
     EditLogInputStream elis = null;
     try {
       while ((elis = allStreams.poll()) != null) {
@@ -392,7 +392,7 @@ public class TestFileJournalManager {
     final PriorityQueue<EditLogInputStream> allStreams = 
         new PriorityQueue<EditLogInputStream>(64,
             JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
-    jm.selectInputStreams(allStreams, txId, inProgressOk);
+    jm.selectInputStreams(allStreams, txId, inProgressOk, true);
     EditLogInputStream elis = null, ret;
     try {
       while ((elis = allStreams.poll()) != null) {
@@ -462,6 +462,6 @@ public class TestFileJournalManager {
 
   private static String getLogsAsString(
       FileJournalManager fjm, long firstTxId) throws IOException {
-    return Joiner.on(",").join(fjm.getRemoteEditLogs(firstTxId));
+    return Joiner.on(",").join(fjm.getRemoteEditLogs(firstTxId, true));
   }
 }

@@ -627,14 +627,14 @@ class Journal implements Closeable {
   /**
    * @see QJournalProtocol#getEditLogManifest(String, long)
    */
-  public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
-      throws IOException {
+  public RemoteEditLogManifest getEditLogManifest(long sinceTxId,
+      boolean forReading) throws IOException {
     // No need to checkRequest() here - anyone may ask for the list
     // of segments.
     checkFormatted();
     
     RemoteEditLogManifest manifest = new RemoteEditLogManifest(
-        fjm.getRemoteEditLogs(sinceTxId));
+        fjm.getRemoteEditLogs(sinceTxId, forReading));
     return manifest;
   }
 

@@ -95,8 +95,8 @@ public abstract class GenericTestUtils {
     Set<String> expectedSet = Sets.newTreeSet(
         Arrays.asList(expectedMatches));
     Assert.assertEquals("Bad files matching " + pattern + " in " + dir,
-        Joiner.on(",").join(found),
-        Joiner.on(",").join(expectedSet));
+        Joiner.on(",").join(expectedSet),
+        Joiner.on(",").join(found));
   }
   
   public static void assertExceptionContains(String string, Throwable t) {

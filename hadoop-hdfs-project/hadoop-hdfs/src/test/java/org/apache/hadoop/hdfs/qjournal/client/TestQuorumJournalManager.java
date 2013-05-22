@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -898,6 +899,26 @@ public class TestQuorumJournalManager {
     GenericTestUtils.assertMatches(
         qjm.toString(),
         "QJM to \\[127.0.0.1:\\d+, 127.0.0.1:\\d+, 127.0.0.1:\\d+\\]");
+  }
+  
+  @Test
+  public void testSelectInputStreamsNotOnBoundary() throws Exception {
+    final int txIdsPerSegment = 10; 
+    for (int txid = 1; txid <= 5 * txIdsPerSegment; txid += txIdsPerSegment) {
+      writeSegment(cluster, qjm, txid, txIdsPerSegment, true);
+    }
+    File curDir = cluster.getCurrentDir(0, JID);
+    GenericTestUtils.assertGlobEquals(curDir, "edits_.*",
+        NNStorage.getFinalizedEditsFileName(1, 10),
+        NNStorage.getFinalizedEditsFileName(11, 20),
+        NNStorage.getFinalizedEditsFileName(21, 30),
+        NNStorage.getFinalizedEditsFileName(31, 40),
+        NNStorage.getFinalizedEditsFileName(41, 50));
+    
+    ArrayList<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
+    qjm.selectInputStreams(streams, 25, false, false);
+    
+    verifyEdits(streams, 25, 50);
   }
   
   

@@ -109,7 +109,7 @@ interface AsyncLogger {
    * Fetch the list of edit logs available on the remote node.
    */
   public ListenableFuture<RemoteEditLogManifest> getEditLogManifest(
-      long fromTxnId);
+      long fromTxnId, boolean forReading);
 
   /**
    * Prepare recovery. See the HDFS-3077 design document for details.
