@@ -22,11 +22,14 @@ import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
+import org.junit.Test;
 
 /**
  * This class performs unit test for Job/JobControl classes.
@@ -191,10 +194,68 @@ public class TestJobControl extends junit.framework.TestCase {
     theControl.stop();
   }
 
+  @SuppressWarnings("deprecation")
+  @Test(timeout = 30000)
+  public void testJobState() throws Exception {
+    Job job_1 = getCopyJob();
+    JobControl jc = new JobControl("Test");
+    jc.addJob(job_1);
+    Assert.assertEquals(Job.WAITING, job_1.getState());
+    job_1.setState(Job.SUCCESS);
+    Assert.assertEquals(Job.WAITING, job_1.getState());
+
+    org.apache.hadoop.mapreduce.Job mockjob =
+        mock(org.apache.hadoop.mapreduce.Job.class);
+    org.apache.hadoop.mapreduce.JobID jid =
+        new org.apache.hadoop.mapreduce.JobID("test", 0);
+    when(mockjob.getJobID()).thenReturn(jid);
+    job_1.setJob(mockjob);
+    Assert.assertEquals("job_test_0000", job_1.getMapredJobID());
+    job_1.setMapredJobID("job_test_0001");
+    Assert.assertEquals("job_test_0000", job_1.getMapredJobID());
+    jc.stop();
+  }
+
+  @Test(timeout = 30000)
+  public void testAddingDependingJob() throws Exception {
+    Job job_1 = getCopyJob();
+    ArrayList<Job> dependingJobs = new ArrayList<Job>();
+    JobControl jc = new JobControl("Test");
+    jc.addJob(job_1);
+    Assert.assertEquals(Job.WAITING, job_1.getState());
+    Assert.assertTrue(job_1.addDependingJob(new Job(job_1.getJobConf(),
+      dependingJobs)));
+  }
+
+  public Job getCopyJob() throws Exception {
+    Configuration defaults = new Configuration();
+    FileSystem fs = FileSystem.get(defaults);
+    Path rootDataDir =
+        new Path(System.getProperty("test.build.data", "."),
+          "TestJobControlData");
+    Path indir = new Path(rootDataDir, "indir");
+    Path outdir_1 = new Path(rootDataDir, "outdir_1");
+
+    JobControlTestUtils.cleanData(fs, indir);
+    JobControlTestUtils.generateData(fs, indir);
+
+    JobControlTestUtils.cleanData(fs, outdir_1);
+
+    ArrayList<Job> dependingJobs = null;
+
+    ArrayList<Path> inPaths_1 = new ArrayList<Path>();
+    inPaths_1.add(indir);
+    JobConf jobConf_1 = JobControlTestUtils.createCopyJob(inPaths_1, outdir_1);
+    Job job_1 = new Job(jobConf_1, dependingJobs);
+    return job_1;
+  }
+  
+  @Test (timeout = 30000)
   public void testJobControl() throws Exception {
     doJobControlTest();
   }
   
+  @Test (timeout = 30000)
   public void testGetAssignedJobId() throws Exception {
     JobConf jc = new JobConf();
     Job j = new Job(jc);

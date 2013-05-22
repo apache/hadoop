@@ -60,12 +60,11 @@ public class Job extends ControlledJob {
   }
 
   /**
-   * @return the mapred ID of this job as assigned by the 
-   * mapred framework.
+   * @return the mapred ID of this job as assigned by the mapred framework.
    */
   public JobID getAssignedJobID() {
-    org.apache.hadoop.mapreduce.JobID temp = super.getMapredJobID();
-    if(temp == null) {
+    org.apache.hadoop.mapreduce.JobID temp = super.getMapredJobId();
+    if (temp == null) {
       return null;
     }
     return JobID.downgrade(temp);
@@ -127,6 +126,30 @@ public class Job extends ControlledJob {
   }
   
   /**
+   * This is a no-op function, Its a behavior change from 1.x We no more can
+   * change the state from job
+   * 
+   * @param state
+   *          the new state for this job.
+   */
+  @Deprecated
+  protected synchronized void setState(int state) {
+    // No-Op, we dont want to change the sate
+  }
+  
+  /**
+   * Add a job to this jobs' dependency list. 
+   * Dependent jobs can only be added while a Job 
+   * is waiting to run, not during or afterwards.
+   * 
+   * @param dependingJob Job that this Job depends on.
+   * @return <tt>true</tt> if the Job was added.
+   */
+  public synchronized boolean addDependingJob(Job dependingJob) {
+    return super.addDependingJob(dependingJob);
+  }
+  
+  /**
    * @return the job client of this job
    */
   public JobClient getJobClient() {
@@ -144,4 +167,25 @@ public class Job extends ControlledJob {
     return JobControl.castToJobList(super.getDependentJobs());
   }
 
+  /**
+   * @return the mapred ID of this job as assigned by the mapred framework.
+   */
+  public synchronized String getMapredJobID() {
+    if (super.getMapredJobId() != null) {
+      return super.getMapredJobId().toString();
+    }
+    return null;
+  }
+
+  /**
+   * This is no-op method for backward compatibility. It's a behavior change
+   * from 1.x, we can not change job ids from job.
+   * 
+   * @param mapredJobID
+   *          the mapred job ID for this job.
+   */
+  @Deprecated
+  public synchronized void setMapredJobID(String mapredJobID) {
+    setAssignedJobID(JobID.forName(mapredJobID));
+  }
 }

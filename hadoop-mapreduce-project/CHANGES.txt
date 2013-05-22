@@ -15,6 +15,10 @@ Release 2.0.5-beta - UNRELEASED
     1.x examples jar on top of YARN. This change breaks 0.23.x direct usages of
     ProgramDriver. (Zhijie Shen via vinodkv)
 
+    MAPREDUCE-5233. Add methods that are changed or removed from JobControl.Job
+    when compared to 1.x. This breaks 0.23.x users of one API in Job. (Mayank
+    Bansal via vinodkv)
+
   NEW FEATURES
 
   IMPROVEMENTS
