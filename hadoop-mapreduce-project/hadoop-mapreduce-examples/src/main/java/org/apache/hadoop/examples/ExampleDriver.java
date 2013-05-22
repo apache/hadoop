@@ -71,7 +71,7 @@ public class ExampleDriver {
       pgd.addClass("teragen", TeraGen.class, "Generate data for the terasort");
       pgd.addClass("terasort", TeraSort.class, "Run the terasort");
       pgd.addClass("teravalidate", TeraValidate.class, "Checking results of terasort");
-      exitCode = pgd.driver(argv);
+      exitCode = pgd.run(argv);
     }
     catch(Throwable e){
       e.printStackTrace();

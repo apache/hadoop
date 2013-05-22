@@ -117,7 +117,7 @@ public class ProgramDriver {
    * @throws IllegalArgumentException 
    * @throws Throwable Anything thrown by the example program's main
    */
-  public int driver(String[] args) 
+  public int run(String[] args)
     throws Throwable 
   {
     // Make sure they gave us a program name.
@@ -144,5 +144,14 @@ public class ProgramDriver {
     pgm.invoke(new_args);
     return 0;
   }
-    
+
+  /**
+   * API compatible with Hadoop 1.x
+   */
+  public void driver(String[] argv) throws Throwable {
+    if (run(argv) == -1) {
+      System.exit(-1);
+    }
+  }
+
 }

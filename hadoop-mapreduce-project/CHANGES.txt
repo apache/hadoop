@@ -11,6 +11,10 @@ Release 2.0.5-beta - UNRELEASED
     compatibility with mapred in 1.x but incompatible with 0.23.x. (Mayank Bansal
     via vinodkv)
 
+    MAPREDUCE-5156. Change hadoop examples ProgramDriver to be able to run
+    1.x examples jar on top of YARN. This change breaks 0.23.x direct usages of
+    ProgramDriver. (Zhijie Shen via vinodkv)
+
   NEW FEATURES
 
   IMPROVEMENTS
