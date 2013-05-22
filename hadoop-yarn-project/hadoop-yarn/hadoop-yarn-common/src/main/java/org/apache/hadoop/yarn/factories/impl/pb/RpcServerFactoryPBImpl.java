@@ -63,8 +63,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
   
   public Server getServer(Class<?> protocol, Object instance,
       InetSocketAddress addr, Configuration conf,
-      SecretManager<? extends TokenIdentifier> secretManager, int numHandlers)
-      throws YarnException {
+      SecretManager<? extends TokenIdentifier> secretManager, int numHandlers) {
     return getServer(protocol, instance, addr, conf, secretManager, numHandlers,
         null);
   }
@@ -73,8 +72,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
   public Server getServer(Class<?> protocol, Object instance,
       InetSocketAddress addr, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager, int numHandlers,
-      String portRangeConfig)
-      throws YarnException {
+      String portRangeConfig) {
     
     Constructor<?> constructor = serviceCache.get(protocol);
     if (constructor == null) {

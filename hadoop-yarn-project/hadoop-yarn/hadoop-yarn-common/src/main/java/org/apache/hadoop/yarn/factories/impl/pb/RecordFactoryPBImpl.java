@@ -45,7 +45,7 @@ public class RecordFactoryPBImpl implements RecordFactory {
   
   @SuppressWarnings("unchecked")
   @Override
-  public <T> T newRecordInstance(Class<T> clazz) throws YarnException {
+  public <T> T newRecordInstance(Class<T> clazz) {
     
     Constructor<?> constructor = cache.get(clazz);
     if (constructor == null) {

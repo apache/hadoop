@@ -260,6 +260,9 @@ Release 2.0.5-beta - UNRELEASED
     also in unsecure mode to prevent AMs from faking resource requirements in
     unsecure mode. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-708. Moved RecordFactory classes to hadoop-yarn-api, and put some
+    miscellaneous fixes to the interfaces. (Siddharth Seth via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

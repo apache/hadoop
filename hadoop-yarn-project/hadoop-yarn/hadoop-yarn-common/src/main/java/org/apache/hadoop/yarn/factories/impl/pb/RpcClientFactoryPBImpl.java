@@ -50,7 +50,8 @@ public class RpcClientFactoryPBImpl implements RpcClientFactory {
   private RpcClientFactoryPBImpl() {
   }
   
-  public Object getClient(Class<?> protocol, long clientVersion, InetSocketAddress addr, Configuration conf) throws YarnException {
+  public Object getClient(Class<?> protocol, long clientVersion,
+      InetSocketAddress addr, Configuration conf) {
    
     Constructor<?> constructor = cache.get(protocol);
     if (constructor == null) {
