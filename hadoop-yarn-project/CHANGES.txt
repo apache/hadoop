@@ -321,6 +321,8 @@ Release 2.0.5-beta - UNRELEASED
     ApplicationReportProto and fix bugs in ApplicationReportPBImpl. (Zhijie Shen
     via vinodkv)
 
+    YARN-706. Fixed race conditions in TestFSDownload. (Zhijie Shen via vinodkv).
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
