@@ -100,6 +100,11 @@
        <Method name="run" />
        <Bug pattern="DM_EXIT" />
      </Match>
+     <Match>
+       <Class name="org.apache.hadoop.util.ProgramDriver" />
+       <Method name="driver" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
      <!--
        We need to cast objects between old and new api objects
      -->

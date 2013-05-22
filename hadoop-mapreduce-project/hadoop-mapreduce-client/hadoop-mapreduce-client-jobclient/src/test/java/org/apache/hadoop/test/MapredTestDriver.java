@@ -112,7 +112,7 @@ public class MapredTestDriver {
   public void run(String argv[]) {
     int exitCode = -1;
     try {
-      exitCode = pgd.driver(argv);
+      exitCode = pgd.run(argv);
     } catch(Throwable e) {
       e.printStackTrace();
     }
