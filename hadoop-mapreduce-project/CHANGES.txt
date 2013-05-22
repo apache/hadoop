@@ -270,6 +270,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5257. Fix issues in TestContainerLauncherImpl after YARN-617.
     (Omkar Vinit Joshi via vinodkv)
 
+    MAPREDUCE-5261. Fix issues in TestRMContainerAllocator after YARN-617.
+    (Omkar Vinit Joshi via vinodkv)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
