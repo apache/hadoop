@@ -169,6 +169,8 @@ message NewEpochResponseProto {
 message GetEditLogManifestRequestProto {
   required JournalIdProto jid = 1;
   required uint64 sinceTxId = 2;  // Transaction ID
+  // Whether or not the client will be reading from the returned streams.
+  optional bool forReading = 3 [default = true];
 }
 
 message GetEditLogManifestResponseProto {

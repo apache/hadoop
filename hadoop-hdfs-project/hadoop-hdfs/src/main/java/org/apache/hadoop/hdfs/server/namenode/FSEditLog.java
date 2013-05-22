@@ -252,7 +252,7 @@ public class FSEditLog implements LogsPurgeable {
     // Safety check: we should never start a segment if there are
     // newer txids readable.
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    journalSet.selectInputStreams(streams, segmentTxId, true);
+    journalSet.selectInputStreams(streams, segmentTxId, true, true);
     if (!streams.isEmpty()) {
       String error = String.format("Cannot start writing at txid %s " +
         "when there is a stream available for read: %s",
@@ -879,7 +879,7 @@ public class FSEditLog implements LogsPurgeable {
    */
   public synchronized RemoteEditLogManifest getEditLogManifest(long fromTxId)
       throws IOException {
-    return journalSet.getEditLogManifest(fromTxId);
+    return journalSet.getEditLogManifest(fromTxId, true);
   }
  
   /**
@@ -1129,8 +1129,8 @@ public class FSEditLog implements LogsPurgeable {
   }
   
   public void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxId, boolean inProgressOk) throws IOException {
-    journalSet.selectInputStreams(streams, fromTxId, inProgressOk);
+      long fromTxId, boolean inProgressOk, boolean forReading) throws IOException {
+    journalSet.selectInputStreams(streams, fromTxId, inProgressOk, forReading);
   }
 
   public Collection<EditLogInputStream> selectInputStreams(
@@ -1149,7 +1149,7 @@ public class FSEditLog implements LogsPurgeable {
       long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,
       boolean inProgressOk) throws IOException {
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    selectInputStreams(streams, fromTxId, inProgressOk);
+    selectInputStreams(streams, fromTxId, inProgressOk, true);
 
     try {
       checkForGaps(streams, fromTxId, toAtLeastTxId, inProgressOk);
