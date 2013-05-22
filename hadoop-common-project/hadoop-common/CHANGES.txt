@@ -4,6 +4,8 @@ Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-8886. Remove KFS support. (eli)
+
     HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
     avoid an extra copy (Sanjay Radia)
 
@@ -14,9 +16,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9425 Add error codes to rpc-response (sanjay Radia)
 
-  NEW FEATURES
-
     HADOOP-9194. RPC support for QoS. (Junping Du via llu)
+
+  NEW FEATURES
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
 
