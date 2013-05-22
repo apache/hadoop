@@ -54,7 +54,7 @@ public class TestMetricsSystemImpl {
   @Captor private ArgumentCaptor<MetricsRecord> r3;
   private static String hostname = MetricsSystemImpl.getHostname();
 
-  @Test public void testInitFirst() throws Exception {
+  @Test public void testInitFirstVerifyStopInvokedImmediately() throws Exception {
     new ConfigBuilder().add("default.period", 8)
         .add("source.filter.class",
              "org.apache.hadoop.metrics2.filter.GlobFilter")
@@ -81,11 +81,62 @@ public class TestMetricsSystemImpl {
     ms.stop();
     ms.shutdown();
 
-    verify(sink1, times(3)).putMetrics(r1.capture()); // 2 + 1 sys source
+    // When we call stop, at most 3 sources will be consumed by each sink thread.
+    verify(sink1, atMost(3)).putMetrics(r1.capture()); // 2 + 1 sys source
     List<MetricsRecord> mr1 = r1.getAllValues();
-    verify(sink2, times(3)).putMetrics(r2.capture()); // ditto
+    verify(sink2, atMost(3)).putMetrics(r2.capture()); // ditto
     List<MetricsRecord> mr2 = r2.getAllValues();
-    verify(sink3, times(2)).putMetrics(r3.capture()); // 1 + 1 (s1, s2 filtered)
+    if (mr1.size() != 0 && mr2.size() != 0) {
+      checkMetricsRecords(mr1, "s2rec");
+      assertEquals("output", mr1, mr2);
+    } else if (mr1.size() != 0) {
+      checkMetricsRecords(mr1, "s2rec");
+    } else if (mr2.size() != 0) {
+      checkMetricsRecords(mr2, "s2rec");
+    }
+
+    verify(sink3, atMost(2)).putMetrics(r3.capture()); // 1 + 1 (s1, s2 filtered)
+    List<MetricsRecord> mr3 = r3.getAllValues();
+    if (mr3.size() != 0) {
+      checkMetricsRecords(mr3, "s3rec");
+    }
+  }
+
+  @Test public void testInitFirstVerifyCallBacks() throws Exception {
+    new ConfigBuilder().add("default.period", 8)
+        .add("source.filter.class",
+             "org.apache.hadoop.metrics2.filter.GlobFilter")
+        .add("test.*.source.filter.class", "${source.filter.class}")
+        .add("test.*.source.filter.exclude", "s1*")
+        .add("test.sink.sink3.source.filter.class", "${source.filter.class}")
+        .add("test.sink.sink3.source.filter.exclude", "s2*")
+        .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
+    MetricsSystemImpl ms = new MetricsSystemImpl("Test");
+    ms.start();
+    TestSource s1 = ms.register("s1", "s1 desc", new TestSource("s1rec"));
+    TestSource s2 = ms.register("s2", "s2 desc", new TestSource("s2rec"));
+    TestSource s3 = ms.register("s3", "s3 desc", new TestSource("s3rec"));
+    s1.s1.add(0);
+    s2.s1.add(0);
+    s3.s1.add(0);
+    MetricsSink sink1 = mock(MetricsSink.class);
+    MetricsSink sink2 = mock(MetricsSink.class);
+    MetricsSink sink3 = mock(MetricsSink.class);
+    ms.register("sink1", "sink1 desc", sink1);
+    ms.register("sink2", "sink2 desc", sink2);
+    ms.register("sink3", "sink3 desc", sink3);
+    ms.publishMetricsNow(); // publish the metrics
+
+    try {
+      verify(sink1, timeout(200).times(3)).putMetrics(r1.capture());
+      verify(sink2, timeout(200).times(3)).putMetrics(r2.capture());
+      verify(sink3, timeout(200).times(2)).putMetrics(r3.capture());
+    } finally {
+      ms.stop();
+      ms.shutdown();
+    }
+    List<MetricsRecord> mr1 = r1.getAllValues();
+    List<MetricsRecord> mr2 = r2.getAllValues();
     List<MetricsRecord> mr3 = r3.getAllValues();
     checkMetricsRecords(mr1, "s2rec");
     assertEquals("output", mr1, mr2);

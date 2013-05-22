@@ -52,6 +52,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5095. TestShuffleExceptionCount#testCheckException fails
     occasionally with JDK7 (Arpit Agarwal via hitesh)
 
+    HADOOP-8981. TestMetricsSystemImpl fails on Windows. (Xuan Gong, backported
+    by Chris Nauroth via suresh)
+
 Release 1.2.1 - Unreleased 
 
   INCOMPATIBLE CHANGES
