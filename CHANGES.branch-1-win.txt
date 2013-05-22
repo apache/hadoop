@@ -399,3 +399,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-8745. Incorrect version numbers in hadoop-core POM.
     (Matthias Friedrich via eli)
+
+    HADOOP-8981. TestMetricsSystemImpl fails on Windows. (Xuan Gong, backported
+    by Chris Nauroth via suresh)
