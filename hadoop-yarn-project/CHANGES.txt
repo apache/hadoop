@@ -655,6 +655,9 @@ Release 0.23.8 - UNRELEASED
 
   OPTIMIZATIONS
 
+    YARN-548. Add tests for YarnUncaughtExceptionHandler (Vadim Bondarev via
+    jeagles)
+
   BUG FIXES
 
     YARN-363. Add webapps/proxy directory without which YARN proxy-server fails

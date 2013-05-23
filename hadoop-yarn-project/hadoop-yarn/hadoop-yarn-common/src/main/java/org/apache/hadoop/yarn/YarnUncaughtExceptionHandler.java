@@ -22,6 +22,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 
 /**
@@ -55,9 +56,9 @@ public class YarnUncaughtExceptionHandler implements UncaughtExceptionHandler {
         } catch (Throwable err) {
           //Again we done want to exit because of logging issues.
         }
-        Runtime.getRuntime().halt(-1);
+        ExitUtil.halt(-1);
       } else {
-        System.exit(-1);
+        ExitUtil.terminate(-1);
       }
     } else {
       LOG.error("Thread " + t + " threw an Exception.", e);
