@@ -497,6 +497,7 @@ public class YARNRunner implements ClientProtocol {
         conf.getInt(MRJobConfig.MR_AM_MAX_ATTEMPTS,
             MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS));
     appContext.setResource(capability);
+    appContext.setApplicationType(MRJobConfig.MR_APPLICATION_TYPE);
     return appContext;
   }
 

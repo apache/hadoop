@@ -788,6 +788,7 @@ public class TestRMWebServicesApps extends JerseyTest {
           WebServicesTestUtils.getXmlString(element, "id"),
           WebServicesTestUtils.getXmlString(element, "user"),
           WebServicesTestUtils.getXmlString(element, "name"),
+          WebServicesTestUtils.getXmlString(element, "applicationType"),
           WebServicesTestUtils.getXmlString(element, "queue"),
           WebServicesTestUtils.getXmlString(element, "state"),
           WebServicesTestUtils.getXmlString(element, "finalStatus"),
@@ -807,20 +808,20 @@ public class TestRMWebServicesApps extends JerseyTest {
       Exception {
 
     // 15 because trackingUrl not assigned yet
-    assertEquals("incorrect number of elements", 15, info.length());
+    assertEquals("incorrect number of elements", 16, info.length());
 
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
-        info.getString("name"), info.getString("queue"),
-        info.getString("state"), info.getString("finalStatus"),
-        (float) info.getDouble("progress"), info.getString("trackingUI"),
-        info.getString("diagnostics"), info.getLong("clusterId"),
-        info.getLong("startedTime"), info.getLong("finishedTime"),
-        info.getLong("elapsedTime"), info.getString("amHostHttpAddress"),
-        info.getString("amContainerLogs"));
+      info.getString("name"), info.getString("applicationType"), info.getString("queue"),
+      info.getString("state"), info.getString("finalStatus"),
+      (float) info.getDouble("progress"), info.getString("trackingUI"),
+      info.getString("diagnostics"), info.getLong("clusterId"),
+      info.getLong("startedTime"), info.getLong("finishedTime"),
+      info.getLong("elapsedTime"), info.getString("amHostHttpAddress"),
+      info.getString("amContainerLogs"));
   }
 
   public void verifyAppInfoGeneric(RMApp app, String id, String user,
-      String name, String queue, String state, String finalStatus,
+      String name, String applicationType, String queue, String state, String finalStatus,
       float progress, String trackingUI, String diagnostics, long clusterId,
       long startedTime, long finishedTime, long elapsedTime,
       String amHostHttpAddress, String amContainerLogs) throws JSONException,
@@ -830,6 +831,8 @@ public class TestRMWebServicesApps extends JerseyTest {
         .toString(), id);
     WebServicesTestUtils.checkStringMatch("user", app.getUser(), user);
     WebServicesTestUtils.checkStringMatch("name", app.getName(), name);
+    WebServicesTestUtils.checkStringMatch("applicationType",
+      app.getApplicationType(), applicationType);
     WebServicesTestUtils.checkStringMatch("queue", app.getQueue(), queue);
     WebServicesTestUtils.checkStringMatch("state", app.getState().toString(),
         state);

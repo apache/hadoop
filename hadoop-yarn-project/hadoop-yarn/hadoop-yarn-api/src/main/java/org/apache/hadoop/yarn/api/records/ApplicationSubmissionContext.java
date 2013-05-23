@@ -199,4 +199,23 @@ public interface ApplicationSubmissionContext {
   @Public
   @Stable
   public void setResource(Resource resource);
+  
+  /**
+   * Get the <em>applicationType</em> is the application type
+   * 
+   * @return <em>applicationType</em> is the application type
+   */
+  @Public
+  @Stable
+  public String getApplicationType();
+
+  /**
+   * Set the <em>applicationType</em> is the application type
+   * 
+   * @param applicationType
+   *          <em>applicationType</em> is the application type
+   */
+  @Public
+  @Stable
+  public void setApplicationType(String applicationType);
 }

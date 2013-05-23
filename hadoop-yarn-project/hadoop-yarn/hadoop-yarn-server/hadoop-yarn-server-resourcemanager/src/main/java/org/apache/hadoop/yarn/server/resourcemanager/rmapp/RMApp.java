@@ -179,4 +179,10 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the number of max attempts of the application.
    */
   int getMaxAppAttempts();
+  
+  /**
+   * Returns the application type
+   * @return the application type.
+   */
+  String getApplicationType(); 
 }

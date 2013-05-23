@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -336,7 +337,7 @@ public class BuilderUtils {
       String url, long startTime, long finishTime,
       FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
-      float progress) {
+      float progress, String appType) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -356,9 +357,40 @@ public class BuilderUtils {
     report.setApplicationResourceUsageReport(appResources);
     report.setOriginalTrackingUrl(origTrackingUrl);
     report.setProgress(progress);
+    report.setApplicationType(appType);
     return report;
   }
+  
+  public static ApplicationSubmissionContext newApplicationSubmissionContext(
+      ApplicationId applicationId, String applicationName, String queue,
+      Priority priority, ContainerLaunchContext amContainer,
+      boolean isUnmanagedAM, boolean cancelTokensWhenComplete,
+      int maxAppAttempts, Resource resource, String applicationType) {
+    ApplicationSubmissionContext context =
+        recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
+    context.setApplicationId(applicationId);
+    context.setApplicationName(applicationName);
+    context.setQueue(queue);
+    context.setPriority(priority);
+    context.setAMContainerSpec(amContainer);
+    context.setUnmanagedAM(isUnmanagedAM);
+    context.setCancelTokensWhenComplete(cancelTokensWhenComplete);
+    context.setMaxAppAttempts(maxAppAttempts);
+    context.setResource(resource);
+    context.setApplicationType(applicationType);
+    return context;
+  }
 
+  public static ApplicationSubmissionContext newApplicationSubmissionContext(
+      ApplicationId applicationId, String applicationName, String queue,
+      Priority priority, ContainerLaunchContext amContainer,
+      boolean isUnmanagedAM, boolean cancelTokensWhenComplete,
+      int maxAppAttempts, Resource resource) {
+    return newApplicationSubmissionContext(applicationId, applicationName,
+      queue, priority, amContainer, isUnmanagedAM, cancelTokensWhenComplete,
+      maxAppAttempts, resource, null);
+  }
+  
   public static ApplicationResourceUsageReport newApplicationResourceUsageReport(
       int numUsedContainers, int numReservedContainers, Resource usedResources,
       Resource reservedResources, Resource neededResources) {

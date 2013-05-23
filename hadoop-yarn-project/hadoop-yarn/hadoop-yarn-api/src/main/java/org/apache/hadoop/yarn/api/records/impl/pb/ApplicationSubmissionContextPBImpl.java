@@ -165,6 +165,15 @@ implements ApplicationSubmissionContext {
   }
 
   @Override
+  public String getApplicationType() {
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasApplicationType()) {
+      return null;
+    }
+    return (p.getApplicationType());
+  }
+  
+  @Override
   public void setQueue(String queue) {
     maybeInitBuilder();
     if (queue == null) {
@@ -172,6 +181,16 @@ implements ApplicationSubmissionContext {
       return;
     }
     builder.setQueue((queue));
+  }
+  
+  @Override
+  public void setApplicationType(String applicationType) {
+    maybeInitBuilder();
+    if (applicationType == null) {
+      builder.clearApplicationType();
+      return;
+    }
+    builder.setApplicationType((applicationType));
   }
 
   @Override

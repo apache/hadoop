@@ -253,6 +253,12 @@ public class YarnConfiguration extends Configuration {
   /** Default application name */
   public static final String DEFAULT_APPLICATION_NAME = "N/A";
 
+  /** Default application type */
+  public static final String DEFAULT_APPLICATION_TYPE = "YARN";
+
+  /** Default application type length */
+  public static final int APPLICATION_TYPE_LENGTH = 20;
+  
   /** Default queue name */
   public static final String DEFAULT_QUEUE_NAME = "default";
 

@@ -220,6 +220,15 @@ implements ApplicationReport {
   }
 
   @Override
+  public String getApplicationType() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasApplicationType()) {
+      return null;
+    }
+    return p.getApplicationType();
+  }
+  
+  @Override
   public void setApplicationId(ApplicationId applicationId) {
     maybeInitBuilder();
     if (applicationId == null)
@@ -317,6 +326,16 @@ implements ApplicationReport {
       return;
     }
     builder.setUser((user));
+  }
+  
+  @Override
+  public void setApplicationType(String applicationType) {
+    maybeInitBuilder();
+    if (applicationType == null) {
+      builder.clearApplicationType();
+      return;
+    }
+    builder.setApplicationType((applicationType));
   }
 
   @Override

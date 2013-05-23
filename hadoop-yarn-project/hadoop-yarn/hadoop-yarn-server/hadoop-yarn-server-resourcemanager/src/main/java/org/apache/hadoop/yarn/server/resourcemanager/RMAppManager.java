@@ -269,7 +269,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             submissionContext.getAMContainerSpec().getUser(),
             submissionContext.getQueue(),
             submissionContext, this.scheduler, this.masterService,
-            submitTime);
+            submitTime, submissionContext.getApplicationType());
 
     // Concurrent app submissions with same applicationId will fail here
     // Concurrent app submissions with different applicationIds will not
