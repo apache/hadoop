@@ -1203,7 +1203,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     final InetSocketAddress isa = NetUtils.createSocketAddr(first.getName());
     final Socket sock = client.socketFactory.createSocket();
     final int timeout = client.getDatanodeReadTimeout(length);
-    NetUtils.connect(sock, isa, timeout);
+    NetUtils.connect(sock, isa, client.getConf().socketTimeout);
     sock.setSoTimeout(timeout);
     sock.setSendBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
     if(DFSClient.LOG.isDebugEnabled()) {

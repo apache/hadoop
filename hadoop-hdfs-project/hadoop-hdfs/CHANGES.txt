@@ -28,6 +28,9 @@ Release 0.23.8 - UNRELEASED
 
     HDFS-3875. Issue handling checksum errors in write pipeline. (kihwal)
 
+    HDFS-4807. createSocketForPipeline() should not include timeout extension
+    on connect. (Cristina Abad via kihwal)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
