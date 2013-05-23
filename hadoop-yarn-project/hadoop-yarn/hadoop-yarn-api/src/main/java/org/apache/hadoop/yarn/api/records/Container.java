@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>Container</code> represents an allocated resource in the cluster.
@@ -63,18 +64,34 @@ import org.apache.hadoop.yarn.api.ContainerManager;
  */
 @Public
 @Stable
-public interface Container extends Comparable<Container> {
+public abstract class Container implements Comparable<Container> {
+
+  @Private
+  public static Container newInstance(ContainerId containerId, NodeId nodeId,
+      String nodeHttpAddress, Resource resource, Priority priority,
+      ContainerToken containerToken, long rmIdentifier) {
+    Container container = Records.newRecord(Container.class);
+    container.setId(containerId);
+    container.setNodeId(nodeId);
+    container.setNodeHttpAddress(nodeHttpAddress);
+    container.setResource(resource);
+    container.setPriority(priority);
+    container.setContainerToken(containerToken);
+    container.setRMIdentifier(rmIdentifier);
+    return container;
+  }
+
   /**
    * Get the globally unique identifier for the container.
    * @return globally unique identifier for the container
    */
   @Public
   @Stable
-  ContainerId getId();
+  public abstract ContainerId getId();
   
   @Private
   @Unstable
-  void setId(ContainerId id);
+  public abstract void setId(ContainerId id);
 
   /**
    * Get the identifier of the node on which the container is allocated.
@@ -82,11 +99,11 @@ public interface Container extends Comparable<Container> {
    */
   @Public
   @Stable
-  NodeId getNodeId();
+  public abstract NodeId getNodeId();
   
   @Private
   @Unstable
-  void setNodeId(NodeId nodeId);
+  public abstract void setNodeId(NodeId nodeId);
   
   /**
    * Get the http uri of the node on which the container is allocated.
@@ -94,11 +111,11 @@ public interface Container extends Comparable<Container> {
    */
   @Public
   @Stable
-  String getNodeHttpAddress();
+  public abstract String getNodeHttpAddress();
   
   @Private
   @Unstable
-  void setNodeHttpAddress(String nodeHttpAddress);
+  public abstract void setNodeHttpAddress(String nodeHttpAddress);
   
   /**
    * Get the <code>Resource</code> allocated to the container.
@@ -106,11 +123,11 @@ public interface Container extends Comparable<Container> {
    */
   @Public
   @Stable
-  Resource getResource();
+  public abstract Resource getResource();
   
   @Private
   @Unstable
-  void setResource(Resource resource);
+  public abstract void setResource(Resource resource);
 
   /**
    * Get the <code>Priority</code> at which the <code>Container</code> was
@@ -118,11 +135,11 @@ public interface Container extends Comparable<Container> {
    * @return <code>Priority</code> at which the <code>Container</code> was
    *         allocated
    */
-  Priority getPriority();
+  public abstract Priority getPriority();
   
   @Private
   @Unstable
-  void setPriority(Priority priority);
+  public abstract void setPriority(Priority priority);
   
   /**
    * Get the <code>ContainerToken</code> for the container.
@@ -130,11 +147,11 @@ public interface Container extends Comparable<Container> {
    */
   @Public
   @Stable
-  ContainerToken getContainerToken();
+  public abstract ContainerToken getContainerToken();
   
   @Private
   @Unstable
-  void setContainerToken(ContainerToken containerToken);
+  public abstract void setContainerToken(ContainerToken containerToken);
 
   /**
    * Get the RMIdentifier of RM in which containers are allocated
@@ -142,9 +159,9 @@ public interface Container extends Comparable<Container> {
    */
   @Private
   @Unstable
-  long getRMIdentifer();
+  public abstract long getRMIdentifer();
 
   @Private
   @Unstable
-  void setRMIdentifier(long rmIdentifier);
+  public abstract void setRMIdentifier(long rmIdentifier);
 }

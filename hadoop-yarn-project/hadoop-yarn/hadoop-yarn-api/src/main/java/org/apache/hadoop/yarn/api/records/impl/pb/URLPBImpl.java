@@ -19,14 +19,13 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.proto.YarnProtos.URLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.URLProtoOrBuilder;
 
 
     
-public class URLPBImpl extends ProtoBase<URLProto> implements URL {
+public class URLPBImpl extends URL {
   URLProto proto = URLProto.getDefaultInstance();
   URLProto.Builder builder = null;
   boolean viaProto = false;
@@ -44,6 +43,26 @@ public class URLPBImpl extends ProtoBase<URLProto> implements URL {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void maybeInitBuilder() {

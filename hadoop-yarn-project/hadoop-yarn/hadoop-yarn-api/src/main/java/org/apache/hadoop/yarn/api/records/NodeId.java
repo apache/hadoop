@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>NodeId</code> is the unique identifier for a node.</p>
@@ -33,6 +34,14 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @Public
 @Stable
 public abstract class NodeId implements Comparable<NodeId> {
+
+  @Private
+  public static NodeId newInstance(String host, int port) {
+    NodeId nodeId = Records.newRecord(NodeId.class);
+    nodeId.setHost(host);
+    nodeId.setPort(port);
+    return nodeId;
+  }
 
   /**
    * Get the <em>hostname</em> of the node.

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.records;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>LocalResource</code> represents a local resource required to
@@ -40,56 +41,79 @@ import org.apache.hadoop.yarn.api.ContainerManager;
  */
 @Public
 @Stable
-public interface LocalResource {
+public abstract class LocalResource {
+
+  @Public
+  @Stable
+  public static LocalResource newInstance(URL url, LocalResourceType type,
+      LocalResourceVisibility visibility, long size, long timestamp,
+      String pattern) {
+    LocalResource resource = Records.newRecord(LocalResource.class);
+    resource.setResource(url);
+    resource.setType(type);
+    resource.setVisibility(visibility);
+    resource.setSize(size);
+    resource.setTimestamp(timestamp);
+    resource.setPattern(pattern);
+    return resource;
+  }
+
+  @Public
+  @Stable
+  public static LocalResource newInstance(URL url, LocalResourceType type,
+      LocalResourceVisibility visibility, long size, long timestamp) {
+    return newInstance(url, type, visibility, size, timestamp, null);
+  }
+
   /**
    * Get the <em>location</em> of the resource to be localized.
    * @return <em>location</em> of the resource to be localized
    */
-  public URL getResource();
+  public abstract URL getResource();
   
   /**
    * Set <em>location</em> of the resource to be localized.
    * @param resource <em>location</em> of the resource to be localized
    */
-  public void setResource(URL resource);
+  public abstract void setResource(URL resource);
   
   /**
    * Get the <em>size</em> of the resource to be localized.
    * @return <em>size</em> of the resource to be localized
    */
-  public long getSize();
+  public abstract long getSize();
   
   /**
    * Set the <em>size</em> of the resource to be localized.
    * @param size <em>size</em> of the resource to be localized
    */
-  public void setSize(long size);
+  public abstract void setSize(long size);
   
   /**
    * Get the original <em>timestamp</em> of the resource to be localized, used
    * for verification.
    * @return <em>timestamp</em> of the resource to be localized
    */
-  public long getTimestamp();
+  public abstract long getTimestamp();
   
   /**
    * Set the <em>timestamp</em> of the resource to be localized, used
    * for verification.
    * @param timestamp <em>timestamp</em> of the resource to be localized
    */
-  public void setTimestamp(long timestamp);
+  public abstract void setTimestamp(long timestamp);
   
   /**
    * Get the <code>LocalResourceType</code> of the resource to be localized.
    * @return <code>LocalResourceType</code> of the resource to be localized
    */
-  public LocalResourceType getType();
+  public abstract LocalResourceType getType();
   
   /**
    * Set the <code>LocalResourceType</code> of the resource to be localized.
    * @param type <code>LocalResourceType</code> of the resource to be localized
    */
-  public void setType(LocalResourceType type);
+  public abstract void setType(LocalResourceType type);
   
   /**
    * Get the <code>LocalResourceVisibility</code> of the resource to be 
@@ -97,7 +121,7 @@ public interface LocalResource {
    * @return <code>LocalResourceVisibility</code> of the resource to be 
    *         localized
    */
-  public LocalResourceVisibility getVisibility();
+  public abstract LocalResourceVisibility getVisibility();
   
   /**
    * Set the <code>LocalResourceVisibility</code> of the resource to be 
@@ -105,7 +129,7 @@ public interface LocalResource {
    * @param visibility <code>LocalResourceVisibility</code> of the resource to be 
    *                   localized
    */
-  public void setVisibility(LocalResourceVisibility visibility);
+  public abstract void setVisibility(LocalResourceVisibility visibility);
   
   /**
    * Get the <em>pattern</em> that should be used to extract entries from the
@@ -113,7 +137,7 @@ public interface LocalResource {
    * @return <em>pattern</em> that should be used to extract entries from the 
    * archive. 
    */
-  public String getPattern();
+  public abstract String getPattern();
   
   /**
    * Set the <em>pattern</em> that should be used to extract entries from the
@@ -121,5 +145,5 @@ public interface LocalResource {
    * @param pattern <em>pattern</em> that should be used to extract entries 
    * from the archive.
    */
-  public void setPattern(String pattern);
+  public abstract void setPattern(String pattern);
 }

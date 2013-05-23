@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>ContainerId</code> represents a globally unique identifier
@@ -32,6 +33,16 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @Public
 @Stable
 public abstract class ContainerId implements Comparable<ContainerId>{
+
+  @Private
+  public static ContainerId newInstance(ApplicationAttemptId appAttemptId,
+      int containerId) {
+    ContainerId id = Records.newRecord(ContainerId.class);
+    id.setId(containerId);
+    id.setApplicationAttemptId(appAttemptId);
+    return id;
+  }
+
   /**
    * Get the <code>ApplicationAttemptId</code> of the application to which
    * the <code>Container</code> was assigned.

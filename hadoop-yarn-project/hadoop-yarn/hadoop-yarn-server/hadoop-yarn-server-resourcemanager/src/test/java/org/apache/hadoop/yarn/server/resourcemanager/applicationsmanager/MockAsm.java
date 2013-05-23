@@ -25,15 +25,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -46,108 +42,6 @@ import com.google.common.collect.Lists;
 
 @InterfaceAudience.Private
 public abstract class MockAsm extends MockApps {
-
-  public static class AppMasterBase implements ApplicationMaster {
-    @Override
-    public ApplicationId getApplicationId() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public String getHost() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public int getRpcPort() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public String getTrackingUrl() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public ApplicationStatus getStatus() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public YarnApplicationState getState() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public ClientToken getClientToken() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public int getAMFailCount() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public int getContainerCount() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public String getDiagnostics() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setApplicationId(ApplicationId appId) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setHost(String host) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setRpcPort(int rpcPort) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setTrackingUrl(String url) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setStatus(ApplicationStatus status) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setState(YarnApplicationState state) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setClientToken(ClientToken clientToken) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setAMFailCount(int amFailCount) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setContainerCount(int containerCount) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setDiagnostics(String diagnostics) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-  }
 
   public static class ApplicationBase implements RMApp {
     @Override

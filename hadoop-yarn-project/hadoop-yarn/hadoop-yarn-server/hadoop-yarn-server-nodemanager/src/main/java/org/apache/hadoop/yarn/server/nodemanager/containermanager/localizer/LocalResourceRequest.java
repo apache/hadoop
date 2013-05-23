@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class LocalResourceRequest
-    implements LocalResource, Comparable<LocalResourceRequest> {
+    extends LocalResource implements Comparable<LocalResourceRequest> {
 
   private final Path loc;
   private final long timestamp;

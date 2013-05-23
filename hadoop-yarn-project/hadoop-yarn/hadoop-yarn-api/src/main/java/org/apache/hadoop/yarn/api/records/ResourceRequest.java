@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.records;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>ResourceRequest</code> represents the request made by an
@@ -49,6 +50,18 @@ import org.apache.hadoop.yarn.api.AMRMProtocol;
 @Public
 @Stable
 public abstract class ResourceRequest implements Comparable<ResourceRequest> {
+
+  @Public
+  @Stable
+  public static ResourceRequest newInstance(Priority priority,
+      String hostName, Resource capability, int numContainers) {
+    ResourceRequest request = Records.newRecord(ResourceRequest.class);
+    request.setPriority(priority);
+    request.setHostName(hostName);
+    request.setCapability(capability);
+    request.setNumContainers(numContainers);
+    return request;
+  }
 
   /**
    * The constant string representing no locality.

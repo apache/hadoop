@@ -18,21 +18,32 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Contains various scheduling metrics to be reported by UI and CLI.
  */
 @Public
 @Stable
-public interface ApplicationResourceUsageReport {
+public abstract class ApplicationResourceUsageReport {
+
+  @Private
+  public static ApplicationResourceUsageReport newInstance(
+      int numUsedContainers, int numReservedContainers, Resource usedResources,
+      Resource reservedResources, Resource neededResources) {
+    ApplicationResourceUsageReport report =
+        Records.newRecord(ApplicationResourceUsageReport.class);
+    report.setNumUsedContainers(numUsedContainers);
+    report.setNumReservedContainers(numReservedContainers);
+    report.setUsedResources(usedResources);
+    report.setReservedResources(reservedResources);
+    report.setNeededResources(neededResources);
+    return report;
+  }
 
   /**
    * Get the number of used containers
@@ -40,7 +51,7 @@ public interface ApplicationResourceUsageReport {
    */
   @Public
   @Stable
-  int getNumUsedContainers();
+  public abstract int getNumUsedContainers();
 
   /**
    * Set the number of used containers
@@ -48,7 +59,7 @@ public interface ApplicationResourceUsageReport {
    */
   @Private
   @Unstable
-  void setNumUsedContainers(int num_containers);
+  public abstract void setNumUsedContainers(int num_containers);
 
   /**
    * Get the number of reserved containers
@@ -56,7 +67,7 @@ public interface ApplicationResourceUsageReport {
    */
   @Public
   @Stable
-  int getNumReservedContainers();
+  public abstract int getNumReservedContainers();
 
   /**
    * Set the number of reserved containers
@@ -64,7 +75,7 @@ public interface ApplicationResourceUsageReport {
    */
   @Private
   @Unstable
-  void setNumReservedContainers(int num_reserved_containers);
+  public abstract void setNumReservedContainers(int num_reserved_containers);
 
   /**
    * Get the used <code>Resource</code>
@@ -72,11 +83,11 @@ public interface ApplicationResourceUsageReport {
    */
   @Public
   @Stable
-  Resource getUsedResources();
+  public abstract Resource getUsedResources();
 
   @Private
   @Unstable
-  void setUsedResources(Resource resources);
+  public abstract void setUsedResources(Resource resources);
 
   /**
    * Get the reserved <code>Resource</code>
@@ -84,11 +95,11 @@ public interface ApplicationResourceUsageReport {
    */
   @Public
   @Stable
-  Resource getReservedResources();
+  public abstract Resource getReservedResources();
 
   @Private
   @Unstable
-  void setReservedResources(Resource reserved_resources);
+  public abstract void setReservedResources(Resource reserved_resources);
 
   /**
    * Get the needed <code>Resource</code>
@@ -96,9 +107,9 @@ public interface ApplicationResourceUsageReport {
    */
   @Public
   @Stable
-  Resource getNeededResources();
+  public abstract Resource getNeededResources();
 
   @Private
   @Unstable
-  void setNeededResources(Resource needed_resources);
+  public abstract void setNeededResources(Resource needed_resources);
 }

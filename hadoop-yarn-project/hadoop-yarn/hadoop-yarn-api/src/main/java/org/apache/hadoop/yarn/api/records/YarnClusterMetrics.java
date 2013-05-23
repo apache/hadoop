@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>YarnClusterMetrics</code> represents cluster metrics.</p>
@@ -30,8 +31,15 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
  */
 @Public
 @Stable
-public interface YarnClusterMetrics {
+public abstract class YarnClusterMetrics {
   
+  @Private
+  public static YarnClusterMetrics newInstance(int numNodeManagers) {
+    YarnClusterMetrics metrics = Records.newRecord(YarnClusterMetrics.class);
+    metrics.setNumNodeManagers(numNodeManagers);
+    return metrics;
+  }
+
   /**
    * Get the number of <code>NodeManager</code>s in the cluster.
    * @return number of <code>NodeManager</code>s in the cluster

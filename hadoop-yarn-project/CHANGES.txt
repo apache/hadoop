@@ -266,6 +266,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-708. Moved RecordFactory classes to hadoop-yarn-api, and put some
     miscellaneous fixes to the interfaces. (Siddharth Seth via vinodkv)
 
+    YARN-711. Copied BuilderUtil methods in individual API records as
+    BuilderUtils is going to be dismantled. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -23,15 +23,13 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.QueueACL;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueACLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueUserACLInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueUserACLInfoProtoOrBuilder;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
-public class QueueUserACLInfoPBImpl extends ProtoBase<QueueUserACLInfoProto> 
-implements QueueUserACLInfo {
+public class QueueUserACLInfoPBImpl extends QueueUserACLInfo {
 
   QueueUserACLInfoProto proto = QueueUserACLInfoProto.getDefaultInstance();
   QueueUserACLInfoProto.Builder builder = null;
@@ -78,12 +76,31 @@ implements QueueUserACLInfo {
     this.userAclsList = userAclsList;
   }
 
-  @Override
   public QueueUserACLInfoProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void initLocalQueueUserAclsList() {

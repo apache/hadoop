@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>NodeReport</code> is a summary of runtime information of a 
@@ -45,26 +46,43 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  */
 @Public
 @Stable
-public interface NodeReport {
+public abstract class NodeReport {
+
+  @Private
+  public static NodeReport newInstance(NodeId nodeId, NodeState nodeState,
+      String httpAddress, String rackName, Resource used, Resource capability,
+      int numContainers, NodeHealthStatus nodeHealthStatus) {
+    NodeReport nodeReport = Records.newRecord(NodeReport.class);
+    nodeReport.setNodeId(nodeId);
+    nodeReport.setNodeState(nodeState);
+    nodeReport.setHttpAddress(httpAddress);
+    nodeReport.setRackName(rackName);
+    nodeReport.setUsed(used);
+    nodeReport.setCapability(capability);
+    nodeReport.setNumContainers(numContainers);
+    nodeReport.setNodeHealthStatus(nodeHealthStatus);
+    return nodeReport;
+  }
+
   /**
    * Get the <code>NodeId</code> of the node.
    * @return <code>NodeId</code> of the node
    */
-  NodeId getNodeId();
+  public abstract NodeId getNodeId();
   
   @Private
   @Unstable
-  void setNodeId(NodeId nodeId);
+  public abstract void setNodeId(NodeId nodeId);
   
   /**
    * Get the <code>NodeState</code> of the node.
    * @return <code>NodeState</code> of the node
    */
-  NodeState getNodeState();
+  public abstract NodeState getNodeState();
   
   @Private
   @Unstable
-  void setNodeState(NodeState nodeState);
+  public abstract void setNodeState(NodeState nodeState);
   
   /**
    * Get the <em>http address</em> of the node.
@@ -72,11 +90,11 @@ public interface NodeReport {
    */
   @Public
   @Stable
-  String getHttpAddress();
+  public abstract String getHttpAddress();
   
   @Private
   @Unstable
-  void setHttpAddress(String httpAddress);
+  public abstract void setHttpAddress(String httpAddress);
   
   /**
    * Get the <em>rack name</em> for the node.
@@ -84,11 +102,11 @@ public interface NodeReport {
    */
   @Public
   @Stable
-  String getRackName();
+  public abstract String getRackName();
   
   @Private
   @Unstable
-  void setRackName(String rackName);
+  public abstract void setRackName(String rackName);
   
   /**
    * Get <em>used</em> <code>Resource</code> on the node.
@@ -96,11 +114,11 @@ public interface NodeReport {
    */
   @Public
   @Stable
-  Resource getUsed();        
+  public abstract Resource getUsed();
   
   @Private
   @Unstable
-  void setUsed(Resource used);
+  public abstract void setUsed(Resource used);
   
   /**
    * Get the <em>total</em> <code>Resource</code> on the node.
@@ -108,11 +126,11 @@ public interface NodeReport {
    */
   @Public
   @Stable
-  Resource getCapability();
+  public abstract Resource getCapability();
   
   @Private
   @Unstable
-  void setCapability(Resource capability);
+  public abstract void setCapability(Resource capability);
   
   /**
    * Get the <em>number of running containers</em> on the node.
@@ -120,11 +138,11 @@ public interface NodeReport {
    */
   @Public
   @Stable
-  int getNumContainers();
+  public abstract int getNumContainers();
   
   @Private
   @Unstable
-  void setNumContainers(int numContainers);
+  public abstract void setNumContainers(int numContainers);
   
   /**
    * Get the <code>NodeHealthStatus</code> of the node. 
@@ -132,9 +150,9 @@ public interface NodeReport {
    */
   @Public
   @Stable
-  NodeHealthStatus getNodeHealthStatus();
+  public abstract NodeHealthStatus getNodeHealthStatus();
   
   @Private
   @Unstable
-  void setNodeHealthStatus(NodeHealthStatus nodeHealthStatus);
+  public abstract void setNodeHealthStatus(NodeHealthStatus nodeHealthStatus);
 }
