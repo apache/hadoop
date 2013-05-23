@@ -197,7 +197,6 @@
         <configuration>
           <excludes>
             <exclude>CHANGES.txt</exclude>
-            <exclude>CHANGES.branch-trunk-win.txt</exclude>
           </excludes>
         </configuration>
       </plugin>
