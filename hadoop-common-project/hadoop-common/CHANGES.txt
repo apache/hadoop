@@ -307,6 +307,14 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9372. Fix bad timeout annotations on tests.
     (Arpit Agarwal via suresh)
 
+    HADOOP-9376. TestProxyUserFromEnv fails on a Windows domain joined machine.
+    (Ivan Mitic via suresh)
+
+    HADOOP-9365. TestHAZKUtil fails on Windows. (Ivan Mitic via suresh)
+
+    HADOOP-9364. PathData#expandAsGlob does not return correct results for
+    absolute paths on Windows. (Ivan Mitic via suresh)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
