@@ -197,34 +197,41 @@ public class TestINodeFile {
     long fileLen = 1024;
     replication = 3;
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
-        replication).build();
-    cluster.waitActive();
-    FSNamesystem fsn = cluster.getNamesystem();
-    FSDirectory fsdir = fsn.getFSDirectory();
-    DistributedFileSystem dfs = cluster.getFileSystem();
-    
-    // Create a file for test
-    final Path dir = new Path("/dir");
-    final Path file = new Path(dir, "file");
-    DFSTestUtil.createFile(dfs, file, fileLen, replication, 0L);
-    
-    // Check the full path name of the INode associating with the file
-    INode fnode = fsdir.getINode(file.toString());
-    assertEquals(file.toString(), fnode.getFullPathName());
-    
-    // Call FSDirectory#unprotectedSetQuota which calls
-    // INodeDirectory#replaceChild
-    dfs.setQuota(dir, Long.MAX_VALUE - 1, replication * fileLen * 10);
-    final Path newDir = new Path("/newdir");
-    final Path newFile = new Path(newDir, "file");
-    // Also rename dir
-    dfs.rename(dir, newDir, Options.Rename.OVERWRITE);
-    // /dir/file now should be renamed to /newdir/file
-    fnode = fsdir.getINode(newFile.toString());
-    // getFullPathName can return correct result only if the parent field of
-    // child node is set correctly
-    assertEquals(newFile.toString(), fnode.getFullPathName());
+    MiniDFSCluster cluster = null;
+    try {
+      cluster =
+          new MiniDFSCluster.Builder(conf).numDataNodes(replication).build();
+      cluster.waitActive();
+      FSNamesystem fsn = cluster.getNamesystem();
+      FSDirectory fsdir = fsn.getFSDirectory();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+
+      // Create a file for test
+      final Path dir = new Path("/dir");
+      final Path file = new Path(dir, "file");
+      DFSTestUtil.createFile(dfs, file, fileLen, replication, 0L);
+
+      // Check the full path name of the INode associating with the file
+      INode fnode = fsdir.getINode(file.toString());
+      assertEquals(file.toString(), fnode.getFullPathName());
+
+      // Call FSDirectory#unprotectedSetQuota which calls
+      // INodeDirectory#replaceChild
+      dfs.setQuota(dir, Long.MAX_VALUE - 1, replication * fileLen * 10);
+      final Path newDir = new Path("/newdir");
+      final Path newFile = new Path(newDir, "file");
+      // Also rename dir
+      dfs.rename(dir, newDir, Options.Rename.OVERWRITE);
+      // /dir/file now should be renamed to /newdir/file
+      fnode = fsdir.getINode(newFile.toString());
+      // getFullPathName can return correct result only if the parent field of
+      // child node is set correctly
+      assertEquals(newFile.toString(), fnode.getFullPathName());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
   
   @Test
