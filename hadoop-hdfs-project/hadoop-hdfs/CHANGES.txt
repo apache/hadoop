@@ -7,6 +7,8 @@ Release 0.23.8 - UNRELEASED
   NEW FEATURES
   
   IMPROVEMENTS
+    HDFS-4714. Log short messages in Namenode RPC server for exceptions 
+    meant for clients. (kihwal)
   
   OPTIMIZATIONS
  
