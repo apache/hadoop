@@ -86,7 +86,8 @@ public class ShellBasedUnixGroupsMapping
       LOG.warn("got exception trying to get groups for user " + user, e);
     }
     
-    StringTokenizer tokenizer = new StringTokenizer(result);
+    StringTokenizer tokenizer =
+        new StringTokenizer(result, Shell.TOKEN_SEPARATOR_REGEX);
     List<String> groups = new LinkedList<String>();
     while (tokenizer.hasMoreTokens()) {
       groups.add(tokenizer.nextToken());

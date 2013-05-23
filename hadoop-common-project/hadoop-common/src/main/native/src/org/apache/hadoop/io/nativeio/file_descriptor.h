@@ -18,11 +18,19 @@
 #define FILE_DESCRIPTOR_H
 
 #include <jni.h>
+#include "org_apache_hadoop.h"
 
 void fd_init(JNIEnv *env);
 void fd_deinit(JNIEnv *env);
 
+#ifdef UNIX
 int fd_get(JNIEnv* env, jobject obj);
 jobject fd_create(JNIEnv *env, int fd);
+#endif
+
+#ifdef WINDOWS
+long fd_get(JNIEnv* env, jobject obj);
+jobject fd_create(JNIEnv *env, long fd);
+#endif
 
 #endif

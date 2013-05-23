@@ -16,9 +16,12 @@
  * limitations under the License.
  */
 
-#include "config.h"
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_io_compress_lz4_Lz4Decompressor.h"
+
+#ifdef UNIX
+#include "config.h"
+#endif // UNIX
 
 int LZ4_uncompress_unknownOutputSize(const char* source, char* dest, int isize, int maxOutputSize);
 
@@ -58,6 +61,9 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Decompressor_in
 
 JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Decompressor_decompressBytesDirect
 (JNIEnv *env, jobject thisj){
+  const char *compressed_bytes;
+  char *uncompressed_bytes;
+
   // Get members of Lz4Decompressor
   jobject clazz = (*env)->GetStaticObjectField(env,thisj, Lz4Decompressor_clazz);
   jobject compressed_direct_buf = (*env)->GetObjectField(env,thisj, Lz4Decompressor_compressedDirectBuf);
@@ -67,7 +73,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Decompressor_de
 
   // Get the input direct buffer
   LOCK_CLASS(env, clazz, "Lz4Decompressor");
-  const char* compressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, compressed_direct_buf);
+  compressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, compressed_direct_buf);
   UNLOCK_CLASS(env, clazz, "Lz4Decompressor");
 
   if (compressed_bytes == 0) {
@@ -76,7 +82,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Decompressor_de
 
   // Get the output direct buffer
   LOCK_CLASS(env, clazz, "Lz4Decompressor");
-  char* uncompressed_bytes = (char *)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
+  uncompressed_bytes = (char *)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
   UNLOCK_CLASS(env, clazz, "Lz4Decompressor");
 
   if (uncompressed_bytes == 0) {

@@ -21,25 +21,31 @@
  *   All rights reserved. Use of this source code is governed by a
  *   BSD-style license that can be found in the LICENSE file.
  */
+
+#include "org_apache_hadoop.h"
+
 #include <assert.h>
-#include <arpa/inet.h>
 #include <errno.h>
 #include <stdint.h>
+
+#ifdef UNIX
+#include <arpa/inet.h>
 #include <unistd.h>
+#endif // UNIX
 
 #include "crc32_zlib_polynomial_tables.h"
 #include "crc32c_tables.h"
 #include "bulk_crc32.h"
 #include "gcc_optimizations.h"
 
-#ifndef __FreeBSD__
+#if (!defined(__FreeBSD__) && !defined(WINDOWS))
 #define USE_PIPELINED
 #endif
 
 #define CRC_INITIAL_VAL 0xffffffff
 
 typedef uint32_t (*crc_update_func_t)(uint32_t, const uint8_t *, size_t);
-static inline uint32_t crc_val(uint32_t crc);
+static uint32_t crc_val(uint32_t crc);
 static uint32_t crc32_zlib_sb8(uint32_t crc, const uint8_t *buf, size_t length);
 static uint32_t crc32c_sb8(uint32_t crc, const uint8_t *buf, size_t length);
 
@@ -187,7 +193,7 @@ return_crc_error:
 /**
  * Extract the final result of a CRC
  */
-static inline uint32_t crc_val(uint32_t crc) {
+uint32_t crc_val(uint32_t crc) {
   return ~crc;
 }
 
@@ -200,11 +206,13 @@ static uint32_t crc32c_sb8(uint32_t crc, const uint8_t *buf, size_t length) {
   uint32_t end_bytes = length - running_length; 
   int li;
   for (li=0; li < running_length/8; li++) {
+	uint32_t term1;
+	uint32_t term2;
     crc ^= *(uint32_t *)buf;
     buf += 4;
-    uint32_t term1 = CRC32C_T8_7[crc & 0x000000FF] ^
+    term1 = CRC32C_T8_7[crc & 0x000000FF] ^
         CRC32C_T8_6[(crc >> 8) & 0x000000FF];
-    uint32_t term2 = crc >> 16;
+    term2 = crc >> 16;
     crc = term1 ^
         CRC32C_T8_5[term2 & 0x000000FF] ^ 
         CRC32C_T8_4[(term2 >> 8) & 0x000000FF];
@@ -234,11 +242,13 @@ static uint32_t crc32_zlib_sb8(
   uint32_t end_bytes = length - running_length; 
   int li;
   for (li=0; li < running_length/8; li++) {
+	uint32_t term1;
+	uint32_t term2;
     crc ^= *(uint32_t *)buf;
     buf += 4;
-    uint32_t term1 = CRC32_T8_7[crc & 0x000000FF] ^
+    term1 = CRC32_T8_7[crc & 0x000000FF] ^
         CRC32_T8_6[(crc >> 8) & 0x000000FF];
-    uint32_t term2 = crc >> 16;
+    term2 = crc >> 16;
     crc = term1 ^
         CRC32_T8_5[term2 & 0x000000FF] ^ 
         CRC32_T8_4[(term2 >> 8) & 0x000000FF];

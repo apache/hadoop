@@ -91,9 +91,6 @@ case $COMMAND in
     ;;
 
   classpath)
-    if $cygwin; then
-      CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-    fi
     echo $CLASSPATH
     exit
     ;;
@@ -132,9 +129,6 @@ case $COMMAND in
     #make sure security appender is turned off
     HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
 
-    if $cygwin; then
-      CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-    fi
     export CLASSPATH=$CLASSPATH
     exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"
     ;;

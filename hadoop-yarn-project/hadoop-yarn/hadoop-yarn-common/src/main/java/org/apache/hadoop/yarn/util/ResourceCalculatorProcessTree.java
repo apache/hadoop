@@ -145,14 +145,11 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
     }
 
     // No class given, try a os specific class
-    try {
-      String osName = System.getProperty("os.name");
-      if (osName.startsWith("Linux")) {
-        return new ProcfsBasedProcessTree(pid);
-      }
-    } catch (SecurityException se) {
-      // Failed to get Operating System name.
-      return null;
+    if (ProcfsBasedProcessTree.isAvailable()) {
+      return new ProcfsBasedProcessTree(pid);
+    }
+    if (WindowsBasedProcessTree.isAvailable()) {
+      return new WindowsBasedProcessTree(pid);
     }
 
     // Not supported on this system.

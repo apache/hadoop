@@ -53,7 +53,7 @@ public class TestSymLink
   String cacheString = "This is just the cache string";
   StreamJob job;
 
-  @Test
+  @Test (timeout = 60000)
   public void testSymLink() throws Exception
   {
     boolean mayExit = false;

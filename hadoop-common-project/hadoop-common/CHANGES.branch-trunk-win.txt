@@ -1,0 +1,111 @@
+branch-trunk-win changes - unreleased
+
+  HADOOP-8924. Hadoop Common creating package-info.java must not depend on sh.
+  (Chris Nauroth via suresh)
+
+  HADOOP-8945. Merge winutils from branch-1-win to branch-trunk-win.
+  (Bikas Saha, Chuan Liu, Giridharan Kesavan, Ivan Mitic, and Steve Maine
+  ported by Chris Nauroth via suresh)
+
+  HADOOP-8946. winutils: compile codebase during Maven build on 
+  branch-trunk-win. (Chris Nauroth via suresh)
+
+  HADOOP-8947. Merge FileUtil and Shell changes from branch-1-win to 
+  branch-trunk-win to enable initial test pass. (Raja Aluri, Davio Lao, 
+  Sumadhur Reddy Bolli, Ahmed El Baz, Kanna Karanam, Chuan Liu, 
+  Ivan Mitic, Chris Nauroth, and Bikas Saha via suresh)
+
+  HADOOP-8954. "stat" executable not found on Windows. (Bikas Saha, Ivan Mitic
+  ported by Chris Narouth via suresh)
+
+  HADOOP-8959. TestUserGroupInformation fails on Windows due to "id" executable
+  not found. (Bikas Saha, Ivan Mitic, ported by Chris Narouth via suresh)
+
+  HADOOP-8955. "chmod" executable not found on Windows.
+  (Chris Nauroth via suresh)
+
+  HADOOP-8960. TestMetricsServlet fails on Windows. (Ivan Mitic via suresh)
+
+  HADOOP-8961. GenericOptionsParser URI parsing failure on Windows.
+  (Ivan Mitic via suresh)
+
+  HADOOP-8949. Remove FileUtil.CygPathCommand dead code. (Chris Nauroth via 
+  suresh)
+
+  HADOOP-8956. FileSystem.primitiveMkdir failures on Windows cause multiple
+  test suites to fail. (Chris Nauroth via suresh)
+
+  HADOOP-8978. TestTrash fails on Windows. (Chris Nauroth via suresh)
+
+  HADOOP-8979. TestHttpServer fails on Windows. (Chris Nauroth via suresh)
+
+  HADOOP-8953. Shell PathData parsing failures on Windows. (Arpit Agarwal via
+  suresh)
+
+  HADOOP-8975. TestFileContextResolveAfs fails on Windows. (Chris Nauroth via
+  suresh)
+
+  HADOOP-8977. Multiple FsShell test failures on Windows. (Chris Nauroth via
+  suresh)
+
+  HADOOP-9005. Merge hadoop cmd line scripts from branch-1-win. (David Lao, 
+  Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
+
+  HADOOP-9008. Building hadoop tarball fails on Windows. (Chris Nauroth via
+  suresh)
+
+  HADOOP-9011. saveVersion.py does not include branch in version annotation.
+  (Chris Nauroth via suresh)
+
+  HADOOP-9110. winutils ls off-by-one error indexing MONTHS array can cause 
+  access violation. (Chris Nauroth via suresh)
+
+  HADOOP-9056. Build native library on Windows. (Chuan Liu, Arpit Agarwal via
+  suresh)
+
+  HADOOP-9144. Fix findbugs warnings. (Chris Nauroth via suresh)
+
+  HADOOP-9081. Add TestWinUtils. (Chuan Liu, Ivan Mitic, Chris Nauroth, 
+  and Bikas Saha via suresh)
+
+  HADOOP-9146. Fix sticky bit regression on branch-trunk-win.
+  (Chris Nauroth via suresh)
+
+  HADOOP-9266. Fix javac, findbugs, and release audit warnings on
+  branch-trunk-win. (Chris Nauroth via suresh)
+
+  HADOOP-9270. Remove a stale java comment from FileUtil. (Chris Nauroth via
+  szetszwo)
+
+  HADOOP-9271. Revert Python build scripts from branch-trunk-win.
+  (Chris Nauroth via suresh)
+
+  HADOOP-9313. Remove spurious mkdir from hadoop-config.cmd.
+  (Ivan Mitic via suresh)
+
+  HADOOP-9309. Test failures on Windows due to UnsatisfiedLinkError
+  in NativeCodeLoader#buildSupportsSnappy. (Arpit Agarwal via suresh)
+
+  HADOOP-9347. Add instructions to BUILDING.txt describing how to
+  build on Windows. (Chris Nauroth via suresh)
+
+  HADOOP-9348. Address TODO in winutils to add more command line usage
+  and examples. (Chris Nauroth via suresh)
+
+  HADOOP-9354. Windows native project files missing license headers.
+  (Chris Nauroth via suresh)
+
+  HADOOP-9356. Remove remaining references to cygwin/cygpath from scripts.
+  (Chris Nauroth via suresh)
+
+  HADOOP-9232. JniBasedUnixGroupsMappingWithFallback fails on Windows
+  with UnsatisfiedLinkError. (Ivan Mitic via suresh)
+
+  HADOOP-9368. Add timeouts to new tests in branch-trunk-win.
+  (Arpit Agarwal via suresh)
+
+Patch equivalent to trunk committed to branch-trunk-win
+
+  HADOOP-8924. Add maven plugin alternative to shell script to save
+  package-info.java. (Chris Nauroth via suresh)
+

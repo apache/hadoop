@@ -1,0 +1,29 @@
+branch-trunk-win changes - unreleased
+
+  YARN-158. Yarn creating package-info.java must not depend on sh.
+  (Chris Nauroth via suresh)
+
+  YARN-176. Some YARN tests fail to find winutils. (Chris Nauroth via suresh)
+  
+  YARN-207. YARN distribution build fails on Windows. (Chris Nauroth via
+  suresh)
+
+  YARN-199. Yarn cmd line scripts for windows. (Ivan Mitic via suresh)
+
+  YARN-213. YARN build script would be more readable using abspath.
+  (Chris Nauroth via suresh)
+
+  YARN-233. Added support for running containers in MS Windows to YARN. (Chris
+  Nauroth via acmurthy)
+
+  YARN-234. Added support for process tree and resource calculator in MS Windows 
+  to YARN. (Chris Nauroth via acmurthy)
+
+  YARN-259. Fix LocalDirsHandlerService to use Path rather than URIs. (Xuan
+  Gong via acmurthy) 
+
+  YARN-316. YARN container launch may exceed maximum Windows command line 
+  length due to long classpath. (Chris Nauroth via suresh)
+
+  YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
+  via vinodkv)

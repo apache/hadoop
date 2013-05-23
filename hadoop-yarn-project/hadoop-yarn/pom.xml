@@ -159,6 +159,10 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <environmentVariables>
+            <!-- HADOOP_HOME required for tests on Windows to find winutils -->
+            <HADOOP_HOME>${basedir}/../../../hadoop-common-project/hadoop-common/target</HADOOP_HOME>
+          </environmentVariables>
           <properties>
             <property>
               <name>listener</name>

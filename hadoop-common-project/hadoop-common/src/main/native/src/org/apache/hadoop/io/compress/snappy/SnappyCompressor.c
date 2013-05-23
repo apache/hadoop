@@ -16,12 +16,18 @@
  * limitations under the License.
  */
 
-#include <dlfcn.h>
+
+#if defined HADOOP_SNAPPY_LIBRARY
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef UNIX
+#include <dlfcn.h>
 #include "config.h"
+#endif // UNIX
+
 #include "org_apache_hadoop_io_compress_snappy.h"
 #include "org_apache_hadoop_io_compress_snappy_SnappyCompressor.h"
 
@@ -81,7 +87,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
   UNLOCK_CLASS(env, clazz, "SnappyCompressor");
 
   if (uncompressed_bytes == 0) {
-    return 0;
+    return (jint)0;
   }
 
   // Get the output direct buffer
@@ -90,7 +96,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
   UNLOCK_CLASS(env, clazz, "SnappyCompressor");
 
   if (compressed_bytes == 0) {
-    return 0;
+    return (jint)0;
   }
 
   /* size_t should always be 4 bytes or larger. */
@@ -109,3 +115,5 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
   (*env)->SetIntField(env, thisj, SnappyCompressor_uncompressedDirectBufLen, 0);
   return (jint)buf_len;
 }
+
+#endif //define HADOOP_SNAPPY_LIBRARY

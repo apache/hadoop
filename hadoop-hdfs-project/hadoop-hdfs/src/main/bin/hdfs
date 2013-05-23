@@ -146,9 +146,6 @@ else
   CLASS="$COMMAND"
 fi
 
-if $cygwin; then
-  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-fi
 export CLASSPATH=$CLASSPATH
 
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"

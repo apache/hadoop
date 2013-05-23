@@ -107,7 +107,7 @@
                         fi
                       }
 
-                      ROOT=`cd ${basedir}/..;pwd`
+                      ROOT=`cd ../..;pwd`
                       echo
                       echo "Current directory `pwd`"
                       echo
@@ -151,7 +151,8 @@
                         fi
                       }
 
-                      run tar czf hadoop-${project.version}.tar.gz hadoop-${project.version}
+                      run tar cf hadoop-${project.version}.tar hadoop-${project.version}
+                      run gzip hadoop-${project.version}.tar
                       echo
                       echo "Hadoop dist tar available at: ${project.build.directory}/hadoop-${project.version}.tar.gz"
                       echo

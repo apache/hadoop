@@ -16,12 +16,18 @@
  * limitations under the License.
  */
 
-#include <dlfcn.h>
+
+#if defined HADOOP_SNAPPY_LIBRARY
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef UNIX
 #include "config.h"
+#include <dlfcn.h>
+#endif
+
 #include "org_apache_hadoop_io_compress_snappy.h"
 #include "org_apache_hadoop_io_compress_snappy_SnappyDecompressor.h"
 
@@ -103,3 +109,5 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyDecompres
 
   return (jint)uncompressed_direct_buf_len;
 }
+
+#endif //define HADOOP_SNAPPY_LIBRARY

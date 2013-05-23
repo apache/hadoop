@@ -16,9 +16,13 @@
  * limitations under the License.
  */
 
-#include "config.h"
+
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_io_compress_lz4_Lz4Compressor.h"
+
+#ifdef UNIX
+#include "config.h"
+#endif // UNIX
 
 //****************************
 // Simple Functions
@@ -61,6 +65,9 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_init
 
 JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_compressBytesDirect
 (JNIEnv *env, jobject thisj){
+  const char* uncompressed_bytes;
+  char *compressed_bytes;
+
   // Get members of Lz4Compressor
   jobject clazz = (*env)->GetStaticObjectField(env, thisj, Lz4Compressor_clazz);
   jobject uncompressed_direct_buf = (*env)->GetObjectField(env, thisj, Lz4Compressor_uncompressedDirectBuf);
@@ -70,7 +77,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_comp
 
   // Get the input direct buffer
   LOCK_CLASS(env, clazz, "Lz4Compressor");
-  const char* uncompressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
+  uncompressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
   UNLOCK_CLASS(env, clazz, "Lz4Compressor");
 
   if (uncompressed_bytes == 0) {
@@ -79,7 +86,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_comp
 
   // Get the output direct buffer
   LOCK_CLASS(env, clazz, "Lz4Compressor");
-  char* compressed_bytes = (char *)(*env)->GetDirectBufferAddress(env, compressed_direct_buf);
+  compressed_bytes = (char *)(*env)->GetDirectBufferAddress(env, compressed_direct_buf);
   UNLOCK_CLASS(env, clazz, "Lz4Compressor");
 
   if (compressed_bytes == 0) {

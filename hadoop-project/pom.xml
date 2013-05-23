@@ -840,6 +840,8 @@
           <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
           <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
           <environmentVariables>
+            <!-- HADOOP_HOME required for tests on Windows to find winutils -->
+            <HADOOP_HOME>${basedir}/../../hadoop-common-project/hadoop-common/target</HADOOP_HOME>
             <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${basedir}/../../hadoop-common-project/hadoop-common/target/native/target/usr/local/lib/</LD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
@@ -903,6 +905,28 @@
       <properties>
         <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
       </properties>
+    </profile>
+    <profile>
+      <id>native-win</id>
+      <activation>
+        <os>
+          <family>Windows</family>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <environmentVariables>
+                <!-- Specify where to look for the native DLL on Windows -->
+                <PATH>${env.PATH};${basedir}/../../hadoop-common-project/hadoop-common/target/bin</PATH>
+              </environmentVariables>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <id>test-patch</id>

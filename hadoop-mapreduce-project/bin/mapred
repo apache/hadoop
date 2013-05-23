@@ -135,10 +135,6 @@ for f in $HADOOP_MAPRED_HOME/modules/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-if $cygwin; then
-  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-fi
-
 if [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit

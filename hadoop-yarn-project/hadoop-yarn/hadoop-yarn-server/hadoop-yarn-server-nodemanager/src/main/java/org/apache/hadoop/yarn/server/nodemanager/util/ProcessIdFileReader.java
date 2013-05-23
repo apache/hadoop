@@ -25,6 +25,8 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * Helper functionality to read the pid from a file.
@@ -62,14 +64,28 @@ public class ProcessIdFileReader {
           }
           String temp = line.trim(); 
           if (!temp.isEmpty()) {
-            try {
-              Long pid = Long.valueOf(temp);
-              if (pid > 0) {
+            if (Shell.WINDOWS) {
+              // On Windows, pid is expected to be a container ID, so find first
+              // line that parses successfully as a container ID.
+              try {
+                ConverterUtils.toContainerId(temp);
                 processId = temp;
                 break;
+              } catch (Exception e) {
+                // do nothing
               }
-            } catch (Exception e) {
-              // do nothing
+            }
+            else {
+              // Otherwise, find first line containing a numeric pid.
+              try {
+                Long pid = Long.valueOf(temp);
+                if (pid > 0) {
+                  processId = temp;
+                  break;
+                }
+              } catch (Exception e) {
+                // do nothing
+              }
             }
           }
         }
