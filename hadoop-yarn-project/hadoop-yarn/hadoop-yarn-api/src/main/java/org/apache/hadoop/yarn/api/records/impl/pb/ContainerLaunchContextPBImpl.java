@@ -28,7 +28,6 @@ import java.util.Map;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProtoOrBuilder;
@@ -38,9 +37,10 @@ import org.apache.hadoop.yarn.proto.YarnProtos.StringLocalResourceMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
+import com.google.protobuf.ByteString;
+
 public class ContainerLaunchContextPBImpl 
-extends ProtoBase<ContainerLaunchContextProto> 
-implements ContainerLaunchContext {
+extends ContainerLaunchContext {
   ContainerLaunchContextProto proto = 
       ContainerLaunchContextProto.getDefaultInstance();
   ContainerLaunchContextProto.Builder builder = null;
@@ -68,7 +68,35 @@ implements ContainerLaunchContext {
     viaProto = true;
     return proto;
   }
-  
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+  }
+
+  protected final ByteBuffer convertFromProtoFormat(ByteString byteString) {
+    return ProtoUtils.convertFromProtoFormat(byteString);
+  }
+
+  protected final ByteString convertToProtoFormat(ByteBuffer byteBuffer) {
+    return ProtoUtils.convertToProtoFormat(byteBuffer);
+  }
+
   private void mergeLocalToBuilder() {
     if (this.localResources != null) {
       addLocalResourcesToProto();

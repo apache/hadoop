@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>ApplicationReport</code> is a report of an application.</p>
@@ -47,7 +48,37 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  */
 @Public
 @Stable
-public interface ApplicationReport {
+public abstract class ApplicationReport {
+
+  @Private
+  public static ApplicationReport newInstance(ApplicationId applicationId,
+      ApplicationAttemptId applicationAttemptId, String user, String queue,
+      String name, String host, int rpcPort, ClientToken clientToken,
+      YarnApplicationState state, String diagnostics, String url,
+      long startTime, long finishTime, FinalApplicationStatus finalStatus,
+      ApplicationResourceUsageReport appResources, String origTrackingUrl,
+      float progress, String applicationType) {
+    ApplicationReport report = Records.newRecord(ApplicationReport.class);
+    report.setApplicationId(applicationId);
+    report.setCurrentApplicationAttemptId(applicationAttemptId);
+    report.setUser(user);
+    report.setQueue(queue);
+    report.setName(name);
+    report.setHost(host);
+    report.setRpcPort(rpcPort);
+    report.setClientToken(clientToken);
+    report.setYarnApplicationState(state);
+    report.setDiagnostics(diagnostics);
+    report.setTrackingUrl(url);
+    report.setStartTime(startTime);
+    report.setFinishTime(finishTime);
+    report.setFinalApplicationStatus(finalStatus);
+    report.setApplicationResourceUsageReport(appResources);
+    report.setOriginalTrackingUrl(origTrackingUrl);
+    report.setProgress(progress);
+    report.setApplicationType(applicationType);
+    return report;
+  }
 
   /**
    * Get the <code>ApplicationId</code> of the application.
@@ -55,11 +86,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  ApplicationId getApplicationId();
+  public abstract ApplicationId getApplicationId();
 
   @Private
   @Unstable
-  void setApplicationId(ApplicationId applicationId);
+  public abstract void setApplicationId(ApplicationId applicationId);
   
   /**
    * Get the <code>ApplicationAttemptId</code> of the current
@@ -68,11 +99,11 @@ public interface ApplicationReport {
    */
   @Private
   @Unstable
-  ApplicationAttemptId getCurrentApplicationAttemptId();
+  public abstract ApplicationAttemptId getCurrentApplicationAttemptId();
   
   @Private
   @Unstable
-  void setCurrentApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
+  public abstract void setCurrentApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
 
   /**
    * Get the <em>user</em> who submitted the application.
@@ -80,11 +111,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  String getUser();
+  public abstract String getUser();
 
   @Private
   @Unstable
-  void setUser(String user);
+  public abstract void setUser(String user);
 
   /**
    * Get the <em>queue</em> to which the application was submitted.
@@ -92,11 +123,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  String getQueue();
+  public abstract String getQueue();
 
   @Private
   @Unstable
-  void setQueue(String queue);
+  public abstract void setQueue(String queue);
 
   /**
    * Get the user-defined <em>name</em> of the application.
@@ -104,11 +135,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  String getName();
+  public abstract String getName();
 
   @Private
   @Unstable
-  void setName(String name);
+  public abstract void setName(String name);
 
   /**
    * Get the <em>host</em> on which the <code>ApplicationMaster</code>
@@ -118,11 +149,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  String getHost();
+  public abstract String getHost();
 
   @Private
   @Unstable
-  void setHost(String host);
+  public abstract void setHost(String host);
 
   /**
    * Get the <em>RPC port</em> of the <code>ApplicationMaster</code>.
@@ -130,11 +161,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  int getRpcPort();
+  public abstract int getRpcPort();
 
   @Private
   @Unstable
-  void setRpcPort(int rpcPort);
+  public abstract void setRpcPort(int rpcPort);
 
   /**
    * Get the <em>client token</em> for communicating with the
@@ -144,11 +175,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  ClientToken getClientToken();
+  public abstract ClientToken getClientToken();
 
   @Private
   @Unstable
-  void setClientToken(ClientToken clientToken);
+  public abstract void setClientToken(ClientToken clientToken);
 
   /**
    * Get the <code>YarnApplicationState</code> of the application.
@@ -156,11 +187,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  YarnApplicationState getYarnApplicationState();
+  public abstract YarnApplicationState getYarnApplicationState();
 
   @Private
   @Unstable
-  void setYarnApplicationState(YarnApplicationState state);
+  public abstract void setYarnApplicationState(YarnApplicationState state);
 
   /**
    * Get  the <em>diagnositic information</em> of the application in case of
@@ -170,11 +201,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  String getDiagnostics();
+  public abstract String getDiagnostics();
 
   @Private
   @Unstable
-  void setDiagnostics(String diagnostics);
+  public abstract void setDiagnostics(String diagnostics);
 
   /**
    * Get the <em>tracking url</em> for the application.
@@ -182,11 +213,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  String getTrackingUrl();
+  public abstract String getTrackingUrl();
 
   @Private
   @Unstable
-  void setTrackingUrl(String url);
+  public abstract void setTrackingUrl(String url);
   
   /**
    * Get the original not-proxied <em>tracking url</em> for the application.
@@ -195,11 +226,11 @@ public interface ApplicationReport {
    */
   @Private
   @Unstable
-  String getOriginalTrackingUrl();
+  public abstract String getOriginalTrackingUrl();
 
   @Private
   @Unstable
-  void setOriginalTrackingUrl(String url);
+  public abstract void setOriginalTrackingUrl(String url);
 
   /**
    * Get the <em>start time</em> of the application.
@@ -207,11 +238,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  long getStartTime();
+  public abstract long getStartTime();
 
   @Private
   @Unstable
-  void setStartTime(long startTime);
+  public abstract void setStartTime(long startTime);
 
   /**
    * Get the <em>finish time</em> of the application.
@@ -219,11 +250,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  long getFinishTime();
+  public abstract long getFinishTime();
 
   @Private
   @Unstable
-  void setFinishTime(long finishTime);
+  public abstract void setFinishTime(long finishTime);
 
 
   /**
@@ -232,11 +263,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  FinalApplicationStatus getFinalApplicationStatus();
+  public abstract FinalApplicationStatus getFinalApplicationStatus();
 
   @Private
   @Unstable
-  void setFinalApplicationStatus(FinalApplicationStatus finishState);
+  public abstract void setFinalApplicationStatus(FinalApplicationStatus finishState);
 
   /**
    * Retrieve the structure containing the job resources for this application
@@ -244,7 +275,7 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  ApplicationResourceUsageReport getApplicationResourceUsageReport();
+  public abstract ApplicationResourceUsageReport getApplicationResourceUsageReport();
 
   /**
    * Store the structure containing the job resources for this application
@@ -252,7 +283,7 @@ public interface ApplicationReport {
    */
   @Private
   @Unstable
-  void setApplicationResourceUsageReport(ApplicationResourceUsageReport appResources);
+  public abstract void setApplicationResourceUsageReport(ApplicationResourceUsageReport appResources);
 
   /**
    * Get the application's progress ( range 0.0 to 1.0 )
@@ -260,11 +291,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  float getProgress();
+  public abstract float getProgress();
 
   @Private
   @Unstable
-  void setProgress(float progress);
+  public abstract void setProgress(float progress);
   
   /**
    * Get the application's Type 
@@ -272,9 +303,9 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  String getApplicationType();
+  public abstract String getApplicationType();
 
   @Private
   @Unstable
-  void setApplicationType(String applicationType);
+  public abstract void setApplicationType(String applicationType);
 }

@@ -24,7 +24,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
@@ -33,7 +32,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
     
-public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Container {
+public class ContainerPBImpl extends Container {
 
   ContainerProto proto = ContainerProto.getDefaultInstance();
   ContainerProto.Builder builder = null;
@@ -60,6 +59,21 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
   }
 
   private void mergeLocalToBuilder() {

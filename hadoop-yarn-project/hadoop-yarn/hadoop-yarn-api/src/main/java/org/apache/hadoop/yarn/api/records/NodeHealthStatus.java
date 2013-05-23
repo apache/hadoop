@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>NodeHealthStatus</code> is a summary of the health status of the
@@ -43,7 +44,17 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  */
 @Public
 @Stable
-public interface NodeHealthStatus {
+public abstract class NodeHealthStatus {
+
+  @Private
+  public static NodeHealthStatus newInstance(boolean isNodeHealthy,
+      String healthReport, long lastHealthReport) {
+    NodeHealthStatus status = Records.newRecord(NodeHealthStatus.class);
+    status.setIsNodeHealthy(isNodeHealthy);
+    status.setHealthReport(healthReport);
+    status.setLastHealthReportTime(lastHealthReport);
+    return status;
+  }
 
   /**
    * Is the node healthy?
@@ -51,11 +62,11 @@ public interface NodeHealthStatus {
    */
   @Public
   @Stable
-  boolean getIsNodeHealthy();
+  public abstract boolean getIsNodeHealthy();
 
   @Private
   @Unstable
-  void setIsNodeHealthy(boolean isNodeHealthy);
+  public abstract void setIsNodeHealthy(boolean isNodeHealthy);
 
   /**
    * Get the <em>diagnostic health report</em> of the node.
@@ -63,11 +74,11 @@ public interface NodeHealthStatus {
    */
   @Public
   @Stable
-  String getHealthReport();
+  public abstract String getHealthReport();
 
   @Private
   @Unstable
-  void setHealthReport(String healthReport);
+  public abstract void setHealthReport(String healthReport);
 
   /**
    * Get the <em>last timestamp</em> at which the health report was received.
@@ -75,9 +86,9 @@ public interface NodeHealthStatus {
    */
   @Public
   @Stable
-  long getLastHealthReportTime();
+  public abstract long getLastHealthReportTime();
 
   @Private
   @Unstable
-  void setLastHealthReportTime(long lastHealthReport);
+  public abstract void setLastHealthReportTime(long lastHealthReport);
 }

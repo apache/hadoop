@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
@@ -32,8 +31,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
-public class QueueInfoPBImpl extends ProtoBase<QueueInfoProto> implements
-    QueueInfo {
+public class QueueInfoPBImpl extends QueueInfo {
 
   QueueInfoProto proto = QueueInfoProto.getDefaultInstance();
   QueueInfoProto.Builder builder = null;
@@ -150,12 +148,31 @@ public class QueueInfoPBImpl extends ProtoBase<QueueInfoProto> implements
     builder.setState(convertToProtoFormat(queueState));
   }
 
-  @Override
   public QueueInfoProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void initLocalApplicationsList() {

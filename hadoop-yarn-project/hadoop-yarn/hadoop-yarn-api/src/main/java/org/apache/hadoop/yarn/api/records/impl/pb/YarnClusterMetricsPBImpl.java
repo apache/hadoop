@@ -19,14 +19,13 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnClusterMetricsProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnClusterMetricsProtoOrBuilder;
 
 
     
-public class YarnClusterMetricsPBImpl extends ProtoBase<YarnClusterMetricsProto> implements YarnClusterMetrics {
+public class YarnClusterMetricsPBImpl extends YarnClusterMetrics {
   YarnClusterMetricsProto proto = YarnClusterMetricsProto.getDefaultInstance();
   YarnClusterMetricsProto.Builder builder = null;
   boolean viaProto = false;
@@ -44,6 +43,26 @@ public class YarnClusterMetricsPBImpl extends ProtoBase<YarnClusterMetricsProto>
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void maybeInitBuilder() {

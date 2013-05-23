@@ -19,12 +19,10 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeHealthStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeHealthStatusProtoOrBuilder;
 
-public class NodeHealthStatusPBImpl extends ProtoBase<NodeHealthStatusProto>
-    implements NodeHealthStatus {
+public class NodeHealthStatusPBImpl extends NodeHealthStatus {
 
   private NodeHealthStatusProto.Builder builder;
   private boolean viaProto = false;
@@ -45,6 +43,26 @@ public class NodeHealthStatusPBImpl extends ProtoBase<NodeHealthStatusProto>
     this.proto = this.viaProto ? this.proto : this.builder.build();
     this.viaProto = true;
     return this.proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToProto() {

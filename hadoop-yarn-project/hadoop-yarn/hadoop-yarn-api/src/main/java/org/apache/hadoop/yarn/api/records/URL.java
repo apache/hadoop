@@ -20,14 +20,27 @@ package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>URL</code> represents a serializable {@link java.net.URL}.</p>
  */
 @Public
 @Evolving
-public interface URL {
-  
+public abstract class URL {
+
+  @Public
+  @Stable
+  public static URL newInstance(String scheme, String host, int port, String file) {
+    URL url = Records.newRecord(URL.class);
+    url.setScheme(scheme);
+    url.setHost(host);
+    url.setPort(port);
+    url.setFile(file);
+    return url;
+  }
+
   /**
    * Get the scheme of the URL.
    * @return scheme of the URL

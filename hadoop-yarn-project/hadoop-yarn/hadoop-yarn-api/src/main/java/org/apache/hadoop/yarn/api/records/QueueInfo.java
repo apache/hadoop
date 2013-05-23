@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>QueueInfo is a report of the runtime information of the queue.</p>
@@ -46,18 +47,35 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  */
 @Public
 @Stable
-public interface QueueInfo {
+public abstract class QueueInfo {
+
+  @Private
+  public static QueueInfo newInstance(String queueName, float capacity,
+      float maximumCapacity, float currentCapacity,
+      List<QueueInfo> childQueues, List<ApplicationReport> applications,
+      QueueState queueState) {
+    QueueInfo queueInfo = Records.newRecord(QueueInfo.class);
+    queueInfo.setQueueName(queueName);
+    queueInfo.setCapacity(capacity);
+    queueInfo.setMaximumCapacity(maximumCapacity);
+    queueInfo.setCurrentCapacity(currentCapacity);
+    queueInfo.setChildQueues(childQueues);
+    queueInfo.setApplications(applications);
+    queueInfo.setQueueState(queueState);
+    return queueInfo;
+  }
+
   /**
    * Get the <em>name</em> of the queue.
    * @return <em>name</em> of the queue
    */
   @Public
   @Stable
-  String getQueueName();
+  public abstract String getQueueName();
   
   @Private
   @Unstable
-  void setQueueName(String queueName);
+  public abstract void setQueueName(String queueName);
   
   /**
    * Get the <em>configured capacity</em> of the queue.
@@ -65,11 +83,11 @@ public interface QueueInfo {
    */
   @Public
   @Stable
-  float getCapacity();
+  public abstract float getCapacity();
   
   @Private
   @Unstable
-  void setCapacity(float capacity);
+  public abstract void setCapacity(float capacity);
   
   /**
    * Get the <em>maximum capacity</em> of the queue.
@@ -77,11 +95,11 @@ public interface QueueInfo {
    */
   @Public
   @Stable
-  float getMaximumCapacity();
+  public abstract float getMaximumCapacity();
   
   @Private
   @Unstable
-  void setMaximumCapacity(float maximumCapacity);
+  public abstract void setMaximumCapacity(float maximumCapacity);
   
   /**
    * Get the <em>current capacity</em> of the queue.
@@ -89,11 +107,11 @@ public interface QueueInfo {
    */
   @Public
   @Stable
-  float getCurrentCapacity();
+  public abstract float getCurrentCapacity();
   
   @Private
   @Unstable
-  void setCurrentCapacity(float currentCapacity);
+  public abstract void setCurrentCapacity(float currentCapacity);
   
   /**
    * Get the <em>child queues</em> of the queue.
@@ -101,11 +119,11 @@ public interface QueueInfo {
    */
   @Public
   @Stable
-  List<QueueInfo> getChildQueues();
+  public abstract List<QueueInfo> getChildQueues();
   
   @Private
   @Unstable
-  void setChildQueues(List<QueueInfo> childQueues);
+  public abstract void setChildQueues(List<QueueInfo> childQueues);
   
   /**
    * Get the <em>running applications</em> of the queue.
@@ -113,11 +131,11 @@ public interface QueueInfo {
    */
   @Public
   @Stable
-  List<ApplicationReport> getApplications();
+  public abstract List<ApplicationReport> getApplications();
   
   @Private
   @Unstable
-  void setApplications(List<ApplicationReport> applications);
+  public abstract void setApplications(List<ApplicationReport> applications);
   
   /**
    * Get the <code>QueueState</code> of the queue.
@@ -125,9 +143,9 @@ public interface QueueInfo {
    */
   @Public
   @Stable
-  QueueState getQueueState();
+  public abstract QueueState getQueueState();
   
   @Private
   @Unstable
-  void setQueueState(QueueState queueState);
+  public abstract void setQueueState(QueueState queueState);
 }

@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p><code>ContainerStatus</code> represents the current status of a 
@@ -38,18 +39,30 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
  */
 @Public
 @Stable
-public interface ContainerStatus {
+public abstract class ContainerStatus {
+
+  @Private
+  public static ContainerStatus newInstance(ContainerId containerId,
+      ContainerState containerState, String diagnostics, int exitStatus) {
+    ContainerStatus containerStatus = Records.newRecord(ContainerStatus.class);
+    containerStatus.setState(containerState);
+    containerStatus.setContainerId(containerId);
+    containerStatus.setDiagnostics(diagnostics);
+    containerStatus.setExitStatus(exitStatus);
+    return containerStatus;
+  }
+
   /**
    * Get the <code>ContainerId</code> of the container.
    * @return <code>ContainerId</code> of the container
    */
   @Public
   @Stable
-  ContainerId getContainerId();
+  public abstract ContainerId getContainerId();
   
   @Private
   @Unstable
-  void setContainerId(ContainerId containerId);
+  public abstract void setContainerId(ContainerId containerId);
 
   /**
    * Get the <code>ContainerState</code> of the container.
@@ -57,11 +70,11 @@ public interface ContainerStatus {
    */
   @Public
   @Stable
-  ContainerState getState();
+  public abstract ContainerState getState();
   
   @Private
   @Unstable
-  void setState(ContainerState state);
+  public abstract void setState(ContainerState state);
 
   /**
    * <p>Get the <em>exit status</em> for the container.</p>
@@ -84,11 +97,11 @@ public interface ContainerStatus {
    */
   @Public
   @Stable
-  int getExitStatus();
+  public abstract int getExitStatus();
   
   @Private
   @Unstable
-  void setExitStatus(int exitStatus);
+  public abstract void setExitStatus(int exitStatus);
 
   /**
    * Get <em>diagnostic messages</em> for failed containers.
@@ -96,9 +109,9 @@ public interface ContainerStatus {
    */
   @Public
   @Stable
-  String getDiagnostics();
+  public abstract String getDiagnostics();
   
   @Private
   @Unstable
-  void setDiagnostics(String diagnostics);
+  public abstract void setDiagnostics(String diagnostics);
 }

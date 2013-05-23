@@ -22,7 +22,6 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
@@ -31,8 +30,7 @@ import org.apache.hadoop.yarn.util.ProtoUtils;
 
 
     
-public class ContainerStatusPBImpl extends ProtoBase<ContainerStatusProto> 
-implements ContainerStatus {
+public class ContainerStatusPBImpl extends ContainerStatus {
   ContainerStatusProto proto = ContainerStatusProto.getDefaultInstance();
   ContainerStatusProto.Builder builder = null;
   boolean viaProto = false;
@@ -54,6 +52,26 @@ implements ContainerStatus {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToBuilder() {
