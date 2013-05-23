@@ -186,7 +186,7 @@ public class TestRMAppTransitions {
     RMApp application =
         new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
           submissionContext, scheduler, masterService,
-          System.currentTimeMillis());
+          System.currentTimeMillis(), "YARN");
 
     testAppStartState(applicationId, user, name, queue, application);
     return application;

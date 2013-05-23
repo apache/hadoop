@@ -97,6 +97,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       = new LinkedHashMap<ApplicationAttemptId, RMAppAttempt>();
   private final long submitTime;
   private final Set<RMNode> updatedNodes = new HashSet<RMNode>();
+  private final String applicationType;
 
   // Mutable fields
   private long startTime;
@@ -230,7 +231,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext,
       YarnScheduler scheduler,
-      ApplicationMasterService masterService, long submitTime) {
+      ApplicationMasterService masterService, long submitTime, String applicationType) {
 
     this.applicationId = applicationId;
     this.name = name;
@@ -245,6 +246,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.masterService = masterService;
     this.submitTime = submitTime;
     this.startTime = System.currentTimeMillis();
+    this.applicationType = applicationType;
 
     int globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -472,7 +474,7 @@ public class RMAppImpl implements RMApp, Recoverable {
           this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()), diags,
           trackingUrl, this.startTime, this.finishTime, finishState,
-          appUsageReport, origTrackingUrl, progress);
+          appUsageReport, origTrackingUrl, progress, this.applicationType);
     } finally {
       this.readLock.unlock();
     }
@@ -755,5 +757,10 @@ public class RMAppImpl implements RMApp, Recoverable {
       }
     }
 
+  }
+
+  @Override
+  public String getApplicationType() {
+    return this.applicationType;
   }
 }

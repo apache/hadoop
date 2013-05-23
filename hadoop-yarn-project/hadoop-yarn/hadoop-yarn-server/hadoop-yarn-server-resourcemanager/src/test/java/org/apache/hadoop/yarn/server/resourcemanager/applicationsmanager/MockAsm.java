@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -236,6 +237,11 @@ public abstract class MockAsm extends MockApps {
     public int pullRMNodeUpdates(Collection<RMNode> updatedNodes) {
       throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
+    public String getApplicationType() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
   }
 
   public static RMApp newApplication(int i) {
@@ -250,6 +256,7 @@ public abstract class MockAsm extends MockApps {
     final String queue = newQueue();
     final long start = 123456 + i * 1000;
     final long finish = 234567 + i * 1000;
+    final String type = YarnConfiguration.DEFAULT_APPLICATION_TYPE;
     RMAppState[] allStates = RMAppState.values();
     final RMAppState state = allStates[i % allStates.length];
     final int maxAppAttempts = i % 1000;
@@ -266,6 +273,11 @@ public abstract class MockAsm extends MockApps {
       @Override
       public String getName() {
         return name;
+      }
+
+      @Override
+      public String getApplicationType() {
+        return type;
       }
 
       @Override

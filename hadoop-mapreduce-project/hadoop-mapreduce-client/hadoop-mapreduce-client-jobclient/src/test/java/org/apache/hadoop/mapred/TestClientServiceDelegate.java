@@ -429,9 +429,9 @@ public class TestClientServiceDelegate {
     ApplicationAttemptId attemptId = BuilderUtils.newApplicationAttemptId(
         appId, 0);
     return BuilderUtils.newApplicationReport(appId, attemptId, "user", "queue",
-        "appname", "host", 124, null, YarnApplicationState.FINISHED,
-        "diagnostics", "url", 0, 0, FinalApplicationStatus.SUCCEEDED, null,
-        "N/A", 0.0f);
+      "appname", "host", 124, null, YarnApplicationState.FINISHED,
+      "diagnostics", "url", 0, 0, FinalApplicationStatus.SUCCEEDED, null,
+      "N/A", 0.0f, YarnConfiguration.DEFAULT_APPLICATION_TYPE);
   }
 
   private ApplicationReport getRunningApplicationReport(String host, int port) {
@@ -439,9 +439,9 @@ public class TestClientServiceDelegate {
     ApplicationAttemptId attemptId = BuilderUtils.newApplicationAttemptId(
         appId, 0);
     return BuilderUtils.newApplicationReport(appId, attemptId, "user", "queue",
-        "appname", host, port, null, YarnApplicationState.RUNNING,
-        "diagnostics", "url", 0, 0, FinalApplicationStatus.UNDEFINED, null,
-        "N/A", 0.0f);
+      "appname", host, port, null, YarnApplicationState.RUNNING, "diagnostics",
+      "url", 0, 0, FinalApplicationStatus.UNDEFINED, null, "N/A", 0.0f,
+      YarnConfiguration.DEFAULT_APPLICATION_TYPE);
   }
 
   private ResourceMgrDelegate getRMDelegate() throws IOException {

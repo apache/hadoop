@@ -135,6 +135,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-45. Add protocol for schedulers to request containers back from
     ApplicationMasters. (Carlo Curino, cdouglas)
 
+    YARN-563. Add the concept of an application-type for each application.
+    (Mayank Bansal via vinodkv)
+
   IMPROVEMENTS
 
     YARN-365. Change NM heartbeat handling to not generate a scheduler event

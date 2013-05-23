@@ -56,6 +56,7 @@ class AppsBlock extends HtmlBlock {
             th(".id", "ID").
             th(".user", "User").
             th(".name", "Name").
+            th(".type", "Application Type").
             th(".queue", "Queue").
             th(".starttime", "StartTime").
             th(".finishtime", "FinishTime").
@@ -88,6 +89,8 @@ class AppsBlock extends HtmlBlock {
         appInfo.getUser()))).append("\",\"")
       .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
         appInfo.getName()))).append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+        appInfo.getApplicationType()))).append("\",\"")
       .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
         appInfo.getQueue()))).append("\",\"")
       .append(appInfo.getStartTime()).append("\",\"")

@@ -76,7 +76,7 @@ public class TestYarnCLI {
         applicationId, BuilderUtils.newApplicationAttemptId(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f);
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN");
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport);
     int result = cli.run(new String[] { "-status", applicationId.toString() });
@@ -87,6 +87,7 @@ public class TestYarnCLI {
     pw.println("Application Report : ");
     pw.println("\tApplication-Id : application_1234_0005");
     pw.println("\tApplication-Name : appname");
+    pw.println("\tApplication-Type : YARN");
     pw.println("\tUser : user");
     pw.println("\tQueue : queue");
     pw.println("\tStart-Time : 0");
@@ -112,7 +113,7 @@ public class TestYarnCLI {
         applicationId, BuilderUtils.newApplicationAttemptId(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f);
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN");
     List<ApplicationReport> applicationReports = new ArrayList<ApplicationReport>();
     applicationReports.add(newApplicationReport);
     when(client.getApplicationList()).thenReturn(applicationReports);
@@ -124,11 +125,13 @@ public class TestYarnCLI {
     PrintWriter pw = new PrintWriter(baos);
     pw.println("Total Applications:1");
     pw.print("                Application-Id\t    Application-Name");
+    pw.print("\t    Application-Type");
     pw.print("\t      User\t     Queue\t             State\t       ");
     pw.print("Final-State\t       Progress");
     pw.println("\t                       Tracking-URL");
     pw.print("         application_1234_0005\t             ");
-    pw.print("appname\t      user\t     queue\t          FINISHED\t         ");
+    pw.print("appname\t                YARN\t      user\t     ");
+    pw.print("queue\t          FINISHED\t         ");
     pw.print("SUCCEEDED\t         53.79%");
     pw.println("\t                                N/A");
     pw.close();

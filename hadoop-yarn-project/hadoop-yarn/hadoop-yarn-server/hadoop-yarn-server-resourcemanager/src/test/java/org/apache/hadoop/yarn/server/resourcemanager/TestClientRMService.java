@@ -449,7 +449,7 @@ public class TestClientRMService {
     when(asContext.getMaxAppAttempts()).thenReturn(1);
     return new RMAppImpl(applicationId3, rmContext, config, null, null,
         queueName, asContext, yarnScheduler, null , System
-            .currentTimeMillis());
+            .currentTimeMillis(), "YARN");
   }
 
   private static YarnScheduler mockYarnScheduler() {

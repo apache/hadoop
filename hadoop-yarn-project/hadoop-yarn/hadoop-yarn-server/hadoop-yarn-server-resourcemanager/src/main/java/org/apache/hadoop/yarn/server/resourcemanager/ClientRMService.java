@@ -298,6 +298,16 @@ public class ClientRMService extends AbstractService implements
       submissionContext.setApplicationName(
           YarnConfiguration.DEFAULT_APPLICATION_NAME);
     }
+    if (submissionContext.getApplicationType() == null) {
+      submissionContext
+        .setApplicationType(YarnConfiguration.DEFAULT_APPLICATION_TYPE);
+    } else {
+      if (submissionContext.getApplicationType().length() > YarnConfiguration.APPLICATION_TYPE_LENGTH) {
+        submissionContext.setApplicationType(submissionContext
+          .getApplicationType().substring(0,
+            YarnConfiguration.APPLICATION_TYPE_LENGTH));
+      }
+    }
 
     try {
       // call RMAppManager to submit application directly

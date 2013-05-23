@@ -1227,6 +1227,7 @@ ResourceManager REST API's.
     <id>application_1326815542473_0001</id>
     <user>user1</user>
     <name>word count</name>
+    <applicationType>MAPREDUCE</applicationType>
     <queue>default</queue>
     <state>FINISHED</state>
     <finalStatus>SUCCEEDED</finalStatus>
@@ -1247,6 +1248,7 @@ _01_000001</amContainerLogs>
     <id>application_1326815542473_0002</id>
     <user>user1</user>
     <name>Sleep job</name>
+    <applicationType>YARN</applicationType>
     <queue>default</queue>
     <state>FINISHED</state>
     <finalStatus>SUCCEEDED</finalStatus>
@@ -1301,6 +1303,8 @@ _01_000001</amContainerLogs>
 | user | string  | The user who started the application |
 *---------------+--------------+--------------------------------+
 | name | string  | The application name |
+*---------------+--------------+--------------------------------+
+| Application Type | string  | The application type |
 *---------------+--------------+--------------------------------+
 | queue | string  | The queue the application was submitted to|
 *---------------+--------------+--------------------------------+
@@ -1364,6 +1368,7 @@ _01_000001</amContainerLogs>
       "amHostHttpAddress" : "host.domain.com:8042",
       "progress" : 100,
       "name" : "Sleep job",
+      "applicationType" : "Yarn",
       "startedTime" : 1326824544552,
       "elapsedTime" : 446748,
       "diagnostics" : "",

@@ -265,4 +265,16 @@ public interface ApplicationReport {
   @Private
   @Unstable
   void setProgress(float progress);
+  
+  /**
+   * Get the application's Type 
+   * @return application's Type
+   */
+  @Public
+  @Stable
+  String getApplicationType();
+
+  @Private
+  @Unstable
+  void setApplicationType(String applicationType);
 }

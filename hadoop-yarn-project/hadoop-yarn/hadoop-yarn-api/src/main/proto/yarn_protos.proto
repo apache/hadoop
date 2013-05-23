@@ -162,6 +162,7 @@ message ApplicationReportProto {
   optional string originalTrackingUrl = 15;
   optional ApplicationAttemptIdProto currentApplicationAttemptId = 16;
   optional float progress = 17;
+  optional string applicationType = 18;
 }
 
 enum NodeStateProto {
@@ -219,6 +220,7 @@ message ApplicationSubmissionContextProto {
   optional bool unmanaged_am = 7 [default = false];
   optional int32 maxAppAttempts = 8 [default = 0];
   optional ResourceProto resource = 9;
+  optional string applicationType = 10 [default = "YARN"];
 }
 
 enum ApplicationAccessTypeProto {

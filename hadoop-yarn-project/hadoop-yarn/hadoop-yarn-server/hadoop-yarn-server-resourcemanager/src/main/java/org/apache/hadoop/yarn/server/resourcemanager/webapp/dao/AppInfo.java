@@ -62,7 +62,8 @@ public class AppInfo {
   protected String trackingUrl;
   protected String diagnostics;
   protected long clusterId;
-
+  protected String applicationType;
+  
   // these are only allowed if acls allow
   protected long startedTime;
   protected long finishedTime;
@@ -95,6 +96,7 @@ public class AppInfo {
       this.trackingUrlPretty = trackingUrlIsNotReady ? "UNASSIGNED" : join(
           HttpConfig.getSchemePrefix(), trackingUrl);
       this.applicationId = app.getApplicationId();
+      this.applicationType = app.getApplicationType();
       this.appIdNum = String.valueOf(app.getApplicationId().getId());
       this.id = app.getApplicationId().toString();
       this.user = app.getUser().toString();
@@ -213,6 +215,10 @@ public class AppInfo {
 
   public long getClusterId() {
     return this.clusterId;
+  }
+
+  public String getApplicationType() {
+    return this.applicationType;
   }
 
 }

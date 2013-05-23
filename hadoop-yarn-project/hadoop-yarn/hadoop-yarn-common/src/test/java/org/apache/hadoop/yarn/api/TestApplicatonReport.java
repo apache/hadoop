@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,10 +54,11 @@ public class TestApplicatonReport {
     ApplicationId appId = BuilderUtils.newApplicationId(timestamp, appIdInt);
     ApplicationAttemptId appAttemptId =
         BuilderUtils.newApplicationAttemptId(appId, appAttemptIdInt);
-    ApplicationReport appReport = BuilderUtils.newApplicationReport(
-        appId, appAttemptId, "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f);
+    ApplicationReport appReport =
+        BuilderUtils.newApplicationReport(appId, appAttemptId, "user", "queue",
+          "appname", "host", 124, null, YarnApplicationState.FINISHED,
+          "diagnostics", "url", 0, 0, FinalApplicationStatus.SUCCEEDED, null,
+          "N/A", 0.53789f, YarnConfiguration.DEFAULT_APPLICATION_TYPE);
     return appReport;
   }
 

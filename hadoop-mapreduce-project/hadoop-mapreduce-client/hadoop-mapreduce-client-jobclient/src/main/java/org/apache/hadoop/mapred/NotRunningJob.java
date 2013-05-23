@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -88,8 +89,9 @@ public class NotRunningJob implements MRClientProtocol {
     // Setting AppState to NEW and finalStatus to UNDEFINED as they are never
     // used for a non running job
     return BuilderUtils.newApplicationReport(unknownAppId, unknownAttemptId,
-        "N/A", "N/A", "N/A", "N/A", 0, null, YarnApplicationState.NEW, "N/A",
-        "N/A", 0, 0, FinalApplicationStatus.UNDEFINED, null, "N/A", 0.0f);
+      "N/A", "N/A", "N/A", "N/A", 0, null, YarnApplicationState.NEW, "N/A",
+      "N/A", 0, 0, FinalApplicationStatus.UNDEFINED, null, "N/A", 0.0f,
+      YarnConfiguration.DEFAULT_APPLICATION_TYPE);
   }
 
   NotRunningJob(ApplicationReport applicationReport, JobState jobState) {
