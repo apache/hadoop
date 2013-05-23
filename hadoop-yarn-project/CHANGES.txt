@@ -7,6 +7,9 @@ Release 0.23.8 - UNRELEASED
   NEW FEATURES
   
   IMPROVEMENTS
+
+    YARN-548. Add tests for YarnUncaughtExceptionHandler (Vadim Bondarev via
+    jeagles)
   
   OPTIMIZATIONS
  
