@@ -404,6 +404,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-706. Fixed race conditions in TestFSDownload. (Zhijie Shen via vinodkv).
 
+    YARN-716. Fixed unit test failures - TestDistributedShell and
+    TestUnmanagedAMLauncher. (Vinod Kumar Vavilapalli via sseth)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
