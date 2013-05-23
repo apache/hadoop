@@ -3050,6 +3050,9 @@ Release 0.23.8 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HDFS-4714. Log short messages in Namenode RPC server for exceptions 
+    meant for clients. (kihwal)
+
   NEW FEATURES
 
   IMPROVEMENTS
