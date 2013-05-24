@@ -391,6 +391,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4743. TestNNStorageRetentionManager fails on Windows.
     (Chris Nauroth via suresh)
 
+    HDFS-4740. Fixes for a few test failures on Windows.
+    (Arpit Agarwal via suresh)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES

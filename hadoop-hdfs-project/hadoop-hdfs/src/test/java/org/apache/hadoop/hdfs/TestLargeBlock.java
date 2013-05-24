@@ -155,10 +155,12 @@ public class TestLargeBlock {
   }
  
   /**
-   * Test for block size of 2GB + 512B
+   * Test for block size of 2GB + 512B. This test can take a rather long time to
+   * complete on Windows (reading the file back can be slow) so we use a larger
+   * timeout here.
    * @throws IOException in case of errors
    */
-  @Test(timeout = 120000)
+  @Test (timeout = 900000)
   public void testLargeBlockSize() throws IOException {
     final long blockSize = 2L * 1024L * 1024L * 1024L + 512L; // 2GB + 512B
     runTest(blockSize);
