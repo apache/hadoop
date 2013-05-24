@@ -358,6 +358,11 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4603. TestMiniDFSCluster fails on Windows. (Ivan Mitic via suresh)
 
+    HDFS-4604. TestJournalNode fails on Windows. (Ivan Mitic via suresh)
+
+    HDFS-4607.  In TestGetConf.testGetSpecificKey(), use a platform-specific
+    line separator; otherwise, it fails on Windows.  (Ivan Mitic via szetszwo)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES

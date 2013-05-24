@@ -210,6 +210,9 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-4898. FileOutputFormat.checkOutputSpecs and 
     FileOutputFormat.setOutputPath incompatible with MR1. (rkanter via tucu)
+    
+    MAPREDUCE-5078. TestMRAppMaster fails on Windows due to mismatched path
+    separators. (Chris Nauroth via sseth)
 
     MAPREDUCE-4932. mapreduce.job#getTaskCompletionEvents incompatible with 
     Hadoop 1. (rkanter via tucu)

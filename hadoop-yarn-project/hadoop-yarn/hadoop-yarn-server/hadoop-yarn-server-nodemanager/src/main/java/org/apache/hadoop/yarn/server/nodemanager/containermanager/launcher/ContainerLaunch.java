@@ -580,8 +580,10 @@ public class ContainerLaunch implements Callable<Integer> {
     // additional testing.  See YARN-358.
     if (Shell.WINDOWS) {
       String inputClassPath = environment.get(Environment.CLASSPATH.name());
-      environment.put(Environment.CLASSPATH.name(),
-          FileUtil.createJarWithClassPath(inputClassPath, pwd));
+      if (inputClassPath != null && !inputClassPath.isEmpty()) {
+        environment.put(Environment.CLASSPATH.name(),
+            FileUtil.createJarWithClassPath(inputClassPath, pwd));
+      }
     }
 
     /**

@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.JarFinder;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -54,8 +55,8 @@ public class TestDistributedShell {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, 
         FifoScheduler.class, ResourceScheduler.class);
     if (yarnCluster == null) {
-      yarnCluster = new MiniYARNCluster(TestDistributedShell.class.getName(),
-          1, 1, 1);
+      yarnCluster = new MiniYARNCluster(
+        TestDistributedShell.class.getSimpleName(), 1, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
       URL url = Thread.currentThread().getContextClassLoader().getResource("yarn-site.xml");
@@ -82,7 +83,7 @@ public class TestDistributedShell {
     }
   }
 
-  @Test
+  @Test(timeout=30000)
   public void testDSShell() throws Exception {
 
     String[] args = {
@@ -91,7 +92,7 @@ public class TestDistributedShell {
         "--num_containers",
         "2",
         "--shell_command",
-        "ls",
+        Shell.WINDOWS ? "dir" : "ls",
         "--master_memory",
         "512",
         "--container_memory",
@@ -110,7 +111,7 @@ public class TestDistributedShell {
 
   }
 
-  @Test
+  @Test(timeout=30000)
   public void testDSShellWithNoArgs() throws Exception {
 
     String[] args = {};

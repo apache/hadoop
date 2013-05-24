@@ -369,6 +369,12 @@ Release 2.0.5-beta - UNRELEASED
     YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
     via vinodkv)
 
+    YARN-488. TestContainerManagerSecurity fails on Windows. (Chris Nauroth
+    via hitesh)
+
+    YARN-490. TestDistributedShell fails on Windows. (Chris Nauroth via hitesh)
+
+    YARN-491. TestContainerLogsPage fails on Windows. (Chris Nauroth via hitesh)
 
 Release 2.0.4-alpha - 2013-04-25 
 

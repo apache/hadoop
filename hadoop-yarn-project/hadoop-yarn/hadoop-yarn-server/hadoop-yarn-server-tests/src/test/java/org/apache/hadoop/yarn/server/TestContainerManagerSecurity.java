@@ -45,6 +45,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -405,10 +406,15 @@ public class TestContainerManagerSecurity {
       UnsupportedFileSystemException, YarnRemoteException,
       InterruptedException {
 
+    // Use ping to simulate sleep on Windows.
+    List<String> cmd = Shell.WINDOWS ?
+      Arrays.asList("ping", "-n", "100", "127.0.0.1", ">nul") :
+      Arrays.asList("sleep", "100");
+
     ContainerLaunchContext amContainer = BuilderUtils
         .newContainerLaunchContext("testUser",
             Collections.<String, LocalResource>emptyMap(),
-            new HashMap<String, String>(), Arrays.asList("sleep", "100"),
+            new HashMap<String, String>(), cmd,
             new HashMap<String, ByteBuffer>(), null,
             new HashMap<ApplicationAccessType, String>());
 
