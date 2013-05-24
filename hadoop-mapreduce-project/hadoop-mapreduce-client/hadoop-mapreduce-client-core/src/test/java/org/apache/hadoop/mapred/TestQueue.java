@@ -28,8 +28,11 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static junit.framework.Assert.*;
@@ -39,6 +42,18 @@ import static org.mockito.Mockito.*;
  * TestCounters checks the sanity and recoverability of Queue
  */
 public class TestQueue {
+  private static File testDir = new File(System.getProperty("test.build.data",
+      "/tmp"), TestJobConf.class.getSimpleName());
+
+  @Before
+  public void setup() {
+    testDir.mkdirs();
+  }
+
+  @After
+  public void cleanup() {
+    FileUtil.fullyDelete(testDir);
+  }
 
   /**
    * test QueueManager
@@ -217,8 +232,7 @@ public class TestQueue {
  */
   private File writeFile() throws IOException {
 
-    File f = null;
-    f = File.createTempFile("tst", "xml");
+    File f = new File(testDir, "tst.xml");
     BufferedWriter out = new BufferedWriter(new FileWriter(f));
     String properties = "<properties><property key=\"key\" value=\"value\"/><property key=\"key1\" value=\"value1\"/></properties>";
     out.write("<queues>");
