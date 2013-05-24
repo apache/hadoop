@@ -257,6 +257,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5246. Specify application-type at the time of job submission after
     YARN-563. (Mayank Bansal via vinodkv)
 
+    MAPREDUCE-5230. Bring back NLineInputFormat.createFileSplit for binary
+    compatibility with mapred in 1.x (Mayank Bansal via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
