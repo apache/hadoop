@@ -116,13 +116,13 @@ ChangeFileOwnerByNameEnd:
 // Notes:
 //
 //
-int Chown(int argc, wchar_t *argv[])
+int Chown(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
   LPWSTR pathName = NULL;
 
   LPWSTR ownerInfo = NULL;
 
-  LPWSTR colonPos = NULL;
+  WCHAR const * colonPos = NULL;
 
   LPWSTR userName = NULL;
   size_t userNameLen = 0;

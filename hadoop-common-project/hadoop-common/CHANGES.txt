@@ -330,9 +330,8 @@ Release 2.0.5-beta - UNRELEASED
     that POSIX errno is embedded in NativeIOException. (Chris Nauroth via
     suresh)
 
-    HADOOP-9488. FileUtil#createJarWithClassPath only substitutes environment
-    variables from current process environment/does not support overriding
-    when launching new process (Chris Nauroth via bikas)
+    HADOOP-9443. Port winutils static code analysis change to trunk.
+    (Chuan Liu via suresh)
     
 Release 2.0.4-beta - UNRELEASED
 
