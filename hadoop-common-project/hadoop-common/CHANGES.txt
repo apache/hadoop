@@ -315,6 +315,11 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9364. PathData#expandAsGlob does not return correct results for
     absolute paths on Windows. (Ivan Mitic via suresh)
 
+    HADOOP-8973. DiskChecker cannot reliably detect an inaccessible disk on
+    Windows with NTFS ACLs. (Chris Nauroth via suresh)
+
+    HADOOP-9388. TestFsShellCopy fails on Windows. (Ivan Mitic via suresh)
+    
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES

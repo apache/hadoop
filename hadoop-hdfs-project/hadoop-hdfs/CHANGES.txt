@@ -352,6 +352,12 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4287. HTTPFS tests fail on Windows. (Chris Nauroth via suresh)
 
+    HDFS-4593. TestSaveNamespace fails on Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4582. TestHostsFiles fails on Windows. (Ivan Mitic via suresh)
+
+    HDFS-4603. TestMiniDFSCluster fails on Windows. (Ivan Mitic via suresh)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES

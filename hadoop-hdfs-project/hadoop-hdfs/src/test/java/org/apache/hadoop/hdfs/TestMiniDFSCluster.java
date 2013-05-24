@@ -65,7 +65,7 @@ public class TestMiniDFSCluster {
    *
    * @throws Throwable on a failure
    */
-  @Test
+  @Test(timeout=100000)
   public void testClusterWithoutSystemProperties() throws Throwable {
     System.clearProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA);
     Configuration conf = new HdfsConfiguration();
@@ -74,7 +74,8 @@ public class TestMiniDFSCluster {
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c1Path);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
-      assertEquals(c1Path+"/data", cluster.getDataDirectory());
+      assertEquals(new File(c1Path + "/data"),
+          new File(cluster.getDataDirectory()));
     } finally {
       cluster.shutdown();
     }
@@ -84,7 +85,7 @@ public class TestMiniDFSCluster {
    * Bring up two clusters and assert that they are in different directories.
    * @throws Throwable on a failure
    */
-  @Test
+  @Test(timeout=100000)
   public void testDualClusters() throws Throwable {
     File testDataCluster2 = new File(testDataPath, CLUSTER_2);
     File testDataCluster3 = new File(testDataPath, CLUSTER_3);
@@ -95,7 +96,7 @@ public class TestMiniDFSCluster {
     MiniDFSCluster cluster3 = null;
     try {
       String dataDir2 = cluster2.getDataDirectory();
-      assertEquals(c2Path + "/data", dataDir2);
+      assertEquals(new File(c2Path + "/data"), new File(dataDir2));
       //change the data dir
       conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
                testDataCluster3.getAbsolutePath());
