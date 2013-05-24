@@ -276,6 +276,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4693. Some test cases in TestCheckpoint do not clean up after 
     themselves. (Arpit Agarwal, suresh via suresh)
 
+    HDFS-4725. Fix HDFS file handle leaks in FSEditLog, NameNode,
+    OfflineEditsBinaryLoader and some tests.  (Chris Nauroth via szetszwo)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
