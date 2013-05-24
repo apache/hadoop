@@ -335,6 +335,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9290. Some tests cannot load native library on windows.
     (Chris Nauroth via suresh)
+
+    HADOOP-9500. TestUserGroupInformation#testGetServerSideGroups fails on 
+    Windows due to failure to find winutils.exe. (Chris Nauroth via suresh)
     
 Release 2.0.4-beta - UNRELEASED
 
