@@ -21,6 +21,7 @@ package org.apache.hadoop.streaming;
 import java.io.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.FileUtil;
 
 /**
  * Maps a relative pathname to an absolute pathname using the PATH environment.
@@ -79,7 +80,7 @@ public class PathFinder {
         f = new File(entry + fileSep + filename);
       }
       // see if the filename matches and we can read it
-      if (f.isFile() && f.canRead()) {
+      if (f.isFile() && FileUtil.canRead(f)) {
         return f;
       }
       classvalue = classvalue.substring(val + 1).trim();

@@ -403,6 +403,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4734. HDFS Tests that use ShellCommandFencer are broken on Windows.
     (Arpit Agarwal via suresh)
 
+    HDFS-4610. Use common utils FileUtil#setReadable/Writable/Executable and 
+    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES

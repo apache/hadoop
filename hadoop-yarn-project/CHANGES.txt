@@ -389,6 +389,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
     via vinodkv)
 
+    YARN-506. Move to common utils FileUtil#setReadable/Writable/Executable and 
+    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES

@@ -28,6 +28,7 @@ import java.util.TimerTask;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
@@ -321,7 +322,7 @@ public class NodeHealthScriptRunner extends AbstractService {
       return false;
     }
     File f = new File(nodeHealthScript);
-    return f.exists() && f.canExecute();
+    return f.exists() && FileUtil.canExecute(f);
   }
 
   private synchronized void setHealthStatus(boolean isHealthy, String output) {
