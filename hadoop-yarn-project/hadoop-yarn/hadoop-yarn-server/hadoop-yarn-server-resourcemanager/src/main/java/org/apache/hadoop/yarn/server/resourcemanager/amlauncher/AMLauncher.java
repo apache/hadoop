@@ -165,7 +165,6 @@ public class AMLauncher implements Runnable {
             new String[0])));
     
     // Finalize the container
-    container.setUser(applicationMasterContext.getAMContainerSpec().getUser());
     setupTokensAndEnv(container, containerID);
     
     return container;

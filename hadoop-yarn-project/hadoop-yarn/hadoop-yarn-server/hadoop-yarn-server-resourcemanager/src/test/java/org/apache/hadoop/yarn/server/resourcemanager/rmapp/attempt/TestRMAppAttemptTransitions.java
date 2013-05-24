@@ -203,7 +203,7 @@ public class TestRMAppAttemptTransitions {
     when(submissionContext.getQueue()).thenReturn(queue);
     Resource resource = BuilderUtils.newResource(1536, 1);
     ContainerLaunchContext amContainerSpec =
-        BuilderUtils.newContainerLaunchContext(user, null, null,
+        BuilderUtils.newContainerLaunchContext(null, null,
             null, null, null, null);
     when(submissionContext.getAMContainerSpec()).thenReturn(amContainerSpec);
     when(submissionContext.getResource()).thenReturn(resource);
@@ -213,7 +213,7 @@ public class TestRMAppAttemptTransitions {
     application = mock(RMApp.class);
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttemptId, rmContext, scheduler,
-          masterService, submissionContext, new Configuration());
+          masterService, submissionContext, new Configuration(), user);
     when(application.getCurrentAppAttempt()).thenReturn(applicationAttempt);
     when(application.getApplicationId()).thenReturn(applicationId);
     

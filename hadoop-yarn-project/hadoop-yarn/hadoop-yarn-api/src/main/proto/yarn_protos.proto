@@ -267,13 +267,12 @@ message QueueUserACLInfoProto {
 ////////////////////////////////////////////////////////////////////////
 
 message ContainerLaunchContextProto {
-  optional string user = 1;
-  repeated StringLocalResourceMapProto localResources = 2;
-  optional bytes tokens = 3;
-  repeated StringBytesMapProto service_data = 4;
-  repeated StringStringMapProto environment = 5;
-  repeated string command = 6;
-  repeated ApplicationACLMapProto application_ACLs = 7;
+  repeated StringLocalResourceMapProto localResources = 1;
+  optional bytes tokens = 2;
+  repeated StringBytesMapProto service_data = 3;
+  repeated StringStringMapProto environment = 4;
+  repeated string command = 5;
+  repeated ApplicationACLMapProto application_ACLs = 6;
 }
 
 message ContainerStatusProto {

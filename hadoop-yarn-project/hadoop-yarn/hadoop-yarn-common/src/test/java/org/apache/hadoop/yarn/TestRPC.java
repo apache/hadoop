@@ -111,7 +111,6 @@ public class TestRPC {
             NetUtils.getConnectAddress(server), conf);
     ContainerLaunchContext containerLaunchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    containerLaunchContext.setUser("dummy-user");
     ContainerId containerId = 
         recordFactory.newRecordInstance(ContainerId.class);
     ApplicationId applicationId = 

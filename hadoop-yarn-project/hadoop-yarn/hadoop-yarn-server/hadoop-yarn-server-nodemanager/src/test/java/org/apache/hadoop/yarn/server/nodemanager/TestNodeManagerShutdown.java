@@ -166,8 +166,6 @@ public class TestNodeManagerShutdown {
     mockContainer.setNodeId(nodeId);
     mockContainer.setNodeHttpAddress("localhost:12345");
     
-    containerLaunchContext.setUser(cId.toString());
-
     URL localResourceUri =
         ConverterUtils.getYarnUrlFromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
@@ -183,7 +181,6 @@ public class TestNodeManagerShutdown {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, localResource);
     containerLaunchContext.setLocalResources(localResources);
-    containerLaunchContext.setUser(containerLaunchContext.getUser());
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
     Resource resource = BuilderUtils.newResource(1024, 1);

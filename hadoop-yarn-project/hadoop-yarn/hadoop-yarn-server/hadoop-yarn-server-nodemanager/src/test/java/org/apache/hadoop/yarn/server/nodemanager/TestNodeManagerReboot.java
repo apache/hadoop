@@ -115,8 +115,6 @@ public class TestNodeManagerReboot {
         Records.newRecord(org.apache.hadoop.yarn.api.records.Container.class);
     mockContainer.setId(cId);
 
-    containerLaunchContext.setUser(user);
-
     URL localResourceUri =
         ConverterUtils.getYarnUrlFromPath(localFS
             .makeQualified(new Path(localResourceDir.getAbsolutePath())));

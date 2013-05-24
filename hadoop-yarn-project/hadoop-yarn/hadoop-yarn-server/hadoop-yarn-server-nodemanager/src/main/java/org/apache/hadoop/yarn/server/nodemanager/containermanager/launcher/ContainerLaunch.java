@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.DelayedProcessKiller;
@@ -67,6 +68,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.yarn.util.Apps;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ContainerLaunch implements Callable<Integer> {
@@ -120,11 +122,11 @@ public class ContainerLaunch implements Callable<Integer> {
         container.getLocalizedResources();
     ContainerId containerID = container.getContainer().getId();
     String containerIdStr = ConverterUtils.toString(containerID);
-    final String user = launchContext.getUser();
     final List<String> command = launchContext.getCommands();
     int ret = -1;
 
     try {
+      final String user = container.getUser();
       // /////////////////////////// Variable expansion
       // Before the container script gets written out.
       List<String> newCmds = new ArrayList<String>(command.size());
@@ -334,7 +336,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
       // kill process
       if (processId != null) {
-        String user = container.getLaunchContext().getUser();
+        String user = container.getUser();
         LOG.debug("Sending signal to pid " + processId
             + " as user " + user
             + " for container " + containerIdStr);

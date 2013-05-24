@@ -67,6 +67,7 @@ message GetGroupsForUserResponseProto {
 message ApplicationStateDataProto {
   optional int64 submit_time = 1;
   optional ApplicationSubmissionContextProto application_submission_context = 2;
+  optional string user = 3;
 }
 
 message ApplicationAttemptStateDataProto {

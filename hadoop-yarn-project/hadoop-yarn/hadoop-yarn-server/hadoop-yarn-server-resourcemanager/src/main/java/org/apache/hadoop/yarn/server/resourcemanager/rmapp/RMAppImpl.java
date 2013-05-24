@@ -586,7 +586,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     RMAppAttempt attempt =
         new RMAppAttemptImpl(appAttemptId, rmContext, scheduler, masterService,
-          submissionContext, conf);
+          submissionContext, conf, user);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
     if(startAttempt) {

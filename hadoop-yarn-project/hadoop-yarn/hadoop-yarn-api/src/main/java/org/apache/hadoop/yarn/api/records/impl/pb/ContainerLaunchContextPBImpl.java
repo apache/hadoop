@@ -170,25 +170,6 @@ extends ContainerLaunchContext {
   }
   
   @Override
-  public String getUser() {
-    ContainerLaunchContextProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasUser()) {
-      return null;
-    }
-    return (p.getUser());
-  }
-
-  @Override
-  public void setUser(String user) {
-    maybeInitBuilder();
-    if (user == null) {
-      builder.clearUser();
-      return;
-    }
-    builder.setUser((user));
-  }
-  
-  @Override
   public Map<String, LocalResource> getLocalResources() {
     initLocalResources();
     return this.localResources;

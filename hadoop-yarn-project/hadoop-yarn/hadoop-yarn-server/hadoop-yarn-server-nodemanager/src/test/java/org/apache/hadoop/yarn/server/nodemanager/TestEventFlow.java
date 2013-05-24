@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -47,6 +48,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerM
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 
@@ -135,10 +137,16 @@ public class TestEventFlow {
     cID.setApplicationAttemptId(applicationAttemptId);
     Container mockContainer = mock(Container.class);
     when(mockContainer.getId()).thenReturn(cID);
-    when(mockContainer.getResource()).thenReturn(recordFactory
-        .newRecordInstance(Resource.class));
+    Resource r = BuilderUtils.newResource(1024, 1);
+    when(mockContainer.getResource()).thenReturn(r);
     when(mockContainer.getRMIdentifer()).thenReturn(SIMULATED_RM_IDENTIFIER);
-    launchContext.setUser("testing");
+    String user = "testing";
+    String host = "127.0.0.1";
+    int port = 1234;
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cID, host, port, user, r,
+          System.currentTimeMillis() + 10000L, 123, "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest request = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(launchContext);

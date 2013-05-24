@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -128,8 +129,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
     // ////// Construct the Container-id
     ContainerId cId = createContainerId();
 
-    container.setUser(user);
-
     // ////// Construct the container-spec.
     ContainerLaunchContext containerLaunchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
@@ -147,17 +146,21 @@ public class TestContainerManager extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    containerLaunchContext.setUser(container.getUser());
     Container mockContainer = mock(Container.class);
     when(mockContainer.getId()).thenReturn(cId);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(512, 1));
+    Resource r = BuilderUtils.newResource(512, 1);
+    when(mockContainer.getResource()).thenReturn(r);
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    int port = 12345;
     when(mockContainer.getNodeHttpAddress()).thenReturn(
-        context.getNodeId().getHost() + ":12345");
+        context.getNodeId().getHost() + ":" + port);
     when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
-
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest startRequest = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
@@ -228,8 +231,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerLaunchContext containerLaunchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
-    containerLaunchContext.setUser(user);
-
     URL resource_alpha =
         ConverterUtils.getYarnUrlFromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
@@ -245,17 +246,22 @@ public class TestContainerManager extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    containerLaunchContext.setUser(containerLaunchContext.getUser());
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
     Container mockContainer = mock(Container.class);
     when(mockContainer.getId()).thenReturn(cId);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(100, 1)); // MB
+    Resource r = BuilderUtils.newResource(100, 1);
+    when(mockContainer.getResource()).thenReturn(r); // MB
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    int port = 12345;
     when(mockContainer.getNodeHttpAddress()).thenReturn(
-        context.getNodeId().getHost() + ":12345");
+        context.getNodeId().getHost() + ":" + port);
     when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
 
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
@@ -341,8 +347,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
 	  ContainerLaunchContext containerLaunchContext = 
 			  recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
-	  containerLaunchContext.setUser(user);
-
 	  URL resource_alpha =
 			  ConverterUtils.getYarnUrlFromPath(localFS
 					  .makeQualified(new Path(scriptFile.getAbsolutePath())));
@@ -358,18 +362,22 @@ public class TestContainerManager extends BaseContainerManagerTest {
 			  new HashMap<String, LocalResource>();
 	  localResources.put(destinationFile, rsrc_alpha);
 	  containerLaunchContext.setLocalResources(localResources);
-	  containerLaunchContext.setUser(containerLaunchContext.getUser());
 	  List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
 	  containerLaunchContext.setCommands(commands);
     Container mockContainer = mock(Container.class);
     when(mockContainer.getId()).thenReturn(cId);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(100, 1)); // MB
+    Resource r = BuilderUtils.newResource(100, 1);
+    when(mockContainer.getResource()).thenReturn(r); // MB
+    int port = 12345;
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
     when(mockContainer.getNodeHttpAddress()).thenReturn(
-        context.getNodeId().getHost() + ":12345");
+        context.getNodeId().getHost() + ":" + port);
     when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
-
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
 	  StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
 	  startRequest.setContainerLaunchContext(containerLaunchContext);
 	  startRequest.setContainer(mockContainer);
@@ -436,8 +444,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerId cId = createContainerId();
     ApplicationId appId = cId.getApplicationAttemptId().getApplicationId();
 
-    container.setUser(user);
-
     // ////// Construct the container-spec.
     ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
 //    containerLaunchContext.resources =
@@ -456,18 +462,22 @@ public class TestContainerManager extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    containerLaunchContext.setUser(container.getUser());
     Container mockContainer = mock(Container.class);
     when(mockContainer.getId()).thenReturn(cId);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(100, 1));
+    Resource r = BuilderUtils.newResource(100, 1);
+    when(mockContainer.getResource()).thenReturn(r);
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    int port = 12345;
     when(mockContainer.getNodeHttpAddress()).thenReturn(
-        context.getNodeId().getHost() + ":12345");
+        context.getNodeId().getHost() + ":" + port);
     when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
 
 //    containerLaunchContext.command = new ArrayList<CharSequence>();
-
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest request = recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(containerLaunchContext);
     request.setContainer(mockContainer);
@@ -541,13 +551,13 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
+    String host = "127.0.0.1";
+    int port = 1234;
     ContainerId cId1 = createContainerId();
     ContainerId cId2 = createContainerId();
-    containerLaunchContext.setUser(user);
     containerLaunchContext
       .setLocalResources(new HashMap<String, LocalResource>());
-    containerLaunchContext.setUser(containerLaunchContext.getUser());
-    Resource mockResource = mock(Resource.class);
+    Resource mockResource = BuilderUtils.newResource(1024, 1);
 
     Container mockContainer1 = mock(Container.class);
     when(mockContainer1.getId()).thenReturn(cId1);
@@ -557,6 +567,11 @@ public class TestContainerManager extends BaseContainerManagerTest {
     StartContainerRequest startRequest1 =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest1.setContainerLaunchContext(containerLaunchContext);
+    
+    ContainerToken containerToken1 =
+        BuilderUtils.newContainerToken(cId1, host, port, user, mockResource,
+          System.currentTimeMillis() + 10000, 123, "password".getBytes());
+    when(mockContainer1.getContainerToken()).thenReturn(containerToken1);
     startRequest1.setContainer(mockContainer1);
     boolean catchException = false;
     try {
@@ -583,6 +598,11 @@ public class TestContainerManager extends BaseContainerManagerTest {
     StartContainerRequest startRequest2 =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest2.setContainerLaunchContext(containerLaunchContext);
+    ContainerToken containerToken2 =
+        BuilderUtils.newContainerToken(cId1, host, port, user, mockResource,
+          System.currentTimeMillis() + 10000, 123, "password".getBytes());
+    when(mockContainer2.getContainerToken()).thenReturn(containerToken2);
+
     startRequest2.setContainer(mockContainer2);
     boolean noException = true;
     try {

@@ -206,7 +206,7 @@ public class TestNodeStatusUpdater {
         when(mockContainer.getResource()).thenReturn(resource);
         Container container =
             new ContainerImpl(conf, mockDispatcher, launchContext,
-                mockContainer, null, mockMetrics);
+                mockContainer, null, mockMetrics, null);
         this.context.getContainers().put(firstContainerID, container);
       } else if (heartBeatID == 2) {
         // Checks on the RM end
@@ -232,7 +232,7 @@ public class TestNodeStatusUpdater {
         when(mockContainer.getResource()).thenReturn(resource);
         Container container =
             new ContainerImpl(conf, mockDispatcher, launchContext,
-                mockContainer, null, mockMetrics);
+                mockContainer, null, mockMetrics, null);
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end
@@ -665,8 +665,8 @@ public class TestNodeStatusUpdater {
     }
 
     waitCount = 0;
-    while (heartBeatID <= 3 && waitCount++ != 20) {
-      Thread.sleep(500);
+    while (heartBeatID <= 3 && waitCount++ != 200) {
+      Thread.sleep(1000);
     }
     Assert.assertFalse(heartBeatID <= 3);
     Assert.assertEquals("Number of registered NMs is wrong!!", 1,

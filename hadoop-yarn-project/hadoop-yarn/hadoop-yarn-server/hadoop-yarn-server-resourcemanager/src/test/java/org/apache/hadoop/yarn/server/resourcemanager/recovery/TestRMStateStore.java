@@ -194,6 +194,7 @@ public class TestRMStateStore {
     when(mockApp.getApplicationId()).thenReturn(appId);
     when(mockApp.getSubmitTime()).thenReturn(time);
     when(mockApp.getApplicationSubmissionContext()).thenReturn(context);
+    when(mockApp.getUser()).thenReturn("test");
     store.storeApplication(mockApp);
   }
 

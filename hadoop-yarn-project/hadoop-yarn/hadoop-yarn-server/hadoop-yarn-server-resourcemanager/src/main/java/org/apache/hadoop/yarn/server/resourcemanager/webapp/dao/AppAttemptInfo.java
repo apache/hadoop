@@ -42,7 +42,7 @@ public class AppAttemptInfo {
   public AppAttemptInfo() {
   }
 
-  public AppAttemptInfo(RMAppAttempt attempt) {
+  public AppAttemptInfo(RMAppAttempt attempt, String user) {
     this.startTime = 0;
     this.containerId = "";
     this.nodeHttpAddress = "";
@@ -59,8 +59,7 @@ public class AppAttemptInfo {
         this.logsLink = join(HttpConfig.getSchemePrefix(),
             masterContainer.getNodeHttpAddress(),
             "/node", "/containerlogs/",
-            ConverterUtils.toString(masterContainer.getId()), "/",
-            attempt.getSubmissionContext().getAMContainerSpec().getUser());
+            ConverterUtils.toString(masterContainer.getId()), "/", user);
       }
     }
   }

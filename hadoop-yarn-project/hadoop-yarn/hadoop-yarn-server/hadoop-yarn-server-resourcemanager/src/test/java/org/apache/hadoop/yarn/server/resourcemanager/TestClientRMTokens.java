@@ -234,7 +234,7 @@ public class TestClientRMTokens {
   public void testShortCircuitRenewCancel()
       throws IOException, InterruptedException {
     InetSocketAddress addr =
-        new InetSocketAddress(InetAddress.getLocalHost(), 123);    
+        new InetSocketAddress(InetAddress.getLocalHost(), 123);
     checkShortCircuitRenewCancel(addr, addr, true);
   }
 

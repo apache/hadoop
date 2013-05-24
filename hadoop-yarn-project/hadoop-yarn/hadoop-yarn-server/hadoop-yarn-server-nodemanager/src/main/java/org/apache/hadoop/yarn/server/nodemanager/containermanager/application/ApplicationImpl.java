@@ -77,7 +77,7 @@ public class ApplicationImpl implements Application {
       ApplicationACLsManager aclsManager, String user, ApplicationId appId,
       Credentials credentials, Context context) {
     this.dispatcher = dispatcher;
-    this.user = user.toString();
+    this.user = user;
     this.appId = appId;
     this.credentials = credentials;
     this.aclsManager = aclsManager;

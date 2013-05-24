@@ -763,8 +763,7 @@ public abstract class TaskAttemptImpl implements
     // The null fields are per-container and will be constructed for each
     // container separately.
     ContainerLaunchContext container = BuilderUtils
-        .newContainerLaunchContext(conf
-            .get(MRJobConfig.USER_NAME), localResources,
+        .newContainerLaunchContext(localResources,
             environment, null, serviceData, taskCredentialsBuffer,
             applicationACLs);
 
@@ -808,7 +807,6 @@ public abstract class TaskAttemptImpl implements
 
     // Construct the actual Container
     ContainerLaunchContext container = BuilderUtils.newContainerLaunchContext(
-        commonContainerSpec.getUser(),
         commonContainerSpec.getLocalResources(), myEnv, commands,
         myServiceData, commonContainerSpec.getTokens().duplicate(),
         applicationACLs);

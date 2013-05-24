@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
@@ -75,6 +77,7 @@ public class ContainerImpl implements Container {
   private final NodeManagerMetrics metrics;
   private final ContainerLaunchContext launchContext;
   private final org.apache.hadoop.yarn.api.records.Container container;
+  private final String user;
   private int exitCode = ContainerExitStatus.INVALID;
   private final StringBuilder diagnostics;
 
@@ -93,10 +96,11 @@ public class ContainerImpl implements Container {
   private final List<LocalResourceRequest> appRsrcs =
     new ArrayList<LocalResourceRequest>();
 
-  public ContainerImpl(Configuration conf,
-      Dispatcher dispatcher, ContainerLaunchContext launchContext,
+  public ContainerImpl(Configuration conf, Dispatcher dispatcher,
+      ContainerLaunchContext launchContext,
       org.apache.hadoop.yarn.api.records.Container container,
-      Credentials creds, NodeManagerMetrics metrics) {
+      Credentials creds, NodeManagerMetrics metrics,
+      ContainerTokenIdentifier identifier) throws IOException {
     this.daemonConf = conf;
     this.dispatcher = dispatcher;
     this.launchContext = launchContext;
@@ -104,7 +108,7 @@ public class ContainerImpl implements Container {
     this.diagnostics = new StringBuilder();
     this.credentials = creds;
     this.metrics = metrics;
-
+    user = identifier.getApplicationSubmitter();
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     this.readLock = readWriteLock.readLock();
     this.writeLock = readWriteLock.writeLock();
@@ -311,7 +315,7 @@ public class ContainerImpl implements Container {
   public String getUser() {
     this.readLock.lock();
     try {
-      return this.launchContext.getUser();
+      return this.user;
     } finally {
       this.readLock.unlock();
     }
@@ -382,7 +386,6 @@ public class ContainerImpl implements Container {
   @SuppressWarnings({"fallthrough", "unchecked"})
   private void finished() {
     ContainerId containerID = this.container.getId();
-    String user = this.launchContext.getUser();
     switch (getContainerState()) {
       case EXITED_WITH_SUCCESS:
         metrics.endRunningContainer();
@@ -486,7 +489,7 @@ public class ContainerImpl implements Container {
         for (Map.Entry<String,ByteBuffer> service : csd.entrySet()) {
           container.dispatcher.getEventHandler().handle(
               new AuxServicesEvent(AuxServicesEventType.APPLICATION_INIT,
-                  ctxt.getUser(), container.container.getId()
+                  container.user, container.container.getId()
                       .getApplicationAttemptId().getApplicationId(),
                   service.getKey().toString(), service.getValue()));
         }

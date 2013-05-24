@@ -182,16 +182,6 @@ public abstract class BaseContainerManagerTest {
           throws YarnRemoteException {
         // do nothing
       }
-
-      @Override
-      protected ContainerTokenIdentifier getContainerTokenIdentifier(
-          UserGroupInformation remoteUgi,
-          org.apache.hadoop.yarn.api.records.Container container)
-          throws YarnRemoteException {
-        return new ContainerTokenIdentifier(container.getId(),
-          container.getNodeHttpAddress(), remoteUgi.getUserName(),
-          container.getResource(), System.currentTimeMillis(), 123);
-      }
     };
   }
 

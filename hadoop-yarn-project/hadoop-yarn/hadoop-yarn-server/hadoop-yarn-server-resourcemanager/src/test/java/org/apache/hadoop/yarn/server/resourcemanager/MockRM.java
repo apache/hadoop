@@ -188,7 +188,6 @@ public class MockRM extends ResourceManager {
     capability.setMemory(masterMemory);
     sub.setResource(capability);
     clc.setApplicationACLs(acls);
-    clc.setUser(user);
     if (ts != null && UserGroupInformation.isSecurityEnabled()) {
       DataOutputBuffer dob = new DataOutputBuffer();
       ts.writeTokenStorageToStream(dob);
