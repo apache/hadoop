@@ -110,6 +110,11 @@ void SystemInfoUsage();
 DWORD GetFileInformationByName(__in LPCWSTR pathName,  __in BOOL followLink,
   __out LPBY_HANDLE_FILE_INFORMATION lpFileInformation);
 
+DWORD CheckAccessForCurrentUser(
+  __in PCWSTR pathName,
+  __in ACCESS_MASK requestedAccess,
+  __out BOOL *allowed);
+
 DWORD ConvertToLongPath(__in PCWSTR path, __deref_out PWSTR *newPath);
 
 DWORD GetSidFromAcctNameW(__in PCWSTR acctName, __out PSID* ppSid);

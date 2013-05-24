@@ -342,6 +342,12 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9490. LocalFileSystem#reportChecksumFailure not closing the 
     checksum file handle before rename. (Ivan Mitic via suresh)
 
+    HADOOP-9524. Fix ShellCommandFencer to work on Windows.
+    (Arpit Agarwal via suresh)
+
+    HADOOP-9413. Add common utils for File#setReadable/Writable/Executable &
+    File#canRead/Write/Execute that work cross-platform. (Ivan Mitic via suresh)
+    
     HADOOP-9488. FileUtil#createJarWithClassPath only substitutes environment
     variables from current process environment/does not support overriding
     when launching new process (Chris Nauroth via bikas)

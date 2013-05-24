@@ -812,6 +812,42 @@ cleanup:
 #endif
 }
 
+/*
+ * Class:     org_apache_hadoop_io_nativeio_NativeIO_Windows
+ * Method:    access0
+ * Signature: (Ljava/lang/String;I)Z
+ */
+JNIEXPORT jboolean JNICALL Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_access0
+  (JNIEnv *env, jclass clazz, jstring jpath, jint jaccess)
+{
+#ifdef UNIX
+  THROW(env, "java/io/IOException",
+    "The function access0(path, access) is not supported on Unix");
+  return NULL;
+#endif
+
+#ifdef WINDOWS
+  LPCWSTR path = NULL;
+  DWORD dwRtnCode = ERROR_SUCCESS;
+  ACCESS_MASK access = (ACCESS_MASK)jaccess;
+  BOOL allowed = FALSE;
+
+  path = (LPCWSTR) (*env)->GetStringChars(env, jpath, NULL);
+  if (!path) goto cleanup; // exception was thrown
+
+  dwRtnCode = CheckAccessForCurrentUser(path, access, &allowed);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    throw_ioe(env, dwRtnCode);
+    goto cleanup;
+  }
+
+cleanup:
+  if (path) (*env)->ReleaseStringChars(env, jpath, path);
+
+  return (jboolean)allowed;
+#endif
+}
+
 JNIEXPORT void JNICALL 
 Java_org_apache_hadoop_io_nativeio_NativeIO_renameTo0(JNIEnv *env, 
 jclass clazz, jstring jsrc, jstring jdst)

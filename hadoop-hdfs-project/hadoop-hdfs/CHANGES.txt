@@ -400,6 +400,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4705. Address HDFS test failures on Windows because of invalid
     dfs.namenode.name.dir. (Ivan Mitic via suresh)
 
+    HDFS-4734. HDFS Tests that use ShellCommandFencer are broken on Windows.
+    (Arpit Agarwal via suresh)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES

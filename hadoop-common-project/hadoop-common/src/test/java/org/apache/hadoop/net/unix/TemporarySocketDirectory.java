@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Random;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.FileUtil;
 
 /**
  * Create a temporary directory in which sockets can be created.
@@ -37,7 +38,7 @@ public class TemporarySocketDirectory implements Closeable {
     dir = new File(tmp, "socks." + (System.currentTimeMillis() +
         "." + (new Random().nextInt())));
     dir.mkdirs();
-    dir.setWritable(true, true);
+    FileUtil.setWritable(dir, true);
   }
 
   public File getDir() {
