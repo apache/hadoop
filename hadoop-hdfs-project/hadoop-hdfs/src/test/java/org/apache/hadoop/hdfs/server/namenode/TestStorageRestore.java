@@ -362,4 +362,72 @@ public class TestStorageRestore {
       }
     }
   }
+  
+  /**
+   * 1. create DFS cluster with 3 storage directories
+   *    - 2 EDITS_IMAGE(name1, name2), 1 EDITS(name3)
+   * 2. create a file
+   * 3. corrupt/disable name2 and name3 by removing rwx permission
+   * 4. run doCheckpoint
+   *    - will fail on removed dirs (which invalidates them)
+   * 5. write another file
+   * 6. check there is only one healthy storage dir
+   * 7. run doCheckpoint - recover should fail but checkpoint should succeed
+   * 8. check there is still only one healthy storage dir
+   * 9. restore the access permission for name2 and name 3, run checkpoint again
+   * 10.verify there are 3 healthy storage dirs.
+   */
+  @Test
+  public void testStorageRestoreFailure() throws Exception {
+
+    SecondaryNameNode secondary = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(config).numDataNodes(0)
+          .manageNameDfsDirs(false).build();
+      cluster.waitActive();
+
+      secondary = new SecondaryNameNode(config);
+      printStorages(cluster.getNameNode().getFSImage());
+
+      FileSystem fs = cluster.getFileSystem();
+      Path path = new Path("/", "test");
+      assertTrue(fs.mkdirs(path));
+
+      // invalidate storage by removing rwx permission from name2 and name3
+      FileUtil.chmod(path2.toString(), "000");
+      FileUtil.chmod(path3.toString(), "000");
+      secondary.doCheckpoint(); // should remove name2 and name3
+
+      printStorages(cluster.getNameNode().getFSImage());
+
+      path = new Path("/", "test1");
+      assertTrue(fs.mkdirs(path));
+      assert (cluster.getNameNode().getFSImage().getStorage()
+          .getNumStorageDirs() == 1);
+
+      secondary.doCheckpoint(); // shouldn't be able to restore name 2 and 3
+      assert (cluster.getNameNode().getFSImage().getStorage()
+          .getNumStorageDirs() == 1);
+
+      FileUtil.chmod(path2.toString(), "755");
+      FileUtil.chmod(path3.toString(), "755");
+      secondary.doCheckpoint(); // should restore name 2 and 3
+      assert (cluster.getNameNode().getFSImage().getStorage()
+          .getNumStorageDirs() == 3);
+
+    } finally {
+      if (path2.exists()) {
+        FileUtil.chmod(path2.toString(), "755");
+      }
+      if (path3.exists()) {
+        FileUtil.chmod(path3.toString(), "755");
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+    }
+  }
 }
