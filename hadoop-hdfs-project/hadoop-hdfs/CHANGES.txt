@@ -385,6 +385,9 @@ Release 2.0.5-beta - UNRELEASED
     failure to unpack old image tarball that contains hard links.
     (Chris Nauroth via szetszwo)
 
+    HDFS-4741. TestStorageRestore#testStorageRestoreFailure fails on Windows.
+    (Arpit Agarwal via suresh)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
