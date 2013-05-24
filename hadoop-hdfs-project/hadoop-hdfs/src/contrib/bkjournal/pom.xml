@@ -33,6 +33,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <properties>
     <hadoop.component>hdfs</hadoop.component>
+    <hadoop.common.build.dir>${basedir}/../../../../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
   </properties>
 
   <dependencies>

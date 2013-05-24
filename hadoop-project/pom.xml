@@ -50,9 +50,10 @@
 
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
     <test.build.data>${test.build.dir}</test.build.data>
-    
-    <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
-    <test.build.data>${test.build.dir}</test.build.data>
+
+    <!-- Used for building path to native library loaded by tests.  Projects -->
+    <!-- at different nesting levels in the source tree may need to override. -->
+    <hadoop.common.build.dir>${basedir}/../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
   </properties>
 
   <dependencyManagement>
@@ -841,8 +842,8 @@
           <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
           <environmentVariables>
             <!-- HADOOP_HOME required for tests on Windows to find winutils -->
-            <HADOOP_HOME>${basedir}/../../hadoop-common-project/hadoop-common/target</HADOOP_HOME>
-            <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${basedir}/../../hadoop-common-project/hadoop-common/target/native/target/usr/local/lib/</LD_LIBRARY_PATH>
+            <HADOOP_HOME>${hadoop.common.build.dir}</HADOOP_HOME>
+            <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib</LD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
           <systemPropertyVariables>
@@ -921,7 +922,7 @@
             <configuration>
               <environmentVariables>
                 <!-- Specify where to look for the native DLL on Windows -->
-                <PATH>${env.PATH};${basedir}/../../hadoop-common-project/hadoop-common/target/bin</PATH>
+                <PATH>${env.PATH};${hadoop.common.build.dir}/bin</PATH>
               </environmentVariables>
             </configuration>
           </plugin>
