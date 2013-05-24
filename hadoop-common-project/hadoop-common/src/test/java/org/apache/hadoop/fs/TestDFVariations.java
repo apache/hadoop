@@ -29,21 +29,17 @@ import java.util.EnumSet;
 import java.util.Random;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Shell;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TestDFVariations {
 
   public static class XXDF extends DF {
-    private final String osName;
-    public XXDF(String osName) throws IOException {
+    public XXDF() throws IOException {
       super(new File(System.getProperty("test.build.data","/tmp")), 0L);
-      this.osName = osName;
     }
-    @Override
-    public DF.OSType getOSType() {
-      return DF.getOSType(osName);
-    }
+
     @Override
     protected String[] getExecString() {
       return new String[] { "echo", "IGNORE\n", 
@@ -51,14 +47,20 @@ public class TestDFVariations {
     }
   }
 
-  @Test(timeout=5000)
-  public void testOSParsing() throws Exception {
-    for (DF.OSType ost : EnumSet.allOf(DF.OSType.class)) {
-      XXDF df = new XXDF(ost.getId());
-      assertEquals(ost.getId() + " mount", "/foo/bar", df.getMount());
-    }
+  public void testMountAndFileSystem() throws Exception {
+    XXDF df = new XXDF();
+    String expectedMount =
+        Shell.WINDOWS ? df.getDirPath().substring(0, 2) : "/foo/bar";
+    String expectedFileSystem =
+        Shell.WINDOWS ? df.getDirPath().substring(0, 2) : "/dev/sda3";
+
+    assertEquals("Invalid mount point",
+        expectedMount, df.getMount());
+
+    assertEquals("Invalid filesystem",
+        expectedFileSystem, df.getFilesystem());
   }
-  
+
   @Test(timeout=5000)
   public void testDFInvalidPath() throws Exception {
     // Generate a path that doesn't exist

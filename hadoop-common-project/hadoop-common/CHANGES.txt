@@ -319,7 +319,13 @@ Release 2.0.5-beta - UNRELEASED
     Windows with NTFS ACLs. (Chris Nauroth via suresh)
 
     HADOOP-9388. TestFsShellCopy fails on Windows. (Ivan Mitic via suresh)
-    
+
+    HADOOP-9387. Fix DF so that it won't execute a shell command on Windows
+    to compute the file system/mount point.  (Ivan Mitic via szetszwo)
+
+    HADOOP-9353. Activate native-win maven profile by default on Windows.
+    (Arpit Agarwal via szetszwo)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
