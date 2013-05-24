@@ -270,7 +270,6 @@ public class ClientRMService extends AbstractService implements
     try {
       // Safety
       user = UserGroupInformation.getCurrentUser().getShortUserName();
-      submissionContext.getAMContainerSpec().setUser(user);
     } catch (IOException ie) {
       LOG.warn("Unable to get the current user.", ie);
       RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
@@ -312,7 +311,7 @@ public class ClientRMService extends AbstractService implements
     try {
       // call RMAppManager to submit application directly
       rmAppManager.submitApplication(submissionContext,
-          System.currentTimeMillis(), false);
+          System.currentTimeMillis(), false, user);
 
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user);

@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProtoOrBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
+import org.mortbay.log.Log;
 
 public class ApplicationStateDataPBImpl 
 extends ProtoBase<ApplicationStateDataProto> 
@@ -91,6 +92,22 @@ implements ApplicationStateData {
     builder.setSubmitTime(submitTime);
   }
 
+  @Override
+  public String getUser() {
+    ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasUser()) {
+      return null;
+    }
+    return (p.getUser());
+
+  }
+  
+  @Override
+  public void setUser(String user) {
+    maybeInitBuilder();
+    builder.setUser(user);
+  }
+  
   @Override
   public ApplicationSubmissionContext getApplicationSubmissionContext() {
     ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;

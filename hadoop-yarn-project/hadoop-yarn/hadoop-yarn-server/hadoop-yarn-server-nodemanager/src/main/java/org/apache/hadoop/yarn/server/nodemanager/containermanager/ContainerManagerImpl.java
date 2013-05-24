@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import static org.apache.hadoop.yarn.service.Service.STATE.STARTED;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -105,9 +103,9 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.service.ServiceStateChangeListener;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.RpcUtil;
 
 public class ContainerManagerImpl extends CompositeService implements
     ServiceStateChangeListener, ContainerManager,
@@ -321,13 +319,9 @@ public class ContainerManagerImpl extends CompositeService implements
       // Get the tokenId from the remote user ugi
       return selectContainerTokenIdentifier(remoteUgi);
     } else {
-      ContainerToken containerToken = container.getContainerToken();
-      Token<ContainerTokenIdentifier> token =
-          new Token<ContainerTokenIdentifier>(containerToken.getIdentifier()
-            .array(), containerToken.getPassword().array(), new Text(
-            containerToken.getKind()), new Text(containerToken.getService()));
       try {
-        return token.decodeIdentifier();
+        return BuilderUtils.newContainerTokenIdentifier(container
+          .getContainerToken());
       } catch (IOException e) {
         throw RPCUtil.getRemoteException(e);
       }
@@ -370,15 +364,6 @@ public class ContainerManagerImpl extends CompositeService implements
         messageBuilder
           .append("\nNo ContainerToken found for " + containerIDStr);
       } else {
-
-        // Is the container coming in with correct user-name?
-        if (!launchContext.getUser().equals(tokenId.getApplicationSubmitter())) {
-          unauthorized = true;
-          messageBuilder.append("\n Expected user-name "
-              + tokenId.getApplicationSubmitter() + " but found "
-              + launchContext.getUser());
-        }
-
         
         // Is the container being relaunched? Or RPC layer let startCall with 
       	//  tokens generated off old-secret through?
@@ -451,7 +436,7 @@ public class ContainerManagerImpl extends CompositeService implements
     }
 
     LOG.info("Start request for " + containerIDStr + " by user "
-        + launchContext.getUser());
+        + tokenId.getApplicationSubmitter());
 
     // //////////// Parse credentials
     ByteBuffer tokens = launchContext.getTokens();
@@ -473,13 +458,14 @@ public class ContainerManagerImpl extends CompositeService implements
       }
     }
     // //////////// End of parsing credentials
+    String user = tokenId.getApplicationSubmitter();
 
     Container container = new ContainerImpl(getConfig(), this.dispatcher,
-        launchContext, lauchContainer, credentials, metrics);
+        launchContext, lauchContainer, credentials, metrics, tokenId);
     ApplicationId applicationID = 
         containerID.getApplicationAttemptId().getApplicationId();
     if (context.getContainers().putIfAbsent(containerID, container) != null) {
-      NMAuditLogger.logFailure(launchContext.getUser(), 
+      NMAuditLogger.logFailure(user, 
           AuditConstants.START_CONTAINER, "ContainerManagerImpl",
           "Container already running on this node!",
           applicationID, containerID);
@@ -490,7 +476,8 @@ public class ContainerManagerImpl extends CompositeService implements
     // Create the application
     Application application =
         new ApplicationImpl(dispatcher, this.aclsManager,
-          launchContext.getUser(), applicationID, credentials, context);
+          user, applicationID, credentials,
+          context);
     if (null ==
         context.getApplications().putIfAbsent(applicationID, application)) {
       LOG.info("Creating a new application reference for app "
@@ -506,7 +493,7 @@ public class ContainerManagerImpl extends CompositeService implements
     
     this.context.getContainerTokenSecretManager().startContainerSuccessful(
       tokenId);
-    NMAuditLogger.logSuccess(launchContext.getUser(), 
+    NMAuditLogger.logSuccess(user, 
         AuditConstants.START_CONTAINER, "ContainerManageImpl", 
         applicationID, containerID);
 

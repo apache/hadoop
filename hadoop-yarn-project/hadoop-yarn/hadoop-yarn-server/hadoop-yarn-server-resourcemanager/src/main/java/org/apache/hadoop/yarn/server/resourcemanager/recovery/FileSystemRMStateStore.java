@@ -103,7 +103,8 @@ public class FileSystemRMStateStore extends RMStateStore {
                                 ApplicationStateDataProto.parseFrom(childData));
           ApplicationState appState = new ApplicationState(
                                appStateData.getSubmitTime(),
-                               appStateData.getApplicationSubmissionContext());
+                               appStateData.getApplicationSubmissionContext(),
+                               appStateData.getUser());
           // assert child node name is same as actual applicationId
           assert appId.equals(appState.context.getApplicationId());
           state.appState.put(appId, appState);

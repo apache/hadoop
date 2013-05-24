@@ -1612,7 +1612,7 @@ public class TestFairScheduler {
         new ApplicationMasterService(resourceManager.getRMContext(), scheduler);
     ApplicationSubmissionContext submissionContext = new ApplicationSubmissionContextPBImpl();
     ContainerLaunchContext clc =
-        BuilderUtils.newContainerLaunchContext(user, null, null, null, null,
+        BuilderUtils.newContainerLaunchContext(null, null, null, null,
             null, null);
     submissionContext.setApplicationId(applicationId);
     submissionContext.setAMContainerSpec(clc);

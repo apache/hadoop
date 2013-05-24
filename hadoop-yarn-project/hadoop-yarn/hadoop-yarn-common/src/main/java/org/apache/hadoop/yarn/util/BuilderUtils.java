@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.util;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -25,6 +26,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -188,6 +190,16 @@ public class BuilderUtils {
     return cId;
   }
 
+  public static ContainerToken newContainerToken(ContainerId cId, String host,
+      int port, String user, Resource r, long expiryTime, int masterKeyId,
+      byte[] password) throws IOException {
+    ContainerTokenIdentifier identifier =
+        new ContainerTokenIdentifier(cId, host, user, r, expiryTime,
+            masterKeyId);
+    return newContainerToken(BuilderUtils.newNodeId(host, port), password,
+        identifier);
+  }
+
   public static ContainerId newContainerId(RecordFactory recordFactory,
       ApplicationId appId, ApplicationAttemptId appAttemptId,
       int containerId) {
@@ -286,14 +298,24 @@ public class BuilderUtils {
     return containerToken;
   }
 
+  public static ContainerTokenIdentifier newContainerTokenIdentifier(
+      ContainerToken containerToken) throws IOException {
+    org.apache.hadoop.security.token.Token<ContainerTokenIdentifier> token =
+        new org.apache.hadoop.security.token.Token<ContainerTokenIdentifier>(
+            containerToken.getIdentifier()
+                .array(), containerToken.getPassword().array(), new Text(
+                containerToken.getKind()),
+            new Text(containerToken.getService()));
+    return token.decodeIdentifier();
+  }
+
   public static ContainerLaunchContext newContainerLaunchContext(
-      String user, Map<String, LocalResource> localResources,
+      Map<String, LocalResource> localResources,
       Map<String, String> environment, List<String> commands,
-      Map<String, ByteBuffer> serviceData,  ByteBuffer tokens,
+      Map<String, ByteBuffer> serviceData, ByteBuffer tokens,
       Map<ApplicationAccessType, String> acls) {
     ContainerLaunchContext container = recordFactory
         .newRecordInstance(ContainerLaunchContext.class);
-    container.setUser(user);
     container.setLocalResources(localResources);
     container.setEnvironment(environment);
     container.setCommands(commands);

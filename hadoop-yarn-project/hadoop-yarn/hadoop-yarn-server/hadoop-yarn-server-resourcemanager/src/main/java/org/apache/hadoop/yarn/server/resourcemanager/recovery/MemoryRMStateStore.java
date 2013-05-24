@@ -65,8 +65,8 @@ public class MemoryRMStateStore extends RMStateStore {
                                      ApplicationStateDataPBImpl appStateData)
       throws Exception {
     ApplicationState appState = new ApplicationState(
-                         appStateData.getSubmitTime(), 
-                         appStateData.getApplicationSubmissionContext());
+        appStateData.getSubmitTime(),
+        appStateData.getApplicationSubmissionContext(), appStateData.getUser());
     if (state.appState.containsKey(appState.getAppId())) {
       Exception e = new IOException("App: " + appId + " is already stored.");
       LOG.info("Error storing info for app: " + appId, e);

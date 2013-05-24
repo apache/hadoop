@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -26,13 +28,13 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import junit.framework.Assert;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -50,9 +52,11 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
@@ -67,9 +71,6 @@ import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.junit.Before;
 import org.junit.Test;
-import static org.mockito.Mockito.*;
-
-import junit.framework.Assert;
 
 public class TestContainerLaunch extends BaseContainerManagerTest {
 
@@ -157,7 +158,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
    * See if environment variable is forwarded using sanitizeEnv.
    * @throws Exception
    */
-  @Test (timeout = 5000)
+  @Test (timeout = 60000)
   public void testContainerEnvVariables() throws Exception {
     containerManager.start();
 
@@ -175,12 +176,13 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     appAttemptId.setAttemptId(1);
     ContainerId cId = 
         recordFactory.newRecordInstance(ContainerId.class);
+    int port = 12345;
     cId.setApplicationAttemptId(appAttemptId);
     when(mockContainer.getId()).thenReturn(cId);
 
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
     when(mockContainer.getNodeHttpAddress()).thenReturn(
-        context.getNodeId().getHost() + ":12345");
+        context.getNodeId().getHost() + ":" + port);
     when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
 
     Map<String, String> userSetEnv = new HashMap<String, String>();
@@ -189,7 +191,6 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     userSetEnv.put(Environment.NM_PORT.name(), "user_set_NM_PORT");
     userSetEnv.put(Environment.NM_HTTP_PORT.name(), "user_set_NM_HTTP_PORT");
     userSetEnv.put(Environment.LOCAL_DIRS.name(), "user_set_LOCAL_DIR");
-    containerLaunchContext.setUser(user);
     containerLaunchContext.setEnvironment(userSetEnv);
 
     File scriptFile = new File(tmpDir, "scriptFile.sh");
@@ -243,13 +244,17 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     containerLaunchContext.setLocalResources(localResources);
 
     // set up the rest of the container
-    containerLaunchContext.setUser(containerLaunchContext.getUser());
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(1024, 1));
+    Resource r = BuilderUtils.newResource(1024, 1);
+    when(mockContainer.getResource()).thenReturn(r);
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 1234,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     startRequest.setContainer(mockContainer);
     containerManager.startContainer(startRequest);
 
@@ -376,11 +381,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
     when(mockContainer.getId()).thenReturn(cId);
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    int port = 12345;
     when(mockContainer.getNodeHttpAddress()).thenReturn(
-        context.getNodeId().getHost() + ":12345");
+        context.getNodeId().getHost() + ":" + port);
     when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
-
-    containerLaunchContext.setUser(user);
 
     // upload the script file so that the container can run it
     URL resource_alpha =
@@ -400,11 +404,15 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     containerLaunchContext.setLocalResources(localResources);
 
     // set up the rest of the container
-    containerLaunchContext.setUser(containerLaunchContext.getUser());
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(1024, 1));
+    Resource r = BuilderUtils.newResource(1024, 1);
+    when(mockContainer.getResource()).thenReturn(r);
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
     startRequest.setContainer(mockContainer);

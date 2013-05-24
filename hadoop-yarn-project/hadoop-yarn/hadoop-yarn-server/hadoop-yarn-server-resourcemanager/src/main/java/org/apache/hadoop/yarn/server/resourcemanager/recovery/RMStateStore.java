@@ -91,12 +91,15 @@ public abstract class RMStateStore {
   public static class ApplicationState {
     final ApplicationSubmissionContext context;
     final long submitTime;
+    final String user;
     Map<ApplicationAttemptId, ApplicationAttemptState> attempts =
                   new HashMap<ApplicationAttemptId, ApplicationAttemptState>();
     
-    ApplicationState(long submitTime, ApplicationSubmissionContext context) {
+    ApplicationState(long submitTime, ApplicationSubmissionContext context,
+        String user) {
       this.submitTime = submitTime;
       this.context = context;
+      this.user = user;
     }
 
     public ApplicationId getAppId() {
@@ -113,6 +116,9 @@ public abstract class RMStateStore {
     }
     public ApplicationAttemptState getAttempt(ApplicationAttemptId attemptId) {
       return attempts.get(attemptId);
+    }
+    public String getUser() {
+      return user;
     }
   }
   
@@ -190,7 +196,7 @@ public abstract class RMStateStore {
                                             .getApplicationSubmissionContext();
     assert context instanceof ApplicationSubmissionContextPBImpl;
     ApplicationState appState = new ApplicationState(
-        app.getSubmitTime(), context);
+        app.getSubmitTime(), context, app.getUser());
     dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
   }
     
@@ -240,7 +246,8 @@ public abstract class RMStateStore {
    */
   public synchronized void removeApplication(RMApp app) {
     ApplicationState appState = new ApplicationState(
-        app.getSubmitTime(), app.getApplicationSubmissionContext());
+            app.getSubmitTime(), app.getApplicationSubmissionContext(),
+            app.getUser());
     for(RMAppAttempt appAttempt : app.getAppAttempts().values()) {
       Credentials credentials = getTokensFromAppAttempt(appAttempt);
       ApplicationAttemptState attemptState =
@@ -295,6 +302,7 @@ public abstract class RMStateStore {
           appStateData.setSubmitTime(apptState.getSubmitTime());
           appStateData.setApplicationSubmissionContext(
               apptState.getApplicationSubmissionContext());
+          appStateData.setUser(apptState.getUser());
           ApplicationId appId =
               apptState.getApplicationSubmissionContext().getApplicationId();
 

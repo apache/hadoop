@@ -131,7 +131,6 @@ public class Application {
   public synchronized void submit() throws IOException, YarnRemoteException {
     ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     context.setApplicationId(this.applicationId);
-    context.getAMContainerSpec().setUser(this.user);
     context.setQueue(this.queue);
     SubmitApplicationRequest request = recordFactory
         .newRecordInstance(SubmitApplicationRequest.class);
@@ -401,7 +400,6 @@ public class Application {
 
   private ContainerLaunchContext createCLC() {
     ContainerLaunchContext clc = recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    clc.setUser(this.user);
     return clc;
   }
 }

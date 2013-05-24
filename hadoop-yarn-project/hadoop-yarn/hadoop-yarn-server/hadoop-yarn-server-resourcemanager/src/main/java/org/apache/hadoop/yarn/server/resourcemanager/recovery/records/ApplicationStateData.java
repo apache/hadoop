@@ -44,6 +44,17 @@ public interface ApplicationStateData {
   public void setSubmitTime(long submitTime);
   
   /**
+   * The application submitter
+   */
+  @Public
+  @Unstable
+  public void setUser(String user);
+  
+  @Public
+  @Unstable
+  public String getUser();
+  
+  /**
    * The {@link ApplicationSubmissionContext} for the application
    * {@link ApplicationId} can be obtained from the this
    * @return ApplicationSubmissionContext

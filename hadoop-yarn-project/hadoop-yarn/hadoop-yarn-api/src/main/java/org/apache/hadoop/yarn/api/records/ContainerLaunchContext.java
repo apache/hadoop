@@ -56,13 +56,12 @@ public abstract class ContainerLaunchContext {
   @Public
   @Stable
   public static ContainerLaunchContext newInstance(
-      String user, Map<String, LocalResource> localResources,
+      Map<String, LocalResource> localResources,
       Map<String, String> environment, List<String> commands,
       Map<String, ByteBuffer> serviceData,  ByteBuffer tokens,
       Map<ApplicationAccessType, String> acls) {
     ContainerLaunchContext container =
         Records.newRecord(ContainerLaunchContext.class);
-    container.setUser(user);
     container.setLocalResources(localResources);
     container.setEnvironment(environment);
     container.setCommands(commands);
@@ -71,22 +70,6 @@ public abstract class ContainerLaunchContext {
     container.setApplicationACLs(acls);
     return container;
   }
-
-  /**
-   * Get the <em>user</em> to whom the container has been allocated.
-   * @return the <em>user</em> to whom the container has been allocated
-   */
-  @Public
-  @Stable
-  public abstract String getUser();
-  
-  /**
-   * Set the <em>user</em> to whom the container has been allocated
-   * @param user <em>user</em> to whom the container has been allocated
-   */
-  @Public
-  @Stable
-  public abstract void setUser(String user);
 
   /**
    * Get all the tokens needed by this container. It may include file-system

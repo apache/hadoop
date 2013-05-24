@@ -476,8 +476,7 @@ public class YARNRunner implements ClientProtocol {
 
     // Setup ContainerLaunchContext for AM container
     ContainerLaunchContext amContainer = BuilderUtils
-        .newContainerLaunchContext(UserGroupInformation
-            .getCurrentUser().getShortUserName(), localResources,
+        .newContainerLaunchContext(localResources,
             environment, vargsFinal, null, securityTokens, acls);
 
     // Set up the ApplicationSubmissionContext

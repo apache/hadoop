@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.HashMap;
 
@@ -178,7 +179,8 @@ public class TestNMWebServicesContainers extends JerseyTest {
     assertEquals("apps isn't NULL", JSONObject.NULL, json.get("containers"));
   }
 
-  private HashMap<String, String> addAppContainers(Application app) {
+  private HashMap<String, String> addAppContainers(Application app) 
+      throws IOException {
     Dispatcher dispatcher = new AsyncDispatcher();
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         app.getAppId(), 1);
