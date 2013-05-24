@@ -394,6 +394,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4740. Fixes for a few test failures on Windows.
     (Arpit Agarwal via suresh)
 
+    HDFS-4722. TestGetConf#testFederation times out on Windows.
+    (Ivan Mitic via suresh)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
