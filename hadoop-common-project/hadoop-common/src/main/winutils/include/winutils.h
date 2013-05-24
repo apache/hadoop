@@ -104,6 +104,9 @@ void TaskUsage();
 int Symlink(__in int argc, __in_ecount(argc) wchar_t *argv[]);
 void SymlinkUsage();
 
+int Readlink(__in int argc, __in_ecount(argc) wchar_t *argv[]);
+void ReadlinkUsage();
+
 int SystemInfo();
 void SystemInfoUsage();
 

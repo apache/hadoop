@@ -20,6 +20,7 @@ package org.apache.hadoop.ha;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import java.util.Collections;
 import java.util.UUID;
@@ -28,6 +29,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.State;
 import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
+import org.apache.hadoop.util.Shell;
 import org.apache.log4j.Level;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.server.ZooKeeperServer;
@@ -59,6 +61,8 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
   
   @Override
   public void setUp() throws Exception {
+    // skip tests on Windows until after resolution of ZooKeeper client bug
+    assumeTrue(!Shell.WINDOWS);
     super.setUp();
     
     zkServer = getServer(serverFactory);

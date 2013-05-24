@@ -88,6 +88,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
     (todd)
 
+    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
+    for Unit testing. (Hari via stevel)
+
   BUG FIXES
 
     HADOOP-9294. GetGroupsTestBase fails on Windows. (Chris Nauroth via suresh)
@@ -347,10 +350,22 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9413. Add common utils for File#setReadable/Writable/Executable &
     File#canRead/Write/Execute that work cross-platform. (Ivan Mitic via suresh)
+
+    HADOOP-9043. Disallow in winutils creating symlinks with forwards slashes.
+    (Chris Nauroth via suresh)
+
+    HADOOP-9483. winutils support for readlink command.
+    (Arpit Agarwal via suresh)
     
     HADOOP-9488. FileUtil#createJarWithClassPath only substitutes environment
     variables from current process environment/does not support overriding
     when launching new process (Chris Nauroth via bikas)
+
+    HADOOP-9556. disable HA tests on Windows that fail due to ZooKeeper client
+    connection management bug. (Chris Nauroth via suresh)
+
+    HADOOP-9553. TestAuthenticationToken fails on Windows.
+    (Arpit Agarwal via suresh)
 
 Release 2.0.4-beta - UNRELEASED
 

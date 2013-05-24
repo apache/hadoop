@@ -19,6 +19,7 @@
 package org.apache.hadoop.util;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -32,6 +33,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import static org.junit.Assume.*;
+import static org.hamcrest.CoreMatchers.*;
 
 /**
  * Test cases for helper Windows winutils.exe utility.
@@ -44,6 +47,8 @@ public class TestWinUtils {
 
   @Before
   public void setUp() {
+    // Not supported on non-Windows platforms
+    assumeTrue(Shell.WINDOWS);
     TEST_DIR.mkdirs();
   }
 
@@ -70,11 +75,6 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testLs() throws IOException {
-    if (!Shell.WINDOWS) {
-      // Not supported on non-Windows platforms
-      return;
-    }
-
     final String content = "6bytes";
     final int contentSize = content.length();
     File testFile = new File(TEST_DIR, "file1");
@@ -104,11 +104,6 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testGroups() throws IOException {
-    if (!Shell.WINDOWS) {
-      // Not supported on non-Windows platforms
-      return;
-    }
-
     String currentUser = System.getProperty("user.name");
 
     // Verify that groups command returns information about the current user
@@ -229,11 +224,6 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testBasicChmod() throws IOException {
-    if (!Shell.WINDOWS) {
-      // Not supported on non-Windows platforms
-      return;
-    }
-
     // - Create a file.
     // - Change mode to 377 so owner does not have read permission.
     // - Verify the owner truly does not have the permissions to read.
@@ -285,11 +275,6 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testChmod() throws IOException {
-    if (!Shell.WINDOWS) {
-      // Not supported on non-Windows platforms
-      return;
-    }
-
     testChmodInternal("7", "-------rwx");
     testChmodInternal("70", "----rwx---");
     testChmodInternal("u-x,g+r,o=g", "-rw-r--r--");
@@ -322,11 +307,6 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testChown() throws IOException {
-    if (!Shell.WINDOWS) {
-      // Not supported on non-Windows platforms
-      return;
-    }
-
     File a = new File(TEST_DIR, "a");
     assertTrue(a.createNewFile());
     String username = System.getProperty("user.name");
@@ -348,5 +328,118 @@ public class TestWinUtils {
 
     assertTrue(a.delete());
     assertFalse(a.exists());
+  }
+
+  @Test (timeout = 30000)
+  public void testSymlinkRejectsForwardSlashesInLink() throws IOException {
+    File newFile = new File(TEST_DIR, "file");
+    assertTrue(newFile.createNewFile());
+    String target = newFile.getPath();
+    String link = new File(TEST_DIR, "link").getPath().replaceAll("\\\\", "/");
+    try {
+      Shell.execCommand(Shell.WINUTILS, "symlink", link, target);
+      fail(String.format("did not receive expected failure creating symlink "
+        + "with forward slashes in link: link = %s, target = %s", link, target));
+    } catch (IOException e) {
+      LOG.info(
+        "Expected: Failed to create symlink with forward slashes in target");
+    }
+  }
+
+  @Test (timeout = 30000)
+  public void testSymlinkRejectsForwardSlashesInTarget() throws IOException {
+    File newFile = new File(TEST_DIR, "file");
+    assertTrue(newFile.createNewFile());
+    String target = newFile.getPath().replaceAll("\\\\", "/");
+    String link = new File(TEST_DIR, "link").getPath();
+    try {
+      Shell.execCommand(Shell.WINUTILS, "symlink", link, target);
+      fail(String.format("did not receive expected failure creating symlink "
+        + "with forward slashes in target: link = %s, target = %s", link, target));
+    } catch (IOException e) {
+      LOG.info(
+        "Expected: Failed to create symlink with forward slashes in target");
+    }
+  }
+
+  @Test (timeout = 30000)
+  public void testReadLink() throws IOException {
+    // Create TEST_DIR\dir1\file1.txt
+    //
+    File dir1 = new File(TEST_DIR, "dir1");
+    assertTrue(dir1.mkdirs());
+
+    File file1 = new File(dir1, "file1.txt");
+    assertTrue(file1.createNewFile());
+
+    File dirLink = new File(TEST_DIR, "dlink");
+    File fileLink = new File(TEST_DIR, "flink");
+
+    // Next create a directory symlink to dir1 and a file
+    // symlink to file1.txt.
+    //
+    Shell.execCommand(
+        Shell.WINUTILS, "symlink", dirLink.toString(), dir1.toString());
+    Shell.execCommand(
+        Shell.WINUTILS, "symlink", fileLink.toString(), file1.toString());
+
+    // Read back the two links and ensure we get what we expected.
+    //
+    String readLinkOutput = Shell.execCommand(Shell.WINUTILS,
+        "readlink",
+        dirLink.toString());
+    assertThat(readLinkOutput, equalTo(dir1.toString()));
+
+    readLinkOutput = Shell.execCommand(Shell.WINUTILS,
+        "readlink",
+        fileLink.toString());
+    assertThat(readLinkOutput, equalTo(file1.toString()));
+
+    // Try a few invalid inputs and verify we get an ExitCodeException for each.
+    //
+    try {
+      // No link name specified.
+      //
+      Shell.execCommand(Shell.WINUTILS, "readlink", "");
+      fail("Failed to get Shell.ExitCodeException when reading bad symlink");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
+    }
+
+    try {
+      // Bad link name.
+      //
+      Shell.execCommand(Shell.WINUTILS, "readlink", "ThereIsNoSuchLink");
+      fail("Failed to get Shell.ExitCodeException when reading bad symlink");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
+    }
+
+    try {
+      // Non-symlink directory target.
+      //
+      Shell.execCommand(Shell.WINUTILS, "readlink", dir1.toString());
+      fail("Failed to get Shell.ExitCodeException when reading bad symlink");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
+    }
+
+    try {
+      // Non-symlink file target.
+      //
+      Shell.execCommand(Shell.WINUTILS, "readlink", file1.toString());
+      fail("Failed to get Shell.ExitCodeException when reading bad symlink");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
+    }
+
+    try {
+      // Too many parameters.
+      //
+      Shell.execCommand(Shell.WINUTILS, "readlink", "a", "b");
+      fail("Failed to get Shell.ExitCodeException with bad parameters");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
+    }
   }
 }

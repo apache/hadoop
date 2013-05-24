@@ -55,6 +55,10 @@ int wmain(__in int argc, __in_ecount(argc) wchar_t* argv[])
   {
     return Symlink(argc - 1, argv + 1);
   }
+  else if (wcscmp(L"readlink", cmd) == 0)
+  {
+    return Readlink(argc - 1, argv + 1);
+  }
   else if (wcscmp(L"task", cmd) == 0)
   {
     return Task(argc - 1, argv + 1);
@@ -103,6 +107,10 @@ The available commands and their usages are:\n\n", program);
  
   fwprintf(stdout, L"%-10s%s\n\n", L"symlink", L"Create a symbolic link.");
   SymlinkUsage();
+  fwprintf(stdout, L"\n\n");
+
+  fwprintf(stdout, L"%-10s%s\n\n", L"readlink", L"Print the target of a symbolic link.");
+  ReadlinkUsage();
   fwprintf(stdout, L"\n\n");
 
   fwprintf(stdout, L"%-15s%s\n\n", L"systeminfo", L"System information.");
