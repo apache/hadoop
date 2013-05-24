@@ -376,6 +376,12 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-491. TestContainerLogsPage fails on Windows. (Chris Nauroth via hitesh)
 
+    YARN-557. Fix TestUnmanagedAMLauncher failure on Windows. (Chris Nauroth via
+    vinodkv)
+
+    YARN-487. Modify path manipulation in LocalDirsHandlerService to let
+    TestDiskFailures pass on Windows. (Chris Nauroth via vinodkv)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES

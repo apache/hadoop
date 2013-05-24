@@ -446,7 +446,13 @@ public class TestNativeIO {
       NativeIO.renameTo(nonExistentFile, targetFile);
       Assert.fail();
     } catch (NativeIOException e) {
-      Assert.assertEquals(e.getErrno(), Errno.ENOENT);
+      if (Path.WINDOWS) {
+        Assert.assertEquals(
+          String.format("The system cannot find the file specified.%n"),
+          e.getMessage());
+      } else {
+        Assert.assertEquals(Errno.ENOENT, e.getErrno());
+      }
     }
     
     // Test renaming a file to itself.  It should succeed and do nothing.
@@ -465,7 +471,13 @@ public class TestNativeIO {
       NativeIO.renameTo(sourceFile, badTarget);
       Assert.fail();
     } catch (NativeIOException e) {
-      Assert.assertEquals(e.getErrno(), Errno.ENOTDIR);
+      if (Path.WINDOWS) {
+        Assert.assertEquals(
+          String.format("The parameter is incorrect.%n"),
+          e.getMessage());
+      } else {
+        Assert.assertEquals(Errno.ENOTDIR, e.getErrno());
+      }
     }
 
     FileUtils.deleteQuietly(TEST_DIR);
