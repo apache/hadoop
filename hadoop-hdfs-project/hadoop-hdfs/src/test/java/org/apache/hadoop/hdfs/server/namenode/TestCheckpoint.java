@@ -1550,9 +1550,10 @@ public class TestCheckpoint {
       if (fs != null) {
         fs.close();
       }
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      cleanup(secondary);
+      secondary = null;
+      cleanup(cluster);
+      cluster = null;
       Mockito.reset(faultInjector);
     }
   }
