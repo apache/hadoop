@@ -27,6 +27,152 @@ Release 2.0.5-beta - UNRELEASED
 
   IMPROVEMENTS
 
+<<<<<<< .working
+=======
+    MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
+
+    MAPREDUCE-3597. [Rumen] Rumen should provide APIs to access all the
+                    job-history related information.
+
+    MAPREDUCE-3375. [Gridmix] Memory Emulation system tests.
+                    (Vinay Thota via amarrk)
+
+    MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests.
+                    (Vinay Thota via amarrk)
+
+    MAPREDUCE-2836. Provide option to fail jobs when submitted to non-existent
+    fair scheduler pools. (Ahmed Radwan via todd)
+
+    MAPREDUCE-3171. normalize nodemanager native code compilation with common/hdfs
+    native. (tucu)
+
+    MAPREDUCE-3149. Add a test to verify that TokenCache handles file system
+    uri with no authority. (John George via jitendra)
+
+    MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides
+    client APIs cross MR1 and MR2 (Ahmed via tucu)
+
+    MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks()
+    (XieXianshan via harsh)
+
+    MAPREDUCE-3956. Remove the use of the deprecated Syncable.sync() method from
+    TeraOutputFormat in the terasort example.  (szetszwo)
+
+    MAPREDUCE-3935. Annotate Counters.Counter and Counters.Group as @Public.
+    (tomwhite)
+
+    HADOOP-8285 MR changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
+    MAPREDUCE-3302. Remove the last dependency call from
+    org.apache.hadoop.record package in MR. (harsh)
+
+    MAPREDUCE-2384. The job submitter should make sure to validate
+    jobs before creation of necessary files. (harsh)
+
+    MAPREDUCE-4371. Check for cyclic dependencies in Jobcontrol job DAG
+    (madhukara phatak via bobby)
+
+    MAPREDUCE-4686. hadoop-mapreduce-client-core fails compilation in Eclipse 
+    due to missing Avro-generated classes (Chris Nauroth via harsh)
+
+    MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
+    (Brandon Li via suresh)
+
+    MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing.
+    (Srikanth Sundarrajan via amareshwari)
+
+  BUG FIXES
+
+    MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
+    (Yu Gao via llu)
+
+    MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
+                     (Jason Lowe via bobby)
+
+    MAPREDUCE-3462. Fix Gridmix JUnit testcase failures.
+                    (Ravi Prakash and Ravi Gummadi via amarrk)
+
+    MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks.
+                    (Devaraj K and Amar Kamat via amarrk)
+
+    MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
+
+    MAPREDUCE-3346. [Rumen] LoggedTaskAttempt#getHostName() returns null.
+                    (amarrk)
+
+    MAPREDUCE-2950. [Gridmix] TestUserResolve fails in trunk.
+                    (Ravi Gummadi via amarrk)
+
+    MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and
+    ResourceUsageMatcher. (amarrk)
+
+    MAPREDUCE-2978. Fixed test-patch to make Jenkins report correct number of
+    findBugs, correct links to findBugs artifacts and no links to the
+    artifacts when there are no warnings. (Tom White via vinodkv).
+
+    MAPREDUCE-3664. Federation Documentation has incorrect configuration example.
+    (Brandon Li via jitendra)
+
+    MAPREDUCE-1740. NPE in getMatchingLevelForNodes when node locations are 
+    variable depth (ahmed via tucu) [IMPORTANT: this is dead code in trunk]
+
+    MAPREDUCE-3990. MRBench allows Long-sized input-lines value
+    but parses CLI argument as an Integer. (harsh)
+
+    MAPREDUCE-3868. Make Raid Compile. (Weiyan Wang via schen)
+
+    MAPREDUCE-4685. DBCount should not use ACCESS. (Viji via harsh)
+
+    MAPREDUCE-3223. Remove MR1 configs from mapred-default.xml (tlipcon via harsh)
+
+    MAPREDUCE-4695. Fix LocalRunner on trunk after MAPREDUCE-3223 broke it
+    (harsh)
+
+    MAPREDUCE-4574. Fix TotalOrderParitioner to work with
+    non-WritableComparable key types. (harsh)
+
+    MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
+    queue configuration. (Chris Nauroth via suresh)
+
+    MAPREDUCE-5012. Typo in javadoc for IdentityMapper class. (Adam Monsen
+    via suresh)
+
+    MAPREDUCE-5078. TestMRAppMaster fails on Windows due to mismatched path
+    separators. (Chris Nauroth via sseth)
+
+    MAPREDUCE-4885. Streaming tests have multiple failures on Windows. (Chris
+    Nauroth via bikas)
+
+  BREAKDOWN OF HADOOP-8562 SUBTASKS
+
+    MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
+    (Chris Nauroth via suresh)
+
+    MAPREDUCE-4780. MapReduce distribution build fails on Windows.
+    (Chris Nauroth via suresh)
+
+    MAPREDUCE-4790. MapReduce build script would be more readable using abspath.
+    (Chris Nauroth via suresh)
+
+    MAPREDUCE-4869. Fix TestMapReduceChildJVM. (Chris Nauroth via acmurthy)
+
+    MAPREDUCE-4870. Fix TestMRJobsWithHistoryService. (Chris Nauroth via acmurthy)
+
+    MAPREDUCE-4983. Fixed various platform specific assumptions in various tests,
+    so that they can pass on Windows too. (Chris Nauroth via vinodkv)
+
+    HADOOP-9372. Fix bad timeout annotations on tests.
+    (Arpit Agarwal via suresh)
+
+Release 2.0.5-beta - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+>>>>>>> .merge-right.r1467158
     MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running
     tasks in Gridmix. (amarrk via tgraves)
 
@@ -314,6 +460,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9372. Fix bad timeout annotations on tests.
     (Arpit Agarwal via suresh)
+
+    MAPREDUCE-4885. Streaming tests have multiple failures on Windows. (Chris
+    Nauroth via bikas)
 
 Release 2.0.4-beta - UNRELEASED
 

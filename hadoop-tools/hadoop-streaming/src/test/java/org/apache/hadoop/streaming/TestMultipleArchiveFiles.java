@@ -70,8 +70,8 @@ public class TestMultipleArchiveFiles extends TestStreaming
     namenode = fileSys.getUri().getAuthority();
     mr  = new MiniMRCluster(1, namenode, 1);
 
-    map = "xargs cat";
-    reduce = "cat";
+    map = XARGS_CAT;
+    reduce = CAT;
   }
 
   @Override
@@ -84,7 +84,8 @@ public class TestMultipleArchiveFiles extends TestStreaming
   {
     fileSys.delete(new Path(INPUT_DIR), true);
     DataOutputStream dos = fileSys.create(new Path(INPUT_FILE));
-    String inputFileString = "symlink1/cacheArchive1\nsymlink2/cacheArchive2";
+    String inputFileString = "symlink1" + File.separator
+      + "cacheArchive1\nsymlink2" + File.separator + "cacheArchive2";
     dos.write(inputFileString.getBytes("UTF-8"));
     dos.close();
 

@@ -127,6 +127,20 @@
               </target>
             </configuration>
           </execution>
+          <execution>
+            <id>copy-test-bin</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy todir="target/bin">
+                  <fileset dir="src/test/bin" />
+                </copy>
+              </target>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>

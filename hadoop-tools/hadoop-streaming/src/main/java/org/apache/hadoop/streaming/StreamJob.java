@@ -294,8 +294,7 @@ public class StreamJob implements Tool {
         for (String file : values) {
           packageFiles_.add(file);
           try {
-            URI pathURI = new URI(file);
-            Path path = new Path(pathURI);
+            Path path = new Path(file);
             FileSystem localFs = FileSystem.getLocal(config_);
             String finalPath = path.makeQualified(localFs).toString();
             if(fileList.length() > 0) {

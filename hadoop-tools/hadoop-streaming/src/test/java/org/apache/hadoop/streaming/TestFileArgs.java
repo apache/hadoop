@@ -19,6 +19,7 @@
 package org.apache.hadoop.streaming;
 
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Before;
 
@@ -45,7 +47,8 @@ public class TestFileArgs extends TestStreaming
   private static final String EXPECTED_OUTPUT =
     "job.jar\t\nsidefile\t\n";
 
-  private static final String LS_PATH = "/bin/ls";
+  private static final String LS_PATH = Shell.WINDOWS ? "cmd /c dir /B" :
+    "/bin/ls";
 
   public TestFileArgs() throws IOException
   {
@@ -58,6 +61,7 @@ public class TestFileArgs extends TestStreaming
 
     map = LS_PATH;
     FileSystem.setDefaultUri(conf, "hdfs://" + namenode);
+    setTestDir(new File("/tmp/TestFileArgs"));
   }
 
   @Before

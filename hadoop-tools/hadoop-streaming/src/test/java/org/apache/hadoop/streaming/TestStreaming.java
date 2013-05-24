@@ -33,7 +33,7 @@ import static org.junit.Assert.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
-
+import org.apache.hadoop.util.Shell;
 
 /**
  * This class tests hadoopStreaming in MapReduce local mode.
@@ -42,6 +42,22 @@ public class TestStreaming
 {
 
   public static final String STREAMING_JAR = JarFinder.getJar(StreamJob.class);
+
+  /**
+   * cat command used for copying stdin to stdout as mapper or reducer function.
+   * On Windows, use a cmd script that approximates the functionality of cat.
+   */
+  static final String CAT = Shell.WINDOWS ?
+    "cmd /c " + new File("target/bin/cat.cmd").getAbsolutePath() : "cat";
+
+  /**
+   * Command used for iterating through file names on stdin and copying each
+   * file's contents to stdout, used as mapper or reducer function.  On Windows,
+   * use a cmd script that approximates the functionality of xargs cat.
+   */
+  static final String XARGS_CAT = Shell.WINDOWS ?
+    "cmd /c " + new File("target/bin/xargs_cat.cmd").getAbsolutePath() :
+    "xargs cat";
 
   // "map" command: grep -E (red|green|blue)
   // reduce command: uniq
@@ -66,9 +82,22 @@ public class TestStreaming
     UtilTest utilTest = new UtilTest(getClass().getName());
     utilTest.checkUserDir();
     utilTest.redirectIfAntJunit();
-    TEST_DIR = new File("target/TestStreaming").getAbsoluteFile();
-    OUTPUT_DIR = new File(TEST_DIR, "out");
-    INPUT_FILE = new File(TEST_DIR, "input.txt");
+    setTestDir(new File("target/TestStreaming").getAbsoluteFile());
+  }
+
+  /**
+   * Sets root of test working directory and resets any other paths that must be
+   * children of the test working directory.  Typical usage is for subclasses
+   * that use HDFS to override the test directory to the form "/tmp/<test name>"
+   * so that on Windows, tests won't attempt to use paths containing a ':' from
+   * the drive specifier.  The ':' character is considered invalid by HDFS.
+   * 
+   * @param testDir File to set
+   */
+  protected void setTestDir(File testDir) {
+    TEST_DIR = testDir;
+    OUTPUT_DIR = new File(testDir, "out");
+    INPUT_FILE = new File(testDir, "input.txt");
   }
 
   @Before
@@ -89,19 +118,18 @@ public class TestStreaming
 
   protected void createInput() throws IOException
   {
-    DataOutputStream out = getFileSystem().create(
-      new Path(INPUT_FILE.getAbsolutePath()));
+    DataOutputStream out = getFileSystem().create(new Path(
+      INPUT_FILE.getPath()));
     out.write(getInputData().getBytes("UTF-8"));
     out.close();
   }
 
   protected void setInputOutput() {
-    inputFile = INPUT_FILE.getAbsolutePath();
-    outDir = OUTPUT_DIR.getAbsolutePath();
+    inputFile = INPUT_FILE.getPath();
+    outDir = OUTPUT_DIR.getPath();
   }
 
   protected String[] genArgs() {
-    setInputOutput();
     args.add("-input");args.add(inputFile);
     args.add("-output");args.add(outDir);
     args.add("-mapper");args.add(map);
@@ -129,7 +157,7 @@ public class TestStreaming
   }
 
   protected void checkOutput() throws IOException {
-    Path outPath = new Path(OUTPUT_DIR.getAbsolutePath(), "part-00000");
+    Path outPath = new Path(OUTPUT_DIR.getPath(), "part-00000");
     FileSystem fs = getFileSystem();
     String output = StreamUtil.slurpHadoop(outPath, fs);
     fs.delete(outPath, true);
@@ -155,6 +183,7 @@ public class TestStreaming
    * @throws IOException
    */
   protected int runStreamJob() throws IOException {
+    setInputOutput();
     createInput();
     boolean mayExit = false;
 
