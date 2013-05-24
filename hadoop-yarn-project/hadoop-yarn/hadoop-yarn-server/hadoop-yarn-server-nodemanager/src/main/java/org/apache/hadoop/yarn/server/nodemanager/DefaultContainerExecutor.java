@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class DefaultContainerExecutor extends ContainerExecutor {
 
   private static final Log LOG = LogFactory
@@ -237,8 +239,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     protected abstract void writeLocalWrapperScript(Path launchDst, Path pidFile,
         PrintStream pout);
 
-    protected LocalWrapperScriptBuilder(Path wrapperScriptPath) {
-      this.wrapperScriptPath = wrapperScriptPath;
+    protected LocalWrapperScriptBuilder(Path containerWorkDir) {
+      this.wrapperScriptPath = new Path(containerWorkDir,
+        Shell.appendScriptExtension("default_container_executor"));
     }
   }
 
@@ -246,7 +249,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       extends LocalWrapperScriptBuilder {
 
     public UnixLocalWrapperScriptBuilder(Path containerWorkDir) {
-      super(new Path(containerWorkDir, "default_container_executor.sh"));
+      super(containerWorkDir);
     }
 
     @Override
@@ -260,7 +263,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       pout.println();
       pout.println("echo $$ > " + pidFile.toString() + ".tmp");
       pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
-      String exec = ContainerExecutor.isSetsidAvailable? "exec setsid" : "exec";
+      String exec = Shell.isSetsidAvailable? "exec setsid" : "exec";
       pout.println(exec + " /bin/bash -c \"" +
         launchDst.toUri().getPath().toString() + "\"");
     }
@@ -274,7 +277,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     public WindowsLocalWrapperScriptBuilder(String containerIdStr,
         Path containerWorkDir) {
 
-      super(new Path(containerWorkDir, "default_container_executor.cmd"));
+      super(containerWorkDir);
       this.containerIdStr = containerIdStr;
     }
 
@@ -297,18 +300,15 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   @Override
   public boolean signalContainer(String user, String pid, Signal signal)
       throws IOException {
-    final String sigpid = ContainerExecutor.isSetsidAvailable
-        ? "-" + pid
-        : pid;
-    LOG.debug("Sending signal " + signal.getValue() + " to pid " + sigpid
+    LOG.debug("Sending signal " + signal.getValue() + " to pid " + pid
         + " as user " + user);
-    if (!containerIsAlive(sigpid)) {
+    if (!containerIsAlive(pid)) {
       return false;
     }
     try {
-      killContainer(sigpid, signal);
+      killContainer(pid, signal);
     } catch (IOException e) {
-      if (!containerIsAlive(sigpid)) {
+      if (!containerIsAlive(pid)) {
         return false;
       }
       throw e;
@@ -322,9 +322,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    * @param pid String pid
    * @return boolean true if the process is alive
    */
-  private boolean containerIsAlive(String pid) throws IOException {
+  @VisibleForTesting
+  public static boolean containerIsAlive(String pid) throws IOException {
     try {
-      new ShellCommandExecutor(getCheckProcessIsAliveCommand(pid)).execute();
+      new ShellCommandExecutor(Shell.getCheckProcessIsAliveCommand(pid))
+        .execute();
       // successful execution means process is alive
       return true;
     }
@@ -342,7 +344,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    * (for logging).
    */
   private void killContainer(String pid, Signal signal) throws IOException {
-    new ShellCommandExecutor(getSignalKillCommand(signal.getValue(), pid))
+    new ShellCommandExecutor(Shell.getSignalKillCommand(signal.getValue(), pid))
       .execute();
   }
 

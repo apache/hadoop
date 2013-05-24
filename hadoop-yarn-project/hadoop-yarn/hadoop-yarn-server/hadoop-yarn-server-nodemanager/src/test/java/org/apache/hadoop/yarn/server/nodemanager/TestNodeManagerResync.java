@@ -89,7 +89,8 @@ public class TestNodeManagerResync {
     YarnConfiguration conf = createNMConfig();
     nm.init(conf);
     nm.start();
-    TestNodeManagerShutdown.startContainer(nm, localFS, tmpDir,
+    ContainerId cId = TestNodeManagerShutdown.createContainerId();
+    TestNodeManagerShutdown.startContainer(nm, cId, localFS, tmpDir,
       processStartFile);
 
     Assert.assertEquals(1, ((TestNodeManager1) nm).getNMRegistrationCount());
@@ -118,7 +119,8 @@ public class TestNodeManagerResync {
     nm.start();
 
     // Start the container in running state
-    TestNodeManagerShutdown.startContainer(nm, localFS, tmpDir,
+    ContainerId cId = TestNodeManagerShutdown.createContainerId();
+    TestNodeManagerShutdown.startContainer(nm, cId, localFS, tmpDir,
       processStartFile);
 
     nm.getNMDispatcher().getEventHandler()

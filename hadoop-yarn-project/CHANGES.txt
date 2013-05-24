@@ -386,6 +386,9 @@ Release 2.0.5-beta - UNRELEASED
     classpath with new process's environment variables and localized resources
     (Chris Nauroth via bikas)
 
+    YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
+    via vinodkv)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES

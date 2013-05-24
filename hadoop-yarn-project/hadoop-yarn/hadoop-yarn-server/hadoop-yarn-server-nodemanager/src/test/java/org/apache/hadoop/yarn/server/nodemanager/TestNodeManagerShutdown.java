@@ -19,14 +19,15 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -64,6 +66,9 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
@@ -84,6 +89,7 @@ public class TestNodeManagerShutdown {
       .getRecordFactory(null);
   static final String user = "nobody";
   private FileContext localFS;
+  private ContainerId cId;
 
   @Before
   public void setup() throws UnsupportedFileSystemException {
@@ -92,6 +98,9 @@ public class TestNodeManagerShutdown {
     logsDir.mkdirs();
     remoteLogsDir.mkdirs();
     nmLocalDir.mkdirs();
+
+    // Construct the Container-id
+    cId = createContainerId();
   }
   
   @After
@@ -105,7 +114,7 @@ public class TestNodeManagerShutdown {
     NodeManager nm = new TestNodeManager();
     nm.init(createNMConfig());
     nm.start();
-    startContainer(nm, localFS, tmpDir, processStartFile);
+    startContainer(nm, cId, localFS, tmpDir, processStartFile);
     
     final int MAX_TRIES=20;
     int numTries = 0;
@@ -118,38 +127,43 @@ public class TestNodeManagerShutdown {
     
     nm.stop();
     
-    // Now verify the contents of the file
-    // Script generates a message when it receives a sigterm
-    // so we look for that
-    BufferedReader reader =
-        new BufferedReader(new FileReader(processStartFile));
+    // Now verify the contents of the file.  Script generates a message when it
+    // receives a sigterm so we look for that.  We cannot perform this check on
+    // Windows, because the process is not notified when killed by winutils.
+    // There is no way for the process to trap and respond.  Instead, we can
+    // verify that the job object with ID matching container ID no longer exists.
+    if (Shell.WINDOWS) {
+      Assert.assertFalse("Process is still alive!",
+        DefaultContainerExecutor.containerIsAlive(cId.toString()));
+    } else {
+      BufferedReader reader =
+          new BufferedReader(new FileReader(processStartFile));
 
-    boolean foundSigTermMessage = false;
-    while (true) {
-      String line = reader.readLine();
-      if (line == null) {
-        break;
+      boolean foundSigTermMessage = false;
+      while (true) {
+        String line = reader.readLine();
+        if (line == null) {
+          break;
+        }
+        if (line.contains("SIGTERM")) {
+          foundSigTermMessage = true;
+          break;
+        }
       }
-      if (line.contains("SIGTERM")) {
-        foundSigTermMessage = true;
-        break;
-      }
+      Assert.assertTrue("Did not find sigterm message", foundSigTermMessage);
+      reader.close();
     }
-    Assert.assertTrue("Did not find sigterm message", foundSigTermMessage);
-    reader.close();
   }
 
-  public static void startContainer(NodeManager nm, FileContext localFS,
-      File scriptFileDir, File processStartFile) throws IOException,
-      YarnRemoteException {
+  public static void startContainer(NodeManager nm, ContainerId cId,
+      FileContext localFS, File scriptFileDir, File processStartFile) 
+          throws IOException, YarnRemoteException {
     File scriptFile =
-        createUnhaltingScriptFile(scriptFileDir, processStartFile);
+        createUnhaltingScriptFile(cId, scriptFileDir, processStartFile);
     
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
     Container mockContainer = new ContainerPBImpl();
-    // Construct the Container-id
-    ContainerId cId = createContainerId();
     mockContainer.setId(cId);
 
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 1234);
@@ -173,9 +187,7 @@ public class TestNodeManagerShutdown {
     localResources.put(destinationFile, localResource);
     containerLaunchContext.setLocalResources(localResources);
     containerLaunchContext.setUser(containerLaunchContext.getUser());
-    List<String> commands = new ArrayList<String>();
-    commands.add("/bin/bash");
-    commands.add(scriptFile.getAbsolutePath());
+    List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
     Resource resource = BuilderUtils.newResource(1024, 1);
     mockContainer.setResource(resource);
@@ -239,18 +251,26 @@ public class TestNodeManagerShutdown {
    * Creates a script to run a container that will run forever unless
    * stopped by external means.
    */
-  private static File createUnhaltingScriptFile(File scriptFileDir,
-      File processStartFile) throws IOException {
+  private static File createUnhaltingScriptFile(ContainerId cId,
+      File scriptFileDir, File processStartFile) throws IOException {
     File scriptFile = new File(scriptFileDir, "scriptFile.sh");
-    BufferedWriter fileWriter = new BufferedWriter(new FileWriter(scriptFile));
-    fileWriter.write("#!/bin/bash\n\n");
-    fileWriter.write("echo \"Running testscript for delayed kill\"\n");
-    fileWriter.write("hello=\"Got SIGTERM\"\n");
-    fileWriter.write("umask 0\n");
-    fileWriter.write("trap \"echo $hello >> " + processStartFile + "\" SIGTERM\n");
-    fileWriter.write("echo \"Writing pid to start file\"\n");
-    fileWriter.write("echo $$ >> " + processStartFile + "\n");
-    fileWriter.write("while true; do\ndate >> /dev/null;\n done\n");
+    PrintWriter fileWriter = new PrintWriter(scriptFile);
+    if (Shell.WINDOWS) {
+      fileWriter.println("@echo \"Running testscript for delayed kill\"");
+      fileWriter.println("@echo \"Writing pid to start file\"");
+      fileWriter.println("@echo " + cId + ">> " + processStartFile);
+      fileWriter.println("@pause");
+    } else {
+      fileWriter.write("#!/bin/bash\n\n");
+      fileWriter.write("echo \"Running testscript for delayed kill\"\n");
+      fileWriter.write("hello=\"Got SIGTERM\"\n");
+      fileWriter.write("umask 0\n");
+      fileWriter.write("trap \"echo $hello >> " + processStartFile +
+        "\" SIGTERM\n");
+      fileWriter.write("echo \"Writing pid to start file\"\n");
+      fileWriter.write("echo $$ >> " + processStartFile + "\n");
+      fileWriter.write("while true; do\ndate >> /dev/null;\n done\n");
+    }
 
     fileWriter.close();
     return scriptFile;

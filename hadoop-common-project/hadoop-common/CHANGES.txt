@@ -341,7 +341,11 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9490. LocalFileSystem#reportChecksumFailure not closing the 
     checksum file handle before rename. (Ivan Mitic via suresh)
-    
+
+    HADOOP-9488. FileUtil#createJarWithClassPath only substitutes environment
+    variables from current process environment/does not support overriding
+    when launching new process (Chris Nauroth via bikas)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
