@@ -397,6 +397,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4722. TestGetConf#testFederation times out on Windows.
     (Ivan Mitic via suresh)
 
+    HDFS-4705. Address HDFS test failures on Windows because of invalid
+    dfs.namenode.name.dir. (Ivan Mitic via suresh)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
