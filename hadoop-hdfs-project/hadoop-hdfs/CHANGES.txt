@@ -381,6 +381,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4674. TestBPOfferService fails on Windows due to failure parsing 
     datanode data directory as URI. (Chris Nauroth via suresh)
 
+    HDFS-4732. Fix TestDFSUpgradeFromImage which fails on Windows due to
+    failure to unpack old image tarball that contains hard links.
+    (Chris Nauroth via szetszwo)
 
 Release 2.0.4-alpha - 2013-04-25
 
