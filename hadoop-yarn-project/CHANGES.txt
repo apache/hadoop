@@ -382,6 +382,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-487. Modify path manipulation in LocalDirsHandlerService to let
     TestDiskFailures pass on Windows. (Chris Nauroth via vinodkv)
 
+    YARN-593. container launch on Windows does not correctly populate
+    classpath with new process's environment variables and localized resources
+    (Chris Nauroth via bikas)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES

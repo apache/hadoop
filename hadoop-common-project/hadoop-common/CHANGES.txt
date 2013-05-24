@@ -329,6 +329,10 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9437. TestNativeIO#testRenameTo fails on Windows due to assumption
     that POSIX errno is embedded in NativeIOException. (Chris Nauroth via
     suresh)
+
+    HADOOP-9488. FileUtil#createJarWithClassPath only substitutes environment
+    variables from current process environment/does not support overriding
+    when launching new process (Chris Nauroth via bikas)
     
 Release 2.0.4-beta - UNRELEASED
 

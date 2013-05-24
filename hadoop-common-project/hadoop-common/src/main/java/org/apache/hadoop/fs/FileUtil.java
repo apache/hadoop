@@ -967,15 +967,17 @@ public class FileUtil {
    * 
    * @param inputClassPath String input classpath to bundle into the jar manifest
    * @param pwd Path to working directory to save jar
+   * @param callerEnv Map<String, String> caller's environment variables to use
+   *   for expansion
    * @return String absolute path to new jar
    * @throws IOException if there is an I/O error while writing the jar file
    */
-  public static String createJarWithClassPath(String inputClassPath, Path pwd)
-      throws IOException {
+  public static String createJarWithClassPath(String inputClassPath, Path pwd,
+      Map<String, String> callerEnv) throws IOException {
     // Replace environment variables, case-insensitive on Windows
     @SuppressWarnings("unchecked")
-    Map<String, String> env = Shell.WINDOWS ?
-      new CaseInsensitiveMap(System.getenv()) : System.getenv();
+    Map<String, String> env = Shell.WINDOWS ? new CaseInsensitiveMap(callerEnv) :
+      callerEnv;
     String[] classPathEntries = inputClassPath.split(File.pathSeparator);
     for (int i = 0; i < classPathEntries.length; ++i) {
       classPathEntries[i] = StringUtils.replaceTokens(classPathEntries[i],
@@ -1006,9 +1008,22 @@ public class FileUtil {
           }
         }
       } else {
-        // Append just this jar
-        classPathEntryList.add(new File(classPathEntry).toURI().toURL()
-          .toExternalForm());
+        // Append just this entry
+        String classPathEntryUrl = new File(classPathEntry).toURI().toURL()
+          .toExternalForm();
+
+        // File.toURI only appends trailing '/' if it can determine that it is a
+        // directory that already exists.  (See JavaDocs.)  If this entry had a
+        // trailing '/' specified by the caller, then guarantee that the
+        // classpath entry in the manifest has a trailing '/', and thus refers to
+        // a directory instead of a file.  This can happen if the caller is
+        // creating a classpath jar referencing a directory that hasn't been
+        // created yet, but will definitely be created before running.
+        if (classPathEntry.endsWith(Path.SEPARATOR) &&
+            !classPathEntryUrl.endsWith(Path.SEPARATOR)) {
+          classPathEntryUrl = classPathEntryUrl + Path.SEPARATOR;
+        }
+        classPathEntryList.add(classPathEntryUrl);
       }
     }
     String jarClassPath = StringUtils.join(" ", classPathEntryList);
