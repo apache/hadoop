@@ -21,10 +21,6 @@ Trunk (Unreleased)
     HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
     (Junping Du via szetszwo)
 
-    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
-    Azure environments. (See breakdown of tasks below for subtasks and
-    contributors)
-
     HDFS-4659 Support setting execution bit for regular files (Brandon Li via sanjay)
 
   IMPROVEMENTS
@@ -260,10 +256,6 @@ Trunk (Unreleased)
     HDFS-4586. TestDataDirs.testGetDataDirsFromURIs fails with all directories
     in dfs.datanode.data.dir are invalid. (Ivan Mitic via atm)
 
-    HDFS-4732. Fix TestDFSUpgradeFromImage which fails on Windows due to
-    failure to unpack old image tarball that contains hard links.
-    (Chris Nauroth via szetszwo)
-
     HDFS-4757. Update FSDirectory#inodeMap when replacing an INodeDirectory
     while setting quota.  (Jing Zhao via szetszwo)
 
@@ -272,70 +264,6 @@ Trunk (Unreleased)
 
     HDFS-4687. TestDelegationTokenForProxyUser#testWebHdfsDoAs is flaky with
     JDK7. (Andrew Wang via atm)
-
-  BREAKDOWN OF HADOOP-8562 and HDFS-3602 SUBTASKS AND RELATED JIRAS
-
-    HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
-    Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
-
-    HDFS-4163. HDFS distribution build fails on Windows. (Chris Nauroth via
-    suresh)
-
-    HDFS-4316. branch-trunk-win contains test code accidentally added during 
-    work on fixing tests on Windows. (Chris Nauroth via suresh)
-
-    HDFS-4297. Fix issues related to datanode concurrent reading and writing on
-    Windows. (Arpit Agarwal, Chuan Liu via suresh)
-
-    HDFS-4573. Fix TestINodeFile on Windows. (Arpit Agarwal via suresh)
-
-    HDFS-4572. Fix TestJournal failures on Windows. (Arpit Agarwal via suresh)
-
-    HDFS-4287. HTTPFS tests fail on Windows. (Chris Nauroth via suresh)
-
-    HDFS-4593. TestSaveNamespace fails on Windows. (Arpit Agarwal via suresh)
-
-    HDFS-4582. TestHostsFiles fails on Windows. (Ivan Mitic via suresh)
-
-    HDFS-4603. TestMiniDFSCluster fails on Windows. (Ivan Mitic via suresh)
-
-    HDFS-4604. TestJournalNode fails on Windows. (Ivan Mitic via suresh)
-
-    HDFS-4625. Make TestNNWithQJM#testNewNamenodeTakesOverWriter work on
-    Windows. (Ivan Mitic via suresh)
-
-    HDFS-4674. TestBPOfferService fails on Windows due to failure parsing 
-    datanode data directory as URI. (Chris Nauroth via suresh)
-
-    HDFS-4725. Fix HDFS file handle leaks in FSEditLog, NameNode,
-    OfflineEditsBinaryLoader and some tests.  (Chris Nauroth via szetszwo)
-
-    HDFS-4615. Fix TestDFSShell failures on Windows.  (Arpit Agarwal
-    via szetszwo)
-
-    HDFS-4584. Skip TestNNWithQJM.testNewNamenodeTakesOverWriter() on Windows.
-    (Arpit Agarwal via szetszwo)
-
-    HDFS-4741. TestStorageRestore#testStorageRestoreFailure fails on Windows.
-    (Arpit Agarwal via suresh)
-
-    HDFS-4743. TestNNStorageRetentionManager fails on Windows.
-    (Chris Nauroth via suresh)
-
-    HDFS-4740. Fixes for a few test failures on Windows.
-    (Arpit Agarwal via suresh)
-
-    HDFS-4722. TestGetConf#testFederation times out on Windows.
-    (Ivan Mitic via suresh)
-
-    HDFS-4705. Address HDFS test failures on Windows because of invalid
-    dfs.namenode.name.dir. (Ivan Mitic via suresh)
-
-    HDFS-4734. HDFS Tests that use ShellCommandFencer are broken on Windows.
-    (Arpit Agarwal via suresh)
-
-    HDFS-4610. Use common utils FileUtil#setReadable/Writable/Executable and 
-    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
   BREAKDOWN OF HDFS-2802 HDFS SNAPSHOT SUBTASKS
 
@@ -680,10 +608,10 @@ Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
-    HDFS-4434. Provide a mapping from INodeId to INode. (suresh)
-
     HDFS-4305. Add a configurable limit on number of blocks per file, and min
     block size. (Andrew Wang via atm)
+
+    HDFS-4434. Provide a mapping from INodeId to INode. (suresh)
 
   NEW FEATURES
 
@@ -709,6 +637,10 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-347. DFS read performance suboptimal when client co-located on nodes
     with data. (Colin Patrick McCabe via todd and atm)
 
+    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
+    Azure environments. (See breakdown of tasks below for subtasks and
+    contributors)
+    
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
@@ -861,9 +793,6 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4620. Documentation for dfs.namenode.rpc-address specifies wrong
     format. (Sandy Ryza via atm)
 
-    HDFS-4607. In TestGetConf.testGetSpecificKey(), use a platform-specific
-    line separator; otherwise, it fails on Windows.  (Ivan Mitic via szetszwo)
-
     HDFS-4609. TestAuditLogs should release log handles between tests. 
     (Ivan Mitic via szetszwo)
 
@@ -956,6 +885,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4298. StorageRetentionManager spews warnings when used with QJM. (atm)
 
+    HDFS-4725. Fix HDFS file handle leaks in FSEditLog, NameNode,
+    OfflineEditsBinaryLoader and some tests.  (Chris Nauroth via szetszwo)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
@@ -1014,6 +946,74 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4661. A few little code cleanups of some HDFS-347-related code. (Colin
     Patrick McCabe via atm)
+
+  BREAKDOWN OF HADOOP-8562 and HDFS-3602 SUBTASKS AND RELATED JIRAS
+
+    HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
+    Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
+
+    HDFS-4163. HDFS distribution build fails on Windows. (Chris Nauroth via
+    suresh)
+
+    HDFS-4316. branch-trunk-win contains test code accidentally added during 
+    work on fixing tests on Windows. (Chris Nauroth via suresh)
+
+    HDFS-4297. Fix issues related to datanode concurrent reading and writing on
+    Windows. (Arpit Agarwal, Chuan Liu via suresh)
+
+    HDFS-4573. Fix TestINodeFile on Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4572. Fix TestJournal failures on Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4287. HTTPFS tests fail on Windows. (Chris Nauroth via suresh)
+
+    HDFS-4593. TestSaveNamespace fails on Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4582. TestHostsFiles fails on Windows. (Ivan Mitic via suresh)
+
+    HDFS-4603. TestMiniDFSCluster fails on Windows. (Ivan Mitic via suresh)
+
+    HDFS-4604. TestJournalNode fails on Windows. (Ivan Mitic via suresh)
+
+    HDFS-4607.  In TestGetConf.testGetSpecificKey(), use a platform-specific
+    line separator; otherwise, it fails on Windows.  (Ivan Mitic via szetszwo)
+
+    HDFS-4625. Make TestNNWithQJM#testNewNamenodeTakesOverWriter work on
+    Windows. (Ivan Mitic via suresh)
+
+    HDFS-4674. TestBPOfferService fails on Windows due to failure parsing 
+    datanode data directory as URI. (Chris Nauroth via suresh)
+
+    HDFS-4615. Fix TestDFSShell failures on Windows.  (Arpit Agarwal
+    via szetszwo)
+
+    HDFS-4584. Skip TestNNWithQJM.testNewNamenodeTakesOverWriter() on Windows.
+    (Arpit Agarwal via szetszwo)
+
+    HDFS-4732. Fix TestDFSUpgradeFromImage which fails on Windows due to
+    failure to unpack old image tarball that contains hard links.
+    (Chris Nauroth via szetszwo)
+
+    HDFS-4741. TestStorageRestore#testStorageRestoreFailure fails on Windows.
+    (Arpit Agarwal via suresh)
+
+    HDFS-4743. TestNNStorageRetentionManager fails on Windows.
+    (Chris Nauroth via suresh)
+
+    HDFS-4740. Fixes for a few test failures on Windows.
+    (Arpit Agarwal via suresh)
+
+    HDFS-4722. TestGetConf#testFederation times out on Windows.
+    (Ivan Mitic via suresh)
+
+    HDFS-4705. Address HDFS test failures on Windows because of invalid
+    dfs.namenode.name.dir. (Ivan Mitic via suresh)
+
+    HDFS-4734. HDFS Tests that use ShellCommandFencer are broken on Windows.
+    (Arpit Agarwal via suresh)
+
+    HDFS-4610. Use common utils FileUtil#setReadable/Writable/Executable and 
+    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
 Release 2.0.4-alpha - 2013-04-25
 

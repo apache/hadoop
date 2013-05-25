@@ -6,10 +6,6 @@ Trunk - Unreleased
 
   NEW FEATURES
 
-    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
-    Azure environments. (See breakdown of tasks below for subtasks and
-    contributors)
-
   IMPROVEMENTS
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
@@ -18,66 +14,12 @@ Trunk - Unreleased
 
   BUG FIXES
 
-    YARN-488. TestContainerManagerSecurity fails on Windows. (Chris Nauroth
-    via hitesh)
-
-    YARN-490. TestDistributedShell fails on Windows. (Chris Nauroth via hitesh)
-
-    YARN-491. TestContainerLogsPage fails on Windows. (Chris Nauroth via hitesh)
-
-    YARN-557. Fix TestUnmanagedAMLauncher failure on Windows. (Chris Nauroth via
-    vinodkv)
-
     YARN-524 TestYarnVersionInfo failing if generated properties doesn't
     include an SVN URL. (stevel)
-
-    YARN-487. Modify path manipulation in LocalDirsHandlerService to let
-    TestDiskFailures pass on Windows. (Chris Nauroth via vinodkv)
-
-    YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
-    via vinodkv)
-
-    YARN-593. container launch on Windows does not correctly populate
-    classpath with new process's environment variables and localized resources
-    (Chris Nauroth via bikas)
 
     YARN-597. TestFSDownload fails on Windows due to dependencies on
     tar/gzip/jar tools. (Ivan Mitic via acmurthy) 
 
-  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
-
-    YARN-158. Yarn creating package-info.java must not depend on sh.
-    (Chris Nauroth via suresh)
-
-    YARN-176. Some YARN tests fail to find winutils. (Chris Nauroth via suresh)
-    
-    YARN-207. YARN distribution build fails on Windows. (Chris Nauroth via
-    suresh)
-
-    YARN-199. Yarn cmd line scripts for windows. (Ivan Mitic via suresh)
-
-    YARN-213. YARN build script would be more readable using abspath.
-    (Chris Nauroth via suresh)
-
-    YARN-233. Added support for running containers in MS Windows to YARN. (Chris
-    Nauroth via acmurthy)
-
-    YARN-234. Added support for process tree and resource calculator in MS Windows 
-    to YARN. (Chris Nauroth via acmurthy)
-
-    YARN-259. Fix LocalDirsHandlerService to use Path rather than URIs. (Xuan
-    Gong via acmurthy) 
-
-    YARN-316. YARN container launch may exceed maximum Windows command line 
-    length due to long classpath. (Chris Nauroth via suresh)
-
-    YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
-    via vinodkv)
-
-    YARN-506. Move to common utils FileUtil#setReadable/Writable/Executable and 
-    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
-
-    
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -140,6 +82,10 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-563. Add the concept of an application-type for each application.
     (Mayank Bansal via vinodkv)
+
+    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
+    Azure environments. (See breakdown of tasks below for subtasks and
+    contributors)
 
   IMPROVEMENTS
 
@@ -312,11 +258,11 @@ Release 2.0.5-beta - UNRELEASED
     YARN-498. Unmanaged AM launcher does not set various constants in env for
     an AM, also does not handle failed AMs properly. (Hitesh Shah via bikas)
 
-    YARN-474. Fix CapacityScheduler to trigger application-activation when
-    am-resource-percent configuration is refreshed. (Zhijie Shen via vinodkv)
-
     YARN-496. Fair scheduler configs are refreshed inconsistently in
     reinitialize. (Sandy Ryza via tomwhite)
+
+    YARN-474. Fix CapacityScheduler to trigger application-activation when
+    am-resource-percent configuration is refreshed. (Zhijie Shen via vinodkv)
 
     YARN-209. Fix CapacityScheduler to trigger application-activation when
     the cluster capacity changes. (Zhijie Shen via vinodkv)
@@ -415,6 +361,56 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-715. Fixed unit test failures - TestDistributedShell and
     TestUnmanagedAMLauncher. (Vinod Kumar Vavilapalli via sseth)
+
+  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
+
+    YARN-158. Yarn creating package-info.java must not depend on sh.
+    (Chris Nauroth via suresh)
+
+    YARN-176. Some YARN tests fail to find winutils. (Chris Nauroth via suresh)
+    
+    YARN-207. YARN distribution build fails on Windows. (Chris Nauroth via
+    suresh)
+
+    YARN-199. Yarn cmd line scripts for windows. (Ivan Mitic via suresh)
+
+    YARN-213. YARN build script would be more readable using abspath.
+    (Chris Nauroth via suresh)
+
+    YARN-233. Added support for running containers in MS Windows to YARN. (Chris
+    Nauroth via acmurthy)
+
+    YARN-234. Added support for process tree and resource calculator in MS Windows 
+    to YARN. (Chris Nauroth via acmurthy)
+
+    YARN-259. Fix LocalDirsHandlerService to use Path rather than URIs. (Xuan
+    Gong via acmurthy) 
+
+    YARN-316. YARN container launch may exceed maximum Windows command line 
+    length due to long classpath. (Chris Nauroth via suresh)
+
+    YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
+    via vinodkv)
+
+    YARN-506. Move to common utils FileUtil#setReadable/Writable/Executable and 
+    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
+    YARN-488. TestContainerManagerSecurity fails on Windows. (Chris Nauroth
+    via hitesh)
+
+    YARN-490. TestDistributedShell fails on Windows. (Chris Nauroth via hitesh)
+
+    YARN-491. TestContainerLogsPage fails on Windows. (Chris Nauroth via hitesh)
+
+    YARN-487. Modify path manipulation in LocalDirsHandlerService to let
+    TestDiskFailures pass on Windows. (Chris Nauroth via vinodkv)
+
+    YARN-593. container launch on Windows does not correctly populate
+    classpath with new process's environment variables and localized resources
+    (Chris Nauroth via bikas)
+
+    YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
+    via vinodkv)
 
 Release 2.0.4-alpha - 2013-04-25 
 
