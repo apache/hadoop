@@ -474,7 +474,22 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4885. Streaming tests have multiple failures on Windows. (Chris
     Nauroth via bikas)
 
-Release 2.0.4-beta - UNRELEASED
+Release 2.0.4.1-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+  MAPREDUCE-5240 inside of FileOutputCommitter the initialized Credentials cache
+  appears to be empty. (vinodkv)
+
+Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
 
