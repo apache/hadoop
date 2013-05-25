@@ -14,10 +14,6 @@ Trunk (Unreleased)
     MAPREDUCE-4887. Add RehashPartitioner, to smooth distributions
     with poor implementations of Object#hashCode().  (Radim Kolar via cutting)
 
-    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
-    Azure environments. (See breakdown of tasks below for subtasks and
-    contributors)
-
     MAPREDUCE-5232. Add a configuration to be able to log classpath and other
     system properties on mapreduce JVMs startup.  (Sangjin Lee via vinodkv)
 
@@ -131,9 +127,6 @@ Trunk (Unreleased)
     MAPREDUCE-5012. Typo in javadoc for IdentityMapper class. (Adam Monsen
     via suresh)
 
-    MAPREDUCE-5078. TestMRAppMaster fails on Windows due to mismatched path
-    separators. (Chris Nauroth via sseth)
-
     MAPREDUCE-4885. Streaming tests have multiple failures on Windows. (Chris
     Nauroth via bikas)
 
@@ -143,30 +136,6 @@ Trunk (Unreleased)
 
     MAPREDUCE-5191. TestQueue#testQueue fails with timeout on Windows. (Ivan
     Mitic via hitesh)
-
-  BREAKDOWN OF HADOOP-8562 SUBTASKS
-
-    MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
-    (Chris Nauroth via suresh)
-
-    MAPREDUCE-4780. MapReduce distribution build fails on Windows.
-    (Chris Nauroth via suresh)
-
-    MAPREDUCE-4790. MapReduce build script would be more readable using abspath.
-    (Chris Nauroth via suresh)
-
-    MAPREDUCE-4869. Fix TestMapReduceChildJVM. (Chris Nauroth via acmurthy)
-
-    MAPREDUCE-4870. Fix TestMRJobsWithHistoryService. (Chris Nauroth via acmurthy)
-
-    MAPREDUCE-4983. Fixed various platform specific assumptions in various tests,
-    so that they can pass on Windows too. (Chris Nauroth via vinodkv)
-
-    HADOOP-9372. Fix bad timeout annotations on tests.
-    (Arpit Agarwal via suresh)
-
-    MAPREDUCE-5177. Use common utils FileUtil#setReadable/Writable/Executable & 
-    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
 Release 2.0.5-beta - UNRELEASED
 
@@ -189,6 +158,10 @@ Release 2.0.5-beta - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
+    Azure environments. (See breakdown of tasks below for subtasks and
+    contributors)
+
   IMPROVEMENTS
 
     MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running
@@ -199,11 +172,11 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-4892. Modify CombineFileInputFormat to not skew input slits'
     allocation on small clusters. (Bikas Saha via vinodkv)
-    
-    MAPREDUCE-4990. Construct debug strings conditionally in
+
+    MAPREDUCE-4990. Construct debug strings conditionally in 
     ShuffleHandler.Shuffle#sendMapOutput(). (kkambatl via tucu)
-    
-    MAPREDUCE-4875. coverage fixing for org.apache.hadoop.mapred
+
+    MAPREDUCE-4875. coverage fixing for org.apache.hadoop.mapred 
     (Aleksey Gorshkov via bobby)
 
     MAPREDUCE-5129. Allow tags to JobHistory for deeper analytics. (billie via
@@ -295,16 +268,16 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4693. History server should include counters for failed tasks.
     (Xuan Gong via sseth)
 
-    MAPREDUCE-4896. mapred queue -info spits out ugly exception when queue does
+    MAPREDUCE-4896. mapred queue -info spits out ugly exception when queue does 
     not exist. (sandyr via tucu)
 
     MAPREDUCE-3685. Fix bugs in MergeManager to ensure compression codec is
     appropriately used and that on-disk segments are correctly sorted on
-    file-size. (Anty Rao and Ravi Prakash via acmurthy)
-    
+    file-size. (Anty Rao and Ravi Prakash via acmurthy) 
+
     MAPREDUCE-4571. TestHsWebServicesJobs fails on jdk7. (tgraves via tucu)
 
-    MAPREDUCE-4716. TestHsWebServicesJobsQuery.testJobsQueryStateInvalid
+    MAPREDUCE-4716. TestHsWebServicesJobsQuery.testJobsQueryStateInvalid 
     fails with jdk7. (tgraves via tucu)
 
     MAPREDUCE-5075. DistCp leaks input file handles since ThrottledInputStream
@@ -350,13 +323,13 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5138. Fix LocalDistributedCacheManager after YARN-112. (Omkar Vinit
     Joshi via vinodkv)
 
-    MAPREDUCE-5113. Streaming input/output types are ignored with java 
+    MAPREDUCE-5086. MR app master deletes staging dir when sent a reboot
+    command from the RM. (Jian He via jlowe)
+
+    MAPREDUCE-5113. Streaming input/output types are ignored with java
     mapper/reducer. (sandyr via tucu)
 
     MAPREDUCE-5098. Fix findbugs warnings in gridmix. (kkambatl via tucu)
-
-    MAPREDUCE-5086. MR app master deletes staging dir when sent a reboot
-    command from the RM. (Jian He via jlowe)
 
     MAPREDUCE-5137. AM web UI: clicking on Map Task results in 500 error
     (Thomas Graves via jlowe)
@@ -377,6 +350,9 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-4898. FileOutputFormat.checkOutputSpecs and 
     FileOutputFormat.setOutputPath incompatible with MR1. (rkanter via tucu)
+    
+    MAPREDUCE-5078. TestMRAppMaster fails on Windows due to mismatched path
+    separators. (Chris Nauroth via sseth)
 
     MAPREDUCE-4932. mapreduce.job#getTaskCompletionEvents incompatible with 
     Hadoop 1. (rkanter via tucu)
@@ -457,6 +433,31 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-5261. Fix issues in TestRMContainerAllocator after YARN-617.
     (Omkar Vinit Joshi via vinodkv)
+
+  BREAKDOWN OF HADOOP-8562 SUBTASKS
+
+    MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
+    (Chris Nauroth via suresh)
+
+    MAPREDUCE-4780. MapReduce distribution build fails on Windows.
+    (Chris Nauroth via suresh)
+
+    MAPREDUCE-4790. MapReduce build script would be more readable using abspath.
+    (Chris Nauroth via suresh)
+
+    MAPREDUCE-4869. Fix TestMapReduceChildJVM. (Chris Nauroth via acmurthy)
+
+    MAPREDUCE-4870. Fix TestMRJobsWithHistoryService. (Chris Nauroth via acmurthy)
+
+    MAPREDUCE-4983. Fixed various platform specific assumptions in various tests,
+    so that they can pass on Windows too. (Chris Nauroth via vinodkv)
+
+    HADOOP-9372. Fix bad timeout annotations on tests.
+    (Arpit Agarwal via suresh)
+
+    MAPREDUCE-5177. Use common utils FileUtil#setReadable/Writable/Executable & 
+    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
 
 Release 2.0.4-alpha - 2013-04-25
 
