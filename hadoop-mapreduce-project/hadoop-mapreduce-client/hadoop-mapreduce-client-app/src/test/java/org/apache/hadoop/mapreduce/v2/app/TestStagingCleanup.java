@@ -52,6 +52,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -219,7 +220,7 @@ import org.junit.Test;
 
      public TestMRApp(ApplicationAttemptId applicationAttemptId, 
          ContainerAllocator allocator, int maxAppAttempts) {
-       super(applicationAttemptId, BuilderUtils.newContainerId(
+       super(applicationAttemptId, ContainerId.newInstance(
            applicationAttemptId, 1), "testhost", 2222, 3333,
            System.currentTimeMillis(), maxAppAttempts);
        this.allocator = allocator;

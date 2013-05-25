@@ -58,10 +58,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.apache.hadoop.yarn.util.Apps;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-
-import com.google.common.base.Charsets;
 
 /**
  * Helper class for MR applications
@@ -423,15 +420,10 @@ public class MRApps extends Apps {
               getResourceDescription(orig.getType()) + orig.getResource() + 
               " conflicts with " + getResourceDescription(type) + u);
         }
-        localResources.put(
-            linkName,
-            BuilderUtils.newLocalResource(
-                p.toUri(), type, 
-                visibilities[i]
-                  ? LocalResourceVisibility.PUBLIC
-                  : LocalResourceVisibility.PRIVATE,
-                sizes[i], timestamps[i])
-        );
+        localResources.put(linkName, LocalResource.newInstance(ConverterUtils
+          .getYarnUrlFromURI(p.toUri()), type, visibilities[i]
+            ? LocalResourceVisibility.PUBLIC : LocalResourceVisibility.PRIVATE,
+          sizes[i], timestamps[i]));
       }
     }
   }

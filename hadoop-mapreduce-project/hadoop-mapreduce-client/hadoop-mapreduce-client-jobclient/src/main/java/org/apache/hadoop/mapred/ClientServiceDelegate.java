@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ClientToken;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -478,7 +479,7 @@ public class ClientServiceDelegate {
             taReport.getContainerId().toString(),
             taReport.getContainerId().getApplicationAttemptId()
                 .getApplicationId().toString(),
-            BuilderUtils.newNodeId(taReport.getNodeManagerHost(),
+            NodeId.newInstance(taReport.getNodeManagerHost(),
                 taReport.getNodeManagerPort()).toString(), report.getUser());
       } else {
         if (report.getAMInfos() == null || report.getAMInfos().size() == 0) {
@@ -489,7 +490,7 @@ public class ClientServiceDelegate {
         return new LogParams(
             amInfo.getContainerId().toString(),
             amInfo.getAppAttemptId().getApplicationId().toString(),
-            BuilderUtils.newNodeId(amInfo.getNodeManagerHost(),
+            NodeId.newInstance(amInfo.getNodeManagerHost(),
                 amInfo.getNodeManagerPort()).toString(), report.getUser());
       }
     } else {

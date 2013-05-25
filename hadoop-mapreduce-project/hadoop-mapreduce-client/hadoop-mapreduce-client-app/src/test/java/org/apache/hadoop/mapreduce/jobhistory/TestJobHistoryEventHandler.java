@@ -272,8 +272,8 @@ public class TestJobHistoryEventHandler {
     String workDir = setupTestWorkDir();
     ApplicationId appId = BuilderUtils.newApplicationId(200, 1);
     ApplicationAttemptId appAttemptId =
-        BuilderUtils.newApplicationAttemptId(appId, 1);
-    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
     TaskID taskID = TaskID.forName("task_200707121733_0003_m_000005");
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     AppContext mockAppContext = mockAppContext(appId);

@@ -91,13 +91,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 
 
 /**
@@ -164,7 +164,7 @@ public class MRApp extends MRAppMaster {
     ApplicationAttemptId appAttemptId =
         getApplicationAttemptId(applicationId, startCount);
     ContainerId containerId =
-        BuilderUtils.newContainerId(appAttemptId, startCount);
+        ContainerId.newInstance(appAttemptId, startCount);
     return containerId;
   }
 
@@ -231,9 +231,9 @@ public class MRApp extends MRAppMaster {
           this.clusterInfo.getMaxContainerCapability());
     } else {
       getContext().getClusterInfo().setMinContainerCapability(
-          BuilderUtils.newResource(1024, 1));
+          Resource.newInstance(1024, 1));
       getContext().getClusterInfo().setMaxContainerCapability(
-          BuilderUtils.newResource(10240, 1));
+          Resource.newInstance(10240, 1));
     }
   }
 
@@ -517,8 +517,8 @@ public class MRApp extends MRAppMaster {
         ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
         cId.setApplicationAttemptId(getContext().getApplicationAttemptId());
         cId.setId(containerCount++);
-        NodeId nodeId = BuilderUtils.newNodeId(NM_HOST, NM_PORT);
-        Container container = BuilderUtils.newContainer(cId, nodeId,
+        NodeId nodeId = NodeId.newInstance(NM_HOST, NM_PORT);
+        Container container = Container.newInstance(cId, nodeId,
             NM_HOST + ":" + NM_HTTP_PORT, null, null, null, 0);
         JobID id = TypeConverter.fromYarn(applicationId);
         JobId jobId = TypeConverter.toYarn(id);

@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -243,7 +244,7 @@ public class TestHSWebApp {
     params.put(CONTAINER_ID, BuilderUtils.newContainerId(1, 1, 333, 1)
         .toString());
     params.put(NM_NODENAME, 
-        BuilderUtils.newNodeId(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
+        NodeId.newInstance(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
     params.put(ENTITY_STRING, "container_10_0001_01_000001");
     params.put(APP_OWNER, "owner");
 
@@ -271,7 +272,7 @@ public class TestHSWebApp {
     params.put(CONTAINER_ID, BuilderUtils.newContainerId(1, 1, 333, 1)
         .toString());
     params.put(NM_NODENAME,
-        BuilderUtils.newNodeId(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
+        NodeId.newInstance(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
     params.put(ENTITY_STRING, "container_10_0001_01_000001");
     params.put(APP_OWNER, "owner");
 
@@ -302,7 +303,7 @@ public class TestHSWebApp {
     params.put(CONTAINER_ID, BuilderUtils.newContainerId(1, 1, 333, 1)
         .toString());
     params.put(NM_NODENAME,
-        BuilderUtils.newNodeId(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
+        NodeId.newInstance(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
     params.put(ENTITY_STRING, "container_10_0001_01_000001");
     params.put(APP_OWNER, "owner");
 

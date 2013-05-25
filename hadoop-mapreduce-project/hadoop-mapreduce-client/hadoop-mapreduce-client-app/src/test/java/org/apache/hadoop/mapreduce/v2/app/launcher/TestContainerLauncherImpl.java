@@ -19,12 +19,11 @@ package org.apache.hadoop.mapreduce.v2.app.launcher;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.atLeast;
-import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -53,9 +52,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -66,6 +68,7 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 public class TestContainerLauncherImpl {
   static final Log LOG = LogFactory.getLog(TestContainerLauncherImpl.class);
@@ -122,8 +125,8 @@ public class TestContainerLauncherImpl {
   
   public static ContainerId makeContainerId(long ts, int appId, int attemptId,
       int id) {
-    return BuilderUtils.newContainerId(
-      BuilderUtils.newApplicationAttemptId(
+    return ContainerId.newInstance(
+      ApplicationAttemptId.newInstance(
         BuilderUtils.newApplicationId(ts, appId), attemptId), id);
   }
 
@@ -406,10 +409,10 @@ public class TestContainerLauncherImpl {
   
   private ContainerToken createNewContainerToken(ContainerId contId,
       String containerManagerAddr) {
-    return BuilderUtils.newContainerToken(BuilderUtils.newNodeId("127.0.0.1",
+    return BuilderUtils.newContainerToken(NodeId.newInstance("127.0.0.1",
         1234), "password".getBytes(), new ContainerTokenIdentifier(
         contId, containerManagerAddr, "user",
-        BuilderUtils.newResource(1024, 1),
+        Resource.newInstance(1024, 1),
         System.currentTimeMillis() + 10000L, 123));
   }
 

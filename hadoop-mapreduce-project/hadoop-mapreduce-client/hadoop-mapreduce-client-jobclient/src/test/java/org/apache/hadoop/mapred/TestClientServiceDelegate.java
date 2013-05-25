@@ -426,9 +426,9 @@ public class TestClientServiceDelegate {
 
   private ApplicationReport getFinishedApplicationReport() {
     ApplicationId appId = BuilderUtils.newApplicationId(1234, 5);
-    ApplicationAttemptId attemptId = BuilderUtils.newApplicationAttemptId(
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         appId, 0);
-    return BuilderUtils.newApplicationReport(appId, attemptId, "user", "queue",
+    return ApplicationReport.newInstance(appId, attemptId, "user", "queue",
       "appname", "host", 124, null, YarnApplicationState.FINISHED,
       "diagnostics", "url", 0, 0, FinalApplicationStatus.SUCCEEDED, null,
       "N/A", 0.0f, YarnConfiguration.DEFAULT_APPLICATION_TYPE);
@@ -436,9 +436,9 @@ public class TestClientServiceDelegate {
 
   private ApplicationReport getRunningApplicationReport(String host, int port) {
     ApplicationId appId = BuilderUtils.newApplicationId(1234, 5);
-    ApplicationAttemptId attemptId = BuilderUtils.newApplicationAttemptId(
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         appId, 0);
-    return BuilderUtils.newApplicationReport(appId, attemptId, "user", "queue",
+    return ApplicationReport.newInstance(appId, attemptId, "user", "queue",
       "appname", host, port, null, YarnApplicationState.RUNNING, "diagnostics",
       "url", 0, 0, FinalApplicationStatus.UNDEFINED, null, "N/A", 0.0f,
       YarnConfiguration.DEFAULT_APPLICATION_TYPE);

@@ -83,7 +83,7 @@ public class TestContainerLauncher {
   public void testPoolSize() throws InterruptedException {
 
     ApplicationId appId = BuilderUtils.newApplicationId(12345, 67);
-    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
       appId, 3);
     JobId jobId = MRBuilderUtils.newJobId(appId, 8);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 9, TaskType.MAP);
@@ -104,7 +104,7 @@ public class TestContainerLauncher {
 
     containerLauncher.expectedCorePoolSize = ContainerLauncherImpl.INITIAL_POOL_SIZE;
     for (int i = 0; i < 10; i++) {
-      ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, i);
+      ContainerId containerId = ContainerId.newInstance(appAttemptId, i);
       TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, i);
       containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
         containerId, "host" + i + ":1234", null,
@@ -126,7 +126,7 @@ public class TestContainerLauncher {
     Assert.assertEquals(10, containerLauncher.numEventsProcessed.get());
     containerLauncher.finishEventHandling = false;
     for (int i = 0; i < 10; i++) {
-      ContainerId containerId = BuilderUtils.newContainerId(appAttemptId,
+      ContainerId containerId = ContainerId.newInstance(appAttemptId,
           i + 10);
       TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId,
           i + 10);
@@ -143,7 +143,7 @@ public class TestContainerLauncher {
     // Core pool size should be 21 but the live pool size should be only 11.
     containerLauncher.expectedCorePoolSize = 11 + ContainerLauncherImpl.INITIAL_POOL_SIZE;
     containerLauncher.finishEventHandling = false;
-    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 21);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 21);
     TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, 21);
     containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
       containerId, "host11:1234", null,
@@ -158,12 +158,12 @@ public class TestContainerLauncher {
   @Test
   public void testPoolLimits() throws InterruptedException {
     ApplicationId appId = BuilderUtils.newApplicationId(12345, 67);
-    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
       appId, 3);
     JobId jobId = MRBuilderUtils.newJobId(appId, 8);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 9, TaskType.MAP);
     TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, 0);
-    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 10);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 10);
 
     AppContext context = mock(AppContext.class);
     CustomContainerLauncher containerLauncher = new CustomContainerLauncher(

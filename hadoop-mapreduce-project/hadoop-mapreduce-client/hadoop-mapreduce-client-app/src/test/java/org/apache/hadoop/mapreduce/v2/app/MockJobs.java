@@ -622,9 +622,9 @@ public class MockJobs extends MockApps {
   }
 
   private static AMInfo createAMInfo(int attempt) {
-    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         BuilderUtils.newApplicationId(100, 1), attempt);
-    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
     return MRBuilderUtils.newAMInfo(appAttemptId, System.currentTimeMillis(),
         containerId, NM_HOST, NM_PORT, NM_HTTP_PORT);
   }
