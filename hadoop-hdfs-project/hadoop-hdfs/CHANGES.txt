@@ -18,10 +18,6 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
 
-    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
-    Azure environments. (See breakdown of tasks below for subtasks and
-    contributors)
-    
     HDFS-4339. Persist inode id in fsimage and editlog. (Brandon Li via
     suresh)
 
@@ -37,6 +33,10 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-347. DFS read performance suboptimal when client co-located on nodes
     with data. (Colin Patrick McCabe via todd and atm)
 
+    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
+    Azure environments. (See breakdown of tasks below for subtasks and
+    contributors)
+    
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
@@ -116,6 +116,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4804. WARN when users set the block balanced preference percent below
     0.5 or above 1.0. (Stephen Chu via atm)
 
+    HDFS-4698. Provide client-side metrics for remote reads, local reads, and
+    short-circuit reads. (Colin Patrick McCabe via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -186,9 +189,6 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4620. Documentation for dfs.namenode.rpc-address specifies wrong
     format. (Sandy Ryza via atm)
 
-    HDFS-4607. In TestGetConf.testGetSpecificKey(), use a platform-specific
-    line separator; otherwise, it fails on Windows.  (Ivan Mitic via szetszwo)
-
     HDFS-4609. TestAuditLogs should release log handles between tests. 
     (Ivan Mitic via szetszwo)
 
@@ -237,6 +237,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4748. MiniJournalCluster#restartJournalNode leaks resources, which 
     causes sporadic test failures. (Chris Nauroth via suresh)
 
+    HDFS-4733. Make HttpFS username pattern configurable. (tucu via atm)
+
     HDFS-4778. Fixes some issues that the first patch on HDFS-2576 missed.
     (ddas)
 
@@ -255,6 +257,7 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4533. start-dfs.sh ignores additional parameters besides -upgrade.
     (Fengdong Yu via suresh)
+
     HDFS-4765. Permission check of symlink deletion incorrectly throws
     UnresolvedLinkException. (Andrew Wang via atm)
 
@@ -270,11 +273,13 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4787. Create a new HdfsConfiguration before each TestDFSClientRetries
     testcases. (Tian Hong Wang via atm)
 
+    HDFS-4830. Typo in config settings for AvailableSpaceVolumeChoosingPolicy
+    in hdfs-default.xml. (atm)
+
     HDFS-4824. FileInputStreamCache.close leaves dangling reference to
     FileInputStreamCache.cacheCleaner. (Colin Patrick McCabe via todd)
 
-    HDFS-4693. Some test cases in TestCheckpoint do not clean up after 
-    themselves. (Arpit Agarwal, suresh via suresh)
+    HDFS-4298. StorageRetentionManager spews warnings when used with QJM. (atm)
 
     HDFS-4725. Fix HDFS file handle leaks in FSEditLog, NameNode,
     OfflineEditsBinaryLoader and some tests.  (Chris Nauroth via szetszwo)
@@ -338,7 +343,7 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4661. A few little code cleanups of some HDFS-347-related code. (Colin
     Patrick McCabe via atm)
 
-  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
+  BREAKDOWN OF HADOOP-8562 and HDFS-3602 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
     Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
@@ -369,17 +374,17 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4607.  In TestGetConf.testGetSpecificKey(), use a platform-specific
     line separator; otherwise, it fails on Windows.  (Ivan Mitic via szetszwo)
 
-    HDFS-4615. Fix TestDFSShell failures on Windows.  (Arpit Agarwal
-    via szetszwo)
-
-    HDFS-4584. Skip TestNNWithQJM.testNewNamenodeTakesOverWriter() on Windows.
-    (Arpit Agarwal via szetszwo)
-
     HDFS-4625. Make TestNNWithQJM#testNewNamenodeTakesOverWriter work on
     Windows. (Ivan Mitic via suresh)
 
     HDFS-4674. TestBPOfferService fails on Windows due to failure parsing 
     datanode data directory as URI. (Chris Nauroth via suresh)
+
+    HDFS-4615. Fix TestDFSShell failures on Windows.  (Arpit Agarwal
+    via szetszwo)
+
+    HDFS-4584. Skip TestNNWithQJM.testNewNamenodeTakesOverWriter() on Windows.
+    (Arpit Agarwal via szetszwo)
 
     HDFS-4732. Fix TestDFSUpgradeFromImage which fails on Windows due to
     failure to unpack old image tarball that contains hard links.

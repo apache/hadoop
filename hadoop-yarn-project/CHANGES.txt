@@ -16,7 +16,7 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-486. Changed NM's startContainer API to accept Container record given by
     RM as a direct parameter instead of as part of the ContainerLaunchContext
-    record. (Xuan Gong via vinodkv) 
+    record. (Xuan Gong via vinodkv)
 
     YARN-444. Moved special container exit codes from YarnConfiguration to API
     where they belong. (Sandy Ryza via vinodkv)
@@ -342,7 +342,7 @@ Release 2.0.5-beta - UNRELEASED
     YARN-715. Fixed unit test failures - TestDistributedShell and
     TestUnmanagedAMLauncher. (Vinod Kumar Vavilapalli via sseth)
 
-  BREAKDOWN OF HADOOP-8562 SUBTASKS
+  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
     (Chris Nauroth via suresh)
@@ -372,15 +372,15 @@ Release 2.0.5-beta - UNRELEASED
     YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
     via vinodkv)
 
+    YARN-506. Move to common utils FileUtil#setReadable/Writable/Executable and 
+    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
     YARN-488. TestContainerManagerSecurity fails on Windows. (Chris Nauroth
     via hitesh)
 
     YARN-490. TestDistributedShell fails on Windows. (Chris Nauroth via hitesh)
 
     YARN-491. TestContainerLogsPage fails on Windows. (Chris Nauroth via hitesh)
-
-    YARN-557. Fix TestUnmanagedAMLauncher failure on Windows. (Chris Nauroth via
-    vinodkv)
 
     YARN-487. Modify path manipulation in LocalDirsHandlerService to let
     TestDiskFailures pass on Windows. (Chris Nauroth via vinodkv)
@@ -391,9 +391,6 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
     via vinodkv)
-
-    YARN-506. Move to common utils FileUtil#setReadable/Writable/Executable and 
-    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
 Release 2.0.4-alpha - 2013-04-25 
 

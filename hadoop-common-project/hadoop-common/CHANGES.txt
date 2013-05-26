@@ -88,9 +88,6 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
     (todd)
 
-    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
-    for Unit testing. (Hari via stevel)
-
   BUG FIXES
 
     HADOOP-9294. GetGroupsTestBase fails on Windows. (Chris Nauroth via suresh)
@@ -351,8 +348,11 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9413. Add common utils for File#setReadable/Writable/Executable &
     File#canRead/Write/Execute that work cross-platform. (Ivan Mitic via suresh)
 
-    HADOOP-9043. Disallow in winutils creating symlinks with forwards slashes.
+    HADOOP-9532. HADOOP_CLIENT_OPTS is appended twice by Windows cmd scripts.
     (Chris Nauroth via suresh)
+
+    HADOOP-9043. Disallow in winutils creating symlinks with forwards slashes.
+    (Chris Nauroth and Arpit Agarwal via suresh)
 
     HADOOP-9483. winutils support for readlink command.
     (Arpit Agarwal via suresh)
@@ -367,7 +367,7 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9553. TestAuthenticationToken fails on Windows.
     (Arpit Agarwal via suresh)
 
-Release 2.0.4.1-alpha - UNRELEASED
+Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
 
@@ -395,7 +395,7 @@ Release 2.0.4-alpha - 2013-04-25
   BUG FIXES
 
     HADOOP-9467. Metrics2 record filter should check name as well as tags.
-    (Ganeshan Iyler via llu)
+    (Chris Nauroth and Ganeshan Iyler via llu)
 
     HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
 
