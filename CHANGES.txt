@@ -11,6 +11,9 @@ Release 1.3.0 - unreleased
     HADOOP-9450. HADOOP_USER_CLASSPATH_FIRST is not honored; CLASSPATH
     is PREpended instead of APpended. (Chris Nauroth and harsh via harsh)
 
+    HADOOP-9573. Fix test-patch script to work with the enhanced
+    PreCommit-Admin script.(Giridharan Kesavan)
+
   BUG FIXES
 
     MAPREDUCE-5047. keep.failed.task.files=true causes job failure on 

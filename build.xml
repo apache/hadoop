@@ -164,12 +164,10 @@
   <property name="jdiff.stable.javadoc" 
             value="http://hadoop.apache.org/core/docs/r${jdiff.stable}/api/"/>
 
-  <property name="scratch.dir" value="${user.home}/tmp"/>
-  <property name="svn.cmd" value="svn"/>
-  <property name="grep.cmd" value="grep"/>
-  <property name="patch.cmd" value="patch"/>
   <property name="make.cmd" value="make"/>
-
+  <property name="jiranum" value=""/>
+  <property name="attachid" value=""/>
+  <property name="patch.dir" value="/tmp/${Name}${jiranum}"/>
   <property name="jsvc.build.dir" value="${build.dir}/jsvc.${os.arch}" />
   <property name="jsvc.install.dir" value="${dist.dir}/libexec" /> 
   <exec executable="sh" outputproperty="os-name">
@@ -2293,39 +2291,23 @@
 <target name="test-patch" depends="patch.check,findbugs.check,forrest.check">
   <exec executable="bash" failonerror="true">
     <arg value="${basedir}/src/test/bin/test-patch.sh"/>
-    <arg value="DEVELOPER"/>
-    <arg value="${patch.file}"/>
-    <arg value="${scratch.dir}"/>
-    <arg value="${svn.cmd}"/>
-    <arg value="${grep.cmd}"/>
-    <arg value="${patch.cmd}"/>
-    <arg value="${findbugs.home}"/>
-    <arg value="${forrest.home}"/>
-    <arg value="${basedir}"/>
-  </exec>
+    <arg line="${basedir}/src/test/bin/test-test-patch.sh"/>
+    <arg line="--patch-dir=${patch.dir} --patch-file=${patch.file}"/>
+    <arg line="--findbugs-home ${findbugs.home} --forrest-home ${forrest.home}"/>
+    <arg line="--eclipse-home ${eclipse.home}"/>
+ </exec>
 </target>
 
-<target name="hudson-test-patch" depends="findbugs.check,forrest.check">
+<target name="jenkins-test-patch" depends="findbugs.check,forrest.check">
   <exec executable="bash" failonerror="true">
-    <arg value="${basedir}/src/test/bin/test-patch.sh"/>
-    <arg value="HUDSON"/>
-    <arg value="${scratch.dir}"/>
-    <arg value="${support.dir}"/>
-    <arg value="${ps.cmd}"/>
-    <arg value="${wget.cmd}"/>
-    <arg value="${jiracli.cmd}"/>
-    <arg value="${svn.cmd}"/>
-    <arg value="${grep.cmd}"/>
-    <arg value="${patch.cmd}"/>
-    <arg value="${findbugs.home}"/>
-    <arg value="${forrest.home}"/>
-    <arg value="${eclipse.home}"/>
-    <arg value="${python.home}"/>
-    <arg value="${basedir}"/>
-    <arg value="${trigger.url}"/>
-    <arg value="${jira.passwd}"/>
+    <arg line="${basedir}/src/test/bin/test-patch.sh"/>
+    <arg line="--patch-dir ${patch.dir} --jira-cli ${jiracli.cmd}"/>
+    <arg line="--findbugs-home ${findbugs.home} --forrest-home ${forrest.home}"/>
+    <arg line="--eclipse-home ${eclipse.home} --jira-password ${jira.passwd}"/>
+    <arg line="--issue-num ${jiranum} --attach-id ${attachid} --jenkins true"/>
   </exec>
 </target>
+ 
 	
   <condition property="ant-eclipse.jar.exists">
     <available file="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar"/>
