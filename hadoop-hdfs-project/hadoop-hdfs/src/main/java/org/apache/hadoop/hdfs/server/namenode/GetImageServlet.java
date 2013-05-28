@@ -157,7 +157,7 @@ public class GetImageServlet extends HttpServlet {
               
               // We may have lost our ticket since last checkpoint, log in again, just in case
               if (UserGroupInformation.isSecurityEnabled()) {
-                UserGroupInformation.getCurrentUser().reloginFromKeytab();
+                UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
               }
               
               // issue a HTTP get request to download the new fsimage 

@@ -891,6 +891,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4825. webhdfs / httpfs tests broken because of min block size change.
     (Andrew Wang via suresh)
 
+    HDFS-4780. Use the correct relogin method for services. (Robert Parker via
+    kihwal)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
