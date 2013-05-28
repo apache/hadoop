@@ -330,20 +330,15 @@ public class DatanodeManager {
    * @return the best match for the given datanode
    */
   DatanodeDescriptor getDatanodeDescriptor(String address) {
-    DatanodeDescriptor node = null;
-    int colon = address.indexOf(":");
-    int xferPort;
-    String host = address;
-    if (colon > 0) {
-      host = address.substring(0, colon);
-      xferPort = Integer.parseInt(address.substring(colon+1));
-      node = getDatanodeByXferAddr(host, xferPort);
-    }
+    DatanodeID dnId = parseDNFromHostsEntry(address);
+    String host = dnId.getIpAddr();
+    int xferPort = dnId.getXferPort();
+    DatanodeDescriptor node = getDatanodeByXferAddr(host, xferPort);
     if (node == null) {
       node = getDatanodeByHost(host);
     }
     if (node == null) {
-      String networkLocation = resolveNetworkLocation(host);
+      String networkLocation = resolveNetworkLocation(dnId);
 
       // If the current cluster doesn't contain the node, fallback to
       // something machine local and then rack local.
@@ -503,11 +498,6 @@ public class DatanodeManager {
           + node + "): storage " + key 
           + " is removed from datanodeMap.");
     }
-  }
-
-  public String resolveNetworkLocation(String host) {
-    DatanodeID d = parseDNFromHostsEntry(host);
-    return resolveNetworkLocation(d);
   }
 
   /* Resolve a node's network location */
