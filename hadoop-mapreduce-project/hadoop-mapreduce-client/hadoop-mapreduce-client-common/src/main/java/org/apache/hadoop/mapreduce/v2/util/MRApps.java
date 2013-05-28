@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.apache.hadoop.yarn.util.Apps;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
@@ -435,15 +434,10 @@ public class MRApps extends Apps {
               " This will be an error in Hadoop 2.0");
           continue;
         }
-        localResources.put(
-            linkName,
-            BuilderUtils.newLocalResource(
-                p.toUri(), type, 
-                visibilities[i]
-                  ? LocalResourceVisibility.PUBLIC
-                  : LocalResourceVisibility.PRIVATE,
-                sizes[i], timestamps[i])
-        );
+        localResources.put(linkName, LocalResource.newInstance(ConverterUtils
+          .getYarnUrlFromURI(p.toUri()), type, visibilities[i]
+            ? LocalResourceVisibility.PUBLIC : LocalResourceVisibility.PRIVATE,
+          sizes[i], timestamps[i]));
       }
     }
   }

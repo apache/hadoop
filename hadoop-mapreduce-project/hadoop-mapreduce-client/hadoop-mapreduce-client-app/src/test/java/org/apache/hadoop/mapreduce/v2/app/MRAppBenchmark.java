@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -205,10 +206,10 @@ public class MRAppBenchmark {
                       throws IOException {
                 RegisterApplicationMasterResponse response =
                     Records.newRecord(RegisterApplicationMasterResponse.class);
-                response.setMinimumResourceCapability(BuilderUtils
-                  .newResource(1024, 1));
-                response.setMaximumResourceCapability(BuilderUtils
-                  .newResource(10240, 1));
+                response.setMinimumResourceCapability(Resource.newInstance(
+                  1024, 1));
+                response.setMaximumResourceCapability(Resource.newInstance(
+                  10240, 1));
                 return response;
               }
 
@@ -236,14 +237,13 @@ public class MRAppBenchmark {
                   int numContainers = req.getNumContainers();
                   for (int i = 0; i < numContainers; i++) {
                     ContainerId containerId =
-                        BuilderUtils.newContainerId(
+                        ContainerId.newInstance(
                           request.getApplicationAttemptId(),
                           request.getResponseId() + i);
-                    containers.add(BuilderUtils
-                      .newContainer(containerId, BuilderUtils.newNodeId("host"
-                          + containerId.getId(), 2345),
-                        "host" + containerId.getId() + ":5678", req
-                          .getCapability(), req.getPriority(), null, 0));
+                    containers.add(Container.newInstance(containerId,
+                      NodeId.newInstance("host" + containerId.getId(), 2345),
+                      "host" + containerId.getId() + ":5678",
+                      req.getCapability(), req.getPriority(), null, 0));
                   }
                 }
 

@@ -48,10 +48,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Before;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestMRJobsWithHistoryService {
@@ -169,8 +168,8 @@ public class TestMRJobsWithHistoryService {
     List<AMInfo> amInfos = jobReport.getAMInfos();
     Assert.assertEquals(1, amInfos.size());
     AMInfo amInfo = amInfos.get(0);
-    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(jobId.getAppId(), 1);
-    ContainerId amContainerId = BuilderUtils.newContainerId(appAttemptId, 1);  
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(jobId.getAppId(), 1);
+    ContainerId amContainerId = ContainerId.newInstance(appAttemptId, 1);
     Assert.assertEquals(appAttemptId, amInfo.getAppAttemptId());
     Assert.assertEquals(amContainerId, amInfo.getContainerId());
     Assert.assertTrue(jobReport.getSubmitTime() > 0);

@@ -496,7 +496,7 @@ public class TestRMContainerAllocator {
     rm.sendAMLaunched(appAttemptId);
     rmDispatcher.await();
 
-    MRApp mrApp = new MRApp(appAttemptId, BuilderUtils.newContainerId(
+    MRApp mrApp = new MRApp(appAttemptId, ContainerId.newInstance(
       appAttemptId, 0), 10, 10, false, this.getClass().getName(), true, 1) {
       @Override
       protected Dispatcher createDispatcher() {
@@ -612,7 +612,7 @@ public class TestRMContainerAllocator {
       MRApp mrApp, Task task) throws Exception {
     TaskAttempt attempt = task.getAttempts().values().iterator().next();
     List<ContainerStatus> contStatus = new ArrayList<ContainerStatus>(1);
-    contStatus.add(BuilderUtils.newContainerStatus(attempt.getAssignedContainerID(),
+    contStatus.add(ContainerStatus.newInstance(attempt.getAssignedContainerID(),
         ContainerState.COMPLETE, "", 0));
     Map<ApplicationId,List<ContainerStatus>> statusUpdate =
         new HashMap<ApplicationId,List<ContainerStatus>>(1);
@@ -648,7 +648,7 @@ public class TestRMContainerAllocator {
     rm.sendAMLaunched(appAttemptId);
     rmDispatcher.await();
 
-    MRApp mrApp = new MRApp(appAttemptId, BuilderUtils.newContainerId(
+    MRApp mrApp = new MRApp(appAttemptId, ContainerId.newInstance(
       appAttemptId, 0), 10, 0, false, this.getClass().getName(), true, 1) {
       @Override
         protected Dispatcher createDispatcher() {
@@ -1229,7 +1229,7 @@ public class TestRMContainerAllocator {
         List<ContainerId> release) {
       List<ResourceRequest> askCopy = new ArrayList<ResourceRequest>();
       for (ResourceRequest req : ask) {
-        ResourceRequest reqCopy = BuilderUtils.newResourceRequest(req
+        ResourceRequest reqCopy = ResourceRequest.newInstance(req
             .getPriority(), req.getHostName(), req.getCapability(), req
             .getNumContainers());
         askCopy.add(reqCopy);
@@ -1255,7 +1255,7 @@ public class TestRMContainerAllocator {
     }
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId,
         taskAttemptId);
-    Resource containerNeed = BuilderUtils.newResource(memory, 1);
+    Resource containerNeed = Resource.newInstance(memory, 1);
     if (earlierFailedAttempt) {
       return ContainerRequestEvent
           .createContainerRequestEventForFailedContainer(attemptId,
@@ -1338,8 +1338,8 @@ public class TestRMContainerAllocator {
       when(context.getApplicationAttemptId()).thenReturn(appAttemptId);
       when(context.getJob(isA(JobId.class))).thenReturn(job);
       when(context.getClusterInfo()).thenReturn(
-          new ClusterInfo(BuilderUtils.newResource(1024, 1), BuilderUtils
-              .newResource(10240, 1)));
+        new ClusterInfo(Resource.newInstance(1024, 1), Resource.newInstance(
+          10240, 1)));
       when(context.getEventHandler()).thenReturn(new EventHandler() {
         @Override
         public void handle(Event event) {
@@ -1412,12 +1412,12 @@ public class TestRMContainerAllocator {
 
     @Override
     protected Resource getMinContainerCapability() {
-      return BuilderUtils.newResource(1024, 1);
+      return Resource.newInstance(1024, 1);
     }
 
     @Override
     protected Resource getMaxContainerCapability() {
-      return BuilderUtils.newResource(10240, 1);
+      return Resource.newInstance(10240, 1);
     }
 
     public void sendRequest(ContainerRequestEvent req) {
@@ -1665,11 +1665,14 @@ public class TestRMContainerAllocator {
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(
         MRBuilderUtils.newTaskId(
             MRBuilderUtils.newJobId(1, 1, 1), 1, TaskType.MAP), 1);
-    ContainerId containerId = BuilderUtils.newContainerId(1, 1, 1, 1);
-    ContainerStatus status = BuilderUtils.newContainerStatus(
+    ApplicationId applicationId = BuilderUtils.newApplicationId(1, 1);
+    ApplicationAttemptId applicationAttemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    ContainerId containerId = ContainerId.newInstance(applicationAttemptId, 1);
+    ContainerStatus status = ContainerStatus.newInstance(
         containerId, ContainerState.RUNNING, "", 0);
 
-    ContainerStatus abortedStatus = BuilderUtils.newContainerStatus(
+    ContainerStatus abortedStatus = ContainerStatus.newInstance(
         containerId, ContainerState.RUNNING, "",
         ContainerExitStatus.ABORTED);
     

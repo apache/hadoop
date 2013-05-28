@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -108,7 +109,7 @@ public class TestLocalContainerAllocator {
     private static AppContext createAppContext() {
       ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
       ApplicationAttemptId attemptId =
-          BuilderUtils.newApplicationAttemptId(appId, 1);
+          ApplicationAttemptId.newInstance(appId, 1);
       Job job = mock(Job.class);
       @SuppressWarnings("rawtypes")
       EventHandler eventHandler = mock(EventHandler.class);
@@ -117,8 +118,8 @@ public class TestLocalContainerAllocator {
       when(ctx.getApplicationAttemptId()).thenReturn(attemptId);
       when(ctx.getJob(isA(JobId.class))).thenReturn(job);
       when(ctx.getClusterInfo()).thenReturn(
-          new ClusterInfo(BuilderUtils.newResource(1024, 1), BuilderUtils
-              .newResource(10240, 1)));
+        new ClusterInfo(Resource.newInstance(1024, 1), Resource.newInstance(
+          10240, 1)));
       when(ctx.getEventHandler()).thenReturn(eventHandler);
       return ctx;
     }

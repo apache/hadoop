@@ -198,8 +198,8 @@ public class TestTaskAttempt{
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.MAP_MEMORY_MB, mapMemMb);
     conf.setInt(MRJobConfig.REDUCE_MEMORY_MB, reduceMemMb);
-    app.setClusterInfo(new ClusterInfo(BuilderUtils
-        .newResource(minContainerSize, 1), BuilderUtils.newResource(10240, 1)));
+    app.setClusterInfo(new ClusterInfo(Resource
+      .newInstance(minContainerSize, 1), Resource.newInstance(10240, 1)));
 
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
@@ -320,7 +320,7 @@ public class TestTaskAttempt{
   public void testLaunchFailedWhileKilling() throws Exception {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
     ApplicationAttemptId appAttemptId =
-      BuilderUtils.newApplicationAttemptId(appId, 0);
+      ApplicationAttemptId.newInstance(appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId, 0);
@@ -345,8 +345,8 @@ public class TestTaskAttempt{
           mock(Token.class), new Credentials(),
           new SystemClock(), null);
 
-    NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
-    ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
+    NodeId nid = NodeId.newInstance("127.0.0.1", 0);
+    ContainerId contId = ContainerId.newInstance(appAttemptId, 3);
     Container container = mock(Container.class);
     when(container.getId()).thenReturn(contId);
     when(container.getNodeId()).thenReturn(nid);
@@ -370,7 +370,7 @@ public class TestTaskAttempt{
   public void testContainerCleanedWhileRunning() throws Exception {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
     ApplicationAttemptId appAttemptId =
-      BuilderUtils.newApplicationAttemptId(appId, 0);
+      ApplicationAttemptId.newInstance(appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId, 0);
@@ -402,8 +402,8 @@ public class TestTaskAttempt{
           mock(Token.class), new Credentials(),
           new SystemClock(), appCtx);
 
-    NodeId nid = BuilderUtils.newNodeId("127.0.0.2", 0);
-    ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
+    NodeId nid = NodeId.newInstance("127.0.0.2", 0);
+    ContainerId contId = ContainerId.newInstance(appAttemptId, 3);
     Container container = mock(Container.class);
     when(container.getId()).thenReturn(contId);
     when(container.getNodeId()).thenReturn(nid);
@@ -428,7 +428,7 @@ public class TestTaskAttempt{
   public void testContainerCleanedWhileCommitting() throws Exception {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
     ApplicationAttemptId appAttemptId =
-      BuilderUtils.newApplicationAttemptId(appId, 0);
+      ApplicationAttemptId.newInstance(appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId, 0);
@@ -460,8 +460,8 @@ public class TestTaskAttempt{
           mock(Token.class), new Credentials(),
           new SystemClock(), appCtx);
 
-    NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
-    ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
+    NodeId nid = NodeId.newInstance("127.0.0.1", 0);
+    ContainerId contId = ContainerId.newInstance(appAttemptId, 3);
     Container container = mock(Container.class);
     when(container.getId()).thenReturn(contId);
     when(container.getNodeId()).thenReturn(nid);
@@ -489,7 +489,7 @@ public class TestTaskAttempt{
   public void testDoubleTooManyFetchFailure() throws Exception {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
     ApplicationAttemptId appAttemptId =
-      BuilderUtils.newApplicationAttemptId(appId, 0);
+      ApplicationAttemptId.newInstance(appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId, 0);
@@ -521,8 +521,8 @@ public class TestTaskAttempt{
           mock(Token.class), new Credentials(),
           new SystemClock(), appCtx);
 
-    NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
-    ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
+    NodeId nid = NodeId.newInstance("127.0.0.1", 0);
+    ContainerId contId = ContainerId.newInstance(appAttemptId, 3);
     Container container = mock(Container.class);
     when(container.getId()).thenReturn(contId);
     when(container.getNodeId()).thenReturn(nid);
@@ -555,7 +555,7 @@ public class TestTaskAttempt{
   @Test
   public void testAppDiognosticEventOnUnassignedTask() throws Exception {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
-    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
@@ -587,8 +587,8 @@ public class TestTaskAttempt{
         jobFile, 1, splits, jobConf, taListener,
         mock(Token.class), new Credentials(), new SystemClock(), appCtx);
 
-    NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
-    ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
+    NodeId nid = NodeId.newInstance("127.0.0.1", 0);
+    ContainerId contId = ContainerId.newInstance(appAttemptId, 3);
     Container container = mock(Container.class);
     when(container.getId()).thenReturn(contId);
     when(container.getNodeId()).thenReturn(nid);
@@ -605,7 +605,7 @@ public class TestTaskAttempt{
   @Test
   public void testAppDiognosticEventOnNewTask() throws Exception {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
-    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
@@ -637,8 +637,8 @@ public class TestTaskAttempt{
         jobFile, 1, splits, jobConf, taListener,
         mock(Token.class), new Credentials(), new SystemClock(), appCtx);
 
-    NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
-    ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
+    NodeId nid = NodeId.newInstance("127.0.0.1", 0);
+    ContainerId contId = ContainerId.newInstance(appAttemptId, 3);
     Container container = mock(Container.class);
     when(container.getId()).thenReturn(contId);
     when(container.getNodeId()).thenReturn(nid);
