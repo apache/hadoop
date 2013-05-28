@@ -371,7 +371,7 @@ public class SecondaryNameNode implements Runnable {
       try {
         // We may have lost our ticket since last checkpoint, log in again, just in case
         if(UserGroupInformation.isSecurityEnabled())
-          UserGroupInformation.getCurrentUser().reloginFromKeytab();
+          UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
         
         long now = Time.now();
 
