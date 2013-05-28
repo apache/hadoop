@@ -1278,7 +1278,7 @@ public class DFSClient implements java.io.Closeable {
       favoredNodeStrs = new String[favoredNodes.length];
       for (int i = 0; i < favoredNodes.length; i++) {
         favoredNodeStrs[i] = 
-            favoredNodes[i].getAddress().getHostAddress() + ":" 
+            favoredNodes[i].getHostName() + ":" 
                          + favoredNodes[i].getPort();
       }
     }

@@ -894,6 +894,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4780. Use the correct relogin method for services. (Robert Parker via
     kihwal)
 
+    HDFS-4827. Slight update to the implementation of API for handling favored
+    nodes in DFSClient (ddas)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
