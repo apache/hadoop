@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
@@ -163,36 +164,31 @@ public class LogAggregationService extends AbstractService implements
   }
   
   void verifyAndCreateRemoteLogDir(Configuration conf) {
-    // Checking the existance of the TLD
+    // Checking the existence of the TLD
     FileSystem remoteFS = null;
     try {
       remoteFS = FileSystem.get(conf);
     } catch (IOException e) {
       throw new YarnException("Unable to get Remote FileSystem instance", e);
     }
-    boolean remoteExists = false;
+    boolean remoteExists = true;
     try {
-      remoteExists = remoteFS.exists(this.remoteRootLogDir);
-    } catch (IOException e) {
-      throw new YarnException("Failed to check for existence of remoteLogDir ["
-          + this.remoteRootLogDir + "]", e);
-    }
-    if (remoteExists) {
-      try {
-        FsPermission perms =
-            remoteFS.getFileStatus(this.remoteRootLogDir).getPermission();
-        if (!perms.equals(TLDIR_PERMISSIONS)) {
-          LOG.warn("Remote Root Log Dir [" + this.remoteRootLogDir
-              + "] already exist, but with incorrect permissions. "
-              + "Expected: [" + TLDIR_PERMISSIONS + "], Found: [" + perms
-              + "]." + " The cluster may have problems with multiple users.");
-        }
-      } catch (IOException e) {
-        throw new YarnException(
-            "Failed to check permissions for dir ["
-                + this.remoteRootLogDir + "]", e);
+      FsPermission perms =
+          remoteFS.getFileStatus(this.remoteRootLogDir).getPermission();
+      if (!perms.equals(TLDIR_PERMISSIONS)) {
+        LOG.warn("Remote Root Log Dir [" + this.remoteRootLogDir
+            + "] already exist, but with incorrect permissions. "
+            + "Expected: [" + TLDIR_PERMISSIONS + "], Found: [" + perms
+            + "]." + " The cluster may have problems with multiple users.");
       }
-    } else {
+    } catch (FileNotFoundException e) {
+      remoteExists = false;
+    } catch (IOException e) {
+      throw new YarnException(
+          "Failed to check permissions for dir ["
+              + this.remoteRootLogDir + "]", e);
+    }
+    if (!remoteExists) {
       LOG.warn("Remote Root Log Dir [" + this.remoteRootLogDir
           + "] does not exist. Attempting to create it.");
       try {

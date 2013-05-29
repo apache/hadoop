@@ -223,6 +223,9 @@ Release 2.0.5-beta - UNRELEASED
 
   OPTIMIZATIONS
 
+    YARN-512. Log aggregation root directory check is more expensive than it
+    needs to be. (Maysam Yabandeh via jlowe)
+
   BUG FIXES
 
     YARN-383. AMRMClientImpl should handle null rmClient in stop()
