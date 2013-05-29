@@ -39,8 +39,8 @@ import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -52,8 +52,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.PRE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -228,6 +228,27 @@ public class ContainerLogsPage extends NMView {
           return;
         } else {
           FileInputStream logByteStream = null;
+          
+          try {
+            logByteStream =
+                SecureIOUtils.openForRead(logFile, application.getUser(), null);
+          }  catch (IOException e) {
+            LOG.error(
+              "Exception reading log file " + logFile.getAbsolutePath(), e);
+            if (e.getMessage().contains(
+              "did not match expected owner '" + application.getUser()
+                  + "'")) {
+              html.h1("Exception reading log file. Application submitted by '"
+                  + application.getUser()
+                  + "' doesn't own requested log file : "
+                  + logFile.getName());
+            } else {
+              html.h1("Exception reading log file. It might be because log "
+                  + "file was aggregated : " + logFile.getName());
+            }
+            return;
+          }
+          
           try {
             long toRead = end - start;
             if (toRead < logFile.length()) {
@@ -236,11 +257,8 @@ public class ContainerLogsPage extends NMView {
                       logFile.getName(), "?start=0"), "here").
                       _(" for full log")._();
             }
-            // TODO: Use secure IO Utils to avoid symlink attacks.
             // TODO Fix findBugs close warning along with IOUtils change
-            logByteStream = new FileInputStream(logFile);
             IOUtils.skipFully(logByteStream, start);
-
             InputStreamReader reader = new InputStreamReader(logByteStream);
             int bufferSize = 65536;
             char[] cbuf = new char[bufferSize];
@@ -260,8 +278,10 @@ public class ContainerLogsPage extends NMView {
             reader.close();
 
           } catch (IOException e) {
-            html.h1("Exception reading log-file. Log file was likely aggregated. "
-                + StringUtils.stringifyException(e));
+            LOG.error(
+              "Exception reading log file " + logFile.getAbsolutePath(), e);
+            html.h1("Exception reading log file. It might be because log "
+                + "file was aggregated : " + logFile.getName());
           } finally {
             if (logByteStream != null) {
               try {

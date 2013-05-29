@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
@@ -126,6 +127,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   @SuppressWarnings("unchecked")
   public void testLocalFileDeletionAfterUpload() throws Exception {
     this.delSrvc = new DeletionService(createContainerExecutor());
+    delSrvc = spy(delSrvc);
     this.delSrvc.init(conf);
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
@@ -169,7 +171,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     // ensure filesystems were closed
     verify(logAggregationService).closeFileSystems(
         any(UserGroupInformation.class));
-    
+    verify(delSrvc).delete(eq(user), eq((Path) null),
+      eq(new Path(app1LogDir.getAbsolutePath())));
     delSrvc.stop();
     
     String containerIdStr = ConverterUtils.toString(container11);

@@ -18,26 +18,47 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.ContainerLogsPage.ContainersLogsBlock;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
+import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.google.inject.Injector;
+import com.google.inject.Module;
 
 public class TestContainerLogsPage {
 
@@ -68,5 +89,100 @@ public class TestContainerLogsPage {
     files = ContainerLogsPage.ContainersLogsBlock.getContainerLogDirs(
         container1, dirsHandler);
     Assert.assertTrue(!(files.get(0).toString().contains("file:")));
+  }
+  
+  @Test(timeout = 10000)
+  public void testContainerLogPageAccess() throws IOException {
+    // SecureIOUtils require Native IO to be enabled. This test will run
+    // only if it is enabled.
+    assumeTrue(NativeIO.isAvailable());
+    String user = "randomUser" + System.currentTimeMillis();
+    File absLogDir = null, appDir = null, containerDir = null, syslog = null;
+    try {
+      // target log directory
+      absLogDir =
+          new File("target", TestContainerLogsPage.class.getSimpleName()
+              + "LogDir").getAbsoluteFile();
+      absLogDir.mkdir();
+
+      Configuration conf = new Configuration();
+      conf.set(YarnConfiguration.NM_LOG_DIRS, absLogDir.toURI().toString());
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+      UserGroupInformation.setConfiguration(conf);
+
+      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
+      healthChecker.init(conf);
+      LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
+      // Add an application and the corresponding containers
+      RecordFactory recordFactory =
+          RecordFactoryProvider.getRecordFactory(conf);
+      long clusterTimeStamp = 1234;
+      ApplicationId appId =
+          BuilderUtils.newApplicationId(recordFactory, clusterTimeStamp, 1);
+      Application app = mock(Application.class);
+      when(app.getAppId()).thenReturn(appId);
+
+      // Making sure that application returns a random user. This is required
+      // for SecureIOUtils' file owner check.
+      when(app.getUser()).thenReturn(user);
+
+      ApplicationAttemptId appAttemptId =
+          BuilderUtils.newApplicationAttemptId(appId, 1);
+      ContainerId container1 =
+          BuilderUtils.newContainerId(recordFactory, appId, appAttemptId, 0);
+
+      // Testing secure read access for log files
+
+      // Creating application and container directory and syslog file.
+      appDir = new File(absLogDir, appId.toString());
+      appDir.mkdir();
+      containerDir = new File(appDir, container1.toString());
+      containerDir.mkdir();
+      syslog = new File(containerDir, "syslog");
+      syslog.createNewFile();
+      BufferedOutputStream out =
+          new BufferedOutputStream(new FileOutputStream(syslog));
+      out.write("Log file Content".getBytes());
+      out.close();
+
+      ApplicationACLsManager aclsManager = mock(ApplicationACLsManager.class);
+
+      Context context = mock(Context.class);
+      ConcurrentMap<ApplicationId, Application> appMap =
+          new ConcurrentHashMap<ApplicationId, Application>();
+      appMap.put(appId, app);
+      when(context.getApplications()).thenReturn(appMap);
+      when(context.getContainers()).thenReturn(
+        new ConcurrentHashMap<ContainerId, Container>());
+
+      ContainersLogsBlock cLogsBlock =
+          new ContainersLogsBlock(conf, context, aclsManager, dirsHandler);
+
+      Map<String, String> params = new HashMap<String, String>();
+      params.put(YarnWebParams.CONTAINER_ID, container1.toString());
+      params.put(YarnWebParams.CONTAINER_LOG_TYPE, "syslog");
+
+      Injector injector =
+          WebAppTests.testPage(ContainerLogsPage.class,
+            ContainersLogsBlock.class, cLogsBlock, params, (Module[])null);
+      PrintWriter spyPw = WebAppTests.getPrintWriter(injector);
+      verify(spyPw).write(
+        "Exception reading log file. Application submitted by '" + user
+            + "' doesn't own requested log file : syslog");
+    } finally {
+      if (syslog != null) {
+        syslog.delete();
+      }
+      if (containerDir != null) {
+        containerDir.delete();
+      }
+      if (appDir != null) {
+        appDir.delete();
+      }
+      if (absLogDir != null) {
+        absLogDir.delete();
+      }
+    }
   }
 }
