@@ -465,6 +465,30 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     logAggregationService.stop();
   }
   
+  
+  @Test
+  public void testVerifyAndCreateRemoteDirNonExistence()
+      throws Exception {
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    File aNewFile = new File(String.valueOf("tmp"+System.currentTimeMillis()));
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, 
+        aNewFile.getAbsolutePath());
+    
+    DrainDispatcher dispatcher = createDispatcher();
+    LogAggregationService logAggregationService = spy(
+        new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                                  super.dirsHandler));
+    logAggregationService.init(this.conf);
+    boolean existsBefore = aNewFile.exists();
+    assertTrue("The new file already exists!", !existsBefore);
+
+    logAggregationService.verifyAndCreateRemoteLogDir(this.conf);
+    
+    boolean existsAfter = aNewFile.exists();
+    assertTrue("The new aggregate file is not successfully created", existsAfter);
+    aNewFile.delete(); //housekeeping
+  }
+  
   @Test
   @SuppressWarnings("unchecked")
   public void testLogAggregationInitAppFailsWithoutKillingNM() throws Exception {
