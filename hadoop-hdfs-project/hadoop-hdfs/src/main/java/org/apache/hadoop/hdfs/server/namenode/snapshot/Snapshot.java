@@ -129,7 +129,7 @@ public class Snapshot implements Comparable<byte[]> {
   static Snapshot read(DataInput in, FSImageFormat.Loader loader)
       throws IOException {
     final int snapshotId = in.readInt();
-    final INode root = loader.loadINodeWithLocalName(false, in);
+    final INode root = loader.loadINodeWithLocalName(false, in, false);
     return new Snapshot(snapshotId, root.asDirectory(), null);
   }
 

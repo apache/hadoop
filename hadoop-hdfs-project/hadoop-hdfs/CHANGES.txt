@@ -610,6 +610,9 @@ Trunk (Unreleased)
     HDFS-4846. Clean up snapshot CLI commands output stacktrace for invalid
     arguments. (Jing Zhao via brandonli)
 
+    HDFS-4857. Snapshot.Root and AbstractINodeDiff#snapshotINode should not be 
+    put into INodeMap when loading FSImage. (jing9)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
