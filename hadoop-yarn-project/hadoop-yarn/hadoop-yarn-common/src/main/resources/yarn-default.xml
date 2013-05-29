@@ -661,6 +661,13 @@
     <value>30</value>
   </property>
 
+  <property>
+    <description>Max number of threads in NMClientAsync to process container
+    management events</description>
+    <name>yarn.client.nodemanager-client-async.thread-pool-max-size</name>
+    <value>500</value>
+  </property>
+
   <!--Map Reduce configuration-->
   <property>
     <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>

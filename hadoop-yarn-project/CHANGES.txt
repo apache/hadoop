@@ -87,6 +87,9 @@ Release 2.0.5-beta - UNRELEASED
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
+    YARN-422. Add a NM Client library to help application-writers. (Zhijie Shen
+    via vinodkv)
+
   IMPROVEMENTS
 
     YARN-365. Change NM heartbeat handling to not generate a scheduler event
