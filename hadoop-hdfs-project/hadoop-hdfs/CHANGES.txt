@@ -265,7 +265,7 @@ Trunk (Unreleased)
     HDFS-4687. TestDelegationTokenForProxyUser#testWebHdfsDoAs is flaky with
     JDK7. (Andrew Wang via atm)
 
-  BREAKDOWN OF HDFS-2802 HDFS SNAPSHOT SUBTASKS
+  BREAKDOWN OF HDFS-2802 HDFS SNAPSHOT SUBTASKS AND RELATED JIRAS
 
     HDFS-4076. Support snapshot of single files.  (szetszwo)
 
@@ -603,6 +603,9 @@ Trunk (Unreleased)
 
     HDFS-4809. When a QuotaExceededException is thrown during rename, the quota
     usage should be subtracted back.  (Jing Zhao via szetszwo)
+
+    HDFS-4842. Identify the correct prior snapshot when deleting a 
+    snapshot under a renamed subtree. (jing9)
 
 Release 2.0.5-beta - UNRELEASED
 
