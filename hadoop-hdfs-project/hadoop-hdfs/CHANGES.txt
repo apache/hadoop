@@ -293,6 +293,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4827. Slight update to the implementation of API for handling favored
     nodes in DFSClient (ddas)
 
+    HDFS-4865. Remove sub resource warning from httpfs log at startup time. 
+    (ywskycn via tucu)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.

@@ -197,7 +197,6 @@ public class HttpFSServer {
    * {@link HttpFSExceptionProvider}.
    */
   @GET
-  @Path("/")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRoot(@Context Principal user,
                           @QueryParam(OperationParam.NAME) OperationParam op,
