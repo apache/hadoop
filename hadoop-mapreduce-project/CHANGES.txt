@@ -156,6 +156,11 @@ Release 2.0.5-beta - UNRELEASED
     when compared to 1.x. This breaks 0.23.x users of one API in Job. (Mayank
     Bansal via vinodkv)
 
+    MAPREDUCE-5237. Add methods that were removed from ClusterStatus back into
+    2.x so as to be compatible with 1.x. Incompatible as
+    ClusterStatus.UNINITIALIZED_MEMORY_VALUE is a long now and so breaks 0.23.x
+    but it shouldn't be a big deal in reality. (Zhijie Shen via vinodkv)
+
   NEW FEATURES
 
     HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows

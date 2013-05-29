@@ -23,14 +23,13 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.mapreduce.ClusterMetrics;
-import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
 import org.apache.hadoop.util.StringInterner;
 
@@ -175,7 +174,7 @@ public class ClusterStatus implements Writable {
     
   }
   
-  public static final int UNINITIALIZED_MEMORY_VALUE = -1;
+  public static final long UNINITIALIZED_MEMORY_VALUE = -1;
   
   private int numActiveTrackers;
   private Collection<String> activeTrackers = new ArrayList<String>();
@@ -316,7 +315,33 @@ public class ClusterStatus implements Writable {
     }
     return blacklistedTrackers;
   }
-  
+
+  /**
+   * Get the names of graylisted task trackers in the cluster.
+   *
+   * The gray list of trackers is no longer available on M/R 2.x. The function
+   * is kept to be compatible with M/R 1.x applications.
+   *
+   * @return an empty graylisted task trackers in the cluster.
+   */
+  @Deprecated
+  public Collection<String> getGraylistedTrackerNames() {
+    return Collections.emptySet();
+  }
+
+  /**
+   * Get the number of graylisted task trackers in the cluster.
+   *
+   * The gray list of trackers is no longer available on M/R 2.x. The function
+   * is kept to be compatible with M/R 1.x applications.
+   *
+   * @return 0 graylisted task trackers in the cluster.
+   */
+  @Deprecated
+  public int getGraylistedTrackers() {
+    return 0;
+  }
+
   /**
    * Get the number of blacklisted task trackers in the cluster.
    * 
@@ -411,6 +436,20 @@ public class ClusterStatus implements Writable {
    */
   public Collection<BlackListInfo> getBlackListedTrackersInfo() {
     return blacklistedTrackersInfo;
+  }
+
+  /**
+   * Get the current state of the <code>JobTracker</code>,
+   * as {@link JobTracker.State}
+   *
+   * {@link JobTracker.State} should no longer be used on M/R 2.x. The function
+   * is kept to be compatible with M/R 1.x applications.
+   *
+   * @return the invalid state of the <code>JobTracker</code>.
+   */
+  @Deprecated
+  public JobTracker.State getJobTrackerState() {
+    return JobTracker.State.RUNNING;
   }
 
   public void write(DataOutput out) throws IOException {
