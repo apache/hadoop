@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.webapp.view.HtmlPage;
 public class MyApp {
 
   // This is an app API
-  public String anyAPI() { return "anything ☁, really!"; }
+  public String anyAPI() { return "anything, really!"; }
 
   // Note this is static so it can be in any files.
   public static class MyController extends Controller {
@@ -46,7 +46,7 @@ public class MyApp {
 
     @Override
     public void index() {
-      set("anything", "something ☯");
+      set("anything", "something");
     }
 
     public void anythingYouWant() {
