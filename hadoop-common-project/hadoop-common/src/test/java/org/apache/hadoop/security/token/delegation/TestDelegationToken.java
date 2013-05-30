@@ -84,6 +84,11 @@ public class TestDelegationToken {
   public static class TestDelegationTokenSecretManager 
   extends AbstractDelegationTokenSecretManager<TestDelegationTokenIdentifier> {
 
+    public boolean isStoreNewMasterKeyCalled = false;
+    public boolean isRemoveStoredMasterKeyCalled = false;
+    public boolean isStoreNewTokenCalled = false;
+    public boolean isRemoveStoredTokenCalled = false;
+    public boolean isUpdateStoredTokenCalled = false;
     public TestDelegationTokenSecretManager(long delegationKeyUpdateInterval,
                          long delegationTokenMaxLifetime,
                          long delegationTokenRenewInterval,
@@ -101,7 +106,40 @@ public class TestDelegationToken {
     protected byte[] createPassword(TestDelegationTokenIdentifier t) {
       return super.createPassword(t);
     }
-    
+
+    @Override
+    protected void storeNewMasterKey(DelegationKey key) throws IOException {
+      isStoreNewMasterKeyCalled = true;
+      super.storeNewMasterKey(key);
+    }
+
+    @Override
+    protected void removeStoredMasterKey(DelegationKey key) {
+      isRemoveStoredMasterKeyCalled = true;
+      Assert.assertFalse(key.equals(allKeys.get(currentId)));
+    }
+
+    @Override
+    protected void storeNewToken(TestDelegationTokenIdentifier ident,
+        long renewDate) {
+      super.storeNewToken(ident, renewDate);
+      isStoreNewTokenCalled = true;
+    }
+
+    @Override
+    protected void removeStoredToken(TestDelegationTokenIdentifier ident)
+        throws IOException {
+      super.removeStoredToken(ident);
+      isRemoveStoredTokenCalled = true;
+    }
+
+    @Override
+    protected void updateStoredToken(TestDelegationTokenIdentifier ident,
+        long renewDate) {
+      super.updateStoredToken(ident, renewDate);
+      isUpdateStoredTokenCalled = true;
+    }
+
     public byte[] createPassword(TestDelegationTokenIdentifier t, DelegationKey key) {
       return SecretManager.createPassword(t.getBytes(), key.getKey());
     }
@@ -229,6 +267,7 @@ public class TestDelegationToken {
       final Token<TestDelegationTokenIdentifier> token = 
         generateDelegationToken(
           dtSecretManager, "SomeUser", "JobTracker");
+      Assert.assertTrue(dtSecretManager.isStoreNewTokenCalled);
       // Fake renewer should not be able to renew
       shouldThrow(new PrivilegedExceptionAction<Object>() {
         @Override
@@ -238,6 +277,7 @@ public class TestDelegationToken {
         }
       }, AccessControlException.class);
       long time = dtSecretManager.renewToken(token, "JobTracker");
+      Assert.assertTrue(dtSecretManager.isUpdateStoredTokenCalled);
       assertTrue("renew time is in future", time > Time.now());
       TestDelegationTokenIdentifier identifier = 
         new TestDelegationTokenIdentifier();
@@ -289,6 +329,7 @@ public class TestDelegationToken {
         }
       }, AccessControlException.class);
       dtSecretManager.cancelToken(token, "JobTracker");
+      Assert.assertTrue(dtSecretManager.isRemoveStoredTokenCalled);
       shouldThrow(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
@@ -304,8 +345,8 @@ public class TestDelegationToken {
   @Test
   public void testRollMasterKey() throws Exception {
     TestDelegationTokenSecretManager dtSecretManager = 
-      new TestDelegationTokenSecretManager(24*60*60*1000,
-        10*1000,1*1000,3600000);
+      new TestDelegationTokenSecretManager(800,
+        800,1*1000,3600000);
     try {
       dtSecretManager.startThreads();
       //generate a token and store the password
@@ -316,7 +357,8 @@ public class TestDelegationToken {
       int prevNumKeys = dtSecretManager.getAllKeys().length;
       
       dtSecretManager.rollMasterKey();
-      
+      Assert.assertTrue(dtSecretManager.isStoreNewMasterKeyCalled);
+
       //after rolling, the length of the keys list must increase
       int currNumKeys = dtSecretManager.getAllKeys().length;
       Assert.assertEquals((currNumKeys - prevNumKeys) >= 1, true);
@@ -333,6 +375,10 @@ public class TestDelegationToken {
         dtSecretManager.retrievePassword(identifier);
       //compare the passwords
       Assert.assertEquals(oldPasswd, newPasswd);
+      // wait for keys to exipire
+      Thread.sleep(2200);
+      Assert.assertTrue(dtSecretManager.isRemoveStoredMasterKeyCalled);
+
     } finally {
       dtSecretManager.stopThreads();
     }
@@ -483,5 +529,14 @@ public class TestDelegationToken {
         new Text("owner"), new Text(bigBuf), new Text("realUser")));
     assertFalse(testDelegationTokenIdentiferSerializationRoundTrip(
         new Text("owner"), new Text("renewer"), new Text(bigBuf)));
+  }
+
+  @Test
+  public void testDelegationKeyEqualAndHash() {
+    DelegationKey key1 = new DelegationKey(1111, 2222, "keyBytes".getBytes());
+    DelegationKey key2 = new DelegationKey(1111, 2222, "keyBytes".getBytes());
+    DelegationKey key3 = new DelegationKey(3333, 2222, "keyBytes".getBytes());
+    Assert.assertEquals(key1, key2);
+    Assert.assertFalse(key2.equals(key3));
   }
 }
