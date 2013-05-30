@@ -241,6 +241,10 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5270. Migrated MR app from using BuilderUtil factory methods to
     individual record factory methods. (Jian He via vinodkv)
 
+    MAPREDUCE-5263. Bring back old methods and fields in
+    filecache.DistributedCache for binary compatibility with mapred in 1.x.
+    (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
