@@ -28,6 +28,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -61,6 +62,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -454,10 +456,15 @@ public class TestClientRMTokens {
     return mockSched;
   }
 
-  private static RMDelegationTokenSecretManager createRMDelegationTokenSecretManager(
-      long secretKeyInterval, long tokenMaxLifetime, long tokenRenewInterval) {
-    RMDelegationTokenSecretManager rmDtSecretManager = new RMDelegationTokenSecretManager(
-        secretKeyInterval, tokenMaxLifetime, tokenRenewInterval, 3600000);
+  private static RMDelegationTokenSecretManager
+      createRMDelegationTokenSecretManager(long secretKeyInterval,
+          long tokenMaxLifetime, long tokenRenewInterval) {
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
+
+    RMDelegationTokenSecretManager rmDtSecretManager =
+        new RMDelegationTokenSecretManager(secretKeyInterval, tokenMaxLifetime,
+          tokenRenewInterval, 3600000, rmContext);
     return rmDtSecretManager;
   }
 }

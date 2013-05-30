@@ -204,6 +204,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-714. Added NMTokens to be sent to AMs as part of heart-beat response.
     (Omkar Vinit Joshi via vinodkv)
 
+    YARN-638. Modified ResourceManager to restore RMDelegationTokens after
+    restarting. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it

@@ -31,6 +31,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -53,8 +56,10 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -111,7 +116,8 @@ public class TestRMStateStore {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
       TestFSRMStateStoreTester fsTester = new TestFSRMStateStoreTester(cluster);
-      testRMStateStore(fsTester);
+      testRMAppStateStore(fsTester);
+      testRMDTSecretManagerStateStore(fsTester);
     } finally {
       cluster.shutdown();
     }
@@ -218,7 +224,7 @@ public class TestRMStateStore {
   }
 
   @SuppressWarnings("unchecked")
-  void testRMStateStore(RMStateStoreHelper stateStoreHelper) throws Exception {
+  void testRMAppStateStore(RMStateStoreHelper stateStoreHelper) throws Exception {
     long submitTime = System.currentTimeMillis();
     Configuration conf = new YarnConfiguration();
     RMStateStore store = stateStoreHelper.getRMStateStore();
@@ -332,6 +338,37 @@ public class TestRMStateStore {
     assertTrue(stateStoreHelper.isFinalStateValid());
 
     store.close();
+  }
+
+  public void testRMDTSecretManagerStateStore(
+      RMStateStoreHelper stateStoreHelper) throws Exception {
+    RMStateStore store = stateStoreHelper.getRMStateStore();
+    TestDispatcher dispatcher = new TestDispatcher();
+    store.setDispatcher(dispatcher);
+
+    // store RM delegation token;
+    RMDelegationTokenIdentifier dtId1 =
+        new RMDelegationTokenIdentifier(new Text("owner1"),
+          new Text("renewer1"), new Text("realuser1"));
+    Long renewDate1 = new Long(System.currentTimeMillis());
+    int sequenceNumber = 1111;
+    store.storeRMDelegationTokenAndSequenceNumber(dtId1, renewDate1,
+      sequenceNumber);
+    Map<RMDelegationTokenIdentifier, Long> token1 =
+        new HashMap<RMDelegationTokenIdentifier, Long>();
+    token1.put(dtId1, renewDate1);
+
+    // store delegation key;
+    DelegationKey key = new DelegationKey(1234, 4321 , "keyBytes".getBytes());
+    HashSet<DelegationKey> keySet = new HashSet<DelegationKey>();
+    keySet.add(key);
+    store.storeRMDTMasterKey(key);
+
+    RMDTSecretManagerState secretManagerState =
+        store.loadState().getRMDTSecretManagerState();
+    Assert.assertEquals(token1, secretManagerState.getTokenState());
+    Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
+    Assert.assertEquals(sequenceNumber, secretManagerState.getDTSequenceNumber());
   }
 
   private List<Token<?>> generateTokens(ApplicationAttemptId attemptId,

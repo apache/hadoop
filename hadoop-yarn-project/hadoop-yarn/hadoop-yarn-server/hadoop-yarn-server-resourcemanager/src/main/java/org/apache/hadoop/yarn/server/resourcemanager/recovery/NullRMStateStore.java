@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 
 @Unstable
 public class NullRMStateStore extends RMStateStore {
@@ -59,4 +62,26 @@ public class NullRMStateStore extends RMStateStore {
     // Do nothing
   }
 
+  @Override
+  public void storeRMDelegationTokenAndSequenceNumberState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
+      int latestSequenceNumber) throws Exception {
+    // Do nothing
+  }
+
+  @Override
+  public void removeRMDelegationTokenState(RMDelegationTokenIdentifier rmDTIdentifier)
+      throws Exception {
+    // Do nothing
+  }
+
+  @Override
+  public void storeRMDTMasterKeyState(DelegationKey delegationKey) throws Exception {
+    // Do nothing
+  }
+
+  @Override
+  public void removeRMDTMasterKeyState(DelegationKey delegationKey) throws Exception {
+    // Do nothing
+  }
 }
