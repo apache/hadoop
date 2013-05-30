@@ -25,8 +25,8 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.InputStreamReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Writer;
 import java.security.PrivilegedExceptionAction;
@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.file.tfile.TFile;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -137,12 +138,15 @@ public class AggregatedLogFormat {
 
     private final List<String> rootLogDirs;
     private final ContainerId containerId;
+    private final String user;
     // TODO Maybe add a version string here. Instead of changing the version of
     // the entire k-v format
 
-    public LogValue(List<String> rootLogDirs, ContainerId containerId) {
+    public LogValue(List<String> rootLogDirs, ContainerId containerId,
+        String user) {
       this.rootLogDirs = new ArrayList<String>(rootLogDirs);
       this.containerId = containerId;
+      this.user = user;
 
       // Ensure logs are processed in lexical order
       Collections.sort(this.rootLogDirs);
@@ -177,17 +181,29 @@ public class AggregatedLogFormat {
           // Write the log itself
           FileInputStream in = null;
           try {
-            in = new FileInputStream(logFile);
+            in = SecureIOUtils.openForRead(logFile, getUser(), null);
             byte[] buf = new byte[65535];
             int len = 0;
             while ((len = in.read(buf)) != -1) {
               out.write(buf, 0, len);
             }
+          } catch (IOException e) {
+            String message = "Error aggregating log file. Log file : "
+                + logFile.getAbsolutePath() + e.getMessage(); 
+            LOG.error(message, e);
+            out.write(message.getBytes());
           } finally {
-            in.close();
+            if (in != null) {
+              in.close();
+            }
           }
         }
       }
+    }
+    
+    // Added for testing purpose.
+    public String getUser() {
+      return user;
     }
   }
 

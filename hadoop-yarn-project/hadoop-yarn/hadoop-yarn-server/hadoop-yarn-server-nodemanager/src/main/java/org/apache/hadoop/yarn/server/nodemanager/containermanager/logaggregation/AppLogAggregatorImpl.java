@@ -123,7 +123,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         + ". Current good log dirs are "
         + StringUtils.join(",", dirsHandler.getLogDirs()));
     LogKey logKey = new LogKey(containerId);
-    LogValue logValue = new LogValue(dirsHandler.getLogDirs(), containerId);
+    LogValue logValue =
+        new LogValue(dirsHandler.getLogDirs(), containerId,
+          userUgi.getShortUserName());
     try {
       this.writer.append(logKey, logValue);
     } catch (IOException e) {
