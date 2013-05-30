@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -30,10 +31,12 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
@@ -52,6 +55,7 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
   Resource limit;
 
   private List<Container> allocatedContainers = null;
+  private List<Token> nmTokens = null;
   private List<ContainerStatus> completedContainersStatuses = null;
 
   private List<NodeReport> updatedNodes = null;
@@ -80,6 +84,11 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
       Iterable<ContainerProto> iterable =
           getProtoIterable(this.allocatedContainers);
       builder.addAllAllocatedContainers(iterable);
+    }
+    if (nmTokens != null) {
+      builder.clearNmTokens();
+      Iterable<TokenProto> iterable = getTokenProtoIterable(nmTokens);
+      builder.addAllNmTokens(iterable);
     }
     if (this.completedContainersStatuses != null) {
       builder.clearCompletedContainerStatuses();
@@ -211,6 +220,24 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
   }
 
   @Override
+  public synchronized void setNMTokens(List<Token> nmTokens) {
+    if (nmTokens == null || nmTokens.isEmpty()) {
+      this.nmTokens.clear();
+      builder.clearNmTokens();
+      return;
+    }
+    // Implementing it as an append rather than set for consistency
+    initLocalNewNMTokenList();
+    this.nmTokens.addAll(nmTokens);
+  }
+
+  @Override
+  public synchronized List<Token> getNMTokens() {
+    initLocalNewNMTokenList();
+    return nmTokens;
+  }
+  
+  @Override
   public synchronized int getNumClusterNodes() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
     return p.getNumClusterNodes();
@@ -274,6 +301,18 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
     }
   }
 
+  private synchronized void initLocalNewNMTokenList() {
+    if (nmTokens != null) {
+      return;
+    }
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<TokenProto> list = p.getNmTokensList();
+    nmTokens = new ArrayList<Token>();
+    for (TokenProto t : list) {
+      nmTokens.add(convertFromProtoFormat(t));
+    }
+  }
+
   private synchronized Iterable<ContainerProto> getProtoIterable(
       final List<Container> newContainersList) {
     maybeInitBuilder();
@@ -305,6 +344,35 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
     };
   }
 
+  private synchronized Iterable<TokenProto> getTokenProtoIterable(
+      final List<Token> nmTokenList) {
+    maybeInitBuilder();
+    return new Iterable<TokenProto>() {
+      @Override
+      public synchronized Iterator<TokenProto> iterator() {
+        return new Iterator<TokenProto>() {
+
+          Iterator<Token> iter = nmTokenList.iterator();
+          
+          @Override
+          public boolean hasNext() {
+            return iter.hasNext();
+          }
+          
+          @Override
+          public TokenProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+          
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+  }
+  
   private synchronized Iterable<ContainerStatusProto>
   getContainerStatusProtoIterable(
       final List<ContainerStatus> newContainersList) {
@@ -426,5 +494,13 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
 
   private synchronized PreemptionMessageProto convertToProtoFormat(PreemptionMessage r) {
     return ((PreemptionMessagePBImpl)r).getProto();
+  }
+  
+  private synchronized TokenProto convertToProtoFormat(Token token) {
+    return ((TokenPBImpl)token).getProto();
+  }
+  
+  private synchronized Token convertFromProtoFormat(TokenProto proto) {
+    return new TokenPBImpl(proto);
   }
 }  

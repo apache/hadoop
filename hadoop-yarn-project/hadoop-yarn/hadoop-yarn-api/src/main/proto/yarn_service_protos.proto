@@ -67,6 +67,7 @@ message AllocateResponseProto {
   repeated NodeReportProto updated_nodes = 6;
   optional int32 num_cluster_nodes = 7;
   optional PreemptionMessageProto preempt = 8;
+  repeated hadoop.common.TokenProto nm_tokens = 9;
 }
 
 message PreemptionMessageProto {
