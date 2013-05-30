@@ -108,6 +108,10 @@ Release 2.0.5-beta - UNRELEASED
     filecache.DistributedCache for binary compatibility with mapred in 1.x.
     (Zhijie Shen via vinodkv)
 
+    MAPREDUCE-5228. Bring back FileInputFormat.Counter and
+    FileOuputFormat.Counter for binary compatibility with 1.x mapred APIs.
+    (Mayank Bansal via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 

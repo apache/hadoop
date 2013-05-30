@@ -80,6 +80,40 @@ public class TestJobCounters {
     }
   }
 
+  @SuppressWarnings("deprecation")
+  private void validateOldFileCounters(Counters counter, long fileBytesRead,
+      long fileBytesWritten, long mapOutputBytes,
+      long mapOutputMaterializedBytes) {
+
+    assertEquals(fileBytesRead,
+      counter.findCounter(FileInputFormat.Counter.BYTES_READ).getValue());
+
+    assertEquals(
+      fileBytesRead,
+      counter
+        .findCounter(
+          org.apache.hadoop.mapreduce.lib.input.FileInputFormat.Counter.BYTES_READ)
+        .getValue());
+
+    assertEquals(fileBytesWritten,
+      counter.findCounter(FileOutputFormat.Counter.BYTES_WRITTEN).getValue());
+
+    assertEquals(
+      fileBytesWritten,
+      counter
+        .findCounter(
+          org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.Counter.BYTES_WRITTEN)
+        .getValue());
+
+    if (mapOutputBytes >= 0) {
+      assertTrue(counter.findCounter(TaskCounter.MAP_OUTPUT_BYTES).getValue() != 0);
+    }
+    if (mapOutputMaterializedBytes >= 0) {
+      assertTrue(counter.findCounter(TaskCounter.MAP_OUTPUT_MATERIALIZED_BYTES)
+        .getValue() != 0);
+    }
+  }
+  
   private void validateCounters(Counters counter, long spillRecCnt,
                                 long mapInputRecords, long mapOutputRecords) {
       // Check if the numer of Spilled Records is same as expected
@@ -255,7 +289,7 @@ public class TestJobCounters {
     // 4 records/line = 61440 output records
     validateCounters(c1, 90112, 15360, 61440);
     validateFileCounters(c1, inputSize, 0, 0, 0);
-
+    validateOldFileCounters(c1, inputSize, 61928, 0, 0);
   }
 
   @Test
@@ -429,6 +463,18 @@ public class TestJobCounters {
     final Counters c1 = Counters.downgrade(job.getCounters());
     validateCounters(c1, 0, 15360, 61440);
     validateFileCounters(c1, inputSize, 0, -1, -1);
+  }
+
+  @SuppressWarnings("deprecation")
+  @Test
+  public void testOldCounters() throws Exception {
+    Counters c1 = new Counters();
+    c1.incrCounter(FileInputFormat.Counter.BYTES_READ, 100);
+    c1.incrCounter(FileOutputFormat.Counter.BYTES_WRITTEN, 200);
+    c1.incrCounter(TaskCounter.MAP_OUTPUT_BYTES, 100);
+    c1.incrCounter(TaskCounter.MAP_OUTPUT_MATERIALIZED_BYTES, 100);
+    validateFileCounters(c1, 100, 200, 100, 100);
+    validateOldFileCounters(c1, 100, 200, 100, 100);
   }
 
   /** 

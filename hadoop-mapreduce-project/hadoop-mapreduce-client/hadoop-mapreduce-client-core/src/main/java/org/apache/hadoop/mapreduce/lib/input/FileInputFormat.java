@@ -68,6 +68,11 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   private static final Log LOG = LogFactory.getLog(FileInputFormat.class);
 
   private static final double SPLIT_SLOP = 1.1;   // 10% slop
+  
+  @Deprecated
+  public static enum Counter { 
+    BYTES_READ
+  }
 
   private static final PathFilter hiddenFileFilter = new PathFilter(){
       public boolean accept(Path p){
