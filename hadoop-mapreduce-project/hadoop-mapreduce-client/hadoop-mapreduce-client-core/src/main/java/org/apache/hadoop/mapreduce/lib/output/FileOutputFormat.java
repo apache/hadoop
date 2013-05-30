@@ -60,6 +60,11 @@ public static final String COMPRESS_CODEC =
 public static final String COMPRESS_TYPE = "mapreduce.output.fileoutputformat.compress.type";
 public static final String OUTDIR = "mapreduce.output.fileoutputformat.outputdir";
 
+  @Deprecated
+  public static enum Counter {
+    BYTES_WRITTEN
+  }
+
   /**
    * Set whether the output of the job is compressed.
    * @param job the job to modify
