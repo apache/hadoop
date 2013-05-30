@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> the  
@@ -176,5 +177,24 @@ public interface AllocateResponse {
   @Private
   @Unstable
   public void setPreemptionMessage(PreemptionMessage request);
+  
+  @Public
+  @Stable
+  public void setNMTokens(List<Token> nmTokens);
+  
+  /**
+   * Get the list of NMTokens required for communicating with NM. New NMTokens
+   * issued only if
+   * 1) AM is receiving first container on underlying NodeManager.
+   * OR
+   * 2) NMToken master key rolled over in ResourceManager and AM is getting new
+   * container on the same underlying NodeManager.
+   * AM will receive one NMToken per NM irrespective of the number of containers
+   * issued on same NM. AM is expected to store these tokens until issued a
+   * new token for the same NM.
+   */
+  @Public
+  @Stable
+  public List<Token> getNMTokens();
 
 }
