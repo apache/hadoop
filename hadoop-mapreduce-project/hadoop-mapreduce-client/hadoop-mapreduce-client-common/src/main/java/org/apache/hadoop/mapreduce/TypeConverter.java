@@ -76,9 +76,8 @@ public class TypeConverter {
     JobId jobId = recordFactory.newRecordInstance(JobId.class);
     jobId.setId(id.getId()); //currently there is 1-1 mapping between appid and jobid
 
-    ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-    appId.setId(id.getId());
-    appId.setClusterTimestamp(toClusterTimeStamp(id.getJtIdentifier()));
+    ApplicationId appId = ApplicationId.newInstance(
+        toClusterTimeStamp(id.getJtIdentifier()), id.getId());
     jobId.setAppId(appId);
     return jobId;
   }

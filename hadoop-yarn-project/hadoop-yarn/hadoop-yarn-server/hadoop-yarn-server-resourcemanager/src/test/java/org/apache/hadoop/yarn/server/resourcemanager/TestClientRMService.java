@@ -157,8 +157,7 @@ public class TestClientRMService {
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     GetApplicationReportRequest request = recordFactory
         .newRecordInstance(GetApplicationReportRequest.class);
-    request.setApplicationId(recordFactory
-        .newRecordInstance(ApplicationId.class));
+    request.setApplicationId(ApplicationId.newInstance(0, 0));
     GetApplicationReportResponse applicationReport = rmService
         .getApplicationReport(request);
     Assert.assertNull("It should return null as application report for absent application.",
@@ -436,11 +435,7 @@ public class TestClientRMService {
   }
 
   private ApplicationId getApplicationId(int id) {
-    ApplicationId applicationId = recordFactory
-        .newRecordInstance(ApplicationId.class);
-    applicationId.setClusterTimestamp(123456);
-    applicationId.setId(id);
-    return applicationId;
+    return ApplicationId.newInstance(123456, id);
   }
 
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,

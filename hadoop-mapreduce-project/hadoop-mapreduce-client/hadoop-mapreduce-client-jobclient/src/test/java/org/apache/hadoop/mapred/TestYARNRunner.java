@@ -140,9 +140,7 @@ public class TestYARNRunner extends TestCase {
         ).when(yarnRunner).createApplicationSubmissionContext(any(Configuration.class),
             any(String.class), any(Credentials.class));
 
-    appId = recordFactory.newRecordInstance(ApplicationId.class);
-    appId.setClusterTimestamp(System.currentTimeMillis());
-    appId.setId(1);
+    appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
     jobId = TypeConverter.fromYarn(appId);
     if (testWorkDir.exists()) {
       FileContext.getLocalFSFileContext().delete(new Path(testWorkDir.toString()), true);

@@ -126,10 +126,7 @@ public class TestEventFlow {
     ContainerLaunchContext launchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
     ContainerId cID = recordFactory.newRecordInstance(ContainerId.class);
-    ApplicationId applicationId =
-        recordFactory.newRecordInstance(ApplicationId.class);
-    applicationId.setClusterTimestamp(0);
-    applicationId.setId(0);
+    ApplicationId applicationId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId applicationAttemptId = 
         recordFactory.newRecordInstance(ApplicationAttemptId.class);
     applicationAttemptId.setApplicationId(applicationId);

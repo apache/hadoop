@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.mapreduce;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,18 +31,13 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationResourceUsageReportPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.QueueState;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -74,14 +72,16 @@ public class TestTypeConverter {
   public void testFromYarn() throws Exception {
     int appStartTime = 612354;
     YarnApplicationState state = YarnApplicationState.RUNNING;
-    ApplicationId applicationId = new ApplicationIdPBImpl();
-    ApplicationReportPBImpl applicationReport = new ApplicationReportPBImpl();
+    ApplicationId applicationId = ApplicationId.newInstance(0, 0);
+    ApplicationReport applicationReport = Records
+        .newRecord(ApplicationReport.class);
     applicationReport.setApplicationId(applicationId);
     applicationReport.setYarnApplicationState(state);
     applicationReport.setStartTime(appStartTime);
     applicationReport.setUser("TestTypeConverter-user");
-    ApplicationResourceUsageReportPBImpl appUsageRpt = new ApplicationResourceUsageReportPBImpl();
-    ResourcePBImpl r = new ResourcePBImpl();
+    ApplicationResourceUsageReport appUsageRpt = Records
+        .newRecord(ApplicationResourceUsageReport.class);
+    Resource r = Records.newRecord(Resource.class);
     r.setMemory(2048);
     appUsageRpt.setNeededResources(r);
     appUsageRpt.setNumReservedContainers(1);
@@ -107,8 +107,9 @@ public class TestTypeConverter {
     when(mockReport.getUser()).thenReturn("dummy-user");
     when(mockReport.getQueue()).thenReturn("dummy-queue");
     String jobFile = "dummy-path/job.xml";
-    ApplicationResourceUsageReportPBImpl appUsageRpt = new ApplicationResourceUsageReportPBImpl();
-    ResourcePBImpl r = new ResourcePBImpl();
+    ApplicationResourceUsageReport appUsageRpt = Records
+        .newRecord(ApplicationResourceUsageReport.class);
+    Resource r = Records.newRecord(Resource.class);
     r.setMemory(2048);
     appUsageRpt.setNeededResources(r);
     appUsageRpt.setNumReservedContainers(1);
@@ -134,7 +135,8 @@ public class TestTypeConverter {
 
   @Test
   public void testFromYarnQueueInfo() {
-    org.apache.hadoop.yarn.api.records.QueueInfo queueInfo = new QueueInfoPBImpl();
+    org.apache.hadoop.yarn.api.records.QueueInfo queueInfo = Records
+        .newRecord(org.apache.hadoop.yarn.api.records.QueueInfo.class);
     queueInfo.setQueueState(org.apache.hadoop.yarn.api.records.QueueState.STOPPED);
     org.apache.hadoop.mapreduce.QueueInfo returned =
       TypeConverter.fromYarn(queueInfo, new Configuration());

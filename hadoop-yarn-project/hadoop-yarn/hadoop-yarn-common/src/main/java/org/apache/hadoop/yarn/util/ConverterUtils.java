@@ -114,18 +114,15 @@ public class ConverterUtils {
 
   private static ApplicationId toApplicationId(RecordFactory recordFactory,
       Iterator<String> it) {
-    ApplicationId appId =
-        recordFactory.newRecordInstance(ApplicationId.class);
-    appId.setClusterTimestamp(Long.parseLong(it.next()));
-    appId.setId(Integer.parseInt(it.next()));
+    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
+        Integer.parseInt(it.next()));
     return appId;
   }
 
   private static ApplicationAttemptId toApplicationAttemptId(
       Iterator<String> it) throws NumberFormatException {
-    ApplicationId appId = Records.newRecord(ApplicationId.class);
-    appId.setClusterTimestamp(Long.parseLong(it.next()));
-    appId.setId(Integer.parseInt(it.next()));
+    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
+        Integer.parseInt(it.next()));
     ApplicationAttemptId appAttemptId = Records
         .newRecord(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(appId);
@@ -135,9 +132,8 @@ public class ConverterUtils {
 
   private static ApplicationId toApplicationId(
       Iterator<String> it) throws NumberFormatException {
-    ApplicationId appId = Records.newRecord(ApplicationId.class);
-    appId.setClusterTimestamp(Long.parseLong(it.next()));
-    appId.setId(Integer.parseInt(it.next()));
+    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
+        Integer.parseInt(it.next()));
     return appId;
   }
 

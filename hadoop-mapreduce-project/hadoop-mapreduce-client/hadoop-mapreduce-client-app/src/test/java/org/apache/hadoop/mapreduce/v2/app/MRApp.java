@@ -128,9 +128,7 @@ public class MRApp extends MRAppMaster {
   static ApplicationId applicationId;
 
   static {
-    applicationId = recordFactory.newRecordInstance(ApplicationId.class);
-    applicationId.setClusterTimestamp(0);
-    applicationId.setId(0);
+    applicationId = ApplicationId.newInstance(0, 0);
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,

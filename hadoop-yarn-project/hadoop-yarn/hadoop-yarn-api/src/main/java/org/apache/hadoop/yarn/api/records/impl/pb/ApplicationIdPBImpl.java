@@ -21,58 +21,49 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProtoOrBuilder;
+
+import com.google.common.base.Preconditions;
 
 
-    
 public class ApplicationIdPBImpl extends ApplicationId {
-  ApplicationIdProto proto = ApplicationIdProto.getDefaultInstance();
+  ApplicationIdProto proto = null;
   ApplicationIdProto.Builder builder = null;
-  boolean viaProto = false;
-  
+
   public ApplicationIdPBImpl() {
     builder = ApplicationIdProto.newBuilder();
   }
 
   public ApplicationIdPBImpl(ApplicationIdProto proto) {
     this.proto = proto;
-    viaProto = true;
   }
 
-  public synchronized ApplicationIdProto getProto() {
-    proto = viaProto ? proto : builder.build();
-    viaProto = true;
+  public ApplicationIdProto getProto() {
     return proto;
   }
 
-  private synchronized void maybeInitBuilder() {
-    if (viaProto || builder == null) {
-      builder = ApplicationIdProto.newBuilder(proto);
-    }
-    viaProto = false;
-  }
-    
-  
   @Override
-  public synchronized int getId() {
-    ApplicationIdProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getId());
+  public int getId() {
+    Preconditions.checkNotNull(proto);
+    return proto.getId();
   }
 
   @Override
-  public synchronized void setId(int id) {
-    maybeInitBuilder();
-    builder.setId((id));
+  protected void setId(int id) {
+    builder.setId(id);
   }
   @Override
-  public synchronized long getClusterTimestamp() {
-    ApplicationIdProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getClusterTimestamp());
+  public long getClusterTimestamp() {
+    Preconditions.checkNotNull(proto);
+    return proto.getClusterTimestamp();
   }
 
   @Override
-  public synchronized void setClusterTimestamp(long clusterTimestamp) {
-    maybeInitBuilder();
+  protected void setClusterTimestamp(long clusterTimestamp) {
     builder.setClusterTimestamp((clusterTimestamp));
+  }
+
+  @Override
+  protected void build() {
+    proto = builder.build();
   }
 }

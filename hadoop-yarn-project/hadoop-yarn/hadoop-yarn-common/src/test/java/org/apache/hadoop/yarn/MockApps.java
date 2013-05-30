@@ -62,10 +62,7 @@ public class MockApps {
   }
 
   public static ApplicationId newAppID(int i) {
-    ApplicationId id = Records.newRecord(ApplicationId.class);
-    id.setClusterTimestamp(TS);
-    id.setId(i);
-    return id;
+    return ApplicationId.newInstance(TS, i);
   }
 
   public static ApplicationAttemptId newAppAttemptID(ApplicationId appId, int i) {

@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.apache.hadoop.yarn.service.Service.STATE.INITED;
+import static org.apache.hadoop.yarn.service.Service.STATE.STARTED;
+import static org.apache.hadoop.yarn.service.Service.STATE.STOPPED;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -30,17 +34,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.Service;
-
-
-import static org.apache.hadoop.yarn.service.Service.STATE.*;
+import org.junit.Test;
 
 public class TestAuxServices {
   private static final Log LOG = LogFactory.getLog(TestAuxServices.class);
@@ -123,18 +120,17 @@ public class TestAuxServices {
     aux.init(conf);
     aux.start();
 
-    ApplicationId appId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
-    appId.setId(65);
+    ApplicationId appId1 = ApplicationId.newInstance(0, 65);
     ByteBuffer buf = ByteBuffer.allocate(6);
     buf.putChar('A');
     buf.putInt(65);
     buf.flip();
     AuxServicesEvent event = new AuxServicesEvent(
-        AuxServicesEventType.APPLICATION_INIT, "user0", appId, "Asrv", buf);
+        AuxServicesEventType.APPLICATION_INIT, "user0", appId1, "Asrv", buf);
     aux.handle(event);
-    appId.setId(66);
+    ApplicationId appId2 = ApplicationId.newInstance(0, 66);
     event = new AuxServicesEvent(
-        AuxServicesEventType.APPLICATION_STOP, "user0", appId, "Bsrv", null);
+        AuxServicesEventType.APPLICATION_STOP, "user0", appId2, "Bsrv", null);
     // verify all services got the stop event 
     aux.handle(event);
     Collection<AuxServices.AuxiliaryService> servs = aux.getServices();

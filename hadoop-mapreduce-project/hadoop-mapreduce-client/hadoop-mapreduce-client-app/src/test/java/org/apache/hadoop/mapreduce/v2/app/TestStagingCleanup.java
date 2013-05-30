@@ -84,9 +84,8 @@ import org.junit.Test;
      ApplicationAttemptId attemptId = recordFactory.newRecordInstance(
          ApplicationAttemptId.class);
      attemptId.setAttemptId(0);
-     ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-     appId.setClusterTimestamp(System.currentTimeMillis());
-     appId.setId(0);
+     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
+        0);
      attemptId.setApplicationId(appId);
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
@@ -113,9 +112,8 @@ import org.junit.Test;
      ApplicationAttemptId attemptId = recordFactory.newRecordInstance(
          ApplicationAttemptId.class);
      attemptId.setAttemptId(0);
-     ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-     appId.setClusterTimestamp(System.currentTimeMillis());
-     appId.setId(0);
+     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
+         0);
      attemptId.setApplicationId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
      Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
@@ -141,9 +139,8 @@ import org.junit.Test;
      ApplicationAttemptId attemptId = recordFactory.newRecordInstance(
          ApplicationAttemptId.class);
      attemptId.setAttemptId(1);
-     ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-     appId.setClusterTimestamp(System.currentTimeMillis());
-     appId.setId(0);
+     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
+         0);
      attemptId.setApplicationId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
@@ -169,9 +166,8 @@ import org.junit.Test;
      ApplicationAttemptId attemptId = recordFactory.newRecordInstance(
          ApplicationAttemptId.class);
      attemptId.setAttemptId(0);
-     ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-     appId.setClusterTimestamp(System.currentTimeMillis());
-     appId.setId(0);
+     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
+         0);
      attemptId.setApplicationId(appId);
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
@@ -197,9 +193,8 @@ import org.junit.Test;
      ApplicationAttemptId attemptId = recordFactory.newRecordInstance(
          ApplicationAttemptId.class);
      attemptId.setAttemptId(1);
-     ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-     appId.setClusterTimestamp(System.currentTimeMillis());
-     appId.setId(0);
+     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
+         0);
      attemptId.setApplicationId(appId);
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);

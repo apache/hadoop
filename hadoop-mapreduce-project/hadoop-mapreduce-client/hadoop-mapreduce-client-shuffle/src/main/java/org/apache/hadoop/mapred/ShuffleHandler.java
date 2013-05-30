@@ -79,7 +79,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.util.Records;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -549,9 +548,8 @@ public class ShuffleHandler extends AbstractService
       // $x/$user/appcache/$appId/output/$mapId
       // TODO: Once Shuffle is out of NM, this can use MR APIs to convert between App and Job
       JobID jobID = JobID.forName(jobId);
-      ApplicationId appID = Records.newRecord(ApplicationId.class);
-      appID.setClusterTimestamp(Long.parseLong(jobID.getJtIdentifier()));
-      appID.setId(jobID.getId());
+      ApplicationId appID = ApplicationId.newInstance(
+          Long.parseLong(jobID.getJtIdentifier()), jobID.getId());
       final String base =
           ContainerLocalizer.USERCACHE + "/" + user + "/"
               + ContainerLocalizer.APPCACHE + "/"

@@ -129,7 +129,7 @@ public class TestResourceMgrDelegate {
     ApplicationResourceUsageReport appResources = Mockito
         .mock(ApplicationResourceUsageReport.class);
     Mockito.when(appReport.getApplicationId()).thenReturn(
-        Records.newRecord(ApplicationId.class));
+        ApplicationId.newInstance(0, 0));
     Mockito.when(appResources.getNeededResources()).thenReturn(
         Records.newRecord(Resource.class));
     Mockito.when(appResources.getReservedResources()).thenReturn(

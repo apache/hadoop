@@ -21,7 +21,6 @@ package org.apache.hadoop.mapreduce;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.Task.CombineOutputCollector;
@@ -30,7 +29,6 @@ import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.mapreduce.task.reduce.Shuffle;
-import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapred.JobConf;
@@ -40,7 +38,6 @@ import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapred.ShuffleConsumerPlugin;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
-import org.apache.hadoop.mapred.Reducer;
 
 /**
   * A JUnit for testing availability and accessibility of shuffle related API.
@@ -181,10 +178,6 @@ public class TestShufflePlugin<K, V> {
    * AuxiliaryService(s) which are "Shuffle-Providers" (ShuffleHandler and 3rd party plugins)
    */
   public void testProviderApi() {
-
-    ApplicationId mockApplicationId = mock(ApplicationId.class);
-    mockApplicationId.setClusterTimestamp(new Long(10));
-    mockApplicationId.setId(mock(JobID.class).getId());
     LocalDirAllocator mockLocalDirAllocator = mock(LocalDirAllocator.class);
     JobConf mockJobConf = mock(JobConf.class);
     try {
