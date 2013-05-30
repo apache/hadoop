@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.client;
 
-import static org.mockito.Mockito.anyFloat;
-import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.anyString;
+import static org.mockito.Matchers.anyFloat;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -56,7 +56,7 @@ public class TestAMRMClientAsync {
             BuilderUtils.newContainerId(0, 0, 0, 0),
             ContainerState.COMPLETE, "", 0));
     List<Container> allocated1 = Arrays.asList(
-        BuilderUtils.newContainer(null, null, null, null, null, null, 0));
+        BuilderUtils.newContainer(null, null, null, null, null, null));
     final AllocateResponse response1 = createAllocateResponse(
         new ArrayList<ContainerStatus>(), allocated1);
     final AllocateResponse response2 = createAllocateResponse(completed1,

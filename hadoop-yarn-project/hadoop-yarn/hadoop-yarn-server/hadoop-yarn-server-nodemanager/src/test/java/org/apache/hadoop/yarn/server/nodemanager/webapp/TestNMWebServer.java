@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -183,10 +182,11 @@ public class TestNMWebServer {
           recordFactory.newRecordInstance(ContainerLaunchContext.class);
       org.apache.hadoop.yarn.api.records.Container mockContainer =
           mock(org.apache.hadoop.yarn.api.records.Container.class);
+      long currentTime = System.currentTimeMillis();
       ContainerToken containerToken =
           BuilderUtils.newContainerToken(containerId, "127.0.0.1", 1234, user,
-            BuilderUtils.newResource(1024, 1),
-            System.currentTimeMillis() + 10000L, 123, "password".getBytes());
+            BuilderUtils.newResource(1024, 1), currentTime + 10000L, 123,
+            "password".getBytes(), currentTime);
       when(mockContainer.getContainerToken()).thenReturn(containerToken);
       when(mockContainer.getId()).thenReturn(containerId);
       Container container =

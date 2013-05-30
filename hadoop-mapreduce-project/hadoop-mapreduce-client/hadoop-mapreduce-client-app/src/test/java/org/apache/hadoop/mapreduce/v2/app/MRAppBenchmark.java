@@ -49,7 +49,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -243,7 +242,7 @@ public class MRAppBenchmark {
                     containers.add(Container.newInstance(containerId,
                       NodeId.newInstance("host" + containerId.getId(), 2345),
                       "host" + containerId.getId() + ":5678",
-                      req.getCapability(), req.getPriority(), null, 0));
+                      req.getCapability(), req.getPriority(), null));
                   }
                 }
 

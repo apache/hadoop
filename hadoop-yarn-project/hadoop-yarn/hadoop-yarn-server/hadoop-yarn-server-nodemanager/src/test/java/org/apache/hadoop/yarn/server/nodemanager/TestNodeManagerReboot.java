@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -137,9 +138,11 @@ public class TestNodeManagerReboot {
     resource.setMemory(1024);
     mockContainer.setResource(resource);
     NodeId nodeId = BuilderUtils.newNodeId("127.0.0.1", 12345);
-    mockContainer.setContainerToken(nm.getNMContext()
-      .getContainerTokenSecretManager()
-      .createContainerToken(cId, nodeId, user, resource));
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, nodeId.getHost(), nodeId.getPort(),
+          user, resource, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes(), 0);
+    mockContainer.setContainerToken(containerToken);
     mockContainer.setNodeHttpAddress("127.0.0.1");
     mockContainer.setNodeId(nodeId);
     

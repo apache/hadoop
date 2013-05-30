@@ -533,8 +533,8 @@ public class TestNMClientAsync {
     nodeId = NodeId.newInstance("localhost", 0);
     // Create an empty record
     containerToken = recordFactory.newRecordInstance(ContainerToken.class);
-    return BuilderUtils.newContainer(
-        containerId, nodeId, null, null, null, containerToken, 0);
+    return BuilderUtils.newContainer(containerId, nodeId, null, null, null,
+      containerToken);
   }
 
 }

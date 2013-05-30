@@ -409,11 +409,12 @@ public class TestContainerLauncherImpl {
   
   private ContainerToken createNewContainerToken(ContainerId contId,
       String containerManagerAddr) {
+    long currentTime = System.currentTimeMillis();
     return BuilderUtils.newContainerToken(NodeId.newInstance("127.0.0.1",
         1234), "password".getBytes(), new ContainerTokenIdentifier(
         contId, containerManagerAddr, "user",
         Resource.newInstance(1024, 1),
-        System.currentTimeMillis() + 10000L, 123));
+        currentTime + 10000L, 123, currentTime));
   }
 
   private static class ContainerManagerForTest implements ContainerManager {

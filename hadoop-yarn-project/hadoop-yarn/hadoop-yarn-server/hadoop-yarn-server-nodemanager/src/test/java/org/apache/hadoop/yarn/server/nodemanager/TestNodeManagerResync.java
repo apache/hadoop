@@ -282,7 +282,7 @@ public class TestNodeManagerResync {
           while (!isStopped && numContainers < 10) {
             ContainerId cId = TestNodeManagerShutdown.createContainerId();
             Container container =
-                BuilderUtils.newContainer(cId, null, null, null, null, null, 0);
+                BuilderUtils.newContainer(cId, null, null, null, null, null);
             StartContainerRequest startRequest =
                 recordFactory.newRecordInstance(StartContainerRequest.class);
             startRequest.setContainerLaunchContext(containerLaunchContext);

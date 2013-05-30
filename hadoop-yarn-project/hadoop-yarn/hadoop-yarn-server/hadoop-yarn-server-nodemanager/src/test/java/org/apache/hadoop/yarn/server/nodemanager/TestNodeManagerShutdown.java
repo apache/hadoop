@@ -184,8 +184,11 @@ public class TestNodeManagerShutdown {
     containerLaunchContext.setCommands(commands);
     Resource resource = BuilderUtils.newResource(1024, 1);
     mockContainer.setResource(resource);
-    mockContainer.setContainerToken(getContainerToken(nm, cId, nodeId,
-      cId.toString(), resource));
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, nodeId.getHost(), nodeId.getPort(),
+          user, resource, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes(), 0);
+    mockContainer.setContainerToken(containerToken);
     StartContainerRequest startRequest =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
@@ -267,12 +270,6 @@ public class TestNodeManagerShutdown {
 
     fileWriter.close();
     return scriptFile;
-  }
-  
-  public static ContainerToken getContainerToken(NodeManager nm,
-      ContainerId containerId, NodeId nodeId, String user, Resource resource) {
-    return nm.getNMContext().getContainerTokenSecretManager()
-      .createContainerToken(containerId, nodeId, user, resource);
   }
   
   class TestNodeManager extends NodeManager {

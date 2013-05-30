@@ -485,9 +485,10 @@ public class TestApplication {
       for (int i = 0; i < numContainers; i++) {
         Container container = createMockedContainer(this.appId, i);
         containers.add(container);
+        long currentTime = System.currentTimeMillis();
         context.getContainerTokenSecretManager().startContainerSuccessful(
           new ContainerTokenIdentifier(container.getContainer().getId(), "",
-            "", null, System.currentTimeMillis() + 1000, masterKey.getKeyId()));
+            "", null, currentTime + 1000, masterKey.getKeyId(), currentTime));
         Assert.assertFalse(context.getContainerTokenSecretManager()
           .isValidStartContainerRequest(container.getContainer().getId()));
       }

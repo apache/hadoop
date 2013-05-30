@@ -64,10 +64,11 @@ public class MockContainer implements Container {
         uniqId);
     this.launchContext = recordFactory
         .newRecordInstance(ContainerLaunchContext.class);
+    long currentTime = System.currentTimeMillis();
     ContainerToken containerToken =
         BuilderUtils.newContainerToken(id, "127.0.0.1", 1234, user,
-          BuilderUtils.newResource(1024, 1),
-          System.currentTimeMillis() + 10000, 123, "password".getBytes());
+          BuilderUtils.newResource(1024, 1), currentTime + 10000, 123,
+          "password".getBytes(), currentTime);
     this.state = ContainerState.NEW;
 
     mockContainer = mock(org.apache.hadoop.yarn.api.records.Container.class);

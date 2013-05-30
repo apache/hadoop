@@ -33,7 +33,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
@@ -53,7 +52,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -426,7 +424,7 @@ public class ContainerManagerImpl extends CompositeService implements
       tokenId);
 
     // Is the container coming from unknown RM
-    if (lauchContainer.getRMIdentifer() != nodeStatusUpdater
+    if (tokenId.getRMIdentifer() != nodeStatusUpdater
       .getRMIdentifier()) {
       String msg = "\nContainer "+ containerIDStr
           + " rejected as it is allocated by a previous RM";

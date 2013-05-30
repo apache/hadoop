@@ -139,13 +139,13 @@ public class TestEventFlow {
     when(mockContainer.getId()).thenReturn(cID);
     Resource r = BuilderUtils.newResource(1024, 1);
     when(mockContainer.getResource()).thenReturn(r);
-    when(mockContainer.getRMIdentifer()).thenReturn(SIMULATED_RM_IDENTIFIER);
     String user = "testing";
     String host = "127.0.0.1";
     int port = 1234;
     ContainerToken containerToken =
         BuilderUtils.newContainerToken(cID, host, port, user, r,
-          System.currentTimeMillis() + 10000L, 123, "password".getBytes());
+          System.currentTimeMillis() + 10000L, 123, "password".getBytes(),
+          SIMULATED_RM_IDENTIFIER);
     when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest request = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
