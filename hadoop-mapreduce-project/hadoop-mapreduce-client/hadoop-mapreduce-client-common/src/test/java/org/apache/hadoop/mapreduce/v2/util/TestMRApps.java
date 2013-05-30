@@ -82,7 +82,7 @@ public class TestMRApps {
   @Test (timeout = 120000)
   public void testJobIDtoString() {
     JobId jid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class);
-    jid.setAppId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class));
+    jid.setAppId(ApplicationId.newInstance(0, 0));
     assertEquals("job_0_0000", MRApps.toString(jid));
   }
 
@@ -104,7 +104,7 @@ public class TestMRApps {
   public void testTaskIDtoString() {
     TaskId tid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class);
     tid.setJobId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class));
-    tid.getJobId().setAppId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class));
+    tid.getJobId().setAppId(ApplicationId.newInstance(0, 0));
     tid.setTaskType(TaskType.MAP);
     TaskType type = tid.getTaskType();
     System.err.println(type);
@@ -146,7 +146,7 @@ public class TestMRApps {
     taid.setTaskId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class));
     taid.getTaskId().setTaskType(TaskType.MAP);
     taid.getTaskId().setJobId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class));
-    taid.getTaskId().getJobId().setAppId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class));
+    taid.getTaskId().getJobId().setAppId(ApplicationId.newInstance(0, 0));
     assertEquals("attempt_0_0000_m_000000_0", MRApps.toString(taid));
   }
 

@@ -27,7 +27,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,7 +40,7 @@ public class TestAppController {
   public void setUp() {
     AppContext context = mock(AppContext.class);
     when(context.getApplicationID()).thenReturn(
-        Records.newRecord(ApplicationId.class));
+        ApplicationId.newInstance(0, 0));
     App app = new App(context);
     Configuration conf = new Configuration();
     ctx = mock(RequestContext.class);

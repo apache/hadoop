@@ -249,9 +249,7 @@ public class TestNodeManagerReboot {
   }
 
   private ContainerId createContainerId() {
-    ApplicationId appId = Records.newRecord(ApplicationId.class);
-    appId.setClusterTimestamp(0);
-    appId.setId(0);
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId appAttemptId =
         Records.newRecord(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(appId);

@@ -24,7 +24,6 @@ import java.util.Map;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
 import static org.apache.hadoop.yarn.util.StringHelper.*;
 
@@ -45,10 +44,8 @@ public class Apps {
       throwParseException(sjoin(prefix, ID), s);
     }
     shouldHaveNext(prefix, s, it);
-    ApplicationId appId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
-    appId.setClusterTimestamp(Long.parseLong(it.next()));
-    shouldHaveNext(prefix, s, it);
-    appId.setId(Integer.parseInt(it.next()));
+    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
+        Integer.parseInt(it.next()));
     return appId;
   }
 

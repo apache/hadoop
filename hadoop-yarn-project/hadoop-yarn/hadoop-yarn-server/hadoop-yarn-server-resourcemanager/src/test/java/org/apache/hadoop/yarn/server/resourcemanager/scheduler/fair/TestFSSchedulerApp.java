@@ -36,8 +36,7 @@ public class TestFSSchedulerApp {
 
   private ApplicationAttemptId createAppAttemptId(int appId, int attemptId) {
     ApplicationAttemptId attId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    ApplicationId appIdImpl = recordFactory.newRecordInstance(ApplicationId.class);
-    appIdImpl.setId(appId);
+    ApplicationId appIdImpl = ApplicationId.newInstance(0, appId);
     attId.setAttemptId(attemptId);
     attId.setApplicationId(appIdImpl);
     return attId;

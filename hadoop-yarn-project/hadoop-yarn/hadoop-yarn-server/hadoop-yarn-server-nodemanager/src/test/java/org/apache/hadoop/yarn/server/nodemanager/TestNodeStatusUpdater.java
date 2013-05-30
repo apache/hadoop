@@ -151,8 +151,6 @@ public class TestNodeStatusUpdater {
       return response;
     }
 
-    ApplicationId applicationID = recordFactory
-        .newRecordInstance(ApplicationId.class);
     ApplicationAttemptId appAttemptID = recordFactory
         .newRecordInstance(ApplicationAttemptId.class);
     ContainerId firstContainerID = recordFactory
@@ -191,12 +189,15 @@ public class TestNodeStatusUpdater {
           getAppToContainerStatusMap(nodeStatus.getContainersStatuses());
       org.apache.hadoop.yarn.api.records.Container mockContainer =
           mock(org.apache.hadoop.yarn.api.records.Container.class);
+      
+      ApplicationId appId1 = ApplicationId.newInstance(0, 1);
+      ApplicationId appId2 = ApplicationId.newInstance(0, 2);
+      
       if (heartBeatID == 1) {
         Assert.assertEquals(0, nodeStatus.getContainersStatuses().size());
 
         // Give a container to the NM.
-        applicationID.setId(heartBeatID);
-        appAttemptID.setApplicationId(applicationID);
+        appAttemptID.setApplicationId(appId1);
         firstContainerID.setApplicationAttemptId(appAttemptID);
         firstContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
@@ -213,7 +214,7 @@ public class TestNodeStatusUpdater {
         Assert.assertEquals("Number of applications should only be one!", 1,
             nodeStatus.getContainersStatuses().size());
         Assert.assertEquals("Number of container for the app should be one!",
-            1, appToContainers.get(applicationID).size());
+            1, appToContainers.get(appId1).size());
 
         // Checks on the NM end
         ConcurrentMap<ContainerId, Container> activeContainers =
@@ -221,8 +222,7 @@ public class TestNodeStatusUpdater {
         Assert.assertEquals(1, activeContainers.size());
 
         // Give another container to the NM.
-        applicationID.setId(heartBeatID);
-        appAttemptID.setApplicationId(applicationID);
+        appAttemptID.setApplicationId(appId2);
         secondContainerID.setApplicationAttemptId(appAttemptID);
         secondContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
@@ -239,7 +239,7 @@ public class TestNodeStatusUpdater {
         Assert.assertEquals("Number of applications should only be one!", 1,
             appToContainers.size());
         Assert.assertEquals("Number of container for the app should be two!",
-            2, appToContainers.get(applicationID).size());
+            2, appToContainers.get(appId2).size());
 
         // Checks on the NM end
         ConcurrentMap<ContainerId, Container> activeContainers =

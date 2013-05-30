@@ -167,9 +167,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     Container mockContainer = mock(Container.class);
     // ////// Construct the Container-id
-    ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-    appId.setClusterTimestamp(0);
-    appId.setId(0);
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId appAttemptId = 
         recordFactory.newRecordInstance(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(appId);
@@ -341,9 +339,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     Container mockContainer = mock(Container.class);
     // ////// Construct the Container-id
-    ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-    appId.setClusterTimestamp(1);
-    appId.setId(1);
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
     ApplicationAttemptId appAttemptId = 
         recordFactory.newRecordInstance(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(appId);

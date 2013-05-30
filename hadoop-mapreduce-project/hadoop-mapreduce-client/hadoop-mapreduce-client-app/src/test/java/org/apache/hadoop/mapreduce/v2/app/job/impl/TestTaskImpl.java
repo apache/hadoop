@@ -224,9 +224,7 @@ public class TestTaskImpl {
     metrics = mock(MRAppMetrics.class);  
     dataLocations = new String[1];
     
-    appId = Records.newRecord(ApplicationId.class);
-    appId.setClusterTimestamp(System.currentTimeMillis());
-    appId.setId(1);
+    appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
     jobId = Records.newRecord(JobId.class);
     jobId.setId(1);

@@ -52,6 +52,8 @@ Release 2.0.5-beta - UNRELEASED
     YARN-571. Remove user from ContainerLaunchContext. (Omkar Vinit Joshi via
     vinodkv)
 
+    YARN-716. Making ApplicationID immutable. (Siddharth Seth via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

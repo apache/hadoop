@@ -91,12 +91,9 @@ public class TestContainerLaunchRPC {
           .newRecordInstance(ContainerLaunchContext.class);
       ContainerId containerId = recordFactory
           .newRecordInstance(ContainerId.class);
-      ApplicationId applicationId = recordFactory
-          .newRecordInstance(ApplicationId.class);
+      ApplicationId applicationId = ApplicationId.newInstance(0, 0);
       ApplicationAttemptId applicationAttemptId = recordFactory
           .newRecordInstance(ApplicationAttemptId.class);
-      applicationId.setClusterTimestamp(0);
-      applicationId.setId(0);
       applicationAttemptId.setApplicationId(applicationId);
       applicationAttemptId.setAttemptId(0);
       containerId.setApplicationAttemptId(applicationAttemptId);

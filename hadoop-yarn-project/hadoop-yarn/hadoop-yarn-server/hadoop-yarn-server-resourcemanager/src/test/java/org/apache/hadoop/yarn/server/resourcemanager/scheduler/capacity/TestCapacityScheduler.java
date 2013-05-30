@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -30,6 +31,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -51,13 +53,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import static org.mockito.Mockito.*;
 
 
 public class TestCapacityScheduler {
@@ -468,15 +467,9 @@ public class TestCapacityScheduler {
     {
       CapacityScheduler cs = new CapacityScheduler();
       Comparator<FiCaSchedulerApp> appComparator= cs.getApplicationComparator();
-      ApplicationId id1 = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
-      id1.setClusterTimestamp(1);
-      id1.setId(1);
-      ApplicationId id2 = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
-      id2.setClusterTimestamp(1);
-      id2.setId(2);
-      ApplicationId id3 = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
-      id3.setClusterTimestamp(2);
-      id3.setId(1);
+      ApplicationId id1 = ApplicationId.newInstance(1, 1);
+      ApplicationId id2 = ApplicationId.newInstance(1, 2);
+      ApplicationId id3 = ApplicationId.newInstance(2, 1);
       //same clusterId
       FiCaSchedulerApp app1 = Mockito.mock(FiCaSchedulerApp.class);
       when(app1.getApplicationId()).thenReturn(id1);

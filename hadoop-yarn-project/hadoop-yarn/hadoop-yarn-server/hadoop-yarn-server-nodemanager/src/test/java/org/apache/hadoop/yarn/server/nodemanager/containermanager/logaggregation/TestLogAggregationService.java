@@ -709,10 +709,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
     Container mockContainer = mock(Container.class);
     // ////// Construct the Container-id
-    ApplicationId appId =
-        recordFactory.newRecordInstance(ApplicationId.class);
-    appId.setClusterTimestamp(0);
-    appId.setId(0);
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId appAttemptId =
         BuilderUtils.newApplicationAttemptId(appId, 1);
     ContainerId cId = BuilderUtils.newContainerId(appAttemptId, 0);

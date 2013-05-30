@@ -132,28 +132,17 @@ public class BuilderUtils {
 
   public static ApplicationId newApplicationId(RecordFactory recordFactory,
       long clustertimestamp, CharSequence id) {
-    ApplicationId applicationId =
-        recordFactory.newRecordInstance(ApplicationId.class);
-    applicationId.setId(Integer.valueOf(id.toString()));
-    applicationId.setClusterTimestamp(clustertimestamp);
-    return applicationId;
+    return ApplicationId.newInstance(clustertimestamp,
+        Integer.valueOf(id.toString()));
   }
 
   public static ApplicationId newApplicationId(RecordFactory recordFactory,
       long clusterTimeStamp, int id) {
-    ApplicationId applicationId =
-        recordFactory.newRecordInstance(ApplicationId.class);
-    applicationId.setId(id);
-    applicationId.setClusterTimestamp(clusterTimeStamp);
-    return applicationId;
+    return ApplicationId.newInstance(clusterTimeStamp, id);
   }
 
   public static ApplicationId newApplicationId(long clusterTimeStamp, int id) {
-    ApplicationId applicationId =
-        recordFactory.newRecordInstance(ApplicationId.class);
-    applicationId.setId(id);
-    applicationId.setClusterTimestamp(clusterTimeStamp);
-    return applicationId;
+    return ApplicationId.newInstance(clusterTimeStamp, id);
   }
 
   public static ApplicationAttemptId newApplicationAttemptId(
@@ -166,11 +155,8 @@ public class BuilderUtils {
   }
 
   public static ApplicationId convert(long clustertimestamp, CharSequence id) {
-    ApplicationId applicationId =
-        recordFactory.newRecordInstance(ApplicationId.class);
-    applicationId.setId(Integer.valueOf(id.toString()));
-    applicationId.setClusterTimestamp(clustertimestamp);
-    return applicationId;
+    return ApplicationId.newInstance(clustertimestamp,
+        Integer.valueOf(id.toString()));
   }
 
   public static ContainerId newContainerId(ApplicationAttemptId appAttemptId,

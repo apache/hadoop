@@ -74,8 +74,7 @@ public class JobHistory extends AbstractService implements HistoryContext {
   public void init(Configuration conf) throws YarnException {
     LOG.info("JobHistory Init");
     this.conf = conf;
-    this.appID = RecordFactoryProvider.getRecordFactory(conf)
-        .newRecordInstance(ApplicationId.class);
+    this.appID = ApplicationId.newInstance(0, 0);
     this.appAttemptID = RecordFactoryProvider.getRecordFactory(conf)
         .newRecordInstance(ApplicationAttemptId.class);
 
