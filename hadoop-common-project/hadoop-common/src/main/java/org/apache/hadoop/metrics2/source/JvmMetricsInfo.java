@@ -28,7 +28,7 @@ import org.apache.hadoop.metrics2.MetricsInfo;
  */
 @InterfaceAudience.Private
 public enum JvmMetricsInfo implements MetricsInfo {
-  JvmMetrics("JVM related metrics etc."), // record infoß
+  JvmMetrics("JVM related metrics etc."), // record info
   // metrics
   MemNonHeapUsedM("Non-heap memory used in MB"),
   MemNonHeapCommittedM("Non-heap memory committed in MB"),
