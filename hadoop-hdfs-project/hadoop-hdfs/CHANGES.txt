@@ -613,6 +613,9 @@ Trunk (Unreleased)
     HDFS-4857. Snapshot.Root and AbstractINodeDiff#snapshotINode should not be 
     put into INodeMap when loading FSImage. (jing9)
 
+    HDFS-4863. The root directory should be added to the snapshottable 
+    directory list while loading fsimage. (jing9)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES

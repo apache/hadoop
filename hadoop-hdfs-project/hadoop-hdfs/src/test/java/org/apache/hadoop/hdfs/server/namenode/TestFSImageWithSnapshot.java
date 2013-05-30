@@ -200,6 +200,23 @@ public class TestFSImageWithSnapshot {
     List<DirectoryDiff> diffList = rootNode.getDiffs().asList();
     assertEquals(1, diffList.size());
     assertEquals("s1", diffList.get(0).getSnapshot().getRoot().getLocalName());
+    
+    // check SnapshotManager's snapshottable directory list
+    assertEquals(1, fsn.getSnapshotManager().getNumSnapshottableDirs());
+    SnapshottableDirectoryStatus[] sdirs = fsn.getSnapshotManager()
+        .getSnapshottableDirListing(null);
+    assertEquals(root, sdirs[0].getFullPath());
+    
+    // save namespace and restart cluster
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    cluster.shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).format(false)
+        .numDataNodes(REPLICATION).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
   }
 
   /**

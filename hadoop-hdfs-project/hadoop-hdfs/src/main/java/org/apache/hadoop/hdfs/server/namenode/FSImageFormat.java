@@ -435,13 +435,16 @@ public class FSImageFormat {
       if (numSnapshots >= 0) {
         final INodeDirectorySnapshottable snapshottableParent
             = INodeDirectorySnapshottable.valueOf(parent, parent.getLocalName());
-        if (snapshottableParent.getParent() != null) { // not root
-          this.namesystem.getSnapshotManager().addSnapshottable(
-              snapshottableParent);
-        }
         // load snapshots and snapshotQuota
         SnapshotFSImageFormat.loadSnapshotList(snapshottableParent,
             numSnapshots, in, this);
+        if (snapshottableParent.getSnapshotQuota() > 0) {
+          // add the directory to the snapshottable directory list in 
+          // SnapshotManager. Note that we only add root when its snapshot quota
+          // is positive.
+          this.namesystem.getSnapshotManager().addSnapshottable(
+              snapshottableParent);
+        }
       }
 
       // Step 3. Load children nodes under parent
