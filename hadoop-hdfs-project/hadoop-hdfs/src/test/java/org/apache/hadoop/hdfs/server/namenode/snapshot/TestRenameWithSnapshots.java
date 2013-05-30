@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -1389,8 +1390,8 @@ public class TestRenameWithSnapshots {
     INodeDirectory root = fsdir.getINode4Write("/").asDirectory();
     root.replaceChild(dir3, mockDir3, fsdir.getINodeMap());
     
-    final Path foo_dir2 = new Path(sdir2, "foo");
-    final Path foo_dir3 = new Path(sdir3, "foo");
+    final Path foo_dir2 = new Path(sdir2, "foo2");
+    final Path foo_dir3 = new Path(sdir3, "foo3");
     hdfs.rename(foo, foo_dir2);
     boolean result = hdfs.rename(foo_dir2, foo_dir3);
     assertFalse(result);
@@ -1406,7 +1407,7 @@ public class TestRenameWithSnapshots {
     ChildrenDiff childrenDiff = dir2Diffs.get(0).getChildrenDiff();
     assertEquals(0, childrenDiff.getList(ListType.DELETED).size());
     assertEquals(1, childrenDiff.getList(ListType.CREATED).size());
-    final Path foo_s2 = SnapshotTestHelper.getSnapshotPath(sdir2, "s2", "foo");
+    final Path foo_s2 = SnapshotTestHelper.getSnapshotPath(sdir2, "s2", "foo2");
     assertFalse(hdfs.exists(foo_s2));
     
     INode fooNode = fsdir.getINode4Write(foo_dir2.toString());
@@ -1442,7 +1443,7 @@ public class TestRenameWithSnapshots {
     assertEquals(0, childrenDiff.getList(ListType.DELETED).size());
     assertEquals(0, childrenDiff.getList(ListType.CREATED).size());
     
-    final Path foo_s3 = SnapshotTestHelper.getSnapshotPath(sdir2, "s3", "foo");
+    final Path foo_s3 = SnapshotTestHelper.getSnapshotPath(sdir2, "s3", "foo2");
     assertFalse(hdfs.exists(foo_s2));
     assertTrue(hdfs.exists(foo_s3));
     
@@ -1470,14 +1471,14 @@ public class TestRenameWithSnapshots {
     final Path bar = new Path(foo, "bar");
     DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPL, SEED);
     
-    final Path foo2 = new Path(sdir2, "foo");
+    final Path foo2 = new Path(sdir2, "foo2");
     hdfs.mkdirs(foo2);
     
     SnapshotTestHelper.createSnapshot(hdfs, sdir1, "s1");
     SnapshotTestHelper.createSnapshot(hdfs, sdir2, "s2");
     
     // rename foo2 to foo3, so that foo3 will be a reference node
-    final Path foo3 = new Path(sdir3, "foo");
+    final Path foo3 = new Path(sdir3, "foo3");
     hdfs.rename(foo2, foo3);
     
     INode foo3Node = fsdir.getINode4Write(foo3.toString());
@@ -1663,6 +1664,67 @@ public class TestRenameWithSnapshots {
     
     diffList = ((INodeDirectoryWithSnapshot) subdir2Node).getDiffs().asList();
     assertEquals(0, diffList.size());
+  }
+  
+  /**
+   * Test rename to an invalid name (xxx/.snapshot)
+   */
+  @Test
+  public void testRenameUndo_7() throws Exception {
+    final Path root = new Path("/");
+    final Path foo = new Path(root, "foo");
+    final Path bar = new Path(foo, "bar");
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPL, SEED);
+    
+    // create a snapshot on root
+    SnapshotTestHelper.createSnapshot(hdfs, root, snap1);
+    
+    // rename bar to /foo/.snapshot which is invalid
+    final Path invalid = new Path(foo, HdfsConstants.DOT_SNAPSHOT_DIR);
+    try {
+      hdfs.rename(bar, invalid);
+      fail("expect exception since invalid name is used for rename");
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains("\"" +
+          HdfsConstants.DOT_SNAPSHOT_DIR + "\" is a reserved name", e);
+    }
+    
+    // check
+    INodeDirectoryWithSnapshot fooNode = (INodeDirectoryWithSnapshot) fsdir
+        .getINode4Write(foo.toString());
+    ReadOnlyList<INode> children = fooNode.getChildrenList(null);
+    assertEquals(1, children.size());
+    List<DirectoryDiff> diffList = fooNode.getDiffs().asList();
+    assertEquals(1, diffList.size());
+    DirectoryDiff diff = diffList.get(0);
+    // this diff is generated while renaming
+    assertEquals(snap1, Snapshot.getSnapshotName(diff.snapshot));
+    // after undo, the diff should be empty
+    assertTrue(diff.getChildrenDiff().getList(ListType.DELETED).isEmpty());
+    assertTrue(diff.getChildrenDiff().getList(ListType.CREATED).isEmpty());
+    
+    // bar was converted to filewithsnapshot while renaming
+    INodeFileWithSnapshot barNode = (INodeFileWithSnapshot) fsdir
+        .getINode4Write(bar.toString());
+    assertSame(barNode, children.get(0));
+    assertSame(fooNode, barNode.getParent());
+    List<FileDiff> barDiffList = barNode.getDiffs().asList();
+    assertEquals(1, barDiffList.size());
+    FileDiff barDiff = barDiffList.get(0);
+    assertEquals(snap1, Snapshot.getSnapshotName(barDiff.snapshot));
+    
+    // restart cluster multiple times to make sure the fsimage and edits log are
+    // correct. Note that when loading fsimage, foo and bar will be converted 
+    // back to normal INodeDirectory and INodeFile since they do not store any 
+    // snapshot data
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    cluster.shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).format(false)
+        .numDataNodes(REPL).build();
+    cluster.waitActive();
+    restartClusterAndCheckImage();
   }
   
   /**
