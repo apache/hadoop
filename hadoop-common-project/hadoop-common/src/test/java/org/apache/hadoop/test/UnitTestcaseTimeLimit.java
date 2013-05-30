@@ -18,7 +18,7 @@
 package org.apache.hadoop.test;
 
 import org.junit.Rule;
-import org.junit.rules.MethodRule;
+import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
 /**
@@ -30,5 +30,5 @@ import org.junit.rules.Timeout;
 public class UnitTestcaseTimeLimit {
   public final int timeOutSecs = 10;
   
-  @Rule public MethodRule globalTimeout = new Timeout(timeOutSecs * 1000);
+  @Rule public TestRule globalTimeout = new Timeout(timeOutSecs * 1000);
 }
