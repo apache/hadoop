@@ -239,7 +239,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     // Register event handler for RMAppManagerEvents
     this.rmDispatcher.register(RMAppManagerEventType.class,
         this.rmAppManager);
-    this.rmDTSecretManager = createRMDelegationTokenSecretManager();
+    this.rmDTSecretManager = createRMDelegationTokenSecretManager(this.rmContext);
     clientRM = createClientRMService();
     addService(clientRM);
     
@@ -666,7 +666,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected RMDelegationTokenSecretManager
-               createRMDelegationTokenSecretManager() {
+               createRMDelegationTokenSecretManager(RMContext rmContext) {
     long secretKeyInterval = 
         conf.getLong(YarnConfiguration.DELEGATION_KEY_UPDATE_INTERVAL_KEY, 
             YarnConfiguration.DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
@@ -678,7 +678,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
             YarnConfiguration.DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
 
     return new RMDelegationTokenSecretManager(secretKeyInterval, 
-        tokenMaxLifetime, tokenRenewInterval, 3600000);
+        tokenMaxLifetime, tokenRenewInterval, 3600000, rmContext);
   }
 
   protected ClientRMService createClientRMService() {
@@ -745,6 +745,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   @Override
   public void recover(RMState state) throws Exception {
+    // recover RMdelegationTokenSecretManager
+    rmDTSecretManager.recover(state);
+
     // recover applications
     rmAppManager.recover(state);
   }

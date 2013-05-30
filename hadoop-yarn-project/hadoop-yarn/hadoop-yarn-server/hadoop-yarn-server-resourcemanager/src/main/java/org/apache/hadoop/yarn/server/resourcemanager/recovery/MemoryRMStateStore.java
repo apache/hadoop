@@ -19,14 +19,18 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -49,6 +53,12 @@ public class MemoryRMStateStore extends RMStateStore {
     // return a copy of the state to allow for modification of the real state
     RMState returnState = new RMState();
     returnState.appState.putAll(state.appState);
+    returnState.rmSecretManagerState.getMasterKeyState()
+      .addAll(state.rmSecretManagerState.getMasterKeyState());
+    returnState.rmSecretManagerState.getTokenState().putAll(
+      state.rmSecretManagerState.getTokenState());
+    returnState.rmSecretManagerState.dtSequenceNumber =
+        state.rmSecretManagerState.dtSequenceNumber;
     return returnState;
   }
   
@@ -112,5 +122,54 @@ public class MemoryRMStateStore extends RMStateStore {
     ApplicationId appId = appState.getAppId();
     ApplicationState removed = state.appState.remove(appId);
     assert removed != null;
+  }
+
+  @Override
+  public synchronized void storeRMDelegationTokenAndSequenceNumberState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
+      int latestSequenceNumber) throws Exception {
+    Map<RMDelegationTokenIdentifier, Long> rmDTState =
+        state.rmSecretManagerState.getTokenState();
+    if (rmDTState.containsKey(rmDTIdentifier)) {
+      IOException e = new IOException("RMDelegationToken: " + rmDTIdentifier
+              + "is already stored.");
+      LOG.info("Error storing info for RMDelegationToken: " + rmDTIdentifier, e);
+      throw e;
+    }
+    rmDTState.put(rmDTIdentifier, renewDate);
+    state.rmSecretManagerState.dtSequenceNumber = latestSequenceNumber;
+  }
+
+  @Override
+  public synchronized void removeRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier) throws Exception{
+    Map<RMDelegationTokenIdentifier, Long> rmDTState =
+        state.rmSecretManagerState.getTokenState();
+    rmDTState.remove(rmDTIdentifier);
+  }
+
+  @Override
+  public synchronized void storeRMDTMasterKeyState(DelegationKey delegationKey)
+      throws Exception {
+    Set<DelegationKey> rmDTMasterKeyState =
+        state.rmSecretManagerState.getMasterKeyState();
+
+    if (rmDTMasterKeyState.contains(delegationKey)) {
+      IOException e = new IOException("RMDTMasterKey with keyID: "
+              + delegationKey.getKeyId() + " is already stored");
+      LOG.info("Error storing info for RMDTMasterKey with keyID: "
+          + delegationKey.getKeyId(), e);
+      throw e;
+    }
+    state.getRMDTSecretManagerState().getMasterKeyState().add(delegationKey);
+    LOG.info("rmDTMasterKeyState SIZE: " + rmDTMasterKeyState.size());
+  }
+
+  @Override
+  public synchronized void removeRMDTMasterKeyState(DelegationKey delegationKey)
+      throws Exception {
+    Set<DelegationKey> rmDTMasterKeyState =
+        state.rmSecretManagerState.getMasterKeyState();
+    rmDTMasterKeyState.remove(delegationKey);
   }
 }
