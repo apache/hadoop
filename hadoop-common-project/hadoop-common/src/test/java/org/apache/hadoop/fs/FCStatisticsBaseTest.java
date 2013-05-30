@@ -39,6 +39,8 @@ public abstract class FCStatisticsBaseTest {
   static protected int blockSize = 512;
   static protected int numBlocks = 1;
   
+  protected final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
+
   //fc should be set appropriately by the deriving test.
   protected static FileContext fc = null;
   
@@ -47,7 +49,7 @@ public abstract class FCStatisticsBaseTest {
     URI fsUri = getFsUri();
     Statistics stats = FileContext.getStatistics(fsUri);
     Assert.assertEquals(0, stats.getBytesRead());
-    Path filePath = getTestRootPath(fc, "file1");
+    Path filePath = fileContextTestHelper .getTestRootPath(fc, "file1");
     createFile(fc, filePath, numBlocks, blockSize);
 
     Assert.assertEquals(0, stats.getBytesRead());

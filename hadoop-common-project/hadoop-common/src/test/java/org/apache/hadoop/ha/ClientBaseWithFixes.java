@@ -23,7 +23,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.net.Socket;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -63,17 +66,13 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     static final File BASETEST =
         new File(System.getProperty("build.test.dir", "build"));
 
-    protected String hostPort = "127.0.0.1:" + PortAssignment.unique();
+    protected final String hostPort = initHostPort();
     protected int maxCnxns = 0;
     protected ServerCnxnFactory serverFactory = null;
     protected File tmpDir = null;
     
     long initialFdCount;
     
-    public ClientBaseWithFixes() {
-        super();
-    }
-
     /**
      * In general don't use this. Only use in the special case that you
      * want to ignore results (for whatever reason) in your test. Don't
@@ -153,6 +152,10 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
     private LinkedList<ZooKeeper> allClients;
     private boolean allClientsSetup = false;
+
+    private RandomAccessFile portNumLockFile;
+
+    private File portNumFile;
 
     protected TestableZooKeeper createClient(CountdownWatcher watcher, String hp)
         throws IOException, InterruptedException
@@ -311,6 +314,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
         return tmpDir;
     }
+
     private static int getPort(String hostPort) {
         String[] split = hostPort.split(":");
         String portstr = split[split.length-1];
@@ -394,6 +398,35 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         LOG.info("Client test setup finished");
     }
 
+    private String initHostPort() {
+        BASETEST.mkdirs();
+        int port;
+        for (;;) {
+            port = PortAssignment.unique();
+            FileLock lock = null;
+            portNumLockFile = null;
+            try {
+                try {
+                    portNumFile = new File(BASETEST, port + ".lock");
+                    portNumLockFile = new RandomAccessFile(portNumFile, "rw");
+                    try {
+                        lock = portNumLockFile.getChannel().tryLock();
+                    } catch (OverlappingFileLockException e) {
+                        continue;
+                    }
+                } finally {
+                    if (lock != null)
+                        break;
+                    if (portNumLockFile != null)
+                        portNumLockFile.close();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return "127.0.0.1:" + port;
+    }
+
     protected void startServer() throws Exception {
         LOG.info("STARTING server");
         serverFactory = createNewServerInstance(tmpDir, serverFactory, hostPort, maxCnxns);
@@ -434,6 +467,9 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
         stopServer();
 
+        portNumLockFile.close();
+        portNumFile.delete();
+        
         if (tmpDir != null) {
             Assert.assertTrue("delete " + tmpDir.toString(), recursiveDelete(tmpDir));
         }

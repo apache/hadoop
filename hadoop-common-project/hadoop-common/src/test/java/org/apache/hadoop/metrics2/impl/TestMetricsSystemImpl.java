@@ -64,6 +64,9 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 @RunWith(MockitoJUnitRunner.class)
 public class TestMetricsSystemImpl {
   private static final Log LOG = LogFactory.getLog(TestMetricsSystemImpl.class);
+  
+  static { DefaultMetricsSystem.setMiniClusterMode(true); }
+  
   @Captor private ArgumentCaptor<MetricsRecord> r1;
   @Captor private ArgumentCaptor<MetricsRecord> r2;
   private static String hostname = MetricsSystemImpl.getHostname();

@@ -52,7 +52,7 @@ public class TestLocalFSFileContextMainOperations extends FileContextMainOperati
 
   @Test
   public void testDefaultFilePermission() throws IOException {
-    Path file = FileContextTestHelper.getTestRootPath(fc,
+    Path file = fileContextTestHelper.getTestRootPath(fc,
         "testDefaultFilePermission");
     FileContextTestHelper.createFile(fc, file);
     FsPermission expect = FileContext.FILE_DEFAULT_PERM.applyUMask(fc.getUMask());

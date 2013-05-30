@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.apache.hadoop.fs.FileContextTestHelper.getTestRootPath;
 import static org.apache.hadoop.fs.FileContextTestHelper.readFile;
 import static org.apache.hadoop.fs.FileContextTestHelper.writeFile;
 import static org.junit.Assert.assertTrue;
@@ -44,6 +43,7 @@ import org.junit.Test;
  * </p>
  */
 public abstract class FileContextUtilBase {
+  protected final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
   protected FileContext fc;
   
   {
@@ -58,19 +58,19 @@ public abstract class FileContextUtilBase {
 
   @Before
   public void setUp() throws Exception {
-    fc.mkdir(getTestRootPath(fc), FileContext.DEFAULT_PERM, true);
+    fc.mkdir(fileContextTestHelper.getTestRootPath(fc), FileContext.DEFAULT_PERM, true);
   }
 
   @After
   public void tearDown() throws Exception {
-    fc.delete(getTestRootPath(fc), true);
+    fc.delete(fileContextTestHelper.getTestRootPath(fc), true);
   }
   
   @Test
   public void testFcCopy() throws Exception{
     final String ts = "some random text";
-    Path file1 = getTestRootPath(fc, "file1");
-    Path file2 = getTestRootPath(fc, "file2");
+    Path file1 = fileContextTestHelper.getTestRootPath(fc, "file1");
+    Path file2 = fileContextTestHelper.getTestRootPath(fc, "file2");
     
     writeFile(fc, file1, ts.getBytes());
     assertTrue(fc.util().exists(file1));
@@ -87,8 +87,8 @@ public abstract class FileContextUtilBase {
   public void testRecursiveFcCopy() throws Exception {
 
     final String ts = "some random text";
-    Path dir1 = getTestRootPath(fc, "dir1");
-    Path dir2 = getTestRootPath(fc, "dir2");
+    Path dir1 = fileContextTestHelper.getTestRootPath(fc, "dir1");
+    Path dir2 = fileContextTestHelper.getTestRootPath(fc, "dir2");
 
     Path file1 = new Path(dir1, "file1");
     fc.mkdir(dir1, null, false);

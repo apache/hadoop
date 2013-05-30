@@ -38,7 +38,6 @@ import org.junit.Before;
 
 public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
 
-
   @Override
   @Before
   public void setUp() throws Exception {
@@ -51,7 +50,7 @@ public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
   @Override
   @After
   public void tearDown() throws Exception {
-    fsTarget.delete(FileSystemTestHelper.getTestRootPath(fsTarget), true);
+    fsTarget.delete(fileSystemTestHelper.getTestRootPath(fsTarget), true);
     super.tearDown();
   }
 }

@@ -57,12 +57,11 @@ public class TestTFileStreams extends TestCase {
 
   private String compression = Compression.Algorithm.GZ.getName();
   private String comparator = "memcmp";
-  private String outputFile = "TFileTestStreams";
+  private final String outputFile = getClass().getSimpleName();
 
-  public void init(String compression, String comparator, String outputFile) {
+  public void init(String compression, String comparator) {
     this.compression = compression;
     this.comparator = comparator;
-    this.outputFile = outputFile;
   }
 
   @Override

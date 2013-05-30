@@ -32,7 +32,7 @@ public class TestTFileLzoCodecsStreams extends TestTFileStreams {
     if (skip) {
       System.out.println("Skipped");
     }
-    init(Compression.Algorithm.LZO.getName(), "memcmp", "TFileTestCodecsLzo");
+    init(Compression.Algorithm.LZO.getName(), "memcmp");
     if (!skip) 
       super.setUp();
   }

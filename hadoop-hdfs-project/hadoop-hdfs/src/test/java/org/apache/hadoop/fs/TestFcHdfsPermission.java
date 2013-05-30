@@ -35,13 +35,25 @@ import org.junit.BeforeClass;
 
 public class TestFcHdfsPermission extends FileContextPermissionBase {
   
+  private static final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
+  private static FileContext fc;
+
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
+  
+  @Override
+  protected FileContextTestHelper getFileContextHelper() {
+    return fileContextTestHelper;
+  }
+  
+  @Override
+  protected FileContext getFileContext() {
+    return fc;
+  }
   
   @BeforeClass
   public static void clusterSetupAtBegining()
                                     throws IOException, LoginException, URISyntaxException  {
-    FileContextTestHelper.TEST_ROOT_DIR = "/tmp/TestFcHdfsPermission";
     Configuration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     fc = FileContext.getFileContext(cluster.getURI(0), conf);

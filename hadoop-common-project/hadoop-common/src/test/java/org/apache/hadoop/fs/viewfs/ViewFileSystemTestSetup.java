@@ -56,18 +56,18 @@ public class ViewFileSystemTestSetup {
    * @return return the ViewFS File context to be used for tests
    * @throws Exception
    */
-  static public FileSystem setupForViewFileSystem(Configuration conf, FileSystem fsTarget) throws Exception {
+  static public FileSystem setupForViewFileSystem(Configuration conf, FileSystemTestHelper fileSystemTestHelper, FileSystem fsTarget) throws Exception {
     /**
      * create the test root on local_fs - the  mount table will point here
      */
-    Path targetOfTests = FileSystemTestHelper.getTestRootPath(fsTarget);
+    Path targetOfTests = fileSystemTestHelper.getTestRootPath(fsTarget);
     // In case previous test was killed before cleanup
     fsTarget.delete(targetOfTests, true);
     fsTarget.mkdirs(targetOfTests);
 
 
     // Set up viewfs link for test dir as described above
-    String testDir = FileSystemTestHelper.getTestRootPath(fsTarget).toUri()
+    String testDir = fileSystemTestHelper.getTestRootPath(fsTarget).toUri()
         .getPath();
     linkUpFirstComponents(conf, testDir, fsTarget, "test dir");
     
@@ -92,14 +92,21 @@ public class ViewFileSystemTestSetup {
    * 
    * delete the test directory in the target  fs
    */
-  static public void tearDown(FileSystem fsTarget) throws Exception {
-    Path targetOfTests = FileSystemTestHelper.getTestRootPath(fsTarget);
+  static public void tearDown(FileSystemTestHelper fileSystemTestHelper, FileSystem fsTarget) throws Exception {
+    Path targetOfTests = fileSystemTestHelper.getTestRootPath(fsTarget);
     fsTarget.delete(targetOfTests, true);
   }
   
   public static Configuration createConfig() {
+    return createConfig(true);
+  }
+  
+  public static Configuration createConfig(boolean disableCache) {
     Configuration conf = new Configuration();
     conf.set("fs.viewfs.impl", ViewFileSystem.class.getName());
+    if (disableCache) {
+      conf.set("fs.viewfs.impl.disable.cache", "true");
+    }
     return conf; 
   }
   

@@ -52,7 +52,7 @@ public class TestViewFileSystemDelegation { //extends ViewFileSystemTestSetup {
     conf.set("fs."+scheme+".impl", clazz.getName());
     FakeFileSystem fs = (FakeFileSystem)FileSystem.get(uri, conf);
     assertEquals(uri, fs.getUri());
-    Path targetPath = FileSystemTestHelper.getAbsoluteTestRootPath(fs);
+    Path targetPath = new FileSystemTestHelper().getAbsoluteTestRootPath(fs);
     ConfigUtil.addLink(conf, "/mounts/"+scheme, targetPath.toUri());
     return fs;
   }

@@ -61,6 +61,7 @@ public class TestViewFsDefaultValue {
   static final String testFileDir = "/tmp/test/";
   static final String testFileName = testFileDir + "testFileStatusSerialziation";
   private static MiniDFSCluster cluster;
+  private static final FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper(); 
   private static Configuration CONF = new Configuration();
   private static FileSystem fHdfs;
   private static FileSystem vfs;
@@ -81,7 +82,7 @@ public class TestViewFsDefaultValue {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(DFS_REPLICATION_DEFAULT + 1).build();
     cluster.waitClusterUp();
     fHdfs = cluster.getFileSystem();
-    FileSystemTestHelper.createFile(fHdfs, testFileName);
+    fileSystemTestHelper.createFile(fHdfs, testFileName);
     Configuration conf = ViewFileSystemTestSetup.createConfig();
     ConfigUtil.addLink(conf, "/tmp", new URI(fHdfs.getUri().toString() +
       "/tmp"));

@@ -46,7 +46,7 @@ public class TestSequenceFileSerialization extends TestCase {
   
   public void testJavaSerialization() throws Exception {
     Path file = new Path(System.getProperty("test.build.data",".") +
-        "/test.seq");
+        "/testseqser.seq");
     
     fs.delete(file, true);
     Writer writer = SequenceFile.createWriter(fs, conf, file, Long.class,

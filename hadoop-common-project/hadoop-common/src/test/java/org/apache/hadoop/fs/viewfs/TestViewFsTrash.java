@@ -35,11 +35,12 @@ public class TestViewFsTrash {
   FileSystem fsTarget;  // the target file system - the mount will point here
   FileSystem fsView;
   Configuration conf;
+  FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper();
 
-  static class TestLFS extends LocalFileSystem {
+  class TestLFS extends LocalFileSystem {
     Path home;
     TestLFS() throws IOException {
-      this(new Path(FileSystemTestHelper.TEST_ROOT_DIR));
+      this(new Path(fileSystemTestHelper.getTestRootDir()));
     }
     TestLFS(Path home) throws IOException {
       super();
@@ -54,23 +55,23 @@ public class TestViewFsTrash {
   @Before
   public void setUp() throws Exception {
     fsTarget = FileSystem.getLocal(new Configuration());
-    fsTarget.mkdirs(new Path(FileSystemTestHelper.
+    fsTarget.mkdirs(new Path(fileSystemTestHelper.
         getTestRootPath(fsTarget), "dir1"));
     conf = ViewFileSystemTestSetup.createConfig();
-    fsView = ViewFileSystemTestSetup.setupForViewFileSystem(conf, fsTarget);
+    fsView = ViewFileSystemTestSetup.setupForViewFileSystem(conf, fileSystemTestHelper, fsTarget);
     conf.set("fs.defaultFS", FsConstants.VIEWFS_URI.toString());
   }
  
   @After
   public void tearDown() throws Exception {
-    ViewFileSystemTestSetup.tearDown(fsTarget);
+    ViewFileSystemTestSetup.tearDown(fileSystemTestHelper, fsTarget);
     fsTarget.delete(new Path(fsTarget.getHomeDirectory(), ".Trash/Current"),
         true);
   }
   
   @Test
   public void testTrash() throws IOException {
-    TestTrash.trashShell(conf, FileSystemTestHelper.getTestRootPath(fsView),
+    TestTrash.trashShell(conf, fileSystemTestHelper.getTestRootPath(fsView),
         fsTarget, new Path(fsTarget.getHomeDirectory(), ".Trash/Current"));
   }
   

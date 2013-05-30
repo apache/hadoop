@@ -59,7 +59,7 @@ public class TestViewFileSystemWithAuthorityLocalFileSystem extends ViewFileSyst
   @Override
   @After
   public void tearDown() throws Exception {
-    fsTarget.delete(FileSystemTestHelper.getTestRootPath(fsTarget), true);
+    fsTarget.delete(fileSystemTestHelper.getTestRootPath(fsTarget), true);
     super.tearDown();
   }
  

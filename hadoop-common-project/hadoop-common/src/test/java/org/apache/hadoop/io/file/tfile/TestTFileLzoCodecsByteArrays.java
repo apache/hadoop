@@ -34,8 +34,7 @@ public class TestTFileLzoCodecsByteArrays extends TestTFileByteArrays {
     }
 
     // TODO: sample the generated key/value records, and put the numbers below
-    init(Compression.Algorithm.LZO.getName(), "memcmp", "TFileTestCodecsLzo",
-        2605, 2558);
+    init(Compression.Algorithm.LZO.getName(), "memcmp", 2605, 2558);
     if (!skip)
       super.setUp();
   }

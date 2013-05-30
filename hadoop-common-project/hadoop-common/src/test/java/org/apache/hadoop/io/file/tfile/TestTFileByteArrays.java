@@ -64,7 +64,7 @@ public class TestTFileByteArrays {
 
   private String compression = Compression.Algorithm.GZ.getName();
   private String comparator = "memcmp";
-  private String outputFile = "TFileTestByteArrays";
+  private final String outputFile = getClass().getSimpleName();
 
   /*
    * pre-sampled numbers of records in one block, based on the given the
@@ -75,17 +75,16 @@ public class TestTFileByteArrays {
   private int records1stBlock = usingNative ? 5674 : 4480;
   private int records2ndBlock = usingNative ? 5574 : 4263;
 
-  public void init(String compression, String comparator, String outputFile,
+  public void init(String compression, String comparator,
       int numRecords1stBlock, int numRecords2ndBlock) {
-    init(compression, comparator, outputFile);
+    init(compression, comparator);
     this.records1stBlock = numRecords1stBlock;
     this.records2ndBlock = numRecords2ndBlock;
   }
   
-  public void init(String compression, String comparator, String outputFile) {
+  public void init(String compression, String comparator) {
     this.compression = compression;
     this.comparator = comparator;
-    this.outputFile = outputFile;
   }
 
   @Before
@@ -99,7 +98,7 @@ public class TestTFileByteArrays {
   @After
   public void tearDown() throws IOException {
     if (!skip)
-    fs.delete(path, true);
+      fs.delete(path, true);
   }
 
   @Test

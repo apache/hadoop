@@ -97,37 +97,37 @@ public class TestCopyPreserveFlag {
     assertEquals(0, cmd.run(args));
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testPutWithP() throws Exception {
     run(new Put(), "-p", FROM.toString(), TO.toString());
     assertAttributesPreserved();
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testPutWithoutP() throws Exception {
     run(new Put(), FROM.toString(), TO.toString());
     assertAttributesChanged();
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testGetWithP() throws Exception {
     run(new Get(), "-p", FROM.toString(), TO.toString());
     assertAttributesPreserved();
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testGetWithoutP() throws Exception {
     run(new Get(), FROM.toString(), TO.toString());
     assertAttributesChanged();
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testCpWithP() throws Exception {
       run(new Cp(), "-p", FROM.toString(), TO.toString());
       assertAttributesPreserved();
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testCpWithoutP() throws Exception {
       run(new Cp(), FROM.toString(), TO.toString());
       assertAttributesChanged();

@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import static org.apache.hadoop.fs.FileSystemTestHelper.exists;
-import static org.apache.hadoop.fs.FileSystemTestHelper.getTestRootPath;
-
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -29,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -53,13 +49,15 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
 
   private static MiniDFSCluster cluster = null;
   private static Path defaultWorkingDirectory;
+  private static FileSystem fileSystem;
+  
+  @Override
+  protected FileSystem createFileSystem() throws Exception {
+    return fileSystem;
+  }
 
   @BeforeClass
   public static void setupCluster() {
-    // Initialize the test root directory to a DFS like path
-    // since we are testing based on the MiniDFSCluster.
-    FileSystemTestHelper.TEST_ROOT_DIR = "/tmp/TestFSMainOperationsWebHdfs";
-
     final Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
@@ -78,14 +76,14 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
       final UserGroupInformation current = UserGroupInformation.getCurrentUser();
       final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
           current.getShortUserName() + "x", new String[]{"user"});
-      fSys = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      fileSystem = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override
         public FileSystem run() throws Exception {
           return FileSystem.get(new URI(uri), conf);
         }
       });
 
-      defaultWorkingDirectory = fSys.getWorkingDirectory();
+      defaultWorkingDirectory = fileSystem.getWorkingDirectory();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -164,4 +162,5 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
       // also okay for HDFS.
     }    
   }
+
 }

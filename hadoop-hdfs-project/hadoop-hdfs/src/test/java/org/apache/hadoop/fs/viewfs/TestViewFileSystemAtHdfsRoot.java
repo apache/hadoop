@@ -43,10 +43,14 @@ public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
   private static Configuration CONF = new Configuration();
   private static FileSystem fHdfs;
   
+  @Override
+  protected FileSystemTestHelper createFileSystemHelper() {
+    return new FileSystemTestHelper("/tmp/TestViewFileSystemAtHdfsRoot");
+  }
+  
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
-    FileSystemTestHelper.TEST_ROOT_DIR = "/tmp/TestViewFileSystemAtHdfsRoot";
     SupportsBlocks = true;
     CONF.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);

@@ -39,8 +39,10 @@ import org.mockito.Mockito;
 public class TestSequenceFile extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestSequenceFile.class);
 
-  private static Configuration conf = new Configuration();
+  private Configuration conf = new Configuration();
   
+  public TestSequenceFile() { }
+
   public TestSequenceFile(String name) { super(name); }
 
   /** Unit tests for SequenceFile. */
@@ -126,7 +128,7 @@ public class TestSequenceFile extends TestCase {
     }
   }
 
-  private static void writeTest(FileSystem fs, int count, int seed, Path file, 
+  private void writeTest(FileSystem fs, int count, int seed, Path file, 
                                 CompressionType compressionType, CompressionCodec codec)
     throws IOException {
     fs.delete(file, true);
@@ -146,7 +148,7 @@ public class TestSequenceFile extends TestCase {
     writer.close();
   }
 
-  private static void readTest(FileSystem fs, int count, int seed, Path file)
+  private void readTest(FileSystem fs, int count, int seed, Path file)
     throws IOException {
     LOG.debug("reading " + count + " records");
     SequenceFile.Reader reader = new SequenceFile.Reader(fs, file, conf);
@@ -202,7 +204,7 @@ public class TestSequenceFile extends TestCase {
   }
 
 
-  private static void sortTest(FileSystem fs, int count, int megabytes, 
+  private void sortTest(FileSystem fs, int count, int megabytes, 
                                int factor, boolean fast, Path file)
     throws IOException {
     fs.delete(new Path(file+".sorted"), true);
@@ -212,7 +214,7 @@ public class TestSequenceFile extends TestCase {
     LOG.info("done sorting " + count + " debug");
   }
 
-  private static void checkSort(FileSystem fs, int count, int seed, Path file)
+  private void checkSort(FileSystem fs, int count, int seed, Path file)
     throws IOException {
     LOG.info("sorting " + count + " records in memory for debug");
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
@@ -249,7 +251,7 @@ public class TestSequenceFile extends TestCase {
     LOG.debug("sucessfully checked " + count + " records");
   }
 
-  private static void mergeTest(FileSystem fs, int count, int seed, Path file, 
+  private void mergeTest(FileSystem fs, int count, int seed, Path file, 
                                 CompressionType compressionType,
                                 boolean fast, int factor, int megabytes)
     throws IOException {
@@ -293,7 +295,7 @@ public class TestSequenceFile extends TestCase {
       .merge(sortedNames, file.suffix(".sorted"));
   }
 
-  private static SequenceFile.Sorter newSorter(FileSystem fs, 
+  private SequenceFile.Sorter newSorter(FileSystem fs, 
                                                boolean fast,
                                                int megabytes, int factor) {
     SequenceFile.Sorter sorter = 
@@ -370,7 +372,7 @@ public class TestSequenceFile extends TestCase {
   }
   
   
-  private static SequenceFile.Metadata readMetadata(FileSystem fs, Path file)
+  private SequenceFile.Metadata readMetadata(FileSystem fs, Path file)
     throws IOException {
     LOG.info("reading file: " + file.toString());
     SequenceFile.Reader reader = new SequenceFile.Reader(fs, file, conf);
@@ -379,7 +381,7 @@ public class TestSequenceFile extends TestCase {
     return meta;
   }
 
-  private static void writeMetadataTest(FileSystem fs, int count, int seed, Path file, 
+  private void writeMetadataTest(FileSystem fs, int count, int seed, Path file, 
                                         CompressionType compressionType, CompressionCodec codec, SequenceFile.Metadata metadata)
     throws IOException {
     fs.delete(file, true);
@@ -399,7 +401,7 @@ public class TestSequenceFile extends TestCase {
     writer.close();
   }
 
-  private static void sortMetadataTest(FileSystem fs, Path unsortedFile, Path sortedFile, SequenceFile.Metadata metadata)
+  private void sortMetadataTest(FileSystem fs, Path unsortedFile, Path sortedFile, SequenceFile.Metadata metadata)
     throws IOException {
     fs.delete(sortedFile, true);
     LOG.info("sorting: " + unsortedFile + " to: " + sortedFile);
@@ -538,7 +540,6 @@ public class TestSequenceFile extends TestCase {
   }
 
   public void testRecursiveSeqFileCreate() throws IOException {
-    Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
     Path name = new Path(new Path(System.getProperty("test.build.data","."),
         "recursiveCreateDir") , "file");
@@ -673,7 +674,9 @@ public class TestSequenceFile extends TestCase {
         }
       }
         
-      fs = file.getFileSystem(conf);
+      TestSequenceFile test = new TestSequenceFile();
+      
+      fs = file.getFileSystem(test.conf);
 
       LOG.info("count = " + count);
       LOG.info("megabytes = " + megabytes);
@@ -696,25 +699,25 @@ public class TestSequenceFile extends TestCase {
       CompressionType compressionType = 
         CompressionType.valueOf(compressType);
       CompressionCodec codec = (CompressionCodec)ReflectionUtils.newInstance(
-                                                                             conf.getClassByName(compressionCodec), 
-                                                                             conf);
+                                                                             test.conf.getClassByName(compressionCodec), 
+                                                                             test.conf);
 
       if (rwonly || (create && !merge)) {
-        writeTest(fs, count, seed, file, compressionType, codec);
-        readTest(fs, count, seed, file);
+        test.writeTest(fs, count, seed, file, compressionType, codec);
+        test.readTest(fs, count, seed, file);
       }
 
       if (!rwonly) {
         if (merge) {
-          mergeTest(fs, count, seed, file, compressionType, 
+          test.mergeTest(fs, count, seed, file, compressionType, 
                     fast, factor, megabytes);
         } else {
-          sortTest(fs, count, megabytes, factor, fast, file);
+          test.sortTest(fs, count, megabytes, factor, fast, file);
         }
       }
     
       if (check) {
-        checkSort(fs, count, seed, file);
+        test.checkSort(fs, count, seed, file);
       }
     } finally {
       fs.close();

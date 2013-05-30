@@ -68,16 +68,25 @@ public abstract class FileContextPermissionBase {
     }
   }
   
-  protected static FileContext fc;
+  protected FileContextTestHelper fileContextTestHelper;
+  protected FileContext fc;
 
+  protected FileContextTestHelper getFileContextHelper() {
+      return new FileContextTestHelper(); 
+  }
+  
+  protected abstract FileContext getFileContext() throws Exception;
+  
   @Before
   public void setUp() throws Exception {
-    fc.mkdir(getTestRootPath(fc), FileContext.DEFAULT_PERM, true);
+    fileContextTestHelper = getFileContextHelper();
+    fc = getFileContext();
+    fc.mkdir(fileContextTestHelper.getTestRootPath(fc), FileContext.DEFAULT_PERM, true);
   }
 
   @After
   public void tearDown() throws Exception {
-    fc.delete(getTestRootPath(fc), true);
+    fc.delete(fileContextTestHelper.getTestRootPath(fc), true);
   }
   
   private void cleanupFile(FileContext fc, Path name) throws IOException {
@@ -93,8 +102,8 @@ public abstract class FileContextPermissionBase {
       return;
     }
     String filename = "foo";
-    Path f = getTestRootPath(fc, filename);
-    createFile(fc, filename);
+    Path f = fileContextTestHelper.getTestRootPath(fc, filename);
+    fileContextTestHelper.createFile(fc, filename);
     doFilePermissionCheck(FileContext.FILE_DEFAULT_PERM.applyUMask(fc.getUMask()),
                         fc.getFileStatus(f).getPermission());
   }
@@ -108,7 +117,7 @@ public abstract class FileContextPermissionBase {
     }
 
     String filename = "foo";
-    Path f = getTestRootPath(fc, filename);
+    Path f = fileContextTestHelper.getTestRootPath(fc, filename);
     createFile(fc, f);
 
     try {
@@ -133,7 +142,7 @@ public abstract class FileContextPermissionBase {
     }
 
     String filename = "bar";
-    Path f = getTestRootPath(fc, filename);
+    Path f = fileContextTestHelper.getTestRootPath(fc, filename);
     createFile(fc, f);
     List<String> groups = null;
     try {
