@@ -303,9 +303,6 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5257. Fix issues in TestContainerLauncherImpl after YARN-617.
     (Omkar Vinit Joshi via vinodkv)
 
-    MAPREDUCE-5261. Fix issues in TestRMContainerAllocator after YARN-617.
-    (Omkar Vinit Joshi via vinodkv)
-
     MAPREDUCE-5282. Updating MR App to use immutable ApplicationID after
     YARN-716. (Siddharth Seth via vinodkv)
 
