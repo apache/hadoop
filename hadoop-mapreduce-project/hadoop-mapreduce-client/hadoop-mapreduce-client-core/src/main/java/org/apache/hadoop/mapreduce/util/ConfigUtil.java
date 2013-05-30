@@ -47,6 +47,7 @@ public class ConfigUtil {
   /**
    * Adds deprecated keys and the corresponding new keys to the Configuration
    */
+  @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys()  {
     Configuration.addDeprecation("mapred.temp.dir", 
       new String[] {MRConfig.TEMP_DIR});
@@ -242,6 +243,10 @@ public class ConfigUtil {
       new String[] {MRJobConfig.CACHE_LOCALFILES});
     Configuration.addDeprecation("mapred.cache.localArchives", 
       new String[] {MRJobConfig.CACHE_LOCALARCHIVES});
+    Configuration.addDeprecation("mapred.cache.files.filesizes",
+      new String[] {MRJobConfig.CACHE_FILES_SIZES});
+    Configuration.addDeprecation("mapred.cache.archives.filesizes",
+      new String[] {MRJobConfig.CACHE_ARCHIVES_SIZES});
     Configuration.addDeprecation("mapred.cache.files.timestamps", 
       new String[] {MRJobConfig.CACHE_FILE_TIMESTAMPS});
     Configuration.addDeprecation("mapred.cache.archives.timestamps", 
