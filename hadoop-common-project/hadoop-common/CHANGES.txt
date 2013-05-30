@@ -375,6 +375,8 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9607. Fixes in Javadoc build (Timothy St. Clair via cos)
 
+    HADOOP-9605. Update junit dependency. (Timothy St. Clair via cos)
+
 Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
