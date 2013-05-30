@@ -21,7 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -220,8 +221,6 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     int port = 12345;
     when(mockContainer.getNodeHttpAddress()).thenReturn(
         context.getNodeId().getHost() + ":" + port);
-    when(mockContainer.getRMIdentifer()).thenReturn(
-      super.DUMMY_RM_IDENTIFIER);
 
     URL resource_alpha =
         ConverterUtils.getYarnUrlFromPath(localFS
@@ -250,7 +249,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     ContainerToken containerToken =
         BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
           port, user, r, System.currentTimeMillis() + 10000L, 123,
-          "password".getBytes());
+          "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
     when(mockContainer.getContainerToken()).thenReturn(containerToken);
     startRequest.setContainer(mockContainer);
     containerManager.startContainer(startRequest);

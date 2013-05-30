@@ -69,7 +69,7 @@ public abstract class Container implements Comparable<Container> {
   @Private
   public static Container newInstance(ContainerId containerId, NodeId nodeId,
       String nodeHttpAddress, Resource resource, Priority priority,
-      ContainerToken containerToken, long rmIdentifier) {
+      ContainerToken containerToken) {
     Container container = Records.newRecord(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
@@ -77,7 +77,6 @@ public abstract class Container implements Comparable<Container> {
     container.setResource(resource);
     container.setPriority(priority);
     container.setContainerToken(containerToken);
-    container.setRMIdentifier(rmIdentifier);
     return container;
   }
 
@@ -152,16 +151,4 @@ public abstract class Container implements Comparable<Container> {
   @Private
   @Unstable
   public abstract void setContainerToken(ContainerToken containerToken);
-
-  /**
-   * Get the RMIdentifier of RM in which containers are allocated
-   * @return RMIdentifier
-   */
-  @Private
-  @Unstable
-  public abstract long getRMIdentifer();
-
-  @Private
-  @Unstable
-  public abstract void setRMIdentifier(long rmIdentifier);
 }

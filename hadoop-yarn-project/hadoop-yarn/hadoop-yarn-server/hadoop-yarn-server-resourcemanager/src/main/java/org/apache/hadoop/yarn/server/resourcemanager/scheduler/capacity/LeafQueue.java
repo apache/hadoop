@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -1242,9 +1241,9 @@ public class LeafQueue implements CSQueue {
         .getApplicationAttemptId(), application.getNewContainerId());
   
     // Create the container
-    Container container = BuilderUtils.newContainer(containerId, nodeId,
-        node.getRMNode().getHttpAddress(), capability, priority,
-        null, ResourceManager.clusterTimeStamp);
+    Container container =
+        BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
+          .getHttpAddress(), capability, priority, null);
   
     return container;
   }

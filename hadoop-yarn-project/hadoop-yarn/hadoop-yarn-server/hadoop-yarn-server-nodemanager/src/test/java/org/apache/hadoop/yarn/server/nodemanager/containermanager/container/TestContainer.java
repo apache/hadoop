@@ -548,7 +548,6 @@ public class TestContainer {
     final Container c;
     final Map<String, LocalResource> localResources;
     final Map<String, ByteBuffer> serviceData;
-    final String user;
 
     WrappedContainer(int appId, long timestamp, int id, String user)
         throws IOException {
@@ -572,7 +571,6 @@ public class TestContainer {
       dispatcher.register(AuxServicesEventType.class, auxBus);
       dispatcher.register(ApplicationEventType.class, appBus);
       dispatcher.register(LogHandlerEventType.class, LogBus);
-      this.user = user;
 
       ctxt = mock(ContainerLaunchContext.class);
       org.apache.hadoop.yarn.api.records.Container mockContainer =
@@ -584,9 +582,10 @@ public class TestContainer {
       when(mockContainer.getResource()).thenReturn(resource);
       String host = "127.0.0.1";
       int port = 1234;
+      long currentTime = System.currentTimeMillis();
       ContainerTokenIdentifier identifier =
           new ContainerTokenIdentifier(cId, "127.0.0.1", user, resource,
-            System.currentTimeMillis() + 10000L, 123);
+            currentTime + 10000L, 123, currentTime);
       ContainerToken token =
           BuilderUtils.newContainerToken(BuilderUtils.newNodeId(host, port),
             "password".getBytes(), identifier);

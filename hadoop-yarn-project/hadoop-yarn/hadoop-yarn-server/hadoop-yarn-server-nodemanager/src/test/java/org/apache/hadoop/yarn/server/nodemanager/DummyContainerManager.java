@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.commons.logging.Log;
@@ -53,6 +54,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.Log
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 public class DummyContainerManager extends ContainerManagerImpl {
 
@@ -192,8 +194,14 @@ public class DummyContainerManager extends ContainerManagerImpl {
       UserGroupInformation remoteUgi,
       org.apache.hadoop.yarn.api.records.Container container)
       throws YarnRemoteException {
-    return new ContainerTokenIdentifier(container.getId(),
-      container.getNodeHttpAddress(), remoteUgi.getUserName(),
-      container.getResource(), System.currentTimeMillis(), 123);
+    try {
+      return new ContainerTokenIdentifier(container.getId(),
+        container.getNodeHttpAddress(), remoteUgi.getUserName(),
+        container.getResource(), System.currentTimeMillis() + 100000l, 123,
+        BuilderUtils.newContainerTokenIdentifier(
+          container.getContainerToken()).getRMIdentifer());
+    } catch (IOException e) {
+      throw new YarnRemoteException(e);
+    }
   }
 }

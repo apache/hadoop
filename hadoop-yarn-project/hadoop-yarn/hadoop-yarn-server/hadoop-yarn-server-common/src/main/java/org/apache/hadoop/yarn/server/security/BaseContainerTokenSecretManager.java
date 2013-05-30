@@ -31,14 +31,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -168,37 +163,5 @@ public class BaseContainerTokenSecretManager extends
   @Override
   public ContainerTokenIdentifier createIdentifier() {
     return new ContainerTokenIdentifier();
-  }
-
-  /**
-   * Helper function for creating ContainerTokens
-   * 
-   * @param containerId
-   * @param nodeId
-   * @param appSubmitter
-   * @param capability
-   * @return the container-token
-   */
-  public ContainerToken createContainerToken(ContainerId containerId,
-      NodeId nodeId, String appSubmitter, Resource capability) {
-    byte[] password;
-    ContainerTokenIdentifier tokenIdentifier;
-    long expiryTimeStamp =
-        System.currentTimeMillis() + containerTokenExpiryInterval;
-
-    // Lock so that we use the same MasterKey's keyId and its bytes
-    this.readLock.lock();
-    try {
-      tokenIdentifier =
-          new ContainerTokenIdentifier(containerId, nodeId.toString(),
-            appSubmitter, capability, expiryTimeStamp, this.currentMasterKey
-              .getMasterKey().getKeyId());
-      password = this.createPassword(tokenIdentifier);
-
-    } finally {
-      this.readLock.unlock();
-    }
-
-    return BuilderUtils.newContainerToken(nodeId, password, tokenIdentifier);
   }
 }

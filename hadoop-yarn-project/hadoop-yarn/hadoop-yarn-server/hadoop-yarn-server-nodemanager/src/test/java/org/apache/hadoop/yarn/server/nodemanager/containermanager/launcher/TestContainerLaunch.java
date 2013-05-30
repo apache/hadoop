@@ -181,7 +181,6 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
     when(mockContainer.getNodeHttpAddress()).thenReturn(
         context.getNodeId().getHost() + ":" + port);
-    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
 
     Map<String, String> userSetEnv = new HashMap<String, String>();
     userSetEnv.put(Environment.CONTAINER_ID.name(), "user_set_container_id");
@@ -251,7 +250,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ContainerToken containerToken =
         BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
           port, user, r, System.currentTimeMillis() + 10000L, 1234,
-          "password".getBytes());
+          "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
     when(mockContainer.getContainerToken()).thenReturn(containerToken);
     startRequest.setContainer(mockContainer);
     containerManager.startContainer(startRequest);
@@ -382,7 +381,6 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     int port = 12345;
     when(mockContainer.getNodeHttpAddress()).thenReturn(
         context.getNodeId().getHost() + ":" + port);
-    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
 
     // upload the script file so that the container can run it
     URL resource_alpha =
@@ -409,7 +407,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ContainerToken containerToken =
         BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
           port, user, r, System.currentTimeMillis() + 10000L, 123,
-          "password".getBytes());
+          "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
     when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);

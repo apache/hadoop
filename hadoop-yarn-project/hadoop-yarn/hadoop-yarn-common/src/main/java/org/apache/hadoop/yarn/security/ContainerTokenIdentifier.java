@@ -52,15 +52,18 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   private Resource resource;
   private long expiryTimeStamp;
   private int masterKeyId;
+  private long rmIdentifier;
 
   public ContainerTokenIdentifier(ContainerId containerID, String hostName,
-      String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId) {
+      String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId,
+      long rmIdentifier) {
     this.containerId = containerID;
     this.nmHostAddr = hostName;
     this.appSubmitter = appSubmitter;
     this.resource = r;
     this.expiryTimeStamp = expiryTimeStamp;
     this.masterKeyId = masterKeyId;
+    this.rmIdentifier = rmIdentifier;
   }
 
   /**
@@ -93,6 +96,14 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     return this.masterKeyId;
   }
 
+  /**
+   * Get the RMIdentifier of RM in which containers are allocated
+   * @return RMIdentifier
+   */
+  public long getRMIdentifer() {
+    return this.rmIdentifier;
+  }
+
   @Override
   public void write(DataOutput out) throws IOException {
     LOG.debug("Writing ContainerTokenIdentifier to RPC layer: " + this);
@@ -109,6 +120,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     out.writeInt(this.resource.getVirtualCores());
     out.writeLong(this.expiryTimeStamp);
     out.writeInt(this.masterKeyId);
+    out.writeLong(this.rmIdentifier);
   }
 
   @Override
@@ -126,6 +138,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     this.resource = BuilderUtils.newResource(memory, vCores);
     this.expiryTimeStamp = in.readLong();
     this.masterKeyId = in.readInt();
+    this.rmIdentifier = in.readLong();
   }
 
   @Override

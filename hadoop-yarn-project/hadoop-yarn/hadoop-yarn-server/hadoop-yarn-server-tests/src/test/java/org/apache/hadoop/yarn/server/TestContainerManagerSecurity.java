@@ -223,7 +223,8 @@ public class TestContainerManagerSecurity {
     ContainerTokenIdentifier modifiedIdentifier =
         new ContainerTokenIdentifier(dummyIdentifier.getContainerID(),
           dummyIdentifier.getNmHostAddress(), "testUser", modifiedResource,
-          Long.MAX_VALUE, dummyIdentifier.getMasterKeyId());
+          Long.MAX_VALUE, dummyIdentifier.getMasterKeyId(),
+          ResourceManager.clusterTimeStamp);
     Token<ContainerTokenIdentifier> modifiedToken = new Token<ContainerTokenIdentifier>(
         modifiedIdentifier.getBytes(), containerToken.getPassword().array(),
         new Text(containerToken.getKind()), new Text(containerToken
@@ -340,10 +341,10 @@ public class TestContainerManagerSecurity {
       resourceManager.getRMContainerTokenSecretManager(); 
     final ContainerTokenIdentifier newTokenId =
         new ContainerTokenIdentifier(tokenId.getContainerID(),
-            tokenId.getNmHostAddress(), tokenId.getApplicationSubmitter(),
-            tokenId.getResource(),
-            System.currentTimeMillis() - 1,
-            containerTokenSecreteManager.getCurrentKey().getKeyId());
+          tokenId.getNmHostAddress(), tokenId.getApplicationSubmitter(),
+          tokenId.getResource(), System.currentTimeMillis() - 1,
+          containerTokenSecreteManager.getCurrentKey().getKeyId(),
+          ResourceManager.clusterTimeStamp);
     final byte[] passowrd =
         containerTokenSecreteManager.createPassword(
             newTokenId);

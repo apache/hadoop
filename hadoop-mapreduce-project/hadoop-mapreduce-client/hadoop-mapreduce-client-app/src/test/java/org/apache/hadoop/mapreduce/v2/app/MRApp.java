@@ -519,7 +519,7 @@ public class MRApp extends MRAppMaster {
         cId.setId(containerCount++);
         NodeId nodeId = NodeId.newInstance(NM_HOST, NM_PORT);
         Container container = Container.newInstance(cId, nodeId,
-            NM_HOST + ":" + NM_HTTP_PORT, null, null, null, 0);
+            NM_HOST + ":" + NM_HTTP_PORT, null, null, null);
         JobID id = TypeConverter.fromYarn(applicationId);
         JobId jobId = TypeConverter.toYarn(id);
         getContext().getEventHandler().handle(new JobHistoryEvent(jobId, 

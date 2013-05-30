@@ -103,7 +103,7 @@ public class TestContainerLaunchRPC {
       containerId.setId(100);
       Container container =
           BuilderUtils.newContainer(containerId, null, null, recordFactory
-              .newRecordInstance(Resource.class), null, null, 0);
+              .newRecordInstance(Resource.class), null, null);
 
       StartContainerRequest scRequest = recordFactory
           .newRecordInstance(StartContainerRequest.class);

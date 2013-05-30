@@ -192,10 +192,10 @@ public class BuilderUtils {
 
   public static ContainerToken newContainerToken(ContainerId cId, String host,
       int port, String user, Resource r, long expiryTime, int masterKeyId,
-      byte[] password) throws IOException {
+      byte[] password, long rmIdentifier) throws IOException {
     ContainerTokenIdentifier identifier =
         new ContainerTokenIdentifier(cId, host, user, r, expiryTime,
-            masterKeyId);
+            masterKeyId, rmIdentifier);
     return newContainerToken(BuilderUtils.newNodeId(host, port), password,
         identifier);
   }
@@ -253,7 +253,7 @@ public class BuilderUtils {
 
   public static Container newContainer(ContainerId containerId, NodeId nodeId,
       String nodeHttpAddress, Resource resource, Priority priority,
-      ContainerToken containerToken, long rmIdentifier) {
+      ContainerToken containerToken) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
@@ -261,7 +261,6 @@ public class BuilderUtils {
     container.setResource(resource);
     container.setPriority(priority);
     container.setContainerToken(containerToken);
-    container.setRMIdentifier(rmIdentifier);
     return container;
   }
 

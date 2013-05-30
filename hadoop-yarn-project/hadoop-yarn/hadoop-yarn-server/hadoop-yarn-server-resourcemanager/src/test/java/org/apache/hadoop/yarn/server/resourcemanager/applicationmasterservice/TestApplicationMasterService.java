@@ -23,7 +23,9 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -32,6 +34,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -77,8 +80,12 @@ public class TestApplicationMasterService {
     }
 
     // assert RMIdentifer is set properly in allocated containers
-    Assert.assertEquals(rm.clusterTimeStamp, alloc1Response
-      .getAllocatedContainers().get(0).getRMIdentifer());
+    Container allocatedContainer =
+        alloc1Response.getAllocatedContainers().get(0);
+    ContainerTokenIdentifier tokenId =
+        BuilderUtils.newContainerTokenIdentifier(allocatedContainer
+          .getContainerToken());
+    Assert.assertEquals(MockRM.clusterTimeStamp, tokenId.getRMIdentifer());
     rm.stop();
   }
 }
