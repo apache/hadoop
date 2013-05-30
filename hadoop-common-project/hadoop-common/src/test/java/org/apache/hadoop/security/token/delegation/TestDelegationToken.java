@@ -342,7 +342,7 @@ public class TestDelegationToken {
     }
   }
 
-  @Test
+  @Test(timeout = 10000)
   public void testRollMasterKey() throws Exception {
     TestDelegationTokenSecretManager dtSecretManager = 
       new TestDelegationTokenSecretManager(800,
@@ -375,10 +375,10 @@ public class TestDelegationToken {
         dtSecretManager.retrievePassword(identifier);
       //compare the passwords
       Assert.assertEquals(oldPasswd, newPasswd);
-      // wait for keys to exipire
-      Thread.sleep(2200);
-      Assert.assertTrue(dtSecretManager.isRemoveStoredMasterKeyCalled);
-
+      // wait for keys to expire
+      while(!dtSecretManager.isRemoveStoredMasterKeyCalled) {
+        Thread.sleep(200);
+      }
     } finally {
       dtSecretManager.stopThreads();
     }
