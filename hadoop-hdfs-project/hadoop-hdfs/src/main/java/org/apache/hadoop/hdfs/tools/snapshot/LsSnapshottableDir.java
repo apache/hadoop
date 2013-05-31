@@ -51,8 +51,13 @@ public class LsSnapshottableDir {
     }
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     
-    SnapshottableDirectoryStatus[] stats = dfs.getSnapshottableDirListing();
-    SnapshottableDirectoryStatus.print(stats, System.out);
+    try {
+      SnapshottableDirectoryStatus[] stats = dfs.getSnapshottableDirListing();
+      SnapshottableDirectoryStatus.print(stats, System.out);
+    } catch (IOException e) {
+      String[] content = e.getLocalizedMessage().split("\n");
+      System.err.println("lsSnapshottableDir: " + content[0]);
+    }
   }
 
 }

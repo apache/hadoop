@@ -135,7 +135,7 @@ public class TestNestedSnapshots {
     try {
       hdfs.disallowSnapshot(rootPath);
       fail("Expect snapshot exception when disallowing snapshot on root again");
-    } catch (SnapshotException e) {
+    } catch (RemoteException e) {
       GenericTestUtils.assertExceptionContains(
           "Root is not a snapshottable directory", e);
     }
@@ -149,14 +149,16 @@ public class TestNestedSnapshots {
     try {
       hdfs.allowSnapshot(rootPath);
       Assert.fail();
-    } catch(SnapshotException se) {
-      assertNestedSnapshotException(se, "subdirectory");
+    } catch(RemoteException se) {
+      assertNestedSnapshotException(
+          (SnapshotException) se.unwrapRemoteException(), "subdirectory");
     }
     try {
       hdfs.allowSnapshot(foo);
       Assert.fail();
-    } catch(SnapshotException se) {
-      assertNestedSnapshotException(se, "subdirectory");
+    } catch(RemoteException se) {
+      assertNestedSnapshotException(
+          (SnapshotException) se.unwrapRemoteException(), "subdirectory");
     }
 
     final Path sub1Bar = new Path(bar, "sub1");
@@ -165,14 +167,16 @@ public class TestNestedSnapshots {
     try {
       hdfs.allowSnapshot(sub1Bar);
       Assert.fail();
-    } catch(SnapshotException se) {
-      assertNestedSnapshotException(se, "ancestor");
+    } catch(RemoteException se) {
+      assertNestedSnapshotException(
+          (SnapshotException) se.unwrapRemoteException(), "ancestor");
     }
     try {
       hdfs.allowSnapshot(sub2Bar);
       Assert.fail();
-    } catch(SnapshotException se) {
-      assertNestedSnapshotException(se, "ancestor");
+    } catch(RemoteException se) {
+      assertNestedSnapshotException(
+          (SnapshotException) se.unwrapRemoteException(), "ancestor");
     }
   }
   

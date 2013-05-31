@@ -771,6 +771,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4842. Identify the correct prior snapshot when deleting a 
     snapshot under a renamed subtree. (jing9)
 
+    HDFS-4846. Clean up snapshot CLI commands output stacktrace for invalid
+    arguments. (Jing Zhao via brandonli)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES

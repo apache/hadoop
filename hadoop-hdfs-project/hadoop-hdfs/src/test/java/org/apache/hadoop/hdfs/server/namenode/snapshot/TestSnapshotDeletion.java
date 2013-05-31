@@ -112,7 +112,7 @@ public class TestSnapshotDeletion {
 
     // Deleting a snapshottable dir with snapshots should fail
     exception.expect(RemoteException.class);
-    String error = "The direcotry " + sub.toString()
+    String error = "The directory " + sub.toString()
         + " cannot be deleted since " + sub.toString()
         + " is snapshottable and already has snapshots";
     exception.expectMessage(error);

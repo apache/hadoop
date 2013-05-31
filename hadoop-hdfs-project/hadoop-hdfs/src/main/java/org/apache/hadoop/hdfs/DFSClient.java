@@ -2152,11 +2152,7 @@ public class DFSClient implements java.io.Closeable {
    */
   public void allowSnapshot(String snapshotRoot) throws IOException {
     checkOpen();
-    try {
-      namenode.allowSnapshot(snapshotRoot);
-    } catch(RemoteException re) {
-      throw re.unwrapRemoteException();
-    }
+    namenode.allowSnapshot(snapshotRoot);
   }
   
   /**
@@ -2166,11 +2162,7 @@ public class DFSClient implements java.io.Closeable {
    */
   public void disallowSnapshot(String snapshotRoot) throws IOException {
     checkOpen();
-    try {
-      namenode.disallowSnapshot(snapshotRoot);
-    } catch(RemoteException re) {
-      throw re.unwrapRemoteException();
-    }
+    namenode.disallowSnapshot(snapshotRoot);
   }
   
   /**

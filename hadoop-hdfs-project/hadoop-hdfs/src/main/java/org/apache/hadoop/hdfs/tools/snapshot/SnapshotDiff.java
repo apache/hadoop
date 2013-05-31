@@ -82,9 +82,14 @@ public class SnapshotDiff {
     Path snapshotRoot = new Path(argv[0]);
     String fromSnapshot = getSnapshotName(argv[1]);
     String toSnapshot = getSnapshotName(argv[2]);
-    SnapshotDiffReport diffReport = dfs.getSnapshotDiffReport(snapshotRoot,
-        fromSnapshot, toSnapshot);
-    System.out.println(diffReport.toString());
+    try {
+      SnapshotDiffReport diffReport = dfs.getSnapshotDiffReport(snapshotRoot,
+          fromSnapshot, toSnapshot);
+      System.out.println(diffReport.toString());
+    } catch (IOException e) {
+      String[] content = e.getLocalizedMessage().split("\n");
+      System.err.println("snapshotDiff: " + content[0]);
+    }
   }
 
 }
