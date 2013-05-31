@@ -19,14 +19,14 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerTokenPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProtoOrBuilder;
 
@@ -39,7 +39,7 @@ public class StartContainerRequestPBImpl extends ProtoBase<StartContainerRequest
   
   private ContainerLaunchContext containerLaunchContext = null;
 
-  private Container container = null;
+  private ContainerToken containerToken = null;
   
   public StartContainerRequestPBImpl() {
     builder = StartContainerRequestProto.newBuilder();
@@ -61,8 +61,8 @@ public class StartContainerRequestPBImpl extends ProtoBase<StartContainerRequest
     if (this.containerLaunchContext != null) {
       builder.setContainerLaunchContext(convertToProtoFormat(this.containerLaunchContext));
     }
-    if(this.container != null) {
-      builder.setContainer(convertToProtoFormat(this.container));
+    if(this.containerToken != null) {
+      builder.setContainerToken(convertToProtoFormat(this.containerToken));
     }
   }
 
@@ -104,25 +104,25 @@ public class StartContainerRequestPBImpl extends ProtoBase<StartContainerRequest
   }
 
   @Override
-  public Container getContainer() {
+  public ContainerToken getContainerToken() {
     StartContainerRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.container != null) {
-      return this.container;
+    if (this.containerToken != null) {
+      return this.containerToken;
     }
-    if (!p.hasContainer()) {
+    if (!p.hasContainerToken()) {
       return null;
     }
-    this.container = convertFromProtoFormat(p.getContainer());
-    return this.container;
+    this.containerToken = convertFromProtoFormat(p.getContainerToken());
+    return this.containerToken;
   }
 
   @Override
-  public void setContainer(Container container) {
+  public void setContainerToken(ContainerToken containerToken) {
     maybeInitBuilder();
-    if(container == null) {
-      builder.clearContainer();
+    if(containerToken == null) {
+      builder.clearContainerToken();
     }
-    this.container = container;
+    this.containerToken = containerToken;
   }
 
   private ContainerLaunchContextPBImpl convertFromProtoFormat(ContainerLaunchContextProto p) {
@@ -135,11 +135,11 @@ public class StartContainerRequestPBImpl extends ProtoBase<StartContainerRequest
 
 
 
-  private ContainerPBImpl convertFromProtoFormat(ContainerProto containerProto) {
-    return new ContainerPBImpl(containerProto);
+  private ContainerTokenPBImpl convertFromProtoFormat(TokenProto containerProto) {
+    return new ContainerTokenPBImpl(containerProto);
   }
 
-  private ContainerProto convertToProtoFormat(Container container) {
-    return ((ContainerPBImpl)container).getProto();
+  private TokenProto convertToProtoFormat(ContainerToken container) {
+    return ((ContainerTokenPBImpl)container).getProto();
   }
 }  

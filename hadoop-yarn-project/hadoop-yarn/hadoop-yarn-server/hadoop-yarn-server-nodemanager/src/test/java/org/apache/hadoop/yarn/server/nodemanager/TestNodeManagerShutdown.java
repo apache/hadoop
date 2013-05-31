@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -56,7 +55,6 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
-import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -158,13 +156,8 @@ public class TestNodeManagerShutdown {
     
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    Container mockContainer = new ContainerPBImpl();
-    
-    mockContainer.setId(cId);
 
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 1234);
-    mockContainer.setNodeId(nodeId);
-    mockContainer.setNodeHttpAddress("localhost:12345");
     
     URL localResourceUri =
         ConverterUtils.getYarnUrlFromPath(localFS
@@ -184,16 +177,14 @@ public class TestNodeManagerShutdown {
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
     Resource resource = BuilderUtils.newResource(1024, 1);
-    mockContainer.setResource(resource);
     ContainerToken containerToken =
         BuilderUtils.newContainerToken(cId, nodeId.getHost(), nodeId.getPort(),
           user, resource, System.currentTimeMillis() + 10000L, 123,
           "password".getBytes(), 0);
-    mockContainer.setContainerToken(containerToken);
     StartContainerRequest startRequest =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
-    startRequest.setContainer(mockContainer);
+    startRequest.setContainerToken(containerToken);
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(cId.toString());
 

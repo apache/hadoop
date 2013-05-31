@@ -155,13 +155,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     // NodeManager is the last service to start, so NodeId is available.
     this.nodeId = this.context.getNodeId();
-
-    InetSocketAddress httpBindAddress = getConfig().getSocketAddr(
-        YarnConfiguration.NM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_NM_WEBAPP_PORT);
+    this.httpPort = this.context.getHttpPort();
     try {
-      this.httpPort = httpBindAddress.getPort();
       // Registration has to be in start so that ContainerManager can get the
       // perNM tokens needed to authenticate ContainerTokens.
       registerWithRM();

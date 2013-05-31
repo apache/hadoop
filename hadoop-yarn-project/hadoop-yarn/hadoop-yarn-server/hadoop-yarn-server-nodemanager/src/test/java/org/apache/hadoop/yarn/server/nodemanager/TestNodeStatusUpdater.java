@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -187,8 +188,6 @@ public class TestNodeStatusUpdater {
       nodeStatus.setResponseId(heartBeatID++);
       Map<ApplicationId, List<ContainerStatus>> appToContainers =
           getAppToContainerStatusMap(nodeStatus.getContainersStatuses());
-      org.apache.hadoop.yarn.api.records.Container mockContainer =
-          mock(org.apache.hadoop.yarn.api.records.Container.class);
       
       ApplicationId appId1 = ApplicationId.newInstance(0, 1);
       ApplicationId appId2 = ApplicationId.newInstance(0, 2);
@@ -202,12 +201,17 @@ public class TestNodeStatusUpdater {
         firstContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
-        when(mockContainer.getId()).thenReturn(firstContainerID);
         Resource resource = BuilderUtils.newResource(2, 1);
-        when(mockContainer.getResource()).thenReturn(resource);
+        long currentTime = System.currentTimeMillis();
+        String user = "testUser";
+        ContainerTokenIdentifier containerToken =
+            BuilderUtils.newContainerTokenIdentifier(BuilderUtils
+              .newContainerToken(firstContainerID, "127.0.0.1", 1234, user,
+                resource, currentTime + 10000, 123, "password".getBytes(),
+                currentTime));
         Container container =
-            new ContainerImpl(conf, mockDispatcher, launchContext,
-                mockContainer, null, mockMetrics, null);
+            new ContainerImpl(conf, mockDispatcher, launchContext, null,
+              mockMetrics, containerToken);
         this.context.getContainers().put(firstContainerID, container);
       } else if (heartBeatID == 2) {
         // Checks on the RM end
@@ -227,12 +231,17 @@ public class TestNodeStatusUpdater {
         secondContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
-        when(mockContainer.getId()).thenReturn(secondContainerID);
+        long currentTime = System.currentTimeMillis();
+        String user = "testUser";
         Resource resource = BuilderUtils.newResource(3, 1);
-        when(mockContainer.getResource()).thenReturn(resource);
+        ContainerTokenIdentifier containerToken =
+            BuilderUtils.newContainerTokenIdentifier(BuilderUtils
+              .newContainerToken(secondContainerID, "127.0.0.1", 1234, user,
+                resource, currentTime + 10000, 123,
+                "password".getBytes(), currentTime));
         Container container =
-            new ContainerImpl(conf, mockDispatcher, launchContext,
-                mockContainer, null, mockMetrics, null);
+            new ContainerImpl(conf, mockDispatcher, launchContext, null,
+              mockMetrics, containerToken);
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end

@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -377,7 +376,7 @@ public class TestContainer {
           public boolean matches(Object o) {
             ContainersLauncherEvent evt = (ContainersLauncherEvent) o;
             return evt.getType() == ContainersLauncherEventType.LAUNCH_CONTAINER
-              && wcf.cId == evt.getContainer().getContainer().getId();
+              && wcf.cId == evt.getContainer().getContainerId();
           }
         };
       verify(wc.launcherBus).handle(argThat(matchesLaunchReq));
@@ -526,13 +525,6 @@ public class TestContainer {
     return serviceData;
   }
 
-  private Container newContainer(Dispatcher disp, ContainerLaunchContext ctx,
-      org.apache.hadoop.yarn.api.records.Container container,
-      ContainerTokenIdentifier identifier) throws IOException {
-    return new ContainerImpl(conf, disp, ctx, container, null, metrics,
-      identifier);
-  }
-  
   @SuppressWarnings("unchecked")
   private class WrappedContainer {
     final DrainDispatcher dispatcher;
@@ -612,7 +604,7 @@ public class TestContainer {
       }
       when(ctxt.getServiceData()).thenReturn(serviceData);
 
-      c = newContainer(dispatcher, ctxt, mockContainer, identifier);
+      c = new ContainerImpl(conf, dispatcher, ctxt, null, metrics, identifier);
       dispatcher.start();
     }
 
@@ -649,7 +641,7 @@ public class TestContainer {
         Path p = new Path(cache, rsrc.getKey());
         localPaths.put(p, Arrays.asList(rsrc.getKey()));
         // rsrc copied to p
-        c.handle(new ContainerResourceLocalizedEvent(c.getContainer().getId(),
+        c.handle(new ContainerResourceLocalizedEvent(c.getContainerId(),
                  req, p));
       }
       drainDispatcherEvents();
@@ -672,8 +664,8 @@ public class TestContainer {
       LocalResource rsrc = localResources.get(rsrcKey);
       LocalResourceRequest req = new LocalResourceRequest(rsrc);
       Exception e = new Exception("Fake localization error");
-      c.handle(new ContainerResourceFailedEvent(c.getContainer()
-          .getId(), req, e.getMessage()));
+      c.handle(new ContainerResourceFailedEvent(c.getContainerId(), req, e
+        .getMessage()));
       drainDispatcherEvents();
     }
 
@@ -688,7 +680,7 @@ public class TestContainer {
         ++counter;
         LocalResourceRequest req = new LocalResourceRequest(rsrc.getValue());
         Exception e = new Exception("Fake localization error");
-        c.handle(new ContainerResourceFailedEvent(c.getContainer().getId(),
+        c.handle(new ContainerResourceFailedEvent(c.getContainerId(),
                  req, e.getMessage()));
       }
       drainDispatcherEvents();     

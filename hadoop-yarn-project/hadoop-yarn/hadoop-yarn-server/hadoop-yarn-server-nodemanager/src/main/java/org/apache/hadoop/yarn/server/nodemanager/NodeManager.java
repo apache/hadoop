@@ -32,7 +32,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -56,7 +55,6 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecret
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.CompositeService;
-import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -173,9 +171,10 @@ public class NodeManager extends CompositeService
     addService(containerManager);
     ((NMContext) context).setContainerManager(containerManager);
 
-    Service webServer = createWebServer(context, containerManager
+    WebServer webServer = createWebServer(context, containerManager
         .getContainersMonitor(), this.aclsManager, dirsHandler);
     addService(webServer);
+    ((NMContext) context).setWebServer(webServer);
 
     dispatcher.register(ContainerManagerEventType.class, containerManager);
     dispatcher.register(NodeManagerEventType.class, this);
@@ -297,6 +296,7 @@ public class NodeManager extends CompositeService
 
     private final NMContainerTokenSecretManager containerTokenSecretManager;
     private ContainerManager containerManager;
+    private WebServer webServer;
     private final NodeHealthStatus nodeHealthStatus = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);
 
@@ -313,6 +313,11 @@ public class NodeManager extends CompositeService
     @Override
     public NodeId getNodeId() {
       return this.nodeId;
+    }
+
+    @Override
+    public int getHttpPort() {
+      return this.webServer.getPort();
     }
 
     @Override
@@ -342,6 +347,10 @@ public class NodeManager extends CompositeService
     public void setContainerManager(ContainerManager containerManager) {
       this.containerManager = containerManager;
     }
+
+    public void setWebServer(WebServer webServer) {
+      this.webServer = webServer;
+    }
   }
 
 
@@ -352,12 +361,6 @@ public class NodeManager extends CompositeService
     return nodeHealthChecker;
   }
 
-  private void reboot() {
-    LOG.info("Rebooting the node manager.");
-    NodeManager nodeManager = createNewNodeManager();
-    nodeManager.initAndStartNodeManager(this.getConfig(), true);
-  }
-  
   private void initAndStartNodeManager(Configuration conf, boolean hasToReboot) {
     try {
 

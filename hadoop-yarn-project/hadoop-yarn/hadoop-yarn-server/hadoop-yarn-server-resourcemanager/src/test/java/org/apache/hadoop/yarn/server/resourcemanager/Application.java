@@ -342,7 +342,7 @@ public class Application {
             // Launch the container
             StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
             startRequest.setContainerLaunchContext(createCLC());
-            startRequest.setContainer(container);
+            startRequest.setContainerToken(container.getContainerToken());
             nodeManager.startContainer(startRequest);
             break;
           }

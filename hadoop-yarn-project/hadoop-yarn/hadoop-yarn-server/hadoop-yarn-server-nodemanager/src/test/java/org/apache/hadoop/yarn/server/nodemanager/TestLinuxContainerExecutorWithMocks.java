@@ -34,6 +34,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -108,10 +109,7 @@ public class TestLinuxContainerExecutorWithMocks {
     ContainerLaunchContext context = mock(ContainerLaunchContext.class);
     HashMap<String, String> env = new HashMap<String,String>();
     
-    org.apache.hadoop.yarn.api.records.Container containerAPI =
-        mock(org.apache.hadoop.yarn.api.records.Container.class);
-    when(container.getContainer()).thenReturn(containerAPI);
-    when(container.getContainer().getId()).thenReturn(cId);
+    when(container.getContainerId()).thenReturn(cId);
     when(container.getLaunchContext()).thenReturn(context);
     
     when(cId.toString()).thenReturn(containerId);
@@ -229,10 +227,7 @@ public class TestLinuxContainerExecutorWithMocks {
     ContainerLaunchContext context = mock(ContainerLaunchContext.class);
     HashMap<String, String> env = new HashMap<String, String>();
 
-    org.apache.hadoop.yarn.api.records.Container containerAPI =
-        mock(org.apache.hadoop.yarn.api.records.Container.class);
-    when(container.getContainer()).thenReturn(containerAPI);
-    when(container.getContainer().getId()).thenReturn(cId);
+    when(container.getContainerId()).thenReturn(cId);
     when(container.getLaunchContext()).thenReturn(context);
 
     when(cId.toString()).thenReturn(containerId);

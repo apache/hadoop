@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManager;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 
 /**
  * <p>The request sent by the <code>ApplicationMaster</code> to the
@@ -62,9 +62,9 @@ public interface StartContainerRequest {
 
   @Public
   @Stable
-  public Container getContainer();
+  public ContainerToken getContainerToken();
 
   @Public
   @Stable
-  public void setContainer(Container container);
+  public void setContainerToken(ContainerToken container);
 }

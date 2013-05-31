@@ -763,7 +763,7 @@ public class ApplicationMaster {
       StartContainerRequest startReq = Records
           .newRecord(StartContainerRequest.class);
       startReq.setContainerLaunchContext(ctx);
-      startReq.setContainer(container);
+      startReq.setContainerToken(container.getContainerToken());
       try {
         cm.startContainer(startReq);
       } catch (YarnRemoteException e) {

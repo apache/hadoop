@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -43,7 +42,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.NMNotYetReadyException;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -281,12 +279,10 @@ public class TestNodeManagerResync {
         try {
           while (!isStopped && numContainers < 10) {
             ContainerId cId = TestNodeManagerShutdown.createContainerId();
-            Container container =
-                BuilderUtils.newContainer(cId, null, null, null, null, null);
             StartContainerRequest startRequest =
                 recordFactory.newRecordInstance(StartContainerRequest.class);
             startRequest.setContainerLaunchContext(containerLaunchContext);
-            startRequest.setContainer(container);
+            startRequest.setContainerToken(null);
             System.out.println("no. of containers to be launched: "
                 + numContainers);
             numContainers++;

@@ -113,7 +113,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       List<String> localDirs, List<String> logDirs) throws IOException {
 
     FsPermission dirPerm = new FsPermission(APPDIR_PERM);
-    ContainerId containerId = container.getContainer().getId();
+    ContainerId containerId = container.getContainerId();
 
     // create container dirs on all disks
     String containerIdStr = ConverterUtils.toString(containerId);

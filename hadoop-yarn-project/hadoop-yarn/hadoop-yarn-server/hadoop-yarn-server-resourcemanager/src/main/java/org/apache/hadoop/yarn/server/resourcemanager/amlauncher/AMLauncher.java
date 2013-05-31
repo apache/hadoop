@@ -109,7 +109,7 @@ public class AMLauncher implements Runnable {
     StartContainerRequest request = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(launchContext);
-    request.setContainer(masterContainer);
+    request.setContainerToken(masterContainer.getContainerToken());
     containerMgrProxy.startContainer(request);
     LOG.info("Done launching container " + masterContainer
         + " for AM " + application.getAppAttemptId());

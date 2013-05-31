@@ -74,6 +74,10 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-716. Making ApplicationID immutable. (Siddharth Seth via vinodkv)
 
+    YARN-684. ContainerManager.startContainer should use
+    ContainerTokenIdentifier instead of the entire Container.
+    (Vinod Kumar Vavilapalli via sseth)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
