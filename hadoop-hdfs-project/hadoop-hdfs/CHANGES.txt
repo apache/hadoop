@@ -8,9 +8,6 @@ Trunk (Unreleased)
 
     HDFS-3034. Remove the deprecated DFSOutputStream.sync() method.  (szetszwo)
 
-    HDFS-2802. Add HDFS Snapshot feature.  (See breakdown of tasks below for
-    subtasks and contributors)
-
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
@@ -265,360 +262,6 @@ Trunk (Unreleased)
     HDFS-4687. TestDelegationTokenForProxyUser#testWebHdfsDoAs is flaky with
     JDK7. (Andrew Wang via atm)
 
-  BREAKDOWN OF HDFS-2802 HDFS SNAPSHOT SUBTASKS AND RELATED JIRAS
-
-    HDFS-4076. Support snapshot of single files.  (szetszwo)
-
-    HDFS-4082. Add editlog opcodes for snapshot create and delete operations.
-    (suresh via szetszwo)
-
-    HDFS-4086. Add editlog opcodes to allow and disallow snapshots on a
-    directory. (Brandon Li via suresh)
-
-    HDFS-4083. Protocol changes for snapshots. (suresh)
-
-    HDFS-4077. Add support for Snapshottable Directory. (szetszwo via suresh)
-
-    HDFS-4087. Protocol changes for listSnapshots functionality.
-    (Brandon Li via suresh)
-
-    HDFS-4079. Add SnapshotManager which maintains a list for all the
-    snapshottable directories and supports snapshot methods such as setting a
-    directory to snapshottable and creating a snapshot.  (szetszwo)
-
-    HDFS-4078. Handle replication in snapshots.  (szetszwo)
-
-    HDFS-4084. Provide CLI support to allow and disallow snapshot
-    on a directory. (Brondon Li via suresh)
-
-    HDFS-4091. Add snapshot quota to limit the number of snapshots allowed.
-    (szetszwo)
-
-    HDFS-4097. Provide CLI support for createSnapshot. (Brandon Li via suresh)
-
-    HDFS-4092. Update file deletion logic for snapshot so that the current inode
-    is removed from the circular linked list; and if some blocks at the end of
-    the block list no longer belong to any other inode, collect them and update
-    the block list.  (szetszwo)
-
-    HDFS-4111. Support snapshot of subtrees. (szetszwo via suresh)
-
-    HDFS-4119. Complete the allowSnapshot code and add a test for it. (szetszwo)
-
-    HDFS-4133. Add testcases for testing basic snapshot functionalities.
-    (Jing Zhao via suresh)
-
-    HDFS-4116. Add auditlog for some snapshot operations. (Jing Zhao via suresh)
-
-    HDFS-4095. Add some snapshot related metrics. (Jing Zhao via suresh)
-
-    HDFS-4141. Support directory diff - the difference between the current state
-    and a previous snapshot of an INodeDirectory. (szetszwo)
-
-    HDFS-4146. Use getter and setter in INodeFileWithLink to access blocks and
-    initialize root directory as snapshottable. (szetszwo)
-
-    HDFS-4149. Implement the disallowSnapshot(..) in FSNamesystem and add
-    resetSnapshottable(..) to SnapshotManager. (szetszwo)
-
-    HDFS-4147. When there is a snapshot in a subtree, deletion of the subtree
-    should fail. (Jing Zhao via szetszwo)
-
-    HDFS-4150.  Update the inode in the block map when a snapshotted file or a
-    snapshot file is deleted. (Jing Zhao via szetszwo)
-
-    HDFS-4159. Rename should fail when the destination directory is
-    snapshottable and has snapshots. (Jing Zhao via szetszwo)
-
-    HDFS-4170. Add snapshot information to INodesInPath.  (szetszwo)
-
-    HDFS-4177. Add a snapshot parameter to INodeDirectory.getChildrenList() for
-    selecting particular snapshot children list views.  (szetszwo)
-
-    HDFS-4148. Disallow write/modify operations on files and directories in a
-    snapshot. (Brandon Li via suresh)
-
-    HDFS-4188. Add Snapshot.ID_COMPARATOR for comparing IDs and fix a bug in
-    ReadOnlyList.Util.binarySearch(..).  (szetszwo)
-
-    HDFS-4187. Add tests for replication handling in snapshots. (Jing Zhao via
-    szetszwo)
-
-    HDFS-4196. Support renaming of snapshots. (Jing Zhao via szetszwo)
-
-    HDFS-4175. Additional snapshot tests for more complicated directory
-    structure and modifications. (Jing Zhao via suresh)
-
-    HDFS-4293. Fix TestSnapshot failure. (Jing Zhao via suresh)
-
-    HDFS-4317. Change INode and its subclasses to support HDFS-4103. (szetszwo)
-
-    HDFS-4103. Support O(1) snapshot creation. (szetszwo)
-
-    HDFS-4330. Support snapshots up to the snapshot limit. (szetszwo)
-
-    HDFS-4357. Fix a bug that if an inode is replaced, further INode operations
-    should apply to the new inode. (Jing Zhao via szetszwo)
-
-    HDFS-4230. Support listing of all the snapshottable directories.  (Jing Zhao
-    via szetszwo)
-
-    HDFS-4244. Support snapshot deletion.  (Jing Zhao via szetszwo)
-
-    HDFS-4245. Include snapshot related operations in TestOfflineEditsViewer.
-    (Jing Zhao via szetszwo)
-
-    HDFS-4395. In INodeDirectorySnapshottable's constructor, the passed-in dir
-    could be an INodeDirectoryWithSnapshot.  (Jing Zhao via szetszwo)
-
-    HDFS-4397. Fix a bug in INodeDirectoryWithSnapshot.Diff.combinePostDiff(..)
-    that it may put the wrong node into the deleted list.  (szetszwo)
-
-    HDFS-4407. Change INodeDirectoryWithSnapshot.Diff.combinePostDiff(..) to
-    merge-sort like and keep the postDiff parameter unmodified.  (szetszwo)
-
-    HDFS-4098. Add FileWithSnapshot, INodeFileUnderConstructionWithSnapshot and
-    INodeFileUnderConstructionSnapshot for supporting append to snapshotted
-    files.  (szetszwo)
-
-    HDFS-4126. Add reading/writing snapshot information to FSImage.
-    (Jing Zhao via suresh)
-
-    HDFS-4436. Change INode.recordModification(..) to return only the current
-    inode and remove the updateCircularList parameter from some methods in
-    INodeDirectoryWithSnapshot.Diff.  (szetszwo)
-
-    HDFS-4429. When the latest snapshot exists, INodeFileUnderConstruction
-    should be replaced with INodeFileWithSnapshot but not INodeFile.
-    (Jing Zhao via szetszwo)
-
-    HDFS-4441. Move INodeDirectoryWithSnapshot.Diff and the related classes to a
-    package.  (szetszwo)
-
-    HDFS-4432. Support INodeFileUnderConstructionWithSnapshot in FSImage
-    saving/loading. (Jing Zhao via suresh)
-
-    HDFS-4131. Add capability to namenode to get snapshot diff. (Jing Zhao via
-    suresh)
-
-    HDFS-4447. Refactor INodeDirectoryWithSnapshot for supporting general INode
-    diff lists.  (szetszwo)
-
-    HDFS-4189. Renames the getMutableXxx methods to getXxx4Write and fix a bug
-    that some getExistingPathINodes calls should be getINodesInPath4Write.
-    (szetszwo)
-
-    HDFS-4361. When listing snapshottable directories, only return those
-    where the user has permission to take snapshots.  (Jing Zhao via szetszwo)
-
-    HDFS-4464. Combine collectSubtreeBlocksAndClear with deleteDiffsForSnapshot
-    and rename it to destroySubtreeAndCollectBlocks.  (szetszwo)
-
-    HDFS-4414. Add support for getting snapshot diff from DistributedFileSystem.
-    (Jing Zhao via suresh)
-
-    HDFS-4446. Support file snapshots with diff lists.  (szetszwo)
-
-    HDFS-4480. Eliminate the file snapshot circular linked list.  (szetszwo)
-
-    HDFS-4481. Change fsimage to support snapshot file diffs.  (szetszwo)
-
-    HDFS-4500. Refactor snapshot INode methods.  (szetszwo)
-
-    HDFS-4487. Fix snapshot diff report for HDFS-4446.  (Jing Zhao via szetszwo)
-
-    HDFS-4431. Support snapshot in OfflineImageViewer.  (Jing Zhao via szetszwo)
-
-    HDFS-4503. Update computeContentSummary(..), spaceConsumedInTree(..) and
-    diskspaceConsumed(..) in INode for snapshot.  (szetszwo)
-
-    HDFS-4499. Fix file/directory/snapshot deletion for file diff.  (Jing Zhao
-    via szetszwo)
-
-    HDFS-4524. Update SnapshotManager#snapshottables when loading fsimage.
-    (Jing Zhao via szetszwo)
-
-    HDFS-4520. Support listing snapshots under a snapshottable directory using
-    ls.  (Jing Zhao via szetszwo)
-
-    HDFS-4514. Add CLI for supporting snapshot rename, diff report, and
-    snapshottable directory listing.  (Jing Zhao via szetszwo)
-
-    HDFS-4523. Fix INodeFile replacement, TestQuota and javac errors from trunk
-    merge.  (szetszwo)
-
-    HDFS-4507. Update quota verification for snapshots.  (szetszwo)
-
-    HDFS-4545. With snapshots, FSDirectory.unprotectedSetReplication(..) always
-    changes file replication but it may or may not changes block replication.
-    (szetszwo)
-
-    HDFS-4557. Fix FSDirectory#delete when INode#cleanSubtree returns 0.
-    (Jing Zhao via szetszwo)
-
-    HDFS-4579. Annotate snapshot tests. (Arpit Agarwal via suresh)
-
-    HDFS-4574. Move Diff to the util package.  (szetszwo)
-
-    HDFS-4563. Update namespace/diskspace usage after deleting snapshots.
-    (Jing Zhao via szetszwo)
-
-    HDFS-4144. Create test for all snapshot-related metrics.
-    (Jing Zhao via suresh)
-
-    HDFS-4556. Add snapshotdiff and LsSnapshottableDir tools to hdfs script.
-    (Arpit Agarwal via szetszwo)
-
-    HDFS-4534. Add INodeReference in order to support rename with snapshots.
-    (szetszwo)
-
-    HDFS-4616. Update the FilesDeleted metric while deleting file/dir in the
-    current tree.  (Jing Zhao via szetszwo)
-
-    HDFS-4627. Fix FSImageFormat#Loader NPE and synchronization issues.
-    (Jing Zhao via suresh)
-
-    HDFS-4612. Not to use INode.getParent() when generating snapshot diff
-    report.  (Jing Zhao via szetszwo)
-
-    HDFS-4636. Update quota usage when deleting files/dirs that were created
-    after taking the latest snapshot. (Jing Zhao via szetszwo)
-
-    HDFS-4648. For snapshot deletion, when merging the diff from to-delete
-    snapshot to the prior snapshot, make sure files/directories created after
-    the prior snapshot get deleted. (Jing Zhao via szetszwo)
-
-    HDFS-4637. INodeDirectory#replaceSelf4Quota may incorrectly convert a newly
-    created directory to an INodeDirectoryWithSnapshot. (Jing Zhao via szetszwo)
-
-    HDFS-4611. Update FSImage for INodeReference.  (szetszwo)
-
-    HDFS-4647. Rename should call setLocalName after an inode is removed from
-    snapshots.  (Arpit Agarwal via szetszwo)
-
-    HDFS-4684. Use INode id for image serialization when writing INodeReference.
-    (szetszwo)
-
-    HDFS-4675. Fix rename across snapshottable directories.  (Jing Zhao via
-    szetszwo)
-
-    HDFS-4692. Use timestamp as default snapshot names.  (szetszwo)
-
-    HDFS-4666. Define ".snapshot" as a reserved inode name so that users cannot
-    create a file/directory with ".snapshot" as the name.  If ".snapshot" is
-    used in a previous version of HDFS, it must be renamed before upgrade;
-    otherwise, upgrade will fail.  (szetszwo)
-
-    HDFS-4700. Fix the undo section of rename with snapshots.  (Jing Zhao via
-    szetszwo)
-
-    HDFS-4529. Disallow concat when one of the src files is in some snapshot.
-    (szetszwo)
-
-    HDFS-4550. Refactor INodeDirectory.INodesInPath to a standalone class.
-    (szetszwo)
-
-    HDFS-4707. Add snapshot methods to FilterFileSystem and fix findbugs
-    warnings.  (szetszwo)
-
-    HDFS-4706. Do not replace root inode for disallowSnapshot.  (szetszwo)
-
-    HDFS-4717. Change the path parameter type of the snapshot methods in
-    HdfsAdmin from String to Path.  (szetszwo)
-
-    HDFS-4708. Add snapshot user documentation.  (szetszwo)
-
-    HDFS-4726. Fix test failures after merging the INodeId-INode mapping
-    from trunk.  (Jing Zhao via szetszwo)
-
-    HDFS-4727. Update inodeMap after deleting files/directories/snapshots.
-    (Jing Zhao via szetszwo)
-
-    HDFS-4719. Remove AbstractINodeDiff.Factory and move its methods to
-    AbstractINodeDiffList.  (Arpit Agarwal via szetszwo)
-
-    HDFS-4735. DisallowSnapshot throws IllegalStateException for nested
-    snapshottable directories.  (Jing Zhao via szetszwo)
-
-    HDFS-4738. Changes AbstractINodeDiff to implement Comparable<Integer>, and
-    fix javadoc and other warnings.  (szetszwo)
-
-    HDFS-4686. Update quota computation for rename and INodeReference.
-    (Jing Zhao via szetszwo)
-
-    HDFS-4729. Fix OfflineImageViewer and permission checking for snapshot
-    operations.  (Jing Zhao via szetszwo)
-
-    HDFS-4749. Use INodeId to identify the corresponding directory node in
-    FSImage saving/loading.  (Jing Zhao via szetszwo)
-
-    HDFS-4742. Fix appending to a renamed file with snapshot.  (Jing Zhao via
-    szetszwo)
-
-    HDFS-4755. Fix AccessControlException message and moves "implements
-    LinkedElement" from INode to INodeWithAdditionalFields.  (szetszwo)
-
-    HDFS-4650. Fix a bug in FSDirectory and add more unit tests for rename with
-    existence of snapshottable directories and snapshots.  (Jing Zhao via
-    szetszwo)
-
-    HDFS-4650. When passing two non-existing snapshot names to snapshotDiff, it
-    returns success if the names are the same.  (Jing Zhao via szetszwo)
-
-    HDFS-4767. If a directory is snapshottable, do not replace it when clearing
-    quota.  (Jing Zhao via szetszwo)
-
-    HDFS-4578.  Restrict snapshot IDs to 24-bit wide.  (Arpit Agarwal via
-    szetszwo)
-
-    HDFS-4773. Fix bugs in quota usage computation and OfflineImageViewer.
-    (Jing Zhao via szetszwo)
-
-    HDFS-4760. Update inodeMap after node replacement.  (Jing Zhao via szetszwo)
-
-    HDFS-4758. Disallow nested snapshottable directories and unwrap
-    RemoteException.  (szetszwo)
-
-    HDFS-4781. Fix a NullPointerException when listing .snapshot under
-    a non-existing directory.  (szetszwo)
-
-    HDFS-4791. Update and fix deletion of reference inode.  (Jing Zhao via
-    szetszwo)
-
-    HDFS-4798. Update computeContentSummary() for the reference nodes in
-    snapshots.  (szetszwo)
-
-    HDFS-4800. Fix INodeDirectoryWithSnapshot#cleanDeletedINode.  (Jing Zhao via
-    szetszwo)
-
-    HDFS-4801. lsSnapshottableDir throws IllegalArgumentException when root is
-    snapshottable.  (Jing Zhao via szetszwo)
-
-    HDFS-4802. Disallowing snapshot on / twice should throw SnapshotException
-    but not IllegalStateException.  (Jing Zhao via szetszwo)
-
-    HDFS-4806. In INodeDirectoryWithSnapshot, use isInLatestSnapshot() to
-    determine if an added/removed child should be recorded in the snapshot diff.
-    (Jing Zhao via szetszwo)
-
-    HDFS-4809. When a QuotaExceededException is thrown during rename, the quota
-    usage should be subtracted back.  (Jing Zhao via szetszwo)
-
-    HDFS-4842. Identify the correct prior snapshot when deleting a 
-    snapshot under a renamed subtree. (jing9)
-
-    HDFS-4846. Clean up snapshot CLI commands output stacktrace for invalid
-    arguments. (Jing Zhao via brandonli)
-
-    HDFS-4857. Snapshot.Root and AbstractINodeDiff#snapshotINode should not be 
-    put into INodeMap when loading FSImage. (jing9)
-
-    HDFS-4863. The root directory should be added to the snapshottable 
-    directory list while loading fsimage. (jing9)
-
-    HDFS-4848. copyFromLocal and renaming a file to ".snapshot" should output 
-    that ".snapshot" is a reserved name. (Jing Zhao via brandonli)
-
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -627,6 +270,9 @@ Release 2.0.5-beta - UNRELEASED
     block size. (Andrew Wang via atm)
 
     HDFS-4434. Provide a mapping from INodeId to INode. (suresh)
+
+    HDFS-2802. Add HDFS Snapshot feature.  (See breakdown of tasks below for
+    subtasks and contributors)
 
   NEW FEATURES
 
@@ -1041,6 +687,360 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4610. Use common utils FileUtil#setReadable/Writable/Executable and 
     FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
+  BREAKDOWN OF HDFS-2802 HDFS SNAPSHOT SUBTASKS AND RELATED JIRAS
+
+    HDFS-4076. Support snapshot of single files.  (szetszwo)
+
+    HDFS-4082. Add editlog opcodes for snapshot create and delete operations.
+    (suresh via szetszwo)
+
+    HDFS-4086. Add editlog opcodes to allow and disallow snapshots on a
+    directory. (Brandon Li via suresh)
+
+    HDFS-4083. Protocol changes for snapshots. (suresh)
+
+    HDFS-4077. Add support for Snapshottable Directory. (szetszwo via suresh)
+
+    HDFS-4087. Protocol changes for listSnapshots functionality.
+    (Brandon Li via suresh)
+
+    HDFS-4079. Add SnapshotManager which maintains a list for all the
+    snapshottable directories and supports snapshot methods such as setting a
+    directory to snapshottable and creating a snapshot.  (szetszwo)
+
+    HDFS-4078. Handle replication in snapshots.  (szetszwo)
+
+    HDFS-4084. Provide CLI support to allow and disallow snapshot
+    on a directory. (Brondon Li via suresh)
+
+    HDFS-4091. Add snapshot quota to limit the number of snapshots allowed.
+    (szetszwo)
+
+    HDFS-4097. Provide CLI support for createSnapshot. (Brandon Li via suresh)
+
+    HDFS-4092. Update file deletion logic for snapshot so that the current inode
+    is removed from the circular linked list; and if some blocks at the end of
+    the block list no longer belong to any other inode, collect them and update
+    the block list.  (szetszwo)
+
+    HDFS-4111. Support snapshot of subtrees. (szetszwo via suresh)
+
+    HDFS-4119. Complete the allowSnapshot code and add a test for it. (szetszwo)
+
+    HDFS-4133. Add testcases for testing basic snapshot functionalities.
+    (Jing Zhao via suresh)
+
+    HDFS-4116. Add auditlog for some snapshot operations. (Jing Zhao via suresh)
+
+    HDFS-4095. Add some snapshot related metrics. (Jing Zhao via suresh)
+
+    HDFS-4141. Support directory diff - the difference between the current state
+    and a previous snapshot of an INodeDirectory. (szetszwo)
+
+    HDFS-4146. Use getter and setter in INodeFileWithLink to access blocks and
+    initialize root directory as snapshottable. (szetszwo)
+
+    HDFS-4149. Implement the disallowSnapshot(..) in FSNamesystem and add
+    resetSnapshottable(..) to SnapshotManager. (szetszwo)
+
+    HDFS-4147. When there is a snapshot in a subtree, deletion of the subtree
+    should fail. (Jing Zhao via szetszwo)
+
+    HDFS-4150.  Update the inode in the block map when a snapshotted file or a
+    snapshot file is deleted. (Jing Zhao via szetszwo)
+
+    HDFS-4159. Rename should fail when the destination directory is
+    snapshottable and has snapshots. (Jing Zhao via szetszwo)
+
+    HDFS-4170. Add snapshot information to INodesInPath.  (szetszwo)
+
+    HDFS-4177. Add a snapshot parameter to INodeDirectory.getChildrenList() for
+    selecting particular snapshot children list views.  (szetszwo)
+
+    HDFS-4148. Disallow write/modify operations on files and directories in a
+    snapshot. (Brandon Li via suresh)
+
+    HDFS-4188. Add Snapshot.ID_COMPARATOR for comparing IDs and fix a bug in
+    ReadOnlyList.Util.binarySearch(..).  (szetszwo)
+
+    HDFS-4187. Add tests for replication handling in snapshots. (Jing Zhao via
+    szetszwo)
+
+    HDFS-4196. Support renaming of snapshots. (Jing Zhao via szetszwo)
+
+    HDFS-4175. Additional snapshot tests for more complicated directory
+    structure and modifications. (Jing Zhao via suresh)
+
+    HDFS-4293. Fix TestSnapshot failure. (Jing Zhao via suresh)
+
+    HDFS-4317. Change INode and its subclasses to support HDFS-4103. (szetszwo)
+
+    HDFS-4103. Support O(1) snapshot creation. (szetszwo)
+
+    HDFS-4330. Support snapshots up to the snapshot limit. (szetszwo)
+
+    HDFS-4357. Fix a bug that if an inode is replaced, further INode operations
+    should apply to the new inode. (Jing Zhao via szetszwo)
+
+    HDFS-4230. Support listing of all the snapshottable directories.  (Jing Zhao
+    via szetszwo)
+
+    HDFS-4244. Support snapshot deletion.  (Jing Zhao via szetszwo)
+
+    HDFS-4245. Include snapshot related operations in TestOfflineEditsViewer.
+    (Jing Zhao via szetszwo)
+
+    HDFS-4395. In INodeDirectorySnapshottable's constructor, the passed-in dir
+    could be an INodeDirectoryWithSnapshot.  (Jing Zhao via szetszwo)
+
+    HDFS-4397. Fix a bug in INodeDirectoryWithSnapshot.Diff.combinePostDiff(..)
+    that it may put the wrong node into the deleted list.  (szetszwo)
+
+    HDFS-4407. Change INodeDirectoryWithSnapshot.Diff.combinePostDiff(..) to
+    merge-sort like and keep the postDiff parameter unmodified.  (szetszwo)
+
+    HDFS-4098. Add FileWithSnapshot, INodeFileUnderConstructionWithSnapshot and
+    INodeFileUnderConstructionSnapshot for supporting append to snapshotted
+    files.  (szetszwo)
+
+    HDFS-4126. Add reading/writing snapshot information to FSImage.
+    (Jing Zhao via suresh)
+
+    HDFS-4436. Change INode.recordModification(..) to return only the current
+    inode and remove the updateCircularList parameter from some methods in
+    INodeDirectoryWithSnapshot.Diff.  (szetszwo)
+
+    HDFS-4429. When the latest snapshot exists, INodeFileUnderConstruction
+    should be replaced with INodeFileWithSnapshot but not INodeFile.
+    (Jing Zhao via szetszwo)
+
+    HDFS-4441. Move INodeDirectoryWithSnapshot.Diff and the related classes to a
+    package.  (szetszwo)
+
+    HDFS-4432. Support INodeFileUnderConstructionWithSnapshot in FSImage
+    saving/loading. (Jing Zhao via suresh)
+
+    HDFS-4131. Add capability to namenode to get snapshot diff. (Jing Zhao via
+    suresh)
+
+    HDFS-4447. Refactor INodeDirectoryWithSnapshot for supporting general INode
+    diff lists.  (szetszwo)
+
+    HDFS-4189. Renames the getMutableXxx methods to getXxx4Write and fix a bug
+    that some getExistingPathINodes calls should be getINodesInPath4Write.
+    (szetszwo)
+
+    HDFS-4361. When listing snapshottable directories, only return those
+    where the user has permission to take snapshots.  (Jing Zhao via szetszwo)
+
+    HDFS-4464. Combine collectSubtreeBlocksAndClear with deleteDiffsForSnapshot
+    and rename it to destroySubtreeAndCollectBlocks.  (szetszwo)
+
+    HDFS-4414. Add support for getting snapshot diff from DistributedFileSystem.
+    (Jing Zhao via suresh)
+
+    HDFS-4446. Support file snapshots with diff lists.  (szetszwo)
+
+    HDFS-4480. Eliminate the file snapshot circular linked list.  (szetszwo)
+
+    HDFS-4481. Change fsimage to support snapshot file diffs.  (szetszwo)
+
+    HDFS-4500. Refactor snapshot INode methods.  (szetszwo)
+
+    HDFS-4487. Fix snapshot diff report for HDFS-4446.  (Jing Zhao via szetszwo)
+
+    HDFS-4431. Support snapshot in OfflineImageViewer.  (Jing Zhao via szetszwo)
+
+    HDFS-4503. Update computeContentSummary(..), spaceConsumedInTree(..) and
+    diskspaceConsumed(..) in INode for snapshot.  (szetszwo)
+
+    HDFS-4499. Fix file/directory/snapshot deletion for file diff.  (Jing Zhao
+    via szetszwo)
+
+    HDFS-4524. Update SnapshotManager#snapshottables when loading fsimage.
+    (Jing Zhao via szetszwo)
+
+    HDFS-4520. Support listing snapshots under a snapshottable directory using
+    ls.  (Jing Zhao via szetszwo)
+
+    HDFS-4514. Add CLI for supporting snapshot rename, diff report, and
+    snapshottable directory listing.  (Jing Zhao via szetszwo)
+
+    HDFS-4523. Fix INodeFile replacement, TestQuota and javac errors from trunk
+    merge.  (szetszwo)
+
+    HDFS-4507. Update quota verification for snapshots.  (szetszwo)
+
+    HDFS-4545. With snapshots, FSDirectory.unprotectedSetReplication(..) always
+    changes file replication but it may or may not changes block replication.
+    (szetszwo)
+
+    HDFS-4557. Fix FSDirectory#delete when INode#cleanSubtree returns 0.
+    (Jing Zhao via szetszwo)
+
+    HDFS-4579. Annotate snapshot tests. (Arpit Agarwal via suresh)
+
+    HDFS-4574. Move Diff to the util package.  (szetszwo)
+
+    HDFS-4563. Update namespace/diskspace usage after deleting snapshots.
+    (Jing Zhao via szetszwo)
+
+    HDFS-4144. Create test for all snapshot-related metrics.
+    (Jing Zhao via suresh)
+
+    HDFS-4556. Add snapshotdiff and LsSnapshottableDir tools to hdfs script.
+    (Arpit Agarwal via szetszwo)
+
+    HDFS-4534. Add INodeReference in order to support rename with snapshots.
+    (szetszwo)
+
+    HDFS-4616. Update the FilesDeleted metric while deleting file/dir in the
+    current tree.  (Jing Zhao via szetszwo)
+
+    HDFS-4627. Fix FSImageFormat#Loader NPE and synchronization issues.
+    (Jing Zhao via suresh)
+
+    HDFS-4612. Not to use INode.getParent() when generating snapshot diff
+    report.  (Jing Zhao via szetszwo)
+
+    HDFS-4636. Update quota usage when deleting files/dirs that were created
+    after taking the latest snapshot. (Jing Zhao via szetszwo)
+
+    HDFS-4648. For snapshot deletion, when merging the diff from to-delete
+    snapshot to the prior snapshot, make sure files/directories created after
+    the prior snapshot get deleted. (Jing Zhao via szetszwo)
+
+    HDFS-4637. INodeDirectory#replaceSelf4Quota may incorrectly convert a newly
+    created directory to an INodeDirectoryWithSnapshot. (Jing Zhao via szetszwo)
+
+    HDFS-4611. Update FSImage for INodeReference.  (szetszwo)
+
+    HDFS-4647. Rename should call setLocalName after an inode is removed from
+    snapshots.  (Arpit Agarwal via szetszwo)
+
+    HDFS-4684. Use INode id for image serialization when writing INodeReference.
+    (szetszwo)
+
+    HDFS-4675. Fix rename across snapshottable directories.  (Jing Zhao via
+    szetszwo)
+
+    HDFS-4692. Use timestamp as default snapshot names.  (szetszwo)
+
+    HDFS-4666. Define ".snapshot" as a reserved inode name so that users cannot
+    create a file/directory with ".snapshot" as the name.  If ".snapshot" is
+    used in a previous version of HDFS, it must be renamed before upgrade;
+    otherwise, upgrade will fail.  (szetszwo)
+
+    HDFS-4700. Fix the undo section of rename with snapshots.  (Jing Zhao via
+    szetszwo)
+
+    HDFS-4529. Disallow concat when one of the src files is in some snapshot.
+    (szetszwo)
+
+    HDFS-4550. Refactor INodeDirectory.INodesInPath to a standalone class.
+    (szetszwo)
+
+    HDFS-4707. Add snapshot methods to FilterFileSystem and fix findbugs
+    warnings.  (szetszwo)
+
+    HDFS-4706. Do not replace root inode for disallowSnapshot.  (szetszwo)
+
+    HDFS-4717. Change the path parameter type of the snapshot methods in
+    HdfsAdmin from String to Path.  (szetszwo)
+
+    HDFS-4708. Add snapshot user documentation.  (szetszwo)
+
+    HDFS-4726. Fix test failures after merging the INodeId-INode mapping
+    from trunk.  (Jing Zhao via szetszwo)
+
+    HDFS-4727. Update inodeMap after deleting files/directories/snapshots.
+    (Jing Zhao via szetszwo)
+
+    HDFS-4719. Remove AbstractINodeDiff.Factory and move its methods to
+    AbstractINodeDiffList.  (Arpit Agarwal via szetszwo)
+
+    HDFS-4735. DisallowSnapshot throws IllegalStateException for nested
+    snapshottable directories.  (Jing Zhao via szetszwo)
+
+    HDFS-4738. Changes AbstractINodeDiff to implement Comparable<Integer>, and
+    fix javadoc and other warnings.  (szetszwo)
+
+    HDFS-4686. Update quota computation for rename and INodeReference.
+    (Jing Zhao via szetszwo)
+
+    HDFS-4729. Fix OfflineImageViewer and permission checking for snapshot
+    operations.  (Jing Zhao via szetszwo)
+
+    HDFS-4749. Use INodeId to identify the corresponding directory node in
+    FSImage saving/loading.  (Jing Zhao via szetszwo)
+
+    HDFS-4742. Fix appending to a renamed file with snapshot.  (Jing Zhao via
+    szetszwo)
+
+    HDFS-4755. Fix AccessControlException message and moves "implements
+    LinkedElement" from INode to INodeWithAdditionalFields.  (szetszwo)
+
+    HDFS-4650. Fix a bug in FSDirectory and add more unit tests for rename with
+    existence of snapshottable directories and snapshots.  (Jing Zhao via
+    szetszwo)
+
+    HDFS-4650. When passing two non-existing snapshot names to snapshotDiff, it
+    returns success if the names are the same.  (Jing Zhao via szetszwo)
+
+    HDFS-4767. If a directory is snapshottable, do not replace it when clearing
+    quota.  (Jing Zhao via szetszwo)
+
+    HDFS-4578.  Restrict snapshot IDs to 24-bit wide.  (Arpit Agarwal via
+    szetszwo)
+
+    HDFS-4773. Fix bugs in quota usage computation and OfflineImageViewer.
+    (Jing Zhao via szetszwo)
+
+    HDFS-4760. Update inodeMap after node replacement.  (Jing Zhao via szetszwo)
+
+    HDFS-4758. Disallow nested snapshottable directories and unwrap
+    RemoteException.  (szetszwo)
+
+    HDFS-4781. Fix a NullPointerException when listing .snapshot under
+    a non-existing directory.  (szetszwo)
+
+    HDFS-4791. Update and fix deletion of reference inode.  (Jing Zhao via
+    szetszwo)
+
+    HDFS-4798. Update computeContentSummary() for the reference nodes in
+    snapshots.  (szetszwo)
+
+    HDFS-4800. Fix INodeDirectoryWithSnapshot#cleanDeletedINode.  (Jing Zhao via
+    szetszwo)
+
+    HDFS-4801. lsSnapshottableDir throws IllegalArgumentException when root is
+    snapshottable.  (Jing Zhao via szetszwo)
+
+    HDFS-4802. Disallowing snapshot on / twice should throw SnapshotException
+    but not IllegalStateException.  (Jing Zhao via szetszwo)
+
+    HDFS-4806. In INodeDirectoryWithSnapshot, use isInLatestSnapshot() to
+    determine if an added/removed child should be recorded in the snapshot diff.
+    (Jing Zhao via szetszwo)
+
+    HDFS-4809. When a QuotaExceededException is thrown during rename, the quota
+    usage should be subtracted back.  (Jing Zhao via szetszwo)
+
+    HDFS-4842. Identify the correct prior snapshot when deleting a 
+    snapshot under a renamed subtree. (jing9)
+
+    HDFS-4846. Clean up snapshot CLI commands output stacktrace for invalid
+    arguments. (Jing Zhao via brandonli)
+
+    HDFS-4857. Snapshot.Root and AbstractINodeDiff#snapshotINode should not be 
+    put into INodeMap when loading FSImage. (jing9)
+
+    HDFS-4863. The root directory should be added to the snapshottable 
+    directory list while loading fsimage. (jing9)
+
+    HDFS-4848. copyFromLocal and renaming a file to ".snapshot" should output 
+    that ".snapshot" is a reserved name. (Jing Zhao via brandonli)
 
 Release 2.0.4-alpha - 2013-04-25
 
