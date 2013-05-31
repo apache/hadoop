@@ -29,7 +29,6 @@ import javax.xml.bind.annotation.XmlTransient;
 import org.apache.hadoop.yarn.api.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
@@ -60,7 +59,7 @@ public class ContainerInfo {
   public ContainerInfo(final Context nmContext, final Container container,
        String requestUri, String pathPrefix) {
 
-    this.id = container.getContainer().getId().toString();
+    this.id = container.getContainerId().toString();
     this.nodeId = nmContext.getNodeId().toString();
     ContainerStatus containerData = container.cloneAndGetContainerStatus();
     this.exitCode = containerData.getExitStatus();
@@ -74,7 +73,7 @@ public class ContainerInfo {
     }
 
     this.user = container.getUser();
-    Resource res = container.getContainer().getResource();
+    Resource res = container.getResource();
     if (res != null) {
       this.totalMemoryNeededMB = res.getMemory();
     }

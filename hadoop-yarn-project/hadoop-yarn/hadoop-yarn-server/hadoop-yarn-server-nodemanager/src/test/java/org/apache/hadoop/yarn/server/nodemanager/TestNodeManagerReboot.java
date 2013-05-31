@@ -112,9 +112,6 @@ public class TestNodeManagerReboot {
         Records.newRecord(ContainerLaunchContext.class);
     // Construct the Container-id
     ContainerId cId = createContainerId();
-    org.apache.hadoop.yarn.api.records.Container mockContainer =
-        Records.newRecord(org.apache.hadoop.yarn.api.records.Container.class);
-    mockContainer.setId(cId);
 
     URL localResourceUri =
         ConverterUtils.getYarnUrlFromPath(localFS
@@ -136,20 +133,16 @@ public class TestNodeManagerReboot {
     containerLaunchContext.setCommands(commands);
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(1024);
-    mockContainer.setResource(resource);
     NodeId nodeId = BuilderUtils.newNodeId("127.0.0.1", 12345);
     ContainerToken containerToken =
         BuilderUtils.newContainerToken(cId, nodeId.getHost(), nodeId.getPort(),
           user, resource, System.currentTimeMillis() + 10000L, 123,
           "password".getBytes(), 0);
-    mockContainer.setContainerToken(containerToken);
-    mockContainer.setNodeHttpAddress("127.0.0.1");
-    mockContainer.setNodeId(nodeId);
     
     final StartContainerRequest startRequest =
         Records.newRecord(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
-    startRequest.setContainer(mockContainer);
+    startRequest.setContainerToken(containerToken);
     final UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(cId.toString());
     currentUser.doAs(new PrivilegedExceptionAction<Void>() {

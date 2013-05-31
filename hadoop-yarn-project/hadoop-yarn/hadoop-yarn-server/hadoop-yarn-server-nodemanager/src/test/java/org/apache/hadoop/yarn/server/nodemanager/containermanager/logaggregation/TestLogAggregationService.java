@@ -55,10 +55,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -707,14 +707,11 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    Container mockContainer = mock(Container.class);
     // ////// Construct the Container-id
     ApplicationId appId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId appAttemptId =
         BuilderUtils.newApplicationAttemptId(appId, 1);
     ContainerId cId = BuilderUtils.newContainerId(appAttemptId, 0);
-
-    when(mockContainer.getId()).thenReturn(cId);
 
     URL resource_alpha =
         ConverterUtils.getYarnUrlFromPath(localFS
@@ -736,15 +733,14 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     commands.add(scriptFile.getAbsolutePath());
     containerLaunchContext.setCommands(commands);
     Resource r = BuilderUtils.newResource(100 * 1024 * 1024, 1);
-    when(mockContainer.getResource()).thenReturn(r);
-    when(mockContainer.getContainerToken()).thenReturn(
-      BuilderUtils.newContainerToken(cId, "127.0.0.1", 1234, user, r,
-        System.currentTimeMillis() + 10000L, 123, "password".getBytes(),
-        super.DUMMY_RM_IDENTIFIER));
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, "127.0.0.1", 1234, user, r,
+          System.currentTimeMillis() + 10000L, 123, "password".getBytes(),
+          super.DUMMY_RM_IDENTIFIER);
     StartContainerRequest startRequest =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
-    startRequest.setContainer(mockContainer);
+    startRequest.setContainerToken(containerToken);
     this.containerManager.startContainer(startRequest);
 
     BaseContainerManagerTest.waitForContainerState(this.containerManager,

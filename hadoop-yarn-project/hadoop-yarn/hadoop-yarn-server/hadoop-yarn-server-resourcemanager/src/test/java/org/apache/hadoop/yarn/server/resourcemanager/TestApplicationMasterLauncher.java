@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.IOException;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -33,11 +34,15 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -57,8 +62,6 @@ public class TestApplicationMasterLauncher {
     String attemptIdAtContainerManager = null;
     String containerIdAtContainerManager = null;
     String nmHostAtContainerManager = null;
-    int nmPortAtContainerManager;
-    int nmHttpPortAtContainerManager;
     long submitTimeAtContainerManager;
     int maxAppAttempts;
 
@@ -70,17 +73,21 @@ public class TestApplicationMasterLauncher {
       launched = true;
       Map<String, String> env =
           request.getContainerLaunchContext().getEnvironment();
-      ContainerId containerId =
-          request.getContainer().getId();
+
+      ContainerToken containerToken = request.getContainerToken();
+      ContainerTokenIdentifier tokenId = null;
+
+      try {
+        tokenId = BuilderUtils.newContainerTokenIdentifier(containerToken);
+      } catch (IOException e) {
+        throw RPCUtil.getRemoteException(e);
+      }
+
+      ContainerId containerId = tokenId.getContainerID();
       containerIdAtContainerManager = containerId.toString();
       attemptIdAtContainerManager =
           containerId.getApplicationAttemptId().toString();
-      nmHostAtContainerManager = request.getContainer().getNodeId().getHost();
-      nmPortAtContainerManager =
-          request.getContainer().getNodeId().getPort();
-      nmHttpPortAtContainerManager =
-          Integer.parseInt(request.getContainer().getNodeHttpAddress()
-              .split(":")[1]);
+      nmHostAtContainerManager = tokenId.getNmHostAddress();
       submitTimeAtContainerManager =
           Long.parseLong(env.get(ApplicationConstants.APP_SUBMIT_TIME_ENV));
       maxAppAttempts =
@@ -135,12 +142,8 @@ public class TestApplicationMasterLauncher {
     Assert.assertEquals(app.getRMAppAttempt(appAttemptId)
         .getMasterContainer().getId()
         .toString(), containerManager.containerIdAtContainerManager);
-    Assert.assertEquals(nm1.getNodeId().getHost(),
-        containerManager.nmHostAtContainerManager);
-    Assert.assertEquals(nm1.getNodeId().getPort(),
-        containerManager.nmPortAtContainerManager);
-    Assert.assertEquals(nm1.getHttpPort(),
-        containerManager.nmHttpPortAtContainerManager);
+    Assert.assertEquals(nm1.getNodeId().toString(),
+      containerManager.nmHostAtContainerManager);
     Assert.assertEquals(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS,
         containerManager.maxAppAttempts);
 

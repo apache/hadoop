@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -272,14 +272,13 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   // Get the remoteUGI corresponding to the api call.
-  private UserGroupInformation getRemoteUgi(String containerIDStr)
+  private UserGroupInformation getRemoteUgi()
       throws YarnRemoteException {
     UserGroupInformation remoteUgi;
     try {
       remoteUgi = UserGroupInformation.getCurrentUser();
     } catch (IOException e) {
-      String msg = "Cannot obtain the user-name for containerId: "
-          + containerIDStr + ". Got exception: "
+      String msg = "Cannot obtain the user-name. Got exception: "
           + StringUtils.stringifyException(e);
       LOG.warn(msg);
       throw RPCUtil.getRemoteException(msg);
@@ -307,7 +306,7 @@ public class ContainerManagerImpl extends CompositeService implements
   @VisibleForTesting
   protected ContainerTokenIdentifier getContainerTokenIdentifier(
       UserGroupInformation remoteUgi,
-      org.apache.hadoop.yarn.api.records.Container container)
+      ContainerTokenIdentifier containerTokenIdentifier)
       throws YarnRemoteException {
     if (UserGroupInformation.isSecurityEnabled()) {
       if (LOG.isDebugEnabled()) {
@@ -317,12 +316,7 @@ public class ContainerManagerImpl extends CompositeService implements
       // Get the tokenId from the remote user ugi
       return selectContainerTokenIdentifier(remoteUgi);
     } else {
-      try {
-        return BuilderUtils.newContainerTokenIdentifier(container
-          .getContainerToken());
-      } catch (IOException e) {
-        throw RPCUtil.getRemoteException(e);
-      }
+      return containerTokenIdentifier;
     }
   }
   
@@ -341,7 +335,6 @@ public class ContainerManagerImpl extends CompositeService implements
   @VisibleForTesting
   protected void authorizeRequest(String containerIDStr,
       ContainerLaunchContext launchContext,
-      org.apache.hadoop.yarn.api.records.Container container,
       UserGroupInformation remoteUgi, ContainerTokenIdentifier tokenId)
       throws YarnRemoteException {
 
@@ -380,13 +373,6 @@ public class ContainerManagerImpl extends CompositeService implements
               + System.currentTimeMillis() + " found "
               + tokenId.getExpiryTimeStamp());
         }
-        
-        Resource resource = tokenId.getResource();
-        if (resource == null || !resource.equals(container.getResource())) {
-          unauthorized = true;
-          messageBuilder.append("\nExpected resource " + resource
-              + " but found " + container.getResource());
-        }
       }
     }
 
@@ -412,16 +398,23 @@ public class ContainerManagerImpl extends CompositeService implements
     }
 
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
-    org.apache.hadoop.yarn.api.records.Container lauchContainer =
-        request.getContainer();
-    ContainerId containerID = lauchContainer.getId();
+    ContainerToken token = request.getContainerToken();
+
+    ContainerTokenIdentifier tokenIdentifier = null;
+    try {
+      tokenIdentifier = BuilderUtils.newContainerTokenIdentifier(token);
+    } catch (IOException e) {
+      throw RPCUtil.getRemoteException(e);
+    }
+
+    UserGroupInformation remoteUgi = getRemoteUgi();
+    ContainerTokenIdentifier tokenId = 
+        getContainerTokenIdentifier(remoteUgi, tokenIdentifier);
+
+    ContainerId containerID = tokenId.getContainerID();
     String containerIDStr = containerID.toString();
 
-    UserGroupInformation remoteUgi = getRemoteUgi(containerIDStr);
-    ContainerTokenIdentifier tokenId = 
-        getContainerTokenIdentifier(remoteUgi, lauchContainer);
-    authorizeRequest(containerIDStr, launchContext, lauchContainer, remoteUgi,
-      tokenId);
+    authorizeRequest(containerIDStr, launchContext, remoteUgi, tokenId);
 
     // Is the container coming from unknown RM
     if (tokenId.getRMIdentifer() != nodeStatusUpdater
@@ -458,8 +451,9 @@ public class ContainerManagerImpl extends CompositeService implements
     // //////////// End of parsing credentials
     String user = tokenId.getApplicationSubmitter();
 
-    Container container = new ContainerImpl(getConfig(), this.dispatcher,
-        launchContext, lauchContainer, credentials, metrics, tokenId);
+    Container container =
+        new ContainerImpl(getConfig(), this.dispatcher, launchContext,
+          credentials, metrics, tokenId);
     ApplicationId applicationID = 
         containerID.getApplicationAttemptId().getApplicationId();
     if (context.getContainers().putIfAbsent(containerID, container) != null) {
@@ -501,7 +495,7 @@ public class ContainerManagerImpl extends CompositeService implements
     // TODO launchedContainer misplaced -> doesn't necessarily mean a container
     // launch. A finished Application will not launch containers.
     metrics.launchedContainer();
-    metrics.allocateContainer(lauchContainer.getResource());
+    metrics.allocateContainer(tokenId.getResource());
     return response;
   }
 
@@ -518,7 +512,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
     // TODO: Only the container's owner can kill containers today.
 
-    UserGroupInformation remoteUgi = getRemoteUgi(containerIDStr);
+    UserGroupInformation remoteUgi = getRemoteUgi();
     Container container = this.context.getContainers().get(containerID);
     StopContainerResponse response =
         recordFactory.newRecordInstance(StopContainerResponse.class);
@@ -532,8 +526,8 @@ public class ContainerManagerImpl extends CompositeService implements
           containerID);
       return response; // Return immediately.
     }
-    authorizeRequest(containerIDStr, null, null, remoteUgi,
-      getContainerTokenIdentifier(remoteUgi, container.getContainer()));
+    authorizeRequest(containerIDStr, null, remoteUgi,
+      getContainerTokenIdentifier(remoteUgi, container.getContainerTokenIdentifier()));
 
     dispatcher.getEventHandler().handle(
         new ContainerKillEvent(containerID,
@@ -561,15 +555,15 @@ public class ContainerManagerImpl extends CompositeService implements
 
     // TODO: Only the container's owner can get containers' status today.
 
-    UserGroupInformation remoteUgi = getRemoteUgi(containerIDStr);
+    UserGroupInformation remoteUgi = getRemoteUgi();
     LOG.info("Getting container-status for " + containerIDStr);
     Container container = this.context.getContainers().get(containerID);
     if (container == null) {
       throw RPCUtil.getRemoteException("Container " + containerIDStr
         + " is not handled by this NodeManager"); 
     }
-    authorizeRequest(containerIDStr, null, null, remoteUgi,
-      getContainerTokenIdentifier(remoteUgi, container.getContainer()));
+    authorizeRequest(containerIDStr, null, remoteUgi,
+      getContainerTokenIdentifier(remoteUgi, container.getContainerTokenIdentifier()));
 
     ContainerStatus containerStatus = container.cloneAndGetContainerStatus();
     LOG.info("Returning " + containerStatus);

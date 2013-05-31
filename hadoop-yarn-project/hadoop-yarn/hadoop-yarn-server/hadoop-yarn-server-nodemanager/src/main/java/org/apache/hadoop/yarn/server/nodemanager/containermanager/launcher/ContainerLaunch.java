@@ -22,8 +22,8 @@ import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.io.File;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -53,12 +53,12 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
-import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.DelayedProcessKiller;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
@@ -68,7 +68,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.yarn.util.Apps;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ContainerLaunch implements Callable<Integer> {
@@ -86,6 +85,7 @@ public class ContainerLaunch implements Callable<Integer> {
   private final Application app;
   private final Container container;
   private final Configuration conf;
+  private final Context context;
   
   private volatile AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
   private volatile AtomicBoolean completed = new AtomicBoolean(false);
@@ -97,9 +97,10 @@ public class ContainerLaunch implements Callable<Integer> {
 
   private final LocalDirsHandlerService dirsHandler;
 
-  public ContainerLaunch(Configuration configuration, Dispatcher dispatcher,
-      ContainerExecutor exec, Application app, Container container,
-      LocalDirsHandlerService dirsHandler) {
+  public ContainerLaunch(Context context, Configuration configuration,
+      Dispatcher dispatcher, ContainerExecutor exec, Application app,
+      Container container, LocalDirsHandlerService dirsHandler) {
+    this.context = context;
     this.conf = configuration;
     this.app = app;
     this.exec = exec;
@@ -120,7 +121,7 @@ public class ContainerLaunch implements Callable<Integer> {
     final ContainerLaunchContext launchContext = container.getLaunchContext();
     final Map<Path,List<String>> localResources =
         container.getLocalizedResources();
-    ContainerId containerID = container.getContainer().getId();
+    ContainerId containerID = container.getContainerId();
     String containerIdStr = ConverterUtils.toString(containerID);
     final List<String> command = launchContext.getCommands();
     int ret = -1;
@@ -301,7 +302,7 @@ public class ContainerLaunch implements Callable<Integer> {
    * @throws IOException
    */
   public void cleanupContainer() throws IOException {
-    ContainerId containerId = container.getContainer().getId();
+    ContainerId containerId = container.getContainerId();
     String containerIdStr = ConverterUtils.toString(containerId);
     LOG.info("Cleaning up container " + containerIdStr);
 
@@ -372,7 +373,7 @@ public class ContainerLaunch implements Callable<Integer> {
    */
   private String getContainerPid(Path pidFilePath) throws Exception {
     String containerIdStr = 
-        ConverterUtils.toString(container.getContainer().getId());
+        ConverterUtils.toString(container.getContainerId());
     String processId = null;
     LOG.debug("Accessing pid for container " + containerIdStr
         + " from pid file " + pidFilePath);
@@ -550,16 +551,16 @@ public class ContainerLaunch implements Callable<Integer> {
      */
 
     environment.put(Environment.CONTAINER_ID.name(), container
-        .getContainer().getId().toString());
+        .getContainerId().toString());
 
     environment.put(Environment.NM_PORT.name(),
-        String.valueOf(container.getContainer().getNodeId().getPort()));
+      String.valueOf(this.context.getNodeId().getPort()));
 
-    environment.put(Environment.NM_HOST.name(), container.getContainer()
-        .getNodeId().getHost());
+    environment.put(Environment.NM_HOST.name(), this.context.getNodeId()
+      .getHost());
 
-    environment.put(Environment.NM_HTTP_PORT.name(), container.getContainer()
-        .getNodeHttpAddress().split(":")[1]);
+    environment.put(Environment.NM_HTTP_PORT.name(),
+      String.valueOf(this.context.getHttpPort()));
 
     environment.put(Environment.LOCAL_DIRS.name(),
         StringUtils.join(",", appDirs));

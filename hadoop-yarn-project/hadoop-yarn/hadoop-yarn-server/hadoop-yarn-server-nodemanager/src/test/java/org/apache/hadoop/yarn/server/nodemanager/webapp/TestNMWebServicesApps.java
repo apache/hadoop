@@ -188,17 +188,17 @@ public class TestNMWebServicesApps extends JerseyTest {
     Container container2 = new MockContainer(appAttemptId, dispatcher, conf,
         app.getUser(), app.getAppId(), 2);
     nmContext.getContainers()
-        .put(container1.getContainer().getId(), container1);
+        .put(container1.getContainerId(), container1);
     nmContext.getContainers()
-        .put(container2.getContainer().getId(), container2);
+        .put(container2.getContainerId(), container2);
 
-    app.getContainers().put(container1.getContainer().getId(), container1);
-    app.getContainers().put(container2.getContainer().getId(), container2);
+    app.getContainers().put(container1.getContainerId(), container1);
+    app.getContainers().put(container2.getContainerId(), container2);
     HashMap<String, String> hash = new HashMap<String, String>();
-    hash.put(container1.getContainer().getId().toString(), container1
-        .getContainer().getId().toString());
-    hash.put(container2.getContainer().getId().toString(), container2
-        .getContainer().getId().toString());
+    hash.put(container1.getContainerId().toString(), container1
+        .getContainerId().toString());
+    hash.put(container2.getContainerId().toString(), container2
+        .getContainerId().toString());
     return hash;
   }
 

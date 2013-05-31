@@ -26,7 +26,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -76,7 +75,7 @@ public class TestNMWebServer {
     FileUtil.fullyDelete(testLogDir);
   }
   
-  private String startNMWebAppServer(String webAddr) {
+  private int startNMWebAppServer(String webAddr) {
     Context nmContext = new NodeManager.NMContext(null);
     ResourceView resourceView = new ResourceView() {
       @Override
@@ -107,20 +106,19 @@ public class TestNMWebServer {
         new ApplicationACLsManager(conf), dirsHandler);
     server.init(conf);
     server.start();
-    String webAppAddr = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS);
-    return StringUtils.split(webAppAddr, ':')[1];
+    return server.getPort();
   }
   
   @Test
   public void testNMWebAppWithOutPort() throws IOException {
-    String port = startNMWebAppServer("0.0.0.0");
-    Assert.assertTrue("Port is not updated", Integer.parseInt(port) > 0);
+    int port = startNMWebAppServer("0.0.0.0");
+    Assert.assertTrue("Port is not updated", port > 0);
   }
   
   @Test
   public void testNMWebAppWithEphemeralPort() throws IOException {
-    String port = startNMWebAppServer("0.0.0.0:0"); 
-    Assert.assertTrue("Port is not updated", Integer.parseInt(port) > 0);
+    int port = startNMWebAppServer("0.0.0.0:0"); 
+    Assert.assertTrue("Port is not updated", port > 0);
   }
 
   @Test
@@ -180,17 +178,13 @@ public class TestNMWebServer {
       // TODO: Use builder utils
       ContainerLaunchContext launchContext =
           recordFactory.newRecordInstance(ContainerLaunchContext.class);
-      org.apache.hadoop.yarn.api.records.Container mockContainer =
-          mock(org.apache.hadoop.yarn.api.records.Container.class);
       long currentTime = System.currentTimeMillis();
       ContainerToken containerToken =
           BuilderUtils.newContainerToken(containerId, "127.0.0.1", 1234, user,
             BuilderUtils.newResource(1024, 1), currentTime + 10000L, 123,
             "password".getBytes(), currentTime);
-      when(mockContainer.getContainerToken()).thenReturn(containerToken);
-      when(mockContainer.getId()).thenReturn(containerId);
       Container container =
-          new ContainerImpl(conf, dispatcher, launchContext, mockContainer,
+          new ContainerImpl(conf, dispatcher, launchContext,
             null, metrics,
             BuilderUtils.newContainerTokenIdentifier(containerToken)) {
 

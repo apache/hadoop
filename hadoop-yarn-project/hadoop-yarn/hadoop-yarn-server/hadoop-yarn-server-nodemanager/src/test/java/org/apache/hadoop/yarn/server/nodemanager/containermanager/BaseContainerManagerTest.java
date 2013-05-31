@@ -33,7 +33,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -94,9 +93,14 @@ public abstract class BaseContainerManagerTest {
   protected static Log LOG = LogFactory
       .getLog(BaseContainerManagerTest.class);
 
+  protected static final int HTTP_PORT = 5412;
   protected Configuration conf = new YarnConfiguration();
   protected Context context = new NMContext(new NMContainerTokenSecretManager(
-    conf));
+    conf)) {
+    public int getHttpPort() {
+      return HTTP_PORT;
+    };
+  };
   protected ContainerExecutor exec;
   protected DeletionService delSrvc;
   protected String user = "nobody";
@@ -177,9 +181,8 @@ public abstract class BaseContainerManagerTest {
 
       @Override
       protected void authorizeRequest(String containerIDStr,
-          ContainerLaunchContext launchContext, Container container,
-          UserGroupInformation remoteUgi, ContainerTokenIdentifier tokenId)
-          throws YarnRemoteException {
+          ContainerLaunchContext launchContext, UserGroupInformation remoteUgi,
+          ContainerTokenIdentifier tokenId) throws YarnRemoteException {
         // do nothing
       }
     };

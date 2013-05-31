@@ -39,11 +39,11 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
@@ -89,23 +90,25 @@ public class TestContainerLaunchRPC {
           server.getListenerAddress(), conf);
       ContainerLaunchContext containerLaunchContext = recordFactory
           .newRecordInstance(ContainerLaunchContext.class);
-      ContainerId containerId = recordFactory
-          .newRecordInstance(ContainerId.class);
+
       ApplicationId applicationId = ApplicationId.newInstance(0, 0);
-      ApplicationAttemptId applicationAttemptId = recordFactory
-          .newRecordInstance(ApplicationAttemptId.class);
-      applicationAttemptId.setApplicationId(applicationId);
-      applicationAttemptId.setAttemptId(0);
-      containerId.setApplicationAttemptId(applicationAttemptId);
-      containerId.setId(100);
-      Container container =
-          BuilderUtils.newContainer(containerId, null, null, recordFactory
-              .newRecordInstance(Resource.class), null, null);
+      ApplicationAttemptId applicationAttemptId =
+          ApplicationAttemptId.newInstance(applicationId, 0);
+      ContainerId containerId =
+          ContainerId.newInstance(applicationAttemptId, 100);
+      NodeId nodeId = NodeId.newInstance("localhost", 1234);
+      Resource resource = Resource.newInstance(1234, 2);
+      ContainerTokenIdentifier containerTokenIdentifier =
+          new ContainerTokenIdentifier(containerId, "localhost", "user",
+            resource, System.currentTimeMillis() + 10000, 42, 42);
+      ContainerToken containerToken =
+          BuilderUtils.newContainerToken(nodeId, "password".getBytes(),
+            containerTokenIdentifier);
 
       StartContainerRequest scRequest = recordFactory
           .newRecordInstance(StartContainerRequest.class);
       scRequest.setContainerLaunchContext(containerLaunchContext);
-      scRequest.setContainer(container);
+      scRequest.setContainerToken(containerToken);
       try {
         proxy.startContainer(scRequest);
       } catch (Exception e) {
@@ -138,9 +141,6 @@ public class TestContainerLaunchRPC {
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request)
         throws YarnRemoteException, IOException {
-      StartContainerResponse response = recordFactory
-          .newRecordInstance(StartContainerResponse.class);
-      status = recordFactory.newRecordInstance(ContainerStatus.class);
       try {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(10000);
@@ -148,10 +148,7 @@ public class TestContainerLaunchRPC {
         LOG.error(e);
         throw new YarnRemoteException(e);
       }
-      status.setState(ContainerState.RUNNING);
-      status.setContainerId(request.getContainer().getId());
-      status.setExitStatus(0);
-      return response;
+      throw new YarnRemoteException("Shouldn't happen!!");
     }
 
     @Override

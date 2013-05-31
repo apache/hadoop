@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.io.File;
 import java.io.IOException;
 
@@ -30,7 +27,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -80,7 +76,12 @@ public class TestEventFlow {
 
     YarnConfiguration conf = new YarnConfiguration();
     
-    Context context = new NMContext(new NMContainerTokenSecretManager(conf));
+    Context context = new NMContext(new NMContainerTokenSecretManager(conf)) {
+      @Override
+      public int getHttpPort() {
+        return 1234;
+      }
+    };
 
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
@@ -132,10 +133,7 @@ public class TestEventFlow {
     applicationAttemptId.setApplicationId(applicationId);
     applicationAttemptId.setAttemptId(0);
     cID.setApplicationAttemptId(applicationAttemptId);
-    Container mockContainer = mock(Container.class);
-    when(mockContainer.getId()).thenReturn(cID);
     Resource r = BuilderUtils.newResource(1024, 1);
-    when(mockContainer.getResource()).thenReturn(r);
     String user = "testing";
     String host = "127.0.0.1";
     int port = 1234;
@@ -143,11 +141,10 @@ public class TestEventFlow {
         BuilderUtils.newContainerToken(cID, host, port, user, r,
           System.currentTimeMillis() + 10000L, 123, "password".getBytes(),
           SIMULATED_RM_IDENTIFIER);
-    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest request = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(launchContext);
-    request.setContainer(mockContainer);
+    request.setContainerToken(containerToken);
     containerManager.startContainer(request);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cID,

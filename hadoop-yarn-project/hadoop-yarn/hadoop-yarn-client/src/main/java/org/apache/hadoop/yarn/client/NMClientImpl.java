@@ -212,7 +212,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
       try {
         StartContainerRequest startRequest =
             Records.newRecord(StartContainerRequest.class);
-        startRequest.setContainer(container);
+        startRequest.setContainerToken(container.getContainerToken());
         startRequest.setContainerLaunchContext(containerLaunchContext);
         startResponse = containerManager.startContainer(startRequest);
         if (LOG.isDebugEnabled()) {

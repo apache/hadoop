@@ -42,6 +42,13 @@ public interface Context {
    */
   NodeId getNodeId();
 
+  /**
+   * Return the node http-address. Usable only after the Webserver is started.
+   * 
+   * @return the http-port
+   */
+  int getHttpPort();
+
   ConcurrentMap<ApplicationId, Application> getApplications();
 
   ConcurrentMap<ContainerId, Container> getContainers();
