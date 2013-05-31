@@ -154,7 +154,7 @@ public class FileOutputCommitter extends OutputCommitter {
    * @param appAttemptId the ID of the application attempt for this job.
    * @return the path to store job attempt data.
    */
-  private Path getJobAttemptPath(int appAttemptId) {
+  protected Path getJobAttemptPath(int appAttemptId) {
     return getJobAttemptPath(appAttemptId, getOutputPath());
   }
   
@@ -232,7 +232,7 @@ public class FileOutputCommitter extends OutputCommitter {
    * @param context the context of any task.
    * @return the path where the output of a committed task is stored.
    */
-  private Path getCommittedTaskPath(int appAttemptId, TaskAttemptContext context) {
+  protected Path getCommittedTaskPath(int appAttemptId, TaskAttemptContext context) {
     return new Path(getJobAttemptPath(appAttemptId),
         String.valueOf(context.getTaskAttemptID().getTaskID()));
   }
