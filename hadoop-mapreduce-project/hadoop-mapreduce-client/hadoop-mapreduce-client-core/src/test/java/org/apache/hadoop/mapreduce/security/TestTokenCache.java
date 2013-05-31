@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -167,5 +168,29 @@ public class TestTokenCache {
     conf.set(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY, "foo");
     TokenCache.cleanUpTokenReferral(conf);
     assertNull(conf.get(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY));
+  }
+  
+  @Test
+  public void testGetTokensForNamenodes() throws IOException,
+      URISyntaxException {
+    Path TEST_ROOT_DIR =
+        new Path(System.getProperty("test.build.data", "test/build/data"));
+    // ick, but need fq path minus file:/
+    String binaryTokenFile =
+        FileSystem.getLocal(conf)
+          .makeQualified(new Path(TEST_ROOT_DIR, "tokenFile")).toUri()
+          .getPath();
+
+    MockFileSystem fs1 = createFileSystemForServiceName("service1");
+    Credentials creds = new Credentials();
+    Token<?> token1 = fs1.getDelegationToken(renewer);
+    creds.addToken(token1.getService(), token1);
+    // wait to set, else the obtain tokens call above will fail with FNF
+    conf.set(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY, binaryTokenFile);
+    creds.writeTokenStorageFile(new Path(binaryTokenFile), conf);
+    TokenCache.obtainTokensForNamenodesInternal(fs1, creds, conf);
+    String fs_addr = fs1.getCanonicalServiceName();
+    Token<?> nnt = TokenCache.getDelegationToken(creds, fs_addr);
+    assertNotNull("Token for nn is null", nnt);
   }
 }

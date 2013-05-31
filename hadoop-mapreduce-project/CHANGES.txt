@@ -252,6 +252,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5176. Add annotation for tagging tasks as responsive to
     preemption. (Carlo Curino, cdouglas)
 
+    MAPREDUCE-5275. Bring back a couple of APIs in mapreduce.security.TokenCache
+    for binary compatibility with 1.x mapreduce APIs. (Mayank Bansal via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
