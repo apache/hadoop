@@ -1214,7 +1214,7 @@ public class MRAppMaster extends CompositeService {
               Integer.parseInt(nodeHttpPortString), appSubmitTime);
       ShutdownHookManager.get().addShutdownHook(
         new MRAppMasterShutdownHook(appMaster), SHUTDOWN_HOOK_PRIORITY);
-      YarnConfiguration conf = new YarnConfiguration(new JobConf());
+      JobConf conf = new JobConf(new YarnConfiguration());
       conf.addResource(new Path(MRJobConfig.JOB_CONF_FILE));
       String jobUserName = System
           .getenv(ApplicationConstants.Environment.USER.name());
@@ -1261,11 +1261,14 @@ public class MRAppMaster extends CompositeService {
   }
 
   protected static void initAndStartAppMaster(final MRAppMaster appMaster,
-      final YarnConfiguration conf, String jobUserName) throws IOException,
+      final JobConf conf, String jobUserName) throws IOException,
       InterruptedException {
     UserGroupInformation.setConfiguration(conf);
+    Credentials credentials =
+        UserGroupInformation.getCurrentUser().getCredentials();
     UserGroupInformation appMasterUgi = UserGroupInformation
         .createRemoteUser(jobUserName);
+    conf.getCredentials().addAll(credentials);
     appMasterUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
