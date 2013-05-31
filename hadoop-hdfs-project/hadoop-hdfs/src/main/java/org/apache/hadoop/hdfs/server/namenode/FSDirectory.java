@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.FSLimitException.IllegalNameException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -696,11 +695,13 @@ public class FSDirectory implements Closeable {
           // its reference number here
           final INode originalChild = withCount.getReferredINode();
           srcChild = originalChild;
+          srcChild.setLocalName(srcChildName);
         } else {
           withCount.removeReference(oldSrcChild.asReference());
           final INodeReference originalRef = new INodeReference.DstReference(
               srcParent, withCount, srcRefDstSnapshot);
           srcChild = originalRef;
+          withCount.getReferredINode().setLocalName(srcChildName);
         }
         
         if (isSrcInSnapshot) {
@@ -980,11 +981,13 @@ public class FSDirectory implements Closeable {
           // its reference number here
           final INode originalChild = withCount.getReferredINode();
           srcChild = originalChild;
+          srcChild.setLocalName(srcChildName);
         } else {
           withCount.removeReference(oldSrcChild.asReference());
           final INodeReference originalRef = new INodeReference.DstReference(
               srcParent, withCount, srcRefDstSnapshot);
           srcChild = originalRef;
+          withCount.getReferredINode().setLocalName(srcChildName);
         }
         
         if (srcParent instanceof INodeDirectoryWithSnapshot) {
@@ -2070,20 +2073,20 @@ public class FSDirectory implements Closeable {
 
   /** Verify if the snapshot name is legal. */
   void verifySnapshotName(String snapshotName, String path)
-      throws PathComponentTooLongException, IllegalNameException {
+      throws PathComponentTooLongException {
     final byte[] bytes = DFSUtil.string2Bytes(snapshotName);
     verifyINodeName(bytes);
     verifyMaxComponentLength(bytes, path, 0);
   }
   
   /** Verify if the inode name is legal. */
-  void verifyINodeName(byte[] childName) throws IllegalNameException {
+  void verifyINodeName(byte[] childName) throws HadoopIllegalArgumentException {
     if (Arrays.equals(HdfsConstants.DOT_SNAPSHOT_DIR_BYTES, childName)) {
       String s = "\"" + HdfsConstants.DOT_SNAPSHOT_DIR + "\" is a reserved name.";
       if (!ready) {
         s += "  Please rename it before upgrade.";
       }
-      throw new IllegalNameException(s);
+      throw new HadoopIllegalArgumentException(s);
     }
   }
 
@@ -2208,7 +2211,7 @@ public class FSDirectory implements Closeable {
     try {
       return addLastINode(inodesInPath, i, false);
     } catch (QuotaExceededException e) {
-      NameNode.LOG.warn("FSDirectory.addChildNoQuotaCheck - unexpected", e); 
+      NameNode.LOG.warn("FSDirectory.addChildNoQuotaCheck - unexpected", e);
     }
     return false;
   }

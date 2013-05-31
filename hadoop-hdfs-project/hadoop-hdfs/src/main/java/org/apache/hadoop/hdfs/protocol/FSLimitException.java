@@ -97,15 +97,4 @@ public abstract class FSLimitException extends QuotaExceededException {
       " is exceeded: limit=" + quota + " items=" + count; 
     }
   }
-
-  /** The given name is illegal. */
-  public static final class IllegalNameException extends FSLimitException {
-    public static final long serialVersionUID = 1L;
-    
-    public IllegalNameException() {}
-
-    public IllegalNameException(String msg) {
-      super(msg);
-    }
-  }
 }

@@ -780,6 +780,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4863. The root directory should be added to the snapshottable 
     directory list while loading fsimage. (jing9)
 
+    HDFS-4848. copyFromLocal and renaming a file to ".snapshot" should output 
+    that ".snapshot" is a reserved name. (Jing Zhao via brandonli)
+
 Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
