@@ -90,14 +90,17 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 
 /**
@@ -512,12 +515,19 @@ public class MRApp extends MRAppMaster {
 
      @Override
       public void handle(ContainerAllocatorEvent event) {
-        ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
-        cId.setApplicationAttemptId(getContext().getApplicationAttemptId());
-        cId.setId(containerCount++);
+        ContainerId cId =
+            ContainerId.newInstance(getContext().getApplicationAttemptId(),
+              containerCount++);
         NodeId nodeId = NodeId.newInstance(NM_HOST, NM_PORT);
+        Resource resource = Resource.newInstance(1234, 2);
+        ContainerTokenIdentifier containerTokenIdentifier =
+            new ContainerTokenIdentifier(cId, nodeId.toString(), "user",
+              resource, System.currentTimeMillis() + 10000, 42, 42);
+        ContainerToken containerToken =
+            BuilderUtils.newContainerToken(nodeId, "password".getBytes(),
+              containerTokenIdentifier);
         Container container = Container.newInstance(cId, nodeId,
-            NM_HOST + ":" + NM_HTTP_PORT, null, null, null);
+            NM_HOST + ":" + NM_HTTP_PORT, resource, null, containerToken);
         JobID id = TypeConverter.fromYarn(applicationId);
         JobId jobId = TypeConverter.toYarn(id);
         getContext().getEventHandler().handle(new JobHistoryEvent(jobId, 
