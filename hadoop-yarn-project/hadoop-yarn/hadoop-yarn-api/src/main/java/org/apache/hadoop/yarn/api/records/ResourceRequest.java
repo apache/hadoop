@@ -155,6 +155,44 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   @Stable
   public abstract void setNumContainers(int numContainers);
 
+  /**
+   * Get whether locality relaxation is enabled with this
+   * <code>ResourceRequest</code>. Defaults to true.
+   * 
+   * @return whether locality relaxation is enabled with this
+   * <code>ResourceRequest</code>.
+   */
+  @Public
+  @Stable
+  public abstract boolean getRelaxLocality();
+  
+  /**
+   * For a request at a network hierarchy level, set whether locality can be relaxed
+   * to that level and beyond.
+   * 
+   * If the flag is off on a rack-level <code>ResourceRequest</code>,
+   * containers at that request's priority will not be assigned to nodes on that
+   * request's rack unless requests specifically for those nodes have also been
+   * submitted.
+   * 
+   * If the flag is off on an {@link ResourceRequest#ANY}-level
+   * <code>ResourceRequest</code>, containers at that request's priority will
+   * only be assigned on racks for which specific requests have also been
+   * submitted.
+   * 
+   * For example, to request a container strictly on a specific node, the
+   * corresponding rack-level and any-level requests should have locality
+   * relaxation set to false.  Similarly, to request a container strictly on a
+   * specific rack, the corresponding any-level request should have locality
+   * relaxation set to false.
+   * 
+   * @param relaxLocality whether locality relaxation is enabled with this
+   * <code>ResourceRequest</code>.
+   */
+  @Public
+  @Stable
+  public abstract void setRelaxLocality(boolean relaxLocality);
+  
   @Override
   public int hashCode() {
     final int prime = 2153;

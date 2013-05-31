@@ -76,6 +76,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-422. Add a NM Client library to help application-writers. (Zhijie Shen
     via vinodkv)
 
+    YARN-392. Make it possible to specify hard locality constraints in resource
+    requests. (sandyr via tucu)
+
   IMPROVEMENTS
 
     YARN-365. Change NM heartbeat handling to not generate a scheduler event

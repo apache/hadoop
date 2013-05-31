@@ -316,6 +316,11 @@ public class AppSchedulable extends Schedulable {
         ResourceRequest localRequest = app.getResourceRequest(priority,
             node.getHostName());
         
+        if (localRequest != null && !localRequest.getRelaxLocality()) {
+          LOG.warn("Relax locality off is not supported on local request: "
+              + localRequest);
+        }
+        
         NodeType allowedLocality = app.getAllowedLocalityLevel(priority,
             scheduler.getNumClusterNodes(), scheduler.getNodeLocalityThreshold(),
             scheduler.getRackLocalityThreshold());
@@ -324,6 +329,10 @@ public class AppSchedulable extends Schedulable {
             && localRequest != null && localRequest.getNumContainers() != 0) {
           return assignContainer(node, priority,
               localRequest, NodeType.NODE_LOCAL, reserved);
+        }
+        
+        if (rackLocalRequest != null && !rackLocalRequest.getRelaxLocality()) {
+          continue;
         }
 
         if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
@@ -335,6 +344,10 @@ public class AppSchedulable extends Schedulable {
 
         ResourceRequest offSwitchRequest = app.getResourceRequest(priority,
             ResourceRequest.ANY);
+        if (offSwitchRequest != null && !offSwitchRequest.getRelaxLocality()) {
+          continue;
+        }
+        
         if (offSwitchRequest != null && offSwitchRequest.getNumContainers() != 0
             && allowedLocality.equals(NodeType.OFF_SWITCH)) {
           return assignContainer(node, priority, offSwitchRequest,
@@ -359,10 +372,23 @@ public class AppSchedulable extends Schedulable {
    * given node, if the node had full space.
    */
   public boolean hasContainerForNode(Priority prio, FSSchedulerNode node) {
-    // TODO: add checks stuff about node specific scheduling here
-    ResourceRequest request = app.getResourceRequest(prio, ResourceRequest.ANY);
-    return request.getNumContainers() > 0 && 
+    ResourceRequest anyRequest = app.getResourceRequest(prio, ResourceRequest.ANY);
+    ResourceRequest rackRequest = app.getResourceRequest(prio, node.getRackName());
+    ResourceRequest nodeRequest = app.getResourceRequest(prio, node.getHostName());
+
+    return
+        // There must be outstanding requests at the given priority:
+        anyRequest != null && anyRequest.getNumContainers() > 0 &&
+        // If locality relaxation is turned off at *-level, there must be a
+        // non-zero request for the node's rack:
+        (anyRequest.getRelaxLocality() ||
+            (rackRequest != null && rackRequest.getNumContainers() > 0)) &&
+        // If locality relaxation is turned off at rack-level, there must be a
+        // non-zero request at the node:
+        (rackRequest == null || rackRequest.getRelaxLocality() ||
+            (nodeRequest != null && nodeRequest.getNumContainers() > 0)) &&
+        // The requested container must be able to fit on the node:
         Resources.lessThanOrEqual(RESOURCE_CALCULATOR, null,
-            request.getCapability(), node.getRMNode().getTotalCapability());
+            anyRequest.getCapability(), node.getRMNode().getTotalCapability());
   }
 }
