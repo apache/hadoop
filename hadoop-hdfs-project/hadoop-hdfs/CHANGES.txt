@@ -122,6 +122,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4698. Provide client-side metrics for remote reads, local reads, and
     short-circuit reads. (Colin Patrick McCabe via atm)
 
+    HDFS-4826. TestNestedSnapshots times out due to repeated slow edit log
+    flushes when running on virtualized disk.  (Chris Nauroth via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
