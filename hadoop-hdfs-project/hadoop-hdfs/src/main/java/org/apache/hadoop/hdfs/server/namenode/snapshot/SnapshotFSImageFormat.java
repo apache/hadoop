@@ -127,7 +127,7 @@ public class SnapshotFSImageFormat {
     
     // 3. Load snapshotINode 
     final INodeFile snapshotINode = in.readBoolean()?
-        loader.loadINodeWithLocalName(true, in).asFile(): null;
+        loader.loadINodeWithLocalName(true, in, false).asFile(): null;
     
     return new FileDiff(snapshot, snapshotINode, posterior, fileSize);
   }
@@ -194,7 +194,7 @@ public class SnapshotFSImageFormat {
     int deletedSize = in.readInt();
     List<INode> deletedList = new ArrayList<INode>(deletedSize);
     for (int i = 0; i < deletedSize; i++) {
-      final INode deleted = loader.loadINodeWithLocalName(true, in);
+      final INode deleted = loader.loadINodeWithLocalName(true, in, true);
       deletedList.add(deleted);
       // set parent: the parent field of an INode in the deleted list is not 
       // useful, but set the parent here to be consistent with the original 
@@ -246,8 +246,8 @@ public class SnapshotFSImageFormat {
   }
   
   /**
-   * Load the snapshotINode field of {@link SnapshotDiff}.
-   * @param snapshot The Snapshot associated with the {@link SnapshotDiff}.
+   * Load the snapshotINode field of {@link AbstractINodeDiff}.
+   * @param snapshot The Snapshot associated with the {@link AbstractINodeDiff}.
    * @param in The {@link DataInput} to read.
    * @param loader The {@link Loader} instance that this loading procedure is 
    *               using.
@@ -263,7 +263,7 @@ public class SnapshotFSImageFormat {
     } else {
       // another boolean is used to indicate whether snapshotINode is non-null
       return in.readBoolean()?
-          loader.loadINodeWithLocalName(true, in).asDirectory(): null;
+          loader.loadINodeWithLocalName(true, in, false).asDirectory(): null;
     }
   }
    
@@ -348,7 +348,8 @@ public class SnapshotFSImageFormat {
 
       final INodeReference.WithCount withCount;
       if (firstReferred) {
-        final INode referred = loader.loadINodeWithLocalName(isSnapshotINode, in);
+        final INode referred = loader.loadINodeWithLocalName(isSnapshotINode,
+            in, true);
         withCount = new INodeReference.WithCount(null, referred);
         referenceMap.put(withCount.getId(), withCount);
       } else {

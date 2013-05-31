@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,6 +41,8 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.log4j.Level;
@@ -162,6 +165,43 @@ public class TestFSImageWithSnapshot {
     }
   }
   
+  /**
+   * Test when there is snapshot taken on root
+   */
+  @Test
+  public void testSnapshotOnRoot() throws Exception {
+    final Path root = new Path("/");
+    hdfs.allowSnapshot(root);
+    hdfs.createSnapshot(root, "s1");
+    
+    cluster.shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).format(false)
+        .numDataNodes(REPLICATION).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+    
+    // save namespace and restart cluster
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    cluster.shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).format(false)
+        .numDataNodes(REPLICATION).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+    
+    INodeDirectorySnapshottable rootNode = 
+        (INodeDirectorySnapshottable) fsn.dir.getINode4Write(root.toString());
+    assertTrue("The children list of root should be empty", 
+        rootNode.getChildrenList(null).isEmpty());
+    // one snapshot on root: s1
+    List<DirectoryDiff> diffList = rootNode.getDiffs().asList();
+    assertEquals(1, diffList.size());
+    assertEquals("s1", diffList.get(0).getSnapshot().getRoot().getLocalName());
+  }
+
   /**
    * Testing steps:
    * <pre>
