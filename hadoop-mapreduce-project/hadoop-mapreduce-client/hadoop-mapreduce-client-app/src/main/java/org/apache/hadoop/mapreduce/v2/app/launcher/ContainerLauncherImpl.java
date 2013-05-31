@@ -154,7 +154,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         StartContainerRequest startRequest = Records
           .newRecord(StartContainerRequest.class);
         startRequest.setContainerLaunchContext(containerLaunchContext);
-        startRequest.setContainer(event.getAllocatedContainer());
+        startRequest.setContainerToken(event.getContainerToken());
         StartContainerResponse response = proxy.startContainer(startRequest);
 
         ByteBuffer portInfo =

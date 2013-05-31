@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
@@ -376,13 +377,12 @@ public class TestContainerLauncher {
     public StartContainerResponse startContainer(StartContainerRequest request)
         throws IOException {
 
+      ContainerTokenIdentifier containerTokenIdentifier =
+          BuilderUtils.newContainerTokenIdentifier(request.getContainerToken());
+
       // Validate that the container is what RM is giving.
-      Assert.assertEquals(MRApp.NM_HOST, request.getContainer().getNodeId()
-          .getHost());
-      Assert.assertEquals(MRApp.NM_PORT, request.getContainer().getNodeId()
-          .getPort());
-      Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_HTTP_PORT, request
-          .getContainer().getNodeHttpAddress());
+      Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_PORT,
+        containerTokenIdentifier.getNmHostAddress());
 
       StartContainerResponse response = recordFactory
           .newRecordInstance(StartContainerResponse.class);
@@ -395,7 +395,7 @@ public class TestContainerLauncher {
         throw new UndeclaredThrowableException(e);
       }
       status.setState(ContainerState.RUNNING);
-      status.setContainerId(request.getContainer().getId());
+      status.setContainerId(containerTokenIdentifier.getContainerID());
       status.setExitStatus(0);
       return response;
     }

@@ -310,6 +310,10 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5282. Updating MR App to use immutable ApplicationID after
     YARN-716. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-5286. Change MapReduce to use ContainerTokenIdentifier instead
+    of the entire Container in the startContainer call - YARN-684.
+    (Vinod Kumar Vavilapalli via sseth)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
