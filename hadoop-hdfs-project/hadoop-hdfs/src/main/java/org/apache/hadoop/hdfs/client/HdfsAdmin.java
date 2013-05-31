@@ -105,4 +105,20 @@ public class HdfsAdmin {
   public void clearSpaceQuota(Path src) throws IOException {
     dfs.setQuota(src, HdfsConstants.QUOTA_DONT_SET, HdfsConstants.QUOTA_RESET);
   }
+  
+  /**
+   * Allow snapshot on a directory.
+   * @param path The path of the directory where snapshots will be taken.
+   */
+  public void allowSnapshot(Path path) throws IOException {
+    dfs.allowSnapshot(path);
+  }
+  
+  /**
+   * Disallow snapshot on a directory.
+   * @param path The path of the snapshottable directory.
+   */
+  public void disallowSnapshot(Path path) throws IOException {
+    dfs.disallowSnapshot(path);
+  }
 }

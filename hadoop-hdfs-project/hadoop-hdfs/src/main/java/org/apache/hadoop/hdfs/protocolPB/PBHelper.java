@@ -30,23 +30,26 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
@@ -64,7 +67,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHe
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReportProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DataEncryptionKeyProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockWithLocationsProto;
@@ -73,6 +76,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointSignatureProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ContentSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CorruptFileBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DataEncryptionKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto.AdminState;
@@ -89,17 +93,21 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto.Builde
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto.NamenodeRoleProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RecoveringBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogManifestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto.NamenodeRoleProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportEntryProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectoryListingProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectoryStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
@@ -122,15 +130,16 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
+import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.ExactSizeInputStream;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
@@ -291,8 +300,8 @@ public class PBHelper {
 
   public static BlockKeyProto convert(BlockKey key) {
     byte[] encodedKey = key.getEncodedKey();
-    ByteString keyBytes = ByteString.copyFrom(encodedKey == null ? new byte[0]
-        : encodedKey);
+    ByteString keyBytes = ByteString.copyFrom(encodedKey == null ? 
+        DFSUtil.EMPTY_BYTES : encodedKey);
     return BlockKeyProto.newBuilder().setKeyId(key.getKeyId())
         .setKeyBytes(keyBytes).setExpiryDate(key.getExpiryDate()).build();
   }
@@ -1034,7 +1043,6 @@ public class PBHelper {
     return new EnumSetWritable<CreateFlag>(result);
   }
   
-  
   public static HdfsFileStatus convert(HdfsFileStatusProto fs) {
     if (fs == null)
       return null;
@@ -1050,6 +1058,25 @@ public class PBHelper {
         fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null);
   }
 
+  public static SnapshottableDirectoryStatus convert(
+      SnapshottableDirectoryStatusProto sdirStatusProto) {
+    if (sdirStatusProto == null) {
+      return null;
+    }
+    final HdfsFileStatusProto status = sdirStatusProto.getDirStatus();
+    return new SnapshottableDirectoryStatus(
+        status.getModificationTime(),
+        status.getAccessTime(),
+        PBHelper.convert(status.getPermission()),
+        status.getOwner(),
+        status.getGroup(),
+        status.getPath().toByteArray(),
+        status.getFileId(),
+        sdirStatusProto.getSnapshotNumber(),
+        sdirStatusProto.getSnapshotQuota(),
+        sdirStatusProto.getParentFullpath().toByteArray());
+  }
+  
   public static HdfsFileStatusProto convert(HdfsFileStatus fs) {
     if (fs == null)
       return null;
@@ -1082,6 +1109,25 @@ public class PBHelper {
         builder.setLocations(PBHelper.convert(locations));
       }
     }
+    return builder.build();
+  }
+  
+  public static SnapshottableDirectoryStatusProto convert(
+      SnapshottableDirectoryStatus status) {
+    if (status == null) {
+      return null;
+    }
+    int snapshotNumber = status.getSnapshotNumber();
+    int snapshotQuota = status.getSnapshotQuota();
+    byte[] parentFullPath = status.getParentFullPath();
+    ByteString parentFullPathBytes = ByteString.copyFrom(
+        parentFullPath == null ? DFSUtil.EMPTY_BYTES : parentFullPath);
+    HdfsFileStatusProto fs = convert(status.getDirStatus());
+    SnapshottableDirectoryStatusProto.Builder builder = 
+        SnapshottableDirectoryStatusProto
+        .newBuilder().setSnapshotNumber(snapshotNumber)
+        .setSnapshotQuota(snapshotQuota).setParentFullpath(parentFullPathBytes)
+        .setDirStatus(fs);
     return builder.build();
   }
   
@@ -1326,6 +1372,104 @@ public class PBHelper {
     return JournalInfoProto.newBuilder().setClusterID(j.getClusterId())
         .setLayoutVersion(j.getLayoutVersion())
         .setNamespaceID(j.getNamespaceId()).build();
+  } 
+  
+  public static SnapshottableDirectoryStatus[] convert(
+      SnapshottableDirectoryListingProto sdlp) {
+    if (sdlp == null)
+      return null;
+    List<SnapshottableDirectoryStatusProto> list = sdlp
+        .getSnapshottableDirListingList();
+    if (list.isEmpty()) {
+      return new SnapshottableDirectoryStatus[0];
+    } else {
+      SnapshottableDirectoryStatus[] result = 
+          new SnapshottableDirectoryStatus[list.size()];
+      for (int i = 0; i < list.size(); i++) {
+        result[i] = PBHelper.convert(list.get(i));
+      }
+      return result;
+    }
+  }
+  
+  public static SnapshottableDirectoryListingProto convert(
+      SnapshottableDirectoryStatus[] status) {
+    if (status == null)
+      return null;
+    SnapshottableDirectoryStatusProto[] protos = 
+        new SnapshottableDirectoryStatusProto[status.length];
+    for (int i = 0; i < status.length; i++) {
+      protos[i] = PBHelper.convert(status[i]);
+    }
+    List<SnapshottableDirectoryStatusProto> protoList = Arrays.asList(protos);
+    return SnapshottableDirectoryListingProto.newBuilder()
+        .addAllSnapshottableDirListing(protoList).build();
+  }
+  
+  public static DiffReportEntry convert(SnapshotDiffReportEntryProto entry) {
+    if (entry == null) {
+      return null;
+    }
+    DiffType type = DiffType.getTypeFromLabel(entry
+        .getModificationLabel());
+    return type == null ? null : 
+      new DiffReportEntry(type, entry.getFullpath().toByteArray());
+  }
+  
+  public static SnapshotDiffReportEntryProto convert(DiffReportEntry entry) {
+    if (entry == null) {
+      return null;
+    }
+    byte[] fullPath = entry.getRelativePath();
+    ByteString fullPathString = ByteString
+        .copyFrom(fullPath == null ? DFSUtil.EMPTY_BYTES : fullPath);
+    
+    String modification = entry.getType().getLabel();
+    
+    SnapshotDiffReportEntryProto entryProto = SnapshotDiffReportEntryProto
+        .newBuilder().setFullpath(fullPathString)
+        .setModificationLabel(modification).build();
+    return entryProto;
+  }
+  
+  public static SnapshotDiffReport convert(SnapshotDiffReportProto reportProto) {
+    if (reportProto == null) {
+      return null;
+    }
+    String snapshotDir = reportProto.getSnapshotRoot();
+    String fromSnapshot = reportProto.getFromSnapshot();
+    String toSnapshot = reportProto.getToSnapshot();
+    List<SnapshotDiffReportEntryProto> list = reportProto
+        .getDiffReportEntriesList();
+    List<DiffReportEntry> entries = new ArrayList<DiffReportEntry>();
+    for (SnapshotDiffReportEntryProto entryProto : list) {
+      DiffReportEntry entry = convert(entryProto);
+      if (entry != null)
+        entries.add(entry);
+    }
+    return new SnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot,
+        entries);
+  }
+  
+  public static SnapshotDiffReportProto convert(SnapshotDiffReport report) {
+    if (report == null) {
+      return null;
+    }
+    List<DiffReportEntry> entries = report.getDiffList();
+    List<SnapshotDiffReportEntryProto> entryProtos = 
+        new ArrayList<SnapshotDiffReportEntryProto>();
+    for (DiffReportEntry entry : entries) {
+      SnapshotDiffReportEntryProto entryProto = convert(entry);
+      if (entryProto != null)
+        entryProtos.add(entryProto);
+    }
+    
+    SnapshotDiffReportProto reportProto = SnapshotDiffReportProto.newBuilder()
+        .setSnapshotRoot(report.getSnapshotRoot())
+        .setFromSnapshot(report.getFromSnapshot())
+        .setToSnapshot(report.getLaterSnapshotName())
+        .addAllDiffReportEntries(entryProtos).build();
+    return reportProto;
   }
 
   public static DataChecksum.Type convert(HdfsProtos.ChecksumTypeProto type) {

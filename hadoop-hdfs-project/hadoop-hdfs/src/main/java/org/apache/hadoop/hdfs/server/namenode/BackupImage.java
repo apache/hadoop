@@ -230,7 +230,7 @@ public class BackupImage extends FSImage {
       }
       lastAppliedTxId = logLoader.getLastAppliedTxId();
 
-      namesystem.dir.updateCountForINodeWithQuota(); // inefficient!
+      FSImage.updateCountForQuota(namesystem.dir.rootDir); // inefficient!
     } finally {
       backupInputStream.clear();
     }

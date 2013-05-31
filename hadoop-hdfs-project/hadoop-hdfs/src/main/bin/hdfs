@@ -53,6 +53,9 @@ function print_usage(){
   echo "  fetchdt              fetch a delegation token from the NameNode"
   echo "  getconf              get config values from configuration"
   echo "  groups               get the groups which users belong to"
+  echo "  snapshotDiff         diff two snapshots of a directory or diff the"
+  echo "                       current directory contents with a snapshot"
+  echo "  lsSnapshottableDir   list all snapshottable dirs owned by the current user"
   echo "						Use -help to see options"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
@@ -142,6 +145,10 @@ elif [ "$COMMAND" = "getconf" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.GetConf
 elif [ "$COMMAND" = "groups" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.GetGroups
+elif [ "$COMMAND" = "snapshotDiff" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
+elif [ "$COMMAND" = "lsSnapshottableDir" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
 else
   CLASS="$COMMAND"
 fi

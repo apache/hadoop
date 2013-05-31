@@ -56,7 +56,12 @@ public enum FSEditLogOpCodes {
   OP_REASSIGN_LEASE             ((byte) 22),
   OP_END_LOG_SEGMENT            ((byte) 23),
   OP_START_LOG_SEGMENT          ((byte) 24),
-  OP_UPDATE_BLOCKS              ((byte) 25);
+  OP_UPDATE_BLOCKS              ((byte) 25),
+  OP_CREATE_SNAPSHOT            ((byte) 26),
+  OP_DELETE_SNAPSHOT            ((byte) 27),
+  OP_RENAME_SNAPSHOT            ((byte) 28),
+  OP_ALLOW_SNAPSHOT             ((byte) 29),
+  OP_DISALLOW_SNAPSHOT          ((byte) 30);
 
   private byte opCode;
 
