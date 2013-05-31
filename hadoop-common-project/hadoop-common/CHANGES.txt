@@ -87,6 +87,8 @@ Release 2.0.5-beta - UNRELEASED
     helping YARN ResourceManager to reuse code for RM restart. (Jian He via
     vinodkv)
 
+    HADOOP-7391 Document Interface Classification from HADOOP-5073 (sanjay Radia)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
