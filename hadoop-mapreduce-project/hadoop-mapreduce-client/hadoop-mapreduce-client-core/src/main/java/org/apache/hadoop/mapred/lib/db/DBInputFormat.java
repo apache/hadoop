@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.Job;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+@SuppressWarnings("deprecation")
 public class DBInputFormat<T  extends DBWritable>
     extends org.apache.hadoop.mapreduce.lib.db.DBInputFormat<T> 
     implements InputFormat<LongWritable, T>, JobConfigurable {
@@ -48,6 +49,17 @@ public class DBInputFormat<T  extends DBWritable>
   protected class DBRecordReader extends
       org.apache.hadoop.mapreduce.lib.db.DBRecordReader<T>
       implements RecordReader<LongWritable, T> {
+    /**
+     * The constructor is kept to be compatible with M/R 1.x
+     *
+     * @param split The InputSplit to read data for
+     * @throws SQLException
+     */
+    protected DBRecordReader(DBInputSplit split, Class<T> inputClass,
+        JobConf job) throws SQLException {
+      super(split, inputClass, job, connection, dbConf, conditions, fieldNames, tableName);
+    }
+
     /**
      * @param split The InputSplit to read data for
      * @throws SQLException 
@@ -152,7 +164,6 @@ public class DBInputFormat<T  extends DBWritable>
   }
 
   /** {@inheritDoc} */
-  @SuppressWarnings("unchecked")
   public RecordReader<LongWritable, T> getRecordReader(InputSplit split,
       JobConf job, Reporter reporter) throws IOException {
 

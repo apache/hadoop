@@ -255,6 +255,10 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5275. Bring back a couple of APIs in mapreduce.security.TokenCache
     for binary compatibility with 1.x mapreduce APIs. (Mayank Bansal via vinodkv)
 
+    MAPREDUCE-5231. Bring back a constructor in mapred's
+    DBInputFormat.DBRecordReader for binary compatibility with 1.x mapred APIs.
+    (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 

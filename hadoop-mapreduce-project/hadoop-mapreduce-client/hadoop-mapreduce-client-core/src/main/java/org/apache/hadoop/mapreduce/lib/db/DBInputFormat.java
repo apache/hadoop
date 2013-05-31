@@ -32,6 +32,10 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -41,11 +45,6 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
 /**
  * A InputFormat that reads input data from an SQL table.
  * <p>
@@ -62,7 +61,7 @@ public class DBInputFormat<T extends DBWritable>
 
   private static final Log LOG = LogFactory.getLog(DBInputFormat.class);
   
-  private String dbProductName = "DEFAULT";
+  protected String dbProductName = "DEFAULT";
 
   /**
    * A Class that does nothing, implementing DBWritable
@@ -144,15 +143,15 @@ public class DBInputFormat<T extends DBWritable>
     }
   }
 
-  private String conditions;
+  protected String conditions;
 
-  private Connection connection;
+  protected Connection connection;
 
-  private String tableName;
+  protected String tableName;
 
-  private String[] fieldNames;
+  protected String[] fieldNames;
 
-  private DBConfiguration dbConf;
+  protected DBConfiguration dbConf;
 
   /** {@inheritDoc} */
   public void setConf(Configuration conf) {
@@ -230,7 +229,6 @@ public class DBInputFormat<T extends DBWritable>
   }
 
   /** {@inheritDoc} */
-  @SuppressWarnings("unchecked")
   public RecordReader<LongWritable, T> createRecordReader(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {  
 
