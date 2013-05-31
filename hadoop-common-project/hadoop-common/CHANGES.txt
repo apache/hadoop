@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 2.0.4.1-alpha - UNRELEASED
+Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -11,9 +11,6 @@ Release 2.0.4.1-alpha - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-
-  MAPREDUCE-5240 inside of FileOutputCommitter the initialized Credentials cache
-  appears to be empty. (vinodkv)
 
   HADOOP-9407. commons-daemon 1.0.3 dependency has bad group id causing
   build issues. (Sangjin Lee via suresh)
