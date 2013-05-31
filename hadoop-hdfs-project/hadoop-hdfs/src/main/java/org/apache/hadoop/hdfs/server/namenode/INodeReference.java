@@ -493,6 +493,11 @@ public abstract class INodeReference extends INode {
       if (prior == null) {
         prior = getPriorSnapshot(this);
       }
+      
+      if (prior != null
+          && Snapshot.ID_COMPARATOR.compare(snapshot, prior) <= 0) {
+        return Quota.Counts.newInstance();
+      }
 
       Quota.Counts counts = getReferredINode().cleanSubtree(snapshot, prior,
           collectedBlocks, removedINodes);
@@ -596,7 +601,11 @@ public abstract class INodeReference extends INode {
         if (prior == null) {
           prior = getPriorSnapshot(this);
         }
-        if (snapshot != null && snapshot.equals(prior)) {
+        // if prior is not null, and prior is not before the to-be-deleted 
+        // snapshot, we can quit here and leave the snapshot deletion work to 
+        // the src tree of rename
+        if (snapshot != null && prior != null
+            && Snapshot.ID_COMPARATOR.compare(snapshot, prior) <= 0) {
           return Quota.Counts.newInstance();
         }
         return getReferredINode().cleanSubtree(snapshot, prior,
