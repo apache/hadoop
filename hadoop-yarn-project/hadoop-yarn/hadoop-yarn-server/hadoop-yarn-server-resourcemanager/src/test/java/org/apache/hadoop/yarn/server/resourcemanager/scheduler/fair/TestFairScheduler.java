@@ -151,7 +151,7 @@ public class TestFairScheduler {
 
 
   private ResourceRequest createResourceRequest(int memory, String host,
-      int priority, int numContainers) {
+      int priority, int numContainers, boolean relaxLocality) {
     ResourceRequest request = recordFactory.newRecordInstance(ResourceRequest.class);
     request.setCapability(Resources.createResource(memory));
     request.setHostName(host);
@@ -159,6 +159,7 @@ public class TestFairScheduler {
     Priority prio = recordFactory.newRecordInstance(Priority.class);
     prio.setPriority(priority);
     request.setPriority(prio);
+    request.setRelaxLocality(relaxLocality);
     return request;
   }
 
@@ -182,7 +183,7 @@ public class TestFairScheduler {
     scheduler.addApplication(id, queueId, userId);
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request = createResourceRequest(memory, ResourceRequest.ANY,
-        priority, numContainers);
+        priority, numContainers, true);
     ask.add(request);
     scheduler.allocate(id, ask,  new ArrayList<ContainerId>());
     return id;
@@ -190,9 +191,14 @@ public class TestFairScheduler {
   
   private void createSchedulingRequestExistingApplication(int memory, int priority,
       ApplicationAttemptId attId) {
-    List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request = createResourceRequest(memory, ResourceRequest.ANY,
-        priority, 1);
+        priority, 1, true);
+    createSchedulingRequestExistingApplication(request, attId);
+  }
+  
+  private void createSchedulingRequestExistingApplication(ResourceRequest request,
+      ApplicationAttemptId attId) {
+    List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ask.add(request);
     scheduler.allocate(attId, ask,  new ArrayList<ContainerId>());
   }
@@ -499,14 +505,16 @@ public class TestFairScheduler {
     // First ask, queue1 requests 1 large (minReqSize * 2).
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ResourceRequest request1 =
-        createResourceRequest(minReqSize * 2, ResourceRequest.ANY, 1, 1);
+        createResourceRequest(minReqSize * 2, ResourceRequest.ANY, 1, 1, true);
     ask1.add(request1);
     scheduler.allocate(id11, ask1, new ArrayList<ContainerId>());
 
     // Second ask, queue2 requests 1 large + (2 * minReqSize)
     List<ResourceRequest> ask2 = new ArrayList<ResourceRequest>();
-    ResourceRequest request2 = createResourceRequest(2 * minReqSize, "foo", 1, 1);
-    ResourceRequest request3 = createResourceRequest(minReqSize, "bar", 1, 2);
+    ResourceRequest request2 = createResourceRequest(2 * minReqSize, "foo", 1, 1,
+        false);
+    ResourceRequest request3 = createResourceRequest(minReqSize, "bar", 1, 2,
+        false);
     ask2.add(request2);
     ask2.add(request3);
     scheduler.allocate(id21, ask2, new ArrayList<ContainerId>());
@@ -514,7 +522,7 @@ public class TestFairScheduler {
     // Third ask, queue2 requests 1 large
     List<ResourceRequest> ask3 = new ArrayList<ResourceRequest>();
     ResourceRequest request4 =
-        createResourceRequest(2 * minReqSize, ResourceRequest.ANY, 1, 1);
+        createResourceRequest(2 * minReqSize, ResourceRequest.ANY, 1, 1, true);
     ask3.add(request4);
     scheduler.allocate(id22, ask3, new ArrayList<ContainerId>());
 
@@ -1408,12 +1416,12 @@ public class TestFairScheduler {
     // 1 request with 2 nodes on the same rack. another request with 1 node on
     // a different rack
     List<ResourceRequest> asks = new ArrayList<ResourceRequest>();
-    asks.add(createResourceRequest(1024, node1.getHostName(), 1, 1));
-    asks.add(createResourceRequest(1024, node2.getHostName(), 1, 1));
-    asks.add(createResourceRequest(1024, node3.getHostName(), 1, 1));
-    asks.add(createResourceRequest(1024, node1.getRackName(), 1, 1));
-    asks.add(createResourceRequest(1024, node3.getRackName(), 1, 1));
-    asks.add(createResourceRequest(1024, ResourceRequest.ANY, 1, 2));
+    asks.add(createResourceRequest(1024, node1.getHostName(), 1, 1, true));
+    asks.add(createResourceRequest(1024, node2.getHostName(), 1, 1, true));
+    asks.add(createResourceRequest(1024, node3.getHostName(), 1, 1, true));
+    asks.add(createResourceRequest(1024, node1.getRackName(), 1, 1, true));
+    asks.add(createResourceRequest(1024, node3.getRackName(), 1, 1, true));
+    asks.add(createResourceRequest(1024, ResourceRequest.ANY, 1, 2, true));
 
     scheduler.allocate(appId, asks, new ArrayList<ContainerId>());
     
@@ -1693,5 +1701,129 @@ public class TestFairScheduler {
     assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
     scheduler.update(); // update shouldn't change things
     assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
+}
+
+  @Test
+  public void testStrictLocality() {
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 2, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1",
+        "user1", 0);
+    
+    ResourceRequest nodeRequest = createResourceRequest(1024, node1.getHostName(), 1, 1, true);
+    ResourceRequest rackRequest = createResourceRequest(1024, node1.getRackName(), 1, 1, false);
+    ResourceRequest anyRequest = createResourceRequest(1024, ResourceRequest.ANY,
+        1, 1, false);
+    createSchedulingRequestExistingApplication(nodeRequest, attId1);
+    createSchedulingRequestExistingApplication(rackRequest, attId1);
+    createSchedulingRequestExistingApplication(anyRequest, attId1);
+
+    scheduler.update();
+
+    NodeUpdateSchedulerEvent node1UpdateEvent = new NodeUpdateSchedulerEvent(node1);
+    NodeUpdateSchedulerEvent node2UpdateEvent = new NodeUpdateSchedulerEvent(node2);
+
+    // no matter how many heartbeats, node2 should never get a container
+    FSSchedulerApp app = scheduler.applications.get(attId1);
+    for (int i = 0; i < 10; i++) {
+      scheduler.handle(node2UpdateEvent);
+      assertEquals(0, app.getLiveContainers().size());
+      assertEquals(0, app.getReservedContainers().size());
+    }
+    // then node1 should get the container
+    scheduler.handle(node1UpdateEvent);
+    assertEquals(1, app.getLiveContainers().size());
+  }
+  
+  @Test
+  public void testCancelStrictLocality() {
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 2, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1",
+        "user1", 0);
+    
+    ResourceRequest nodeRequest = createResourceRequest(1024, node1.getHostName(), 1, 1, true);
+    ResourceRequest rackRequest = createResourceRequest(1024, "rack1", 1, 1, false);
+    ResourceRequest anyRequest = createResourceRequest(1024, ResourceRequest.ANY,
+        1, 1, false);
+    createSchedulingRequestExistingApplication(nodeRequest, attId1);
+    createSchedulingRequestExistingApplication(rackRequest, attId1);
+    createSchedulingRequestExistingApplication(anyRequest, attId1);
+
+    scheduler.update();
+
+    NodeUpdateSchedulerEvent node2UpdateEvent = new NodeUpdateSchedulerEvent(node2);
+
+    // no matter how many heartbeats, node2 should never get a container
+    FSSchedulerApp app = scheduler.applications.get(attId1);
+    for (int i = 0; i < 10; i++) {
+      scheduler.handle(node2UpdateEvent);
+      assertEquals(0, app.getLiveContainers().size());
+    }
+    
+    // relax locality
+    List<ResourceRequest> update = Arrays.asList(
+        createResourceRequest(1024, node1.getHostName(), 1, 0, true),
+        createResourceRequest(1024, "rack1", 1, 0, true),
+        createResourceRequest(1024, ResourceRequest.ANY, 1, 1, true));
+    scheduler.allocate(attId1, update, new ArrayList<ContainerId>());
+    
+    // then node2 should get the container
+    scheduler.handle(node2UpdateEvent);
+    assertEquals(1, app.getLiveContainers().size());
+  }
+  
+  /**
+   * If we update our ask to strictly request a node, it doesn't make sense to keep
+   * a reservation on another.
+   */
+  @Test
+  public void testReservationsStrictLocality() {
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
+    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 2, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent2);
+
+    ApplicationAttemptId attId = createSchedulingRequest(1024, "queue1",
+        "user1", 0);
+    FSSchedulerApp app = scheduler.applications.get(attId);
+    
+    ResourceRequest nodeRequest = createResourceRequest(1024, node2.getHostName(), 1, 2, true);
+    ResourceRequest rackRequest = createResourceRequest(1024, "rack1", 1, 2, true);
+    ResourceRequest anyRequest = createResourceRequest(1024, ResourceRequest.ANY,
+        1, 2, false);
+    createSchedulingRequestExistingApplication(nodeRequest, attId);
+    createSchedulingRequestExistingApplication(rackRequest, attId);
+    createSchedulingRequestExistingApplication(anyRequest, attId);
+    
+    scheduler.update();
+
+    NodeUpdateSchedulerEvent nodeUpdateEvent = new NodeUpdateSchedulerEvent(node1);
+    scheduler.handle(nodeUpdateEvent);
+    assertEquals(1, app.getLiveContainers().size());
+    scheduler.handle(nodeUpdateEvent);
+    assertEquals(1, app.getReservedContainers().size());
+    
+    // now, make our request node-specific (on a different node)
+    rackRequest = createResourceRequest(1024, "rack1", 1, 1, false);
+    anyRequest = createResourceRequest(1024, ResourceRequest.ANY,
+        1, 1, false);
+    scheduler.allocate(attId, Arrays.asList(rackRequest, anyRequest),
+        new ArrayList<ContainerId>());
+
+    scheduler.handle(nodeUpdateEvent);
+    assertEquals(0, app.getReservedContainers().size());
   }
 }
