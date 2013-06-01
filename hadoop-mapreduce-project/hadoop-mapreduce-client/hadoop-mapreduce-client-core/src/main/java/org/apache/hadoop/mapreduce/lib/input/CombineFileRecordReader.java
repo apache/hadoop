@@ -46,7 +46,9 @@ public class CombineFileRecordReader<K, V> extends RecordReader<K, V> {
                                           Integer.class};
 
   protected CombineFileSplit split;
+  protected Class<? extends RecordReader<K,V>> rrClass;
   protected Constructor<? extends RecordReader<K,V>> rrConstructor;
+  protected FileSystem fs;
   protected TaskAttemptContext context;
   
   protected int idx;
@@ -109,6 +111,7 @@ public class CombineFileRecordReader<K, V> extends RecordReader<K, V> {
     throws IOException {
     this.split = split;
     this.context = context;
+    this.rrClass = rrClass;
     this.idx = 0;
     this.curReader = null;
     this.progress = 0;
