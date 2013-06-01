@@ -151,7 +151,7 @@ public class ApplicationMaster {
   private YarnRPC rpc;
 
   // Handle to communicate with the Resource Manager
-  private AMRMClientAsync resourceManager;
+  private AMRMClientAsync<ContainerRequest> resourceManager;
   
   // Application Attempt Id ( combination of attemptId and fail count )
   private ApplicationAttemptId appAttemptID;
@@ -442,7 +442,9 @@ public class ApplicationMaster {
 
     AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
     
-    resourceManager = new AMRMClientAsync(appAttemptID, 1000, allocListener);
+    resourceManager = new AMRMClientAsync<ContainerRequest>(appAttemptID, 
+                                                            1000, 
+                                                            allocListener);
     resourceManager.init(conf);
     resourceManager.start();
 
@@ -522,7 +524,8 @@ public class ApplicationMaster {
     FinalApplicationStatus appStatus;
     String appMessage = null;
     success = true;
-    if (numFailedContainers.get() == 0) {
+    if (numFailedContainers.get() == 0 && 
+        numCompletedContainers.get() == numTotalContainers) {
       appStatus = FinalApplicationStatus.SUCCEEDED;
     } else {
       appStatus = FinalApplicationStatus.FAILED;
@@ -594,11 +597,6 @@ public class ApplicationMaster {
         resourceManager.addContainerRequest(containerAsk);
       }
       
-      // set progress to deliver to RM on next heartbeat
-      float progress = (float) numCompletedContainers.get()
-          / numTotalContainers;
-      resourceManager.setProgress(progress);
-      
       if (numCompletedContainers.get() == numTotalContainers) {
         done = true;
       }
@@ -637,6 +635,19 @@ public class ApplicationMaster {
 
     @Override
     public void onNodesUpdated(List<NodeReport> updatedNodes) {}
+
+    @Override
+    public float getProgress() {
+      // set progress to deliver to RM on next heartbeat
+      float progress = (float) numCompletedContainers.get()
+          / numTotalContainers;
+      return progress;
+    }
+
+    @Override
+    public void onError(Exception e) {
+      done = true;
+    }
   }
 
   /**

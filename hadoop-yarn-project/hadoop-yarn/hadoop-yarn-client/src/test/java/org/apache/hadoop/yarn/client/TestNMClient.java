@@ -64,7 +64,7 @@ public class TestNMClient {
   Configuration conf = null;
   MiniYARNCluster yarnCluster = null;
   YarnClientImpl yarnClient = null;
-  AMRMClientImpl rmClient = null;
+  AMRMClientImpl<ContainerRequest> rmClient = null;
   NMClientImpl nmClient = null;
   List<NodeReport> nodeReports = null;
   ApplicationAttemptId attemptId = null;
@@ -136,7 +136,7 @@ public class TestNMClient {
     }
 
     // start am rm client
-    rmClient = new AMRMClientImpl(attemptId);
+    rmClient = new AMRMClientImpl<ContainerRequest>(attemptId);
     rmClient.init(conf);
     rmClient.start();
     assertNotNull(rmClient);
@@ -185,7 +185,8 @@ public class TestNMClient {
         null, null);
   }
 
-  private Set<Container> allocateContainers(AMRMClientImpl rmClient, int num)
+  private Set<Container> allocateContainers(
+      AMRMClientImpl<ContainerRequest> rmClient, int num)
       throws YarnRemoteException, IOException {
     // setup container request
     Resource capability = Resource.newInstance(1024, 0);
@@ -201,7 +202,8 @@ public class TestNMClient {
     }
 
     int containersRequestedAny = rmClient.remoteRequestsTable.get(priority)
-        .get(ResourceRequest.ANY).get(capability).getNumContainers();
+        .get(ResourceRequest.ANY).get(capability).remoteRequest
+        .getNumContainers();
 
     // RM should allocate container within 2 calls to allocate()
     int allocatedContainerCount = 0;
