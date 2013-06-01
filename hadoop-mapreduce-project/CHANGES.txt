@@ -133,6 +133,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5289. Updated MR App to use Token directly after YARN-717. (Jian He
     via vinodkv)
 
+    MAPREDUCE-5229. Put back FileOutputCommitter.TEMP_DIR_NAME in mapreduce for
+    binary compatibility with 1.x APIs. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 

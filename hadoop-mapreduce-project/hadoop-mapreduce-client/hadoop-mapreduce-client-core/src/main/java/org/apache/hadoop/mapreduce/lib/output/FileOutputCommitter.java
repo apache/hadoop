@@ -49,6 +49,13 @@ public class FileOutputCommitter extends OutputCommitter {
    * committed yet.
    */
   public static final String PENDING_DIR_NAME = "_temporary";
+  /**
+   * Temporary directory name 
+   *
+   * The static variable to be compatible with M/R 1.x
+   */
+  @Deprecated
+  protected static final String TEMP_DIR_NAME = PENDING_DIR_NAME;
   public static final String SUCCEEDED_FILE_NAME = "_SUCCESS";
   public static final String SUCCESSFUL_JOB_OUTPUT_DIR_MARKER = 
     "mapreduce.fileoutputcommitter.marksuccessfuljobs";
