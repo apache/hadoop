@@ -58,6 +58,9 @@ Release 2.0.5-beta - UNRELEASED
     ContainerTokenIdentifier instead of the entire Container.
     (Vinod Kumar Vavilapalli via sseth)
 
+    YARN-735. Make ApplicationAttemptId, ContaienrId and NodeId immutable.
+    (Jian He via sseth)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

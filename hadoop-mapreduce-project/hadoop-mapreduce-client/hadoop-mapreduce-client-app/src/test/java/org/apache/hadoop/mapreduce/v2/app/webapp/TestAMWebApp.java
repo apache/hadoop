@@ -55,7 +55,7 @@ public class TestAMWebApp {
 
     TestAppContext(int appid, int numJobs, int numTasks, int numAttempts) {
       appID = MockJobs.newAppID(appid);
-      appAttemptID = MockJobs.newAppAttemptID(appID, 0);
+      appAttemptID = ApplicationAttemptId.newInstance(appID, 0);
       jobs = MockJobs.newJobs(appID, numJobs, numTasks, numAttempts);
     }
 

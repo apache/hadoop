@@ -164,15 +164,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     // ////// Construct the Container-id
     ApplicationId appId = ApplicationId.newInstance(0, 0);
-    ApplicationAttemptId appAttemptId = 
-        recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
-    ContainerId cId = 
-        recordFactory.newRecordInstance(ContainerId.class);
-    int port = 12345;
-    cId.setApplicationAttemptId(appAttemptId);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
 
+    int port = 12345;
+    ContainerId cId = ContainerId.newInstance(appAttemptId, 0);
     Map<String, String> userSetEnv = new HashMap<String, String>();
     userSetEnv.put(Environment.CONTAINER_ID.name(), "user_set_container_id");
     userSetEnv.put(Environment.NM_HOST.name(), "user_set_NM_HOST");
@@ -321,14 +317,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     // ////// Construct the Container-id
     ApplicationId appId = ApplicationId.newInstance(1, 1);
-    ApplicationAttemptId appAttemptId = 
-        recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
-    ContainerId cId = 
-        recordFactory.newRecordInstance(ContainerId.class);
-    cId.setApplicationAttemptId(appAttemptId);
-
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cId = ContainerId.newInstance(appAttemptId, 0);
     File processStartFile =
         new File(tmpDir, "pid.txt").getAbsoluteFile();
 

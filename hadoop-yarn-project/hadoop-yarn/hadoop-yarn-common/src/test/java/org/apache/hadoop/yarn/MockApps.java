@@ -20,10 +20,8 @@ package org.apache.hadoop.yarn;
 
 import java.util.Iterator;
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.collect.Iterators;
 
@@ -63,13 +61,6 @@ public class MockApps {
 
   public static ApplicationId newAppID(int i) {
     return ApplicationId.newInstance(TS, i);
-  }
-
-  public static ApplicationAttemptId newAppAttemptID(ApplicationId appId, int i) {
-    ApplicationAttemptId id = Records.newRecord(ApplicationAttemptId.class);
-    id.setApplicationId(appId);
-    id.setAttemptId(i);
-    return id;
   }
 
   public static YarnApplicationState newAppState() {

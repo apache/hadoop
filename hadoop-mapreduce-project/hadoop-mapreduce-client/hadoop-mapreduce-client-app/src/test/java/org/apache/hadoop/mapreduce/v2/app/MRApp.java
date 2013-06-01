@@ -94,8 +94,6 @@ import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.state.StateMachine;
@@ -121,9 +119,6 @@ public class MRApp extends MRAppMaster {
   public static String NM_HOST = "localhost";
   public static int NM_PORT = 1234;
   public static int NM_HTTP_PORT = 8042;
-
-  private static final RecordFactory recordFactory =
-      RecordFactoryProvider.getRecordFactory(null);
 
   //if true, tasks complete automatically as soon as they are launched
   protected boolean autoComplete = false;
@@ -154,9 +149,7 @@ public class MRApp extends MRAppMaster {
   private static ApplicationAttemptId getApplicationAttemptId(
       ApplicationId applicationId, int startCount) {
     ApplicationAttemptId applicationAttemptId =
-        recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    applicationAttemptId.setApplicationId(applicationId);
-    applicationAttemptId.setAttemptId(startCount);
+        ApplicationAttemptId.newInstance(applicationId, startCount);
     return applicationAttemptId;
   }
   

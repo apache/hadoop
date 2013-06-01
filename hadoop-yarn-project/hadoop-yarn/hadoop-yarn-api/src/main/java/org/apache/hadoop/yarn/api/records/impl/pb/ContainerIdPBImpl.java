@@ -22,14 +22,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProtoOrBuilder;
+
+import com.google.common.base.Preconditions;
 
     
 public class ContainerIdPBImpl extends ContainerId {
-  ContainerIdProto proto = ContainerIdProto.getDefaultInstance();
+  ContainerIdProto proto = null;
   ContainerIdProto.Builder builder = null;
-  boolean viaProto = false;
-  
   private ApplicationAttemptId applicationAttemptId = null;
 
   public ContainerIdPBImpl() {
@@ -38,71 +37,37 @@ public class ContainerIdPBImpl extends ContainerId {
 
   public ContainerIdPBImpl(ContainerIdProto proto) {
     this.proto = proto;
-    viaProto = true;
+    this.applicationAttemptId = convertFromProtoFormat(proto.getAppAttemptId());
   }
   
-  public synchronized ContainerIdProto getProto() {
-    mergeLocalToProto();
-    proto = viaProto ? proto : builder.build();
-    viaProto = true;
+  public ContainerIdProto getProto() {
     return proto;
   }
 
-  private synchronized void mergeLocalToBuilder() {
-    if (this.applicationAttemptId != null && !
-        ((ApplicationAttemptIdPBImpl)applicationAttemptId).getProto().equals(
-            builder.getAppAttemptId())) {
-      builder.setAppAttemptId(convertToProtoFormat(this.applicationAttemptId));
-    }
-  }
-
-  private synchronized void mergeLocalToProto() {
-    if (viaProto) 
-      maybeInitBuilder();
-    mergeLocalToBuilder();
-    proto = builder.build();
-    viaProto = true;
-  }
-
-  private synchronized void maybeInitBuilder() {
-    if (viaProto || builder == null) {
-      builder = ContainerIdProto.newBuilder(proto);
-    }
-    viaProto = false;
-  }
-    
-  
   @Override
-  public synchronized int getId() {
-    ContainerIdProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getId());
+  public int getId() {
+    Preconditions.checkNotNull(proto);
+    return proto.getId();
   }
 
   @Override
-  public synchronized void setId(int id) {
-    maybeInitBuilder();
+  protected void setId(int id) {
+    Preconditions.checkNotNull(builder);
     builder.setId((id));
   }
 
 
   @Override
-  public synchronized ApplicationAttemptId getApplicationAttemptId() {
-    ContainerIdProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.applicationAttemptId != null) {
-      return this.applicationAttemptId;
-    }
-    if (!p.hasAppAttemptId()) {
-      return null;
-    }
-    this.applicationAttemptId = convertFromProtoFormat(p.getAppAttemptId());
+  public ApplicationAttemptId getApplicationAttemptId() {
     return this.applicationAttemptId;
   }
 
   @Override
-  public synchronized void setApplicationAttemptId(ApplicationAttemptId atId) {
-    maybeInitBuilder();
-    if (atId == null) 
-      builder.clearAppAttemptId();
+  protected void setApplicationAttemptId(ApplicationAttemptId atId) {
+    if (atId != null) {
+      Preconditions.checkNotNull(builder);
+      builder.setAppAttemptId(convertToProtoFormat(atId));
+    }
     this.applicationAttemptId = atId;
   }
 
@@ -114,5 +79,11 @@ public class ContainerIdPBImpl extends ContainerId {
   private ApplicationAttemptIdProto convertToProtoFormat(
       ApplicationAttemptId t) {
     return ((ApplicationAttemptIdPBImpl)t).getProto();
+  }
+
+  @Override
+  protected void build() {
+    proto = builder.build();
+    builder = null;
   }
 }  

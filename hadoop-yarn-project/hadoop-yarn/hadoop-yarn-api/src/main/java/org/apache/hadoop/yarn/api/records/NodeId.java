@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.api.records;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -40,6 +39,7 @@ public abstract class NodeId implements Comparable<NodeId> {
     NodeId nodeId = Records.newRecord(NodeId.class);
     nodeId.setHost(host);
     nodeId.setPort(port);
+    nodeId.build();
     return nodeId;
   }
 
@@ -52,8 +52,7 @@ public abstract class NodeId implements Comparable<NodeId> {
   public abstract String getHost();
   
   @Private
-  @Unstable
-  public abstract void setHost(String host);
+  protected abstract void setHost(String host);
 
   /**
    * Get the <em>port</em> for communicating with the node.
@@ -64,8 +63,7 @@ public abstract class NodeId implements Comparable<NodeId> {
   public abstract int getPort();
   
   @Private
-  @Unstable
-  public abstract void setPort(int port);
+  protected abstract void setPort(int port);
 
   @Override
   public String toString() {
@@ -111,4 +109,5 @@ public abstract class NodeId implements Comparable<NodeId> {
     return hostCompare;
   }
 
+  protected abstract void build();
 }

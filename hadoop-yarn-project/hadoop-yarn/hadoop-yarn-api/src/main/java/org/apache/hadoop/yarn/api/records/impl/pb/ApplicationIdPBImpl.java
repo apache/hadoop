@@ -49,6 +49,7 @@ public class ApplicationIdPBImpl extends ApplicationId {
 
   @Override
   protected void setId(int id) {
+    Preconditions.checkNotNull(builder);
     builder.setId(id);
   }
   @Override
@@ -59,11 +60,13 @@ public class ApplicationIdPBImpl extends ApplicationId {
 
   @Override
   protected void setClusterTimestamp(long clusterTimestamp) {
+    Preconditions.checkNotNull(builder);
     builder.setClusterTimestamp((clusterTimestamp));
   }
 
   @Override
   protected void build() {
     proto = builder.build();
+    builder = null;
   }
 }

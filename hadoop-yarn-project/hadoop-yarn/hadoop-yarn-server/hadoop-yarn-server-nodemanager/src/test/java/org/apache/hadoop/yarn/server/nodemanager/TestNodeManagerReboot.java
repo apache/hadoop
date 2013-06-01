@@ -243,13 +243,8 @@ public class TestNodeManagerReboot {
 
   private ContainerId createContainerId() {
     ApplicationId appId = ApplicationId.newInstance(0, 0);
-    ApplicationAttemptId appAttemptId =
-        Records.newRecord(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
-    ContainerId containerId =
-        Records.newRecord(ContainerId.class);
-    containerId.setApplicationAttemptId(appAttemptId);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 0);
     return containerId;
   }
 

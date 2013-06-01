@@ -194,8 +194,8 @@ public class TestRMAppAttemptTransitions {
     
 
     ApplicationId applicationId = MockApps.newAppID(appId++);
-    ApplicationAttemptId applicationAttemptId = 
-        MockApps.newAppAttemptID(applicationId, 0);
+    ApplicationAttemptId applicationAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, 0);
     
     final String user = MockApps.newUserName();
     final String queue = MockApps.newQueue();

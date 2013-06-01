@@ -23,7 +23,6 @@ import java.text.NumberFormat;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -40,6 +39,7 @@ public abstract class ContainerId implements Comparable<ContainerId>{
     ContainerId id = Records.newRecord(ContainerId.class);
     id.setId(containerId);
     id.setApplicationAttemptId(appAttemptId);
+    id.build();
     return id;
   }
 
@@ -54,8 +54,7 @@ public abstract class ContainerId implements Comparable<ContainerId>{
   public abstract ApplicationAttemptId getApplicationAttemptId();
   
   @Private
-  @Unstable
-  public abstract void setApplicationAttemptId(ApplicationAttemptId atId);
+  protected abstract void setApplicationAttemptId(ApplicationAttemptId atId);
 
   /**
    * Get the identifier of the <code>ContainerId</code>.
@@ -66,8 +65,7 @@ public abstract class ContainerId implements Comparable<ContainerId>{
   public abstract int getId();
 
   @Private
-  @Unstable
-  public abstract void setId(int id);
+  protected abstract void setId(int id);
  
   
   // TODO: fail the app submission if attempts are more than 10 or something
@@ -146,4 +144,6 @@ public abstract class ContainerId implements Comparable<ContainerId>{
     sb.append(containerIdFormat.get().format(getId()));
     return sb.toString();
   }
+
+  protected abstract void build();
 }

@@ -55,7 +55,6 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecret
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.CompositeService;
-import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -288,7 +287,7 @@ public class NodeManager extends CompositeService
 
   public static class NMContext implements Context {
 
-    private final NodeId nodeId = Records.newRecord(NodeId.class);
+    private NodeId nodeId = null;
     private final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
     private final ConcurrentMap<ContainerId, Container> containers =
@@ -350,6 +349,10 @@ public class NodeManager extends CompositeService
 
     public void setWebServer(WebServer webServer) {
       this.webServer = webServer;
+    }
+
+    public void setNodeId(NodeId nodeId) {
+      this.nodeId = nodeId;
     }
   }
 

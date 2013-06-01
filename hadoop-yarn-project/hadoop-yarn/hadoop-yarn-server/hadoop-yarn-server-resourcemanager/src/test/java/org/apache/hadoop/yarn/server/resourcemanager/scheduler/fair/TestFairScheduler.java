@@ -142,10 +142,9 @@ public class TestFairScheduler {
   }
 
   private ApplicationAttemptId createAppAttemptId(int appId, int attemptId) {
-    ApplicationAttemptId attId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
     ApplicationId appIdImpl = ApplicationId.newInstance(0, appId);
-    attId.setAttemptId(attemptId);
-    attId.setApplicationId(appIdImpl);
+    ApplicationAttemptId attId =
+        ApplicationAttemptId.newInstance(appIdImpl, attemptId);
     return attId;
   }
 
@@ -1642,9 +1641,8 @@ public class TestFairScheduler {
     assertEquals("The application doesn't reach SUBMITTED.",
         RMAppState.SUBMITTED, application.getState());
 
-    ApplicationAttemptId attId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    attId.setAttemptId(this.ATTEMPT_ID++);
-    attId.setApplicationId(applicationId);
+    ApplicationAttemptId attId =
+        ApplicationAttemptId.newInstance(applicationId, this.ATTEMPT_ID++);
     scheduler.addApplication(attId, queue, user);
 
     numTries = 0;

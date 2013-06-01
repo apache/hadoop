@@ -95,11 +95,9 @@ public class TestFifoScheduler {
   }
   
   private ApplicationAttemptId createAppAttemptId(int appId, int attemptId) {
-    ApplicationAttemptId attId = recordFactory
-        .newRecordInstance(ApplicationAttemptId.class);
     ApplicationId appIdImpl = ApplicationId.newInstance(0, appId);
-    attId.setAttemptId(attemptId);
-    attId.setApplicationId(appIdImpl);
+    ApplicationAttemptId attId =
+        ApplicationAttemptId.newInstance(appIdImpl, attemptId);
     return attId;
   }
 

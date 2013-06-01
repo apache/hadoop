@@ -23,22 +23,17 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSSchedulerApp;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestFSSchedulerApp {
-  private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   private ApplicationAttemptId createAppAttemptId(int appId, int attemptId) {
-    ApplicationAttemptId attId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
     ApplicationId appIdImpl = ApplicationId.newInstance(0, appId);
-    attId.setAttemptId(attemptId);
-    attId.setApplicationId(appIdImpl);
+    ApplicationAttemptId attId =
+        ApplicationAttemptId.newInstance(appIdImpl, attemptId);
     return attId;
   }
 

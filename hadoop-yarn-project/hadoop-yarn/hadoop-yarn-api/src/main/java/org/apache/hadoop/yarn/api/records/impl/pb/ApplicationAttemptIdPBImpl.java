@@ -21,15 +21,13 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 
+import com.google.common.base.Preconditions;
+
 public class ApplicationAttemptIdPBImpl extends ApplicationAttemptId {
-  ApplicationAttemptIdProto proto = ApplicationAttemptIdProto
-      .getDefaultInstance();
+  ApplicationAttemptIdProto proto = null;
   ApplicationAttemptIdProto.Builder builder = null;
-  boolean viaProto = false;
-  
   private ApplicationId applicationId = null;
 
   public ApplicationAttemptIdPBImpl() {
@@ -38,69 +36,36 @@ public class ApplicationAttemptIdPBImpl extends ApplicationAttemptId {
 
   public ApplicationAttemptIdPBImpl(ApplicationAttemptIdProto proto) {
     this.proto = proto;
-    viaProto = true;
+    this.applicationId = convertFromProtoFormat(proto.getApplicationId());
   }
   
-  public synchronized ApplicationAttemptIdProto getProto() {
-    mergeLocalToProto();
-    proto = viaProto ? proto : builder.build();
-    viaProto = true;
+  public ApplicationAttemptIdProto getProto() {
     return proto;
   }
 
-  private synchronized void mergeLocalToBuilder() {
-    if (this.applicationId != null
-        && !((ApplicationIdPBImpl) applicationId).getProto().equals(
-            builder.getApplicationId())) {
-      builder.setApplicationId(convertToProtoFormat(this.applicationId));
-    }
-  }
-
-  private synchronized void mergeLocalToProto() {
-    if (viaProto) 
-      maybeInitBuilder();
-    mergeLocalToBuilder();
-    proto = builder.build();
-    viaProto = true;
-  }
-
-  private synchronized void maybeInitBuilder() {
-    if (viaProto || builder == null) {
-      builder = ApplicationAttemptIdProto.newBuilder(proto);
-    }
-    viaProto = false;
-  }
-    
-  
   @Override
-  public synchronized int getAttemptId() {
-    ApplicationAttemptIdProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getAttemptId());
+  public int getAttemptId() {
+    Preconditions.checkNotNull(proto);
+    return proto.getAttemptId();
   }
 
   @Override
-  public synchronized void setAttemptId(int attemptId) {
-    maybeInitBuilder();
-    builder.setAttemptId((attemptId));
+  protected void setAttemptId(int attemptId) {
+    Preconditions.checkNotNull(builder);
+    builder.setAttemptId(attemptId);
   }
+
   @Override
-  public synchronized ApplicationId getApplicationId() {
-    ApplicationAttemptIdProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.applicationId != null) {
-      return this.applicationId;
-    }
-    if (!p.hasApplicationId()) {
-      return null;
-    }
-    this.applicationId = convertFromProtoFormat(p.getApplicationId());
+  public ApplicationId getApplicationId() {
     return this.applicationId;
   }
 
   @Override
-  public synchronized void setApplicationId(ApplicationId appId) {
-    maybeInitBuilder();
-    if (appId == null) 
-      builder.clearApplicationId();
+  public void setApplicationId(ApplicationId appId) {
+    if (appId != null) {
+      Preconditions.checkNotNull(builder);
+      builder.setApplicationId(convertToProtoFormat(appId));
+    }
     this.applicationId = appId;
   }
 
@@ -110,5 +75,11 @@ public class ApplicationAttemptIdPBImpl extends ApplicationAttemptId {
 
   private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
     return ((ApplicationIdPBImpl)t).getProto();
+  }
+
+  @Override
+  protected void build() {
+    proto = builder.build();
+    builder = null;
   }
 }  

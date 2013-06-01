@@ -126,13 +126,11 @@ public class TestEventFlow {
 
     ContainerLaunchContext launchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    ContainerId cID = recordFactory.newRecordInstance(ContainerId.class);
     ApplicationId applicationId = ApplicationId.newInstance(0, 0);
-    ApplicationAttemptId applicationAttemptId = 
-        recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    applicationAttemptId.setApplicationId(applicationId);
-    applicationAttemptId.setAttemptId(0);
-    cID.setApplicationAttemptId(applicationAttemptId);
+    ApplicationAttemptId applicationAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, 0);
+    ContainerId cID = ContainerId.newInstance(applicationAttemptId, 0);
+
     Resource r = BuilderUtils.newResource(1024, 1);
     String user = "testing";
     String host = "127.0.0.1";
