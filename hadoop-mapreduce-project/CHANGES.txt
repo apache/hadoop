@@ -136,6 +136,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5229. Put back FileOutputCommitter.TEMP_DIR_NAME in mapreduce for
     binary compatibility with 1.x APIs. (Zhijie Shen via vinodkv)
 
+    MAPREDUCE-5274. Bring back SecureShuffleUtils.toHex in mapreduce for binary
+    compatibility with 1.x APIs. (Mayank Bansal via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
