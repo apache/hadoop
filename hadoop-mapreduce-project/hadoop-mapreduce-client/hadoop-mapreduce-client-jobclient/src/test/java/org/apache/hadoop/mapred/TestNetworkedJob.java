@@ -206,6 +206,7 @@ public class TestNetworkedJob {
       assertEquals(status.getTaskTrackers(), 2);
       assertEquals(status.getTTExpiryInterval(), 0);
       assertEquals(status.getJobTrackerStatus(), JobTrackerStatus.RUNNING);
+      assertEquals(status.getGraylistedTrackers(), 0);
 
       // test read and write
       ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
