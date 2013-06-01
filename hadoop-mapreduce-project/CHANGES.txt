@@ -137,7 +137,7 @@ Trunk (Unreleased)
     MAPREDUCE-5191. TestQueue#testQueue fails with timeout on Windows. (Ivan
     Mitic via hitesh)
 
-Release 2.0.5-beta - UNRELEASED
+Release 2.1.0-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -493,6 +493,20 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5177. Use common utils FileUtil#setReadable/Writable/Executable & 
     FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
+Release 2.0.5-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+  MAPREDUCE-5240 inside of FileOutputCommitter the initialized Credentials cache
+  appears to be empty. (vinodkv)
 
 Release 2.0.4-alpha - 2013-04-25
 

@@ -262,7 +262,7 @@ Trunk (Unreleased)
     HDFS-4687. TestDelegationTokenForProxyUser#testWebHdfsDoAs is flaky with
     JDK7. (Andrew Wang via atm)
 
-Release 2.0.5-beta - UNRELEASED
+Release 2.1.0-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -1041,6 +1041,18 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4848. copyFromLocal and renaming a file to ".snapshot" should output 
     that ".snapshot" is a reserved name. (Jing Zhao via brandonli)
+
+Release 2.0.5-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.4-alpha - 2013-04-25
 
