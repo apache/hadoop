@@ -259,6 +259,10 @@ Release 2.0.5-beta - UNRELEASED
     DBInputFormat.DBRecordReader for binary compatibility with 1.x mapred APIs.
     (Zhijie Shen via vinodkv)
 
+    MAPREDUCE-5273. Bring back a couple of protected variables in mapred and
+    mapreduce CombineFileRecordReader for binary compatibility with 1.x APIs.
+    (Mayank Bansal via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
