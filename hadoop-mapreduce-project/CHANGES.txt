@@ -263,6 +263,10 @@ Release 2.0.5-beta - UNRELEASED
     mapreduce CombineFileRecordReader for binary compatibility with 1.x APIs.
     (Mayank Bansal via vinodkv)
 
+    MAPREDUCE-5280. Bring back removed constructor and a method in mapreduce
+    ClusterMetrics for binary compatibility with 1.x APIs. (Mayank Bansal via
+    vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 

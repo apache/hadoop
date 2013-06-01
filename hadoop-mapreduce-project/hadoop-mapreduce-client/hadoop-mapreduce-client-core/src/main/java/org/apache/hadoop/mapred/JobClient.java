@@ -711,19 +711,18 @@ public class JobClient extends CLI {
   public ClusterStatus getClusterStatus() throws IOException {
     try {
       return clientUgi.doAs(new PrivilegedExceptionAction<ClusterStatus>() {
-        public ClusterStatus run()  throws IOException, InterruptedException {
+        public ClusterStatus run() throws IOException, InterruptedException {
           ClusterMetrics metrics = cluster.getClusterStatus();
-          return new ClusterStatus(metrics.getTaskTrackerCount(),
-              metrics.getBlackListedTaskTrackerCount(), cluster.getTaskTrackerExpiryInterval(),
-              metrics.getOccupiedMapSlots(),
-              metrics.getOccupiedReduceSlots(), metrics.getMapSlotCapacity(),
-              metrics.getReduceSlotCapacity(),
-              cluster.getJobTrackerStatus(),
-              metrics.getDecommissionedTaskTrackerCount());
+          return new ClusterStatus(metrics.getTaskTrackerCount(), metrics
+            .getBlackListedTaskTrackerCount(), cluster
+            .getTaskTrackerExpiryInterval(), metrics.getOccupiedMapSlots(),
+            metrics.getOccupiedReduceSlots(), metrics.getMapSlotCapacity(),
+            metrics.getReduceSlotCapacity(), cluster.getJobTrackerStatus(),
+            metrics.getDecommissionedTaskTrackerCount(), metrics
+              .getGrayListedTaskTrackerCount());
         }
       });
-    }
-      catch (InterruptedException ie) {
+    } catch (InterruptedException ie) {
       throw new IOException(ie);
     }
   }

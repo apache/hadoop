@@ -69,18 +69,28 @@ public class ClusterMetrics implements Writable {
   private int totalJobSubmissions;
   private int numTrackers;
   private int numBlacklistedTrackers;
+  private int numGraylistedTrackers;
   private int numDecommissionedTrackers;
 
   public ClusterMetrics() {
   }
   
   public ClusterMetrics(int runningMaps, int runningReduces,
-      int occupiedMapSlots, int occupiedReduceSlots,
-      int reservedMapSlots, int reservedReduceSlots,
-      int mapSlots, int reduceSlots, 
-      int totalJobSubmissions,
-      int numTrackers, int numBlacklistedTrackers,
+      int occupiedMapSlots, int occupiedReduceSlots, int reservedMapSlots,
+      int reservedReduceSlots, int mapSlots, int reduceSlots,
+      int totalJobSubmissions, int numTrackers, int numBlacklistedTrackers,
       int numDecommissionedNodes) {
+    this(runningMaps, runningReduces, occupiedMapSlots, occupiedReduceSlots,
+      reservedMapSlots, reservedReduceSlots, mapSlots, reduceSlots,
+      totalJobSubmissions, numTrackers, numBlacklistedTrackers, 0,
+      numDecommissionedNodes);
+  }
+
+  public ClusterMetrics(int runningMaps, int runningReduces,
+      int occupiedMapSlots, int occupiedReduceSlots, int reservedMapSlots,
+      int reservedReduceSlots, int mapSlots, int reduceSlots,
+      int totalJobSubmissions, int numTrackers, int numBlacklistedTrackers,
+      int numGraylistedTrackers, int numDecommissionedNodes) {
     this.runningMaps = runningMaps;
     this.runningReduces = runningReduces;
     this.occupiedMapSlots = occupiedMapSlots;
@@ -92,6 +102,7 @@ public class ClusterMetrics implements Writable {
     this.totalJobSubmissions = totalJobSubmissions;
     this.numTrackers = numTrackers;
     this.numBlacklistedTrackers = numBlacklistedTrackers;
+    this.numGraylistedTrackers = numGraylistedTrackers;
     this.numDecommissionedTrackers = numDecommissionedNodes;
   }
 
@@ -195,6 +206,15 @@ public class ClusterMetrics implements Writable {
   }
   
   /**
+   * Get the number of graylisted trackers in the cluster.
+   * 
+   * @return graylisted tracker count
+   */
+  public int getGrayListedTaskTrackerCount() {
+    return numGraylistedTrackers;
+  }
+  
+  /**
    * Get the number of decommissioned trackers in the cluster.
    * 
    * @return decommissioned tracker count
@@ -216,6 +236,7 @@ public class ClusterMetrics implements Writable {
     totalJobSubmissions = in.readInt();
     numTrackers = in.readInt();
     numBlacklistedTrackers = in.readInt();
+    numGraylistedTrackers = in.readInt();
     numDecommissionedTrackers = in.readInt();
   }
 
@@ -232,6 +253,7 @@ public class ClusterMetrics implements Writable {
     out.writeInt(totalJobSubmissions);
     out.writeInt(numTrackers);
     out.writeInt(numBlacklistedTrackers);
+    out.writeInt(numGraylistedTrackers);
     out.writeInt(numDecommissionedTrackers);
   }
 
