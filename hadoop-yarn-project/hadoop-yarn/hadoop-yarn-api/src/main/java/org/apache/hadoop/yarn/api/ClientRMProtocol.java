@@ -50,9 +50,9 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
@@ -273,7 +273,7 @@ public interface ClientRMProtocol {
    * containers to be able to talk to the service using those tokens.
    * 
    *  <p> The <code>ResourceManager</code> responds with the delegation token
-   *  {@link DelegationToken} that can be used by the client to speak to this
+   *  {@link Token} that can be used by the client to speak to this
    *  service.
    * @param request request to get a delegation token for the client.
    * @return delegation token that can be used to talk to this service

@@ -21,10 +21,10 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProtoOrBuilder;
@@ -42,7 +42,7 @@ public class ContainerPBImpl extends Container {
   private NodeId nodeId = null;
   private Resource resource = null;
   private Priority priority = null;
-  private ContainerToken containerToken = null;
+  private Token containerToken = null;
   
   public ContainerPBImpl() {
     builder = ContainerProto.newBuilder();
@@ -98,7 +98,7 @@ public class ContainerPBImpl extends Container {
       builder.setPriority(convertToProtoFormat(this.priority));
     }
     if (this.containerToken != null
-        && !((ContainerTokenPBImpl) this.containerToken).getProto().equals(
+        && !((TokenPBImpl) this.containerToken).getProto().equals(
             builder.getContainerToken())) {
       builder.setContainerToken(convertToProtoFormat(this.containerToken));
     }
@@ -224,7 +224,7 @@ public class ContainerPBImpl extends Container {
   }
 
   @Override
-  public ContainerToken getContainerToken() {
+  public Token getContainerToken() {
     ContainerProtoOrBuilder p = viaProto ? proto : builder;
     if (this.containerToken != null) {
       return this.containerToken;
@@ -237,7 +237,7 @@ public class ContainerPBImpl extends Container {
   }
 
   @Override
-  public void setContainerToken(ContainerToken containerToken) {
+  public void setContainerToken(Token containerToken) {
     maybeInitBuilder();
     if (containerToken == null) 
       builder.clearContainerToken();
@@ -276,12 +276,12 @@ public class ContainerPBImpl extends Container {
     return ((PriorityPBImpl)p).getProto();
   }
   
-  private ContainerTokenPBImpl convertFromProtoFormat(TokenProto p) {
-    return new ContainerTokenPBImpl(p);
+  private TokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new TokenPBImpl(p);
   }
 
-  private TokenProto convertToProtoFormat(ContainerToken t) {
-    return ((ContainerTokenPBImpl)t).getProto();
+  private TokenProto convertToProtoFormat(Token t) {
+    return ((TokenPBImpl)t).getProto();
   }
 
   public String toString() {

@@ -79,7 +79,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -344,7 +343,7 @@ public class HistoryClientService extends AbstractService {
       Token<MRDelegationTokenIdentifier> realJHSToken =
           new Token<MRDelegationTokenIdentifier>(tokenIdentifier,
               jhsDTSecretManager);
-      DelegationToken mrDToken = BuilderUtils.newDelegationToken(
+      org.apache.hadoop.yarn.api.records.Token mrDToken = BuilderUtils.newDelegationToken(
         realJHSToken.getIdentifier(), realJHSToken.getKind().toString(),
         realJHSToken.getPassword(), realJHSToken.getService().toString());
       response.setDelegationToken(mrDToken);
@@ -359,7 +358,7 @@ public class HistoryClientService extends AbstractService {
               "Delegation Token can be renewed only with kerberos authentication");
         }
 
-        DelegationToken protoToken = request.getDelegationToken();
+        org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
         Token<MRDelegationTokenIdentifier> token =
             new Token<MRDelegationTokenIdentifier>(
                 protoToken.getIdentifier().array(), protoToken.getPassword()
@@ -382,7 +381,7 @@ public class HistoryClientService extends AbstractService {
               "Delegation Token can be cancelled only with kerberos authentication");
         }
 
-        DelegationToken protoToken = request.getDelegationToken();
+        org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
         Token<MRDelegationTokenIdentifier> token =
             new Token<MRDelegationTokenIdentifier>(
                 protoToken.getIdentifier().array(), protoToken.getPassword()

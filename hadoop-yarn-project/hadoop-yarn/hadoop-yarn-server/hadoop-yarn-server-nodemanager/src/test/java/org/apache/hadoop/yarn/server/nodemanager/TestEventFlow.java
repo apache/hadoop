@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -135,7 +135,7 @@ public class TestEventFlow {
     String user = "testing";
     String host = "127.0.0.1";
     int port = 1234;
-    ContainerToken containerToken =
+    Token containerToken =
         BuilderUtils.newContainerToken(cID, host, port, user, r,
           System.currentTimeMillis() + 10000L, 123, "password".getBytes(),
           SIMULATED_RM_IDENTIFIER);

@@ -36,7 +36,6 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -56,7 +55,7 @@ public class MRDelegationTokenRenewer extends TokenRenewer {
   public long renew(Token<?> token, Configuration conf) throws IOException,
       InterruptedException {
 
-    DelegationToken dToken = BuilderUtils.newDelegationToken(
+    org.apache.hadoop.yarn.api.records.Token dToken = BuilderUtils.newDelegationToken(
         token.getIdentifier(), token.getKind().toString(), token.getPassword(),
         token.getService().toString());
 
@@ -77,7 +76,7 @@ public class MRDelegationTokenRenewer extends TokenRenewer {
   public void cancel(Token<?> token, Configuration conf) throws IOException,
       InterruptedException {
 
-    DelegationToken dToken = BuilderUtils.newDelegationToken(
+    org.apache.hadoop.yarn.api.records.Token dToken = BuilderUtils.newDelegationToken(
         token.getIdentifier(), token.getKind().toString(), token.getPassword(),
         token.getService().toString());
 

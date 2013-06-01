@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AbstractEvent;
@@ -288,7 +288,7 @@ public class NMClientAsync extends AbstractService {
   }
 
   public void stopContainer(ContainerId containerId, NodeId nodeId,
-      ContainerToken containerToken) {
+      Token containerToken) {
     if (containers.get(containerId) == null) {
       callbackHandler.onStopContainerError(containerId,
           RPCUtil.getRemoteException("Container " + containerId +
@@ -305,7 +305,7 @@ public class NMClientAsync extends AbstractService {
   }
 
   public void getContainerStatus(ContainerId containerId, NodeId nodeId,
-      ContainerToken containerToken) {
+      Token containerToken) {
     try {
       events.put(new ContainerEvent(containerId, nodeId, containerToken,
           ContainerEventType.QUERY_CONTAINER));
@@ -343,10 +343,10 @@ public class NMClientAsync extends AbstractService {
       extends AbstractEvent<ContainerEventType>{
     private ContainerId containerId;
     private NodeId nodeId;
-    private ContainerToken containerToken;
+    private Token containerToken;
 
     public ContainerEvent(ContainerId containerId, NodeId nodeId,
-        ContainerToken containerToken, ContainerEventType type) {
+        Token containerToken, ContainerEventType type) {
       super(type);
       this.containerId = containerId;
       this.nodeId = nodeId;
@@ -361,7 +361,7 @@ public class NMClientAsync extends AbstractService {
       return nodeId;
     }
 
-    public ContainerToken getContainerToken() {
+    public Token getContainerToken() {
       return containerToken;
     }
   }

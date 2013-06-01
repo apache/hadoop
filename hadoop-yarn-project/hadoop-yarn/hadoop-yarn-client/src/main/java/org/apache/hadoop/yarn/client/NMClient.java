@@ -28,8 +28,8 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.service.Service;
 
@@ -69,7 +69,7 @@ public interface NMClient extends Service {
    * @throws IOException
    */
   void stopContainer(ContainerId containerId, NodeId nodeId,
-      ContainerToken containerToken) throws YarnRemoteException, IOException;
+      Token containerToken) throws YarnRemoteException, IOException;
 
   /**
    * <p>Query the status of a container.</p>
@@ -83,7 +83,7 @@ public interface NMClient extends Service {
    * @throws IOException
    */
   ContainerStatus getContainerStatus(ContainerId containerId, NodeId nodeId,
-      ContainerToken containerToken) throws YarnRemoteException, IOException;
+      Token containerToken) throws YarnRemoteException, IOException;
 
   /**
    * <p>Set whether the containers that are started by this client, and are

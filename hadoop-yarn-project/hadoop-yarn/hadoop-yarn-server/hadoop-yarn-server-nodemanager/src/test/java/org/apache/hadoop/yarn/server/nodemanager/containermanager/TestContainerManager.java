@@ -44,11 +44,11 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
@@ -136,7 +136,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     containerLaunchContext.setLocalResources(localResources);
     Resource r = BuilderUtils.newResource(512, 1);
     int port = 12345;
-    ContainerToken containerToken =
+    Token containerToken =
         BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
           port, user, r, System.currentTimeMillis() + 10000L, 123,
           "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
@@ -229,7 +229,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     containerLaunchContext.setCommands(commands);
     Resource r = BuilderUtils.newResource(100, 1);
     int port = 12345;
-    ContainerToken containerToken =
+    Token containerToken =
         BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
           port, user, r, System.currentTimeMillis() + 10000L, 123,
           "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
@@ -337,7 +337,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
 	  containerLaunchContext.setCommands(commands);
     Resource r = BuilderUtils.newResource(100, 1);
     int port = 12345;
-    ContainerToken containerToken =
+    Token containerToken =
         BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
           port, user, r, System.currentTimeMillis() + 10000L, 123,
           "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
@@ -426,7 +426,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Resource r = BuilderUtils.newResource(100, 1);
     int port = 12345;
 
-    ContainerToken containerToken =
+    Token containerToken =
         BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
           port, user, r, System.currentTimeMillis() + 10000L, 123,
           "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
@@ -516,7 +516,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest1.setContainerLaunchContext(containerLaunchContext);
     
-    ContainerToken containerToken1 =
+    Token containerToken1 =
         BuilderUtils.newContainerToken(cId1, host, port, user, mockResource,
           System.currentTimeMillis() + 10000, 123, "password".getBytes(), 
           (long) ResourceManagerConstants.RM_INVALID_IDENTIFIER);
@@ -541,7 +541,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     StartContainerRequest startRequest2 =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest2.setContainerLaunchContext(containerLaunchContext);
-    ContainerToken containerToken2 =
+    Token containerToken2 =
         BuilderUtils.newContainerToken(cId1, host, port, user, mockResource,
           System.currentTimeMillis() + 10000, 123, "password".getBytes(),
           super.DUMMY_RM_IDENTIFIER);

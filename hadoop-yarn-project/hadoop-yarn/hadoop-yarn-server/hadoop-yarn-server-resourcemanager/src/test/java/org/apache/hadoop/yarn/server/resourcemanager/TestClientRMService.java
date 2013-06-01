@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -244,7 +243,7 @@ public class TestClientRMService {
             new Text(owner.getUserName()), new Text(renewer.getUserName()), null);
     Token<?> token =
         new Token<RMDelegationTokenIdentifier>(tokenIdentifier, dtsm);
-    DelegationToken dToken = BuilderUtils.newDelegationToken(
+    org.apache.hadoop.yarn.api.records.Token dToken = BuilderUtils.newDelegationToken(
         token.getIdentifier(), token.getKind().toString(),
         token.getPassword(), token.getService().toString());
     RenewDelegationTokenRequest request =

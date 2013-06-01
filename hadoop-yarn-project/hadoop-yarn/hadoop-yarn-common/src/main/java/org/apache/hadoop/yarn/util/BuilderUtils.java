@@ -38,14 +38,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -169,7 +166,7 @@ public class BuilderUtils {
     return cId;
   }
 
-  public static ContainerToken newContainerToken(ContainerId cId, String host,
+  public static Token newContainerToken(ContainerId cId, String host,
       int port, String user, Resource r, long expiryTime, int masterKeyId,
       byte[] password, long rmIdentifier) throws IOException {
     ContainerTokenIdentifier identifier =
@@ -217,7 +214,7 @@ public class BuilderUtils {
 
   public static Container newContainer(ContainerId containerId, NodeId nodeId,
       String nodeHttpAddress, Resource resource, Priority priority,
-      ContainerToken containerToken) {
+      Token containerToken) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
@@ -238,31 +235,31 @@ public class BuilderUtils {
     return token;
   }
 
-  public static DelegationToken newDelegationToken(byte[] identifier,
+  public static Token newDelegationToken(byte[] identifier,
       String kind, byte[] password, String service) {
-    return newToken(DelegationToken.class, identifier, kind, password, service);
+    return newToken(Token.class, identifier, kind, password, service);
   }
 
-  public static ClientToken newClientToken(byte[] identifier, String kind,
+  public static Token newClientToken(byte[] identifier, String kind,
       byte[] password, String service) {
-    return newToken(ClientToken.class, identifier, kind, password, service);
+    return newToken(Token.class, identifier, kind, password, service);
   }
 
-  public static ContainerToken newContainerToken(NodeId nodeId,
+  public static Token newContainerToken(NodeId nodeId,
       byte[] password, ContainerTokenIdentifier tokenIdentifier) {
     // RPC layer client expects ip:port as service for tokens
     InetSocketAddress addr =
         NetUtils.createSocketAddrForHost(nodeId.getHost(), nodeId.getPort());
     // NOTE: use SecurityUtil.setTokenService if this becomes a "real" token
-    ContainerToken containerToken =
-        newToken(ContainerToken.class, tokenIdentifier.getBytes(),
+    Token containerToken =
+        newToken(Token.class, tokenIdentifier.getBytes(),
           ContainerTokenIdentifier.KIND.toString(), password, SecurityUtil
             .buildTokenService(addr).toString());
     return containerToken;
   }
 
   public static ContainerTokenIdentifier newContainerTokenIdentifier(
-      ContainerToken containerToken) throws IOException {
+      Token containerToken) throws IOException {
     org.apache.hadoop.security.token.Token<ContainerTokenIdentifier> token =
         new org.apache.hadoop.security.token.Token<ContainerTokenIdentifier>(
             containerToken.getIdentifier()
@@ -318,7 +315,7 @@ public class BuilderUtils {
   public static ApplicationReport newApplicationReport(
       ApplicationId applicationId, ApplicationAttemptId applicationAttemptId,
       String user, String queue, String name, String host, int rpcPort,
-      ClientToken clientToken, YarnApplicationState state, String diagnostics,
+      Token clientToken, YarnApplicationState state, String diagnostics,
       String url, long startTime, long finishTime,
       FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,

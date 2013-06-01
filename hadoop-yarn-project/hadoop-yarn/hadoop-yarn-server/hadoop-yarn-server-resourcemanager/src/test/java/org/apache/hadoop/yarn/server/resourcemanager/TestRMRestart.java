@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -597,7 +596,8 @@ public class TestRMRestart {
     when(request1.getRenewer()).thenReturn("renewer1");
     GetDelegationTokenResponse response1 =
         rm1.getClientRMService().getDelegationToken(request1);
-    DelegationToken delegationToken1 = response1.getRMDelegationToken();
+    org.apache.hadoop.yarn.api.records.Token delegationToken1 =
+        response1.getRMDelegationToken();
     Token<RMDelegationTokenIdentifier> token1 =
         ProtoUtils.convertFromProtoFormat(delegationToken1, null);
     RMDelegationTokenIdentifier dtId1 = token1.decodeIdentifier();
@@ -635,7 +635,8 @@ public class TestRMRestart {
     when(request2.getRenewer()).thenReturn("renewer2");
     GetDelegationTokenResponse response2 =
         rm1.getClientRMService().getDelegationToken(request2);
-    DelegationToken delegationToken2 = response2.getRMDelegationToken();
+    org.apache.hadoop.yarn.api.records.Token delegationToken2 =
+        response2.getRMDelegationToken();
     Token<RMDelegationTokenIdentifier> token2 =
         ProtoUtils.convertFromProtoFormat(delegationToken2, null);
     RMDelegationTokenIdentifier dtId2 = token2.decodeIdentifier();

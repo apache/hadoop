@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -401,7 +400,7 @@ public class ContainerManagerImpl extends CompositeService implements
     }
 
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
-    ContainerToken token = request.getContainerToken();
+    org.apache.hadoop.yarn.api.records.Token token = request.getContainerToken();
 
     ContainerTokenIdentifier tokenIdentifier = null;
     try {

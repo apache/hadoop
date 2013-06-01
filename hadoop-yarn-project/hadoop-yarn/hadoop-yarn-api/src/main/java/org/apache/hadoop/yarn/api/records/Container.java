@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.util.Records;
  *     <li>{@link Priority} at which the container was allocated.</li>
  *     <li>{@link ContainerState} of the container.</li>
  *     <li>
- *       {@link ContainerToken} of the container, used to securely verify 
+ *       Container Token {@link Token} of the container, used to securely verify
  *       authenticity of the allocation. 
  *     </li>
  *     <li>{@link ContainerStatus} of the container.</li>
@@ -69,7 +69,7 @@ public abstract class Container implements Comparable<Container> {
   @Private
   public static Container newInstance(ContainerId containerId, NodeId nodeId,
       String nodeHttpAddress, Resource resource, Priority priority,
-      ContainerToken containerToken) {
+      Token containerToken) {
     Container container = Records.newRecord(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
@@ -142,13 +142,27 @@ public abstract class Container implements Comparable<Container> {
   
   /**
    * Get the <code>ContainerToken</code> for the container.
+   * <p><code>ContainerToken</code> is the security token used by the framework
+   * to verify authenticity of any <code>Container</code>.</p>
+   *
+   * <p>The <code>ResourceManager</code>, on container allocation provides a
+   * secure token which is verified by the <code>NodeManager</code> on
+   * container launch.</p>
+   *
+   * <p>Applications do not need to care about <code>ContainerToken</code>, they
+   * are transparently handled by the framework - the allocated
+   * <code>Container</code> includes the <code>ContainerToken</code>.</p>
+   *
+   * @see AMRMProtocol#allocate(org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest)
+   * @see ContainerManager#startContainer(org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest)
+   *
    * @return <code>ContainerToken</code> for the container
    */
   @Public
   @Stable
-  public abstract ContainerToken getContainerToken();
+  public abstract Token getContainerToken();
   
   @Private
   @Unstable
-  public abstract void setContainerToken(ContainerToken containerToken);
+  public abstract void setContainerToken(Token containerToken);
 }

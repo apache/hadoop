@@ -45,7 +45,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -63,7 +63,7 @@ public class TestNMClientAsync {
 
   private NMClientAsync asyncClient;
   private NodeId nodeId;
-  private ContainerToken containerToken;
+  private Token containerToken;
 
   @Test (timeout = 30000)
   public void testNMClientAsync() throws Exception {
@@ -368,10 +368,10 @@ public class TestNMClientAsync {
             any(ContainerLaunchContext.class))).thenReturn(
                 Collections.<String, ByteBuffer>emptyMap());
         when(client.getContainerStatus(any(ContainerId.class), any(NodeId.class),
-            any(ContainerToken.class))).thenReturn(
+            any(Token.class))).thenReturn(
                 recordFactory.newRecordInstance(ContainerStatus.class));
         doNothing().when(client).stopContainer(any(ContainerId.class),
-            any(NodeId.class), any(ContainerToken.class));
+            any(NodeId.class), any(Token.class));
         break;
       case 1:
         doThrow(RPCUtil.getRemoteException("Start Exception")).when(client)
@@ -379,21 +379,21 @@ public class TestNMClientAsync {
                 any(ContainerLaunchContext.class));
         doThrow(RPCUtil.getRemoteException("Query Exception")).when(client)
             .getContainerStatus(any(ContainerId.class), any(NodeId.class),
-                any(ContainerToken.class));
+                any(Token.class));
         doThrow(RPCUtil.getRemoteException("Stop Exception")).when(client)
             .stopContainer(any(ContainerId.class), any(NodeId.class),
-                any(ContainerToken.class));
+                any(Token.class));
         break;
       case 2:
         when(client.startContainer(any(Container.class),
             any(ContainerLaunchContext.class))).thenReturn(
                 Collections.<String, ByteBuffer>emptyMap());
         when(client.getContainerStatus(any(ContainerId.class), any(NodeId.class),
-            any(ContainerToken.class))).thenReturn(
+            any(Token.class))).thenReturn(
                 recordFactory.newRecordInstance(ContainerStatus.class));
         doThrow(RPCUtil.getRemoteException("Stop Exception")).when(client)
             .stopContainer(any(ContainerId.class), any(NodeId.class),
-                any(ContainerToken.class));
+                any(Token.class));
     }
     return client;
   }
@@ -532,9 +532,8 @@ public class TestNMClientAsync {
     ContainerId containerId = ContainerId.newInstance(attemptId, i);
     nodeId = NodeId.newInstance("localhost", 0);
     // Create an empty record
-    containerToken = recordFactory.newRecordInstance(ContainerToken.class);
+    containerToken = recordFactory.newRecordInstance(Token.class);
     return BuilderUtils.newContainer(containerId, nodeId, null, null, null,
       containerToken);
   }
-
 }

@@ -23,8 +23,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
-import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
@@ -42,7 +42,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
 
   private ApplicationId applicationId;
   private ApplicationAttemptId currentApplicationAttemptId;
-  private ClientToken clientToken = null;
+  private Token clientToken = null;
 
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
@@ -160,7 +160,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   }
 
   @Override
-  public ClientToken getClientToken() {
+  public Token getClientToken() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (this.clientToken != null) {
       return this.clientToken;
@@ -309,7 +309,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   }
 
   @Override
-  public void setClientToken(ClientToken clientToken) {
+  public void setClientToken(Token clientToken) {
     maybeInitBuilder();
     if (clientToken == null) 
       builder.clearClientToken();
@@ -413,7 +413,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
       builder.setCurrentApplicationAttemptId(convertToProtoFormat(this.currentApplicationAttemptId));
     }
     if (this.clientToken != null
-        && !((ClientTokenPBImpl) this.clientToken).getProto().equals(
+        && !((TokenPBImpl) this.clientToken).getProto().equals(
             builder.getClientToken())) {
       builder.setClientToken(convertToProtoFormat(this.clientToken));
     }
@@ -476,11 +476,11 @@ public class ApplicationReportPBImpl extends ApplicationReport {
     return ProtoUtils.convertToProtoFormat(s);
   }
 
-  private ClientTokenPBImpl convertFromProtoFormat(TokenProto p) {
-    return new ClientTokenPBImpl(p);
+  private TokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new TokenPBImpl(p);
   }
 
-  private TokenProto convertToProtoFormat(ClientToken t) {
-    return ((ClientTokenPBImpl)t).getProto();
+  private TokenProto convertToProtoFormat(Token t) {
+    return ((TokenPBImpl)t).getProto();
   }
 }

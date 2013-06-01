@@ -20,7 +20,7 @@ package org.apache.hadoop.mapreduce.v2.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
+import org.apache.hadoop.yarn.api.records.Token;
 
 /**
  * The request issued by the client to renew a delegation token from
@@ -29,6 +29,6 @@ import org.apache.hadoop.yarn.api.records.DelegationToken;
 @Public
 @Evolving
 public interface RenewDelegationTokenRequest {
-  DelegationToken getDelegationToken();
-  void setDelegationToken(DelegationToken dToken);
+  Token getDelegationToken();
+  void setDelegationToken(Token dToken);
 }

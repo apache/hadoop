@@ -37,7 +37,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -98,8 +97,8 @@ public class TestYarnClientProtocolProvider extends TestCase {
       YARNRunner yrunner = (YARNRunner) cluster.getClient();
       GetDelegationTokenResponse getDTResponse = 
           recordFactory.newRecordInstance(GetDelegationTokenResponse.class);
-      DelegationToken rmDTToken = recordFactory.newRecordInstance(
-          DelegationToken.class);
+      org.apache.hadoop.yarn.api.records.Token rmDTToken = recordFactory.newRecordInstance(
+        org.apache.hadoop.yarn.api.records.Token.class);
       rmDTToken.setIdentifier(ByteBuffer.wrap(new byte[2]));
       rmDTToken.setKind("Testclusterkind");
       rmDTToken.setPassword(ByteBuffer.wrap("testcluster".getBytes()));

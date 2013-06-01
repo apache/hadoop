@@ -55,9 +55,9 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -407,7 +407,7 @@ public class TestContainerLauncherImpl {
     }
   }
   
-  private ContainerToken createNewContainerToken(ContainerId contId,
+  private Token createNewContainerToken(ContainerId contId,
       String containerManagerAddr) {
     long currentTime = System.currentTimeMillis();
     return BuilderUtils.newContainerToken(NodeId.newInstance("127.0.0.1",

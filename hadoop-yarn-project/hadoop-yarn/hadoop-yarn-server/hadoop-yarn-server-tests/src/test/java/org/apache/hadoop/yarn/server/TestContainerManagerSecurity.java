@@ -59,7 +59,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -153,7 +152,8 @@ public class TestContainerManagerSecurity {
     final ContainerId containerID = allocatedContainer.getId();
     UserGroupInformation authenticatedUser = UserGroupInformation
         .createRemoteUser(containerID.toString());
-    ContainerToken containerToken = allocatedContainer.getContainerToken();
+    org.apache.hadoop.yarn.api.records.Token containerToken =
+        allocatedContainer.getContainerToken();
     Token<ContainerTokenIdentifier> token = new Token<ContainerTokenIdentifier>(
         containerToken.getIdentifier().array(), containerToken.getPassword()
             .array(), new Text(containerToken.getKind()), new Text(
@@ -212,7 +212,8 @@ public class TestContainerManagerSecurity {
 
     // Now talk to the NM for launching the container with modified resource
 
-    ContainerToken containerToken = allocatedContainer.getContainerToken();
+    org.apache.hadoop.yarn.api.records.Token containerToken =
+        allocatedContainer.getContainerToken();
     ContainerTokenIdentifier originalContainerTokenId =
         BuilderUtils.newContainerTokenIdentifier(containerToken);
 
@@ -327,7 +328,8 @@ public class TestContainerManagerSecurity {
     // Now talk to the NM for launching the container with modified containerID
     final ContainerId containerID = allocatedContainer.getId();
 
-    ContainerToken containerToken = allocatedContainer.getContainerToken();
+    org.apache.hadoop.yarn.api.records.Token containerToken =
+        allocatedContainer.getContainerToken();
     final ContainerTokenIdentifier tokenId =
         BuilderUtils.newContainerTokenIdentifier(containerToken);
 

@@ -79,7 +79,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -283,7 +282,7 @@ public class TestYARNRunner extends TestCase {
       token.setKind(RMDelegationTokenIdentifier.KIND_NAME);
 
       // Setup mock history token
-      DelegationToken historyToken = BuilderUtils.newDelegationToken(
+      org.apache.hadoop.yarn.api.records.Token historyToken = BuilderUtils.newDelegationToken(
           new byte[0], MRDelegationTokenIdentifier.KIND_NAME.toString(),
           new byte[0], hsTokenSevice.toString());
       GetDelegationTokenResponse getDtResponse = Records
@@ -359,8 +358,8 @@ public class TestYARNRunner extends TestCase {
             // check that the renewer matches the cluster's RM principal
             assertEquals(masterPrincipal, request.getRenewer() );
 
-            DelegationToken token =
-                recordFactory.newRecordInstance(DelegationToken.class);
+            org.apache.hadoop.yarn.api.records.Token token =
+                recordFactory.newRecordInstance(org.apache.hadoop.yarn.api.records.Token.class);
             // none of these fields matter for the sake of the test
             token.setKind("");
             token.setService("");

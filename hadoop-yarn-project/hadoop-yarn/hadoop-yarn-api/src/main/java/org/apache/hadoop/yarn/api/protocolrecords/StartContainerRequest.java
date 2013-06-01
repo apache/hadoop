@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.Token;
 
 /**
  * <p>The request sent by the <code>ApplicationMaster</code> to the
@@ -62,9 +62,9 @@ public interface StartContainerRequest {
 
   @Public
   @Stable
-  public ContainerToken getContainerToken();
+  public Token getContainerToken();
 
   @Public
   @Stable
-  public void setContainerToken(ContainerToken container);
+  public void setContainerToken(Token container);
 }
