@@ -267,6 +267,9 @@ Release 2.1.0-beta - UNRELEASED
     ClusterMetrics for binary compatibility with 1.x APIs. (Mayank Bansal via
     vinodkv)
 
+    MAPREDUCE-5289. Updated MR App to use Token directly after YARN-717. (Jian He
+    via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 

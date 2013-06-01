@@ -45,11 +45,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
@@ -578,7 +578,7 @@ public class TestContainer {
       ContainerTokenIdentifier identifier =
           new ContainerTokenIdentifier(cId, "127.0.0.1", user, resource,
             currentTime + 10000L, 123, currentTime);
-      ContainerToken token =
+      Token token =
           BuilderUtils.newContainerToken(BuilderUtils.newNodeId(host, port),
             "password".getBytes(), identifier);
       when(mockContainer.getContainerToken()).thenReturn(token);

@@ -21,9 +21,9 @@ import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequ
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProtoOrBuilder;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.DelegationTokenPBImpl;
+import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 
 public class CancelDelegationTokenRequestPBImpl extends
     ProtoBase<CancelDelegationTokenRequestProto> implements
@@ -44,10 +44,10 @@ public class CancelDelegationTokenRequestPBImpl extends
     viaProto = true;
   }
 
-  DelegationToken token;
+  Token token;
 
   @Override
-  public DelegationToken getDelegationToken() {
+  public Token getDelegationToken() {
     CancelDelegationTokenRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.token != null) {
       return this.token;
@@ -57,7 +57,7 @@ public class CancelDelegationTokenRequestPBImpl extends
   }
 
   @Override
-  public void setDelegationToken(DelegationToken token) {
+  public void setDelegationToken(Token token) {
     maybeInitBuilder();
     if (token == null)
       builder.clearToken();
@@ -93,11 +93,11 @@ public class CancelDelegationTokenRequestPBImpl extends
     viaProto = false;
   }
 
-  private DelegationTokenPBImpl convertFromProtoFormat(TokenProto p) {
-    return new DelegationTokenPBImpl(p);
+  private TokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new TokenPBImpl(p);
   }
 
-  private TokenProto convertToProtoFormat(DelegationToken t) {
-    return ((DelegationTokenPBImpl) t).getProto();
+  private TokenProto convertToProtoFormat(Token t) {
+    return ((TokenPBImpl) t).getProto();
   }
 }

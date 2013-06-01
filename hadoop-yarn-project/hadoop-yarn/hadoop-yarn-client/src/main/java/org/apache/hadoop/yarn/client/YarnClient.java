@@ -28,10 +28,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.service.Service;
@@ -179,12 +179,12 @@ public interface YarnClient extends Service {
    * @param renewer
    *          Address of the renewer who can renew these tokens when needed by
    *          securely talking to YARN.
-   * @return a delegation token ({@link DelegationToken}) that can be used to
+   * @return a delegation token ({@link Token}) that can be used to
    *         talk to YARN
    * @throws YarnRemoteException
    * @throws IOException
    */
-  DelegationToken getRMDelegationToken(Text renewer)
+  Token getRMDelegationToken(Text renewer)
       throws YarnRemoteException, IOException;
 
   /**

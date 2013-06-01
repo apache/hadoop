@@ -26,9 +26,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
@@ -170,7 +170,7 @@ public class RMContainerTokenSecretManager extends
    * @param capability
    * @return the container-token
    */
-  public ContainerToken
+  public Token
       createContainerToken(ContainerId containerId, NodeId nodeId,
           String appSubmitter, Resource capability) {
     byte[] password;

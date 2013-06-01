@@ -22,11 +22,12 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProtoOrBuilder;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.util.ProtoUtils;
 
-public class TokenPBImpl extends ProtoBase<TokenProto> implements
-    Token {
+import com.google.protobuf.ByteString;
+
+public class TokenPBImpl extends Token {
   private TokenProto proto = TokenProto.getDefaultInstance();
   private TokenProto.Builder builder = null;
   private boolean viaProto = false;
@@ -48,6 +49,29 @@ public class TokenPBImpl extends ProtoBase<TokenProto> implements
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  protected final ByteBuffer convertFromProtoFormat(ByteString byteString) {
+    return ProtoUtils.convertFromProtoFormat(byteString);
+  }
+
+  protected final ByteString convertToProtoFormat(ByteBuffer byteBuffer) {
+    return ProtoUtils.convertToProtoFormat(byteBuffer);
   }
 
   private synchronized void mergeLocalToBuilder() {

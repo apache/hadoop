@@ -51,9 +51,10 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class ApplicationReport {
 
   @Private
+  @Stable
   public static ApplicationReport newInstance(ApplicationId applicationId,
       ApplicationAttemptId applicationAttemptId, String user, String queue,
-      String name, String host, int rpcPort, ClientToken clientToken,
+      String name, String host, int rpcPort, Token clientToken,
       YarnApplicationState state, String diagnostics, String url,
       long startTime, long finishTime, FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
@@ -170,16 +171,26 @@ public abstract class ApplicationReport {
   /**
    * Get the <em>client token</em> for communicating with the
    * <code>ApplicationMaster</code>.
+   * <p>
+   * <code>ClientToken</code> is the security token used by the AMs to verify
+   * authenticity of any <code>client</code>.
+   * </p>
+   *
+   * <p>
+   * The <code>ResourceManager</code>, provides a secure token (via
+   * {@link ApplicationReport#getClientToken()}) which is verified by the
+   * ApplicationMaster when the client directly talks to an AM.
+   * </p>
    * @return <em>client token</em> for communicating with the
    * <code>ApplicationMaster</code>
    */
   @Public
   @Stable
-  public abstract ClientToken getClientToken();
+  public abstract Token getClientToken();
 
   @Private
   @Unstable
-  public abstract void setClientToken(ClientToken clientToken);
+  public abstract void setClientToken(Token clientToken);
 
   /**
    * Get the <code>YarnApplicationState</code> of the application.

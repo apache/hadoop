@@ -44,9 +44,9 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -129,7 +129,7 @@ public class TestRPC {
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(containerId, "localhost", "user",
           resource, System.currentTimeMillis() + 10000, 42, 42);
-    ContainerToken containerToken =
+    Token containerToken =
         BuilderUtils.newContainerToken(nodeId, "password".getBytes(),
           containerTokenIdentifier);
     scRequest.setContainerToken(containerToken);
@@ -179,7 +179,7 @@ public class TestRPC {
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request) 
         throws YarnRemoteException {
-      ContainerToken containerToken = request.getContainerToken();
+      Token containerToken = request.getContainerToken();
       ContainerTokenIdentifier tokenId = null;
 
       try {

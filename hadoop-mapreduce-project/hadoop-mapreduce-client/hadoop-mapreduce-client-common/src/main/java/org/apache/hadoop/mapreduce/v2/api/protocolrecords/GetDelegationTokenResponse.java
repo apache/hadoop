@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.mapreduce.v2.api.protocolrecords;
 
-import org.apache.hadoop.yarn.api.records.DelegationToken;
+import org.apache.hadoop.yarn.api.records.Token;
 
 public interface GetDelegationTokenResponse {
-  void setDelegationToken(DelegationToken clientDToken);
-  DelegationToken getDelegationToken();
+  void setDelegationToken(Token clientDToken);
+  Token getDelegationToken();
 }

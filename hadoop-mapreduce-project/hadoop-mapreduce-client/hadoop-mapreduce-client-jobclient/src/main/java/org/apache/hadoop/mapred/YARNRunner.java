@@ -72,7 +72,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -207,7 +206,7 @@ public class YARNRunner implements ClientProtocol {
     GetDelegationTokenRequest request = recordFactory
       .newRecordInstance(GetDelegationTokenRequest.class);
     request.setRenewer(Master.getMasterPrincipal(conf));
-    DelegationToken mrDelegationToken;
+    org.apache.hadoop.yarn.api.records.Token mrDelegationToken;
     mrDelegationToken = hsProxy.getDelegationToken(request)
         .getDelegationToken();
     return ProtoUtils.convertFromProtoFormat(mrDelegationToken,

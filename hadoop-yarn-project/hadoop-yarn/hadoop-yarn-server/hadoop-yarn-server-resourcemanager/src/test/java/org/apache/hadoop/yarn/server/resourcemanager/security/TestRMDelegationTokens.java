@@ -33,7 +33,6 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -99,7 +98,8 @@ public class TestRMDelegationTokens {
     when(request.getRenewer()).thenReturn("renewer1");
     GetDelegationTokenResponse response =
         rm1.getClientRMService().getDelegationToken(request);
-    DelegationToken delegationToken = response.getRMDelegationToken();
+    org.apache.hadoop.yarn.api.records.Token delegationToken =
+        response.getRMDelegationToken();
     Token<RMDelegationTokenIdentifier> token1 =
         ProtoUtils.convertFromProtoFormat(delegationToken, null);
     RMDelegationTokenIdentifier dtId1 = token1.decodeIdentifier();

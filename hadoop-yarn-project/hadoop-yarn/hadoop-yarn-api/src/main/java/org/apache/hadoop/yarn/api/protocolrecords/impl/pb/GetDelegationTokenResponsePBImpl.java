@@ -22,14 +22,14 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRespons
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProtoOrBuilder;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.DelegationTokenPBImpl;
+import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 
 public class GetDelegationTokenResponsePBImpl extends
 ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse {
 
-  DelegationToken appToken;
+  Token appToken;
 
 
   GetDelegationTokenResponseProto proto = 
@@ -48,7 +48,7 @@ ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse
   }
 
   @Override
-  public DelegationToken getRMDelegationToken() {
+  public Token getRMDelegationToken() {
     GetDelegationTokenResponseProtoOrBuilder p = viaProto ? proto : builder;
     if (this.appToken != null) {
       return this.appToken;
@@ -61,7 +61,7 @@ ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse
   }
 
   @Override
-  public void setRMDelegationToken(DelegationToken appToken) {
+  public void setRMDelegationToken(Token appToken) {
     maybeInitBuilder();
     if (appToken == null) 
       builder.clearToken();
@@ -99,11 +99,11 @@ ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse
   }
 
 
-  private DelegationTokenPBImpl convertFromProtoFormat(TokenProto p) {
-    return new DelegationTokenPBImpl(p);
+  private TokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new TokenPBImpl(p);
   }
 
-  private TokenProto convertToProtoFormat(DelegationToken t) {
-    return ((DelegationTokenPBImpl)t).getProto();
+  private TokenProto convertToProtoFormat(Token t) {
+    return ((TokenPBImpl)t).getProto();
   }
 }

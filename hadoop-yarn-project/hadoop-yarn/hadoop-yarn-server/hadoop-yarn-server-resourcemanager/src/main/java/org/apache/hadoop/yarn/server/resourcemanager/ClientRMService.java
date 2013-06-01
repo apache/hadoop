@@ -67,7 +67,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -538,7 +537,7 @@ public class ClientRMService extends AbstractService implements
             "Delegation Token can be renewed only with kerberos authentication");
       }
       
-      DelegationToken protoToken = request.getDelegationToken();
+      org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
       Token<RMDelegationTokenIdentifier> token = new Token<RMDelegationTokenIdentifier>(
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
@@ -562,7 +561,7 @@ public class ClientRMService extends AbstractService implements
         throw new IOException(
             "Delegation Token can be cancelled only with kerberos authentication");
       }
-      DelegationToken protoToken = request.getDelegationToken();
+      org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
       Token<RMDelegationTokenIdentifier> token = new Token<RMDelegationTokenIdentifier>(
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));

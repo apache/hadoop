@@ -61,7 +61,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -347,7 +347,7 @@ public class TestContainerLauncher {
       return new ContainerLauncherImpl(context) {
         @Override
         protected ContainerManager getCMProxy(ContainerId containerID,
-            String containerManagerBindAddr, ContainerToken containerToken)
+            String containerManagerBindAddr, Token containerToken)
             throws IOException {
           // make proxy connect to our local containerManager server
           ContainerManager proxy = (ContainerManager) rpc.getProxy(

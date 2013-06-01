@@ -21,9 +21,9 @@ import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenReque
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProtoOrBuilder;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.DelegationTokenPBImpl;
+import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 
 public class RenewDelegationTokenRequestPBImpl extends
     ProtoBase<RenewDelegationTokenRequestProto> implements
@@ -43,10 +43,10 @@ public class RenewDelegationTokenRequestPBImpl extends
     this.viaProto = true;
   }
 
-  DelegationToken token;
+  Token token;
 
   @Override
-  public DelegationToken getDelegationToken() {
+  public Token getDelegationToken() {
     RenewDelegationTokenRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.token != null) {
       return this.token;
@@ -56,7 +56,7 @@ public class RenewDelegationTokenRequestPBImpl extends
   }
 
   @Override
-  public void setDelegationToken(DelegationToken token) {
+  public void setDelegationToken(Token token) {
     maybeInitBuilder();
     if (token == null) 
       builder.clearToken();
@@ -94,11 +94,11 @@ public class RenewDelegationTokenRequestPBImpl extends
   }
 
 
-  private DelegationTokenPBImpl convertFromProtoFormat(TokenProto p) {
-    return new DelegationTokenPBImpl(p);
+  private TokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new TokenPBImpl(p);
   }
 
-  private TokenProto convertToProtoFormat(DelegationToken t) {
-    return ((DelegationTokenPBImpl)t).getProto();
+  private TokenProto convertToProtoFormat(Token t) {
+    return ((TokenPBImpl)t).getProto();
   }
 }

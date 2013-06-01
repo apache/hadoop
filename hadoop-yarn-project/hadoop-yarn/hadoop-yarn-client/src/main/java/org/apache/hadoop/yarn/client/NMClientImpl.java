@@ -32,7 +32,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
@@ -43,7 +42,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -122,11 +121,11 @@ public class NMClientImpl extends AbstractService implements NMClient {
   protected static class StartedContainer {
     private ContainerId containerId;
     private NodeId nodeId;
-    private ContainerToken containerToken;
+    private Token containerToken;
     private boolean stopped;
 
     public StartedContainer(ContainerId containerId, NodeId nodeId,
-        ContainerToken containerToken) {
+        Token containerToken) {
       this.containerId = containerId;
       this.nodeId = nodeId;
       this.containerToken = containerToken;
@@ -141,7 +140,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
       return nodeId;
     }
 
-    public ContainerToken getContainerToken() {
+    public Token getContainerToken() {
       return containerToken;
     }
   }
@@ -149,11 +148,11 @@ public class NMClientImpl extends AbstractService implements NMClient {
   protected static final class NMCommunicator extends AbstractService {
     private ContainerId containerId;
     private NodeId nodeId;
-    private ContainerToken containerToken;
+    private Token containerToken;
     private ContainerManager containerManager;
 
     public NMCommunicator(ContainerId containerId, NodeId nodeId,
-        ContainerToken containerToken) {
+        Token containerToken) {
       super(NMCommunicator.class.getName());
       this.containerId = containerId;
       this.nodeId = nodeId;
@@ -171,7 +170,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
       UserGroupInformation currentUser =
           UserGroupInformation.createRemoteUser(containerId.toString());
 
-      Token<ContainerTokenIdentifier> token =
+      org.apache.hadoop.security.token.Token<ContainerTokenIdentifier> token =
           ProtoUtils.convertFromProtoFormat(containerToken, containerAddress);
       currentUser.addToken(token);
 
@@ -316,7 +315,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
 
   @Override
   public void stopContainer(ContainerId containerId, NodeId nodeId,
-      ContainerToken containerToken) throws YarnRemoteException, IOException {
+      Token containerToken) throws YarnRemoteException, IOException {
     StartedContainer startedContainer = getStartedContainer(containerId);
     if (startedContainer == null) {
       throw RPCUtil.getRemoteException("Container " + containerId +
@@ -348,7 +347,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
 
   @Override
   public ContainerStatus getContainerStatus(ContainerId containerId,
-      NodeId nodeId, ContainerToken containerToken)
+      NodeId nodeId, Token containerToken)
           throws YarnRemoteException, IOException {
     NMCommunicator nmCommunicator = null;
     try {

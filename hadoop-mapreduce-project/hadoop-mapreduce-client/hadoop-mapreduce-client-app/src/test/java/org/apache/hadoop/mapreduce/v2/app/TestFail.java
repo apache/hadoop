@@ -46,7 +46,7 @@ import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherImpl;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.junit.Test;
 
 /**
@@ -226,7 +226,7 @@ public class TestFail {
 
         @Override
         protected ContainerManager getCMProxy(ContainerId contianerID,
-            String containerManagerBindAddr, ContainerToken containerToken)
+            String containerManagerBindAddr, Token containerToken)
             throws IOException {
           try {
             synchronized (this) {

@@ -21,14 +21,14 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResp
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProtoOrBuilder;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.DelegationTokenPBImpl;
+import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 
 public class GetDelegationTokenResponsePBImpl extends
       ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse {
   
-  DelegationToken mrToken;
+  Token mrToken;
   
 
   GetDelegationTokenResponseProto proto = 
@@ -47,7 +47,7 @@ public class GetDelegationTokenResponsePBImpl extends
   }
   
   @Override
-  public DelegationToken getDelegationToken() {
+  public Token getDelegationToken() {
     GetDelegationTokenResponseProtoOrBuilder p = viaProto ? proto : builder;
     if (this.mrToken != null) {
       return this.mrToken;
@@ -60,7 +60,7 @@ public class GetDelegationTokenResponsePBImpl extends
   }
   
   @Override
-  public void setDelegationToken(DelegationToken mrToken) {
+  public void setDelegationToken(Token mrToken) {
     maybeInitBuilder();
     if (mrToken == null) 
       builder.getToken();
@@ -97,11 +97,11 @@ public class GetDelegationTokenResponsePBImpl extends
     viaProto = false;
   }
 
-  private DelegationTokenPBImpl convertFromProtoFormat(TokenProto p) {
-    return new DelegationTokenPBImpl(p);
+  private TokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new TokenPBImpl(p);
   }
 
-  private TokenProto convertToProtoFormat(DelegationToken t) {
-    return ((DelegationTokenPBImpl)t).getProto();
+  private TokenProto convertToProtoFormat(Token t) {
+    return ((TokenPBImpl)t).getProto();
   }
 }

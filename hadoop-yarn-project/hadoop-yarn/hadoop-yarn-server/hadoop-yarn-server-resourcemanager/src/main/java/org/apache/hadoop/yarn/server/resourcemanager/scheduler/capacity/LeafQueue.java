@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -51,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
@@ -1251,7 +1251,7 @@ public class LeafQueue implements CSQueue {
   /**
    * Create <code>ContainerToken</code>, only in secure-mode
    */
-  ContainerToken createContainerToken(
+  Token createContainerToken(
       FiCaSchedulerApp application, Container container) {
     return containerTokenSecretManager.createContainerToken(
         container.getId(), container.getNodeId(),
@@ -1295,7 +1295,7 @@ public class LeafQueue implements CSQueue {
         unreserve(application, priority, node, rmContainer);
       }
 
-      ContainerToken containerToken =
+      Token containerToken =
           createContainerToken(application, container);
       if (containerToken == null) {
         // Something went wrong...

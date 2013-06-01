@@ -241,6 +241,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-660. Improve AMRMClient with matching requests (bikas)
 
+    YARN-717. Put object creation factories for Token in the class itself and
+    remove useless derivations for specific tokens. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
