@@ -139,19 +139,16 @@ public class MRAppBenchmark {
               try {
                 if (concurrentRunningTasks < maxConcurrentRunningTasks) {
                   event = eventQueue.take();
-                  ContainerId cId = 
-                      recordFactory.newRecordInstance(ContainerId.class);
-                  cId.setApplicationAttemptId(
-                      getContext().getApplicationAttemptId());
-                  cId.setId(containerCount++);
+                  ContainerId cId =
+                      ContainerId.newInstance(getContext()
+                        .getApplicationAttemptId(), containerCount++);
+
                   //System.out.println("Allocating " + containerCount);
                   
                   Container container = 
                       recordFactory.newRecordInstance(Container.class);
                   container.setId(cId);
-                  NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
-                  nodeId.setHost("dummy");
-                  nodeId.setPort(1234);
+                  NodeId nodeId = NodeId.newInstance("dummy", 1234);
                   container.setNodeId(nodeId);
                   container.setContainerToken(null);
                   container.setNodeHttpAddress("localhost:8042");

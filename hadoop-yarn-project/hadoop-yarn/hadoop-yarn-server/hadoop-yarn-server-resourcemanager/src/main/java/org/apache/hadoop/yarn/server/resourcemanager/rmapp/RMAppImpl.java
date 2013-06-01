@@ -71,7 +71,6 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.BuilderUtils;
-import org.apache.hadoop.yarn.util.Records;
 
 public class RMAppImpl implements RMApp, Recoverable {
 
@@ -579,11 +578,8 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @SuppressWarnings("unchecked")
   private void createNewAttempt(boolean startAttempt) {
-    ApplicationAttemptId appAttemptId = Records
-        .newRecord(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(applicationId);
-    appAttemptId.setAttemptId(attempts.size() + 1);
-
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, attempts.size() + 1);
     RMAppAttempt attempt =
         new RMAppAttemptImpl(appAttemptId, rmContext, scheduler, masterService,
           submissionContext, conf, user);

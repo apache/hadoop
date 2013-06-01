@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -71,6 +72,7 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
@@ -249,8 +251,9 @@ public class ContainerManagerImpl extends CompositeService implements
     this.setBlockNewContainerRequests(true);
     server.start();
     InetSocketAddress connectAddress = NetUtils.getConnectAddress(server);
-    this.context.getNodeId().setHost(connectAddress.getHostName());
-    this.context.getNodeId().setPort(connectAddress.getPort());
+    NodeId nodeId = NodeId.newInstance(connectAddress.getHostName(),
+      connectAddress.getPort());
+    ((NodeManager.NMContext)context).setNodeId(nodeId);
     LOG.info("ContainerManager started at " + connectAddress);
     super.start();
   }

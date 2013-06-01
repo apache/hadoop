@@ -105,7 +105,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
     TestAppContext(int appid, int numJobs, int numTasks, int numAttempts,
         boolean hasFailedTasks) {
       appID = MockJobs.newAppID(appid);
-      appAttemptID = MockJobs.newAppAttemptID(appID, 0);
+      appAttemptID = ApplicationAttemptId.newInstance(appID, 0);
       JobsPair jobs;
       try {
         jobs = MockHistoryJobs.newHistoryJobs(appID, numJobs, numTasks,

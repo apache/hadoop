@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
-import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -93,9 +92,7 @@ public class TestRMNMRPCResponseId {
     String node = "localhost";
     Resource capability = BuilderUtils.newResource(1024, 1);
     RegisterNodeManagerRequest request = recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
-    nodeId = Records.newRecord(NodeId.class);
-    nodeId.setHost(node);
-    nodeId.setPort(1234);
+    nodeId = NodeId.newInstance(node, 1234);
     request.setNodeId(nodeId);
     request.setHttpPort(0);
     request.setResource(capability);

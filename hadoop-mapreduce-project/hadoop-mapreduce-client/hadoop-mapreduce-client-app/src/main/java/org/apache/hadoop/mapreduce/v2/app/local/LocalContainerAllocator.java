@@ -46,7 +46,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.BuilderUtils;
-import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Allocates containers locally. Doesn't allocate a real container;
@@ -134,16 +133,13 @@ public class LocalContainerAllocator extends RMCommunicator
   public void handle(ContainerAllocatorEvent event) {
     if (event.getType() == ContainerAllocator.EventType.CONTAINER_REQ) {
       LOG.info("Processing the event " + event.toString());
-      ContainerId cID = recordFactory.newRecordInstance(ContainerId.class);
-      cID.setApplicationAttemptId(applicationAttemptId);
       // Assign the same container ID as the AM
-      cID.setId(this.containerId.getId());
-      
+      ContainerId cID =
+          ContainerId.newInstance(applicationAttemptId,
+            this.containerId.getId());
       Container container = recordFactory.newRecordInstance(Container.class);
       container.setId(cID);
-      NodeId nodeId = Records.newRecord(NodeId.class);
-      nodeId.setHost(this.nmHost);
-      nodeId.setPort(this.nmPort);
+      NodeId nodeId = NodeId.newInstance(this.nmHost, this.nmPort);
       container.setNodeId(nodeId);
       container.setContainerToken(null);
       container.setNodeHttpAddress(this.nmHost + ":" + this.nmHttpPort);

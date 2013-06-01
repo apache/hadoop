@@ -21,14 +21,14 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProtoOrBuilder;
+
+import com.google.common.base.Preconditions;
 
 
     
 public class NodeIdPBImpl extends NodeId {
-  NodeIdProto proto = NodeIdProto.getDefaultInstance();
+  NodeIdProto proto = null;
   NodeIdProto.Builder builder = null;
-  boolean viaProto = false;
   
   public NodeIdPBImpl() {
     builder = NodeIdProto.newBuilder();
@@ -36,43 +36,39 @@ public class NodeIdPBImpl extends NodeId {
 
   public NodeIdPBImpl(NodeIdProto proto) {
     this.proto = proto;
-    viaProto = true;
   }
-  
-  public synchronized NodeIdProto getProto() {
-    proto = viaProto ? proto : builder.build();
-    viaProto = true;
+
+  public NodeIdProto getProto() {
     return proto;
   }
 
-  private synchronized void maybeInitBuilder() {
-    if (viaProto || builder == null) {
-      builder = NodeIdProto.newBuilder(proto);
-    }
-    viaProto = false;
-  }
-    
   @Override
-  public synchronized String getHost() {
-    NodeIdProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getHost());
+  public String getHost() {
+    Preconditions.checkNotNull(proto);
+    return proto.getHost();
   }
 
   @Override
-  public synchronized void setHost(String host) {
-    maybeInitBuilder();
-    builder.setHost((host));
+  protected void setHost(String host) {
+    Preconditions.checkNotNull(builder);
+    builder.setHost(host);
   }
 
   @Override
-  public synchronized int getPort() {
-    NodeIdProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getPort());
+  public int getPort() {
+    Preconditions.checkNotNull(proto);
+    return proto.getPort();
   }
 
   @Override
-  public synchronized void setPort(int port) {
-    maybeInitBuilder();
-    builder.setPort((port));
+  protected void setPort(int port) {
+    Preconditions.checkNotNull(builder);
+    builder.setPort(port);
+  }
+
+  @Override
+  protected void build() {
+    proto = builder.build();
+    builder = null;
   }
 }  

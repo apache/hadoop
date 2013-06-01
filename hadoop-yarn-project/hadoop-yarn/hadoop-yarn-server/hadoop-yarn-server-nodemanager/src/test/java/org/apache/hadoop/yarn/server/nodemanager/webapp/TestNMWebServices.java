@@ -32,6 +32,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
@@ -86,8 +87,8 @@ public class TestNMWebServices extends JerseyTest {
     @Override
     protected void configureServlets() {
       nmContext = new NodeManager.NMContext(null);
-      nmContext.getNodeId().setHost("testhost.foo.com");
-      nmContext.getNodeId().setPort(8042);
+      NodeId nodeId = NodeId.newInstance("testhost.foo.com", 8042);
+      ((NodeManager.NMContext)nmContext).setNodeId(nodeId);
       resourceView = new ResourceView() {
         @Override
         public long getVmemAllocatedForContainers() {

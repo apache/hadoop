@@ -72,6 +72,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -557,10 +558,11 @@ public class TestJobImpl {
     JobID jobID = JobID.forName("job_1234567890000_0001");
     JobId jobId = TypeConverter.toYarn(jobID);
     MRAppMetrics mrAppMetrics = MRAppMetrics.create();
-    JobImpl job = new JobImpl(jobId, Records
-        .newRecord(ApplicationAttemptId.class), conf, mock(EventHandler.class),
-        null, new JobTokenSecretManager(), new Credentials(), null, null,
-        mrAppMetrics, null, true, null, 0, null, null, null, null);
+    JobImpl job =
+        new JobImpl(jobId, ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(0, 0), 0), conf, mock(EventHandler.class),
+          null, new JobTokenSecretManager(), new Credentials(), null, null,
+          mrAppMetrics, null, true, null, 0, null, null, null, null);
     InitTransition initTransition = getInitTransition(2);
     JobEvent mockJobEvent = mock(JobEvent.class);
     initTransition.transition(job, mockJobEvent);
@@ -649,8 +651,8 @@ public class TestJobImpl {
     JobID jobID = JobID.forName("job_1234567890000_0001");
     JobId jobId = TypeConverter.toYarn(jobID);
     StubbedJob job = new StubbedJob(jobId,
-        Records.newRecord(ApplicationAttemptId.class), conf,
-        dispatcher.getEventHandler(), true, "somebody", numSplits);
+        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 0), 0),
+        conf,dispatcher.getEventHandler(), true, "somebody", numSplits);
     dispatcher.register(JobEventType.class, job);
     EventHandler mockHandler = mock(EventHandler.class);
     dispatcher.register(TaskEventType.class, mockHandler);

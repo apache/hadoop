@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -69,13 +68,6 @@ public class MockNodes {
       }
     }
     return list;
-  }
-
-  public static NodeId newNodeID(String host, int port) {
-    NodeId nid = recordFactory.newRecordInstance(NodeId.class);
-    nid.setHost(host);
-    nid.setPort(port);
-    return nid;
   }
 
   public static Resource newResource(int mem) {
@@ -214,7 +206,8 @@ public class MockNodes {
     if (hostName == null) {
       hostName = "host"+ nid;
     }
-    final NodeId nodeID = newNodeID(hostName, port);
+    final NodeId nodeID = NodeId.newInstance(hostName, port);
+
     final String httpAddress = httpAddr;
     final NodeHealthStatus nodeHealthStatus =
         recordFactory.newRecordInstance(NodeHealthStatus.class);

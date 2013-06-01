@@ -71,7 +71,7 @@ public class TestHSWebApp {
     TestAppContext(int appid, int numJobs, int numTasks, int numAttempts,
         boolean hasFailedTasks) {
       appID = MockJobs.newAppID(appid);
-      appAttemptID = MockJobs.newAppAttemptID(appID, 0);
+      appAttemptID = ApplicationAttemptId.newInstance(appID, 0);
       jobs = MockJobs.newJobs(appID, numJobs, numTasks, numAttempts,
           hasFailedTasks);
     }

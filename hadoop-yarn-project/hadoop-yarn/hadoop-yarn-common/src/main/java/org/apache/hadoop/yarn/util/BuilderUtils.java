@@ -147,11 +147,7 @@ public class BuilderUtils {
 
   public static ApplicationAttemptId newApplicationAttemptId(
       ApplicationId appId, int attemptId) {
-    ApplicationAttemptId appAttemptId =
-        recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(attemptId);
-    return appAttemptId;
+    return ApplicationAttemptId.newInstance(appId, attemptId);
   }
 
   public static ApplicationId convert(long clustertimestamp, CharSequence id) {
@@ -161,10 +157,7 @@ public class BuilderUtils {
 
   public static ContainerId newContainerId(ApplicationAttemptId appAttemptId,
       int containerId) {
-    ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
-    id.setId(containerId);
-    id.setApplicationAttemptId(appAttemptId);
-    return id;
+    return ContainerId.newInstance(appAttemptId, containerId);
   }
 
   public static ContainerId newContainerId(int appId, int appAttemptId,
@@ -189,26 +182,11 @@ public class BuilderUtils {
   public static ContainerId newContainerId(RecordFactory recordFactory,
       ApplicationId appId, ApplicationAttemptId appAttemptId,
       int containerId) {
-    ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
-    id.setId(containerId);
-    id.setApplicationAttemptId(appAttemptId);
-    return id;
-  }
-
-  public static ContainerId newContainerId(RecordFactory recordFactory,
-      ApplicationAttemptId appAttemptId,
-      int containerId) {
-    ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
-    id.setApplicationAttemptId(appAttemptId);
-    id.setId(containerId);
-    return id;
+    return ContainerId.newInstance(appAttemptId, containerId);
   }
 
   public static NodeId newNodeId(String host, int port) {
-    NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
-    nodeId.setHost(host);
-    nodeId.setPort(port);
-    return nodeId;
+    return NodeId.newInstance(host, port);
   }
   
   public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState, 

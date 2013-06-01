@@ -212,14 +212,9 @@ public class TestNodeManagerShutdown {
   
   public static ContainerId createContainerId() {
     ApplicationId appId = ApplicationId.newInstance(0, 0);
-    
-    ApplicationAttemptId appAttemptId = 
-        recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
-    ContainerId containerId = 
-        recordFactory.newRecordInstance(ContainerId.class);
-    containerId.setApplicationAttemptId(appAttemptId);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 0);
     return containerId;
   }
   

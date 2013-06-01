@@ -152,13 +152,6 @@ public class TestNodeStatusUpdater {
       return response;
     }
 
-    ApplicationAttemptId appAttemptID = recordFactory
-        .newRecordInstance(ApplicationAttemptId.class);
-    ContainerId firstContainerID = recordFactory
-        .newRecordInstance(ContainerId.class);
-    ContainerId secondContainerID = recordFactory
-        .newRecordInstance(ContainerId.class);
-
     private Map<ApplicationId, List<ContainerStatus>> getAppToContainerStatusMap(
         List<ContainerStatus> containers) {
       Map<ApplicationId, List<ContainerStatus>> map =
@@ -196,9 +189,10 @@ public class TestNodeStatusUpdater {
         Assert.assertEquals(0, nodeStatus.getContainersStatuses().size());
 
         // Give a container to the NM.
-        appAttemptID.setApplicationId(appId1);
-        firstContainerID.setApplicationAttemptId(appAttemptID);
-        firstContainerID.setId(heartBeatID);
+        ApplicationAttemptId appAttemptID =
+            ApplicationAttemptId.newInstance(appId1, 0);
+        ContainerId firstContainerID =
+            ContainerId.newInstance(appAttemptID, heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
         Resource resource = BuilderUtils.newResource(2, 1);
@@ -226,9 +220,10 @@ public class TestNodeStatusUpdater {
         Assert.assertEquals(1, activeContainers.size());
 
         // Give another container to the NM.
-        appAttemptID.setApplicationId(appId2);
-        secondContainerID.setApplicationAttemptId(appAttemptID);
-        secondContainerID.setId(heartBeatID);
+        ApplicationAttemptId appAttemptID =
+            ApplicationAttemptId.newInstance(appId2, 0);
+        ContainerId secondContainerID =
+            ContainerId.newInstance(appAttemptID, heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
         long currentTime = System.currentTimeMillis();

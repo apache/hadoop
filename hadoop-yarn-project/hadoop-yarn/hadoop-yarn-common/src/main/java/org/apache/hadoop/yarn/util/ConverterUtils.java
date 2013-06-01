@@ -123,10 +123,8 @@ public class ConverterUtils {
       Iterator<String> it) throws NumberFormatException {
     ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
         Integer.parseInt(it.next()));
-    ApplicationAttemptId appAttemptId = Records
-        .newRecord(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(Integer.parseInt(it.next()));
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, Integer.parseInt(it.next()));
     return appAttemptId;
   }
 
@@ -164,9 +162,8 @@ public class ConverterUtils {
     }
     try {
       ApplicationAttemptId appAttemptID = toApplicationAttemptId(it);
-      ContainerId containerId = Records.newRecord(ContainerId.class);
-      containerId.setApplicationAttemptId(appAttemptID);
-      containerId.setId(Integer.parseInt(it.next()));
+      ContainerId containerId =
+          ContainerId.newInstance(appAttemptID, Integer.parseInt(it.next()));
       return containerId;
     } catch (NumberFormatException n) {
       throw new IllegalArgumentException("Invalid ContainerId: "

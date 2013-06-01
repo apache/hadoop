@@ -791,10 +791,7 @@ public class TestRuntimeEstimators {
     MyAppContext(int numberMaps, int numberReduces) {
       myApplicationID = ApplicationId.newInstance(clock.getTime(), 1);
 
-      myAppAttemptID = recordFactory
-          .newRecordInstance(ApplicationAttemptId.class);
-      myAppAttemptID.setApplicationId(myApplicationID);
-      myAppAttemptID.setAttemptId(0);
+      myAppAttemptID = ApplicationAttemptId.newInstance(myApplicationID, 0);
       myJobID = recordFactory.newRecordInstance(JobId.class);
       myJobID.setAppId(myApplicationID);
 

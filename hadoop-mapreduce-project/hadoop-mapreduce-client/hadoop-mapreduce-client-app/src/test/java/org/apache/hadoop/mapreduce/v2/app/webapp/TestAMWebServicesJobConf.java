@@ -95,7 +95,7 @@ public class TestAMWebServicesJobConf extends JerseyTest {
 
     TestAppContext(int appid, int numTasks, int numAttempts, Path confPath) {
       appID = MockJobs.newAppID(appid);
-      appAttemptID = MockJobs.newAppAttemptID(appID, 0);
+      appAttemptID = ApplicationAttemptId.newInstance(appID, 0);
       Map<JobId, Job> map = Maps.newHashMap();
       Job job = MockJobs.newJob(appID, 0, numTasks, numAttempts, confPath);
       map.put(job.getID(), job);

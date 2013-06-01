@@ -91,9 +91,7 @@ public class NodeManager implements ContainerManager {
     this.capability = capability;
     Resources.addTo(available, capability);
 
-    this.nodeId = recordFactory.newRecordInstance(NodeId.class);
-    this.nodeId.setHost(hostName);
-    this.nodeId.setPort(containerManagerPort);
+    this.nodeId = NodeId.newInstance(hostName, containerManagerPort);
     RegisterNodeManagerRequest request = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
     request.setHttpPort(httpPort);

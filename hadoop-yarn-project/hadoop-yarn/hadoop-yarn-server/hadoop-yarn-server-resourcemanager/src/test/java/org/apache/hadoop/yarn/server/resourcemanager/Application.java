@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.Task.State;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
-import org.apache.hadoop.yarn.util.Records;
 
 @Private
 public class Application {
@@ -99,9 +98,9 @@ public class Application {
     this.resourceManager = resourceManager;
     this.applicationId =
       this.resourceManager.getClientRMService().getNewApplicationId();
-    this.applicationAttemptId = Records.newRecord(ApplicationAttemptId.class);
-    this.applicationAttemptId.setApplicationId(this.applicationId);
-    this.applicationAttemptId.setAttemptId(this.numAttempts.getAndIncrement());
+    this.applicationAttemptId =
+        ApplicationAttemptId.newInstance(this.applicationId,
+          this.numAttempts.getAndIncrement());
   }
 
   public String getUser() {
