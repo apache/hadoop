@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 2.0.5-beta - UNRELEASED
+Release 2.1.0-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -379,7 +379,7 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9605. Update junit dependency. (Timothy St. Clair via cos)
 
-Release 2.0.4-alpha - 2013-04-25 
+Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
