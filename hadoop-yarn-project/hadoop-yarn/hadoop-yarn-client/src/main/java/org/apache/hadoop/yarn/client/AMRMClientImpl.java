@@ -22,9 +22,15 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -47,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -55,8 +62,11 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
+// TODO check inputs for null etc. YARN-654
+
 @Unstable
-public class AMRMClientImpl extends AbstractService implements AMRMClient {
+public class AMRMClientImpl<T extends ContainerRequest> 
+                          extends AbstractService implements AMRMClient<T> {
 
   private static final Log LOG = LogFactory.getLog(AMRMClientImpl.class);
   
@@ -70,6 +80,57 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
   protected Resource clusterAvailableResources;
   protected int clusterNodeCount;
   
+  class ResourceRequestInfo {
+    ResourceRequest remoteRequest;
+    LinkedHashSet<T> containerRequests;
+    
+    ResourceRequestInfo(Priority priority, String resourceName,
+        Resource capability) {
+      remoteRequest = BuilderUtils.newResourceRequest(priority, resourceName,
+          capability, 0);
+      containerRequests = new LinkedHashSet<T>();
+    }
+  }
+  
+  
+  /**
+   * Class compares Resource by memory then cpu in reverse order
+   */
+  class ResourceReverseMemoryThenCpuComparator implements Comparator<Resource> {
+    @Override
+    public int compare(Resource arg0, Resource arg1) {
+      int mem0 = arg0.getMemory();
+      int mem1 = arg1.getMemory();
+      int cpu0 = arg0.getVirtualCores();
+      int cpu1 = arg1.getVirtualCores();
+      if(mem0 == mem1) {
+        if(cpu0 == cpu1) {
+          return 0;
+        }
+        if(cpu0 < cpu1) {
+          return 1;
+        }
+        return -1;
+      }
+      if(mem0 < mem1) { 
+        return 1;
+      }
+      return -1;
+    }    
+  }
+  
+  static boolean canFit(Resource arg0, Resource arg1) {
+    int mem0 = arg0.getMemory();
+    int mem1 = arg1.getMemory();
+    int cpu0 = arg0.getVirtualCores();
+    int cpu1 = arg1.getVirtualCores();
+    
+    if(mem0 <= mem1 && cpu0 <= cpu1) { 
+      return true;
+    }
+    return false; 
+  }
+  
   //Key -> Priority
   //Value -> Map
   //Key->ResourceName (e.g., hostname, rackname, *)
@@ -77,9 +138,9 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
   //Key->Resource Capability
   //Value->ResourceRequest
   protected final 
-  Map<Priority, Map<String, Map<Resource, ResourceRequest>>>
+  Map<Priority, Map<String, TreeMap<Resource, ResourceRequestInfo>>>
     remoteRequestsTable =
-    new TreeMap<Priority, Map<String, Map<Resource, ResourceRequest>>>();
+    new TreeMap<Priority, Map<String, TreeMap<Resource, ResourceRequestInfo>>>();
 
   protected final Set<ResourceRequest> ask = new TreeSet<ResourceRequest>(
       new org.apache.hadoop.yarn.util.BuilderUtils.ResourceRequestComparator());
@@ -223,42 +284,47 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
   }
   
   @Override
-  public synchronized void addContainerRequest(ContainerRequest req) {
+  public synchronized void addContainerRequest(T req) {
     // Create resource requests
-    if(req.hosts != null) {
+    // add check for dup locations
+    if (req.hosts != null) {
       for (String host : req.hosts) {
-        addResourceRequest(req.priority, host, req.capability, req.containerCount);
+        addResourceRequest(req.priority, host, req.capability,
+            req.containerCount, req);
       }
     }
 
-    if(req.racks != null) {
+    if (req.racks != null) {
       for (String rack : req.racks) {
-        addResourceRequest(req.priority, rack, req.capability, req.containerCount);
+        addResourceRequest(req.priority, rack, req.capability,
+            req.containerCount, req);
       }
     }
 
     // Off-switch
     addResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
-        req.containerCount);
+        req.containerCount, req);
   }
 
   @Override
-  public synchronized void removeContainerRequest(ContainerRequest req) {
+  public synchronized void removeContainerRequest(T req) {
     // Update resource requests
-    if(req.hosts != null) {
+    if (req.hosts != null) {
       for (String hostName : req.hosts) {
-        decResourceRequest(req.priority, hostName, req.capability, req.containerCount);
+        decResourceRequest(req.priority, hostName, req.capability,
+            req.containerCount, req);
       }
     }
-    
-    if(req.racks != null) {
+
+    if (req.racks != null) {
       for (String rack : req.racks) {
-        decResourceRequest(req.priority, rack, req.capability, req.containerCount);
+        decResourceRequest(req.priority, rack, req.capability,
+            req.containerCount, req);
       }
     }
-   
+
     decResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
-        req.containerCount);
+        req.containerCount, req);
   }
 
   @Override
@@ -274,6 +340,44 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
   @Override
   public synchronized int getClusterNodeCount() {
     return clusterNodeCount;
+  }
+  
+  @Override
+  public synchronized List<? extends Collection<T>> getMatchingRequests(
+                                          Priority priority, 
+                                          String resourceName, 
+                                          Resource capability) {
+    List<LinkedHashSet<T>> list = new LinkedList<LinkedHashSet<T>>();
+    Map<String, TreeMap<Resource, ResourceRequestInfo>> remoteRequests = 
+        this.remoteRequestsTable.get(priority);
+    if (remoteRequests == null) {
+      return list;
+    }
+    TreeMap<Resource, ResourceRequestInfo> reqMap = remoteRequests
+        .get(resourceName);
+    if (reqMap == null) {
+      return list;
+    }
+
+    ResourceRequestInfo resourceRequestInfo = reqMap.get(capability);
+    if (resourceRequestInfo != null) {
+      list.add(resourceRequestInfo.containerRequests);
+      return list;
+    }
+    
+    // no exact match. Container may be larger than what was requested.
+    // get all resources <= capability. map is reverse sorted. 
+    SortedMap<Resource, ResourceRequestInfo> tailMap = 
+                                                  reqMap.tailMap(capability);
+    for(Map.Entry<Resource, ResourceRequestInfo> entry : tailMap.entrySet()) {
+      if(canFit(entry.getKey(), capability)) {
+        // match found that fits in the larger resource
+        list.add(entry.getValue().containerRequests);
+      }
+    }
+    
+    // no match found
+    return list;          
   }
   
   private void addResourceRequestToAsk(ResourceRequest remoteRequest) {
@@ -294,44 +398,57 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
   }
 
   private void addResourceRequest(Priority priority, String resourceName,
-      Resource capability, int containerCount) {
-    Map<String, Map<Resource, ResourceRequest>> remoteRequests =
+      Resource capability, int containerCount, T req) {
+    Map<String, TreeMap<Resource, ResourceRequestInfo>> remoteRequests =
       this.remoteRequestsTable.get(priority);
     if (remoteRequests == null) {
-      remoteRequests = new HashMap<String, Map<Resource, ResourceRequest>>();
+      remoteRequests = 
+          new HashMap<String, TreeMap<Resource, ResourceRequestInfo>>();
       this.remoteRequestsTable.put(priority, remoteRequests);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Added priority=" + priority);
       }
     }
-    Map<Resource, ResourceRequest> reqMap = remoteRequests.get(resourceName);
+    TreeMap<Resource, ResourceRequestInfo> reqMap = 
+                                          remoteRequests.get(resourceName);
     if (reqMap == null) {
-      reqMap = new HashMap<Resource, ResourceRequest>();
+      // capabilities are stored in reverse sorted order. smallest last.
+      reqMap = new TreeMap<Resource, ResourceRequestInfo>(
+          new ResourceReverseMemoryThenCpuComparator());
       remoteRequests.put(resourceName, reqMap);
     }
-    ResourceRequest remoteRequest = reqMap.get(capability);
-    if (remoteRequest == null) {
-      remoteRequest = BuilderUtils.
-          newResourceRequest(priority, resourceName, capability, 0);
-      reqMap.put(capability, remoteRequest);
+    ResourceRequestInfo resourceRequestInfo = reqMap.get(capability);
+    if (resourceRequestInfo == null) {
+      resourceRequestInfo =
+          new ResourceRequestInfo(priority, resourceName, capability);
+      reqMap.put(capability, resourceRequestInfo);
     }
     
-    remoteRequest.setNumContainers(remoteRequest.getNumContainers() + containerCount);
+    resourceRequestInfo.remoteRequest.setNumContainers(
+         resourceRequestInfo.remoteRequest.getNumContainers() + containerCount);
+
+    if(req instanceof StoredContainerRequest) {
+      resourceRequestInfo.containerRequests.add(req);
+    }
 
     // Note this down for next interaction with ResourceManager
-    addResourceRequestToAsk(remoteRequest);
+    addResourceRequestToAsk(resourceRequestInfo.remoteRequest);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("addResourceRequest:" + " applicationId="
           + appAttemptId + " priority=" + priority.getPriority()
           + " resourceName=" + resourceName + " numContainers="
-          + remoteRequest.getNumContainers() + " #asks=" + ask.size());
+          + resourceRequestInfo.remoteRequest.getNumContainers() 
+          + " #asks=" + ask.size());
     }
   }
 
-  private void decResourceRequest(Priority priority, String resourceName,
-      Resource capability, int containerCount) {
-    Map<String, Map<Resource, ResourceRequest>> remoteRequests =
+  private void decResourceRequest(Priority priority, 
+                                   String resourceName,
+                                   Resource capability, 
+                                   int containerCount, 
+                                   T req) {
+    Map<String, TreeMap<Resource, ResourceRequestInfo>> remoteRequests =
       this.remoteRequestsTable.get(priority);
     
     if(remoteRequests == null) {
@@ -342,7 +459,7 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
       return;
     }
     
-    Map<Resource, ResourceRequest> reqMap = remoteRequests.get(resourceName);
+    Map<Resource, ResourceRequestInfo> reqMap = remoteRequests.get(resourceName);
     if (reqMap == null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Not decrementing resource as " + resourceName
@@ -350,28 +467,34 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
       }
       return;
     }
-    ResourceRequest remoteRequest = reqMap.get(capability);
+    ResourceRequestInfo resourceRequestInfo = reqMap.get(capability);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("BEFORE decResourceRequest:" + " applicationId="
           + appAttemptId + " priority=" + priority.getPriority()
           + " resourceName=" + resourceName + " numContainers="
-          + remoteRequest.getNumContainers() + " #asks=" + ask.size());
+          + resourceRequestInfo.remoteRequest.getNumContainers() 
+          + " #asks=" + ask.size());
     }
 
-    remoteRequest.
-        setNumContainers(remoteRequest.getNumContainers() - containerCount);
-    if(remoteRequest.getNumContainers() < 0) {
+    resourceRequestInfo.remoteRequest.setNumContainers(
+        resourceRequestInfo.remoteRequest.getNumContainers() - containerCount);
+
+    if(req instanceof StoredContainerRequest) {
+      resourceRequestInfo.containerRequests.remove(req);
+    }
+    
+    if(resourceRequestInfo.remoteRequest.getNumContainers() < 0) {
       // guard against spurious removals
-      remoteRequest.setNumContainers(0);
+      resourceRequestInfo.remoteRequest.setNumContainers(0);
     }
     // send the ResourceRequest to RM even if is 0 because it needs to override
     // a previously sent value. If ResourceRequest was not sent previously then
     // sending 0 aught to be a no-op on RM
-    addResourceRequestToAsk(remoteRequest);
+    addResourceRequestToAsk(resourceRequestInfo.remoteRequest);
 
     // delete entries from map if no longer needed
-    if (remoteRequest.getNumContainers() == 0) {
+    if (resourceRequestInfo.remoteRequest.getNumContainers() == 0) {
       reqMap.remove(capability);
       if (reqMap.size() == 0) {
         remoteRequests.remove(resourceName);
@@ -385,7 +508,8 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
       LOG.info("AFTER decResourceRequest:" + " applicationId="
           + appAttemptId + " priority=" + priority.getPriority()
           + " resourceName=" + resourceName + " numContainers="
-          + remoteRequest.getNumContainers() + " #asks=" + ask.size());
+          + resourceRequestInfo.remoteRequest.getNumContainers() 
+          + " #asks=" + ask.size());
     }
   }
 

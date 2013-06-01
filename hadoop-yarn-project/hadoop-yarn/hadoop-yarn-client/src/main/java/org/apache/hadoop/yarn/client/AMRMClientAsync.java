@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.client;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,7 +40,9 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.service.AbstractService;
 
@@ -88,55 +92,50 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @Unstable
 @Evolving
-public class AMRMClientAsync extends AbstractService {
+public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService {
   
   private static final Log LOG = LogFactory.getLog(AMRMClientAsync.class);
   
-  private final AMRMClient client;
-  private final int intervalMs;
+  private final AMRMClient<T> client;
+  private final AtomicInteger heartbeatIntervalMs = new AtomicInteger();
   private final HeartbeatThread heartbeatThread;
   private final CallbackHandlerThread handlerThread;
   private final CallbackHandler handler;
 
   private final BlockingQueue<AllocateResponse> responseQueue;
   
+  private final Object unregisterHeartbeatLock = new Object();
+  
   private volatile boolean keepRunning;
   private volatile float progress;
   
+  private volatile Exception savedException;
+  
   public AMRMClientAsync(ApplicationAttemptId id, int intervalMs,
       CallbackHandler callbackHandler) {
-    this(new AMRMClientImpl(id), intervalMs, callbackHandler);
+    this(new AMRMClientImpl<T>(id), intervalMs, callbackHandler);
   }
   
   @Private
   @VisibleForTesting
-  AMRMClientAsync(AMRMClient client, int intervalMs,
+  public AMRMClientAsync(AMRMClient<T> client, int intervalMs,
       CallbackHandler callbackHandler) {
     super(AMRMClientAsync.class.getName());
     this.client = client;
-    this.intervalMs = intervalMs;
+    this.heartbeatIntervalMs.set(intervalMs);
     handler = callbackHandler;
     heartbeatThread = new HeartbeatThread();
     handlerThread = new CallbackHandlerThread();
     responseQueue = new LinkedBlockingQueue<AllocateResponse>();
     keepRunning = true;
+    savedException = null;
   }
-  
-  /**
-   * Sets the application's current progress. It will be transmitted to the
-   * resource manager on the next heartbeat.
-   * @param progress
-   *    the application's progress so far
-   */
-  public void setProgress(float progress) {
-    this.progress = progress;
-  }
-  
+    
   @Override
   public void init(Configuration conf) {
     super.init(conf);
     client.init(conf);
-  }
+  }  
   
   @Override
   public void start() {
@@ -171,6 +170,17 @@ public class AMRMClientAsync extends AbstractService {
     super.stop();
   }
   
+  public void setHeartbeatInterval(int interval) {
+    heartbeatIntervalMs.set(interval);
+  }
+  
+  public List<? extends Collection<T>> getMatchingRequests(
+                                                   Priority priority, 
+                                                   String resourceName, 
+                                                   Resource capability) {
+    return client.getMatchingRequests(priority, resourceName, capability);
+  }
+  
   /**
    * Registers this application master with the resource manager. On successful
    * registration, starts the heartbeating thread.
@@ -180,8 +190,8 @@ public class AMRMClientAsync extends AbstractService {
   public RegisterApplicationMasterResponse registerApplicationMaster(
       String appHostName, int appHostPort, String appTrackingUrl)
       throws YarnRemoteException, IOException {
-    RegisterApplicationMasterResponse response =
-        client.registerApplicationMaster(appHostName, appHostPort, appTrackingUrl);
+    RegisterApplicationMasterResponse response = client
+        .registerApplicationMaster(appHostName, appHostPort, appTrackingUrl);
     heartbeatThread.start();
     return response;
   }
@@ -195,8 +205,9 @@ public class AMRMClientAsync extends AbstractService {
    * @throws IOException
    */
   public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
-      String appMessage, String appTrackingUrl) throws YarnRemoteException, IOException {
-    synchronized (client) {
+      String appMessage, String appTrackingUrl) throws YarnRemoteException,
+      IOException {
+    synchronized (unregisterHeartbeatLock) {
       keepRunning = false;
       client.unregisterApplicationMaster(appStatus, appMessage, appTrackingUrl);
     }
@@ -206,7 +217,7 @@ public class AMRMClientAsync extends AbstractService {
    * Request containers for resources before calling <code>allocate</code>
    * @param req Resource request
    */
-  public void addContainerRequest(AMRMClient.ContainerRequest req) {
+  public void addContainerRequest(T req) {
     client.addContainerRequest(req);
   }
 
@@ -217,7 +228,7 @@ public class AMRMClientAsync extends AbstractService {
    * even after the remove request
    * @param req Resource request
    */
-  public void removeContainerRequest(AMRMClient.ContainerRequest req) {
+  public void removeContainerRequest(T req) {
     client.removeContainerRequest(req);
   }
 
@@ -259,7 +270,7 @@ public class AMRMClientAsync extends AbstractService {
       while (true) {
         AllocateResponse response = null;
         // synchronization ensures we don't send heartbeats after unregistering
-        synchronized (client) {
+        synchronized (unregisterHeartbeatLock) {
           if (!keepRunning) {
             break;
           }
@@ -267,9 +278,17 @@ public class AMRMClientAsync extends AbstractService {
           try {
             response = client.allocate(progress);
           } catch (YarnRemoteException ex) {
-            LOG.error("Failed to heartbeat", ex);
+            LOG.error("Yarn exception on heartbeat", ex);
+            savedException = ex;
+            // interrupt handler thread in case it waiting on the queue
+            handlerThread.interrupt();
+            break;
           } catch (IOException e) {
-            LOG.error("Failed to heartbeat", e);
+            LOG.error("IO exception on heartbeat", e);
+            savedException = e;
+            // interrupt handler thread in case it waiting on the queue
+            handlerThread.interrupt();
+            break;
           }
         }
         if (response != null) {
@@ -278,15 +297,15 @@ public class AMRMClientAsync extends AbstractService {
               responseQueue.put(response);
               break;
             } catch (InterruptedException ex) {
-              LOG.warn("Interrupted while waiting to put on response queue", ex);
+              LOG.info("Interrupted while waiting to put on response queue", ex);
             }
           }
         }
         
         try {
-          Thread.sleep(intervalMs);
+          Thread.sleep(heartbeatIntervalMs.get());
         } catch (InterruptedException ex) {
-          LOG.warn("Heartbeater interrupted", ex);
+          LOG.info("Heartbeater interrupted", ex);
         }
       }
     }
@@ -301,14 +320,21 @@ public class AMRMClientAsync extends AbstractService {
       while (keepRunning) {
         AllocateResponse response;
         try {
+          if(savedException != null) {
+            LOG.error("Stopping callback due to: ", savedException);
+            handler.onError(savedException);
+            break;
+          }
           response = responseQueue.take();
         } catch (InterruptedException ex) {
-          LOG.info("Interrupted while waiting for queue");
+          LOG.info("Interrupted while waiting for queue", ex);
           continue;
         }
 
         if (response.getReboot()) {
           handler.onRebootRequest();
+          LOG.info("Reboot requested. Stopping callback.");
+          break;
         }
         List<NodeReport> updatedNodes = response.getUpdatedNodes();
         if (!updatedNodes.isEmpty()) {
@@ -325,6 +351,8 @@ public class AMRMClientAsync extends AbstractService {
         if (!allocated.isEmpty()) {
           handler.onContainersAllocated(allocated);
         }
+        
+        progress = handler.getProgress();
       }
     }
   }
@@ -347,14 +375,19 @@ public class AMRMClientAsync extends AbstractService {
     
     /**
      * Called when the ResourceManager wants the ApplicationMaster to reboot
-     * for being out of sync.
+     * for being out of sync. The ApplicationMaster should not unregister with 
+     * the RM unless the ApplicationMaster wants to be the last attempt.
      */
     public void onRebootRequest();
     
     /**
-     * Called when nodes tracked by the ResourceManager have changed in in health,
+     * Called when nodes tracked by the ResourceManager have changed in health,
      * availability etc.
      */
     public void onNodesUpdated(List<NodeReport> updatedNodes);
+    
+    public float getProgress();
+    
+    public void onError(Exception e);
   }
 }

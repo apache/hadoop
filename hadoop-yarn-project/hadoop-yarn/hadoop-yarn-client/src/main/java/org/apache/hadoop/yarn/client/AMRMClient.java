@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.client;
 
-
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -32,9 +33,11 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.service.Service;
 
+import com.google.common.collect.ImmutableList;
+
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public interface AMRMClient extends Service {
+public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Service {
 
   /**
    * Object to represent container request for resources.
@@ -43,26 +46,63 @@ public interface AMRMClient extends Service {
    * Can ask for multiple containers of a given type.
    */
   public static class ContainerRequest {
-    Resource capability;
-    String[] hosts;
-    String[] racks;
-    Priority priority;
-    int containerCount;
+    final Resource capability;
+    final ImmutableList<String> hosts;
+    final ImmutableList<String> racks;
+    final Priority priority;
+    final int containerCount;
         
     public ContainerRequest(Resource capability, String[] hosts,
         String[] racks, Priority priority, int containerCount) {
       this.capability = capability;
-      this.hosts = (hosts != null ? hosts.clone() : null);
-      this.racks = (racks != null ? racks.clone() : null);
+      this.hosts = (hosts != null ? ImmutableList.copyOf(hosts) : null);
+      this.racks = (racks != null ? ImmutableList.copyOf(racks) : null);
       this.priority = priority;
       this.containerCount = containerCount;
     }
+    
+    public Resource getCapability() {
+      return capability;
+    }
+    
+    public ImmutableList<String> getHosts() {
+      return hosts;
+    }
+    
+    public ImmutableList<String> getRacks() {
+      return racks;
+    }
+    
+    public Priority getPriority() {
+      return priority;
+    }
+    
+    public int getContainerCount() {
+      return containerCount;
+    }
+    
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("Capability[").append(capability).append("]");
       sb.append("Priority[").append(priority).append("]");
       sb.append("ContainerCount[").append(containerCount).append("]");
       return sb.toString();
+    }
+  }
+ 
+  /**
+   * This creates a <code>ContainerRequest</code> for 1 container and the
+   * AMRMClient stores this request internally. <code>getMatchingRequests</code>
+   * can be used to retrieve these requests from AMRMClient. These requests may 
+   * be matched with an allocated container to determine which request to assign
+   * the container to. <code>removeContainerRequest</code> must be called using 
+   * the same assigned <code>StoredContainerRequest</code> object so that 
+   * AMRMClient can remove it from its internal store.
+   */
+  public static class StoredContainerRequest extends ContainerRequest {    
+    public StoredContainerRequest(Resource capability, String[] hosts,
+        String[] racks, Priority priority) {
+      super(capability, hosts, racks, priority, 1);
     }
   }
   
@@ -117,7 +157,7 @@ public interface AMRMClient extends Service {
    * Request containers for resources before calling <code>allocate</code>
    * @param req Resource request
    */
-  public void addContainerRequest(ContainerRequest req);
+  public void addContainerRequest(T req);
   
   /**
    * Remove previous container request. The previous container request may have 
@@ -126,7 +166,7 @@ public interface AMRMClient extends Service {
    * even after the remove request
    * @param req Resource request
    */
-  public void removeContainerRequest(ContainerRequest req);
+  public void removeContainerRequest(T req);
   
   /**
    * Release containers assigned by the Resource Manager. If the app cannot use
@@ -150,4 +190,21 @@ public interface AMRMClient extends Service {
    * @return Current number of nodes in the cluster
    */
   public int getClusterNodeCount();
+
+  /**
+   * Get outstanding <code>StoredContainerRequest</code>s matching the given 
+   * parameters. These StoredContainerRequests should have been added via
+   * <code>addContainerRequest</code> earlier in the lifecycle. For performance,
+   * the AMRMClient may return its internal collection directly without creating 
+   * a copy. Users should not perform mutable operations on the return value.
+   * Each collection in the list contains requests with identical 
+   * <code>Resource</code> size that fit in the given capability. In a 
+   * collection, requests will be returned in the same order as they were added.
+   * @return Collection of request matching the parameters
+   */
+  public List<? extends Collection<T>> getMatchingRequests(
+                                           Priority priority, 
+                                           String resourceName, 
+                                           Resource capability);
+
 }

@@ -239,6 +239,8 @@ Release 2.0.5-beta - UNRELEASED
     YARN-638. Modified ResourceManager to restore RMDelegationTokens after
     restarting. (Jian He via vinodkv)
 
+    YARN-660. Improve AMRMClient with matching requests (bikas)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
