@@ -18,7 +18,9 @@
 package org.apache.hadoop.mapreduce.security;
 
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URL;
 
 import javax.crypto.SecretKey;
@@ -130,5 +132,20 @@ public class SecureShuffleUtils {
    */
   private static String buildMsgFrom(String uri_path, String uri_query, int port) {
     return String.valueOf(port) + uri_path + "?" + uri_query;
+  }
+
+  /**
+   * byte array to Hex String
+   * 
+   * @param ba
+   * @return string with HEX value of the key
+   */
+  public static String toHex(byte[] ba) {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream ps = new PrintStream(baos);
+    for (byte b : ba) {
+      ps.printf("%x", b);
+    }
+    return baos.toString();
   }
 }
