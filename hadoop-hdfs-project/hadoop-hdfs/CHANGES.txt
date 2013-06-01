@@ -122,9 +122,6 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4698. Provide client-side metrics for remote reads, local reads, and
     short-circuit reads. (Colin Patrick McCabe via atm)
 
-    HDFS-4826. TestNestedSnapshots times out due to repeated slow edit log
-    flushes when running on virtualized disk.  (Chris Nauroth via szetszwo)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -782,6 +779,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4848. copyFromLocal and renaming a file to ".snapshot" should output 
     that ".snapshot" is a reserved name. (Jing Zhao via brandonli)
+
+    HDFS-4826. TestNestedSnapshots times out due to repeated slow edit log
+    flushes when running on virtualized disk.  (Chris Nauroth via szetszwo)
 
 Release 2.0.5-alpha - UNRELEASED
 
