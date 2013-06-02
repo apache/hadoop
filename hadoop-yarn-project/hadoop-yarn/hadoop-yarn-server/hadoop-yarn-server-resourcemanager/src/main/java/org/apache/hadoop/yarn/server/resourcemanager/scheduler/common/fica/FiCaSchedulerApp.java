@@ -152,8 +152,8 @@ public class FiCaSchedulerApp extends SchedulerApplication {
     return this.appSchedulingInfo.getPriorities();
   }
 
-  public ResourceRequest getResourceRequest(Priority priority, String nodeAddress) {
-    return this.appSchedulingInfo.getResourceRequest(priority, nodeAddress);
+  public ResourceRequest getResourceRequest(Priority priority, String resourceName) {
+    return this.appSchedulingInfo.getResourceRequest(priority, resourceName);
   }
 
   public synchronized int getTotalRequiredResources(Priority priority) {

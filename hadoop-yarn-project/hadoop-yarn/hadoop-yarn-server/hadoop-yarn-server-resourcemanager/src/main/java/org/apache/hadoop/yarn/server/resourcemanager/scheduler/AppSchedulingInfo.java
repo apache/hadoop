@@ -123,11 +123,11 @@ public class AppSchedulingInfo {
     // Update resource requests
     for (ResourceRequest request : requests) {
       Priority priority = request.getPriority();
-      String hostName = request.getHostName();
+      String resourceName = request.getResourceName();
       boolean updatePendingResources = false;
       ResourceRequest lastRequest = null;
 
-      if (hostName.equals(ResourceRequest.ANY)) {
+      if (resourceName.equals(ResourceRequest.ANY)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("update:" + " application=" + applicationId + " request="
               + request);
@@ -152,10 +152,10 @@ public class AppSchedulingInfo {
         this.requests.put(priority, asks);
         this.priorities.add(priority);
       } else if (updatePendingResources) {
-        lastRequest = asks.get(hostName);
+        lastRequest = asks.get(resourceName);
       }
 
-      asks.put(hostName, request);
+      asks.put(resourceName, request);
       if (updatePendingResources) {
         
         // Similarly, deactivate application?
@@ -187,9 +187,9 @@ public class AppSchedulingInfo {
   }
 
   synchronized public ResourceRequest getResourceRequest(Priority priority,
-      String nodeAddress) {
+      String resourceName) {
     Map<String, ResourceRequest> nodeRequests = requests.get(priority);
-    return (nodeRequests == null) ? null : nodeRequests.get(nodeAddress);
+    return (nodeRequests == null) ? null : nodeRequests.get(resourceName);
   }
 
   public synchronized Resource getResource(Priority priority) {

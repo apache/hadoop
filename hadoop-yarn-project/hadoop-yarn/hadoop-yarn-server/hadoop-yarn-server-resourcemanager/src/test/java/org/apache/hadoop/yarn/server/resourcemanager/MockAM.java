@@ -130,7 +130,7 @@ public class MockAM {
   public ResourceRequest createResourceReq(String resource, int memory, int priority,
       int containers) throws Exception {
     ResourceRequest req = Records.newRecord(ResourceRequest.class);
-    req.setHostName(resource);
+    req.setResourceName(resource);
     req.setNumContainers(containers);
     Priority pri = Records.newRecord(Priority.class);
     pri.setPriority(priority);

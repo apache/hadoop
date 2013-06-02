@@ -98,22 +98,22 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
     this.priority = priority;
   }
   @Override
-  public String getHostName() {
+  public String getResourceName() {
     ResourceRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasHostName()) {
+    if (!p.hasResourceName()) {
       return null;
     }
-    return (p.getHostName());
+    return (p.getResourceName());
   }
 
   @Override
-  public void setHostName(String hostName) {
+  public void setResourceName(String resourceName) {
     maybeInitBuilder();
-    if (hostName == null) {
-      builder.clearHostName();
+    if (resourceName == null) {
+      builder.clearResourceName();
       return;
     }
-    builder.setHostName((hostName));
+    builder.setResourceName((resourceName));
   }
   @Override
   public Resource getCapability() {
@@ -179,7 +179,7 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
   public String toString() {
     return "{Priority: " + getPriority() + ", Capability: " + getCapability()
         + ", # Containers: " + getNumContainers()
-        + ", Location: " + getHostName()
+        + ", Location: " + getResourceName()
         + ", Relax Locality: " + getRelaxLocality() + "}";
   }
 }

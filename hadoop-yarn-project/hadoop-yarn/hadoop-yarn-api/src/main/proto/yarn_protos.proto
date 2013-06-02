@@ -201,7 +201,7 @@ message NodeReportProto {
 ////////////////////////////////////////////////////////////////////////
 message ResourceRequestProto {
   optional PriorityProto priority = 1;
-  optional string host_name = 2;
+  optional string resource_name = 2;
   optional ResourceProto capability = 3;
   optional int32 num_containers = 4;
   optional bool relax_locality = 5 [default = true];

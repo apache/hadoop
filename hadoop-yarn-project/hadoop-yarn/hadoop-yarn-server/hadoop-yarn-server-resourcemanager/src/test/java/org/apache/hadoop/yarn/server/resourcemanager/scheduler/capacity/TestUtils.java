@@ -122,7 +122,7 @@ public class TestUtils {
     Resource capability = Resources.createResource(memory, 1);
     
     request.setNumContainers(numContainers);
-    request.setHostName(hostName);
+    request.setResourceName(hostName);
     request.setCapability(capability);
     request.setPriority(priority);
     return request;

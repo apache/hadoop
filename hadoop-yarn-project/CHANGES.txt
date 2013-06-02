@@ -61,6 +61,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-735. Make ApplicationAttemptId, ContaienrId and NodeId immutable.
     (Jian He via sseth)
 
+    YARN-749. Rename ResourceRequest.(get,set)HostName to
+    ResourceRequest.(get,set)ResourceName. (acmurthy)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

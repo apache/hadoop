@@ -97,8 +97,8 @@ public class BuilderUtils {
       // Compare priority, host and capability
       int ret = r1.getPriority().compareTo(r2.getPriority());
       if (ret == 0) {
-        String h1 = r1.getHostName();
-        String h2 = r2.getHostName();
+        String h1 = r1.getResourceName();
+        String h2 = r2.getResourceName();
         ret = h1.compareTo(h2);
       }
       if (ret == 0) {
@@ -296,7 +296,7 @@ public class BuilderUtils {
     ResourceRequest request = recordFactory
         .newRecordInstance(ResourceRequest.class);
     request.setPriority(priority);
-    request.setHostName(hostName);
+    request.setResourceName(hostName);
     request.setCapability(capability);
     request.setNumContainers(numContainers);
     return request;
@@ -306,7 +306,7 @@ public class BuilderUtils {
     ResourceRequest request = recordFactory
         .newRecordInstance(ResourceRequest.class);
     request.setPriority(r.getPriority());
-    request.setHostName(r.getHostName());
+    request.setResourceName(r.getResourceName());
     request.setCapability(r.getCapability());
     request.setNumContainers(r.getNumContainers());
     return request;
