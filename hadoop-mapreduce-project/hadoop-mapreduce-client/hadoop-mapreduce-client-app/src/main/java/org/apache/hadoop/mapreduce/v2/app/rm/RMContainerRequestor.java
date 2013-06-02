@@ -241,7 +241,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
               // specified for the blacklisted host to be 0.
               ResourceRequest zeroedRequest =
                   ResourceRequest.newInstance(req.getPriority(),
-                    req.getHostName(), req.getCapability(),
+                    req.getResourceName(), req.getCapability(),
                     req.getNumContainers());
 
               zeroedRequest.setNumContainers(0);
@@ -323,7 +323,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     if (remoteRequest == null) {
       remoteRequest = recordFactory.newRecordInstance(ResourceRequest.class);
       remoteRequest.setPriority(priority);
-      remoteRequest.setHostName(resourceName);
+      remoteRequest.setResourceName(resourceName);
       remoteRequest.setCapability(capability);
       remoteRequest.setNumContainers(0);
       reqMap.put(capability, remoteRequest);

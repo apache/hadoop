@@ -153,7 +153,7 @@ public class TestFairScheduler {
       int priority, int numContainers, boolean relaxLocality) {
     ResourceRequest request = recordFactory.newRecordInstance(ResourceRequest.class);
     request.setCapability(Resources.createResource(memory));
-    request.setHostName(host);
+    request.setResourceName(host);
     request.setNumContainers(numContainers);
     Priority prio = recordFactory.newRecordInstance(Priority.class);
     prio.setPriority(priority);
