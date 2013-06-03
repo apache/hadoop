@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
@@ -119,7 +120,7 @@ public class AppSchedulable extends Schedulable {
   }
 
   @Override
-  public double getWeight() {
+  public ResourceWeights getWeights() {
     return scheduler.getAppWeight(this);
   }
 
@@ -237,10 +238,7 @@ public class AppSchedulable extends Schedulable {
     }
 
     // Can we allocate a container on this node?
-    int availableContainers =
-        available.getMemory() / capability.getMemory();
-
-    if (availableContainers > 0) {
+    if (Resources.fitsIn(capability, available)) {
       // Inform the application of the new container for this request
       RMContainer allocatedContainer =
           app.allocate(type, node, priority, request, container);

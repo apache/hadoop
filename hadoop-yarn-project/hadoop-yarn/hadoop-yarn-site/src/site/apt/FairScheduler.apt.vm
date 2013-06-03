@@ -31,17 +31,18 @@ Hadoop MapReduce Next Generation - Fair Scheduler
 * {Introduction}
 
   Fair scheduling is a method of assigning resources to applications such that 
-  all apps get, on average, an equal share of resources over time. 
-  Hadoop NextGen is capable of scheduling multiple resource types, such as 
-  Memory and CPU. Currently only memory is supported, so a "cluster share" is 
-  a proportion of aggregate memory in the cluster. When there is a single app 
-  running, that app uses the entire cluster. When other apps are submitted, 
-  resources that free up are assigned to the new apps, so that each app gets 
-  roughly the same amount of resources. Unlike the default Hadoop scheduler, 
-  which forms a queue of apps, this lets short apps finish in reasonable time
-  while not starving long-lived apps. It is also a reasonable way to share a 
-  cluster between a number of users. Finally, fair sharing can also work with 
-  app priorities - the priorities are used as weights to determine the 
+  all apps get, on average, an equal share of resources over time.
+  Hadoop NextGen is capable of scheduling multiple resource types. By default,
+  the Fair Scheduler bases scheduling fairness decisions only on memory. It
+  can be configured to schedule with both memory and CPU, using the notion
+  of Dominant Resource Fairness developed by Ghodsi et al. When there is a
+  single app running, that app uses the entire cluster. When other apps are
+  submitted, resources that free up are assigned to the new apps, so that each
+  app eventually on gets roughly the same amount of resources. Unlike the default
+  Hadoop scheduler, which forms a queue of apps, this lets short apps finish in
+  reasonable time while not starving long-lived apps. It is also a reasonable way
+  to share a cluster between a number of users. Finally, fair sharing can also
+  work with app priorities - the priorities are used as weights to determine the 
   fraction of total resources that each app should get.
 
   The scheduler organizes apps further into "queues", and shares resources 
@@ -49,9 +50,10 @@ Hadoop MapReduce Next Generation - Fair Scheduler
   called “default”. If an app specifically lists a queue in a container 
   resource request, the request is submitted to that queue. It is also 
   possible to assign queues based on the user name included with the request 
-  through configuration. Within each queue, fair sharing is used to share 
-  capacity between the running apps. queues can also be given weights to share 
-  the cluster non-proportionally in the config file.
+  through configuration. Within each queue, a scheduling policy is used to share
+  resources between the running apps. The default is memory-based fair sharing,
+  but FIFO and multi-resource with Dominant Resource Fairness can also be
+  configured. Queues can be configured with weights to share the cluster non-evenly.
 
   The fair scheduler supports hierarchical queues. All queues descend from a
   queue named "root". Available resources are distributed among the children
@@ -120,14 +122,6 @@ Hadoop MapReduce Next Generation - Fair Scheduler
      queues and their properties, in addition to certain policy defaults. This file
      must be in XML format as described in the next section.
 
- * <<<yarn.scheduler.fair.minimum-allocation-mb>>>
-
-    * The smallest container size the scheduler can allocate, in MB of memory.
-
- * <<<yarn.scheduler.fair.maximum-allocation-mb>>>
-
-    * The largest container the scheduler can allocate, in MB of memory.
-
  * <<<yarn.scheduler.fair.user-as-default-queue>>>
 
     * Whether to use the username associated with the allocation as the default 
@@ -183,17 +177,23 @@ Allocation file format
  * <<Queue elements>>, which represent queues. Each may contain the following
      properties:
 
-   * minResources: minimum MB of aggregate memory the queue expects. If a queue
-     demands resources, and its current allocation is below its configured minimum,
-     it will be assigned available resources before any queue that is not in this
-     situation.  If multiple queues are in this situation, resources go to the
-     queue with the smallest ratio between allocation and minimum. Note that it is
-     possible that a queue that is below its minimum may not immediately get up to
-     its minimum when it submits an application, because already-running jobs may
-     be using those resources.
+   * minResources: minimum resources the queue is entitled to, in the form
+     "X mb, Y vcores". If a queue's minimum share is not satisfied, it will be
+     offered available resources before any other queue under the same parent.
+     Under the single-resource fairness policy, a queue
+     is considered unsatisfied if its memory usage is below its minimum memory
+     share. Under dominant resource fairness, a queue is considered unsatisfied
+     if its usage for its dominant resource with respect to the cluster capacity
+     is below its minimum share for that resource. If multiple queues are
+     unsatisfied in this situation, resources go to the queue with the smallest
+     ratio between relevant resource usage and minimum. Note that it is
+     possible that a queue that is below its minimum may not immediately get up
+     to its minimum when it submits an application, because already-running jobs
+     may be using those resources.
 
-   * maxResources: maximum MB of aggregate memory a queue is allowed.  A queue
-     will never be assigned a container that would put it over this limit.
+   * maxResources: maximum resources a queue is allowed, in the form
+     "X mb, Y vcores". A queue will never be assigned a container that would
+     put its aggregate usage over this limit.
 
    * maxRunningApps: limit the number of apps from the queue to run at once
 
@@ -232,13 +232,13 @@ Allocation file format
 <?xml version="1.0"?>
 <allocations>
   <queue name="sample_queue">
-    <minResources>10000</minResources>
-    <maxResources>90000</maxResources>
+    <minResources>10000 mb</minResources>
+    <maxResources>90000 mb</maxResources>
     <maxRunningApps>50</maxRunningApps>
     <weight>2.0</weight>
     <schedulingMode>fair</schedulingMode>
     <queue name="sample_sub_queue">
-      <minResources>5000</minResources>
+      <minResources>5000 mb</minResources>
     </queue>
   </queue>
   <user name="sample_user">

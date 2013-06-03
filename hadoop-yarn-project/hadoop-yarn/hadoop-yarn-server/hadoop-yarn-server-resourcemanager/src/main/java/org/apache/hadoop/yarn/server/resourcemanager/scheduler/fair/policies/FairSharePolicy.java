@@ -25,17 +25,21 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
 
 import com.google.common.annotations.VisibleForTesting;
 
+/**
+ * Makes scheduling decisions by trying to equalize shares of memory.
+ */
 @Private
 @Unstable
 public class FairSharePolicy extends SchedulingPolicy {
   @VisibleForTesting
-  public static final String NAME = "Fairshare";
+  public static final String NAME = "fair";
   private static final DefaultResourceCalculator RESOURCE_CALCULATOR =
       new DefaultResourceCalculator();
   private FairShareComparator comparator = new FairShareComparator();
@@ -79,8 +83,10 @@ public class FairSharePolicy extends SchedulingPolicy {
           / Resources.max(RESOURCE_CALCULATOR, null, minShare1, one).getMemory();
       minShareRatio2 = (double) s2.getResourceUsage().getMemory()
           / Resources.max(RESOURCE_CALCULATOR, null, minShare2, one).getMemory();
-      useToWeightRatio1 = s1.getResourceUsage().getMemory() / s1.getWeight();
-      useToWeightRatio2 = s2.getResourceUsage().getMemory() / s2.getWeight();
+      useToWeightRatio1 = s1.getResourceUsage().getMemory() /
+          s1.getWeights().getWeight(ResourceType.MEMORY);
+      useToWeightRatio2 = s2.getResourceUsage().getMemory() /
+          s2.getWeights().getWeight(ResourceType.MEMORY);
       int res = 0;
       if (s1Needy && !s2Needy)
         res = -1;
@@ -220,7 +226,7 @@ public class FairSharePolicy extends SchedulingPolicy {
    * {@link SchedulingAlgorithms#computeFairShares(Collection, double)}.
    */
   private static Resource computeShare(Schedulable sched, double r2sRatio) {
-    double share = sched.getWeight() * r2sRatio;
+    double share = sched.getWeights().getWeight(ResourceType.MEMORY) * r2sRatio;
     share = Math.max(share, sched.getMinShare().getMemory());
     share = Math.min(share, sched.getDemand().getMemory());
     return Resources.createResource((int) share);

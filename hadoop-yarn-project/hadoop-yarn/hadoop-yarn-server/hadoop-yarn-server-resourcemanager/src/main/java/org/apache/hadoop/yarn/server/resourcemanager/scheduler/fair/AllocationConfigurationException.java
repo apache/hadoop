@@ -32,4 +32,8 @@ public class AllocationConfigurationException extends Exception {
   public AllocationConfigurationException(String message) {
     super(message);
   }
+  
+  public AllocationConfigurationException(String message, Throwable t) {
+    super(message, t);
+  }
 }

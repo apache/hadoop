@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 
@@ -84,7 +85,7 @@ public abstract class FSQueue extends Schedulable implements Queue {
       throws AllocationConfigurationException;
 
   @Override
-  public double getWeight() {
+  public ResourceWeights getWeights() {
     return queueMgr.getQueueWeight(getName());
   }
   

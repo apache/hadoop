@@ -57,8 +57,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -495,14 +497,14 @@ public class FairScheduler implements ResourceScheduler {
   }
 
   // synchronized for sizeBasedWeight
-  public synchronized double getAppWeight(AppSchedulable app) {
+  public synchronized ResourceWeights getAppWeight(AppSchedulable app) {
     if (!app.getRunnable()) {
       // Job won't launch tasks, but don't return 0 to avoid division errors
-      return 1.0;
+      return ResourceWeights.NEUTRAL;
     } else {
       double weight = 1.0;
       if (sizeBasedWeight) {
-        // Set weight based on current demand
+        // Set weight based on current memory demand
         weight = Math.log1p(app.getDemand().getMemory()) / Math.log(2);
       }
       weight *= app.getPriority().getPriority();
@@ -510,7 +512,7 @@ public class FairScheduler implements ResourceScheduler {
         // Run weight through the user-supplied weightAdjuster
         weight = weightAdjuster.adjustWeight(app, weight);
       }
-      return weight;
+      return new ResourceWeights((float)weight);
     }
   }
 
@@ -714,37 +716,6 @@ public class FairScheduler implements ResourceScheduler {
         " cluster capacity: " + clusterCapacity);
   }
 
-  /**
-   * Utility method to normalize a list of resource requests, by ensuring that
-   * the memory for each request is a multiple of minMemory and is not zero.
-   *
-   * @param asks a list of resource requests
-   * @param minMemory the configured minimum memory allocation
-   * @param maxMemory the configured maximum memory allocation
-   */
-  static void normalizeRequests(List<ResourceRequest> asks,
-      int minMemory, int maxMemory) {
-    for (ResourceRequest ask : asks) {
-      normalizeRequest(ask, minMemory, maxMemory);
-    }
-  }
-
-  /**
-   * Utility method to normalize a resource request, by ensuring that the
-   * requested memory is a multiple of minMemory and is not zero.
-   *
-   * @param ask the resource request
-   * @param minMemory the configured minimum memory allocation
-   * @param maxMemory the configured maximum memory allocation
-   */
-  static void normalizeRequest(ResourceRequest ask, int minMemory,
-      int maxMemory) {
-    int memory = Math.max(ask.getCapability().getMemory(), minMemory);
-    int normalizedMemory =
-        minMemory * ((memory / minMemory) + (memory % minMemory > 0 ? 1 : 0));
-    ask.getCapability().setMemory(Math.min(normalizedMemory, maxMemory));
-  }
-
   @Override
   public Allocation allocate(ApplicationAttemptId appAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release) {
@@ -758,8 +729,8 @@ public class FairScheduler implements ResourceScheduler {
     }
 
     // Sanity check
-    normalizeRequests(ask, minimumAllocation.getMemory(),
-        maximumAllocation.getMemory());
+    SchedulerUtils.normalizeRequests(ask, new DominantResourceCalculator(),
+        clusterCapacity, minimumAllocation, maximumAllocation);
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
@@ -1015,8 +986,8 @@ public class FairScheduler implements ResourceScheduler {
   public synchronized void reinitialize(Configuration conf, RMContext rmContext)
       throws IOException {
     this.conf = new FairSchedulerConfiguration(conf);
-    minimumAllocation = this.conf.getMinimumMemoryAllocation();
-    maximumAllocation = this.conf.getMaximumMemoryAllocation();
+    minimumAllocation = this.conf.getMinimumAllocation();
+    maximumAllocation = this.conf.getMaximumAllocation();
     userAsDefaultQueue = this.conf.getUserAsDefaultQueue();
     nodeLocalityThreshold = this.conf.getLocalityThresholdNode();
     rackLocalityThreshold = this.conf.getLocalityThresholdRack();

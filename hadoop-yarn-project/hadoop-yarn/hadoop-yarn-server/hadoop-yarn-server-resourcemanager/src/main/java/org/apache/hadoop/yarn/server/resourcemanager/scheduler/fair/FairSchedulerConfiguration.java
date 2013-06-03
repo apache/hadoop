@@ -18,12 +18,16 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.io.File;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @Private
 @Evolving
@@ -78,18 +82,24 @@ public class FairSchedulerConfiguration extends Configuration {
     addResource(FS_CONFIGURATION_FILE);
   }
 
-  public Resource getMinimumMemoryAllocation() {
+  public Resource getMinimumAllocation() {
     int mem = getInt(
         YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
-    return Resources.createResource(mem);
+    int cpu = getInt(
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+    return Resources.createResource(mem, cpu);
   }
 
-  public Resource getMaximumMemoryAllocation() {
+  public Resource getMaximumAllocation() {
     int mem = getInt(
         YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
-    return Resources.createResource(mem);
+    int cpu = getInt(
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+    return Resources.createResource(mem, cpu);
   }
 
   public boolean getUserAsDefaultQueue() {
@@ -135,5 +145,35 @@ public class FairSchedulerConfiguration extends Configuration {
   
   public int getWaitTimeBeforeKill() {
     return getInt(WAIT_TIME_BEFORE_KILL, DEFAULT_WAIT_TIME_BEFORE_KILL);
+  }
+  
+  /**
+   * Parses a resource config value of a form like "1024", "1024 mb",
+   * or "1024 mb, 3 vcores". If no units are given, megabytes are assumed.
+   * 
+   * @throws AllocationConfigurationException
+   */
+  public static Resource parseResourceConfigValue(String val)
+      throws AllocationConfigurationException {
+    try {
+      int memory = findResource(val, "mb");
+      int vcores = findResource(val, "vcores");
+      return BuilderUtils.newResource(memory, vcores);
+    } catch (AllocationConfigurationException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      throw new AllocationConfigurationException(
+          "Error reading resource config", ex);
+    }
+  }
+  
+  private static int findResource(String val, String units)
+    throws AllocationConfigurationException {
+    Pattern pattern = Pattern.compile("(\\d+) ?" + units);
+    Matcher matcher = pattern.matcher(val);
+    if (!matcher.find()) {
+      throw new AllocationConfigurationException("Missing resource: " + units);
+    }
+    return Integer.parseInt(matcher.group(1));
   }
 }

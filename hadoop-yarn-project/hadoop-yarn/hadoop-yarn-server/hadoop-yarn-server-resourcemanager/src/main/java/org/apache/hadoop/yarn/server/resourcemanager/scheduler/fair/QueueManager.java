@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -301,7 +302,7 @@ public class QueueManager {
     Map<String, Resource> maxQueueResources = new HashMap<String, Resource>();
     Map<String, Integer> queueMaxApps = new HashMap<String, Integer>();
     Map<String, Integer> userMaxApps = new HashMap<String, Integer>();
-    Map<String, Double> queueWeights = new HashMap<String, Double>();
+    Map<String, ResourceWeights> queueWeights = new HashMap<String, ResourceWeights>();
     Map<String, SchedulingPolicy> queuePolicies = new HashMap<String, SchedulingPolicy>();
     Map<String, Long> minSharePreemptionTimeouts = new HashMap<String, Long>();
     Map<String, Map<QueueACL, AccessControlList>> queueAcls =
@@ -415,7 +416,7 @@ public class QueueManager {
    */
   private void loadQueue(String parentName, Element element, Map<String, Resource> minQueueResources,
       Map<String, Resource> maxQueueResources, Map<String, Integer> queueMaxApps,
-      Map<String, Integer> userMaxApps, Map<String, Double> queueWeights,
+      Map<String, Integer> userMaxApps, Map<String, ResourceWeights> queueWeights,
       Map<String, SchedulingPolicy> queuePolicies,
       Map<String, Long> minSharePreemptionTimeouts,
       Map<String, Map<QueueACL, AccessControlList>> queueAcls, List<String> queueNamesInAllocFile) 
@@ -433,12 +434,12 @@ public class QueueManager {
       Element field = (Element) fieldNode;
       if ("minResources".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
-        int val = Integer.parseInt(text);
-        minQueueResources.put(queueName, Resources.createResource(val));
+        Resource val = FairSchedulerConfiguration.parseResourceConfigValue(text);
+        minQueueResources.put(queueName, val);
       } else if ("maxResources".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
-        int val = Integer.parseInt(text);
-        maxQueueResources.put(queueName, Resources.createResource(val));
+        Resource val = FairSchedulerConfiguration.parseResourceConfigValue(text);
+        maxQueueResources.put(queueName, val);
       } else if ("maxRunningApps".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
         int val = Integer.parseInt(text);
@@ -446,7 +447,7 @@ public class QueueManager {
       } else if ("weight".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
         double val = Double.parseDouble(text);
-        queueWeights.put(queueName, val);
+        queueWeights.put(queueName, new ResourceWeights((float)val));
       } else if ("minSharePreemptionTimeout".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
         long val = Long.parseLong(text) * 1000L;
@@ -454,7 +455,9 @@ public class QueueManager {
       } else if ("schedulingPolicy".equals(field.getTagName())
           || "schedulingMode".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
-        queuePolicies.put(queueName, SchedulingPolicy.parse(text));
+        SchedulingPolicy policy = SchedulingPolicy.parse(text);
+        policy.initialize(scheduler.getClusterCapacity());
+        queuePolicies.put(queueName, policy);
       } else if ("aclSubmitApps".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
         acls.put(QueueACL.SUBMIT_APPLICATIONS, new AccessControlList(text));
@@ -510,12 +513,19 @@ public class QueueManager {
   }
 
   /**
-   * Get a collection of all queues
+   * Get a collection of all leaf queues
    */
   public Collection<FSLeafQueue> getLeafQueues() {
     synchronized (queues) {
       return leafQueues;
     }
+  }
+  
+  /**
+   * Get a collection of all queues
+   */
+  public Collection<FSQueue> getQueues() {
+    return queues.values();
   }
 
   public int getUserMaxApps(String user) {
@@ -538,12 +548,12 @@ public class QueueManager {
     }
   }
   
-  public double getQueueWeight(String queue) {
-    Double weight = info.queueWeights.get(queue);
+  public ResourceWeights getQueueWeight(String queue) {
+    ResourceWeights weight = info.queueWeights.get(queue);
     if (weight != null) {
       return weight;
     } else {
-      return 1.0;
+      return ResourceWeights.NEUTRAL;
     }
   }
 
@@ -595,7 +605,7 @@ public class QueueManager {
     // Maximum amount of resources per queue
     public final Map<String, Resource> maxQueueResources;
     // Sharing weights for each queue
-    public final Map<String, Double> queueWeights;
+    public final Map<String, ResourceWeights> queueWeights;
     
     // Max concurrent running applications for each queue and for each user; in addition,
     // for users that have no max specified, we use the userMaxJobsDefault.
@@ -625,7 +635,7 @@ public class QueueManager {
     public QueueManagerInfo(Map<String, Resource> minQueueResources, 
         Map<String, Resource> maxQueueResources, 
         Map<String, Integer> queueMaxApps, Map<String, Integer> userMaxApps,
-        Map<String, Double> queueWeights, int userMaxAppsDefault,
+        Map<String, ResourceWeights> queueWeights, int userMaxAppsDefault,
         int queueMaxAppsDefault, SchedulingPolicy defaultSchedulingPolicy, 
         Map<String, Long> minSharePreemptionTimeouts, 
         Map<String, Map<QueueACL, AccessControlList>> queueAcls,
@@ -647,7 +657,7 @@ public class QueueManager {
     public QueueManagerInfo() {
       minQueueResources = new HashMap<String, Resource>();
       maxQueueResources = new HashMap<String, Resource>();
-      queueWeights = new HashMap<String, Double>();
+      queueWeights = new HashMap<String, ResourceWeights>();
       queueMaxApps = new HashMap<String, Integer>();
       userMaxApps = new HashMap<String, Integer>();
       userMaxAppsDefault = Integer.MAX_VALUE;
