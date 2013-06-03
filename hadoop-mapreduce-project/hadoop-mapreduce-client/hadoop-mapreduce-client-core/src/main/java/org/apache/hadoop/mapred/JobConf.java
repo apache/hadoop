@@ -20,9 +20,6 @@ package org.apache.hadoop.mapred;
 
 
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.util.Enumeration;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -122,8 +119,8 @@ public class JobConf extends Configuration {
   }
 
   /**
-   * @deprecated Use {@link #MAPRED_JOB_MAP_MEMORY_MB_PROPERTY} and
-   * {@link #MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY}
+   * @deprecated Use {@link #MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY} and
+   * {@link #MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY}
    */
   @Deprecated
   public static final String MAPRED_TASK_MAXVMEM_PROPERTY =
@@ -167,11 +164,27 @@ public class JobConf extends Configuration {
    */
   public static final String DEFAULT_QUEUE_NAME = "default";
 
-  static final String MAPRED_JOB_MAP_MEMORY_MB_PROPERTY = 
+  static final String MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY =
       JobContext.MAP_MEMORY_MB;
 
-  static final String MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY =
+  static final String MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY =
     JobContext.REDUCE_MEMORY_MB;
+
+  /**
+   * The variable is kept for M/R 1.x applications, while M/R 2.x applications
+   * should use {@link #MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY}
+   */
+  @Deprecated
+  public static final String MAPRED_JOB_MAP_MEMORY_MB_PROPERTY =
+      "mapred.job.map.memory.mb";
+
+  /**
+   * The variable is kept for M/R 1.x applications, while M/R 2.x applications
+   * should use {@link #MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY}
+   */
+  @Deprecated
+  public static final String MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY =
+      "mapred.job.reduce.memory.mb";
 
   /** Pattern for the default unpacking behavior for job jars */
   public static final Pattern UNPACK_JAR_PATTERN_DEFAULT =
@@ -335,8 +348,67 @@ public class JobConf extends Configuration {
    * Default logging level for map/reduce tasks.
    */
   public static final Level DEFAULT_LOG_LEVEL = Level.INFO;
-  
-  
+
+  /**
+   * The variable is kept for M/R 1.x applications, M/R 2.x applications should
+   * use {@link MRJobConfig#WORKFLOW_ID} instead
+   */
+  @Deprecated
+  public static final String WORKFLOW_ID = MRJobConfig.WORKFLOW_ID;
+
+  /**
+   * The variable is kept for M/R 1.x applications, M/R 2.x applications should
+   * use {@link MRJobConfig#WORKFLOW_NAME} instead
+   */
+  @Deprecated
+  public static final String WORKFLOW_NAME = MRJobConfig.WORKFLOW_NAME;
+
+  /**
+   * The variable is kept for M/R 1.x applications, M/R 2.x applications should
+   * use {@link MRJobConfig#WORKFLOW_NODE_NAME} instead
+   */
+  @Deprecated
+  public static final String WORKFLOW_NODE_NAME =
+      MRJobConfig.WORKFLOW_NODE_NAME;
+
+  /**
+   * The variable is kept for M/R 1.x applications, M/R 2.x applications should
+   * use {@link MRJobConfig#WORKFLOW_ADJACENCY_PREFIX_STRING} instead
+   */
+  @Deprecated
+  public static final String WORKFLOW_ADJACENCY_PREFIX_STRING =
+      MRJobConfig.WORKFLOW_ADJACENCY_PREFIX_STRING;
+
+  /**
+   * The variable is kept for M/R 1.x applications, M/R 2.x applications should
+   * use {@link MRJobConfig#WORKFLOW_ADJACENCY_PREFIX_PATTERN} instead
+   */
+  @Deprecated
+  public static final String WORKFLOW_ADJACENCY_PREFIX_PATTERN =
+      MRJobConfig.WORKFLOW_ADJACENCY_PREFIX_PATTERN;
+
+  /**
+   * The variable is kept for M/R 1.x applications, M/R 2.x applications should
+   * use {@link MRJobConfig#WORKFLOW_TAGS} instead
+   */
+  @Deprecated
+  public static final String WORKFLOW_TAGS = MRJobConfig.WORKFLOW_TAGS;
+
+  /**
+   * The variable is kept for M/R 1.x applications, M/R 2.x applications should
+   * not use it
+   */
+  @Deprecated
+  public static final String MAPREDUCE_RECOVER_JOB =
+      "mapreduce.job.restart.recover";
+
+  /**
+   * The variable is kept for M/R 1.x applications, M/R 2.x applications should
+   * not use it
+   */
+  @Deprecated
+  public static final boolean DEFAULT_MAPREDUCE_RECOVER_JOB = true;
+
   /**
    * Construct a map/reduce job configuration.
    */
@@ -1697,6 +1769,12 @@ public class JobConf extends Configuration {
     long value = getDeprecatedMemoryValue();
     if (value == DISABLED_MEMORY_LIMIT) {
       value = normalizeMemoryConfigValue(
+                getLong(JobConf.MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY,
+                          DISABLED_MEMORY_LIMIT));
+    }
+    // In case that M/R 1.x applications use the old property name
+    if (value == DISABLED_MEMORY_LIMIT) {
+      value = normalizeMemoryConfigValue(
                 getLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY,
                           DISABLED_MEMORY_LIMIT));
     }
@@ -1704,6 +1782,8 @@ public class JobConf extends Configuration {
   }
 
   public void setMemoryForMapTask(long mem) {
+    setLong(JobConf.MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY, mem);
+    // In case that M/R 1.x applications use the old property name
     setLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY, mem);
   }
 
@@ -1722,6 +1802,12 @@ public class JobConf extends Configuration {
    */
   public long getMemoryForReduceTask() {
     long value = getDeprecatedMemoryValue();
+    if (value == DISABLED_MEMORY_LIMIT) {
+      value = normalizeMemoryConfigValue(
+                getLong(JobConf.MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY,
+                        DISABLED_MEMORY_LIMIT));
+    }
+    // In case that M/R 1.x applications use the old property name
     if (value == DISABLED_MEMORY_LIMIT) {
       value = normalizeMemoryConfigValue(
                 getLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY,
@@ -1745,6 +1831,8 @@ public class JobConf extends Configuration {
   }
 
   public void setMemoryForReduceTask(long mem) {
+    setLong(JobConf.MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY, mem);
+    // In case that M/R 1.x applications use the old property name
     setLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY, mem);
   }
 
@@ -1927,8 +2015,8 @@ public class JobConf extends Configuration {
   private void checkAndWarnDeprecation() {
     if(get(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY) != null) {
       LOG.warn(JobConf.deprecatedString(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY)
-                + " Instead use " + JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY
-                + " and " + JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY);
+                + " Instead use " + JobConf.MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY
+                + " and " + JobConf.MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY);
     }
     if(get(JobConf.MAPRED_TASK_ULIMIT) != null ) {
       LOG.warn(JobConf.deprecatedString(JobConf.MAPRED_TASK_ULIMIT));
