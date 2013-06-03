@@ -144,6 +144,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
     (Gelesh via bobby)
 
+    MAPREDUCE-5268. Improve history server startup performance (Karthik
+    Kambatla via jlowe)
+
   BUG FIXES
 
     MAPREDUCE-4671. AM does not tell the RM about container requests which are
@@ -935,6 +938,21 @@ Release 2.0.0-alpha - 05-23-2012
 
     MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
     bad (Jason Lowe via bobby)
+
+Release 0.23.9 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+    MAPREDUCE-5268. Improve history server startup performance (Karthik
+    Kambatla via jlowe)
+
+  BUG FIXES
 
 Release 0.23.8 - UNRELEASED
 
