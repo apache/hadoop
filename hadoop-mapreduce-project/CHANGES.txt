@@ -276,6 +276,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5274. Bring back SecureShuffleUtils.toHex in mapreduce for binary
     compatibility with 1.x APIs. (Mayank Bansal via vinodkv)
 
+    MAPREDUCE-5300. Fix backward incompatibility for
+    o.a.h.mapreduce.filecache.DistributedCache. (Zhijie Shen via acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
@@ -486,9 +489,6 @@ Release 2.1.0-beta - UNRELEASED
 
     MAPREDUCE-5296. Fix backward incompatibility for JobControl by adding the
     omitted addJob. (Zhijie Shen via acmurthy) 
-
-    MAPREDUCE-5300. Fix backward incompatibility for
-    o.a.h.mapreduce.filecache.DistributedCache. (Zhijie Shen via acmurthy)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
