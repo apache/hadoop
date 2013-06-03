@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.mapred.jobcontrol.Job;
 import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob.State;
 import org.apache.hadoop.util.StringUtils;
 
@@ -137,8 +138,8 @@ public class JobControl implements Runnable {
   }
 
   /**
-   * Add a new job.
-   * @param aJob the new job
+   * Add a new controlled job.
+   * @param aJob the new controlled job
    */
   synchronized public String addJob(ControlledJob aJob) {
     String id = this.getNextJobID();
@@ -147,7 +148,15 @@ public class JobControl implements Runnable {
     jobsInProgress.add(aJob);
     return id;	
   }
-	
+
+  /**
+   * Add a new job.
+   * @param aJob the new job
+   */
+  synchronized public String addJob(Job aJob) {
+    return addJob((ControlledJob) aJob);
+  }
+
   /**
    * Add a collection of jobs
    * 
