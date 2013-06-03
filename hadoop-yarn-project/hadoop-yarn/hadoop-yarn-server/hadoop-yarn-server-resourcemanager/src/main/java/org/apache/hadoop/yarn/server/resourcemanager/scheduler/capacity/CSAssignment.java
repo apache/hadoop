@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -31,12 +32,14 @@ public class CSAssignment {
   private NodeType type;
   private final RMContainer excessReservation;
   private final FiCaSchedulerApp application;
+  private final boolean skipped;
   
   public CSAssignment(Resource resource, NodeType type) {
     this.resource = resource;
     this.type = type;
     this.application = null;
     this.excessReservation = null;
+    this.skipped = false;
   }
   
   public CSAssignment(FiCaSchedulerApp application, RMContainer excessReservation) {
@@ -44,8 +47,16 @@ public class CSAssignment {
     this.type = NodeType.NODE_LOCAL;
     this.application = application;
     this.excessReservation = excessReservation;
+    this.skipped = false;
   }
-
+  
+  public CSAssignment(boolean skipped) {
+    this.resource = Resources.createResource(0, 0);
+    this.type = NodeType.NODE_LOCAL;
+    this.application = null;
+    this.excessReservation = null;
+    this.skipped = skipped;
+  }
 
   public Resource getResource() {
     return resource;
@@ -67,6 +78,10 @@ public class CSAssignment {
     return excessReservation;
   }
 
+  public boolean getSkipped() {
+    return skipped;
+  }
+  
   @Override
   public String toString() {
     return resource.getMemory() + ":" + type;

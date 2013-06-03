@@ -115,15 +115,16 @@ public class TestUtils {
   }
   
   public static ResourceRequest createResourceRequest(
-      String hostName, int memory, int numContainers, Priority priority,
-      RecordFactory recordFactory) {
+      String resourceName, int memory, int numContainers, boolean relaxLocality,
+      Priority priority, RecordFactory recordFactory) {
     ResourceRequest request = 
         recordFactory.newRecordInstance(ResourceRequest.class);
     Resource capability = Resources.createResource(memory, 1);
     
     request.setNumContainers(numContainers);
-    request.setResourceName(hostName);
+    request.setResourceName(resourceName);
     request.setCapability(capability);
+    request.setRelaxLocality(relaxLocality);
     request.setPriority(priority);
     return request;
   }

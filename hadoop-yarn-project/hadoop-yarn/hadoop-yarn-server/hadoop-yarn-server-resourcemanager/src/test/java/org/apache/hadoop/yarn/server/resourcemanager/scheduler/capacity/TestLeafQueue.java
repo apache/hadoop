@@ -292,8 +292,8 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 3, priority,
-                recordFactory))); 
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 3, true,
+                priority, recordFactory))); 
 
     // Start testing...
     
@@ -414,12 +414,12 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 3, priority,
-                recordFactory))); 
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 3, true,
+                priority, recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
-            recordFactory))); 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, true,
+            priority, recordFactory))); 
 
     // Start testing...
     
@@ -547,12 +547,12 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1, priority,
-                recordFactory))); 
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1, true,
+                priority, recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
-            recordFactory))); 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, true,
+            priority, recordFactory))); 
 
     /**
      * Start testing...
@@ -640,12 +640,12 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1, priority,
-                recordFactory))); 
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1, true,
+                priority, recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
-            recordFactory))); 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, true,
+            priority, recordFactory))); 
 
     /**
      * Start testing...
@@ -679,8 +679,8 @@ public class TestLeafQueue {
     // Submit requests for app_1 and set max-cap
     a.setMaxCapacity(.1f);
     app_2.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, priority,
-            recordFactory))); 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, true,
+            priority, recordFactory))); 
     assertEquals(2, a.getActiveUsersManager().getNumActiveUsers());
 
     // No more to user_0 since he is already over user-limit
@@ -696,8 +696,8 @@ public class TestLeafQueue {
     // Check headroom for app_2 
     LOG.info("here");
     app_1.updateResourceRequests(Collections.singletonList(     // unset
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 0, priority,
-            recordFactory))); 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 0, true,
+            priority, recordFactory))); 
     assertEquals(1, a.getActiveUsersManager().getNumActiveUsers());
     a.assignContainers(clusterResource, node_1);
     assertEquals(1*GB, app_2.getHeadroom().getMemory());   // hit queue max-cap 
@@ -757,12 +757,12 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 10, priority,
-                recordFactory))); 
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 10, true,
+                priority, recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 10, priority,
-            recordFactory))); 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 10, true,
+            priority, recordFactory))); 
 
     /** 
      * Start testing... 
@@ -791,12 +791,12 @@ public class TestLeafQueue {
     // Submit resource requests for other apps now to 'activate' them
     
     app_2.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 3*GB, 1, priority,
-            recordFactory))); 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 3*GB, 1, true,
+            priority, recordFactory))); 
 
     app_3.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
-            recordFactory))); 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, true,
+            priority, recordFactory))); 
 
     // Now allocations should goto app_2 since 
     // user_0 is at limit inspite of high user-limit-factor
@@ -919,12 +919,12 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
-                recordFactory))); 
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, true,
+                priority, recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 4*GB, 1, priority,
-            recordFactory))); 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 4*GB, 1, true,
+            priority, recordFactory))); 
 
     // Start testing...
     
@@ -1021,19 +1021,19 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1, priority,
-                recordFactory)));
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1, true,
+                priority, recordFactory)));
 
     // Setup app_1 to request a 4GB container on host_0 and
     // another 4GB container anywhere.
     ArrayList<ResourceRequest> appRequests_1 =
         new ArrayList<ResourceRequest>(4);
     appRequests_1.add(TestUtils.createResourceRequest(host_0, 4*GB, 1,
-        priority, recordFactory));
+        true, priority, recordFactory));
     appRequests_1.add(TestUtils.createResourceRequest(DEFAULT_RACK, 4*GB, 1,
-        priority, recordFactory));
+        true, priority, recordFactory));
     appRequests_1.add(TestUtils.createResourceRequest(ResourceRequest.ANY, 4*GB, 2,
-        priority, recordFactory));
+        true, priority, recordFactory));
     app_1.updateResourceRequests(appRequests_1);
 
     // Start testing...
@@ -1127,12 +1127,12 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
-                recordFactory))); 
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, true,
+                priority, recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 4*GB, 1, priority,
-            recordFactory))); 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 4*GB, 1, true,
+            priority, recordFactory))); 
 
     // Start testing...
     
@@ -1242,19 +1242,19 @@ public class TestLeafQueue {
     List<ResourceRequest> app_0_requests_0 = new ArrayList<ResourceRequest>();
     app_0_requests_0.add(
         TestUtils.createResourceRequest(host_0, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(rack_0, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(host_1, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 3, // one extra
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
 
     // Start testing...
@@ -1313,13 +1313,13 @@ public class TestLeafQueue {
     app_0_requests_0.clear();
     app_0_requests_0.add(
         TestUtils.createResourceRequest(host_1, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, // one extra
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
     assertEquals(2, app_0.getTotalRequiredResources(priority));
     
@@ -1385,31 +1385,31 @@ public class TestLeafQueue {
     Priority priority_1 = TestUtils.createMockPriority(1);
     app_0_requests_0.add(
         TestUtils.createResourceRequest(host_0, 1*GB, 1, 
-            priority_1, recordFactory));
+            true, priority_1, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(rack_0, 1*GB, 1, 
-            priority_1, recordFactory));
+            true, priority_1, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(host_1, 1*GB, 1, 
-            priority_1, recordFactory));
+            true, priority_1, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
-            priority_1, recordFactory));
+            true, priority_1, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2,
-            priority_1, recordFactory));
+            true, priority_1, recordFactory));
     
     // P2
     Priority priority_2 = TestUtils.createMockPriority(2);
     app_0_requests_0.add(
         TestUtils.createResourceRequest(host_2, 2*GB, 1, 
-            priority_2, recordFactory));
+            true, priority_2, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(rack_2, 2*GB, 1, 
-            priority_2, recordFactory));
+            true, priority_2, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1,
-            priority_2, recordFactory));
+            true, priority_2, recordFactory));
     
     app_0.updateResourceRequests(app_0_requests_0);
 
@@ -1513,19 +1513,19 @@ public class TestLeafQueue {
     List<ResourceRequest> app_0_requests_0 = new ArrayList<ResourceRequest>();
     app_0_requests_0.add(
         TestUtils.createResourceRequest(host_0_0, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(host_0_1, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(rack_0, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(host_1_0, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0_requests_0.add(
         TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
 
     // Start testing...
@@ -1534,7 +1534,7 @@ public class TestLeafQueue {
     app_0_requests_0.clear();
     app_0_requests_0.add(
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, // only one
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
     
     // NODE_LOCAL - node_0_1
@@ -1557,7 +1557,7 @@ public class TestLeafQueue {
     app_0_requests_0.clear();
     app_0_requests_0.add(
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, // only one
-            priority, recordFactory));
+            true, priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
 
     // No allocation on node_0_1 even though it's node/rack local since
@@ -1731,7 +1731,174 @@ public class TestLeafQueue {
           c1.getQueueUserAclInfo(user), QueueACL.SUBMIT_APPLICATIONS));
 
   }
-  
+
+  @Test
+  public void testLocalityConstraints() throws Exception {
+
+    // Manipulate queue 'a'
+    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+
+    // User
+    String user_0 = "user_0";
+    
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 = 
+        TestUtils.getMockApplicationAttemptId(0, 0); 
+    FiCaSchedulerApp app_0 = 
+        spy(new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
+            mock(ActiveUsersManager.class), rmContext));
+    a.submitApplication(app_0, user_0, A);
+
+    final ApplicationAttemptId appAttemptId_1 = 
+        TestUtils.getMockApplicationAttemptId(1, 0); 
+    FiCaSchedulerApp app_1 = 
+        spy(new FiCaSchedulerApp(appAttemptId_1, user_0, a, 
+            mock(ActiveUsersManager.class), rmContext));
+    a.submitApplication(app_1, user_0, A);
+
+    // Setup some nodes and racks
+    String host_0_0 = "127.0.0.1";
+    String rack_0 = "rack_0";
+    FiCaSchedulerNode node_0_0 = TestUtils.getMockNode(host_0_0, rack_0, 0, 8*GB);
+    String host_0_1 = "127.0.0.2";
+    FiCaSchedulerNode node_0_1 = TestUtils.getMockNode(host_0_1, rack_0, 0, 8*GB);
+    
+    
+    String host_1_0 = "127.0.0.3";
+    String rack_1 = "rack_1";
+    FiCaSchedulerNode node_1_0 = TestUtils.getMockNode(host_1_0, rack_1, 0, 8*GB);
+    String host_1_1 = "127.0.0.4";
+    FiCaSchedulerNode node_1_1 = TestUtils.getMockNode(host_1_1, rack_1, 0, 8*GB);
+    
+    final int numNodes = 4;
+    Resource clusterResource = Resources.createResource(
+        numNodes * (8*GB), numNodes * 1);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+
+    // Setup resource-requests
+    // resourceName: <priority, memory, #containers, relaxLocality>
+    // host_0_0: < 1, 1GB, 1, true >
+    // host_0_1: < null >
+    // rack_0:   < null >                     <----
+    // host_1_0: < 1, 1GB, 1, true >
+    // host_1_1: < null >
+    // rack_1:   < 1, 1GB, 1, false >         <----
+    // ANY:      < 1, 1GB, 1, false >         <----
+    // Availability:
+    // host_0_0: 8G
+    // host_0_1: 8G
+    // host_1_0: 8G
+    // host_1_1: 8G
+    Priority priority = TestUtils.createMockPriority(1);
+    List<ResourceRequest> app_0_requests_0 = new ArrayList<ResourceRequest>();
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(host_0_0, 1*GB, 1, 
+            true, priority, recordFactory));
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(host_1_0, 1*GB, 1, 
+            true, priority, recordFactory));
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
+            false, priority, recordFactory));
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, // only one
+            false, priority, recordFactory));
+    app_0.updateResourceRequests(app_0_requests_0);
+    app_0_requests_0.clear();
+
+    //
+    // Start testing...
+    //
+    
+    // node_0_1  
+    // Shouldn't allocate since RR(rack_0) = null && RR(ANY) = relax: false
+    a.assignContainers(clusterResource, node_0_1);
+    verify(app_0, never()).allocate(any(NodeType.class), eq(node_0_1), 
+        any(Priority.class), any(ResourceRequest.class), any(Container.class));
+    assertEquals(0, app_0.getSchedulingOpportunities(priority)); // should be 0
+    
+    // resourceName: <priority, memory, #containers, relaxLocality>
+    // host_0_0: < 1, 1GB, 1, true >
+    // host_0_1: < null >
+    // rack_0:   < null >                     <----
+    // host_1_0: < 1, 1GB, 1, true >
+    // host_1_1: < null >
+    // rack_1:   < 1, 1GB, 1, false >         <----
+    // ANY:      < 1, 1GB, 1, false >         <----
+    // Availability:
+    // host_0_0: 8G
+    // host_0_1: 8G
+    // host_1_0: 8G
+    // host_1_1: 8G
+
+    // node_1_1  
+    // Shouldn't allocate since RR(rack_1) = relax: false
+    a.assignContainers(clusterResource, node_1_1);
+    verify(app_0, never()).allocate(any(NodeType.class), eq(node_0_1), 
+        any(Priority.class), any(ResourceRequest.class), any(Container.class));
+    assertEquals(0, app_0.getSchedulingOpportunities(priority)); // should be 0
+    
+    // Allow rack-locality for rack_1
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
+            true, priority, recordFactory));
+    app_0.updateResourceRequests(app_0_requests_0);
+    app_0_requests_0.clear();
+
+    // resourceName: <priority, memory, #containers, relaxLocality>
+    // host_0_0: < 1, 1GB, 1, true >
+    // host_0_1: < null >
+    // rack_0:   < null >                     
+    // host_1_0: < 1, 1GB, 1, true >
+    // host_1_1: < null >
+    // rack_1:   < 1, 1GB, 1, true >          <----
+    // ANY:      < 1, 1GB, 1, false >         
+    // Availability:
+    // host_0_0: 8G
+    // host_0_1: 8G
+    // host_1_0: 8G
+    // host_1_1: 8G
+
+    // node_1_1  
+    // Now, should allocate since RR(rack_1) = relax: true
+    a.assignContainers(clusterResource, node_1_1);
+    verify(app_0).allocate(eq(NodeType.RACK_LOCAL), eq(node_1_1), 
+        any(Priority.class), any(ResourceRequest.class), any(Container.class));
+    assertEquals(0, app_0.getSchedulingOpportunities(priority)); 
+    assertEquals(0, app_0.getTotalRequiredResources(priority));
+
+    // Now sanity-check node_local
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
+            false, priority, recordFactory));
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, // only one
+            false, priority, recordFactory));
+    app_0.updateResourceRequests(app_0_requests_0);
+    app_0_requests_0.clear();
+    
+    // resourceName: <priority, memory, #containers, relaxLocality>
+    // host_0_0: < 1, 1GB, 1, true >
+    // host_0_1: < null >
+    // rack_0:   < null >                     
+    // host_1_0: < 1, 1GB, 1, true >
+    // host_1_1: < null >
+    // rack_1:   < 1, 1GB, 1, false >          <----
+    // ANY:      < 1, 1GB, 1, false >          <----
+    // Availability:
+    // host_0_0: 8G
+    // host_0_1: 8G
+    // host_1_0: 8G
+    // host_1_1: 7G
+
+    a.assignContainers(clusterResource, node_1_0);
+    verify(app_0).allocate(eq(NodeType.NODE_LOCAL), eq(node_1_0), 
+        any(Priority.class), any(ResourceRequest.class), any(Container.class));
+    assertEquals(0, app_0.getSchedulingOpportunities(priority)); 
+    assertEquals(0, app_0.getTotalRequiredResources(priority));
+
+  }
+
   @After
   public void tearDown() throws Exception {
   }

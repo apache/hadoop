@@ -111,6 +111,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-326. Add multi-resource scheduling to the fair scheduler. 
     (sandyr via tucu)
 
+    YARN-398. Make it possible to specify hard locality constraints in resource
+    requests for CapacityScheduler. (acmurthy)
+
   IMPROVEMENTS
 
     YARN-365. Change NM heartbeat handling to not generate a scheduler event
