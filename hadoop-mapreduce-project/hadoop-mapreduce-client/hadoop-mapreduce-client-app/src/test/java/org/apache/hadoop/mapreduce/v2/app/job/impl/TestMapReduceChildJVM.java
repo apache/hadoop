@@ -52,8 +52,8 @@ public class TestMapReduceChildJVM {
       " -Dhadoop.metrics.log.level=WARN" +
       "  -Xmx200m -Djava.io.tmpdir=" + envVar("PWD") + "/tmp" +
       " -Dlog4j.configuration=container-log4j.properties" +
-      " -Dyarn.app.mapreduce.container.log.dir=<LOG_DIR>" +
-      " -Dyarn.app.mapreduce.container.log.filesize=0" +
+      " -Dyarn.app.container.log.dir=<LOG_DIR>" +
+      " -Dyarn.app.container.log.filesize=0" +
       " -Dhadoop.root.logger=INFO,CLA" +
       " org.apache.hadoop.mapred.YarnChild 127.0.0.1" +
       " 54321" +

@@ -84,6 +84,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-749. Rename ResourceRequest.(get,set)HostName to
     ResourceRequest.(get,set)ResourceName. (acmurthy)
 
+    YARN-720. container-log4j.properties should not refer to mapreduce
+    property names. (Zhijie Shen via sseth)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

@@ -155,8 +155,8 @@ public class TestStreamingTaskLog {
     String env = MapReduceTestUtil.readOutput(outputPath, mr.createJobConf());
     long logSize = USERLOG_LIMIT_KB * 1024;
     assertTrue("environment set for child is wrong", env.contains("INFO,CLA")
-               && env.contains("-Dyarn.app.mapreduce.container.log.dir=")
-               && env.contains("-Dyarn.app.mapreduce.container.log.filesize=" + logSize)
+               && env.contains("-Dyarn.app.container.log.dir=")
+               && env.contains("-Dyarn.app.container.log.filesize=" + logSize)
                && env.contains("-Dlog4j.configuration="));
   }
 }
