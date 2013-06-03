@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.fs.Path;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -151,5 +152,37 @@ public class TestJobConf {
     assertEquals("The variable key is no longer used.",
         JobConf.deprecatedString("key"));
 
+  }
+
+  /**
+   * Ensure that M/R 1.x applications can get and set task virtual memory with
+   * old property names
+   */
+  @SuppressWarnings("deprecation")
+  @Test (timeout = 1000)
+  public void testDeprecatedPropertyNameForTaskVmem() {
+    JobConf configuration = new JobConf();
+
+    configuration.setLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY, 1024);
+    configuration.setLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY, 1024);
+    Assert.assertEquals(1024, configuration.getMemoryForMapTask());
+    Assert.assertEquals(1024, configuration.getMemoryForReduceTask());
+    // Make sure new property names aren't broken by the old ones
+    configuration.setLong(JobConf.MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY, 1025);
+    configuration.setLong(JobConf.MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY, 1025);
+    Assert.assertEquals(1025, configuration.getMemoryForMapTask());
+    Assert.assertEquals(1025, configuration.getMemoryForReduceTask());
+
+    configuration.setMemoryForMapTask(2048);
+    configuration.setMemoryForReduceTask(2048);
+    Assert.assertEquals(2048, configuration.getLong(
+        JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY, -1));
+    Assert.assertEquals(2048, configuration.getLong(
+        JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY, -1));
+    // Make sure new property names aren't broken by the old ones
+    Assert.assertEquals(2048, configuration.getLong(
+        JobConf.MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY, -1));
+    Assert.assertEquals(2048, configuration.getLong(
+        JobConf.MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY, -1));
   }
 }
