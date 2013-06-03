@@ -464,9 +464,10 @@ public class MRApps extends Apps {
   public static void addLog4jSystemProperties(
       String logLevel, long logSize, List<String> vargs) {
     vargs.add("-Dlog4j.configuration=container-log4j.properties");
-    vargs.add("-D" + MRJobConfig.TASK_LOG_DIR + "=" +
+    vargs.add("-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_DIR + "=" +
         ApplicationConstants.LOG_DIR_EXPANSION_VAR);
-    vargs.add("-D" + MRJobConfig.TASK_LOG_SIZE + "=" + logSize);
+    vargs.add(
+        "-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_SIZE + "=" + logSize);
     vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA"); 
   }
 }

@@ -368,6 +368,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5177. Use common utils FileUtil#setReadable/Writable/Executable & 
     FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
+    MAPREDUCE-5291. Change MR App to use updated property names in
+    container-log4j.properties. (Zhijie Shen via sseth)
+
 Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
