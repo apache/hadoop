@@ -36,6 +36,9 @@ Release 0.23.8 - UNRELEASED
     HADOOP-9504. MetricsDynamicMBeanBase has concurrency issues in
     createMBeanInfo (Liang Xie via jlowe)
 
+    HADOOP-9614. smart-test-patch.sh hangs for new version of patch (2.7.1)
+    (Ravi Prakash via jeagles)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
