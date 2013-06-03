@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.junit.Test;
@@ -49,6 +50,11 @@ public class TestSchedulingPolicy {
     assertTrue("Invalid scheduler name",
         sm.getName().equals(FairSharePolicy.NAME));
 
+    // Shortname - drf
+    sm = SchedulingPolicy.parse("drf");
+    assertTrue("Invalid scheduler name",
+        sm.getName().equals(DominantResourceFairnessPolicy.NAME));
+    
     // Shortname - fair
     sm = SchedulingPolicy.parse("fair");
     assertTrue("Invalid scheduler name",
@@ -93,7 +99,20 @@ public class TestSchedulingPolicy {
         SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_PARENT));
     assertTrue(ERR,
         SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ANY));
-
+    
+    // drf
+    policy = SchedulingPolicy.parse("drf"); 
+    assertTrue(ERR,
+        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_LEAF));
+    assertTrue(ERR, SchedulingPolicy.isApplicableTo(policy,
+        SchedulingPolicy.DEPTH_INTERMEDIATE));
+    assertTrue(ERR,
+        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ROOT));
+    assertTrue(ERR,
+        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_PARENT));
+    assertTrue(ERR,
+        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ANY));
+    
     policy = Mockito.mock(SchedulingPolicy.class);
     Mockito.when(policy.getApplicableDepth()).thenReturn(
         SchedulingPolicy.DEPTH_PARENT);

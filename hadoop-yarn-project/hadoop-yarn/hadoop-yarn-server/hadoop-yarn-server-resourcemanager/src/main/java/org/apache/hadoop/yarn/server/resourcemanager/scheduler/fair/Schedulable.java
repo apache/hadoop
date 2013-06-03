@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 /**
@@ -80,7 +81,7 @@ public abstract class Schedulable {
 
 
   /** Job/queue weight in fair sharing. */
-  public abstract double getWeight();
+  public abstract ResourceWeights getWeights();
 
   /** Start time for jobs in FIFO queues; meaningless for QueueSchedulables.*/
   public abstract long getStartTime();
@@ -110,7 +111,7 @@ public abstract class Schedulable {
   /** Convenient toString implementation for debugging. */
   @Override
   public String toString() {
-    return String.format("[%s, demand=%s, running=%s, share=%s,], w=%.1f]",
-        getName(), getDemand(), getResourceUsage(), fairShare, getWeight());
+    return String.format("[%s, demand=%s, running=%s, share=%s, w=%s]",
+        getName(), getDemand(), getResourceUsage(), fairShare, getWeights());
   }
 }

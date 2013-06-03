@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -30,7 +31,7 @@ public class FakeSchedulable extends Schedulable {
   private Resource demand;
   private Resource usage;
   private Resource minShare;
-  private double weight;
+  private ResourceWeights weights;
   private Priority priority;
   private long startTime;
   
@@ -46,21 +47,22 @@ public class FakeSchedulable extends Schedulable {
     this(demand, minShare, 1, 0, 0, 0);
   }
   
-  public FakeSchedulable(int demand, int minShare, double weight) {
-    this(demand, minShare, weight, 0, 0, 0);
+  public FakeSchedulable(int demand, int minShare, double memoryWeight) {
+    this(demand, minShare, memoryWeight, 0, 0, 0);
   }
   
   public FakeSchedulable(int demand, int minShare, double weight, int fairShare, int usage,
       long startTime) {
-    this(Resources.createResource(demand), Resources.createResource(minShare), weight, 
-        Resources.createResource(fairShare), Resources.createResource(usage), startTime);
+    this(Resources.createResource(demand), Resources.createResource(minShare),
+        new ResourceWeights((float)weight), Resources.createResource(fairShare),
+        Resources.createResource(usage), startTime);
   }
   
-  public FakeSchedulable(Resource demand, Resource minShare, double weight, Resource fairShare,
-      Resource usage, long startTime) {
+  public FakeSchedulable(Resource demand, Resource minShare, ResourceWeights weight,
+      Resource fairShare, Resource usage, long startTime) {
     this.demand = demand;
     this.minShare = minShare;
-    this.weight = weight;
+    this.weights = weight;
     setFairShare(fairShare);
     this.usage = usage;
     this.priority = Records.newRecord(Priority.class);
@@ -98,8 +100,8 @@ public class FakeSchedulable extends Schedulable {
   }
   
   @Override
-  public double getWeight() {
-    return weight;
+  public ResourceWeights getWeights() {
+    return weights;
   }
   
   @Override

@@ -180,8 +180,8 @@ public class FSSchedulerNode extends SchedulerNode {
   @Override
   public String toString() {
     return "host: " + rmNode.getNodeAddress() + " #containers=" + getNumContainers() +  
-      " available=" + getAvailableResource().getMemory() + 
-      " used=" + getUsedResource().getMemory();
+      " available=" + getAvailableResource() + 
+      " used=" + getUsedResource();
   }
 
   @Override

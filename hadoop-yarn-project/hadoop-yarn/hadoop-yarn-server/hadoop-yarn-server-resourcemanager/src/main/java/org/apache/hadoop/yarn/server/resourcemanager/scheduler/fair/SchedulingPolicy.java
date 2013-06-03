@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 
@@ -67,11 +68,12 @@ public abstract class SchedulingPolicy {
   /**
    * Returns {@link SchedulingPolicy} instance corresponding to the
    * {@link SchedulingPolicy} passed as a string. The policy can be "fair" for
-   * FairsharePolicy or "fifo" for FifoPolicy. For custom
+   * FairSharePolicy, "fifo" for FifoPolicy, or "drf" for
+   * DominantResourceFairnessPolicy. For a custom
    * {@link SchedulingPolicy}s in the RM classpath, the policy should be
    * canonical class name of the {@link SchedulingPolicy}.
    * 
-   * @param policy canonical class name or "fair" or "fifo"
+   * @param policy canonical class name or "drf" or "fair" or "fifo"
    * @throws AllocationConfigurationException
    */
   @SuppressWarnings("unchecked")
@@ -80,10 +82,12 @@ public abstract class SchedulingPolicy {
     @SuppressWarnings("rawtypes")
     Class clazz;
     String text = policy.toLowerCase();
-    if (text.equals("fair")) {
+    if (text.equalsIgnoreCase(FairSharePolicy.NAME)) {
       clazz = FairSharePolicy.class;
-    } else if (text.equals("fifo")) {
+    } else if (text.equalsIgnoreCase(FifoPolicy.NAME)) {
       clazz = FifoPolicy.class;
+    } else if (text.equalsIgnoreCase(DominantResourceFairnessPolicy.NAME)) {
+      clazz = DominantResourceFairnessPolicy.class;
     } else {
       try {
         clazz = Class.forName(policy);
@@ -98,6 +102,8 @@ public abstract class SchedulingPolicy {
     }
     return getInstance(clazz);
   }
+  
+  public void initialize(Resource clusterCapacity) {}
 
   /**
    * @return returns the name of {@link SchedulingPolicy}
