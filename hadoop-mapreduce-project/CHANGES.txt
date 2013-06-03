@@ -344,7 +344,7 @@ Release 2.1.0-beta - UNRELEASED
     of the entire Container in the startContainer call - YARN-684.
     (Vinod Kumar Vavilapalli via sseth)
 
-    MAPREDUCE-5220. Fix backward incompatibility for TaskCompletionEvent by
+    MAPREDUCE-5299. Fix backward incompatibility for TaskCompletionEvent by
     adding back setTaskID. (Zhijie Shen via acmurthy) 
 
     MAPREDUCE-5296. Fix backward incompatibility for JobControl by adding the
