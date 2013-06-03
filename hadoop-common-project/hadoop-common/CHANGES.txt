@@ -32,6 +32,9 @@ Release 2.1.0-beta - UNRELEASED
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
+    HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
+    szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-9253. Capture ulimit info in the logs at service start time.
