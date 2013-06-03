@@ -332,6 +332,11 @@ public class FiCaSchedulerApp extends SchedulerApplication {
         schedulingOpportunities.count(priority) + 1);
   }
 
+  synchronized public void subtractSchedulingOpportunity(Priority priority) {
+    int count = schedulingOpportunities.count(priority) - 1;
+    this.schedulingOpportunities.setCount(priority, Math.max(count,  0));
+  }
+  
   /**
    * Return the number of times the application has been given an opportunity
    * to schedule a task at the given priority since the last time it
