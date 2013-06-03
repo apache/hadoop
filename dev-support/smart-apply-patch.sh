@@ -50,7 +50,12 @@ if $PATCH -p0 -E --dry-run < $PATCH_FILE 2>&1 > $TMP; then
   TMP2=/tmp/tmp.paths.2.$$
   TOCLEAN="$TOCLEAN $TMP2"
 
-  grep '^patching file ' $TMP | awk '{print $3}' | grep -v /dev/null | sort | uniq > $TMP2
+  egrep '^patching file |^checking file ' $TMP | awk '{print $3}' | grep -v /dev/null | sort | uniq > $TMP2
+
+  if [ ! -s $TMP2 ]; then
+    echo "Error: Patch dryrun couldn't detect changes the patch would make. Exiting."
+    cleanup 1
+  fi
 
   #first off check that all of the files do not exist
   FOUND_ANY=0
