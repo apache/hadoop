@@ -12,12 +12,6 @@ Trunk (Unreleased)
     HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
     hadoop client processes. (Yu Gao via llu)
 
-    HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
-    szetszwo)
-
-    HADOOP-8470. Add NetworkTopologyWithNodeGroup, a 4-layer implementation
-    of NetworkTopology.  (Junping Du via szetszwo)
-
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
@@ -400,6 +394,12 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
+
+    HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
+    szetszwo)
+
+    HADOOP-8470. Add NetworkTopologyWithNodeGroup, a 4-layer implementation
+    of NetworkTopology.  (Junping Du via szetszwo)
 
   IMPROVEMENTS
 
