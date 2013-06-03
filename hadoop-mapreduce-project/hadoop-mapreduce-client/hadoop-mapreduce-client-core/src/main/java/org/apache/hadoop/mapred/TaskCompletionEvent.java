@@ -105,7 +105,17 @@ public class TaskCompletionEvent
   public void setTaskId(String taskId) {
     this.setTaskAttemptId(TaskAttemptID.forName(taskId));
   }
-  
+
+  /**
+   * Sets task id.
+   * @param taskId
+   * @deprecated use {@link #setTaskAttemptId(TaskAttemptID)} instead.
+   */
+  @Deprecated
+  public void setTaskID(TaskAttemptID taskId) {
+    this.setTaskAttemptId(taskId);
+  }
+
   /**
    * Sets task id. 
    * @param taskId
