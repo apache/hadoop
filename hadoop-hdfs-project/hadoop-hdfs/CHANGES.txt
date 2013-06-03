@@ -12,12 +12,6 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
-    with 4-layer network topology.  (Junping Du via szetszwo)
-
-    HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
-    (Junping Du via szetszwo)
-
     HDFS-4659 Support setting execution bit for regular files (Brandon Li via sanjay)
 
   IMPROVEMENTS
@@ -94,10 +88,6 @@ Trunk (Unreleased)
 
     HDFS-3478. Test quotas with Long.Max_Value. (Sujay Rau via eli)
 
-    HDFS-3498. Support replica removal in BlockPlacementPolicy and make
-    BlockPlacementPolicyDefault extensible for reusing code in subclasses.
-    (Junping Du via szetszwo)
-
     HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
     HDFS-3768. Exception in TestJettyHelper is incorrect. 
@@ -128,8 +118,6 @@ Trunk (Unreleased)
 
     HDFS-3358. Specify explicitly that the NN UI status total is talking
     of persistent objects on heap. (harsh)
-
-    HDFS-4234. Use generic code for choosing datanode in Balancer.  (szetszwo)
 
     HDFS-4633 TestDFSClientExcludedNodes fails sporadically if excluded nodes
     cache expires too quickly  (Chris Nauroth via Sanjay)
@@ -220,10 +208,6 @@ Trunk (Unreleased)
     HDFS-4003. test-patch should build the common native libs before
     running hdfs tests. (Colin Patrick McCabe via eli)
 
-    HDFS-4240. For nodegroup-aware block placement, when a node is excluded,
-    the nodes in the same nodegroup should also be excluded.  (Junping Du
-    via szetszwo)
-
     HDFS-4260 Fix HDFS tests to set test dir to a valid HDFS path as opposed
     to the local build path (Chri Nauroth via Sanjay)
 
@@ -238,11 +222,6 @@ Trunk (Unreleased)
 
     HDFS-4338. TestNameNodeMetrics#testCorruptBlock is flaky. (Andrew Wang via
     atm)
-
-    HDFS-4261. Fix bugs in Balaner causing infinite loop and
-    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
-
-    HDFS-4382. Fix typo MAX_NOT_CHANGED_INTERATIONS. (Ted Yu via suresh)
 
     HDFS-4391. TestDataTransferKeepalive fails when tests are executed in a
     certain order. (Andrew Wang via atm)
@@ -298,6 +277,12 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
+
+    HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
+    with 4-layer network topology.  (Junping Du via szetszwo)
+
+    HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
+    (Junping Du via szetszwo)
     
   IMPROVEMENTS
 
@@ -380,6 +365,12 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4698. Provide client-side metrics for remote reads, local reads, and
     short-circuit reads. (Colin Patrick McCabe via atm)
+
+    HDFS-3498. Support replica removal in BlockPlacementPolicy and make
+    BlockPlacementPolicyDefault extensible for reusing code in subclasses.
+    (Junping Du via szetszwo)
+
+    HDFS-4234. Use generic code for choosing datanode in Balancer.  (szetszwo)
 
   OPTIMIZATIONS
 
@@ -557,6 +548,15 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4865. Remove sub resource warning from httpfs log at startup time. 
     (ywskycn via tucu)
+
+    HDFS-4240. For nodegroup-aware block placement, when a node is excluded,
+    the nodes in the same nodegroup should also be excluded.  (Junping Du
+    via szetszwo)
+
+    HDFS-4261. Fix bugs in Balaner causing infinite loop and
+    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
+
+    HDFS-4382. Fix typo MAX_NOT_CHANGED_INTERATIONS. (Ted Yu via suresh)
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
