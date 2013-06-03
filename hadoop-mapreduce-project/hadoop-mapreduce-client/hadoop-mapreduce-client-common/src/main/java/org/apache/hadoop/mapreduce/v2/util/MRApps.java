@@ -336,17 +336,6 @@ public class MRApps extends Apps {
     return startCommitFile;
   }
 
-  private static long[] parseTimeStamps(String[] strs) {
-    if (null == strs) {
-      return null;
-    }
-    long[] result = new long[strs.length];
-    for(int i=0; i < strs.length; ++i) {
-      result[i] = Long.parseLong(strs[i]);
-    }
-    return result;
-  }
-
   public static void setupDistributedCache( 
       Configuration conf, 
       Map<String, LocalResource> localResources) 
@@ -356,7 +345,7 @@ public class MRApps extends Apps {
     parseDistributedCacheArtifacts(conf, localResources,  
         LocalResourceType.ARCHIVE, 
         DistributedCache.getCacheArchives(conf), 
-        parseTimeStamps(DistributedCache.getArchiveTimestamps(conf)), 
+        DistributedCache.getArchiveTimestamps(conf),
         getFileSizes(conf, MRJobConfig.CACHE_ARCHIVES_SIZES), 
         DistributedCache.getArchiveVisibilities(conf));
     
@@ -365,7 +354,7 @@ public class MRApps extends Apps {
         localResources,  
         LocalResourceType.FILE, 
         DistributedCache.getCacheFiles(conf),
-        parseTimeStamps(DistributedCache.getFileTimestamps(conf)),
+        DistributedCache.getFileTimestamps(conf),
         getFileSizes(conf, MRJobConfig.CACHE_FILES_SIZES),
         DistributedCache.getFileVisibilities(conf));
   }

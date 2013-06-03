@@ -215,16 +215,33 @@ public class DistributedCache {
   }
 
   /**
+   * Parse a list of strings into longs.
+   * @param strs the list of strings to parse
+   * @return a list of longs that were parsed. same length as strs.
+   */
+  private static long[] parseTimestamps(String[] strs) {
+    if (strs == null) {
+      return null;
+    }
+    long[] result = new long[strs.length];
+    for(int i=0; i < strs.length; ++i) {
+      result[i] = Long.parseLong(strs[i]);
+    }
+    return result;
+  }
+
+  /**
    * Get the timestamps of the archives.  Used by internal
    * DistributedCache and MapReduce code.
    * @param conf The configuration which stored the timestamps
-   * @return a string array of timestamps 
+   * @return a long array of timestamps
    * @throws IOException
    * @deprecated Use {@link JobContext#getArchiveTimestamps()} instead
    */
   @Deprecated
-  public static String[] getArchiveTimestamps(Configuration conf) {
-    return conf.getStrings(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS);
+  public static long[] getArchiveTimestamps(Configuration conf) {
+    return parseTimestamps(
+        conf.getStrings(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS));
   }
 
 
@@ -232,13 +249,14 @@ public class DistributedCache {
    * Get the timestamps of the files.  Used by internal
    * DistributedCache and MapReduce code.
    * @param conf The configuration which stored the timestamps
-   * @return a string array of timestamps 
+   * @return a long array of timestamps
    * @throws IOException
    * @deprecated Use {@link JobContext#getFileTimestamps()} instead
    */
   @Deprecated
-  public static String[] getFileTimestamps(Configuration conf) {
-    return conf.getStrings(MRJobConfig.CACHE_FILE_TIMESTAMPS);
+  public static long[] getFileTimestamps(Configuration conf) {
+    return parseTimestamps(
+        conf.getStrings(MRJobConfig.CACHE_FILE_TIMESTAMPS));
   }
 
   /**

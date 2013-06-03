@@ -245,14 +245,14 @@ public class TestMRWithDistributedCache extends TestCase {
     Assert.assertEquals(1,
         DistributedCache.getArchiveTimestamps(conf).length);
     Assert.assertEquals(1234567890,
-        Long.parseLong(DistributedCache.getArchiveTimestamps(conf)[0]));
+        DistributedCache.getArchiveTimestamps(conf)[0]);
     DistributedCache.setFileTimestamps(conf, "1234567890");
     Assert.assertEquals(1234567890,
         conf.getLong(DistributedCache.CACHE_FILES_TIMESTAMPS, 0));
     Assert.assertEquals(1,
         DistributedCache.getFileTimestamps(conf).length);
     Assert.assertEquals(1234567890,
-        Long.parseLong(DistributedCache.getFileTimestamps(conf)[0]));
+        DistributedCache.getFileTimestamps(conf)[0]);
 
     DistributedCache.createAllSymlink(conf, new File("Test Job Cache Dir"),
         new File("Test Work Dir"));

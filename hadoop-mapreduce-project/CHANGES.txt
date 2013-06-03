@@ -487,6 +487,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5296. Fix backward incompatibility for JobControl by adding the
     omitted addJob. (Zhijie Shen via acmurthy) 
 
+    MAPREDUCE-5300. Fix backward incompatibility for
+    o.a.h.mapreduce.filecache.DistributedCache. (Zhijie Shen via acmurthy)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
