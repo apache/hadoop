@@ -314,6 +314,8 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4261. Fix bugs in Balaner causing infinite loop and
     TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
 
+    HDFS-4382. Fix typo MAX_NOT_CHANGED_INTERATIONS. (Ted Yu via suresh)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
