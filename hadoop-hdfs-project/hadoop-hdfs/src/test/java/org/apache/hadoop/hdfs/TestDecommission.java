@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.HostFileManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.junit.After;
@@ -79,7 +78,6 @@ public class TestDecommission {
     Path dir = new Path(workingDir, System.getProperty("test.build.data", "target/test/data") + "/work-dir/decommission");
     hostsFile = new Path(dir, "hosts");
     excludeFile = new Path(dir, "exclude");
-    HostFileManager.dnsResolutionDisabledForTesting = false;
     
     // Setup conf
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
@@ -101,7 +99,6 @@ public class TestDecommission {
     if (cluster != null) {
       cluster.shutdown();
     }
-    HostFileManager.dnsResolutionDisabledForTesting = false;
   }
   
   private void writeConfigFile(Path name, ArrayList<String> nodes) 
@@ -690,55 +687,6 @@ public class TestDecommission {
         Assert.assertFalse(info[0].isDecommissioned());
         Assert.assertFalse(info[0].isDecommissionInProgress());
         assertEquals(registrationName, info[0].getHostName());
-        break;
-      }
-      LOG.info("Waiting for datanode to come back");
-      Thread.sleep(HEARTBEAT_INTERVAL * 1000);
-    }
-  }
-  
-  @Test(timeout=360000)
-  public void testBackgroundDnsResolution() throws IOException,
-      InterruptedException {
-    // Create cluster
-    Configuration hdfsConf = new Configuration(conf);
-    hdfsConf.setInt(
-        DFSConfigKeys.DFS_NAMENODE_HOSTS_DNS_RESOLUTION_INTERVAL_SECONDS, 1);
-    cluster = new MiniDFSCluster.Builder(hdfsConf)
-        .numDataNodes(1).checkDataNodeHostConfig(true)
-        .setupHostsFile(true).build();
-    cluster.waitActive();
-
-    // Set up an includes file with just 127.0.0.1
-    ArrayList<String> nodes = new ArrayList<String>();
-    String localhost = java.net.InetAddress.getLocalHost().getHostName();
-    nodes.add(localhost);
-    writeConfigFile(hostsFile,  nodes);
-    HostFileManager.dnsResolutionDisabledForTesting = true;
-    refreshNodes(cluster.getNamesystem(0), hdfsConf);
-    
-    // The DN will be marked dead because DNS resolution was turned off,
-    // and we are in the include file by hostname only.
-    DFSClient client = getDfsClient(cluster.getNameNode(0), hdfsConf);
-    while (true) {
-      DatanodeInfo info[] = client.datanodeReport(DatanodeReportType.DEAD);
-      if (info.length == 1) {
-        break;
-      }
-      LOG.info("Waiting for datanode to be marked dead");
-      Thread.sleep(HEARTBEAT_INTERVAL * 1000);
-    }
-    
-    // Allow hostname resolution
-    HostFileManager.dnsResolutionDisabledForTesting = false;
-    cluster.restartDataNode(0);
-
-    // Wait for the DN to come back.
-    while (true) {
-      DatanodeInfo info[] = client.datanodeReport(DatanodeReportType.LIVE);
-      if (info.length == 1) {
-        Assert.assertFalse(info[0].isDecommissioned());
-        Assert.assertFalse(info[0].isDecommissionInProgress());
         break;
       }
       LOG.info("Waiting for datanode to come back");
