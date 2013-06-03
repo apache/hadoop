@@ -10,6 +10,9 @@ Release 0.23.9 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-5268. Improve history server startup performance (Karthik
+    Kambatla via jlowe)
+
   BUG FIXES
 
 Release 0.23.8 - UNRELEASED
