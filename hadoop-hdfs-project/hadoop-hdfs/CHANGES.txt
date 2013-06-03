@@ -307,11 +307,15 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4865. Remove sub resource warning from httpfs log at startup time. 
     (ywskycn via tucu)
 
+    HDFS-4240. For nodegroup-aware block placement, when a node is excluded,
+    the nodes in the same nodegroup should also be excluded.  (Junping Du
+    via szetszwo)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
     (Colin Patrick McCabe via todd)
-    
+
     HDFS-4354. Create DomainSocket and DomainPeer and associated unit tests.
     (Colin Patrick McCabe via todd)
     
