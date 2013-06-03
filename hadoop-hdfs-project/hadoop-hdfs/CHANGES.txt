@@ -311,6 +311,9 @@ Release 2.1.0-beta - UNRELEASED
     the nodes in the same nodegroup should also be excluded.  (Junping Du
     via szetszwo)
 
+    HDFS-4261. Fix bugs in Balaner causing infinite loop and
+    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
