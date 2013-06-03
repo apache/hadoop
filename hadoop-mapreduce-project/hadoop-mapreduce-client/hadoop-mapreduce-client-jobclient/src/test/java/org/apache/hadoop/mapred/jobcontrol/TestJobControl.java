@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.mapred.jobcontrol;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 
@@ -29,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
+import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob;
 import org.junit.Test;
 
 /**
@@ -99,8 +102,8 @@ public class TestJobControl extends junit.framework.TestCase {
     Job job_4 = new Job(jobConf_4, dependingJobs);
 
     JobControl theControl = new JobControl("Test");
-    theControl.addJob(job_1);
-    theControl.addJob(job_2);
+    theControl.addJob((ControlledJob) job_1);
+    theControl.addJob((ControlledJob) job_2);
     theControl.addJob(job_3);
     theControl.addJob(job_4);
 
