@@ -216,7 +216,7 @@ public class TestBalancerWithNodeGroup {
    * to n0 or n1 as balancer policy with node group. Thus, we expect the balancer
    * to end in 5 iterations without move block process.
    */
-  @Test
+  @Test(timeout=60000)
   public void testBalancerEndInNoMoveProgress() throws Exception {
     Configuration conf = createConf();
     long[] capacities = new long[]{CAPACITY, CAPACITY, CAPACITY, CAPACITY};
@@ -255,7 +255,7 @@ public class TestBalancerWithNodeGroup {
    * Create a cluster with even distribution, and a new empty node is added to
    * the cluster, then test rack locality for balancer policy. 
    */
-  @Test
+  @Test(timeout=60000)
   public void testBalancerWithRackLocality() throws Exception {
     Configuration conf = createConf();
     long[] capacities = new long[]{CAPACITY, CAPACITY};
@@ -294,7 +294,7 @@ public class TestBalancerWithNodeGroup {
       totalCapacity += newCapacity;
 
       // run balancer and validate results
-      runBalancer(conf, totalUsedSpace, totalCapacity);
+      runBalancerCanFinish(conf, totalUsedSpace, totalCapacity);
       
       DatanodeInfo[] datanodeReport = 
               client.getDatanodeReport(DatanodeReportType.ALL);
@@ -321,7 +321,7 @@ public class TestBalancerWithNodeGroup {
   /** Create a cluster with even distribution, and a new empty node is added to
    *  the cluster, then test rack locality for balancer policy. 
    **/
-  @Test
+  @Test(timeout=60000)
   public void testBalancerWithNodeGroup() throws Exception {
     Configuration conf = createConf();
     long[] capacities = new long[]{CAPACITY, CAPACITY};
