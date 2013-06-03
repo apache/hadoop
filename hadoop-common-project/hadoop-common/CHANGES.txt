@@ -334,8 +334,6 @@ Trunk (Unreleased)
     HADOOP-9099. NetUtils.normalizeHostName fails on domains where 
     UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
 
-    HADOOP-9397. Incremental dist tar build fails (Chris Nauroth via jlowe)
-
     HADOOP-9431 TestSecurityUtil#testLocalHostNameForNullOrWild on systems where hostname
     contains capital letters  (Chris Nauroth via sanjay)
 
@@ -738,6 +736,8 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-9553. TestAuthenticationToken fails on Windows.
     (Arpit Agarwal via suresh)
+
+    HADOOP-9397. Incremental dist tar build fails (Chris Nauroth via jlowe)
 
     HADOOP-9607. Fixes in Javadoc build (Timothy St. Clair via cos)
 
