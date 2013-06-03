@@ -238,6 +238,9 @@ Trunk (Unreleased)
     HDFS-4687. TestDelegationTokenForProxyUser#testWebHdfsDoAs is flaky with
     JDK7. (Andrew Wang via atm)
 
+    HDFS-3934. duplicative dfs_hosts entries handled wrong. (Colin Patrick
+    McCabe)
+
 Release 2.1.0-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
