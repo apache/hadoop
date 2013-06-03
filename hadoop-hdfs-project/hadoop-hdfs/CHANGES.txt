@@ -40,6 +40,9 @@ Release 2.1.0-beta - UNRELEASED
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
     
+    HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
+    with 4-layer network topology.  (Junping Du via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 

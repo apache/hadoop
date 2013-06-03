@@ -49,7 +49,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
     }
     Node nodeGroup = getNode(node.getNetworkLocation());
     if (nodeGroup == null) {
-      nodeGroup = new InnerNode(node.getNetworkLocation());
+      nodeGroup = new InnerNodeWithNodeGroup(node.getNetworkLocation());
     }
     return getNode(nodeGroup.getNetworkLocation());
   }
@@ -382,6 +382,11 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
         return false;
       }
       return true;
+    }
+    
+    @Override
+    protected boolean isLeafParent() {
+      return isNodeGroup();
     }
 
     @Override

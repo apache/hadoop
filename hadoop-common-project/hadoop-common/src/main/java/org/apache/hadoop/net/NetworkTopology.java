@@ -171,8 +171,7 @@ public class NetworkTopology {
         }
         if (parentNode == null) {
           // create a new InnerNode
-          parentNode = new InnerNode(parentName, getPath(this),
-                                     this, this.getLevel()+1);
+          parentNode = createParentNode(parentName);
           children.add(parentNode);
         }
         // add n to the subtree of the next ancestor node
@@ -289,7 +288,7 @@ public class NetworkTopology {
       // calculate the total number of excluded leaf nodes
       int numOfExcludedLeaves =
         isLeaf ? 1 : ((InnerNode)excludedNode).getNumOfLeaves();
-      if (isRack()) { // children are leaves
+      if (isLeafParent()) { // children are leaves
         if (isLeaf) { // excluded node is a leaf node
           int excludedIndex = children.indexOf(excludedNode);
           if (excludedIndex != -1 && leafIndex >= 0) {
@@ -327,6 +326,10 @@ public class NetworkTopology {
       }
     }
     
+    protected boolean isLeafParent() {
+      return isRack();
+    }
+
     /**
       * Determine if children a leaves, default implementation calls {@link #isRack()}
       * <p>To be overridden in subclasses for specific InnerNode implementations,
@@ -775,6 +778,30 @@ public class NetworkTopology {
       tree.append("\n");
     }
     return tree.toString();
+  }
+  
+  /**
+   * Divide networklocation string into two parts by last separator, and get 
+   * the first part here.
+   * 
+   * @param networkLocation
+   * @return
+   */
+  public static String getFirstHalf(String networkLocation) {
+    int index = networkLocation.lastIndexOf(NodeBase.PATH_SEPARATOR_STR);
+    return networkLocation.substring(0, index);
+  }
+
+  /**
+   * Divide networklocation string into two parts by last separator, and get 
+   * the second part here.
+   * 
+   * @param networkLocation
+   * @return
+   */
+  public static String getLastHalf(String networkLocation) {
+    int index = networkLocation.lastIndexOf(NodeBase.PATH_SEPARATOR_STR);
+    return networkLocation.substring(index);
   }
 
   /** swap two array items */
