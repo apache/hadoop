@@ -95,6 +95,9 @@ Release 1.1.0 - (partial upto at r1293509 as of 2012-02-24 17:46:42)
 
     HDFS-3008. Negative caching of local addrs doesn't work. (eli)
 
+    HDFS-4261. Fix bugs in Balaner causing infinite loop and
+    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
