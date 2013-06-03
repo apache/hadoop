@@ -615,6 +615,9 @@ public class NMClientAsync extends AbstractService {
           LOG.info("Container " + containerId + " is already stopped or failed");
         } else {
           container.handle(event);
+          if (isCompletelyDone(container)) {
+            containers.remove(containerId);
+          }
         }
       }
     }

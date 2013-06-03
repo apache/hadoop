@@ -386,6 +386,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-733. Fixed TestNMClient from failing occasionally. (Zhijie Shen via
     vinodkv)
 
+    YARN-730. Fix NMClientAsync to remove completed containers. (Zhijie Shen
+    via acmurthy)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
