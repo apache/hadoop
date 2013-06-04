@@ -207,6 +207,28 @@ message ResourceRequestProto {
   optional bool relax_locality = 5 [default = true];
 }
 
+message PreemptionMessageProto {
+  optional StrictPreemptionContractProto strictContract = 1;
+  optional PreemptionContractProto contract = 2;
+}
+
+message StrictPreemptionContractProto {
+  repeated PreemptionContainerProto container = 1;
+}
+
+message PreemptionContractProto {
+  repeated PreemptionResourceRequestProto resource = 1;
+  repeated PreemptionContainerProto container = 2;
+}
+
+message PreemptionContainerProto {
+  optional ContainerIdProto id = 1;
+}
+
+message PreemptionResourceRequestProto {
+  optional ResourceRequestProto resource = 1;
+}
+
 ////////////////////////////////////////////////////////////////////////
 ////// From client_RM_Protocol /////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
