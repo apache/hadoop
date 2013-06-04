@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
+package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import org.apache.hadoop.yarn.api.protocolrecords.PreemptionResourceRequest;
+import org.apache.hadoop.yarn.api.records.PreemptionResourceRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionResourceRequestProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionResourceRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionResourceRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionResourceRequestProtoOrBuilder;
 
 public class PreemptionResourceRequestPBImpl implements PreemptionResourceRequest {
 
