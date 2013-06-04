@@ -40,6 +40,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.webapp.TestAMWebApp;
@@ -50,7 +51,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
@@ -241,7 +241,7 @@ public class TestHSWebApp {
     TestAppContext ctx = new TestAppContext();
     Map<String, String> params = new HashMap<String, String>();
 
-    params.put(CONTAINER_ID, BuilderUtils.newContainerId(1, 1, 333, 1)
+    params.put(CONTAINER_ID, MRApp.newContainerId(1, 1, 333, 1)
         .toString());
     params.put(NM_NODENAME, 
         NodeId.newInstance(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
@@ -269,7 +269,7 @@ public class TestHSWebApp {
     params.put("start", "-2048");
     params.put("end", "-1024");
     params.put(CONTAINER_LOG_TYPE, "syslog");
-    params.put(CONTAINER_ID, BuilderUtils.newContainerId(1, 1, 333, 1)
+    params.put(CONTAINER_ID, MRApp.newContainerId(1, 1, 333, 1)
         .toString());
     params.put(NM_NODENAME,
         NodeId.newInstance(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
@@ -300,7 +300,7 @@ public class TestHSWebApp {
 
     params.put("start", "foo");
     params.put("end", "bar");
-    params.put(CONTAINER_ID, BuilderUtils.newContainerId(1, 1, 333, 1)
+    params.put(CONTAINER_ID, MRApp.newContainerId(1, 1, 333, 1)
         .toString());
     params.put(NM_NODENAME,
         NodeId.newInstance(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());

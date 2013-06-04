@@ -32,7 +32,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -78,13 +77,13 @@ public class TestAMRMRPCResponseId {
 
     am.registerAppAttempt();
     
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(attempt
+    AllocateRequest allocateRequest = AllocateRequest.newInstance(attempt
         .getAppAttemptId(), 0, 0F, null, null);
 
     AllocateResponse response = amService.allocate(allocateRequest);
     Assert.assertEquals(1, response.getResponseId());
     Assert.assertFalse(response.getReboot());
-    allocateRequest = BuilderUtils.newAllocateRequest(attempt
+    allocateRequest = AllocateRequest.newInstance(attempt
         .getAppAttemptId(), response.getResponseId(), 0F, null, null);
     
     response = amService.allocate(allocateRequest);
@@ -94,7 +93,7 @@ public class TestAMRMRPCResponseId {
     Assert.assertEquals(2, response.getResponseId());
     
     /** try sending old request again **/
-    allocateRequest = BuilderUtils.newAllocateRequest(attempt
+    allocateRequest = AllocateRequest.newInstance(attempt
         .getAppAttemptId(), 0, 0F, null, null);
     response = amService.allocate(allocateRequest);
     Assert.assertTrue(response.getReboot());

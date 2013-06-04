@@ -21,16 +21,15 @@ package org.apache.hadoop.yarn.api;
 import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestNodeId {
   @Test
   public void testNodeId() {
-    NodeId nodeId1 = BuilderUtils.newNodeId("10.18.52.124", 8041);
-    NodeId nodeId2 = BuilderUtils.newNodeId("10.18.52.125", 8038);
-    NodeId nodeId3 = BuilderUtils.newNodeId("10.18.52.124", 8041);
-    NodeId nodeId4 = BuilderUtils.newNodeId("10.18.52.124", 8039);
+    NodeId nodeId1 = NodeId.newInstance("10.18.52.124", 8041);
+    NodeId nodeId2 = NodeId.newInstance("10.18.52.125", 8038);
+    NodeId nodeId3 = NodeId.newInstance("10.18.52.124", 8041);
+    NodeId nodeId4 = NodeId.newInstance("10.18.52.124", 8039);
 
     Assert.assertTrue(nodeId1.equals(nodeId3));
     Assert.assertFalse(nodeId1.equals(nodeId2));

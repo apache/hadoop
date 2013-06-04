@@ -56,7 +56,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.service.Service.STATE;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -97,8 +96,9 @@ public class TestAMRMClient {
     // get node info
     nodeReports = yarnClient.getNodeReports();
     
-    priority = BuilderUtils.newPriority(1);
-    capability = BuilderUtils.newResource(1024, 1);
+    priority = Priority.newInstance(1);
+    capability = Resource.newInstance(1024, 1);
+
     node = nodeReports.get(0).getNodeId().getHost();
     rack = nodeReports.get(0).getRackName();
     nodes = new String[]{ node };
@@ -171,13 +171,13 @@ public class TestAMRMClient {
       amClient.start();
       amClient.registerApplicationMaster("Host", 10000, "");
       
-      Resource capability1 = BuilderUtils.newResource(1024, 2);
-      Resource capability2 = BuilderUtils.newResource(1024, 1);
-      Resource capability3 = BuilderUtils.newResource(1000, 2);
-      Resource capability4 = BuilderUtils.newResource(2000, 1);
-      Resource capability5 = BuilderUtils.newResource(1000, 3);
-      Resource capability6 = BuilderUtils.newResource(2000, 1);
-      
+      Resource capability1 = Resource.newInstance(1024, 2);
+      Resource capability2 = Resource.newInstance(1024, 1);
+      Resource capability3 = Resource.newInstance(1000, 2);
+      Resource capability4 = Resource.newInstance(2000, 1);
+      Resource capability5 = Resource.newInstance(1000, 3);
+      Resource capability6 = Resource.newInstance(2000, 1);
+
       StoredContainerRequest storedContainer1 = 
           new StoredContainerRequest(capability1, nodes, racks, priority);
       StoredContainerRequest storedContainer2 = 
@@ -201,7 +201,7 @@ public class TestAMRMClient {
       List<? extends Collection<StoredContainerRequest>> matches;
       StoredContainerRequest storedRequest;
       // exact match
-      Resource testCapability1 = BuilderUtils.newResource(1024,  2);
+      Resource testCapability1 = Resource.newInstance(1024,  2);
       matches = amClient.getMatchingRequests(priority, node, testCapability1);
       verifyMatches(matches, 1);
       storedRequest = matches.get(0).iterator().next();
@@ -209,7 +209,7 @@ public class TestAMRMClient {
       amClient.removeContainerRequest(storedContainer1);
       
       // exact matching with order maintained
-      Resource testCapability2 = BuilderUtils.newResource(2000, 1);
+      Resource testCapability2 = Resource.newInstance(2000, 1);
       matches = amClient.getMatchingRequests(priority, node, testCapability2);
       verifyMatches(matches, 2);
       // must be returned in the order they were made
@@ -224,11 +224,11 @@ public class TestAMRMClient {
       amClient.removeContainerRequest(storedContainer6);
       
       // matching with larger container. all requests returned
-      Resource testCapability3 = BuilderUtils.newResource(4000, 4);
+      Resource testCapability3 = Resource.newInstance(4000, 4);
       matches = amClient.getMatchingRequests(priority, node, testCapability3);
       assert(matches.size() == 4);
       
-      Resource testCapability4 = BuilderUtils.newResource(1024, 2);
+      Resource testCapability4 = Resource.newInstance(1024, 2);
       matches = amClient.getMatchingRequests(priority, node, testCapability4);
       assert(matches.size() == 2);
       // verify non-fitting containers are not returned and fitting ones are
@@ -241,7 +241,7 @@ public class TestAMRMClient {
                 testRequest == storedContainer3);
       }
       
-      Resource testCapability5 = BuilderUtils.newResource(512, 4);
+      Resource testCapability5 = Resource.newInstance(512, 4);
       matches = amClient.getMatchingRequests(priority, node, testCapability5);
       assert(matches.size() == 0);
       

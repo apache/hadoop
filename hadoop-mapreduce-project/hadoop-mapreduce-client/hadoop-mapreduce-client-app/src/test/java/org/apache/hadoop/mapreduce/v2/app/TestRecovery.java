@@ -99,7 +99,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -1407,7 +1406,7 @@ public class TestRecovery {
 
   private MapTaskImpl getMockMapTask(long clusterTimestamp, EventHandler eh) {
 
-    ApplicationId appId = BuilderUtils.newApplicationId(clusterTimestamp, 1);
+    ApplicationId appId = ApplicationId.newInstance(clusterTimestamp, 1);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
 
     int partitions = 2;

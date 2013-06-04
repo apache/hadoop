@@ -23,7 +23,6 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestApplicationAttemptId {
@@ -59,8 +58,8 @@ public class TestApplicationAttemptId {
 
   private ApplicationAttemptId createAppAttemptId(
       long clusterTimeStamp, int id, int attemptId) {
-    ApplicationId appId = BuilderUtils.newApplicationId(clusterTimeStamp, id);
-    return BuilderUtils.newApplicationAttemptId(appId, attemptId);
+    ApplicationId appId = ApplicationId.newInstance(clusterTimeStamp, id);
+    return ApplicationAttemptId.newInstance(appId, attemptId);
   }
 
   public static void main(String[] args) throws Exception {

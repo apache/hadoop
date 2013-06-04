@@ -24,10 +24,12 @@ import java.net.InetSocketAddress;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.ContainerManagerPB;
@@ -55,7 +57,6 @@ import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 
@@ -129,8 +130,7 @@ public class TestRPC {
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(containerId, "localhost", "user",
           resource, System.currentTimeMillis() + 10000, 42, 42);
-    Token containerToken =
-        BuilderUtils.newContainerToken(nodeId, "password".getBytes(),
+    Token containerToken = newContainerToken(nodeId, "password".getBytes(),
           containerTokenIdentifier);
     scRequest.setContainerToken(containerToken);
     proxy.startContainer(scRequest);
@@ -183,7 +183,8 @@ public class TestRPC {
       ContainerTokenIdentifier tokenId = null;
 
       try {
-        tokenId = BuilderUtils.newContainerTokenIdentifier(containerToken);
+        tokenId = newContainerTokenIdentifier(containerToken);
+        tokenId = new ContainerTokenIdentifier();
       } catch (IOException e) {
         throw RPCUtil.getRemoteException(e);
       }
@@ -203,5 +204,29 @@ public class TestRPC {
           new Exception(EXCEPTION_CAUSE));
       throw new YarnRemoteException(e);
     }
+  }
+
+  public static ContainerTokenIdentifier newContainerTokenIdentifier(
+      Token containerToken) throws IOException {
+    org.apache.hadoop.security.token.Token<ContainerTokenIdentifier> token =
+        new org.apache.hadoop.security.token.Token<ContainerTokenIdentifier>(
+            containerToken.getIdentifier()
+                .array(), containerToken.getPassword().array(), new Text(
+                containerToken.getKind()),
+            new Text(containerToken.getService()));
+    return token.decodeIdentifier();
+  }
+
+  public static Token newContainerToken(NodeId nodeId, byte[] password,
+      ContainerTokenIdentifier tokenIdentifier) {
+    // RPC layer client expects ip:port as service for tokens
+    InetSocketAddress addr =
+        NetUtils.createSocketAddrForHost(nodeId.getHost(), nodeId.getPort());
+    // NOTE: use SecurityUtil.setTokenService if this becomes a "real" token
+    Token containerToken =
+        Token.newInstance(tokenIdentifier.getBytes(),
+          ContainerTokenIdentifier.KIND.toString(), password, SecurityUtil
+            .buildTokenService(addr).toString());
+    return containerToken;
   }
 }

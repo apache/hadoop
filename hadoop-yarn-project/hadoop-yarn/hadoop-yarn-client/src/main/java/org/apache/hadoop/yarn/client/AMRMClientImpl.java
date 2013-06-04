@@ -60,7 +60,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 
 // TODO check inputs for null etc. YARN-654
 
@@ -86,7 +85,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
     
     ResourceRequestInfo(Priority priority, String resourceName,
         Resource capability) {
-      remoteRequest = BuilderUtils.newResourceRequest(priority, resourceName,
+      remoteRequest = ResourceRequest.newInstance(priority, resourceName,
           capability, 0);
       containerRequests = new LinkedHashSet<T>();
     }
@@ -143,7 +142,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
     new TreeMap<Priority, Map<String, TreeMap<Resource, ResourceRequestInfo>>>();
 
   protected final Set<ResourceRequest> ask = new TreeSet<ResourceRequest>(
-      new org.apache.hadoop.yarn.util.BuilderUtils.ResourceRequestComparator());
+      new org.apache.hadoop.yarn.api.records.ResourceRequest.ResourceRequestComparator());
   protected final Set<ContainerId> release = new TreeSet<ContainerId>();
   
   public AMRMClientImpl(ApplicationAttemptId appAttemptId) {
@@ -227,9 +226,9 @@ public class AMRMClientImpl<T extends ContainerRequest>
         // optimistically clear this collection assuming no RPC failure
         ask.clear();
         release.clear();
-        allocateRequest = BuilderUtils
-            .newAllocateRequest(appAttemptId, lastResponseId, progressIndicator,
-                askList, releaseList);
+        allocateRequest =
+            AllocateRequest.newInstance(appAttemptId, lastResponseId,
+              progressIndicator, askList, releaseList);
       }
 
       allocateResponse = rmClient.allocate(allocateRequest);

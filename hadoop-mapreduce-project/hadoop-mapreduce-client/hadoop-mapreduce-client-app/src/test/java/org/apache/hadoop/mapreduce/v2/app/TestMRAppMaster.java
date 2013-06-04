@@ -63,7 +63,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -359,7 +358,7 @@ public class TestMRAppMaster {
     setNewEnvironmentHack(newEnv);
     credentials.writeTokenStorageFile(tokenFilePath, conf);
 
-    ApplicationId appId = BuilderUtils.newApplicationId(12345, 56);
+    ApplicationId appId = ApplicationId.newInstance(12345, 56);
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId =

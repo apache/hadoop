@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 /*
@@ -102,7 +101,7 @@ public class TestContainerLaunchRPC {
           new ContainerTokenIdentifier(containerId, "localhost", "user",
             resource, System.currentTimeMillis() + 10000, 42, 42);
       Token containerToken =
-          BuilderUtils.newContainerToken(nodeId, "password".getBytes(),
+          TestRPC.newContainerToken(nodeId, "password".getBytes(),
             containerTokenIdentifier);
 
       StartContainerRequest scRequest = recordFactory

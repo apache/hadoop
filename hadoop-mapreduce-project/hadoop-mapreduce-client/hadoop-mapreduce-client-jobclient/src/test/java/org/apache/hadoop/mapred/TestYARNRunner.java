@@ -86,7 +86,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Layout;
@@ -282,11 +281,12 @@ public class TestYARNRunner extends TestCase {
       token.setKind(RMDelegationTokenIdentifier.KIND_NAME);
 
       // Setup mock history token
-      org.apache.hadoop.yarn.api.records.Token historyToken = BuilderUtils.newDelegationToken(
-          new byte[0], MRDelegationTokenIdentifier.KIND_NAME.toString(),
-          new byte[0], hsTokenSevice.toString());
-      GetDelegationTokenResponse getDtResponse = Records
-          .newRecord(GetDelegationTokenResponse.class);
+      org.apache.hadoop.yarn.api.records.Token historyToken =
+          org.apache.hadoop.yarn.api.records.Token.newInstance(new byte[0],
+            MRDelegationTokenIdentifier.KIND_NAME.toString(), new byte[0],
+            hsTokenSevice.toString());
+      GetDelegationTokenResponse getDtResponse =
+          Records.newRecord(GetDelegationTokenResponse.class);
       getDtResponse.setDelegationToken(historyToken);
 
       // mock services

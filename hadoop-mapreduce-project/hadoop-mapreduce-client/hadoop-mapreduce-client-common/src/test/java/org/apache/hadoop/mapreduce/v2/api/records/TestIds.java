@@ -24,7 +24,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.junit.Test;
 
 public class TestIds {
@@ -121,7 +121,7 @@ public class TestIds {
 
   private JobId createJobId(long clusterTimestamp, int idInt) {
     return MRBuilderUtils.newJobId(
-        BuilderUtils.newApplicationId(clusterTimestamp, idInt), idInt);
+        ApplicationId.newInstance(clusterTimestamp, idInt), idInt);
   }
 
   private TaskId createTaskId(long clusterTimestamp, int jobIdInt,

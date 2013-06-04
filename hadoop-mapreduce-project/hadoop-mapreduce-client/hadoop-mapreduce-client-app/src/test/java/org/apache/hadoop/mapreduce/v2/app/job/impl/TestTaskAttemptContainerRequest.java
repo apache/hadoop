@@ -55,11 +55,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 @SuppressWarnings({"rawtypes"})
@@ -79,7 +76,7 @@ public class TestTaskAttemptContainerRequest {
     Map<ApplicationAccessType, String> acls =
         new HashMap<ApplicationAccessType, String>(1);
     acls.put(ApplicationAccessType.VIEW_APP, "otheruser");
-    ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
     Path jobFile = mock(Path.class);
@@ -110,7 +107,6 @@ public class TestTaskAttemptContainerRequest {
             new SystemClock(), null);
 
     jobConf.set(MRJobConfig.APPLICATION_ATTEMPT_ID, taImpl.getID().toString());
-    ContainerId containerId = BuilderUtils.newContainerId(1, 1, 1, 1);
 
     ContainerLaunchContext launchCtx =
         TaskAttemptImpl.createContainerLaunchContext(acls,

@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 
 /**
  * Allocates containers locally. Doesn't allocate a real container;
@@ -94,7 +93,7 @@ public class LocalContainerAllocator extends RMCommunicator
   @SuppressWarnings("unchecked")
   @Override
   protected synchronized void heartbeat() throws Exception {
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
+    AllocateRequest allocateRequest = AllocateRequest.newInstance(
         this.applicationAttemptId, this.lastResponseID, super
             .getApplicationProgress(), new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>());

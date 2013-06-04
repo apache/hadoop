@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCal
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Test;
 
 public class TestSchedulerUtils {

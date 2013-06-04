@@ -26,7 +26,6 @@ import java.util.List;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
@@ -39,7 +38,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProtoOrBuil
 
 
     
-public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> implements AllocateRequest {
+public class AllocateRequestPBImpl extends AllocateRequest {
   AllocateRequestProto proto = AllocateRequestProto.getDefaultInstance();
   AllocateRequestProto.Builder builder = null;
   boolean viaProto = false;
@@ -63,6 +62,26 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToBuilder() {

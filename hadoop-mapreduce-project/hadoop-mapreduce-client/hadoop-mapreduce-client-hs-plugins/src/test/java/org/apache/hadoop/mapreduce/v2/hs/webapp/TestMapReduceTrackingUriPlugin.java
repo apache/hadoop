@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -26,7 +26,6 @@ import java.net.URISyntaxException;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestMapReduceTrackingUriPlugin {
@@ -37,7 +36,7 @@ public class TestMapReduceTrackingUriPlugin {
     conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, historyAddress);
     MapReduceTrackingUriPlugin plugin = new MapReduceTrackingUriPlugin();
     plugin.setConf(conf);
-    ApplicationId id = BuilderUtils.newApplicationId(6384623l, 5);
+    ApplicationId id = ApplicationId.newInstance(6384623l, 5);
     String jobSuffix = id.toString().replaceFirst("^application_", "job_");
     URI expected =
         new URI("http://" + historyAddress + "/jobhistory/job/" + jobSuffix);

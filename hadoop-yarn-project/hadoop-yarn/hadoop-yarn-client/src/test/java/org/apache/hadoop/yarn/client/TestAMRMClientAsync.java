@@ -36,14 +36,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -58,11 +60,10 @@ public class TestAMRMClientAsync {
     Configuration conf = new Configuration();
     final AtomicBoolean heartbeatBlock = new AtomicBoolean(true);
     List<ContainerStatus> completed1 = Arrays.asList(
-        BuilderUtils.newContainerStatus(
-            BuilderUtils.newContainerId(0, 0, 0, 0),
+        ContainerStatus.newInstance(newContainerId(0, 0, 0, 0),
             ContainerState.COMPLETE, "", 0));
     List<Container> allocated1 = Arrays.asList(
-        BuilderUtils.newContainer(null, null, null, null, null, null));
+        Container.newInstance(null, null, null, null, null, null));
     final AllocateResponse response1 = createAllocateResponse(
         new ArrayList<ContainerStatus>(), allocated1);
     final AllocateResponse response2 = createAllocateResponse(completed1,
@@ -214,11 +215,19 @@ public class TestAMRMClientAsync {
   
   private AllocateResponse createAllocateResponse(
       List<ContainerStatus> completed, List<Container> allocated) {
-    AllocateResponse response = BuilderUtils.newAllocateResponse(0, completed, allocated,
+    AllocateResponse response = AllocateResponse.newInstance(0, completed, allocated,
         new ArrayList<NodeReport>(), null, false, 1, null);
     return response;
   }
-  
+
+  public static ContainerId newContainerId(int appId, int appAttemptId,
+      long timestamp, int containerId) {
+    ApplicationId applicationId = ApplicationId.newInstance(timestamp, appId);
+    ApplicationAttemptId applicationAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, appAttemptId);
+    return ContainerId.newInstance(applicationAttemptId, containerId);
+  }
+
   private class TestCallbackHandler implements AMRMClientAsync.CallbackHandler {
     private volatile List<ContainerStatus> completedContainers;
     private volatile List<Container> allocatedContainers;

@@ -88,8 +88,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 
@@ -195,7 +195,7 @@ public class ClientRMService extends AbstractService implements
   }
 
   ApplicationId getNewApplicationId() {
-    ApplicationId applicationId = org.apache.hadoop.yarn.util.BuilderUtils
+    ApplicationId applicationId = org.apache.hadoop.yarn.server.utils.BuilderUtils
         .newApplicationId(recordFactory, ResourceManager.clusterTimeStamp,
             applicationCounter.incrementAndGet());
     LOG.info("Allocated new applicationId: " + applicationId.getId());

@@ -147,7 +147,7 @@ public class ConverterUtils {
     }
     try {
       NodeId nodeId =
-          BuilderUtils.newNodeId(parts[0], Integer.parseInt(parts[1]));
+          NodeId.newInstance(parts[0], Integer.parseInt(parts[1]));
       return nodeId;
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Invalid port: " + parts[1], e);

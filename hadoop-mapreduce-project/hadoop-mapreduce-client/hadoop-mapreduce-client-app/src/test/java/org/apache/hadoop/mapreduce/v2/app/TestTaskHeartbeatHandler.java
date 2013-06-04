@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -30,10 +35,7 @@ import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
-
-import static org.mockito.Mockito.*;
 
 
 public class TestTaskHeartbeatHandler {
@@ -53,7 +55,7 @@ public class TestTaskHeartbeatHandler {
     hb.init(conf);
     hb.start();
     try {
-      ApplicationId appId = BuilderUtils.newApplicationId(0l, 5);
+      ApplicationId appId = ApplicationId.newInstance(0l, 5);
       JobId jobId = MRBuilderUtils.newJobId(appId, 4);
       TaskId tid = MRBuilderUtils.newTaskId(jobId, 3, TaskType.MAP);
       TaskAttemptId taid = MRBuilderUtils.newTaskAttemptId(tid, 2);

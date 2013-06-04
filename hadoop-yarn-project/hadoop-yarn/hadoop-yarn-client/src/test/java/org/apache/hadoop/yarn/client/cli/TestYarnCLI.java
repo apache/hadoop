@@ -37,6 +37,7 @@ import java.util.List;
 import junit.framework.Assert;
 
 import org.apache.commons.lang.time.DateFormatUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -47,7 +48,6 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.YarnClient;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Before;
 import org.junit.Test;
@@ -71,9 +71,9 @@ public class TestYarnCLI {
   @Test
   public void testGetApplicationReport() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
-    ApplicationId applicationId = BuilderUtils.newApplicationId(1234, 5);
-    ApplicationReport newApplicationReport = BuilderUtils.newApplicationReport(
-        applicationId, BuilderUtils.newApplicationAttemptId(applicationId, 1),
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationReport newApplicationReport = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN");
@@ -108,9 +108,9 @@ public class TestYarnCLI {
   @Test
   public void testGetAllApplications() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
-    ApplicationId applicationId = BuilderUtils.newApplicationId(1234, 5);
-    ApplicationReport newApplicationReport = BuilderUtils.newApplicationReport(
-        applicationId, BuilderUtils.newApplicationAttemptId(applicationId, 1),
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationReport newApplicationReport = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN");
@@ -143,7 +143,7 @@ public class TestYarnCLI {
   @Test
   public void testKillApplication() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
-    ApplicationId applicationId = BuilderUtils.newApplicationId(1234, 5);
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     int result = cli.run(new String[] { "-kill", applicationId.toString() });
     assertEquals(0, result);
     verify(client).killApplication(any(ApplicationId.class));
@@ -178,7 +178,7 @@ public class TestYarnCLI {
 
   @Test
   public void testNodeStatus() throws Exception {
-    NodeId nodeId = BuilderUtils.newNodeId("host0", 0);
+    NodeId nodeId = NodeId.newInstance("host0", 0);
     NodeCLI cli = new NodeCLI();
     when(client.getNodeReports()).thenReturn(getNodeReports(3));
     cli.setClient(client);
@@ -209,7 +209,7 @@ public class TestYarnCLI {
 
   @Test
   public void testAbsentNodeStatus() throws Exception {
-    NodeId nodeId = BuilderUtils.newNodeId("Absenthost0", 0);
+    NodeId nodeId = NodeId.newInstance("Absenthost0", 0);
     NodeCLI cli = new NodeCLI();
     when(client.getNodeReports()).thenReturn(getNodeReports(0));
     cli.setClient(client);
@@ -243,8 +243,8 @@ public class TestYarnCLI {
     List<NodeReport> nodeReports = new ArrayList<NodeReport>();
 
     for (int i = 0; i < noOfNodes; i++) {
-      NodeReport nodeReport = BuilderUtils.newNodeReport(BuilderUtils
-          .newNodeId("host" + i, 0), NodeState.RUNNING, "host" + 1 + ":8888",
+      NodeReport nodeReport = NodeReport.newInstance(NodeId
+        .newInstance("host" + i, 0), NodeState.RUNNING, "host" + 1 + ":8888",
           "rack1", Records.newRecord(Resource.class), Records
               .newRecord(Resource.class), 0, Records
               .newRecord(NodeHealthStatus.class));

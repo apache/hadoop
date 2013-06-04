@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -165,9 +164,9 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
     
     private static org.apache.hadoop.yarn.api.records.Token
         convertToProtoToken(Token<?> token) {
-      return BuilderUtils.newDelegationToken(
-          token.getIdentifier(), token.getKind().toString(),
-          token.getPassword(), token.getService().toString());
+      return org.apache.hadoop.yarn.api.records.Token.newInstance(
+        token.getIdentifier(), token.getKind().toString(), token.getPassword(),
+        token.getService().toString());
     }
   }
 }

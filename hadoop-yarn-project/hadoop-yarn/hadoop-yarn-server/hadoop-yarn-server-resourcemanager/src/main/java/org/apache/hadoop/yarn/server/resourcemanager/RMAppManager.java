@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.InvalidResourceRe
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 /**
  * This class manages the list of applications for the resource manager. 
