@@ -563,6 +563,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4840. ReplicationMonitor gets NPE during shutdown. (kihwal)
 
+    HDFS-4815. TestRBWBlockInvalidation: Double call countReplicas() to fetch
+    corruptReplicas and liveReplicas is not needed. (Tian Hong Wang via atm)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
