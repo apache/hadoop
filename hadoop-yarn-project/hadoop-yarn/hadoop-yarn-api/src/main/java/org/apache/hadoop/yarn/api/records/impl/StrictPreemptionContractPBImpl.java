@@ -15,20 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
+package org.apache.hadoop.yarn.api.records.impl;
 
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.yarn.api.protocolrecords.PreemptionContainer;
-import org.apache.hadoop.yarn.api.protocolrecords.StrictPreemptionContract;
+import org.apache.hadoop.yarn.api.records.PreemptionContainer;
+import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionContainerProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StrictPreemptionContractProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StrictPreemptionContractProtoOrBuilder;
 
-public class StrictPreemptionContractPBImpl implements StrictPreemptionContract {
+public class StrictPreemptionContractPBImpl extends StrictPreemptionContract {
 
   StrictPreemptionContractProto proto =
     StrictPreemptionContractProto.getDefaultInstance();
