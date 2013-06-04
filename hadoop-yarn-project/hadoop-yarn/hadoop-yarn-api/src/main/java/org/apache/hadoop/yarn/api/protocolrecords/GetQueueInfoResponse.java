@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to a client
@@ -38,14 +39,21 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
  */
 @Public
 @Stable
-public interface GetQueueInfoResponse {
+public abstract class GetQueueInfoResponse {
+
+  public static GetQueueInfoResponse newInstance(QueueInfo queueInfo) {
+    GetQueueInfoResponse response = Records.newRecord(GetQueueInfoResponse.class);
+    response.setQueueInfo(queueInfo);
+    return response;
+  }
+
   /**
    * Get the <code>QueueInfo</code> for the specified queue.
    * @return <code>QueueInfo</code> for the specified queue
    */
-  QueueInfo getQueueInfo();
+  public abstract QueueInfo getQueueInfo();
   
   @Private
   @Unstable
-  void setQueueInfo(QueueInfo queueInfo);
+  public abstract void setQueueInfo(QueueInfo queueInfo);
 }

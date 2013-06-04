@@ -96,6 +96,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-755. Renamed AllocateResponse.reboot to AllocateResponse.resync. (Bikas
     Saha via vinodkv)
 
+    YARN-753. Added individual factory methods for all api protocol records and
+    converted the records to be abstract classes. (Jian He via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

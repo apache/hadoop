@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request from clients to get a report of all nodes
@@ -32,6 +33,10 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  */
 @Public
 @Stable
-public interface GetClusterNodesRequest {
-
+public abstract class GetClusterNodesRequest {
+  public static GetClusterNodesRequest newInstance() {
+    GetClusterNodesRequest request =
+        Records.newRecord(GetClusterNodesRequest.class);
+    return request;
+  }
 }

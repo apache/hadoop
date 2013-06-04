@@ -23,7 +23,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionResourceRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
 
-public class PreemptionResourceRequestPBImpl implements PreemptionResourceRequest {
+public class PreemptionResourceRequestPBImpl extends PreemptionResourceRequest {
 
   PreemptionResourceRequestProto proto =
     PreemptionResourceRequestProto.getDefaultInstance();
@@ -46,6 +46,26 @@ public class PreemptionResourceRequestPBImpl implements PreemptionResourceReques
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToProto() {

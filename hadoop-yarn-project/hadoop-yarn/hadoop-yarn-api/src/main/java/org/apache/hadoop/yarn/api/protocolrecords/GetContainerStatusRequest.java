@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request sent by the <code>ApplicationMaster</code> to the
@@ -32,7 +33,15 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
  */
 @Public
 @Stable
-public interface GetContainerStatusRequest {
+public abstract class GetContainerStatusRequest {
+
+  public static GetContainerStatusRequest newInstance(ContainerId containerId) {
+    GetContainerStatusRequest request =
+        Records.newRecord(GetContainerStatusRequest.class);
+    request.setContainerId(containerId);
+    return request;
+  }
+
   /**
    * Get the <code>ContainerId</code> of container for which to obtain the
    * <code>ContainerStatus</code>.

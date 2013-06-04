@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * The request issued by the client to renew a delegation token from
@@ -28,7 +29,16 @@ import org.apache.hadoop.yarn.api.records.Token;
  */
 @Public
 @Evolving
-public interface RenewDelegationTokenRequest {
-  Token getDelegationToken();
-  void setDelegationToken(Token dToken);
+public abstract class RenewDelegationTokenRequest {
+
+  public static RenewDelegationTokenRequest newInstance(Token dToken) {
+    RenewDelegationTokenRequest request =
+        Records.newRecord(RenewDelegationTokenRequest.class);
+    request.setDelegationToken(dToken);
+    return request;
+  }
+
+  public abstract Token getDelegationToken();
+
+  public abstract void setDelegationToken(Token dToken);
 }

@@ -22,17 +22,18 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.List;
-
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringBytesMapProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerResponseProtoOrBuilder;
-import org.apache.hadoop.yarn.proto.YarnProtos.StringBytesMapProto;
+import org.apache.hadoop.yarn.util.ProtoUtils;
+
+import com.google.protobuf.ByteString;
     
-public class StartContainerResponsePBImpl extends ProtoBase<StartContainerResponseProto> implements StartContainerResponse {
+public class StartContainerResponsePBImpl extends StartContainerResponse {
   StartContainerResponseProto proto = StartContainerResponseProto.getDefaultInstance();
   StartContainerResponseProto.Builder builder = null;
   boolean viaProto = false;
@@ -55,12 +56,40 @@ public class StartContainerResponsePBImpl extends ProtoBase<StartContainerRespon
     return proto;
   }
 
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+  }
+
   private synchronized void mergeLocalToBuilder() {
     if (this.serviceResponse != null) {
       addServiceResponseToProto();
     }
   }
   
+  protected final ByteBuffer convertFromProtoFormat(ByteString byteString) {
+    return ProtoUtils.convertFromProtoFormat(byteString);
+  }
+
+  protected final ByteString convertToProtoFormat(ByteBuffer byteBuffer) {
+    return ProtoUtils.convertToProtoFormat(byteBuffer);
+  }
+
   private synchronized void mergeLocalToProto() {
     if (viaProto) {
       maybeInitBuilder();

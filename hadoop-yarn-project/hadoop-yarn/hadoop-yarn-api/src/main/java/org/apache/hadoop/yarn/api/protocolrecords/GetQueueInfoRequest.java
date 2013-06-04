@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request sent by clients to get <em>queue information</em>
@@ -30,58 +31,70 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  */
 @Public
 @Stable
-public interface GetQueueInfoRequest {
+public abstract class GetQueueInfoRequest {
+
+  public static GetQueueInfoRequest
+      newInstance(String queueName, boolean includeApplications,
+          boolean includeChildQueues, boolean recursive) {
+    GetQueueInfoRequest request = Records.newRecord(GetQueueInfoRequest.class);
+    request.setQueueName(queueName);
+    request.setIncludeApplications(includeApplications);
+    request.setIncludeChildQueues(includeChildQueues);
+    request.setRecursive(recursive);
+    return request;
+  }
+
   /**
    * Get the <em>queue name</em> for which to get queue information.
    * @return <em>queue name</em> for which to get queue information
    */
-  String getQueueName();
+  public abstract String getQueueName();
   
   /**
    * Set the <em>queue name</em> for which to get queue information
    * @param queueName <em>queue name</em> for which to get queue information
    */
-  void setQueueName(String queueName);
+  public abstract void setQueueName(String queueName);
 
   /**
    * Is information about <em>active applications<e/m> required?
    * @return <code>true</code> if applications' information is to be included,
    *         else <code>false</code>
    */
-  boolean getIncludeApplications();
+  public abstract boolean getIncludeApplications();
 
   /**
    * Should we get fetch information about <em>active applications</em>?
    * @param includeApplications fetch information about <em>active 
    *                            applications</em>?
    */
-  void setIncludeApplications(boolean includeApplications);
+  public abstract void setIncludeApplications(boolean includeApplications);
 
   /**
    * Is information about <em>child queues</em> required?
    * @return <code>true</code> if information about child queues is required,
    *         else <code>false</code>
    */
-  boolean getIncludeChildQueues();
+  public abstract boolean getIncludeChildQueues();
   
   /**
    * Should we fetch information about <em>child queues</em>?
    * @param includeChildQueues fetch information about <em>child queues</em>?
    */
-  void setIncludeChildQueues(boolean includeChildQueues);
+  public abstract void setIncludeChildQueues(boolean includeChildQueues);
 
   /**
    * Is information on the entire <em>child queue hierarchy</em> required?
    * @return <code>true</code> if information about entire hierarchy is 
    *         required, <code>false</code> otherwise
    */
-  boolean getRecursive();
+  public abstract boolean getRecursive();
   
   /**
    * Should we fetch information on the entire <em>child queue hierarchy</em>?
    * @param recursive fetch information on the entire <em>child queue 
    *                  hierarchy</em>?
    */
-  void setRecursive(boolean recursive);
+  public abstract void setRecursive(boolean recursive);
 }
 

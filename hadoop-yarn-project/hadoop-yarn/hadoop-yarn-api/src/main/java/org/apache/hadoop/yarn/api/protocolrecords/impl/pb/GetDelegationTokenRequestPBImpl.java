@@ -20,10 +20,8 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 
-public class GetDelegationTokenRequestPBImpl extends
-      ProtoBase<GetDelegationTokenRequestProto> implements GetDelegationTokenRequest {
+public class GetDelegationTokenRequestPBImpl extends GetDelegationTokenRequest {
   
   String renewer;
   
@@ -60,7 +58,6 @@ public class GetDelegationTokenRequestPBImpl extends
     this.renewer = renewer;
   }
 
-  @Override
   public GetDelegationTokenRequestProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
@@ -68,6 +65,25 @@ public class GetDelegationTokenRequestPBImpl extends
     return proto;
   }
   
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+  }
 
   private void mergeLocalToBuilder() {
     if (renewer != null) {

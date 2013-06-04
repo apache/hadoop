@@ -20,12 +20,11 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.KillApplicationResponseProto;
 
 
     
-public class KillApplicationResponsePBImpl extends ProtoBase<KillApplicationResponseProto> implements KillApplicationResponse {
+public class KillApplicationResponsePBImpl extends KillApplicationResponse {
   KillApplicationResponseProto proto = KillApplicationResponseProto.getDefaultInstance();
   KillApplicationResponseProto.Builder builder = null;
   boolean viaProto = false;
@@ -45,15 +44,30 @@ public class KillApplicationResponsePBImpl extends ProtoBase<KillApplicationResp
     return proto;
   }
 
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+  }
+
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = KillApplicationResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }
-    
-  
-
-
-
 }  

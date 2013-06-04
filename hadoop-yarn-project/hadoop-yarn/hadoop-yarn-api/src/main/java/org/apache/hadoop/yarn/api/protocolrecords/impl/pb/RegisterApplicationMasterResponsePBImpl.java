@@ -26,7 +26,6 @@ import java.util.Map;
 
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
@@ -36,9 +35,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterR
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
 
-public class RegisterApplicationMasterResponsePBImpl
-extends ProtoBase<RegisterApplicationMasterResponseProto>
-implements RegisterApplicationMasterResponse {
+public class RegisterApplicationMasterResponsePBImpl extends
+    RegisterApplicationMasterResponse {
   RegisterApplicationMasterResponseProto proto =
     RegisterApplicationMasterResponseProto.getDefaultInstance();
   RegisterApplicationMasterResponseProto.Builder builder = null;
@@ -62,6 +60,26 @@ implements RegisterApplicationMasterResponse {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToProto() {

@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request sent by the <code>ApplicationMaster</code> to 
@@ -45,7 +46,19 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
  */
 @Public
 @Stable
-public interface RegisterApplicationMasterRequest {
+public abstract class RegisterApplicationMasterRequest {
+
+  public static RegisterApplicationMasterRequest newInstance(
+      ApplicationAttemptId applicationAttemptId, String host, int port,
+      String trackingUrl) {
+    RegisterApplicationMasterRequest request =
+        Records.newRecord(RegisterApplicationMasterRequest.class);
+    request.setApplicationAttemptId(applicationAttemptId);
+    request.setHost(host);
+    request.setRpcPort(port);
+    request.setTrackingUrl(trackingUrl);
+    return request;
+  }
 
   /**
    * Get the <code>ApplicationAttemptId</code> being managed by the 
@@ -55,7 +68,7 @@ public interface RegisterApplicationMasterRequest {
    */
   @Public
   @Stable
-  ApplicationAttemptId getApplicationAttemptId();
+  public abstract ApplicationAttemptId getApplicationAttemptId();
   
   /**
    * Set the <code>ApplicationAttemptId</code> being managed by the 
@@ -65,7 +78,7 @@ public interface RegisterApplicationMasterRequest {
    */
   @Public
   @Stable
-  void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
+  public abstract void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
 
   /**
    * Get the <em>host</em> on which the <code>ApplicationMaster</code> is 
@@ -74,7 +87,7 @@ public interface RegisterApplicationMasterRequest {
    */
   @Public
   @Stable
-  String getHost();
+  public abstract String getHost();
   
   /**
    * Set the <em>host</em> on which the <code>ApplicationMaster</code> is 
@@ -84,7 +97,7 @@ public interface RegisterApplicationMasterRequest {
    */
   @Private
   @Unstable
-  void setHost(String host);
+  public abstract void setHost(String host);
 
   /**
    * Get the <em>RPC port</em> on which the <code>ApplicationMaster</code> 
@@ -94,7 +107,7 @@ public interface RegisterApplicationMasterRequest {
    */
   @Public
   @Stable
-  int getRpcPort();
+  public abstract int getRpcPort();
   
   /**
    * Set the <em>RPC port<em> on which the <code>ApplicationMaster</code> is 
@@ -104,7 +117,7 @@ public interface RegisterApplicationMasterRequest {
    */
   @Public
   @Stable
-  void setRpcPort(int port);
+  public abstract void setRpcPort(int port);
 
   /**
    * Get the <em>tracking URL</em> for the <code>ApplicationMaster</code>.
@@ -112,7 +125,7 @@ public interface RegisterApplicationMasterRequest {
    */
   @Public
   @Stable
-  String getTrackingUrl();
+  public abstract String getTrackingUrl();
   
   /**
    * Set the <em>tracking URL</em> for the <code>ApplicationMaster</code>.
@@ -121,5 +134,5 @@ public interface RegisterApplicationMasterRequest {
    */
   @Public
   @Stable
-  void setTrackingUrl(String trackingUrl);
+  public abstract void setTrackingUrl(String trackingUrl);
 }

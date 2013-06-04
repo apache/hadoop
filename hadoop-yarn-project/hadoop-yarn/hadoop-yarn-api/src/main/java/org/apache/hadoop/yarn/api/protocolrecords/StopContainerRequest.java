@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request sent by the <code>ApplicationMaster</code> to the
@@ -31,14 +32,22 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
  */
 @Public
 @Stable
-public interface StopContainerRequest {
+public abstract class StopContainerRequest {
+
+  public static StopContainerRequest newInstance(ContainerId containerId) {
+    StopContainerRequest request =
+        Records.newRecord(StopContainerRequest.class);
+    request.setContainerId(containerId);
+    return request;
+  }
+
   /**
    * Get the <code>ContainerId</code> of the container to be stopped.
    * @return <code>ContainerId</code> of container to be stopped
    */
   @Public
   @Stable
-  ContainerId getContainerId();
+  public abstract ContainerId getContainerId();
   
   /**
    * Set the <code>ContainerId</code> of the container to be stopped.
@@ -46,5 +55,5 @@ public interface StopContainerRequest {
    */
   @Public
   @Stable
-  void setContainerId(ContainerId containerId);
+  public abstract void setContainerId(ContainerId containerId);
 }

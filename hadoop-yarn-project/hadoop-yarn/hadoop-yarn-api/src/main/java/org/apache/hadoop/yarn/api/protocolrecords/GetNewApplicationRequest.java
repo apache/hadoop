@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request sent by clients to get a new {@link ApplicationId} for
@@ -33,6 +34,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
  */
 @Public
 @Stable
-public interface GetNewApplicationRequest {
-
+public abstract class GetNewApplicationRequest {
+  public static GetNewApplicationRequest newInstance() {
+    GetNewApplicationRequest request =
+        Records.newRecord(GetNewApplicationRequest.class);
+    return request;
+  }
 }

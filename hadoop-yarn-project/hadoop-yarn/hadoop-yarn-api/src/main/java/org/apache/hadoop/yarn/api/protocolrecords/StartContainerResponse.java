@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>NodeManager</code> to the 
@@ -34,7 +35,16 @@ import org.apache.hadoop.yarn.api.ContainerManager;
  */
 @Public
 @Stable
-public interface StartContainerResponse {
+public abstract class StartContainerResponse {
+
+  public static StartContainerResponse newInstance(
+      Map<String, ByteBuffer> serviceResponses) {
+    StartContainerResponse response =
+        Records.newRecord(StartContainerResponse.class);
+    response.setAllServiceResponse(serviceResponses);
+    return response;
+  }
+
   /**
    * <p>Get the responses from all auxiliary services running on the 
    * <code>NodeManager</code>.</p>
@@ -42,7 +52,7 @@ public interface StartContainerResponse {
    * and their corresponding opaque blob <code>ByteBuffer</code>s</p> 
    * @return a Map between the auxiliary service names and their outputs
    */
-  Map<String, ByteBuffer> getAllServiceResponse();
+  public abstract Map<String, ByteBuffer> getAllServiceResponse();
 
   /**
    * Set to the list of auxiliary services which have been started on the
@@ -51,5 +61,5 @@ public interface StartContainerResponse {
    * @param serviceResponses A map from auxiliary service names to the opaque
    * blob <code>ByteBuffer</code>s for that auxiliary service
    */
-  void setAllServiceResponse(Map<String, ByteBuffer> serviceResponses);
+  public abstract void setAllServiceResponse(Map<String, ByteBuffer> serviceResponses);
 }

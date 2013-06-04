@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-public interface RefreshNodesRequest {
+import org.apache.hadoop.yarn.util.Records;
 
+public abstract class RefreshNodesRequest {
+  public static RefreshNodesRequest newInstance() {
+    RefreshNodesRequest request = Records.newRecord(RefreshNodesRequest.class);
+    return request;
+  }
 }

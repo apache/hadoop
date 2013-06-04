@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-public interface RefreshUserToGroupsMappingsRequest {
+import org.apache.hadoop.yarn.util.Records;
 
+public abstract class RefreshUserToGroupsMappingsRequest {
+  public static RefreshUserToGroupsMappingsRequest newInstance() {
+    RefreshUserToGroupsMappingsRequest request =
+        Records.newRecord(RefreshUserToGroupsMappingsRequest.class);
+    return request;
+  }
 }
