@@ -31,7 +31,7 @@ import org.apache.hadoop.mapreduce.v2.proto.MRProtos.CounterGroupProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.CountersProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.CountersProtoOrBuilder;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.StringCounterGroupMapProto;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 
 
     
