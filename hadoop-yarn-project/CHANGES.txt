@@ -437,6 +437,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-757. Changed TestRMRestart to use the default scheduler to avoid test
     failures. (Bikas Saha via vinodkv)
 
+    YARN-742. Log aggregation causes a lot of redundant setPermission calls.
+    (jlowe via kihwal)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
