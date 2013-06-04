@@ -145,15 +145,15 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   }
   
   @Override
-  public synchronized boolean getReboot() {
+  public synchronized boolean getResync() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getReboot());
+    return (p.getResync());
   }
 
   @Override
-  public synchronized void setReboot(boolean reboot) {
+  public synchronized void setResync(boolean resync) {
     maybeInitBuilder();
-    builder.setReboot((reboot));
+    builder.setResync((resync));
   }
 
   @Override

@@ -208,7 +208,7 @@ public class TestApplicationTokens {
       AllocateRequest allocateRequest =
           Records.newRecord(AllocateRequest.class);
       allocateRequest.setApplicationAttemptId(applicationAttemptId);
-      Assert.assertFalse(rmClient.allocate(allocateRequest).getReboot());
+      Assert.assertFalse(rmClient.allocate(allocateRequest).getResync());
 
       // Simulate a master-key-roll-over
       ApplicationTokenSecretManager appTokenSecretManager =
@@ -224,7 +224,7 @@ public class TestApplicationTokens {
       rmClient = createRMClient(rm, conf, rpc, currentUser);
       allocateRequest = Records.newRecord(AllocateRequest.class);
       allocateRequest.setApplicationAttemptId(applicationAttemptId);
-      Assert.assertFalse(rmClient.allocate(allocateRequest).getReboot());
+      Assert.assertFalse(rmClient.allocate(allocateRequest).getResync());
     } finally {
       rm.stop();
       if (rmClient != null) {

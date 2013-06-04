@@ -90,7 +90,7 @@ public class ApplicationMasterService extends AbstractService implements
       RecordFactoryProvider.getRecordFactory(null);
   private final ConcurrentMap<ApplicationAttemptId, AllocateResponse> responseMap =
       new ConcurrentHashMap<ApplicationAttemptId, AllocateResponse>();
-  private final AllocateResponse reboot =
+  private final AllocateResponse resync =
       recordFactory.newRecordInstance(AllocateResponse.class);
   private final RMContext rmContext;
 
@@ -98,7 +98,7 @@ public class ApplicationMasterService extends AbstractService implements
     super(ApplicationMasterService.class.getName());
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.rScheduler = scheduler;
-    this.reboot.setReboot(true);
+    this.resync.setResync(true);
 //    this.reboot.containers = new ArrayList<Container>();
     this.rmContext = rmContext;
   }
@@ -263,7 +263,7 @@ public class ApplicationMasterService extends AbstractService implements
     AllocateResponse lastResponse = responseMap.get(appAttemptId);
     if (lastResponse == null) {
       LOG.error("AppAttemptId doesnt exist in cache " + appAttemptId);
-      return reboot;
+      return resync;
     }
     if ((request.getResponseId() + 1) == lastResponse.getResponseId()) {
       /* old heartbeat */
@@ -273,7 +273,7 @@ public class ApplicationMasterService extends AbstractService implements
       // Oh damn! Sending reboot isn't enough. RM state is corrupted. TODO:
       // Reboot is not useful since after AM reboots, it will send register and 
       // get an exception. Might as well throw an exception here.
-      return reboot;
+      return resync;
     } 
     
     // Allow only one thread in AM to do heartbeat at a time.
@@ -344,7 +344,7 @@ public class ApplicationMasterService extends AbstractService implements
         String message = "App Attempt removed from the cache during allocate"
             + appAttemptId;
         LOG.error(message);
-        return reboot;
+        return resync;
       }
       
       allocateResponse.setNumClusterNodes(this.rScheduler.getNumClusterNodes());

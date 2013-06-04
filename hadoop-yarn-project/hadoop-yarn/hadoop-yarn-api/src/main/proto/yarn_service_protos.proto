@@ -59,7 +59,7 @@ message AllocateRequestProto {
 }
 
 message AllocateResponseProto {
-  optional bool reboot = 1;
+  optional bool resync = 1;
   optional int32 response_id = 2;
   repeated ContainerProto allocated_containers = 3;
   repeated ContainerStatusProto completed_container_statuses = 4;
