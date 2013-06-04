@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records;
+package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import java.nio.ByteBuffer;
 

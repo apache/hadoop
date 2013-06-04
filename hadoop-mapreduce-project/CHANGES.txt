@@ -419,6 +419,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5291. Change MR App to use updated property names in
     container-log4j.properties. (Zhijie Shen via sseth)
 
+    MAPREDUCE-5303. Changed MR app after moving ProtoBase to package impl.pb via
+    YARN-724. (Jian He via vinodkv)
+
 Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
