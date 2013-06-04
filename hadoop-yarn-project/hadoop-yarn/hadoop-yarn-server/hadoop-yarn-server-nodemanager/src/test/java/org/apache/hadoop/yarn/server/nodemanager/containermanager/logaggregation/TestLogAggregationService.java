@@ -25,6 +25,7 @@ import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -55,8 +56,10 @@ import junit.framework.Assert;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnRuntimeException;
@@ -78,6 +81,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -506,7 +510,63 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     assertTrue("The new aggregate file is not successfully created", existsAfter);
     aNewFile.delete(); //housekeeping
   }
-  
+
+  @Test
+  public void testAppLogDirCreation() throws Exception {
+    final String logSuffix = "logs";
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS,
+        localLogDir.getAbsolutePath());
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+        this.remoteRootLogDir.getAbsolutePath());
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, logSuffix);
+
+    InlineDispatcher dispatcher = new InlineDispatcher();
+    dispatcher.init(this.conf);
+    dispatcher.start();
+
+    FileSystem fs = FileSystem.get(this.conf);
+    final FileSystem spyFs = spy(FileSystem.get(this.conf));
+
+    LogAggregationService aggSvc = new LogAggregationService(dispatcher,
+        this.context, this.delSrvc, super.dirsHandler) {
+      @Override
+      protected FileSystem getFileSystem(Configuration conf) {
+        return spyFs;
+      }
+    };
+
+    aggSvc.init(this.conf);
+    aggSvc.start();
+
+    // start an application and verify user, suffix, and app dirs created
+    ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+    Path userDir = fs.makeQualified(new Path(
+        remoteRootLogDir.getAbsolutePath(), this.user));
+    Path suffixDir = new Path(userDir, logSuffix);
+    Path appDir = new Path(suffixDir, appId.toString());
+    aggSvc.handle(new LogHandlerAppStartedEvent(appId, this.user, null,
+        ContainerLogsRetentionPolicy.ALL_CONTAINERS, this.acls));
+    verify(spyFs).mkdirs(eq(userDir), isA(FsPermission.class));
+    verify(spyFs).mkdirs(eq(suffixDir), isA(FsPermission.class));
+    verify(spyFs).mkdirs(eq(appDir), isA(FsPermission.class));
+
+    // start another application and verify only app dir created
+    ApplicationId appId2 = BuilderUtils.newApplicationId(1, 2);
+    Path appDir2 = new Path(suffixDir, appId2.toString());
+    aggSvc.handle(new LogHandlerAppStartedEvent(appId2, this.user, null,
+        ContainerLogsRetentionPolicy.ALL_CONTAINERS, this.acls));
+    verify(spyFs).mkdirs(eq(appDir2), isA(FsPermission.class));
+
+    // start another application with the app dir already created and verify
+    // we do not try to create it again
+    ApplicationId appId3 = BuilderUtils.newApplicationId(1, 3);
+    Path appDir3 = new Path(suffixDir, appId3.toString());
+    new File(appDir3.toUri().getPath()).mkdir();
+    aggSvc.handle(new LogHandlerAppStartedEvent(appId3, this.user, null,
+        ContainerLogsRetentionPolicy.ALL_CONTAINERS, this.acls));
+    verify(spyFs, never()).mkdirs(eq(appDir3), isA(FsPermission.class));
+  }
+
   @Test
   @SuppressWarnings("unchecked")
   public void testLogAggregationInitAppFailsWithoutKillingNM() throws Exception {
