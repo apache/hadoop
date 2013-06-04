@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request sent by the client to the <code>ResourceManager</code>
@@ -36,7 +37,15 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
  */
 @Public
 @Stable
-public interface KillApplicationRequest {
+public abstract class KillApplicationRequest {
+
+  public static KillApplicationRequest newInstance(ApplicationId applicationId) {
+    KillApplicationRequest request =
+        Records.newRecord(KillApplicationRequest.class);
+    request.setApplicationId(applicationId);
+    return request;
+  }
+
   /**
    * Get the <code>ApplicationId</code> of the application to be aborted.
    * @return <code>ApplicationId</code> of the application to be aborted

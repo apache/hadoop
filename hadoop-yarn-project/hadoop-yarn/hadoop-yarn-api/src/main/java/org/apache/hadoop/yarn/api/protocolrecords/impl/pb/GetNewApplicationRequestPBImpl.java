@@ -20,11 +20,10 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNewApplicationRequestProto;
 
     
-public class GetNewApplicationRequestPBImpl extends ProtoBase<GetNewApplicationRequestProto> implements GetNewApplicationRequest {
+public class GetNewApplicationRequestPBImpl extends GetNewApplicationRequest {
   GetNewApplicationRequestProto proto = GetNewApplicationRequestProto.getDefaultInstance();
   GetNewApplicationRequestProto.Builder builder = null;
   boolean viaProto = false;
@@ -44,15 +43,23 @@ public class GetNewApplicationRequestPBImpl extends ProtoBase<GetNewApplicationR
     return proto;
   }
 
-  private void maybeInitBuilder() {
-    if (viaProto || builder == null) {
-      builder = GetNewApplicationRequestProto.newBuilder(proto);
-    }
-    viaProto = false;
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
   }
-    
-  
 
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
 
-
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+  }
 }  

@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-public interface RefreshSuperUserGroupsConfigurationRequest {
+import org.apache.hadoop.yarn.util.Records;
 
+public abstract class RefreshSuperUserGroupsConfigurationRequest {
+  public static RefreshSuperUserGroupsConfigurationRequest newInstance() {
+    RefreshSuperUserGroupsConfigurationRequest request =
+        Records.newRecord(RefreshSuperUserGroupsConfigurationRequest.class);
+    return request;
+  }
 }

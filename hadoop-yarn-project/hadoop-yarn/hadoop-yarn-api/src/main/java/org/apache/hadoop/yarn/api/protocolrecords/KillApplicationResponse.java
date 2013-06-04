@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to the client
@@ -32,6 +33,10 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  */
 @Public
 @Stable
-public interface KillApplicationResponse {
-
+public abstract class KillApplicationResponse {
+  public static KillApplicationResponse newInstance() {
+    KillApplicationResponse response =
+        Records.newRecord(KillApplicationResponse.class);
+    return response;
+  }
 }

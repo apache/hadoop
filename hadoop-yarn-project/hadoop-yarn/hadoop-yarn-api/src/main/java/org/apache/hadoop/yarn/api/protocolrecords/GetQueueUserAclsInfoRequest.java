@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request sent by clients to the <code>ResourceManager</code> to 
@@ -32,6 +33,10 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  */
 @Public
 @Stable
-public interface GetQueueUserAclsInfoRequest {
-
+public abstract class GetQueueUserAclsInfoRequest {
+  public static GetQueueUserAclsInfoRequest newInstance() {
+    GetQueueUserAclsInfoRequest request =
+        Records.newRecord(GetQueueUserAclsInfoRequest.class);
+    return request;
+  }
 }

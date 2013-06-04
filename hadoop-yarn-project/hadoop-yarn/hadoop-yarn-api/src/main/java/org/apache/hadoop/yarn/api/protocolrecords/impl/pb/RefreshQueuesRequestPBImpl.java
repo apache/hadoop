@@ -19,11 +19,9 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshQueuesRequest;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshQueuesRequestProto;
 
-public class RefreshQueuesRequestPBImpl extends ProtoBase<RefreshQueuesRequestProto>
-implements RefreshQueuesRequest {
+public class RefreshQueuesRequestPBImpl extends RefreshQueuesRequest {
 
   RefreshQueuesRequestProto proto = RefreshQueuesRequestProto.getDefaultInstance();
   RefreshQueuesRequestProto.Builder builder = null;
@@ -42,5 +40,25 @@ implements RefreshQueuesRequest {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 }

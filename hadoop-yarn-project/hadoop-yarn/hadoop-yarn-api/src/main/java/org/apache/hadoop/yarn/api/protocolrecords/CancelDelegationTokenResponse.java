@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * The response from the {@code ResourceManager} to a cancelDelegationToken
@@ -27,5 +28,10 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
  */
 @Public
 @Evolving
-public interface CancelDelegationTokenResponse {
+public abstract class CancelDelegationTokenResponse {
+  public static CancelDelegationTokenResponse newInstance() {
+    CancelDelegationTokenResponse response =
+        Records.newRecord(CancelDelegationTokenResponse.class);
+    return response;
+  }
 }

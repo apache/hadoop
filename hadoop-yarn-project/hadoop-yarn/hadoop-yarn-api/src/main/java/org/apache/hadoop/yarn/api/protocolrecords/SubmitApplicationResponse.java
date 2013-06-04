@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to a client on
@@ -32,6 +33,10 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  */
 @Public
 @Stable
-public interface SubmitApplicationResponse {
-
+public abstract class SubmitApplicationResponse {
+  public static SubmitApplicationResponse newInstance() {
+    SubmitApplicationResponse response =
+        Records.newRecord(SubmitApplicationResponse.class);
+    return response;
+  }
 }

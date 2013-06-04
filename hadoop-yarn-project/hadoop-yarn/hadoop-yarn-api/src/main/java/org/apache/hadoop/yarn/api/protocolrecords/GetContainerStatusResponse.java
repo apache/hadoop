@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>NodeManager</code> to the 
@@ -34,7 +35,16 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
  */
 @Public
 @Stable
-public interface GetContainerStatusResponse {
+public abstract class GetContainerStatusResponse {
+
+  public static GetContainerStatusResponse newInstance(
+      ContainerStatus containerStatus) {
+    GetContainerStatusResponse response =
+        Records.newRecord(GetContainerStatusResponse.class);
+    response.setStatus(containerStatus);
+    return response;
+  }
+
   /**
    * Get the <code>ContainerStatus</code> of the container.
    * @return <code>ContainerStatus</code> of the container

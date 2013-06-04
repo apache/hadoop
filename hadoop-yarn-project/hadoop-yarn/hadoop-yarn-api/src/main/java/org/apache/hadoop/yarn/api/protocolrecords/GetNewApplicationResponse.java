@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to the client for 
@@ -34,7 +35,19 @@ import org.apache.hadoop.yarn.api.records.Resource;
  */
 @Public
 @Stable
-public interface GetNewApplicationResponse {
+public abstract class GetNewApplicationResponse {
+
+  public static GetNewApplicationResponse newInstance(
+      ApplicationId applicationId, Resource minCapability,
+      Resource maxCapability) {
+    GetNewApplicationResponse response =
+        Records.newRecord(GetNewApplicationResponse.class);
+    response.setApplicationId(applicationId);
+    response.setMinimumResourceCapability(minCapability);
+    response.setMaximumResourceCapability(maxCapability);
+    return response;
+  }
+
   /**
    * Get the <em>new</em> <code>ApplicationId</code> allocated by the 
    * <code>ResourceManager</code>.
@@ -56,11 +69,11 @@ public interface GetNewApplicationResponse {
    */
   @Public
   @Stable
-  public Resource getMinimumResourceCapability();
+  public abstract Resource getMinimumResourceCapability();
   
   @Private
   @Unstable
-  public void setMinimumResourceCapability(Resource capability);
+  public abstract void setMinimumResourceCapability(Resource capability);
   
   /**
    * Get the maximum capability for any {@link Resource} allocated by the 
@@ -69,9 +82,9 @@ public interface GetNewApplicationResponse {
    */
   @Public
   @Stable
-  public Resource getMaximumResourceCapability();
+  public abstract Resource getMaximumResourceCapability();
   
   @Private
   @Unstable
-  public void setMaximumResourceCapability(Resource capability); 
+  public abstract void setMaximumResourceCapability(Resource capability); 
 }

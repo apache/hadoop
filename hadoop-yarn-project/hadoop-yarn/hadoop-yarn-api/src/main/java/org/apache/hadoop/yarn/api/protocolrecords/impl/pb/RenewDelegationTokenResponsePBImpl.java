@@ -22,8 +22,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRespo
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 
-public class RenewDelegationTokenResponsePBImpl extends
-    ProtoBase<RenewDelegationTokenResponseProto> implements
+public class RenewDelegationTokenResponsePBImpl extends 
     RenewDelegationTokenResponse {
 
   RenewDelegationTokenResponseProto proto =
@@ -41,13 +40,32 @@ public class RenewDelegationTokenResponsePBImpl extends
     this.viaProto = true;
   }
 
-  @Override
   public RenewDelegationTokenResponseProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
-  
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+  }
+
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = RenewDelegationTokenResponseProto.newBuilder(proto);

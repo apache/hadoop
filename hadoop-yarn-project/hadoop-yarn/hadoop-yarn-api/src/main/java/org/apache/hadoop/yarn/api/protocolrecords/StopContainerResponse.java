@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>NodeManager</code> to the 
@@ -33,6 +34,10 @@ import org.apache.hadoop.yarn.api.ContainerManager;
  */
 @Public
 @Stable
-public interface StopContainerResponse {
-
+public abstract class StopContainerResponse {
+  public static StopContainerResponse newInstance() {
+    StopContainerResponse response =
+        Records.newRecord(StopContainerResponse.class);
+    return response;
+  }
 }

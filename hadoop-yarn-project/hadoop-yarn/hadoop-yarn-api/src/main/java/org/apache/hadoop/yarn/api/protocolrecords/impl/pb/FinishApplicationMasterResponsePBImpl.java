@@ -20,12 +20,11 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterResponseProto;
 
 
     
-public class FinishApplicationMasterResponsePBImpl extends ProtoBase<FinishApplicationMasterResponseProto> implements FinishApplicationMasterResponse {
+public class FinishApplicationMasterResponsePBImpl extends FinishApplicationMasterResponse {
   FinishApplicationMasterResponseProto proto = FinishApplicationMasterResponseProto.getDefaultInstance();
   FinishApplicationMasterResponseProto.Builder builder = null;
   boolean viaProto = false;
@@ -43,6 +42,26 @@ public class FinishApplicationMasterResponsePBImpl extends ProtoBase<FinishAppli
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void maybeInitBuilder() {

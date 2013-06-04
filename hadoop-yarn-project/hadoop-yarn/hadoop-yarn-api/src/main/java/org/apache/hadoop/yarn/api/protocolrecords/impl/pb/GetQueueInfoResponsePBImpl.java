@@ -19,15 +19,13 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetQueueInfoResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetQueueInfoResponseProtoOrBuilder;
 
-public class GetQueueInfoResponsePBImpl extends ProtoBase<GetQueueInfoResponseProto> 
-implements GetQueueInfoResponse {
+public class GetQueueInfoResponsePBImpl extends GetQueueInfoResponse {
 
   QueueInfo queueInfo;
   
@@ -45,12 +43,31 @@ implements GetQueueInfoResponse {
     viaProto = true;
   }
 
-  @Override
   public GetQueueInfoResponseProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   @Override

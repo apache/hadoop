@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to clients
@@ -41,7 +42,15 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
  */
 @Public
 @Stable
-public interface GetQueueUserAclsInfoResponse {
+public abstract class GetQueueUserAclsInfoResponse {
+
+  public static GetQueueUserAclsInfoResponse newInstance(
+      List<QueueUserACLInfo> queueUserAclsList) {
+    GetQueueUserAclsInfoResponse response =
+        Records.newRecord(GetQueueUserAclsInfoResponse.class);
+    response.setUserAclsInfoList(queueUserAclsList);
+    return response;
+  }
 
   /**
    * Get the <code>QueueUserACLInfo</code> per queue for the user.
@@ -49,10 +58,11 @@ public interface GetQueueUserAclsInfoResponse {
    */
   @Public
   @Stable
-  public List<QueueUserACLInfo> getUserAclsInfoList();
+  public abstract List<QueueUserACLInfo> getUserAclsInfoList();
   
   @Private
   @Unstable
-  public void setUserAclsInfoList(List<QueueUserACLInfo> queueUserAclsList);
+  public abstract void setUserAclsInfoList(
+      List<QueueUserACLInfo> queueUserAclsList);
   
 }

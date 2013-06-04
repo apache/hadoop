@@ -20,13 +20,23 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * The response to a renewDelegationToken call to the {@code ResourceManager}.
  */
 @Public
 @Evolving
-public interface RenewDelegationTokenResponse {
-  long getNextExpirationTime();
-  void setNextExpirationTime(long expTime);
+public abstract class RenewDelegationTokenResponse {
+
+  public static RenewDelegationTokenResponse newInstance(long expTime) {
+    RenewDelegationTokenResponse response =
+        Records.newRecord(RenewDelegationTokenResponse.class);
+    response.setNextExpirationTime(expTime);
+    return response;
+  }
+
+  public abstract long getNextExpirationTime();
+
+  public abstract void setNextExpirationTime(long expTime);
 }

@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationRequestProto;
@@ -29,7 +28,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationRequestPr
 
 
     
-public class SubmitApplicationRequestPBImpl extends ProtoBase<SubmitApplicationRequestProto> implements SubmitApplicationRequest {
+public class SubmitApplicationRequestPBImpl extends SubmitApplicationRequest {
   SubmitApplicationRequestProto proto = SubmitApplicationRequestProto.getDefaultInstance();
   SubmitApplicationRequestProto.Builder builder = null;
   boolean viaProto = false;
@@ -51,6 +50,26 @@ public class SubmitApplicationRequestPBImpl extends ProtoBase<SubmitApplicationR
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+  
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+  
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+  
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToBuilder() {

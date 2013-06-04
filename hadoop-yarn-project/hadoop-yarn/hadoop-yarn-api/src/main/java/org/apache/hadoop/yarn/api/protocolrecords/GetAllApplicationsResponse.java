@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to a client
@@ -40,16 +41,25 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
  */
 @Public
 @Stable
-public interface GetAllApplicationsResponse {
+public abstract class GetAllApplicationsResponse {
+
+  public static GetAllApplicationsResponse newInstance(
+      List<ApplicationReport> applications) {
+    GetAllApplicationsResponse response =
+        Records.newRecord(GetAllApplicationsResponse.class);
+    response.setApplicationList(applications);
+    return response;
+  }
+
   /**
    * Get <code>ApplicationReport</code> for all applications.
    * @return <code>ApplicationReport</code> for all applications
    */
   @Public
   @Stable
-  List<ApplicationReport> getApplicationList();
+  public abstract List<ApplicationReport> getApplicationList();
   
   @Private
   @Unstable
-  void setApplicationList(List<ApplicationReport> applications);
+  public abstract void setApplicationList(List<ApplicationReport> applications);
 }

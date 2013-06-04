@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request sent by a client to <em>submit an application</em> to the 
@@ -39,7 +40,16 @@ import org.apache.hadoop.yarn.api.records.Resource;
  */
 @Public
 @Stable
-public interface SubmitApplicationRequest {
+public abstract class SubmitApplicationRequest {
+
+  public static SubmitApplicationRequest newInstance(
+      ApplicationSubmissionContext context) {
+    SubmitApplicationRequest request =
+        Records.newRecord(SubmitApplicationRequest.class);
+    request.setApplicationSubmissionContext(context);
+    return request;
+  }
+
   /**
    * Get the <code>ApplicationSubmissionContext</code> for the application.
    * @return <code>ApplicationSubmissionContext</code> for the application
