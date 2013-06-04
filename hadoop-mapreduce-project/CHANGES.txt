@@ -142,6 +142,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5300. Fix backward incompatibility for
     o.a.h.mapreduce.filecache.DistributedCache. (Zhijie Shen via acmurthy)
 
+    MAPREDUCE-5283. Over 10 different tests have near identical
+    implementations of AppContext (Sandy Ryza via jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
