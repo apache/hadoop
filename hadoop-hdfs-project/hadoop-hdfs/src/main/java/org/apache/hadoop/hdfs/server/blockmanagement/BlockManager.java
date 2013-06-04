@@ -3078,10 +3078,15 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
           computeDatanodeWork();
           processPendingReplications();
           Thread.sleep(replicationRecheckInterval);
-        } catch (InterruptedException ie) {
-          LOG.warn("ReplicationMonitor thread received InterruptedException.", ie);
-          break;
         } catch (Throwable t) {
+          if (!namesystem.isRunning()) {
+            LOG.info("Stopping ReplicationMonitor.");
+            if (!(t instanceof InterruptedException)) {
+              LOG.info("ReplicationMonitor received an exception"
+                  + " while shutting down.", t);
+            }
+            break;
+          }
           LOG.fatal("ReplicationMonitor thread received Runtime exception. ", t);
           terminate(1, t);
         }
