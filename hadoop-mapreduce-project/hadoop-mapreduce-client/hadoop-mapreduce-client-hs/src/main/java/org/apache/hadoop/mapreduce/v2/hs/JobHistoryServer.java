@@ -32,7 +32,7 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -73,7 +73,7 @@ public class JobHistoryServer extends CompositeService {
     try {
       doSecureLogin(conf);
     } catch(IOException ie) {
-      throw new YarnException("History Server Failed to login", ie);
+      throw new YarnRuntimeException("History Server Failed to login", ie);
     }
     jobHistoryService = new JobHistory();
     historyContext = (HistoryContext)jobHistoryService;

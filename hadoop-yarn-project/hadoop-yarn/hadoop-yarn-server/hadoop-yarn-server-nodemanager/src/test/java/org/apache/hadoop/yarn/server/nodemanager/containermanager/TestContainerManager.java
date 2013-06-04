@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
@@ -94,7 +94,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
       ContainerId cId = createContainerId();
       request.setContainerId(cId);
       containerManager.getContainerStatus(request);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throwsException = true;
     }
     Assert.assertTrue(throwsException);
@@ -102,7 +102,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
   @Test
   public void testContainerSetup() throws IOException, InterruptedException,
-      YarnRemoteException {
+      YarnException {
 
     containerManager.start();
 
@@ -184,7 +184,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
   @Test
   public void testContainerLaunchAndStop() throws IOException,
-      InterruptedException, YarnRemoteException {
+      InterruptedException, YarnException {
     containerManager.start();
 
     File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
@@ -287,7 +287,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
   }
   
   private void testContainerLaunchAndExit(int exitCode) throws IOException,
-      InterruptedException, YarnRemoteException {
+      InterruptedException, YarnException {
 
 	  File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
 	  PrintWriter fileWriter = new PrintWriter(scriptFile);
@@ -362,7 +362,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
   
   @Test
   public void testContainerLaunchAndExitSuccess() throws IOException,
-      InterruptedException, YarnRemoteException {
+      InterruptedException, YarnException {
 	  containerManager.start();
 	  int exitCode = 0; 
 
@@ -373,7 +373,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
   @Test
   public void testContainerLaunchAndExitFailure() throws IOException,
-      InterruptedException, YarnRemoteException {
+      InterruptedException, YarnException {
 	  containerManager.start();
 	  int exitCode = 50; 
 
@@ -384,7 +384,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
   
   @Test
   public void testLocalFilesCleanup() throws InterruptedException,
-      IOException, YarnRemoteException {
+      IOException, YarnException {
     // Real del service
     delSrvc = new DeletionService(exec);
     delSrvc.init(conf);
@@ -524,7 +524,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     boolean catchException = false;
     try {
       containerManager.startContainer(startRequest1);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       catchException = true;
       Assert.assertTrue(e.getMessage().contains(
         "Container " + cId1 + " rejected as it is allocated by a previous RM"));
@@ -549,10 +549,10 @@ public class TestContainerManager extends BaseContainerManagerTest {
     boolean noException = true;
     try {
       containerManager.startContainer(startRequest2);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       noException = false;
     }
-    // Verify that startContainer get no YarnRemoteException
+    // Verify that startContainer get no YarnException
     Assert.assertTrue(noException);
   }
 }

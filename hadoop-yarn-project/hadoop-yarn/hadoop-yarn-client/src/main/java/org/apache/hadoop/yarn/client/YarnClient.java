@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.Service;
 
 @InterfaceAudience.Public
@@ -58,10 +58,10 @@ public interface YarnClient extends Service {
    * 
    * @return response containing the new <code>ApplicationId</code> to be used
    *         to submit an application
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  GetNewApplicationResponse getNewApplication() throws YarnRemoteException,
+  GetNewApplicationResponse getNewApplication() throws YarnException,
       IOException;
 
   /**
@@ -75,12 +75,12 @@ public interface YarnClient extends Service {
    *          {@link ApplicationSubmissionContext} containing all the details
    *          needed to submit a new application
    * @return {@link ApplicationId} of the accepted application
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    * @see #getNewApplication()
    */
   ApplicationId submitApplication(ApplicationSubmissionContext appContext)
-      throws YarnRemoteException, IOException;
+      throws YarnException, IOException;
 
   /**
    * <p>
@@ -89,13 +89,13 @@ public interface YarnClient extends Service {
    * 
    * @param applicationId
    *          {@link ApplicationId} of the application that needs to be killed
-   * @throws YarnRemoteException
+   * @throws YarnException
    *           in case of errors or if YARN rejects the request due to
    *           access-control restrictions.
    * @throws IOException
    * @see #getQueueAclsInfo()
    */
-  void killApplication(ApplicationId applicationId) throws YarnRemoteException,
+  void killApplication(ApplicationId applicationId) throws YarnException,
       IOException;
 
   /**
@@ -125,11 +125,11 @@ public interface YarnClient extends Service {
    * @param appId
    *          {@link ApplicationId} of the application that needs a report
    * @return application report
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   ApplicationReport getApplicationReport(ApplicationId appId)
-      throws YarnRemoteException, IOException;
+      throws YarnException, IOException;
 
   /**
    * <p>
@@ -143,10 +143,10 @@ public interface YarnClient extends Service {
    * </p>
    * 
    * @return a list of reports of all running applications
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  List<ApplicationReport> getApplicationList() throws YarnRemoteException,
+  List<ApplicationReport> getApplicationList() throws YarnException,
       IOException;
 
   /**
@@ -155,10 +155,10 @@ public interface YarnClient extends Service {
    * </p>
    * 
    * @return cluster metrics
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  YarnClusterMetrics getYarnClusterMetrics() throws YarnRemoteException,
+  YarnClusterMetrics getYarnClusterMetrics() throws YarnException,
       IOException;
 
   /**
@@ -167,10 +167,10 @@ public interface YarnClient extends Service {
    * </p>
    * 
    * @return A list of report of all nodes
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  List<NodeReport> getNodeReports() throws YarnRemoteException, IOException;
+  List<NodeReport> getNodeReports() throws YarnException, IOException;
 
   /**
    * <p>
@@ -181,11 +181,11 @@ public interface YarnClient extends Service {
    *          securely talking to YARN.
    * @return a delegation token ({@link Token}) that can be used to
    *         talk to YARN
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   Token getRMDelegationToken(Text renewer)
-      throws YarnRemoteException, IOException;
+      throws YarnException, IOException;
 
   /**
    * <p>
@@ -195,12 +195,12 @@ public interface YarnClient extends Service {
    * @param queueName
    *          Name of the queue whose information is needed
    * @return queue information
-   * @throws YarnRemoteException
+   * @throws YarnException
    *           in case of errors or if YARN rejects the request due to
    *           access-control restrictions.
    * @throws IOException
    */
-  QueueInfo getQueueInfo(String queueName) throws YarnRemoteException,
+  QueueInfo getQueueInfo(String queueName) throws YarnException,
       IOException;
 
   /**
@@ -210,10 +210,10 @@ public interface YarnClient extends Service {
    * </p>
    * 
    * @return a list of queue-information for all queues
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  List<QueueInfo> getAllQueues() throws YarnRemoteException, IOException;
+  List<QueueInfo> getAllQueues() throws YarnException, IOException;
 
   /**
    * <p>
@@ -221,10 +221,10 @@ public interface YarnClient extends Service {
    * </p>
    * 
    * @return a list of queue-information for all the top-level queues
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  List<QueueInfo> getRootQueueInfos() throws YarnRemoteException, IOException;
+  List<QueueInfo> getRootQueueInfos() throws YarnException, IOException;
 
   /**
    * <p>
@@ -236,10 +236,10 @@ public interface YarnClient extends Service {
    *          Name of the queue whose child-queues' information is needed
    * @return a list of queue-information for all queues who are direct children
    *         of the given parent queue.
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  List<QueueInfo> getChildQueueInfos(String parent) throws YarnRemoteException,
+  List<QueueInfo> getChildQueueInfos(String parent) throws YarnException,
       IOException;
 
   /**
@@ -250,9 +250,9 @@ public interface YarnClient extends Service {
    * 
    * @return a list of queue acls ({@link QueueUserACLInfo}) for
    *         <em>current user</em>
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  List<QueueUserACLInfo> getQueueAclsInfo() throws YarnRemoteException,
+  List<QueueUserACLInfo> getQueueAclsInfo() throws YarnException,
       IOException;
 }

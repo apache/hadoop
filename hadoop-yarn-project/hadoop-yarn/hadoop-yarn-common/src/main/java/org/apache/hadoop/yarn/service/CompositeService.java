@@ -26,7 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 
 /**
  * Composition of services.
@@ -75,7 +75,7 @@ public class CompositeService extends AbstractService {
       // call stop() on all services including failed service to make sure cleanup
       // happens.
       stop(i);
-      throw new YarnException("Failed to Start " + getName(), e);
+      throw new YarnRuntimeException("Failed to Start " + getName(), e);
     }
 
   }

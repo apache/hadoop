@@ -22,7 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.util.StringInterner;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 import static org.apache.hadoop.yarn.util.StringHelper.*;
@@ -56,7 +56,7 @@ public class Apps {
   }
 
   public static void throwParseException(String name, String s) {
-    throw new YarnException(join("Error parsing ", name, ": ", s));
+    throw new YarnRuntimeException(join("Error parsing ", name, ": ", s));
   }
 
   public static void setEnvFromInputString(Map<String, String> env,

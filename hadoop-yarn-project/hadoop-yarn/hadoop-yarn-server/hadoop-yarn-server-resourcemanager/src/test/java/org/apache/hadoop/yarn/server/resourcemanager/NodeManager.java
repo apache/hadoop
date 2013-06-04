@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -83,7 +83,7 @@ public class NodeManager implements ContainerManager {
   public NodeManager(String hostName, int containerManagerPort, int httpPort,
       String rackName, Resource capability,
       ResourceTrackerService resourceTrackerService, RMContext rmContext)
-      throws IOException, YarnRemoteException {
+      throws IOException, YarnException {
     this.containerManagerAddress = hostName + ":" + containerManagerPort;
     this.nodeHttpAddress = hostName + ":" + httpPort;
     this.rackName = rackName;
@@ -144,7 +144,7 @@ public class NodeManager implements ContainerManager {
     }
     return containerStatuses;
   }
-  public void heartbeat() throws IOException, YarnRemoteException {
+  public void heartbeat() throws IOException, YarnException {
     NodeStatus nodeStatus = 
       org.apache.hadoop.yarn.server.resourcemanager.NodeManager.createNodeStatus(
           nodeId, getContainerStatuses(containers));
@@ -160,7 +160,7 @@ public class NodeManager implements ContainerManager {
   @Override
   synchronized public StartContainerResponse startContainer(
       StartContainerRequest request) 
-  throws YarnRemoteException {
+  throws YarnException {
 
     Token containerToken = request.getContainerToken();
     ContainerTokenIdentifier tokenId = null;
@@ -226,7 +226,7 @@ public class NodeManager implements ContainerManager {
   
   @Override
   synchronized public StopContainerResponse stopContainer(StopContainerRequest request) 
-  throws YarnRemoteException {
+  throws YarnException {
     ContainerId containerID = request.getContainerId();
     String applicationId = String.valueOf(
         containerID.getApplicationAttemptId().getApplicationId().getId());
@@ -278,7 +278,7 @@ public class NodeManager implements ContainerManager {
   }
 
   @Override
-  synchronized public GetContainerStatusResponse getContainerStatus(GetContainerStatusRequest request) throws YarnRemoteException {
+  synchronized public GetContainerStatusResponse getContainerStatus(GetContainerStatusRequest request) throws YarnException {
     ContainerId containerId = request.getContainerId();
     List<Container> appContainers = 
         containers.get(

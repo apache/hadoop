@@ -66,7 +66,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -174,7 +174,7 @@ public class ResourceLocalizationService extends CompositeService
     try {
       return FileContext.getLocalFSFileContext(conf);
     } catch (IOException e) {
-      throw new YarnException("Failed to access local fs");
+      throw new YarnRuntimeException("Failed to access local fs");
     }
   }
 
@@ -185,7 +185,7 @@ public class ResourceLocalizationService extends CompositeService
     if (perDirFileLimit <= 36) {
       LOG.error(YarnConfiguration.NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY
           + " parameter is configured with very low value.");
-      throw new YarnException(
+      throw new YarnRuntimeException(
         YarnConfiguration.NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY
             + " parameter is configured with a value less than 37.");
     } else {
@@ -224,7 +224,7 @@ public class ResourceLocalizationService extends CompositeService
         lfs.mkdir(new Path(logDir), null, true);
       }
     } catch (IOException e) {
-      throw new YarnException("Failed to initialize LocalizationService", e);
+      throw new YarnRuntimeException("Failed to initialize LocalizationService", e);
     }
 
     cacheTargetSize =
@@ -318,7 +318,7 @@ public class ResourceLocalizationService extends CompositeService
           ((ApplicationLocalizationEvent)event).getApplication());
       break;
     default:
-      throw new YarnException("Unknown localization event: " + event);
+      throw new YarnRuntimeException("Unknown localization event: " + event);
     }
   }
   

@@ -53,7 +53,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -253,13 +253,13 @@ public class ContainerLocalizer {
           // ignore response
           try {
             nodemanager.heartbeat(status);
-          } catch (YarnRemoteException e) { }
+          } catch (YarnException e) { }
           return;
         }
         cs.poll(1000, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         return;
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         // TODO cleanup
         return;
       }

@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.Records;
@@ -121,7 +121,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
 
   @Override
   public GetNewApplicationResponse getNewApplication()
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     GetNewApplicationRequest request =
         Records.newRecord(GetNewApplicationRequest.class);
     return rmClient.getNewApplication(request);
@@ -130,7 +130,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   @Override
   public ApplicationId
       submitApplication(ApplicationSubmissionContext appContext)
-          throws YarnRemoteException, IOException {
+          throws YarnException, IOException {
     ApplicationId applicationId = appContext.getApplicationId();
     appContext.setApplicationId(applicationId);
     SubmitApplicationRequest request =
@@ -167,7 +167,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
 
   @Override
   public void killApplication(ApplicationId applicationId)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     LOG.info("Killing application " + applicationId);
     KillApplicationRequest request =
         Records.newRecord(KillApplicationRequest.class);
@@ -177,7 +177,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
 
   @Override
   public ApplicationReport getApplicationReport(ApplicationId appId)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     GetApplicationReportRequest request =
         Records.newRecord(GetApplicationReportRequest.class);
     request.setApplicationId(appId);
@@ -188,7 +188,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
 
   @Override
   public List<ApplicationReport> getApplicationList()
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     GetAllApplicationsRequest request =
         Records.newRecord(GetAllApplicationsRequest.class);
     GetAllApplicationsResponse response = rmClient.getAllApplications(request);
@@ -196,7 +196,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   }
 
   @Override
-  public YarnClusterMetrics getYarnClusterMetrics() throws YarnRemoteException,
+  public YarnClusterMetrics getYarnClusterMetrics() throws YarnException,
       IOException {
     GetClusterMetricsRequest request =
         Records.newRecord(GetClusterMetricsRequest.class);
@@ -205,7 +205,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   }
 
   @Override
-  public List<NodeReport> getNodeReports() throws YarnRemoteException,
+  public List<NodeReport> getNodeReports() throws YarnException,
       IOException {
     GetClusterNodesRequest request =
         Records.newRecord(GetClusterNodesRequest.class);
@@ -215,7 +215,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
 
   @Override
   public Token getRMDelegationToken(Text renewer)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     /* get the token from RM */
     GetDelegationTokenRequest rmDTRequest =
         Records.newRecord(GetDelegationTokenRequest.class);
@@ -238,7 +238,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   }
 
   @Override
-  public QueueInfo getQueueInfo(String queueName) throws YarnRemoteException,
+  public QueueInfo getQueueInfo(String queueName) throws YarnException,
       IOException {
     GetQueueInfoRequest request =
         getQueueInfoRequest(queueName, true, false, false);
@@ -247,7 +247,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   }
 
   @Override
-  public List<QueueUserACLInfo> getQueueAclsInfo() throws YarnRemoteException,
+  public List<QueueUserACLInfo> getQueueAclsInfo() throws YarnException,
       IOException {
     GetQueueUserAclsInfoRequest request =
         Records.newRecord(GetQueueUserAclsInfoRequest.class);
@@ -255,7 +255,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   }
 
   @Override
-  public List<QueueInfo> getAllQueues() throws YarnRemoteException,
+  public List<QueueInfo> getAllQueues() throws YarnException,
       IOException {
     List<QueueInfo> queues = new ArrayList<QueueInfo>();
 
@@ -267,7 +267,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   }
 
   @Override
-  public List<QueueInfo> getRootQueueInfos() throws YarnRemoteException,
+  public List<QueueInfo> getRootQueueInfos() throws YarnException,
       IOException {
     List<QueueInfo> queues = new ArrayList<QueueInfo>();
 
@@ -280,7 +280,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
 
   @Override
   public List<QueueInfo> getChildQueueInfos(String parent)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     List<QueueInfo> queues = new ArrayList<QueueInfo>();
 
     QueueInfo parentQueue =

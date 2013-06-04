@@ -24,7 +24,7 @@ import java.io.IOException;
 import junit.framework.Assert;
 
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.Test;
 
 import com.google.protobuf.ServiceException;
@@ -33,7 +33,7 @@ public class TestRPCUtil {
 
   @Test
   public void testUnknownExceptionUnwrapping() {
-    Class<? extends Throwable> exception = YarnRemoteException.class;
+    Class<? extends Throwable> exception = YarnException.class;
     String className = "UnknownException.class";
     verifyRemoteExceptionUnwrapping(exception, className);
   }
@@ -53,7 +53,7 @@ public class TestRPCUtil {
 
   @Test
   public void testRemoteYarnExceptionUnwrapping() {
-    Class<? extends Throwable> exception = YarnRemoteException.class;
+    Class<? extends Throwable> exception = YarnException.class;
     verifyRemoteExceptionUnwrapping(exception, exception.getName());
 
   }
@@ -73,7 +73,7 @@ public class TestRPCUtil {
   
   @Test
   public void testRemoteYarnExceptionWithoutStringConstructor() {
-    // Derivatives of YarnException should always defined a string constructor.
+    // Derivatives of YarnException should always define a string constructor.
     Class<? extends Throwable> exception = YarnTestExceptionNoConstructor.class;
     verifyRemoteExceptionUnwrapping(RemoteException.class, exception.getName());
   }
@@ -131,7 +131,7 @@ public class TestRPCUtil {
             .getMessage().contains(message));
   }
 
-  private static class YarnTestException extends YarnRemoteException {
+  private static class YarnTestException extends YarnException {
     private static final long serialVersionUID = 1L;
 
     @SuppressWarnings("unused")
@@ -141,7 +141,7 @@ public class TestRPCUtil {
   }
 
   private static class YarnTestExceptionNoConstructor extends
-      YarnRemoteException {
+      YarnException {
     private static final long serialVersionUID = 1L;
 
   }

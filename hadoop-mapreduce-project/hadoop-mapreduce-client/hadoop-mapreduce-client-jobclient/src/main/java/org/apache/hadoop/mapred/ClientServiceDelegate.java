@@ -65,12 +65,12 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -143,7 +143,7 @@ public class ClientServiceDelegate {
     ApplicationReport application = null;
     try {
       application = rm.getApplicationReport(appId);
-    } catch (YarnRemoteException e2) {
+    } catch (YarnException e2) {
       throw new IOException(e2);
     }
     if (application != null) {
@@ -212,11 +212,11 @@ public class ClientServiceDelegate {
           Thread.sleep(2000);
         } catch (InterruptedException e1) {
           LOG.warn("getProxy() call interruped", e1);
-          throw new YarnException(e1);
+          throw new YarnRuntimeException(e1);
         }
         try {
           application = rm.getApplicationReport(appId);
-        } catch (YarnRemoteException e1) {
+        } catch (YarnException e1) {
           throw new IOException(e1);
         }
         if (application == null) {
@@ -226,8 +226,8 @@ public class ClientServiceDelegate {
         }
       } catch (InterruptedException e) {
         LOG.warn("getProxy() call interruped", e);
-        throw new YarnException(e);
-      } catch (YarnRemoteException e) {
+        throw new YarnRuntimeException(e);
+      } catch (YarnException e) {
         throw new IOException(e);
       }
     }
@@ -296,9 +296,9 @@ public class ClientServiceDelegate {
     try {
       methodOb = MRClientProtocol.class.getMethod(method, argClass);
     } catch (SecurityException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (NoSuchMethodException e) {
-      throw new YarnException("Method name mismatch", e);
+      throw new YarnRuntimeException("Method name mismatch", e);
     }
     int maxRetries = this.conf.getInt(
         MRJobConfig.MR_CLIENT_MAX_RETRIES,
@@ -308,7 +308,7 @@ public class ClientServiceDelegate {
       try {
         return methodOb.invoke(getProxy(), args);
       } catch (InvocationTargetException e) {
-        // Will not throw out YarnRemoteException anymore
+        // Will not throw out YarnException anymore
         LOG.debug("Failed to contact AM/History for job " + jobId + 
             " retrying..", e.getTargetException());
         // Force reconnection by setting the proxy to null.

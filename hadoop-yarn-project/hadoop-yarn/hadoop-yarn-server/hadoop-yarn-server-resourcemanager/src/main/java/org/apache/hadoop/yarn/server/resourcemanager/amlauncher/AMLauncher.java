@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -97,7 +97,7 @@ public class AMLauncher implements Runnable {
     containerMgrProxy = getContainerMgrProxy(masterContainerID);
   }
   
-  private void launch() throws IOException, YarnRemoteException {
+  private void launch() throws IOException, YarnException {
     connect();
     ContainerId masterContainerID = masterContainer.getId();
     ApplicationSubmissionContext applicationContext =
@@ -115,7 +115,7 @@ public class AMLauncher implements Runnable {
         + " for AM " + application.getAppAttemptId());
   }
   
-  private void cleanup() throws IOException, YarnRemoteException {
+  private void cleanup() throws IOException, YarnException {
     connect();
     ContainerId containerId = masterContainer.getId();
     StopContainerRequest stopRequest = 
@@ -245,7 +245,7 @@ public class AMLauncher implements Runnable {
         cleanup();
       } catch(IOException ie) {
         LOG.info("Error cleaning master ", ie);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         LOG.info("Error cleaning master ", e);
       }
       break;

@@ -35,7 +35,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -109,7 +109,7 @@ public class LocalContainerAllocator extends RMCommunicator
         LOG.error("Could not contact RM after " + retryInterval + " milliseconds.");
         eventHandler.handle(new JobEvent(this.getJob().getID(),
                                          JobEventType.INTERNAL_ERROR));
-        throw new YarnException("Could not contact RM after " +
+        throw new YarnRuntimeException("Could not contact RM after " +
                                 retryInterval + " milliseconds.");
       }
       // Throw this up to the caller, which may decide to ignore it and
@@ -122,7 +122,7 @@ public class LocalContainerAllocator extends RMCommunicator
       // this application must clean itself up.
       eventHandler.handle(new JobEvent(this.getJob().getID(),
                                        JobEventType.JOB_AM_REBOOT));
-      throw new YarnException("Resource Manager doesn't recognize AttemptId: " +
+      throw new YarnRuntimeException("Resource Manager doesn't recognize AttemptId: " +
                                this.getContext().getApplicationID());
     }
   }

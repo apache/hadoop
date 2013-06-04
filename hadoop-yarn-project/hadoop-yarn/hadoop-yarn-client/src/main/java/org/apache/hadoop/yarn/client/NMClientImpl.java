@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -112,7 +112,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
         stopContainer(startedContainer.getContainerId(),
             startedContainer.getNodeId(),
             startedContainer.getContainerToken());
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         LOG.error("Failed to stop Container " +
             startedContainer.getContainerId() +
             "when stopping NMClientImpl");
@@ -213,7 +213,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
 
     public synchronized Map<String, ByteBuffer> startContainer(
         Container container, ContainerLaunchContext containerLaunchContext)
-            throws YarnRemoteException, IOException {
+            throws YarnException, IOException {
       if (!container.getId().equals(containerId)) {
         throw new IllegalArgumentException(
             "NMCommunicator's containerId  mismatches the given Container's");
@@ -228,7 +228,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Started Container " + containerId);
         }
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         LOG.warn("Container " + containerId + " failed to start", e);
         throw e;
       } catch (IOException e) {
@@ -238,7 +238,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
       return startResponse.getAllServiceResponse();
     }
 
-    public synchronized void stopContainer() throws YarnRemoteException,
+    public synchronized void stopContainer() throws YarnException,
         IOException {
       try {
         StopContainerRequest stopRequest =
@@ -248,7 +248,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Stopped Container " + containerId);
         }
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         LOG.warn("Container " + containerId + " failed to stop", e);
         throw e;
       } catch (IOException e) {
@@ -258,7 +258,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
     }
 
     public synchronized ContainerStatus getContainerStatus()
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       GetContainerStatusResponse statusResponse = null;
       try {
         GetContainerStatusRequest statusRequest =
@@ -268,7 +268,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Got the status of Container " + containerId);
         }
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         LOG.warn(
             "Unable to get the status of Container " + containerId, e);
         throw e;
@@ -284,7 +284,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
   @Override
   public Map<String, ByteBuffer> startContainer(
       Container container, ContainerLaunchContext containerLaunchContext)
-          throws YarnRemoteException, IOException {
+          throws YarnException, IOException {
     // Do synchronization on StartedContainer to prevent race condition
     // between startContainer and stopContainer
     synchronized (addStartedContainer(container)) {
@@ -297,7 +297,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
         nmCommunicator.start();
         allServiceResponse =
             nmCommunicator.startContainer(container, containerLaunchContext);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         // Remove the started container if it failed to start
         removeStartedContainer(container.getId());
         throw e;
@@ -326,7 +326,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
 
   @Override
   public void stopContainer(ContainerId containerId, NodeId nodeId,
-      Token containerToken) throws YarnRemoteException, IOException {
+      Token containerToken) throws YarnException, IOException {
     StartedContainer startedContainer = getStartedContainer(containerId);
     if (startedContainer == null) {
       throw RPCUtil.getRemoteException("Container " + containerId +
@@ -359,7 +359,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
   @Override
   public ContainerStatus getContainerStatus(ContainerId containerId,
       NodeId nodeId, Token containerToken)
-          throws YarnRemoteException, IOException {
+          throws YarnException, IOException {
     NMCommunicator nmCommunicator = null;
     try {
       nmCommunicator = new NMCommunicator(containerId, nodeId, containerToken);
@@ -375,7 +375,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
   }
 
   protected synchronized StartedContainer addStartedContainer(
-      Container container) throws YarnRemoteException, IOException {
+      Container container) throws YarnException, IOException {
     if (startedContainers.containsKey(container.getId())) {
       throw RPCUtil.getRemoteException("Container " + container.getId() +
           " is already started");

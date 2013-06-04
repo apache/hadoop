@@ -26,7 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.CompositeService;
@@ -56,7 +56,7 @@ public class WebAppProxyServer extends CompositeService {
     try {
       doSecureLogin(conf);      
     } catch(IOException ie) {
-      throw new YarnException("Proxy Server Failed to login", ie);
+      throw new YarnRuntimeException("Proxy Server Failed to login", ie);
     }
     proxy = new WebAppProxy();
     addService(proxy);

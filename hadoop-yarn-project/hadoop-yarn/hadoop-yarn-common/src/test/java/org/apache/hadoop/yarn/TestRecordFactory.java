@@ -38,7 +38,7 @@ public class TestRecordFactory {
       AllocateResponse response =
           pbRecordFactory.newRecordInstance(AllocateResponse.class);
       Assert.assertEquals(AllocateResponsePBImpl.class, response.getClass());
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to crete record");
     }
@@ -47,7 +47,7 @@ public class TestRecordFactory {
       AllocateRequest response =
           pbRecordFactory.newRecordInstance(AllocateRequest.class);
       Assert.assertEquals(AllocateRequestPBImpl.class, response.getClass());
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to crete record");
     }

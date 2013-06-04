@@ -22,7 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RpcClientFactory;
 import org.apache.hadoop.yarn.factories.RpcServerFactory;
@@ -61,13 +61,13 @@ public class RpcFactoryProvider {
       method.setAccessible(true);
       return method.invoke(null, null);
     } catch (ClassNotFoundException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (NoSuchMethodException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (InvocationTargetException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (IllegalAccessException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
   }
   

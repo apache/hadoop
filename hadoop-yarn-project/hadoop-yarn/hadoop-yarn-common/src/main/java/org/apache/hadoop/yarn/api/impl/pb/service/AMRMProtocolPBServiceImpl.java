@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationMaste
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationMasterResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterResponsePBImpl;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterRequestProto;
@@ -57,7 +57,7 @@ public class AMRMProtocolPBServiceImpl implements AMRMProtocolPB {
     try {
       AllocateResponse response = real.allocate(request);
       return ((AllocateResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -72,7 +72,7 @@ public class AMRMProtocolPBServiceImpl implements AMRMProtocolPB {
     try {
       FinishApplicationMasterResponse response = real.finishApplicationMaster(request);
       return ((FinishApplicationMasterResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -87,7 +87,7 @@ public class AMRMProtocolPBServiceImpl implements AMRMProtocolPB {
     try {
       RegisterApplicationMasterResponse response = real.registerApplicationMaster(request);
       return ((RegisterApplicationMasterResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);

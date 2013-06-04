@@ -61,7 +61,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -477,7 +477,7 @@ public class HistoryFileManager extends AbstractService {
       mkdir(doneDirFc, doneDirPrefixPath, new FsPermission(
           JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION));
     } catch (IOException e) {
-      throw new YarnException("Error creating done directory: ["
+      throw new YarnRuntimeException("Error creating done directory: ["
           + doneDirPrefixPath + "]", e);
     }
 
@@ -493,7 +493,7 @@ public class HistoryFileManager extends AbstractService {
           JobHistoryUtils.HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS.toShort()));
     } catch (IOException e) {
       LOG.info("error creating done directory on dfs " + e);
-      throw new YarnException("Error creating intermediate done directory: ["
+      throw new YarnRuntimeException("Error creating intermediate done directory: ["
           + intermediateDoneDirPath + "]", e);
     }
 

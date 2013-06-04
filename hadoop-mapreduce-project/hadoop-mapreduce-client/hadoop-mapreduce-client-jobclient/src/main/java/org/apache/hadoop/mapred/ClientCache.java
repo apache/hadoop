@@ -33,7 +33,7 @@ import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 
 public class ClientCache {
@@ -60,7 +60,7 @@ public class ClientCache {
         hsProxy = instantiateHistoryProxy();
       } catch (IOException e) {
         LOG.warn("Could not connect to History server.", e);
-        throw new YarnException("Could not connect to History server.", e);
+        throw new YarnRuntimeException("Could not connect to History server.", e);
       }
     }
     ClientServiceDelegate client = cache.get(jobId);

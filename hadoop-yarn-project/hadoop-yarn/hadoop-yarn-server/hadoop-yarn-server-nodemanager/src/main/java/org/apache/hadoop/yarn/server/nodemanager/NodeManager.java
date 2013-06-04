@@ -35,7 +35,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -145,7 +145,7 @@ public class NodeManager extends CompositeService
     try {
       exec.init();
     } catch (IOException e) {
-      throw new YarnException("Failed to initialize container executor", e);
+      throw new YarnRuntimeException("Failed to initialize container executor", e);
     }    
     DeletionService del = createDeletionService(exec);
     addService(del);
@@ -201,7 +201,7 @@ public class NodeManager extends CompositeService
     try {
       doSecureLogin();
     } catch (IOException e) {
-      throw new YarnException("Failed NodeManager login", e);
+      throw new YarnRuntimeException("Failed NodeManager login", e);
     }
     super.start();
   }

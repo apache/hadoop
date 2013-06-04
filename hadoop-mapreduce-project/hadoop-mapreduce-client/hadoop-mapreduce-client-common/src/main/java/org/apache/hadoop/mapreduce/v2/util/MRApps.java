@@ -49,7 +49,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.yarn.ContainerLogAppender;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -97,7 +97,7 @@ public class MRApps extends Apps {
       case MAP:           return "m";
       case REDUCE:        return "r";
     }
-    throw new YarnException("Unknown task type: "+ type.toString());
+    throw new YarnRuntimeException("Unknown task type: "+ type.toString());
   }
 
   public static enum TaskAttemptStateUI {
@@ -126,7 +126,7 @@ public class MRApps extends Apps {
     // JDK 7 supports switch on strings
     if (symbol.equals("m")) return TaskType.MAP;
     if (symbol.equals("r")) return TaskType.REDUCE;
-    throw new YarnException("Unknown task symbol: "+ symbol);
+    throw new YarnRuntimeException("Unknown task symbol: "+ symbol);
   }
 
   public static TaskAttemptStateUI taskAttemptState(String attemptStateStr) {

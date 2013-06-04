@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshSuperUserGroups
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshSuperUserGroupsConfigurationResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshUserToGroupsMappingsRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshUserToGroupsMappingsResponsePBImpl;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.*;
 
 import com.google.protobuf.RpcController;
@@ -61,7 +61,7 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
     try {
       RefreshQueuesResponse response = real.refreshQueues(request);
       return ((RefreshQueuesResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -77,7 +77,7 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
     try {
       RefreshAdminAclsResponse response = real.refreshAdminAcls(request);
       return ((RefreshAdminAclsResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -91,7 +91,7 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
     try {
       RefreshNodesResponse response = real.refreshNodes(request);
       return ((RefreshNodesResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -110,7 +110,7 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
       RefreshSuperUserGroupsConfigurationResponse response = 
         real.refreshSuperUserGroupsConfiguration(request);
       return ((RefreshSuperUserGroupsConfigurationResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -127,7 +127,7 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
       RefreshUserToGroupsMappingsResponse response = 
         real.refreshUserToGroupsMappings(request);
       return ((RefreshUserToGroupsMappingsResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -144,7 +144,7 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
         RefreshServiceAclsResponse response = 
           real.refreshServiceAcls(request);
         return ((RefreshServiceAclsResponsePBImpl)response).getProto();
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         throw new ServiceException(e);
       } catch (IOException e) {
         throw new ServiceException(e);

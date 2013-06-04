@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
@@ -98,7 +98,7 @@ public class TestNodeManagerReboot {
 
   @Test(timeout = 2000000)
   public void testClearLocalDirWhenNodeReboot() throws IOException,
-      YarnRemoteException, InterruptedException {
+      YarnException, InterruptedException {
     nm = new MyNodeManager();
     nm.start();
 
@@ -147,7 +147,7 @@ public class TestNodeManagerReboot {
         .createRemoteUser(cId.toString());
     currentUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
-      public Void run() throws YarnRemoteException, IOException {
+      public Void run() throws YarnException, IOException {
         containerManager.startContainer(startRequest);
         return null;
       }

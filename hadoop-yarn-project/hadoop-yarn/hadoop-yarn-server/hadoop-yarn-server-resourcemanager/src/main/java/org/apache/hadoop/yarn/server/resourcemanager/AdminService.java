@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RefreshSuperUserGroupsConfigur
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -133,7 +133,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     super.stop();
   }
 
-  private UserGroupInformation checkAcls(String method) throws YarnRemoteException {
+  private UserGroupInformation checkAcls(String method) throws YarnException {
     UserGroupInformation user;
     try {
       user = UserGroupInformation.getCurrentUser();
@@ -168,7 +168,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
   
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
-      throws YarnRemoteException {
+      throws YarnException {
     UserGroupInformation user = checkAcls("refreshQueues");
     try {
       scheduler.reinitialize(conf, this.rmContext);
@@ -186,7 +186,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
 
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
-      throws YarnRemoteException {
+      throws YarnException {
     UserGroupInformation user = checkAcls("refreshNodes");
     try {
       this.nodesListManager.refreshNodes(new YarnConfiguration());
@@ -204,7 +204,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
   @Override
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
-      throws YarnRemoteException {
+      throws YarnException {
     UserGroupInformation user = checkAcls("refreshSuperUserGroupsConfiguration");
     
     ProxyUsers.refreshSuperUserGroupsConfiguration(new Configuration());
@@ -217,7 +217,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
 
   @Override
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
-      RefreshUserToGroupsMappingsRequest request) throws YarnRemoteException {
+      RefreshUserToGroupsMappingsRequest request) throws YarnException {
     UserGroupInformation user = checkAcls("refreshUserToGroupsMappings");
     
     Groups.getUserToGroupsMappingService().refresh();
@@ -230,7 +230,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
 
   @Override
   public RefreshAdminAclsResponse refreshAdminAcls(
-      RefreshAdminAclsRequest request) throws YarnRemoteException {
+      RefreshAdminAclsRequest request) throws YarnException {
     UserGroupInformation user = checkAcls("refreshAdminAcls");
     
     Configuration conf = new Configuration();
@@ -245,7 +245,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
 
   @Override
   public RefreshServiceAclsResponse refreshServiceAcls(
-      RefreshServiceAclsRequest request) throws YarnRemoteException {
+      RefreshServiceAclsRequest request) throws YarnException {
     Configuration conf = new Configuration();
     if (!conf.getBoolean(
              CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 

@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 
 /**
  * The exception is thrown when the requested resource is out of the range
  * of the configured lower and upper resource boundaries.
  *
  */
-public class InvalidResourceRequestException extends YarnException {
+public class InvalidResourceRequestException extends YarnRuntimeException {
 
   public InvalidResourceRequestException(Throwable cause) {
     super(cause);

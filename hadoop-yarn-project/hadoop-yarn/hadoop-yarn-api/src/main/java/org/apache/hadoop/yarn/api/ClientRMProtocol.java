@@ -54,7 +54,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
  * <p>The protocol between clients and the <code>ResourceManager</code>
@@ -79,13 +79,13 @@ public interface ClientRMProtocol {
    * @param request request to get a new <code>ApplicationId</code>
    * @return response containing the new <code>ApplicationId</code> to be used
    * to submit an application
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    * @see #submitApplication(SubmitApplicationRequest)
    */
   public GetNewApplicationResponse getNewApplication(
       GetNewApplicationRequest request)
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * <p>The interface used by clients to submit a new application to the
@@ -108,13 +108,13 @@ public interface ClientRMProtocol {
    * 
    * @param request request to submit a new application
    * @return (empty) response on accepting the submission
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    * @see #getNewApplication(GetNewApplicationRequest)
    */
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * <p>The interface used by clients to request the 
@@ -132,13 +132,13 @@ public interface ClientRMProtocol {
    * @param request request to abort a submited application
    * @return <code>ResourceManager</code> returns an empty response
    *         on success and throws an exception on rejecting the request
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    * @see #getQueueUserAcls(GetQueueUserAclsInfoRequest) 
    */
   public KillApplicationResponse forceKillApplication(
       KillApplicationRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
 
   /**
    * <p>The interface used by clients to get a report of an Application from
@@ -168,12 +168,12 @@ public interface ClientRMProtocol {
    *
    * @param request request for an application report
    * @return application report 
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * <p>The interface used by clients to get metrics about the cluster from
@@ -186,12 +186,12 @@ public interface ClientRMProtocol {
    * 
    * @param request request for cluster metrics
    * @return cluster metrics
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * <p>The interface used by clients to get a report of all Applications
@@ -208,12 +208,12 @@ public interface ClientRMProtocol {
    *
    * @param request request for report on all running applications
    * @return report on all running applications
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public GetAllApplicationsResponse getAllApplications(
       GetAllApplicationsRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * <p>The interface used by clients to get a report of all nodes
@@ -225,12 +225,12 @@ public interface ClientRMProtocol {
    * 
    * @param request request for report on all nodes
    * @return report on all nodes
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public GetClusterNodesResponse getClusterNodes(
       GetClusterNodesRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * <p>The interface used by clients to get information about <em>queues</em>
@@ -244,12 +244,12 @@ public interface ClientRMProtocol {
    * 
    * @param request request to get queue information
    * @return queue information
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public GetQueueInfoResponse getQueueInfo(
       GetQueueInfoRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * <p>The interface used by clients to get information about <em>queue 
@@ -261,12 +261,12 @@ public interface ClientRMProtocol {
    * 
    * @param request request to get queue acls for <em>current user</em>
    * @return queue acls for <em>current user</em>
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
       GetQueueUserAclsInfoRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * <p>The interface used by clients to get delegation token, enabling the 
@@ -277,24 +277,24 @@ public interface ClientRMProtocol {
    *  service.
    * @param request request to get a delegation token for the client.
    * @return delegation token that can be used to talk to this service
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * Renew an existing delegation token.
    * 
    * @param request the delegation token to be renewed.
    * @return the new expiry time for the delegation token.
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   @Private
   public RenewDelegationTokenResponse renewDelegationToken(
-      RenewDelegationTokenRequest request) throws YarnRemoteException,
+      RenewDelegationTokenRequest request) throws YarnException,
       IOException;
 
   /**
@@ -302,11 +302,11 @@ public interface ClientRMProtocol {
    * 
    * @param request the delegation token to be cancelled.
    * @return an empty response.
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   @Private
   public CancelDelegationTokenResponse cancelDelegationToken(
-      CancelDelegationTokenRequest request) throws YarnRemoteException,
+      CancelDelegationTokenRequest request) throws YarnException,
       IOException;
 }

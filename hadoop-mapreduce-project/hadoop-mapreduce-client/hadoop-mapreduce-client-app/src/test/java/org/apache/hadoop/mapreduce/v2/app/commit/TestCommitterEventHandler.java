@@ -60,7 +60,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobCommitCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCommitFailedEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Event;
@@ -295,7 +295,7 @@ public class TestCommitterEventHandler {
     when(mockContext.getEventHandler()).thenReturn(waitForItHandler);
     when(mockContext.getClock()).thenReturn(mockClock);
     
-    doThrow(new YarnException("Intentional Failure")).when(mockCommitter)
+    doThrow(new YarnRuntimeException("Intentional Failure")).when(mockCommitter)
       .commitJob(any(JobContext.class));
     
     handler.init(conf);

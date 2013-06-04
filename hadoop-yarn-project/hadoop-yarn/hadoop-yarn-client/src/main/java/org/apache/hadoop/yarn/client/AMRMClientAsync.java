@@ -31,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -152,7 +152,7 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
   @Override
   public void stop() {
     if (Thread.currentThread() == handlerThread) {
-      throw new YarnException("Cannot call stop from callback handler thread!");
+      throw new YarnRuntimeException("Cannot call stop from callback handler thread!");
     }
     keepRunning = false;
     try {
@@ -184,12 +184,12 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
   /**
    * Registers this application master with the resource manager. On successful
    * registration, starts the heartbeating thread.
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public RegisterApplicationMasterResponse registerApplicationMaster(
       String appHostName, int appHostPort, String appTrackingUrl)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     RegisterApplicationMasterResponse response = client
         .registerApplicationMaster(appHostName, appHostPort, appTrackingUrl);
     heartbeatThread.start();
@@ -201,11 +201,11 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
    * @param appStatus Success/Failure status of the master
    * @param appMessage Diagnostics message on failure
    * @param appTrackingUrl New URL to get master info
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
-      String appMessage, String appTrackingUrl) throws YarnRemoteException,
+      String appMessage, String appTrackingUrl) throws YarnException,
       IOException {
     synchronized (unregisterHeartbeatLock) {
       keepRunning = false;
@@ -277,7 +277,7 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
             
           try {
             response = client.allocate(progress);
-          } catch (YarnRemoteException ex) {
+          } catch (YarnException ex) {
             LOG.error("Yarn exception on heartbeat", ex);
             savedException = ex;
             // interrupt handler thread in case it waiting on the queue

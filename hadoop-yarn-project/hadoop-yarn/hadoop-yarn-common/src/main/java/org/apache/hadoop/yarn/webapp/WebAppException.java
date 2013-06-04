@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 
-public class WebAppException extends YarnException {
+public class WebAppException extends YarnRuntimeException {
 
   private static final long serialVersionUID = 1L;
 

@@ -52,7 +52,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
 
@@ -131,7 +131,7 @@ public class JobHistoryEventHandler extends AbstractService
           JobHistoryUtils.getHistoryIntermediateDoneDirForUser(conf);
     } catch (IOException e) {
       LOG.error("Failed while getting the configured log directories", e);
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
 
     //Check for the existence of the history staging dir. Maybe create it. 
@@ -144,7 +144,7 @@ public class JobHistoryEventHandler extends AbstractService
     } catch (IOException e) {
       LOG.error("Failed while checking for/creating  history staging path: ["
           + stagingDirPath + "]", e);
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
 
     //Check for the existence of intermediate done dir.
@@ -178,13 +178,13 @@ public class JobHistoryEventHandler extends AbstractService
                 + ". Either set to true or pre-create this directory with" +
                 " appropriate permissions";
         LOG.error(message);
-        throw new YarnException(message);
+        throw new YarnRuntimeException(message);
       }
       }
     } catch (IOException e) {
       LOG.error("Failed checking for the existance of history intermediate " +
       		"done directory: [" + doneDirPath + "]");
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
 
     //Check/create user directory under intermediate done dir.
@@ -196,7 +196,7 @@ public class JobHistoryEventHandler extends AbstractService
     } catch (IOException e) {
       LOG.error("Error creating user intermediate history done directory: [ "
           + doneDirPrefixPath + "]", e);
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
 
     // Maximum number of unflushed completion-events that can stay in the queue
@@ -457,7 +457,7 @@ public class JobHistoryEventHandler extends AbstractService
 
       eventQueue.put(event);
     } catch (InterruptedException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
   }
 
@@ -479,7 +479,7 @@ public class JobHistoryEventHandler extends AbstractService
         } catch (IOException ioe) {
           LOG.error("Error JobHistoryEventHandler in handleEvent: " + event,
               ioe);
-          throw new YarnException(ioe);
+          throw new YarnRuntimeException(ioe);
         }
       }
 
@@ -501,7 +501,7 @@ public class JobHistoryEventHandler extends AbstractService
       } catch (IOException e) {
         LOG.error("Error writing History Event: " + event.getHistoryEvent(),
             e);
-        throw new YarnException(e);
+        throw new YarnRuntimeException(e);
       }
 
       if (event.getHistoryEvent().getEventType() == EventType.JOB_SUBMITTED) {
@@ -523,7 +523,7 @@ public class JobHistoryEventHandler extends AbstractService
           mi.getJobIndexInfo().setJobStatus(JobState.SUCCEEDED.toString());
           closeEventWriter(event.getJobID());
         } catch (IOException e) {
-          throw new YarnException(e);
+          throw new YarnRuntimeException(e);
         }
       }
 
@@ -539,7 +539,7 @@ public class JobHistoryEventHandler extends AbstractService
           mi.getJobIndexInfo().setJobStatus(jucEvent.getStatus());
           closeEventWriter(event.getJobID());
         } catch (IOException e) {
-          throw new YarnException(e);
+          throw new YarnRuntimeException(e);
         }
       }
     }

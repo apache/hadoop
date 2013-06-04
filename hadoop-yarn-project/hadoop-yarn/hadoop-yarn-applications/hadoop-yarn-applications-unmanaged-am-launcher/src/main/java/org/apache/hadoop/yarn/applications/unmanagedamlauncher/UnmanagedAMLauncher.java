@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -268,7 +268,7 @@ public class UnmanagedAMLauncher {
     amProc.destroy();
   }
   
-  public boolean run() throws IOException, YarnRemoteException {
+  public boolean run() throws IOException, YarnException {
     LOG.info("Starting Client");
     
     // Connect to ResourceManager
@@ -353,11 +353,11 @@ public class UnmanagedAMLauncher {
    * @param appId
    *          Application Id of application to be monitored
    * @return true if application completed successfully
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   private ApplicationReport monitorApplication(ApplicationId appId,
-      Set<YarnApplicationState> finalState) throws YarnRemoteException,
+      Set<YarnApplicationState> finalState) throws YarnException,
       IOException {
 
     long foundAMCompletedTime = 0;

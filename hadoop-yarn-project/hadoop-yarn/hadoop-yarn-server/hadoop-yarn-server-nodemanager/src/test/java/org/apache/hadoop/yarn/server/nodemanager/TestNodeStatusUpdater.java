@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -54,7 +54,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -134,7 +134,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
       NodeId nodeId = request.getNodeId();
       Resource resource = request.getResource();
@@ -171,7 +171,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       NodeStatus nodeStatus = request.getNodeStatus();
       LOG.info("Got heartbeat number " + heartBeatID);
       NodeManagerMetrics mockMetrics = mock(NodeManagerMetrics.class);
@@ -334,7 +334,7 @@ public class TestNodeStatusUpdater {
     protected ResourceTracker getRMClient() {
       if(System.currentTimeMillis() - waitStartTime <= rmStartIntervalMS
           || rmNeverStart) {
-        throw new YarnException("Faking RM start failure as start " +
+        throw new YarnRuntimeException("Faking RM start failure as start " +
             "delay timer has not expired.");
       } else {
         return resourceTracker;
@@ -407,7 +407,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
       
       RegisterNodeManagerResponse response = recordFactory
@@ -419,7 +419,7 @@ public class TestNodeStatusUpdater {
     }
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
       
@@ -445,7 +445,7 @@ public class TestNodeStatusUpdater {
     
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
 
       RegisterNodeManagerResponse response =
@@ -457,7 +457,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       LOG.info("Got heartBeatId: [" + heartBeatID +"]");
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
@@ -497,7 +497,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
@@ -508,7 +508,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       try {
         if (heartBeatID == 0) {
           Assert.assertEquals(request.getNodeStatus().getContainersStatuses()
@@ -537,7 +537,7 @@ public class TestNodeStatusUpdater {
               .get(4).getState() == ContainerState.RUNNING
               && request.getNodeStatus().getContainersStatuses().get(4)
                   .getContainerId().getId() == 5);
-          throw new YarnException("Lost the heartbeat response");
+          throw new YarnRuntimeException("Lost the heartbeat response");
         } else if (heartBeatID == 2) {
           Assert.assertEquals(request.getNodeStatus().getContainersStatuses()
               .size(), 7);
@@ -589,7 +589,7 @@ public class TestNodeStatusUpdater {
     public NodeAction registerNodeAction = NodeAction.NORMAL;
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
       
       RegisterNodeManagerResponse response = recordFactory
@@ -602,7 +602,7 @@ public class TestNodeStatusUpdater {
     
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       heartBeatID++;
       throw RPCUtil.getRemoteException("NodeHeartbeat exception");
     }
@@ -646,7 +646,7 @@ public class TestNodeStatusUpdater {
           nm.start();
         } catch (Throwable e) {
           TestNodeStatusUpdater.this.nmStartError = e;
-          throw new YarnException(e);
+          throw new YarnRuntimeException(e);
         }
       }
     }.start();
@@ -765,7 +765,7 @@ public class TestNodeStatusUpdater {
         return nodeStatusUpdater;
       }
     };
-    verifyNodeStartFailure("org.apache.hadoop.yarn.YarnException: "
+    verifyNodeStartFailure("org.apache.hadoop.yarn.YarnRuntimeException: "
         + "Recieved SHUTDOWN signal from Resourcemanager ,"
         + "Registration of NodeManager failed, "
         + "Message from ResourceManager: RM Shutting Down Node");
@@ -867,7 +867,7 @@ public class TestNodeStatusUpdater {
           @Override
           public void start() {
             // Simulating failure of starting RPC server
-            throw new YarnException("Starting of RPC Server failed");
+            throw new YarnRuntimeException("Starting of RPC Server failed");
           }
         };
       }

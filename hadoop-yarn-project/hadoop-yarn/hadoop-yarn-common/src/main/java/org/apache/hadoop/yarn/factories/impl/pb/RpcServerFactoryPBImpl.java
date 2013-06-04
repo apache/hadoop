@@ -34,7 +34,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RpcServerFactory;
 
 import com.google.protobuf.BlockingService;
@@ -81,7 +81,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
         pbServiceImplClazz = localConf
             .getClassByName(getPbServiceImplClassName(protocol));
       } catch (ClassNotFoundException e) {
-        throw new YarnException("Failed to load class: ["
+        throw new YarnRuntimeException("Failed to load class: ["
             + getPbServiceImplClassName(protocol) + "]", e);
       }
       try {
@@ -89,7 +89,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
         constructor.setAccessible(true);
         serviceCache.putIfAbsent(protocol, constructor);
       } catch (NoSuchMethodException e) {
-        throw new YarnException("Could not find constructor with params: "
+        throw new YarnRuntimeException("Could not find constructor with params: "
             + Long.TYPE + ", " + InetSocketAddress.class + ", "
             + Configuration.class, e);
       }
@@ -99,11 +99,11 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
     try {
       service = constructor.newInstance(instance);
     } catch (InvocationTargetException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (IllegalAccessException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (InstantiationException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
 
     Class<?> pbProtocol = service.getClass().getInterfaces()[0];
@@ -113,7 +113,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
       try {
         protoClazz = localConf.getClassByName(getProtoClassName(protocol));
       } catch (ClassNotFoundException e) {
-        throw new YarnException("Failed to load class: ["
+        throw new YarnRuntimeException("Failed to load class: ["
             + getProtoClassName(protocol) + "]", e);
       }
       try {
@@ -122,7 +122,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
         method.setAccessible(true);
         protoCache.putIfAbsent(protocol, method);
       } catch (NoSuchMethodException e) {
-        throw new YarnException(e);
+        throw new YarnRuntimeException(e);
       }
     }
     
@@ -130,11 +130,11 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
       return createServer(pbProtocol, addr, conf, secretManager, numHandlers,
           (BlockingService)method.invoke(null, service), portRangeConfig);
     } catch (InvocationTargetException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (IllegalAccessException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
   }
   

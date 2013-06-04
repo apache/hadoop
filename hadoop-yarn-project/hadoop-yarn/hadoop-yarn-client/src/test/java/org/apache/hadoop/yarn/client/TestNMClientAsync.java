@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -136,7 +136,7 @@ public class TestNMClientAsync {
         Collections.synchronizedSet(new HashSet<String>());
 
     protected MockNMClientAsync1(int expectedSuccess, int expectedFailure)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       super(MockNMClientAsync1.class.getName(), mockNMClient(0),
           new TestCallbackHandler1(expectedSuccess, expectedFailure));
     }
@@ -361,7 +361,7 @@ public class TestNMClientAsync {
   }
 
   private NMClient mockNMClient(int mode)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     NMClient client = mock(NMClient.class);
     switch (mode) {
       case 0:
@@ -436,7 +436,7 @@ public class TestNMClientAsync {
     private CyclicBarrier barrierB;
 
     protected MockNMClientAsync2(CyclicBarrier barrierA, CyclicBarrier barrierB,
-        CyclicBarrier barrierC) throws YarnRemoteException, IOException {
+        CyclicBarrier barrierC) throws YarnException, IOException {
       super(MockNMClientAsync2.class.getName(), mockNMClient(0),
           new TestCallbackHandler2(barrierC));
       this.barrierA = barrierA;

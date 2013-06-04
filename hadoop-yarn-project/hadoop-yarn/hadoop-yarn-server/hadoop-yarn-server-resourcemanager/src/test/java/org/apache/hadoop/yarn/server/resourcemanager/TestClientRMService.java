@@ -59,7 +59,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -147,7 +147,7 @@ public class TestClientRMService {
   }
   
   @Test
-  public void testGetApplicationReport() throws YarnRemoteException {
+  public void testGetApplicationReport() throws YarnException {
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getRMApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, RMApp>());
@@ -209,7 +209,7 @@ public class TestClientRMService {
           try {
             checkTokenRenewal(owner, other);
             return null;
-          } catch (YarnRemoteException ex) {
+          } catch (YarnException ex) {
             Assert.assertTrue(ex.getMessage().contains(
                 "Client " + owner.getUserName() +
                 " tries to renew a token with renewer specified as " +
@@ -237,7 +237,7 @@ public class TestClientRMService {
   }
 
   private void checkTokenRenewal(UserGroupInformation owner,
-      UserGroupInformation renewer) throws IOException, YarnRemoteException {
+      UserGroupInformation renewer) throws IOException, YarnException {
     RMDelegationTokenIdentifier tokenIdentifier =
         new RMDelegationTokenIdentifier(
             new Text(owner.getUserName()), new Text(renewer.getUserName()), null);
@@ -279,7 +279,7 @@ public class TestClientRMService {
         appId1, null, null);
     try {
       rmService.submitApplication(submitRequest1);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       Assert.fail("Exception is not expected.");
     }
     RMApp app1 = rmContext.getRMApps().get(appId1);
@@ -297,7 +297,7 @@ public class TestClientRMService {
         appId2, name, queue);
     try {
       rmService.submitApplication(submitRequest2);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       Assert.fail("Exception is not expected.");
     }
     RMApp app2 = rmContext.getRMApps().get(appId2);
@@ -309,7 +309,7 @@ public class TestClientRMService {
     try {
       rmService.submitApplication(submitRequest2);
       Assert.fail("Exception is expected.");
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       Assert.assertTrue("The thrown exception is not expected.",
           e.getMessage().contains("Cannot add a duplicate!"));
     }
@@ -318,7 +318,7 @@ public class TestClientRMService {
   @Test(timeout=4000)
   public void testConcurrentAppSubmit()
       throws IOException, InterruptedException, BrokenBarrierException,
-      YarnRemoteException {
+      YarnException {
     YarnScheduler yarnScheduler = mockYarnScheduler();
     RMContext rmContext = mock(RMContext.class);
     mockRMContext(yarnScheduler, rmContext);
@@ -368,7 +368,7 @@ public class TestClientRMService {
       public void run() {
         try {
           rmService.submitApplication(submitRequest1);
-        } catch (YarnRemoteException e) {}
+        } catch (YarnException e) {}
       }
     };
     t.start();

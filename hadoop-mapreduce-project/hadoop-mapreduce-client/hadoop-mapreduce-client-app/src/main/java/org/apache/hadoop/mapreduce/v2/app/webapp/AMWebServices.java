@@ -58,7 +58,7 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TasksInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
@@ -102,8 +102,8 @@ public class AMWebServices {
     Job job;
     try {
       jobId = MRApps.toJobID(jid);
-    } catch (YarnException e) {
-      // TODO: after MAPREDUCE-2793 YarnException is probably not expected here
+    } catch (YarnRuntimeException e) {
+      // TODO: after MAPREDUCE-2793 YarnRuntimeException is probably not expected here
       // anymore but keeping it for now just in case other stuff starts failing.
       // Also, the webservice should ideally return BadRequest (HTTP:400) when
       // the id is malformed instead of NotFound (HTTP:404). The webserver on
@@ -132,8 +132,8 @@ public class AMWebServices {
     Task task;
     try {
       taskID = MRApps.toTaskID(tid);
-    } catch (YarnException e) {
-      // TODO: after MAPREDUCE-2793 YarnException is probably not expected here
+    } catch (YarnRuntimeException e) {
+      // TODO: after MAPREDUCE-2793 YarnRuntimeException is probably not expected here
       // anymore but keeping it for now just in case other stuff starts failing.
       // Also, the webservice should ideally return BadRequest (HTTP:400) when
       // the id is malformed instead of NotFound (HTTP:404). The webserver on
@@ -165,8 +165,8 @@ public class AMWebServices {
     TaskAttempt ta;
     try {
       attemptId = MRApps.toTaskAttemptID(attId);
-    } catch (YarnException e) {
-      // TODO: after MAPREDUCE-2793 YarnException is probably not expected here
+    } catch (YarnRuntimeException e) {
+      // TODO: after MAPREDUCE-2793 YarnRuntimeException is probably not expected here
       // anymore but keeping it for now just in case other stuff starts failing.
       // Also, the webservice should ideally return BadRequest (HTTP:400) when
       // the id is malformed instead of NotFound (HTTP:404). The webserver on
@@ -304,7 +304,7 @@ public class AMWebServices {
       if (type != null && !type.isEmpty()) {
         try {
           ttype = MRApps.taskType(type);
-        } catch (YarnException e) {
+        } catch (YarnRuntimeException e) {
           throw new BadRequestException("tasktype must be either m or r");
         }
       }

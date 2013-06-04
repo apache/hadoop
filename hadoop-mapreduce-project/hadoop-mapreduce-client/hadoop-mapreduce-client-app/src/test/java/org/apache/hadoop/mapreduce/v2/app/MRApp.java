@@ -87,7 +87,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -197,7 +197,7 @@ public class MRApp extends MRAppMaster {
         FileContext.getLocalFSFileContext().delete(testAbsPath, true);
       } catch (Exception e) {
         LOG.warn("COULD NOT CLEANUP: " + testAbsPath, e);
-        throw new YarnException("could not cleanup test dir", e);
+        throw new YarnRuntimeException("could not cleanup test dir", e);
       }
     }
 
@@ -215,7 +215,7 @@ public class MRApp extends MRAppMaster {
       FileSystem fs = getFileSystem(conf);
       fs.mkdirs(stagingDir);
     } catch (Exception e) {
-      throw new YarnException("Error creating staging dir", e);
+      throw new YarnRuntimeException("Error creating staging dir", e);
     }
     
     super.init(conf);
@@ -404,7 +404,7 @@ public class MRApp extends MRAppMaster {
     try {
       currentUser = UserGroupInformation.getCurrentUser();
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
     Job newJob = new TestJob(getJobId(), getAttemptID(), conf, 
     		getDispatcher().getEventHandler(),

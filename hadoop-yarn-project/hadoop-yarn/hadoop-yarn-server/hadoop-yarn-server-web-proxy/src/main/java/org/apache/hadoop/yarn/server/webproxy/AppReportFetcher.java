@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -78,11 +78,11 @@ public class AppReportFetcher {
    * Get a report for the specified app.
    * @param appId the id of the application to get. 
    * @return the ApplicationReport for that app.
-   * @throws YarnRemoteException on any error.
+   * @throws YarnException on any error.
    * @throws IOException
    */
   public ApplicationReport getApplicationReport(ApplicationId appId)
-  throws YarnRemoteException, IOException {
+  throws YarnException, IOException {
     GetApplicationReportRequest request = recordFactory
         .newRecordInstance(GetApplicationReportRequest.class);
     request.setApplicationId(appId);

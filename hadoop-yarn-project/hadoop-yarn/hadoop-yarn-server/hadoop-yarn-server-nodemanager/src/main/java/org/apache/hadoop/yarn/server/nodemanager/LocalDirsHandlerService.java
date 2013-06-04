@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.AbstractService;
 
@@ -88,7 +88,7 @@ public class LocalDirsHandlerService extends AbstractService {
    */
   private final class MonitoringTimerTask extends TimerTask {
 
-    public MonitoringTimerTask(Configuration conf) throws YarnException {
+    public MonitoringTimerTask(Configuration conf) throws YarnRuntimeException {
       localDirs = new DirectoryCollection(
           validatePaths(conf.getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS)));
       logDirs = new DirectoryCollection(
@@ -132,7 +132,7 @@ public class LocalDirsHandlerService extends AbstractService {
     try {
       localFs = FileContext.getLocalFSFileContext(config);
     } catch (IOException e) {
-      throw new YarnException("Unable to get the local filesystem", e);
+      throw new YarnRuntimeException("Unable to get the local filesystem", e);
     }
     FsPermission perm = new FsPermission((short)0755);
     boolean createSucceeded = localDirs.createNonExistentDirs(localFs, perm);
@@ -311,13 +311,13 @@ public class LocalDirsHandlerService extends AbstractService {
         } else {
           LOG.warn(paths[i] + " is not a valid path. Path should be with "
               + FILE_SCHEME + " scheme or without scheme");
-          throw new YarnException(paths[i]
+          throw new YarnRuntimeException(paths[i]
               + " is not a valid path. Path should be with " + FILE_SCHEME
               + " scheme or without scheme");
         }
       } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage());
-        throw new YarnException(paths[i]
+        throw new YarnRuntimeException(paths[i]
             + " is not a valid path. Path should be with " + FILE_SCHEME
             + " scheme or without scheme");
       }

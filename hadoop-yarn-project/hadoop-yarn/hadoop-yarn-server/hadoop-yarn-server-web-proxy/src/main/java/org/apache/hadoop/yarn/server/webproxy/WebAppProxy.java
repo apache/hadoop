@@ -26,7 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.AbstractService;
 
@@ -69,7 +69,7 @@ public class WebAppProxy extends AbstractService {
     fetcher = new AppReportFetcher(conf);
     bindAddress = conf.get(YarnConfiguration.PROXY_ADDRESS);
     if(bindAddress == null || bindAddress.isEmpty()) {
-      throw new YarnException(YarnConfiguration.PROXY_ADDRESS + 
+      throw new YarnRuntimeException(YarnConfiguration.PROXY_ADDRESS + 
           " is not set so the proxy will not run.");
     }
     LOG.info("Instantiating Proxy at " + bindAddress);
@@ -97,7 +97,7 @@ public class WebAppProxy extends AbstractService {
       proxyServer.start();
     } catch (IOException e) {
       LOG.fatal("Could not start proxy web server",e);
-      throw new YarnException("Could not start proxy web server",e);
+      throw new YarnRuntimeException("Could not start proxy web server",e);
     }
     super.start();
   }
@@ -109,7 +109,7 @@ public class WebAppProxy extends AbstractService {
         proxyServer.stop();
       } catch (Exception e) {
         LOG.fatal("Error stopping proxy web server", e);
-        throw new YarnException("Error stopping proxy web server",e);
+        throw new YarnRuntimeException("Error stopping proxy web server",e);
       }
     }
     super.stop();

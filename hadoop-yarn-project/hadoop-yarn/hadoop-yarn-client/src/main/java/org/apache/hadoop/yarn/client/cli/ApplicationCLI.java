@@ -30,7 +30,7 @@ import org.apache.commons.cli.Options;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ApplicationCLI extends YarnCLI {
@@ -90,10 +90,10 @@ public class ApplicationCLI extends YarnCLI {
   /**
    * Lists all the applications present in the Resource Manager
    * 
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  private void listAllApplications() throws YarnRemoteException, IOException {
+  private void listAllApplications() throws YarnException, IOException {
     PrintWriter writer = new PrintWriter(sysout);
     List<ApplicationReport> appsReport = client.getApplicationList();
 
@@ -117,11 +117,11 @@ public class ApplicationCLI extends YarnCLI {
    * Kills the application with the application id as appId
    * 
    * @param applicationId
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   private void killApplication(String applicationId)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
     sysout.println("Killing application " + applicationId);
     client.killApplication(appId);
@@ -131,10 +131,10 @@ public class ApplicationCLI extends YarnCLI {
    * Prints the application report for an application id.
    * 
    * @param applicationId
-   * @throws YarnRemoteException
+   * @throws YarnException
    */
   private void printApplicationReport(String applicationId)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     ApplicationReport appReport = client.getApplicationReport(ConverterUtils
         .toApplicationId(applicationId));
     // Use PrintWriter.println, which uses correct platform line ending.

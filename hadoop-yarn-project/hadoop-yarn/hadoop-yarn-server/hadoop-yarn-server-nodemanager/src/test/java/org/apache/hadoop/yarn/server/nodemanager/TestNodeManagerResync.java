@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
@@ -82,7 +82,7 @@ public class TestNodeManagerResync {
   @SuppressWarnings("unchecked")
   @Test
   public void testKillContainersOnResync() throws IOException,
-      InterruptedException, YarnRemoteException {
+      InterruptedException, YarnException {
     NodeManager nm = new TestNodeManager1();
     YarnConfiguration conf = createNMConfig();
     nm.init(conf);
@@ -110,7 +110,7 @@ public class TestNodeManagerResync {
   @SuppressWarnings("unchecked")
   @Test
   public void testBlockNewContainerRequestsOnStartAndResync()
-      throws IOException, InterruptedException, YarnRemoteException {
+      throws IOException, InterruptedException, YarnException {
     NodeManager nm = new TestNodeManager2();
     YarnConfiguration conf = createNMConfig();
     nm.init(conf);
@@ -166,7 +166,7 @@ public class TestNodeManagerResync {
       }
 
       @Override
-      protected void registerWithRM() throws YarnRemoteException, IOException {
+      protected void registerWithRM() throws YarnException, IOException {
         super.registerWithRM();
         registrationCount++;
       }
@@ -288,7 +288,7 @@ public class TestNodeManagerResync {
             numContainers++;
             try {
               getContainerManager().startContainer(startRequest);
-            } catch (YarnRemoteException e) {
+            } catch (YarnException e) {
               numContainersRejected++;
               Assert.assertTrue(e.getMessage().contains(
                 "Rejecting new containers as NodeManager has not" +

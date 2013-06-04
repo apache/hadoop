@@ -23,7 +23,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
@@ -70,7 +70,7 @@ public class WebServer extends AbstractService {
     } catch (Exception e) {
       String msg = "NMWebapps failed to start.";
       LOG.error(msg, e);
-      throw new YarnException(msg);
+      throw new YarnRuntimeException(msg);
     }
     super.start();
   }

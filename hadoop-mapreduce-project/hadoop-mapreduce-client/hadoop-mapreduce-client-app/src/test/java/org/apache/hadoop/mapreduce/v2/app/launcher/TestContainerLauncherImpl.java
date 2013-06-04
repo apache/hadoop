@@ -61,7 +61,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -460,14 +460,14 @@ public class TestContainerLauncherImpl {
   }
   
   @SuppressWarnings("serial")
-  private static class ContainerException extends YarnRemoteException {
+  private static class ContainerException extends YarnException {
 
     public ContainerException(String message) {
       super(message);
     }
 
     @Override
-    public YarnRemoteException getCause() {
+    public YarnException getCause() {
       return null;
     }
     

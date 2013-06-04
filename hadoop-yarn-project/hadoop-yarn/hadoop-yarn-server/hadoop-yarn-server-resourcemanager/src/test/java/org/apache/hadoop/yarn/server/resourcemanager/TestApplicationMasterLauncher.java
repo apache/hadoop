@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -68,7 +68,7 @@ public class TestApplicationMasterLauncher {
     @Override
     public StartContainerResponse
         startContainer(StartContainerRequest request)
-            throws YarnRemoteException {
+            throws YarnException {
       LOG.info("Container started by MyContainerManager: " + request);
       launched = true;
       Map<String, String> env =
@@ -97,7 +97,7 @@ public class TestApplicationMasterLauncher {
 
     @Override
     public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnRemoteException {
+        throws YarnException {
       LOG.info("Container cleaned up by MyContainerManager");
       cleanedup = true;
       return null;
@@ -105,7 +105,7 @@ public class TestApplicationMasterLauncher {
 
     @Override
     public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnRemoteException {
+        GetContainerStatusRequest request) throws YarnException {
       return null;
     }
 

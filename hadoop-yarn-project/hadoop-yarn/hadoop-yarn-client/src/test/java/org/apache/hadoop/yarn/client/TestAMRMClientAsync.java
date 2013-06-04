@@ -45,7 +45,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -153,7 +153,7 @@ public class TestAMRMClientAsync {
     @SuppressWarnings("unchecked")
     AMRMClient<ContainerRequest> client = mock(AMRMClientImpl.class);
     String exStr = "TestException";
-    YarnRemoteException mockException = mock(YarnRemoteException.class);
+    YarnException mockException = mock(YarnException.class);
     when(mockException.getMessage()).thenReturn(exStr);
     when(client.allocate(anyFloat())).thenThrow(mockException);
 
