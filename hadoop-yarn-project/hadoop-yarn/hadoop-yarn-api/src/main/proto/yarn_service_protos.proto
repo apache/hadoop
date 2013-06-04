@@ -70,28 +70,6 @@ message AllocateResponseProto {
   repeated hadoop.common.TokenProto nm_tokens = 9;
 }
 
-message PreemptionMessageProto {
-  optional StrictPreemptionContractProto strictContract = 1;
-  optional PreemptionContractProto contract = 2;
-}
-
-message StrictPreemptionContractProto {
-  repeated PreemptionContainerProto container = 1;
-}
-
-message PreemptionContractProto {
-  repeated PreemptionResourceRequestProto resource = 1;
-  repeated PreemptionContainerProto container = 2;
-}
-
-message PreemptionContainerProto {
-  optional ContainerIdProto id = 1;
-}
-
-message PreemptionResourceRequestProto {
-  optional ResourceRequestProto resource = 1;
-}
-
 //////////////////////////////////////////////////////
 /////// client_RM_Protocol ///////////////////////////
 //////////////////////////////////////////////////////
