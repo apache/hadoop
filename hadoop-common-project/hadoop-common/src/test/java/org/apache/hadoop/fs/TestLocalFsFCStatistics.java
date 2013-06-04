@@ -25,8 +25,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
-import static org.apache.hadoop.fs.FileContextTestHelper.*;
-
 /**
  * <p>
  *    Tests the File Context Statistics for {@link LocalFileSystem}
@@ -39,12 +37,12 @@ public class TestLocalFsFCStatistics extends FCStatisticsBaseTest {
   @Before
   public void setUp() throws Exception {
     fc = FileContext.getLocalFSFileContext();
-    fc.mkdir(getTestRootPath(fc, "test"), FileContext.DEFAULT_PERM, true);
+    fc.mkdir(fileContextTestHelper.getTestRootPath(fc, "test"), FileContext.DEFAULT_PERM, true);
   }
 
   @After
   public void tearDown() throws Exception {
-    fc.delete(getTestRootPath(fc, "test"), true);
+    fc.delete(fileContextTestHelper.getTestRootPath(fc, "test"), true);
   }
 
   @Override

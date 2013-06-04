@@ -69,7 +69,7 @@ public class TestLocalFileSystem {
   /**
    * Test the capability of setting the working directory.
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testWorkingDirectory() throws IOException {
     Path origDir = fileSys.getWorkingDirectory();
     Path subdir = new Path(TEST_ROOT_DIR, "new");
@@ -156,7 +156,7 @@ public class TestLocalFileSystem {
     }
   }
   
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testCopy() throws IOException {
     Path src = new Path(TEST_ROOT_DIR, "dingo");
     Path dst = new Path(TEST_ROOT_DIR, "yak");
@@ -271,7 +271,7 @@ public class TestLocalFileSystem {
         stats[0].getPath().toUri().getPath());
   }
   
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testReportChecksumFailure() throws IOException {
     base.mkdirs();
     assertTrue(base.exists() && base.isDirectory());

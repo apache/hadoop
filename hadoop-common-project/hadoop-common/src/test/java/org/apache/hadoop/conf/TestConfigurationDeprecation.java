@@ -36,11 +36,9 @@ import org.junit.Test;
  
 public class TestConfigurationDeprecation {
   private Configuration conf;
-  final static String CONFIG = new File("./test-config.xml").getAbsolutePath();
-  final static String CONFIG2 = 
-    new File("./test-config2.xml").getAbsolutePath();
-  final static String CONFIG3 = 
-    new File("./test-config3.xml").getAbsolutePath();
+  final static String CONFIG = new File("./test-config-TestConfigurationDeprecation.xml").getAbsolutePath();
+  final static String CONFIG2 = new File("./test-config2-TestConfigurationDeprecation.xml").getAbsolutePath();
+  final static String CONFIG3 = new File("./test-config3-TestConfigurationDeprecation.xml").getAbsolutePath();
   BufferedWriter out;
   
   static {

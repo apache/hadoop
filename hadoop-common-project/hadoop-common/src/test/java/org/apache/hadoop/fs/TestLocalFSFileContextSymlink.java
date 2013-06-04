@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
-import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 import org.junit.Test;
@@ -43,12 +42,12 @@ public class TestLocalFSFileContextSymlink extends FileContextSymlinkBaseTest {
 
   @Override
   protected String testBaseDir1() throws IOException {
-    return getAbsoluteTestRootDir(fc)+"/test1";
+    return fileContextTestHelper.getAbsoluteTestRootDir(fc)+"/test1";
   }
   
   @Override
   protected String testBaseDir2() throws IOException {
-    return getAbsoluteTestRootDir(fc)+"/test2";
+    return fileContextTestHelper.getAbsoluteTestRootDir(fc)+"/test2";
   }
 
   @Override

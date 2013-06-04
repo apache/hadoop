@@ -25,6 +25,7 @@ import javax.security.auth.login.LoginException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -41,6 +42,11 @@ public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
   private static MiniDFSCluster cluster;
   private static Configuration CONF = new Configuration();
   private static FileSystem fHdfs;
+  
+  @Override
+  protected FileSystemTestHelper createFileSystemHelper() {
+    return new FileSystemTestHelper("/tmp/TestViewFileSystemAtHdfsRoot");
+  }
   
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,

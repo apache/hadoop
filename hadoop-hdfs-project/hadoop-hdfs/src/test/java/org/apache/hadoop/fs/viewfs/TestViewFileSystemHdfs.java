@@ -48,6 +48,11 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   private FileSystem fsTarget2;
   Path targetTestRoot2;
   
+  @Override
+  protected FileSystemTestHelper createFileSystemHelper() {
+    return new FileSystemTestHelper("/tmp/TestViewFileSystemHdfs");
+  }
+
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
@@ -86,7 +91,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     // create the test root on local_fs
     fsTarget = fHdfs;
     fsTarget2 = fHdfs2;
-    targetTestRoot2 = FileSystemTestHelper.getAbsoluteTestRootPath(fsTarget2);
+    targetTestRoot2 = new FileSystemTestHelper().getAbsoluteTestRootPath(fsTarget2);
     super.setUp();
   }
 

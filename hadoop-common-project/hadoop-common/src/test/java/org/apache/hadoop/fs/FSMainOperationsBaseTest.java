@@ -34,8 +34,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mortbay.log.Log;
 
-import static org.apache.hadoop.fs.FileSystemTestHelper.*;
-
 /**
  * <p>
  * A collection of tests for the {@link FileSystem}.
@@ -55,7 +53,7 @@ import static org.apache.hadoop.fs.FileSystemTestHelper.*;
  *     @AfterClass    public static void ClusterShutdownAtEnd()
  * </p>
  */
-public abstract class FSMainOperationsBaseTest  {
+public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   
   private static String TEST_DIR_AAA2 = "test/hadoop2/aaa";
   private static String TEST_DIR_AAA = "test/hadoop/aaa";
@@ -63,8 +61,8 @@ public abstract class FSMainOperationsBaseTest  {
   private static String TEST_DIR_AXX = "test/hadoop/axx";
   private static int numBlocks = 2;
   
-  
-  protected static FileSystem fSys;
+
+  protected FileSystem fSys;
   
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
     @Override
@@ -87,8 +85,18 @@ public abstract class FSMainOperationsBaseTest  {
   protected static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
   
+  abstract protected FileSystem createFileSystem() throws Exception;
+
+  public FSMainOperationsBaseTest() {
+  }
+  
+  public FSMainOperationsBaseTest(String testRootDir) {
+      super(testRootDir);
+  }
+  
   @Before
   public void setUp() throws Exception {
+    fSys = createFileSystem();
     fSys.mkdirs(getTestRootPath(fSys, "test"));
   }
   
@@ -157,7 +165,7 @@ public abstract class FSMainOperationsBaseTest  {
     
     // Now open a file relative to the wd we just set above.
     Path absolutePath = new Path(absoluteDir, "foo");
-    FileSystemTestHelper.createFile(fSys, absolutePath);
+    createFile(fSys, absolutePath);
     fSys.open(new Path("foo")).close();
     
     
@@ -308,11 +316,11 @@ public abstract class FSMainOperationsBaseTest  {
     paths = fSys.listStatus(getTestRootPath(fSys, "test/hadoop"));
     Assert.assertEquals(3, paths.length);
 
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, "test/hadoop/a"),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, "test/hadoop/a"),
         paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, "test/hadoop/b"),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, "test/hadoop/b"),
         paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, "test/hadoop/c"),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, "test/hadoop/c"),
         paths));
 
     paths = fSys.listStatus(getTestRootPath(fSys, "test/hadoop/a"));
@@ -359,9 +367,9 @@ public abstract class FSMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fSys.listStatus(
         getTestRootPath(fSys, "test/hadoop"), TEST_X_FILTER);
     Assert.assertEquals(2,filteredPaths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXA), filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXX), filteredPaths));
   }
   
@@ -417,9 +425,9 @@ public abstract class FSMainOperationsBaseTest  {
     FileStatus[] paths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop*"));
     Assert.assertEquals(2, paths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         "test/hadoop"), paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         "test/hadoop2"), paths));
   }
   
@@ -442,10 +450,10 @@ public abstract class FSMainOperationsBaseTest  {
     FileStatus[] paths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop*/*"));
     Assert.assertEquals(4, paths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, TEST_DIR_AAA), paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, TEST_DIR_AXA), paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, TEST_DIR_AXX), paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, TEST_DIR_AAA2), paths));
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AAA), paths));
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXA), paths));
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXX), paths));
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AAA2), paths));
   }
   
   @Test
@@ -466,9 +474,9 @@ public abstract class FSMainOperationsBaseTest  {
     FileStatus[] paths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/ax?"));
     Assert.assertEquals(2, paths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXA), paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXX), paths));
   }
   
@@ -513,11 +521,11 @@ public abstract class FSMainOperationsBaseTest  {
         getTestRootPath(fSys, "test/hadoop/*"),
         DEFAULT_FILTER);
     Assert.assertEquals(3, filteredPaths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AAA), filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXA), filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXX), filteredPaths));
   }
   
@@ -541,11 +549,11 @@ public abstract class FSMainOperationsBaseTest  {
         getTestRootPath(fSys, "test/hadoop/a??"),
         DEFAULT_FILTER);
     Assert.assertEquals(3, filteredPaths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, TEST_DIR_AAA),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AAA),
         filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, TEST_DIR_AXA),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXA),
         filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, TEST_DIR_AXX),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXX),
         filteredPaths));
   }
   
@@ -569,9 +577,9 @@ public abstract class FSMainOperationsBaseTest  {
         getTestRootPath(fSys, "test/hadoop/*"),
         TEST_X_FILTER);
     Assert.assertEquals(2, filteredPaths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXA), filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXX), filteredPaths));
   }
   
@@ -617,9 +625,9 @@ public abstract class FSMainOperationsBaseTest  {
         getTestRootPath(fSys, "test/hadoop/a??"),
         TEST_X_FILTER);
     Assert.assertEquals(2, filteredPaths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, TEST_DIR_AXA),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXA),
         filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fSys, TEST_DIR_AXX),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXX),
         filteredPaths));
   }
   
@@ -1090,9 +1098,9 @@ public abstract class FSMainOperationsBaseTest  {
   public void testCopyToLocalWithUseRawLocalFileSystemOption() throws Exception {
     Configuration conf = new Configuration();
     FileSystem fSys = new RawLocalFileSystem();
-    Path fileToFS = new Path(TEST_ROOT_DIR, "fs.txt");
-    Path fileToLFS = new Path(TEST_ROOT_DIR, "test.txt");
-    Path crcFileAtLFS = new Path(TEST_ROOT_DIR, ".test.txt.crc");
+    Path fileToFS = new Path(getTestRootDir(), "fs.txt");
+    Path fileToLFS = new Path(getTestRootDir(), "test.txt");
+    Path crcFileAtLFS = new Path(getTestRootDir(), ".test.txt.crc");
     fSys.initialize(new URI("file:///"), conf);
     writeFile(fSys, fileToFS);
     if (fSys.exists(crcFileAtLFS))
@@ -1112,7 +1120,7 @@ public abstract class FSMainOperationsBaseTest  {
   }
   
   protected void createFile(Path path) throws IOException {
-    FileSystemTestHelper.createFile(fSys, path);
+    createFile(fSys, path);
   }
 
   @SuppressWarnings("deprecation")
@@ -1125,10 +1133,11 @@ public abstract class FSMainOperationsBaseTest  {
     Assert.assertEquals("Source exists", srcExists, exists(fSys, src));
     Assert.assertEquals("Destination exists", dstExists, exists(fSys, dst));
   }
-  private boolean containsPath(Path path, FileStatus[] filteredPaths)
+  private boolean containsTestRootPath(Path path, FileStatus[] filteredPaths)
     throws IOException {
+      Path testRootPath = getTestRootPath(fSys, path.toString());
     for(int i = 0; i < filteredPaths.length; i ++) { 
-      if (getTestRootPath(fSys, path.toString()).equals(
+      if (testRootPath.equals(
           filteredPaths[i].getPath()))
         return true;
       }

@@ -95,6 +95,8 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-7391 Document Interface Classification from HADOOP-5073 (sanjay Radia)
 
+    HADOOP-9287. Parallel-testing hadoop-common (Andrey Klochkov via jlowe)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs

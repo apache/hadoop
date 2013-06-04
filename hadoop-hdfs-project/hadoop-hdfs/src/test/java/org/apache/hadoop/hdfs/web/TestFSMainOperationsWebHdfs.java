@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import static org.apache.hadoop.fs.FileSystemTestHelper.exists;
-import static org.apache.hadoop.fs.FileSystemTestHelper.getTestRootPath;
-
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -52,6 +49,12 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
 
   private static MiniDFSCluster cluster = null;
   private static Path defaultWorkingDirectory;
+  private static FileSystem fileSystem;
+  
+  @Override
+  protected FileSystem createFileSystem() throws Exception {
+    return fileSystem;
+  }
 
   @BeforeClass
   public static void setupCluster() {
@@ -73,14 +76,14 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
       final UserGroupInformation current = UserGroupInformation.getCurrentUser();
       final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
           current.getShortUserName() + "x", new String[]{"user"});
-      fSys = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      fileSystem = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override
         public FileSystem run() throws Exception {
           return FileSystem.get(new URI(uri), conf);
         }
       });
 
-      defaultWorkingDirectory = fSys.getWorkingDirectory();
+      defaultWorkingDirectory = fileSystem.getWorkingDirectory();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

@@ -25,8 +25,7 @@ public class TestTFileNoneCodecsByteArrays extends TestTFileByteArrays {
    */
   @Override
   public void setUp() throws IOException {
-    init(Compression.Algorithm.NONE.getName(), "memcmp", "TFileTestCodecsNone",
-        24, 24);
+    init(Compression.Algorithm.NONE.getName(), "memcmp", 24, 24);
     super.setUp();
   }
 }

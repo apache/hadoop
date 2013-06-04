@@ -26,7 +26,7 @@ public class TestTFileNoneCodecsStreams extends TestTFileStreams {
    */
   @Override
   public void setUp() throws IOException {
-    init(Compression.Algorithm.NONE.getName(), "memcmp", "TFileTestCodecsNone");
+    init(Compression.Algorithm.NONE.getName(), "memcmp");
     super.setUp();
   }
 }

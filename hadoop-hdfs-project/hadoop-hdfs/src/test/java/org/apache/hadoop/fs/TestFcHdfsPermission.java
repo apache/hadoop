@@ -35,8 +35,21 @@ import org.junit.BeforeClass;
 
 public class TestFcHdfsPermission extends FileContextPermissionBase {
   
+  private static final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
+  private static FileContext fc;
+
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
+  
+  @Override
+  protected FileContextTestHelper getFileContextHelper() {
+    return fileContextTestHelper;
+  }
+  
+  @Override
+  protected FileContext getFileContext() {
+    return fc;
+  }
   
   @BeforeClass
   public static void clusterSetupAtBegining()

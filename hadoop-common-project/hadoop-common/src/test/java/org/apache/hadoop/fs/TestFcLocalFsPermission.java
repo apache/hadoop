@@ -29,7 +29,6 @@ public class TestFcLocalFsPermission extends
   @Override
   @Before
   public void setUp() throws Exception {
-    fc = FileContext.getLocalFSFileContext();
     super.setUp();
   }
 
@@ -37,6 +36,11 @@ public class TestFcLocalFsPermission extends
   @After
   public void tearDown() throws Exception {
     super.tearDown();
+  }
+
+  @Override
+  protected FileContext getFileContext() throws UnsupportedFileSystemException {
+    return FileContext.getLocalFSFileContext();
   }
 
 }

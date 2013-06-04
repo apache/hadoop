@@ -43,6 +43,7 @@ public abstract class FileContextSymlinkBaseTest {
   static final int  blockSize =  8192;
   static final int  fileSize  = 16384;
  
+  protected final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
   protected static FileContext fc;
 
   abstract protected String getScheme();

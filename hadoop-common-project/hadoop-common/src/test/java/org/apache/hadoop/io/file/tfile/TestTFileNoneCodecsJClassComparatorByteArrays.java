@@ -33,8 +33,7 @@ public class TestTFileNoneCodecsJClassComparatorByteArrays extends TestTFileByte
   @Override
   public void setUp() throws IOException {
     init(Compression.Algorithm.NONE.getName(),
-        "jclass: org.apache.hadoop.io.file.tfile.MyComparator",
-        "TestTFileNoneCodecsJClassComparatorByteArrays", 24, 24);
+        "jclass: org.apache.hadoop.io.file.tfile.MyComparator", 24, 24);
     super.setUp();
   }
 }

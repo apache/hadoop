@@ -37,8 +37,7 @@ public class TestTFileJClassComparatorByteArrays extends TestTFileByteArrays {
   @Override
   public void setUp() throws IOException {
     init(Compression.Algorithm.GZ.getName(),
-        "jclass: org.apache.hadoop.io.file.tfile.MyComparator",
-        "TFileTestJClassComparator");
+        "jclass: org.apache.hadoop.io.file.tfile.MyComparator");
     super.setUp();
   }
 }
