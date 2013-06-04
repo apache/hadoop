@@ -56,7 +56,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -215,7 +215,7 @@ public class TestClientServiceDelegate {
           getRunningApplicationReport(null, 0)).thenReturn(
           getRunningApplicationReport(null, 0)).thenReturn(
           getRunningApplicationReport("am2", 90));
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
 
@@ -285,7 +285,7 @@ public class TestClientServiceDelegate {
             getRunningApplicationReport("am1", 78)).thenReturn(
               getRunningApplicationReport("am1", 78)).thenReturn(
           getFinishedApplicationReport());
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
 
@@ -366,7 +366,7 @@ public class TestClientServiceDelegate {
       verify(rmDelegate, times(3)).getApplicationReport(
           any(ApplicationId.class));
       Assert.assertNotNull(jobStatus);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -396,7 +396,7 @@ public class TestClientServiceDelegate {
       }
       verify(rmDelegate, times(noOfRetries)).getApplicationReport(
           any(ApplicationId.class));
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }  
@@ -447,7 +447,7 @@ public class TestClientServiceDelegate {
     ResourceMgrDelegate rm = mock(ResourceMgrDelegate.class);
     try {
       when(rm.getApplicationReport(jobId.getAppId())).thenReturn(null);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
     return rm;

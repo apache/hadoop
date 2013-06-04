@@ -28,11 +28,11 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -110,7 +110,7 @@ public class ResourceTrackerService extends AbstractService implements
         conf.getLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
     if (nextHeartBeatInterval <= 0) {
-      throw new YarnException("Invalid Configuration. "
+      throw new YarnRuntimeException("Invalid Configuration. "
           + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS
           + " should be larger than 0.");
     }
@@ -161,7 +161,7 @@ public class ResourceTrackerService extends AbstractService implements
   @SuppressWarnings("unchecked")
   @Override
   public RegisterNodeManagerResponse registerNodeManager(
-      RegisterNodeManagerRequest request) throws YarnRemoteException,
+      RegisterNodeManagerRequest request) throws YarnException,
       IOException {
 
     NodeId nodeId = request.getNodeId();
@@ -230,7 +230,7 @@ public class ResourceTrackerService extends AbstractService implements
   @SuppressWarnings("unchecked")
   @Override
   public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
 
     NodeStatus remoteNodeStatus = request.getNodeStatus();
     /**

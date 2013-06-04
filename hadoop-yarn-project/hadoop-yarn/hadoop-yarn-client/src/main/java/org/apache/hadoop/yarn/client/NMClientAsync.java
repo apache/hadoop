@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
@@ -446,7 +446,7 @@ public class NMClientAsync extends AbstractService {
                 + "Container " + containerId, thr);
           }
           return ContainerState.RUNNING;
-        } catch (YarnRemoteException e) {
+        } catch (YarnException e) {
           return onExceptionRaised(container, event, e);
         } catch (IOException e) {
           return onExceptionRaised(container, event, e);
@@ -490,7 +490,7 @@ public class NMClientAsync extends AbstractService {
                 + "Container " + event.getContainerId(), thr);
           }
           return ContainerState.DONE;
-        } catch (YarnRemoteException e) {
+        } catch (YarnException e) {
           return onExceptionRaised(container, event, e);
         } catch (IOException e) {
           return onExceptionRaised(container, event, e);
@@ -602,7 +602,7 @@ public class NMClientAsync extends AbstractService {
                 "Unchecked exception is thrown from onContainerStatusReceived" +
                     " for Container " + event.getContainerId(), thr);
           }
-        } catch (YarnRemoteException e) {
+        } catch (YarnException e) {
           onExceptionRaised(containerId, e);
         } catch (IOException e) {
           onExceptionRaised(containerId, e);

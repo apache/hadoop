@@ -18,23 +18,23 @@
 
 package org.apache.hadoop.yarn.exceptions;
 
-public class YarnRemoteException extends Exception {
+public class YarnException extends Exception {
 
   private static final long serialVersionUID = 1L;
 
-  public YarnRemoteException() {
+  public YarnException() {
     super();
   }
 
-  public YarnRemoteException(String message) {
+  public YarnException(String message) {
     super(message);
   }
 
-  public YarnRemoteException(Throwable cause) {
+  public YarnException(Throwable cause) {
     super(cause);
   }
 
-  public YarnRemoteException(String message, Throwable cause) {
+  public YarnException(String message, Throwable cause) {
     super(message, cause);
   }
 

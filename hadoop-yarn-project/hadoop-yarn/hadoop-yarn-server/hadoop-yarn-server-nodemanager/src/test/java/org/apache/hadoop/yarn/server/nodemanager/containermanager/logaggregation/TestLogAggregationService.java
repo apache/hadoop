@@ -59,7 +59,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -78,7 +78,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
@@ -431,7 +431,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
                                   super.dirsHandler));
     logAggregationService.init(this.conf);
     
-    YarnException e = new YarnException("KABOOM!");
+    YarnRuntimeException e = new YarnRuntimeException("KABOOM!");
     doThrow(e)
       .when(logAggregationService).verifyAndCreateRemoteLogDir(
           any(Configuration.class));
@@ -528,7 +528,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     ApplicationId appId = BuilderUtils.newApplicationId(
         System.currentTimeMillis(), (int)Math.random());
-    doThrow(new YarnException("KABOOM!"))
+    doThrow(new YarnRuntimeException("KABOOM!"))
       .when(logAggregationService).initAppAggregator(
           eq(appId), eq(user), any(Credentials.class),
           any(ContainerLogsRetentionPolicy.class), anyMap());
@@ -708,7 +708,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
   @Test
   public void testLogAggregationForRealContainerLaunch() throws IOException,
-      InterruptedException, YarnRemoteException {
+      InterruptedException, YarnException {
 
     this.containerManager.start();
 

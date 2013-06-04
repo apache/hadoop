@@ -28,7 +28,7 @@ import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.hs.MockHistoryJobs.JobsPair;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 public class MockHistoryContext extends MockAppContext implements HistoryContext {
@@ -42,7 +42,7 @@ public class MockHistoryContext extends MockAppContext implements HistoryContext
     try {
       jobs = MockHistoryJobs.newHistoryJobs(numJobs, numTasks, numAttempts);
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
     partialJobs = jobs.partial;
     fullJobs = jobs.full;
@@ -56,7 +56,7 @@ public class MockHistoryContext extends MockAppContext implements HistoryContext
       jobs = MockHistoryJobs.newHistoryJobs(getApplicationID(), numJobs, numTasks,
           numAttempts);
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
     partialJobs = jobs.partial;
     fullJobs = jobs.full;
@@ -76,7 +76,7 @@ public class MockHistoryContext extends MockAppContext implements HistoryContext
       jobs = MockHistoryJobs.newHistoryJobs(getApplicationID(), numJobs, numTasks,
           numAttempts, hasFailedTasks);
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
     partialJobs = jobs.partial;
     fullJobs = jobs.full;

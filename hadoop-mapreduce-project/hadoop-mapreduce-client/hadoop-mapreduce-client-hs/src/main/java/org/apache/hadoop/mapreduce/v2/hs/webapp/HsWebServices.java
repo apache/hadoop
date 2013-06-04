@@ -55,7 +55,7 @@ import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.HistoryInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
@@ -255,7 +255,7 @@ public class HsWebServices {
       if (type != null && !type.isEmpty()) {
         try {
           ttype = MRApps.taskType(type);
-        } catch (YarnException e) {
+        } catch (YarnRuntimeException e) {
           throw new BadRequestException("tasktype must be either m or r");
         }
       }

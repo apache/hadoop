@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
@@ -130,7 +130,7 @@ public class TestContainerLaunchRPC {
 
     @Override
     public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnRemoteException {
+        GetContainerStatusRequest request) throws YarnException {
       GetContainerStatusResponse response = recordFactory
           .newRecordInstance(GetContainerStatusResponse.class);
       response.setStatus(status);
@@ -139,23 +139,23 @@ public class TestContainerLaunchRPC {
 
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       try {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(10000);
       } catch (Exception e) {
         LOG.error(e);
-        throw new YarnRemoteException(e);
+        throw new YarnException(e);
       }
-      throw new YarnRemoteException("Shouldn't happen!!");
+      throw new YarnException("Shouldn't happen!!");
     }
 
     @Override
     public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnRemoteException {
+        throws YarnException {
       Exception e = new Exception("Dummy function", new Exception(
           "Dummy function cause"));
-      throw new YarnRemoteException(e);
+      throw new YarnException(e);
     }
   }
 }

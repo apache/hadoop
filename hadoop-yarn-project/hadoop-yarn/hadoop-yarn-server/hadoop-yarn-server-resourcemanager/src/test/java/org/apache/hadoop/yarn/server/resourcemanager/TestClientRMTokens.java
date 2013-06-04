@@ -58,7 +58,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
@@ -134,7 +134,7 @@ public class TestClientRMTokens {
         clientRMWithDT.getNewApplication(request);
       } catch (IOException e) {
         fail("Unexpected exception" + e);
-      }  catch (YarnRemoteException e) {
+      }  catch (YarnException e) {
         fail("Unexpected exception" + e);
       }
       
@@ -159,7 +159,7 @@ public class TestClientRMTokens {
         clientRMWithDT.getNewApplication(request);
       } catch (IOException e) {
         fail("Unexpected exception" + e);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         fail("Unexpected exception" + e);
       }
       
@@ -199,7 +199,7 @@ public class TestClientRMTokens {
         clientRMWithDT.getNewApplication(request);
       } catch (IOException e) {
         fail("Unexpected exception" + e);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         fail("Unexpected exception" + e);
       }
       cancelDelegationToken(loggedInUser, clientRMService, token);
@@ -217,7 +217,7 @@ public class TestClientRMTokens {
         clientRMWithDT.getNewApplication(request);
         fail("Should not have succeeded with a cancelled delegation token");
       } catch (IOException e) {
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
       }
 
 
@@ -357,7 +357,7 @@ public class TestClientRMTokens {
         .doAs(new PrivilegedExceptionAction<org.apache.hadoop.yarn.api.records.Token>() {
           @Override
             public org.apache.hadoop.yarn.api.records.Token run()
-                throws YarnRemoteException, IOException {
+                throws YarnException, IOException {
             GetDelegationTokenRequest request = Records
                 .newRecord(GetDelegationTokenRequest.class);
             request.setRenewer(renewerString);
@@ -374,7 +374,7 @@ public class TestClientRMTokens {
       throws IOException, InterruptedException {
     long nextExpTime = loggedInUser.doAs(new PrivilegedExceptionAction<Long>() {
       @Override
-      public Long run() throws YarnRemoteException, IOException {
+      public Long run() throws YarnException, IOException {
         RenewDelegationTokenRequest request = Records
             .newRecord(RenewDelegationTokenRequest.class);
         request.setDelegationToken(dToken);
@@ -391,7 +391,7 @@ public class TestClientRMTokens {
       throws IOException, InterruptedException {
     loggedInUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
-      public Void run() throws YarnRemoteException, IOException {
+      public Void run() throws YarnException, IOException {
         CancelDelegationTokenRequest request = Records
             .newRecord(CancelDelegationTokenRequest.class);
         request.setDelegationToken(dToken);

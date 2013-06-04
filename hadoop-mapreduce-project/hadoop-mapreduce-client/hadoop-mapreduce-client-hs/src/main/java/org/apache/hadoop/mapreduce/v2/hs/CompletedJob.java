@@ -60,7 +60,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Records;
 
 
@@ -333,12 +333,12 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
                 historyFileAbsolute);
         this.jobInfo = parser.parse();
       } catch (IOException e) {
-        throw new YarnException("Could not load history file "
+        throw new YarnRuntimeException("Could not load history file "
             + historyFileAbsolute, e);
       }
       IOException parseException = parser.getParseException(); 
       if (parseException != null) {
-        throw new YarnException(
+        throw new YarnRuntimeException(
             "Could not parse history file " + historyFileAbsolute, 
             parseException);
       }

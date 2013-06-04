@@ -48,7 +48,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
 
@@ -103,7 +103,7 @@ public class CommitterEventHandler extends AbstractService
       endCommitSuccessFile = MRApps.getEndJobCommitSuccessFile(conf, user, jobId);
       endCommitFailureFile = MRApps.getEndJobCommitFailureFile(conf, user, jobId);
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
   }
 
@@ -143,7 +143,7 @@ public class CommitterEventHandler extends AbstractService
     try {
       eventQueue.put(event);
     } catch (InterruptedException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
   }
 
@@ -218,7 +218,7 @@ public class CommitterEventHandler extends AbstractService
         handleTaskAbort((CommitterTaskAbortEvent) event);
         break;
       default:
-        throw new YarnException("Unexpected committer event "
+        throw new YarnRuntimeException("Unexpected committer event "
             + event.toString());
       }
     }

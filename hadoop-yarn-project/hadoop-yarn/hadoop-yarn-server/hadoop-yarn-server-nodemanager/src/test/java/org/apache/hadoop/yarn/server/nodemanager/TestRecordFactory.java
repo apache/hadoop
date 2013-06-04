@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHeartbeatResponse;
@@ -37,7 +37,7 @@ public class TestRecordFactory {
           LocalizerHeartbeatResponse.class);
       Assert.assertEquals(LocalizerHeartbeatResponsePBImpl.class,
                           response.getClass());
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to crete record");
     }

@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.Loc
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalizerHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalizerStatusProto;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
@@ -47,7 +47,7 @@ public class LocalizationProtocolPBServiceImpl implements LocalizationProtocolPB
     try {
       LocalizerHeartbeatResponse response = real.heartbeat(request);
       return ((LocalizerHeartbeatResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);

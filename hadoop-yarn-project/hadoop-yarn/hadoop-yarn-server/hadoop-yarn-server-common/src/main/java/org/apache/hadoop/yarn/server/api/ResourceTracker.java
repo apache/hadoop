@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.server.api;
 
 import java.io.IOException;
 
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
@@ -28,10 +28,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 public interface ResourceTracker {
   
   public RegisterNodeManagerResponse registerNodeManager(
-      RegisterNodeManagerRequest request) throws YarnRemoteException,
+      RegisterNodeManagerRequest request) throws YarnException,
       IOException;
 
   public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-      throws YarnRemoteException, IOException;
+      throws YarnException, IOException;
 
 }

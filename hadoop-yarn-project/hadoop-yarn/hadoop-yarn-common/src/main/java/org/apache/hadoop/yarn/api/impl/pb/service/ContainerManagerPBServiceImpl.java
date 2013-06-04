@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestP
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainerResponsePBImpl;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
@@ -57,7 +57,7 @@ public class ContainerManagerPBServiceImpl implements ContainerManagerPB  {
     try {
       GetContainerStatusResponse response = real.getContainerStatus(request);
       return ((GetContainerStatusResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -71,7 +71,7 @@ public class ContainerManagerPBServiceImpl implements ContainerManagerPB  {
     try {
       StartContainerResponse response = real.startContainer(request);
       return ((StartContainerResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -85,7 +85,7 @@ public class ContainerManagerPBServiceImpl implements ContainerManagerPB  {
     try {
       StopContainerResponse response = real.stopContainer(request);
       return ((StopContainerResponsePBImpl)response).getProto();
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);

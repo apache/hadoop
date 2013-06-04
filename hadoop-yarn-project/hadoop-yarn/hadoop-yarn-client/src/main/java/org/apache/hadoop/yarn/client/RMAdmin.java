@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RefreshServiceAclsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -188,7 +188,7 @@ public class RMAdmin extends Configured implements Tool {
     return adminProtocol;
   }
   
-  private int refreshQueues() throws IOException, YarnRemoteException {
+  private int refreshQueues() throws IOException, YarnException {
     // Refresh the queue properties
     RMAdminProtocol adminProtocol = createAdminProtocol();
     RefreshQueuesRequest request = 
@@ -197,7 +197,7 @@ public class RMAdmin extends Configured implements Tool {
     return 0;
   }
 
-  private int refreshNodes() throws IOException, YarnRemoteException {
+  private int refreshNodes() throws IOException, YarnException {
     // Refresh the nodes
     RMAdminProtocol adminProtocol = createAdminProtocol();
     RefreshNodesRequest request = 
@@ -207,7 +207,7 @@ public class RMAdmin extends Configured implements Tool {
   }
   
   private int refreshUserToGroupsMappings() throws IOException,
-      YarnRemoteException {
+      YarnException {
     // Refresh the user-to-groups mappings
     RMAdminProtocol adminProtocol = createAdminProtocol();
     RefreshUserToGroupsMappingsRequest request = 
@@ -217,7 +217,7 @@ public class RMAdmin extends Configured implements Tool {
   }
   
   private int refreshSuperUserGroupsConfiguration() throws IOException,
-      YarnRemoteException {
+      YarnException {
     // Refresh the super-user groups
     RMAdminProtocol adminProtocol = createAdminProtocol();
     RefreshSuperUserGroupsConfigurationRequest request = 
@@ -226,7 +226,7 @@ public class RMAdmin extends Configured implements Tool {
     return 0;
   }
   
-  private int refreshAdminAcls() throws IOException, YarnRemoteException {
+  private int refreshAdminAcls() throws IOException, YarnException {
     // Refresh the admin acls
     RMAdminProtocol adminProtocol = createAdminProtocol();
     RefreshAdminAclsRequest request = 
@@ -235,7 +235,7 @@ public class RMAdmin extends Configured implements Tool {
     return 0;
   }
   
-  private int refreshServiceAcls() throws IOException, YarnRemoteException {
+  private int refreshServiceAcls() throws IOException, YarnException {
     // Refresh the service acls
     RMAdminProtocol adminProtocol = createAdminProtocol();
     RefreshServiceAclsRequest request = 

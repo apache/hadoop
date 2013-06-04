@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
 import org.junit.Test;
@@ -61,7 +61,7 @@ public class TestRPCFactories {
         RpcServerFactoryPBImpl.get().getServer(
             AMRMProtocol.class, instance, addr, conf, null, 1);
       server.start();
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to create server");
     } finally {
@@ -89,12 +89,12 @@ public class TestRPCFactories {
       AMRMProtocol amrmClient = null;
       try {
         amrmClient = (AMRMProtocol) RpcClientFactoryPBImpl.get().getClient(AMRMProtocol.class, 1, NetUtils.getConnectAddress(server), conf);
-      } catch (YarnException e) {
+      } catch (YarnRuntimeException e) {
         e.printStackTrace();
         Assert.fail("Failed to create client");
       }
       
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to create server");
     } finally {
@@ -108,7 +108,7 @@ public class TestRPCFactories {
 
     @Override
     public RegisterApplicationMasterResponse registerApplicationMaster(
-        RegisterApplicationMasterRequest request) throws YarnRemoteException,
+        RegisterApplicationMasterRequest request) throws YarnException,
         IOException {
       // TODO Auto-generated method stub
       return null;
@@ -116,7 +116,7 @@ public class TestRPCFactories {
 
     @Override
     public FinishApplicationMasterResponse finishApplicationMaster(
-        FinishApplicationMasterRequest request) throws YarnRemoteException,
+        FinishApplicationMasterRequest request) throws YarnException,
         IOException {
       // TODO Auto-generated method stub
       return null;
@@ -124,7 +124,7 @@ public class TestRPCFactories {
 
     @Override
     public AllocateResponse allocate(AllocateRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       // TODO Auto-generated method stub
       return null;
     }

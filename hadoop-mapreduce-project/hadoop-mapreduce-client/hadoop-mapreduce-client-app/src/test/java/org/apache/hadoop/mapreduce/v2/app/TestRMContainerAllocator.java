@@ -74,7 +74,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -1429,7 +1429,7 @@ public class TestRMContainerAllocator {
         super.heartbeat();
       } catch (Exception e) {
         LOG.error("error in heartbeat ", e);
-        throw new YarnException(e);
+        throw new YarnRuntimeException(e);
       }
 
       List<TaskAttemptContainerAssignedEvent> result

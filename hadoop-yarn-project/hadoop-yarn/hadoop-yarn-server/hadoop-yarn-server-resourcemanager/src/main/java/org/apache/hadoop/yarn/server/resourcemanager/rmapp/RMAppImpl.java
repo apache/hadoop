@@ -34,7 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -389,7 +389,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     case FAILED:
       return YarnApplicationState.FAILED;
     }
-    throw new YarnException("Unknown state passed!");
+    throw new YarnRuntimeException("Unknown state passed!");
   }
 
   private FinalApplicationStatus createFinalApplicationStatus(RMAppState state) {
@@ -408,7 +408,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     case KILLED:
       return FinalApplicationStatus.KILLED;
     }
-    throw new YarnException("Unknown state passed!");
+    throw new YarnRuntimeException("Unknown state passed!");
   }
 
   @Override

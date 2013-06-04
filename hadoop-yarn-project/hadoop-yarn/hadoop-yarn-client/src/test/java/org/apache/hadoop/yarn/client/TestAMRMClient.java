@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.AMRMClient.StoredContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.apache.hadoop.yarn.util.Records;
@@ -162,7 +162,7 @@ public class TestAMRMClient {
   }
   
   @Test (timeout=60000)
-  public void testAMRMClientMatchingFit() throws YarnRemoteException, IOException {
+  public void testAMRMClientMatchingFit() throws YarnException, IOException {
     AMRMClientImpl<StoredContainerRequest> amClient = null;
     try {
       // start am rm client
@@ -263,7 +263,7 @@ public class TestAMRMClient {
   }
 
   @Test (timeout=60000)
-  public void testAMRMClientMatchStorage() throws YarnRemoteException, IOException {
+  public void testAMRMClientMatchStorage() throws YarnException, IOException {
     AMRMClientImpl<StoredContainerRequest> amClient = null;
     try {
       // start am rm client
@@ -384,7 +384,7 @@ public class TestAMRMClient {
   }
 
   @Test (timeout=60000)
-  public void testAMRMClient() throws YarnRemoteException, IOException {
+  public void testAMRMClient() throws YarnException, IOException {
     AMRMClientImpl<ContainerRequest> amClient = null;
     try {
       // start am rm client
@@ -407,7 +407,7 @@ public class TestAMRMClient {
   }
     
   private void testAllocation(final AMRMClientImpl<ContainerRequest> amClient)  
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     // setup container request
     
     assertTrue(amClient.ask.size() == 0);

@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RpcClientFactory;
 
 public class RpcClientFactoryPBImpl implements RpcClientFactory {
@@ -59,7 +59,7 @@ public class RpcClientFactoryPBImpl implements RpcClientFactory {
       try {
         pbClazz = localConf.getClassByName(getPBImplClassName(protocol));
       } catch (ClassNotFoundException e) {
-        throw new YarnException("Failed to load class: ["
+        throw new YarnRuntimeException("Failed to load class: ["
             + getPBImplClassName(protocol) + "]", e);
       }
       try {
@@ -67,18 +67,18 @@ public class RpcClientFactoryPBImpl implements RpcClientFactory {
         constructor.setAccessible(true);
         cache.putIfAbsent(protocol, constructor);
       } catch (NoSuchMethodException e) {
-        throw new YarnException("Could not find constructor with params: " + Long.TYPE + ", " + InetSocketAddress.class + ", " + Configuration.class, e);
+        throw new YarnRuntimeException("Could not find constructor with params: " + Long.TYPE + ", " + InetSocketAddress.class + ", " + Configuration.class, e);
       }
     }
     try {
       Object retObject = constructor.newInstance(clientVersion, addr, conf);
       return retObject;
     } catch (InvocationTargetException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (IllegalAccessException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (InstantiationException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
   }
 
@@ -88,11 +88,11 @@ public class RpcClientFactoryPBImpl implements RpcClientFactory {
       Method closeMethod = proxy.getClass().getMethod("close");
       closeMethod.invoke(proxy);
     } catch (InvocationTargetException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     } catch (Exception e) {
       LOG.error("Cannot call close method due to Exception. "
           + "Ignoring.", e);
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
   }
 

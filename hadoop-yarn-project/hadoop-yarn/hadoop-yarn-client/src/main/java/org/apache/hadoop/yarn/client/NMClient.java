@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.Service;
 
 @InterfaceAudience.Public
@@ -51,12 +51,12 @@ public interface NMClient extends Service {
    *                               <code>NodeManager</code> to launch the
    *                               container
    * @return a map between the auxiliary service names and their outputs
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   Map<String, ByteBuffer> startContainer(Container container,
       ContainerLaunchContext containerLaunchContext)
-          throws YarnRemoteException, IOException;
+          throws YarnException, IOException;
 
   /**
    * <p>Stop an started container.</p>
@@ -65,11 +65,11 @@ public interface NMClient extends Service {
    * @param nodeId the Id of the <code>NodeManager</code>
    * @param containerToken the security token to verify authenticity of the
    *                       started container
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   void stopContainer(ContainerId containerId, NodeId nodeId,
-      Token containerToken) throws YarnRemoteException, IOException;
+      Token containerToken) throws YarnException, IOException;
 
   /**
    * <p>Query the status of a container.</p>
@@ -79,11 +79,11 @@ public interface NMClient extends Service {
    * @param containerToken the security token to verify authenticity of the
    *                       started container
    * @return the status of a container
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   ContainerStatus getContainerStatus(ContainerId containerId, NodeId nodeId,
-      Token containerToken) throws YarnRemoteException, IOException;
+      Token containerToken) throws YarnException, IOException;
 
   /**
    * <p>Set whether the containers that are started by this client, and are

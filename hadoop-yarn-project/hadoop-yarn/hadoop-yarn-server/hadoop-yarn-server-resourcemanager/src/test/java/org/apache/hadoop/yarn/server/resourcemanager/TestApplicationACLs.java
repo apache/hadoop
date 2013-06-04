@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -321,7 +321,7 @@ public class TestApplicationACLs {
     try {
       enemyRmClient.forceKillApplication(finishAppRequest);
       Assert.fail("App killing by the enemy should fail!!");
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       LOG.info("Got exception while killing app as the enemy", e);
       Assert
           .assertTrue(e.getMessage().contains(

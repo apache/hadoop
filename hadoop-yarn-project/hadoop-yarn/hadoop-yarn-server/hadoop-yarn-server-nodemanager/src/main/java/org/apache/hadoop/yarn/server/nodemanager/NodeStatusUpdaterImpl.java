@@ -35,7 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -45,7 +45,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -205,7 +205,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   }
 
   @VisibleForTesting
-  protected void registerWithRM() throws YarnRemoteException, IOException {
+  protected void registerWithRM() throws YarnException, IOException {
     Configuration conf = getConfig();
     rmConnectWaitMS =
         conf.getInt(
@@ -220,7 +220,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         * 1000;
 
     if(rmConnectionRetryIntervalMS < 0) {
-      throw new YarnException("Invalid Configuration. " +
+      throw new YarnRuntimeException("Invalid Configuration. " +
           YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS +
           " should not be negative.");
     }
@@ -229,7 +229,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     if(! waitForEver) {
       if(rmConnectWaitMS < 0) {
-          throw new YarnException("Invalid Configuration. " +
+          throw new YarnRuntimeException("Invalid Configuration. " +
               YarnConfiguration.RESOURCEMANAGER_CONNECT_WAIT_SECS +
               " can be -1, but can not be other negative numbers");
       }
@@ -280,7 +280,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           String errorMessage = "Failed to Connect to RM, " +
               "no. of failed attempts is "+rmRetryCount;
           LOG.error(errorMessage,e);
-          throw new YarnException(errorMessage,e);
+          throw new YarnRuntimeException(errorMessage,e);
         }
       }
     }
@@ -289,7 +289,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       String message =
           "Message from ResourceManager: "
               + regNMResponse.getDiagnosticsMessage();
-      throw new YarnException(
+      throw new YarnRuntimeException(
         "Recieved SHUTDOWN signal from Resourcemanager ,Registration of NodeManager failed, "
             + message);
     }
@@ -454,7 +454,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                   String errorMessage = "Failed to heartbeat to RM, " +
                       "no. of failed attempts is "+rmRetryCount;
                   LOG.error(errorMessage,e);
-                  throw new YarnException(errorMessage,e);
+                  throw new YarnRuntimeException(errorMessage,e);
                 }
               }
             }
@@ -507,7 +507,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               dispatcher.getEventHandler().handle(
                   new CMgrCompletedAppsEvent(appsToCleanup));
             }
-          } catch (YarnException e) {
+          } catch (YarnRuntimeException e) {
             //catch and throw the exception if tried MAX wait time to connect RM
             dispatcher.getEventHandler().handle(
                 new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));

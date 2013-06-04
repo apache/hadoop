@@ -72,7 +72,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.AMRMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -434,10 +434,10 @@ public class ApplicationMaster {
   /**
    * Main run function for the application master
    *
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  public boolean run() throws YarnRemoteException, IOException {
+  public boolean run() throws YarnException, IOException {
     LOG.info("Starting ApplicationMaster");
 
     AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
@@ -537,7 +537,7 @@ public class ApplicationMaster {
     }
     try {
       resourceManager.unregisterApplicationMaster(appStatus, appMessage, null);
-    } catch (YarnRemoteException ex) {
+    } catch (YarnException ex) {
       LOG.error("Failed to unregister application", ex);
     } catch (IOException e) {
       LOG.error("Failed to unregister application", e);
@@ -777,7 +777,7 @@ public class ApplicationMaster {
       startReq.setContainerToken(container.getContainerToken());
       try {
         cm.startContainer(startReq);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         LOG.info("Start container failed for :" + ", containerId="
             + container.getId());
         e.printStackTrace();
@@ -802,7 +802,7 @@ public class ApplicationMaster {
       // LOG.info("Container Status"
       // + ", id=" + container.getId()
       // + ", status=" +statusResp.getStatus());
-      // } catch (YarnRemoteException e) {
+      // } catch (YarnException e) {
       // e.printStackTrace();
       // }
     }

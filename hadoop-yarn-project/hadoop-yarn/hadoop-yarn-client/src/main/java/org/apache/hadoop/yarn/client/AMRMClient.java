@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.Service;
 
 import com.google.common.collect.ImmutableList;
@@ -113,14 +113,14 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * @param appHostPort Port master is listening on
    * @param appTrackingUrl URL at which the master info can be seen
    * @return <code>RegisterApplicationMasterResponse</code>
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public RegisterApplicationMasterResponse 
                registerApplicationMaster(String appHostName,
                                          int appHostPort,
                                          String appTrackingUrl) 
-               throws YarnRemoteException, IOException;
+               throws YarnException, IOException;
   
   /**
    * Request additional containers and receive new container allocations.
@@ -134,24 +134,24 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * App should not make concurrent allocate requests. May cause request loss.
    * @param progressIndicator Indicates progress made by the master
    * @return the response of the allocate request
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public AllocateResponse allocate(float progressIndicator) 
-                           throws YarnRemoteException, IOException;
+                           throws YarnException, IOException;
   
   /**
    * Unregister the application master. This must be called in the end.
    * @param appStatus Success/Failure status of the master
    * @param appMessage Diagnostics message on failure
    * @param appTrackingUrl New URL to get master info
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
                                            String appMessage,
                                            String appTrackingUrl) 
-               throws YarnRemoteException, IOException;
+               throws YarnException, IOException;
   
   /**
    * Request containers for resources before calling <code>allocate</code>

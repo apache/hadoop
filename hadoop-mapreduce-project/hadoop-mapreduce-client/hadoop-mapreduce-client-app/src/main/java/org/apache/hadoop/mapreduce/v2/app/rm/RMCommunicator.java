@@ -39,7 +39,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
@@ -163,7 +163,7 @@ public abstract class RMCommunicator extends AbstractService
       LOG.info("maxContainerCapability: " + maxContainerCapability.getMemory());
     } catch (Exception are) {
       LOG.error("Exception while registering", are);
-      throw new YarnException(are);
+      throw new YarnRuntimeException(are);
     }
   }
 
@@ -237,7 +237,7 @@ public abstract class RMCommunicator extends AbstractService
             Thread.sleep(rmPollInterval);
             try {
               heartbeat();
-            } catch (YarnException e) {
+            } catch (YarnRuntimeException e) {
               LOG.error("Error communicating with RM: " + e.getMessage() , e);
               return;
             } catch (Exception e) {
@@ -273,7 +273,7 @@ public abstract class RMCommunicator extends AbstractService
     try {
       currentUser = UserGroupInformation.getCurrentUser();
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
 
     // CurrentUser should already have AMToken loaded.

@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
 public class ResourceMgrDelegate extends YarnClientImpl {
@@ -68,7 +68,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
       InterruptedException {
     try {
       return TypeConverter.fromYarnNodes(super.getNodeReports());
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -76,7 +76,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
   public JobStatus[] getAllJobs() throws IOException, InterruptedException {
     try {
       return TypeConverter.fromYarnApps(super.getApplicationList(), this.conf);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -98,7 +98,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
               metrics.getNumNodeManagers() * 2, 1,
               metrics.getNumNodeManagers(), 0, 0);
       return oldMetrics;
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -113,7 +113,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
     try {
       return ProtoUtils.convertFromProtoFormat(
         super.getRMDelegationToken(renewer), rmAddress);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -127,7 +127,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
       this.application = super.getNewApplication();
       this.applicationId = this.application.getApplicationId();
       return TypeConverter.fromYarn(applicationId);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -139,7 +139,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
           super.getQueueInfo(queueName);
       return (queueInfo == null) ? null : TypeConverter.fromYarn(queueInfo,
           conf);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -149,7 +149,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
     try {
       return TypeConverter.fromYarnQueueUserAclsInfo(super
         .getQueueAclsInfo());
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -157,7 +157,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
   public QueueInfo[] getQueues() throws IOException, InterruptedException {
     try {
       return TypeConverter.fromYarnQueueInfo(super.getAllQueues(), this.conf);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -166,7 +166,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
     try {
       return TypeConverter.fromYarnQueueInfo(super.getRootQueueInfos(),
           this.conf);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -176,7 +176,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
     try {
       return TypeConverter.fromYarnQueueInfo(super.getChildQueueInfos(parent),
         this.conf);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }

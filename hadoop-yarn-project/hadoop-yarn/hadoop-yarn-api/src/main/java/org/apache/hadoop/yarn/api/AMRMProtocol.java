@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
  * <p>The protocol between a live instance of <code>ApplicationMaster</code> 
@@ -58,12 +58,12 @@ public interface AMRMProtocol {
    *  
    * @param request registration request
    * @return registration respose
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * <p>The interface used by an <code>ApplicationMaster</code> to notify the 
@@ -78,12 +78,12 @@ public interface AMRMProtocol {
    * 
    * @param request completion request
    * @return completion response
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
   
   /**
    * <p>The main interface between an <code>ApplicationMaster</code> 
@@ -108,9 +108,9 @@ public interface AMRMProtocol {
    * 
    * @param request allocation request
    * @return allocation response
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
   public AllocateResponse allocate(AllocateRequest request) 
-  throws YarnRemoteException, IOException;
+  throws YarnException, IOException;
 }

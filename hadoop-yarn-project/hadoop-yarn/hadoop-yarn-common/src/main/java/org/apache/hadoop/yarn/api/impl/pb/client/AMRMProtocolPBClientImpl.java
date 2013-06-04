@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationMaste
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationMasterResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterResponsePBImpl;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterRequestProto;
@@ -68,7 +68,7 @@ public class AMRMProtocolPBClientImpl implements AMRMProtocol, Closeable {
 
   @Override
   public AllocateResponse allocate(AllocateRequest request)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     AllocateRequestProto requestProto =
         ((AllocateRequestPBImpl) request).getProto();
     try {
@@ -81,7 +81,7 @@ public class AMRMProtocolPBClientImpl implements AMRMProtocol, Closeable {
 
   @Override
   public FinishApplicationMasterResponse finishApplicationMaster(
-      FinishApplicationMasterRequest request) throws YarnRemoteException,
+      FinishApplicationMasterRequest request) throws YarnException,
       IOException {
     FinishApplicationMasterRequestProto requestProto =
         ((FinishApplicationMasterRequestPBImpl) request).getProto();
@@ -96,7 +96,7 @@ public class AMRMProtocolPBClientImpl implements AMRMProtocol, Closeable {
 
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
-      RegisterApplicationMasterRequest request) throws YarnRemoteException,
+      RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
     RegisterApplicationMasterRequestProto requestProto =
         ((RegisterApplicationMasterRequestPBImpl) request).getProto();

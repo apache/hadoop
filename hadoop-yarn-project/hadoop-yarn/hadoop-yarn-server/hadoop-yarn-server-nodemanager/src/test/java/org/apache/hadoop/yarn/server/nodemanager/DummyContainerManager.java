@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -182,14 +182,14 @@ public class DummyContainerManager extends ContainerManagerImpl {
   protected void authorizeRequest(String containerIDStr,
       ContainerLaunchContext launchContext,
       UserGroupInformation remoteUgi, ContainerTokenIdentifier tokenId)
-      throws YarnRemoteException {
+      throws YarnException {
     // do Nothing
   }
 
   @Override
   protected ContainerTokenIdentifier
       getContainerTokenIdentifier(UserGroupInformation remoteUgi,
-          ContainerTokenIdentifier containerTokenId) throws YarnRemoteException {
+          ContainerTokenIdentifier containerTokenId) throws YarnException {
     return containerTokenId;
   }
 }

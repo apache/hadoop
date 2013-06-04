@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
@@ -86,7 +86,7 @@ public class TestRPC {
       proxy.getNewApplication(Records
           .newRecord(GetNewApplicationRequest.class));
       Assert.fail("Excepted RPC call to fail with unknown method.");
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       Assert.assertTrue(e.getMessage().matches(
           "Unknown method getNewApplication called on.*"
               + "org.apache.hadoop.yarn.proto.ClientRMProtocol"
@@ -147,7 +147,7 @@ public class TestRPC {
       StopContainerRequest stopRequest = recordFactory.newRecordInstance(StopContainerRequest.class);
       stopRequest.setContainerId(containerId);
       proxy.stopContainer(stopRequest);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       exception = true;
       Assert.assertTrue(e.getMessage().contains(EXCEPTION_MSG));
       Assert.assertTrue(e.getMessage().contains(EXCEPTION_CAUSE));
@@ -169,7 +169,7 @@ public class TestRPC {
     @Override
     public GetContainerStatusResponse getContainerStatus(
         GetContainerStatusRequest request)
-    throws YarnRemoteException {
+    throws YarnException {
       GetContainerStatusResponse response = 
           recordFactory.newRecordInstance(GetContainerStatusResponse.class);
       response.setStatus(status);
@@ -178,7 +178,7 @@ public class TestRPC {
 
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request) 
-        throws YarnRemoteException {
+        throws YarnException {
       Token containerToken = request.getContainerToken();
       ContainerTokenIdentifier tokenId = null;
 
@@ -199,10 +199,10 @@ public class TestRPC {
 
     @Override
     public StopContainerResponse stopContainer(StopContainerRequest request) 
-    throws YarnRemoteException {
+    throws YarnException {
       Exception e = new Exception(EXCEPTION_MSG, 
           new Exception(EXCEPTION_CAUSE));
-      throw new YarnRemoteException(e);
+      throw new YarnException(e);
     }
   }
 

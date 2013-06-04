@@ -27,7 +27,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
@@ -56,7 +56,7 @@ public class TestRPCFactories {
         RpcServerFactoryPBImpl.get().getServer(
             LocalizationProtocol.class, instance, addr, conf, null, 1);
       server.start();
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to create server");
     } finally {
@@ -87,12 +87,12 @@ public class TestRPCFactories {
               LocalizationProtocol.class, 1,
               NetUtils.getConnectAddress(server), conf);
         Assert.assertNotNull(client);
-      } catch (YarnException e) {
+      } catch (YarnRuntimeException e) {
         e.printStackTrace();
         Assert.fail("Failed to create client");
       }
       
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to create server");
     } finally {

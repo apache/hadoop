@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -95,7 +95,7 @@ public class TestYarnClient {
       ((MockYarnClient) client).setYarnApplicationState(exitStates[i]);
       try {
         client.submitApplication(context);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         Assert.fail("Exception is not expected.");
       } catch (IOException e) {
         Assert.fail("Exception is not expected.");
@@ -153,7 +153,7 @@ public class TestYarnClient {
       try{
         when(rmClient.getApplicationReport(any(
             GetApplicationReportRequest.class))).thenReturn(mockResponse);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         Assert.fail("Exception is not expected.");
       } catch (IOException e) {
         Assert.fail("Exception is not expected.");

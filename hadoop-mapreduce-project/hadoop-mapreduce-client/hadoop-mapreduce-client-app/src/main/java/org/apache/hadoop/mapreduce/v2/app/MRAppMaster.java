@@ -113,7 +113,7 @@ import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -301,7 +301,7 @@ public class MRAppMaster extends CompositeService {
         }
       }
     } catch (IOException e) {
-      throw new YarnException("Error while initializing", e);
+      throw new YarnRuntimeException("Error while initializing", e);
     }
     
     if (errorHappenedShutDown) {
@@ -442,7 +442,7 @@ public class MRAppMaster extends CompositeService {
             .getOutputFormatClass(), conf);
         committer = outputFormat.getOutputCommitter(taskContext);
       } catch (Exception e) {
-        throw new YarnException(e);
+        throw new YarnRuntimeException(e);
       }
     } else {
       committer = ReflectionUtils.newInstance(conf.getClass(
@@ -623,7 +623,7 @@ public class MRAppMaster extends CompositeService {
           + jobTokenFile);
       currentUser.addCredentials(fsTokens); // For use by AppMaster itself.
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
   }
 
@@ -662,19 +662,19 @@ public class MRAppMaster extends CompositeService {
     } catch (InstantiationException ex) {
       LOG.error("Can't make a speculator -- check "
           + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
-      throw new YarnException(ex);
+      throw new YarnRuntimeException(ex);
     } catch (IllegalAccessException ex) {
       LOG.error("Can't make a speculator -- check "
           + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
-      throw new YarnException(ex);
+      throw new YarnRuntimeException(ex);
     } catch (InvocationTargetException ex) {
       LOG.error("Can't make a speculator -- check "
           + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
-      throw new YarnException(ex);
+      throw new YarnRuntimeException(ex);
     } catch (NoSuchMethodException ex) {
       LOG.error("Can't make a speculator -- check "
           + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
-      throw new YarnException(ex);
+      throw new YarnRuntimeException(ex);
     }
   }
 

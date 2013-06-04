@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -169,7 +169,7 @@ public class LogAggregationService extends AbstractService implements
     try {
       remoteFS = FileSystem.get(conf);
     } catch (IOException e) {
-      throw new YarnException("Unable to get Remote FileSystem instance", e);
+      throw new YarnRuntimeException("Unable to get Remote FileSystem instance", e);
     }
     boolean remoteExists = true;
     try {
@@ -184,7 +184,7 @@ public class LogAggregationService extends AbstractService implements
     } catch (FileNotFoundException e) {
       remoteExists = false;
     } catch (IOException e) {
-      throw new YarnException(
+      throw new YarnRuntimeException(
           "Failed to check permissions for dir ["
               + this.remoteRootLogDir + "]", e);
     }
@@ -198,7 +198,7 @@ public class LogAggregationService extends AbstractService implements
         remoteFS.mkdirs(qualified, new FsPermission(TLDIR_PERMISSIONS));
         remoteFS.setPermission(qualified, new FsPermission(TLDIR_PERMISSIONS));
       } catch (IOException e) {
-        throw new YarnException("Failed to create remoteLogDir ["
+        throw new YarnRuntimeException("Failed to create remoteLogDir ["
             + this.remoteRootLogDir + "]", e);
       }
     }
@@ -279,7 +279,7 @@ public class LogAggregationService extends AbstractService implements
         }
       });
     } catch (Exception e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
   }
 
@@ -293,7 +293,7 @@ public class LogAggregationService extends AbstractService implements
       initAppAggregator(appId, user, credentials, logRetentionPolicy, appAcls);
       eventResponse = new ApplicationEvent(appId,
           ApplicationEventType.APPLICATION_LOG_HANDLING_INITED);
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       LOG.warn("Application failed to init aggregation: " + e.getMessage());
       eventResponse = new ApplicationEvent(appId,
           ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED);
@@ -319,7 +319,7 @@ public class LogAggregationService extends AbstractService implements
             getRemoteNodeLogFileForApp(appId, user), logRetentionPolicy,
             appAcls);
     if (this.appLogAggregators.putIfAbsent(appId, appLogAggregator) != null) {
-      throw new YarnException("Duplicate initApp for " + appId);
+      throw new YarnRuntimeException("Duplicate initApp for " + appId);
     }
     // wait until check for existing aggregator to create dirs
     try {
@@ -328,10 +328,10 @@ public class LogAggregationService extends AbstractService implements
     } catch (Exception e) {
       appLogAggregators.remove(appId);
       closeFileSystems(userUgi);
-      if (!(e instanceof YarnException)) {
-        e = new YarnException(e);
+      if (!(e instanceof YarnRuntimeException)) {
+        e = new YarnRuntimeException(e);
       }
-      throw (YarnException)e;
+      throw (YarnRuntimeException)e;
     }
 
 

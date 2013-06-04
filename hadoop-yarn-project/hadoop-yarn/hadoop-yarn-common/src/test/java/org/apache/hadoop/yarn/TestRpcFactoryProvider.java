@@ -50,12 +50,12 @@ public class TestRpcFactoryProvider {
     try {
       clientFactory = RpcFactoryProvider.getClientFactory(conf);
       Assert.fail("Expected an exception - unknown serializer");
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
     }
     try {
       serverFactory = RpcFactoryProvider.getServerFactory(conf);
       Assert.fail("Expected an exception - unknown serializer");
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
     }
     
     conf = new Configuration();
@@ -65,11 +65,11 @@ public class TestRpcFactoryProvider {
     try {
       clientFactory = RpcFactoryProvider.getClientFactory(conf);
       Assert.fail("Expected an exception - unknown class");
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
     }
     try {
       serverFactory = RpcFactoryProvider.getServerFactory(conf);
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       Assert.fail("Error while loading factory using reflection: [" + RpcServerFactoryPBImpl.class.getName() + "]");
     }
   }

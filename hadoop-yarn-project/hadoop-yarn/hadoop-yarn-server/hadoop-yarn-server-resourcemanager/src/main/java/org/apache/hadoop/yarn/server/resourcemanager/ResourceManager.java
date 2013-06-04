@@ -34,7 +34,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -297,11 +297,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
         return (ResourceScheduler) ReflectionUtils.newInstance(schedulerClazz,
             this.conf);
       } else {
-        throw new YarnException("Class: " + schedulerClassName
+        throw new YarnRuntimeException("Class: " + schedulerClassName
             + " not instance of " + ResourceScheduler.class.getCanonicalName());
       }
     } catch (ClassNotFoundException e) {
-      throw new YarnException("Could not instantiate Scheduler: "
+      throw new YarnRuntimeException("Could not instantiate Scheduler: "
           + schedulerClassName, e);
     }  }
 
@@ -334,7 +334,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
         conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
     if (globalMaxAppAttempts <= 0) {
-      throw new YarnException("Invalid global max attempts configuration"
+      throw new YarnRuntimeException("Invalid global max attempts configuration"
           + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
           + "=" + globalMaxAppAttempts + ", it should be a positive integer.");
     }
@@ -348,7 +348,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
 
     if (minMem <= 0 || minMem > maxMem) {
-      throw new YarnException("Invalid resource scheduler memory"
+      throw new YarnRuntimeException("Invalid resource scheduler memory"
           + " allocation configuration"
           + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
           + "=" + minMem
@@ -366,7 +366,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
 
     if (minVcores <= 0 || minVcores > maxVcores) {
-      throw new YarnException("Invalid resource scheduler vcores"
+      throw new YarnRuntimeException("Invalid resource scheduler vcores"
           + " allocation configuration"
           + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
           + "=" + minVcores
@@ -451,7 +451,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       try {
         this.eventProcessor.join();
       } catch (InterruptedException e) {
-        throw new YarnException(e);
+        throw new YarnRuntimeException(e);
       }
       super.stop();
     }
@@ -470,7 +470,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
         }
         this.eventQueue.put(event);
       } catch (InterruptedException e) {
-        throw new YarnException(e);
+        throw new YarnRuntimeException(e);
       }
     }
   }
@@ -578,7 +578,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     try {
       doSecureLogin();
     } catch(IOException ie) {
-      throw new YarnException("Failed to login", ie);
+      throw new YarnRuntimeException("Failed to login", ie);
     }
 
     this.appTokenSecretManager.start();
@@ -603,7 +603,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     try {
       rmDTSecretManager.startThreads();
     } catch(IOException ie) {
-      throw new YarnException("Failed to start secret manager threads", ie);
+      throw new YarnRuntimeException("Failed to start secret manager threads", ie);
     }
 
     if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {

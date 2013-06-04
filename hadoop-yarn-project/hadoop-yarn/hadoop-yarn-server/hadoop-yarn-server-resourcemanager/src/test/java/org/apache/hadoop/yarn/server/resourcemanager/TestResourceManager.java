@@ -29,13 +29,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.junit.After;
@@ -62,7 +62,7 @@ public class TestResourceManager {
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager
       registerNode(String hostName, int containerManagerPort, int httpPort,
           String rackName, Resource capability) throws IOException,
-          YarnRemoteException {
+          YarnException {
     return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
         hostName, containerManagerPort, httpPort, rackName, capability,
         resourceManager.getResourceTrackerService(), resourceManager
@@ -71,7 +71,7 @@ public class TestResourceManager {
 
 //  @Test
   public void testResourceAllocation() throws IOException,
-      YarnRemoteException {
+      YarnException {
     LOG.info("--- START: testResourceAllocation ---");
         
     final int memory = 4 * 1024;
@@ -199,7 +199,7 @@ public class TestResourceManager {
       resourceManager.init(conf);
       fail("Exception is expected because the global max attempts" +
           " is negative.");
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       // Exception is expected.
       assertTrue("The thrown exception is not the expected one.",
           e.getMessage().startsWith(
@@ -213,7 +213,7 @@ public class TestResourceManager {
       resourceManager.init(conf);
       fail("Exception is expected because the min memory allocation is" +
           " larger than the max memory allocation.");
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       // Exception is expected.
       assertTrue("The thrown exception is not the expected one.",
           e.getMessage().startsWith(
@@ -227,7 +227,7 @@ public class TestResourceManager {
       resourceManager.init(conf);
       fail("Exception is expected because the min vcores allocation is" +
           " larger than the max vcores allocation.");
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       // Exception is expected.
       assertTrue("The thrown exception is not the expected one.",
           e.getMessage().startsWith(

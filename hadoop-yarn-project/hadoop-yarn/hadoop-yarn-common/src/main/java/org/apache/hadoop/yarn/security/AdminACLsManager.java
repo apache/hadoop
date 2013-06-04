@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 
 public class AdminACLsManager {
 
@@ -69,7 +69,7 @@ public class AdminACLsManager {
       adminAcl.addUser(owner.getShortUserName());
     } catch (IOException e){
       LOG.warn("Could not add current user to admin:" + e);
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
 
     aclsEnabled = conf.getBoolean(YarnConfiguration.YARN_ACL_ENABLE,

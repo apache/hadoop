@@ -20,7 +20,7 @@ package org.apache.hadoop.mapreduce.v2;
 
 import junit.framework.Assert;
 
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
@@ -38,7 +38,7 @@ public class TestRecordFactory {
     try {
       CounterGroup response = pbRecordFactory.newRecordInstance(CounterGroup.class);
       Assert.assertEquals(CounterGroupPBImpl.class, response.getClass());
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to crete record");
     }
@@ -46,7 +46,7 @@ public class TestRecordFactory {
     try {
       GetCountersRequest response = pbRecordFactory.newRecordInstance(GetCountersRequest.class);
       Assert.assertEquals(GetCountersRequestPBImpl.class, response.getClass());
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to crete record");
     }

@@ -24,10 +24,14 @@ package org.apache.hadoop.yarn;
  * service, must include a String only constructor for the exception to be 
  * unwrapped on the client.
  */
-public class YarnException extends RuntimeException {
-  public YarnException(Throwable cause) { super(cause); }
-  public YarnException(String message) { super(message); }
-  public YarnException(String message, Throwable cause) {
+public class YarnRuntimeException extends RuntimeException {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = -7153142425412203936L;
+  public YarnRuntimeException(Throwable cause) { super(cause); }
+  public YarnRuntimeException(String message) { super(message); }
+  public YarnRuntimeException(String message, Throwable cause) {
     super(message, cause);
   }
 }

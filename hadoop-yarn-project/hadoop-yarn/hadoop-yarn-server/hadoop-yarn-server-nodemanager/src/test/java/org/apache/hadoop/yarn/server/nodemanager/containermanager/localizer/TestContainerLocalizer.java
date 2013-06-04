@@ -58,7 +58,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -205,7 +205,7 @@ public class TestContainerLocalizer {
 
     // verify filesystems are closed when localizer fails
     localizer = setupContainerLocalizerForTest();
-    doThrow(new YarnException("Forced Failure")).when(localizer).localizeFiles(
+    doThrow(new YarnRuntimeException("Forced Failure")).when(localizer).localizeFiles(
         any(LocalizationProtocol.class), any(CompletionService.class),
         any(UserGroupInformation.class));
     verify(localizer, never()).closeFileSystems(

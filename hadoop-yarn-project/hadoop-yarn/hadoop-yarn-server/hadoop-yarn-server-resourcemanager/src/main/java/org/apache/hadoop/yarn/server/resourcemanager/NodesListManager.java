@@ -29,7 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.HostsFileReader;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -80,7 +80,7 @@ public class NodesListManager extends AbstractService implements
       } catch (IOException ioe2) {
         // Should *never* happen
         this.hostsReader = null;
-        throw new YarnException(ioe2);
+        throw new YarnRuntimeException(ioe2);
       }
     }
     super.init(conf);

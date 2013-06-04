@@ -45,7 +45,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -77,21 +77,21 @@ public class TestAMAuthorization {
     @Override
     public StartContainerResponse
         startContainer(StartContainerRequest request)
-            throws YarnRemoteException {
+            throws YarnException {
       amTokens = request.getContainerLaunchContext().getTokens();
       return null;
     }
 
     @Override
     public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnRemoteException {
+        throws YarnException {
       // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnRemoteException {
+        GetContainerStatusRequest request) throws YarnException {
       // TODO Auto-generated method stub
       return null;
     }
@@ -255,7 +255,7 @@ public class TestAMAuthorization {
     try {
       client.registerApplicationMaster(request);
       Assert.fail("Should fail with authorization error");
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       Assert.assertTrue(e.getMessage().contains(
           "Unauthorized request from ApplicationMaster. "
               + "Expected ApplicationAttemptID: "

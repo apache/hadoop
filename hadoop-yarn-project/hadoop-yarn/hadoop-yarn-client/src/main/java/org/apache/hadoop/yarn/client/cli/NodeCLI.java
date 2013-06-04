@@ -31,7 +31,7 @@ import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class NodeCLI extends YarnCLI {
@@ -83,10 +83,10 @@ public class NodeCLI extends YarnCLI {
   /**
    * Lists all the nodes present in the cluster
    * 
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  private void listClusterNodes() throws YarnRemoteException, IOException {
+  private void listClusterNodes() throws YarnException, IOException {
     PrintWriter writer = new PrintWriter(sysout);
     List<NodeReport> nodesReport = client.getNodeReports();
     writer.println("Total Nodes:" + nodesReport.size());
@@ -105,9 +105,9 @@ public class NodeCLI extends YarnCLI {
    * Prints the node report for node id.
    * 
    * @param nodeIdStr
-   * @throws YarnRemoteException
+   * @throws YarnException
    */
-  private void printNodeStatus(String nodeIdStr) throws YarnRemoteException,
+  private void printNodeStatus(String nodeIdStr) throws YarnException,
       IOException {
     NodeId nodeId = ConverterUtils.toNodeId(nodeIdStr);
     List<NodeReport> nodesReport = client.getNodeReports();

@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -183,7 +183,7 @@ public abstract class BaseContainerManagerTest {
       @Override
       protected void authorizeRequest(String containerIDStr,
           ContainerLaunchContext launchContext, UserGroupInformation remoteUgi,
-          ContainerTokenIdentifier tokenId) throws YarnRemoteException {
+          ContainerTokenIdentifier tokenId) throws YarnException {
         // do nothing
       }
     };
@@ -212,13 +212,13 @@ public abstract class BaseContainerManagerTest {
 
   public static void waitForContainerState(ContainerManager containerManager,
       ContainerId containerID, ContainerState finalState)
-      throws InterruptedException, YarnRemoteException, IOException {
+      throws InterruptedException, YarnException, IOException {
     waitForContainerState(containerManager, containerID, finalState, 20);
   }
 
   public static void waitForContainerState(ContainerManager containerManager,
           ContainerId containerID, ContainerState finalState, int timeOutMax)
-          throws InterruptedException, YarnRemoteException, IOException {
+          throws InterruptedException, YarnException, IOException {
     GetContainerStatusRequest request =
         recordFactory.newRecordInstance(GetContainerStatusRequest.class);
         request.setContainerId(containerID);

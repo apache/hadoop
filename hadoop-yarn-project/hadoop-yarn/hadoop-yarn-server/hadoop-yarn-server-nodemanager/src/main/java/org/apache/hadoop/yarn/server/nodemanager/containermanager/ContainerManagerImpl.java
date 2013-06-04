@@ -56,7 +56,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -275,7 +275,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   // Get the remoteUGI corresponding to the api call.
   private UserGroupInformation getRemoteUgi()
-      throws YarnRemoteException {
+      throws YarnException {
     UserGroupInformation remoteUgi;
     try {
       remoteUgi = UserGroupInformation.getCurrentUser();
@@ -309,7 +309,7 @@ public class ContainerManagerImpl extends CompositeService implements
   protected ContainerTokenIdentifier getContainerTokenIdentifier(
       UserGroupInformation remoteUgi,
       ContainerTokenIdentifier containerTokenIdentifier)
-      throws YarnRemoteException {
+      throws YarnException {
     if (UserGroupInformation.isSecurityEnabled()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Number of TokenIdentifiers in the UGI from RPC: "
@@ -331,14 +331,14 @@ public class ContainerManagerImpl extends CompositeService implements
    *          passed if verifying the startContainer, null otherwise.
    * @param remoteUgi
    *          ugi corresponding to the remote end making the api-call
-   * @throws YarnRemoteException
+   * @throws YarnException
    */
   @Private
   @VisibleForTesting
   protected void authorizeRequest(String containerIDStr,
       ContainerLaunchContext launchContext,
       UserGroupInformation remoteUgi, ContainerTokenIdentifier tokenId)
-      throws YarnRemoteException {
+      throws YarnException {
 
     boolean unauthorized = false;
     StringBuilder messageBuilder =
@@ -391,7 +391,7 @@ public class ContainerManagerImpl extends CompositeService implements
   @SuppressWarnings("unchecked")
   @Override
   public StartContainerResponse startContainer(StartContainerRequest request)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
 
     if (blockNewContainerRequests.get()) {
       throw RPCUtil.getRemoteException(new NMNotYetReadyException(
@@ -507,7 +507,7 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   @SuppressWarnings("unchecked")
   public StopContainerResponse stopContainer(StopContainerRequest request)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
 
     ContainerId containerID = request.getContainerId();
     String containerIDStr = containerID.toString();
@@ -549,7 +549,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   @Override
   public GetContainerStatusResponse getContainerStatus(
-      GetContainerStatusRequest request) throws YarnRemoteException,
+      GetContainerStatusRequest request) throws YarnException,
       IOException {
 
     ContainerId containerID = request.getContainerId();

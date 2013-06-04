@@ -362,6 +362,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5297. Updated MR App since BuilderUtils is no longer public
     after YARN-748. (Jian He via vinodkv)
 
+    MAPREDUCE-5301. Updated MR code to work with YARN-635 changes of renaming
+    YarnRemoteException to YarnException. (Siddharth Seth via vinodkv)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.

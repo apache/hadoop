@@ -50,7 +50,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.TrackingUriPlugin;
@@ -217,7 +217,7 @@ public class WebAppProxyServlet extends HttpServlet {
   }
   
   private ApplicationReport getApplicationReport(ApplicationId id)
-      throws IOException, YarnRemoteException {
+      throws IOException, YarnException {
     return ((AppReportFetcher) getServletContext()
         .getAttribute(WebAppProxy.FETCHER_ATTRIBUTE)).getApplicationReport(id);
   }
@@ -335,7 +335,7 @@ public class WebAppProxyServlet extends HttpServlet {
 
     } catch(URISyntaxException e) {
       throw new IOException(e); 
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }

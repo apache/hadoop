@@ -56,7 +56,7 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
 import org.junit.Test;
@@ -84,7 +84,7 @@ public class TestRPCFactories {
         RpcServerFactoryPBImpl.get().getServer(
           MRClientProtocol.class, instance, addr, conf, null, 1);
       server.start();
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to crete server");
     } finally {
@@ -110,12 +110,12 @@ public class TestRPCFactories {
       MRClientProtocol client = null;
       try {
         client = (MRClientProtocol) RpcClientFactoryPBImpl.get().getClient(MRClientProtocol.class, 1, NetUtils.getConnectAddress(server), conf);
-      } catch (YarnException e) {
+      } catch (YarnRuntimeException e) {
         e.printStackTrace();
         Assert.fail("Failed to crete client");
       }
       
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       e.printStackTrace();
       Assert.fail("Failed to crete server");
     } finally {

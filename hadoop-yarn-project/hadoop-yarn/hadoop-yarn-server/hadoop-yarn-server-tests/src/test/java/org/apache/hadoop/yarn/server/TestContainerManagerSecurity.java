@@ -63,7 +63,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -129,7 +129,7 @@ public class TestContainerManagerSecurity {
   }
   
   private void testAuthenticatedUser() throws IOException,
-      InterruptedException, YarnRemoteException {
+      InterruptedException, YarnException {
 
     LOG.info("Running test for authenticated user");
 
@@ -188,10 +188,10 @@ public class TestContainerManagerSecurity {
    * 
    * @throws IOException
    * @throws InterruptedException
-   * @throws YarnRemoteException
+   * @throws YarnException
    */
   private void testMaliceUser() throws IOException, InterruptedException,
-      YarnRemoteException {
+      YarnException {
 
     LOG.info("Running test for malice user");
 
@@ -286,7 +286,7 @@ public class TestContainerManagerSecurity {
           client.startContainer(request);
           fail("Connection initiation with illegally modified "
               + "tokens is expected to fail.");
-        } catch (YarnRemoteException e) {
+        } catch (YarnException e) {
           LOG.error("Got exception", e);
           fail("Cannot get a YARN remote exception as "
               + "it will indicate RPC success");
@@ -306,7 +306,7 @@ public class TestContainerManagerSecurity {
   }
 
   private void testExpiredTokens() throws IOException, InterruptedException,
-      YarnRemoteException {
+      YarnException {
 
     LOG.info("\n\nRunning test for malice user");
 
@@ -406,7 +406,7 @@ public class TestContainerManagerSecurity {
   private AMRMProtocol submitAndRegisterApplication(
       ResourceManager resourceManager, final YarnRPC yarnRPC,
       ApplicationId appID) throws IOException,
-      UnsupportedFileSystemException, YarnRemoteException,
+      UnsupportedFileSystemException, YarnException,
       InterruptedException {
 
     // Use ping to simulate sleep on Windows.
@@ -491,7 +491,7 @@ public class TestContainerManagerSecurity {
   }
 
   private Container requestAndGetContainer(AMRMProtocol scheduler,
-      ApplicationId appID) throws YarnRemoteException, InterruptedException,
+      ApplicationId appID) throws YarnException, InterruptedException,
       IOException {
 
     // Request a container allocation.

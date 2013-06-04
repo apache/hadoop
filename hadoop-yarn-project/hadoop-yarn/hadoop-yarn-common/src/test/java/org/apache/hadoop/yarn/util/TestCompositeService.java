@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.junit.Before;
@@ -129,7 +129,7 @@ public class TestCompositeService {
     try {
       serviceManager.start();
       fail("Exception should have been thrown due to startup failure of last service");
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       for (int i = 0; i < NUM_OF_SERVICES - 1; i++) {
         if (i >= FAILED_SERVICE_SEQ_NUMBER) {
           // Failed service state should be INITED
@@ -170,7 +170,7 @@ public class TestCompositeService {
     // Stop the composite service
     try {
       serviceManager.stop();
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       for (int i = 0; i < NUM_OF_SERVICES - 1; i++) {
         assertEquals("Service state should have been ", STATE.STOPPED,
             services[NUM_OF_SERVICES].getServiceState());
@@ -202,7 +202,7 @@ public class TestCompositeService {
     @Override
     public synchronized void start() {
       if (throwExceptionOnStart) {
-        throw new YarnException("Fake service start exception");
+        throw new YarnRuntimeException("Fake service start exception");
       }
       counter++;
       callSequenceNumber = counter;
@@ -214,7 +214,7 @@ public class TestCompositeService {
       counter++;
       callSequenceNumber = counter;
       if (throwExceptionOnStop) {
-        throw new YarnException("Fake service stop exception");
+        throw new YarnRuntimeException("Fake service stop exception");
       }
       super.stop();
     }
