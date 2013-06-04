@@ -32,8 +32,8 @@ import org.apache.hadoop.mapreduce.v2.proto.MRProtos.TaskAttemptReportProtoOrBui
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.TaskAttemptStateProto;
 import org.apache.hadoop.mapreduce.v2.util.MRProtoUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 
 

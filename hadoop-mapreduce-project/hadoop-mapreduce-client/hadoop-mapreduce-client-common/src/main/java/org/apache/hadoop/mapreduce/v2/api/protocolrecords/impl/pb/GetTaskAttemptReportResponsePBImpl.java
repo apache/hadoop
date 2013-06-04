@@ -25,7 +25,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.impl.pb.TaskAttemptReportPBImp
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.TaskAttemptReportProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetTaskAttemptReportResponseProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetTaskAttemptReportResponseProtoOrBuilder;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 
 
     

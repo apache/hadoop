@@ -29,7 +29,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.impl.pb.TaskReportPBImpl;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.TaskReportProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetTaskReportsResponseProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetTaskReportsResponseProtoOrBuilder;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 
 
     
