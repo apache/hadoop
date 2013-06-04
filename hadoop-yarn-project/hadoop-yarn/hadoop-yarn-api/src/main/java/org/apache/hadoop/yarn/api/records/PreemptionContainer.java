@@ -15,40 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords;
+package org.apache.hadoop.yarn.api.records;
 
-import java.util.Set;
-
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
- * Enumeration of particular allocations to be reclaimed. The platform will
- * reclaim exactly these resources, so the <code>ApplicationMaster</code> (AM)
- * may attempt to checkpoint work or adjust its execution plan to accommodate
- * it. In contrast to {@link PreemptionContract}, the AM has no flexibility in
- * selecting which resources to return to the cluster.
- * @see PreemptionMessage
+ * Specific container requested back by the <code>ResourceManager</code>.
+ * @see PreemptionContract
+ * @see StrictPreemptionContract
  */
-@Public
-@Evolving
-public interface StrictPreemptionContract {
+public abstract class PreemptionContainer {
+
+  public static PreemptionContainer newInstance(ContainerId id) {
+    PreemptionContainer container = Records.newRecord(PreemptionContainer.class);
+    container.setId(id);
+    return container;
+  }
 
   /**
-   * Get the set of {@link PreemptionContainer} specifying containers owned by
-   * the <code>ApplicationMaster</code> that may be reclaimed by the
-   * <code>ResourceManager</code>.
-   * @return the set of {@link ContainerId} to be preempted.
+   * @return Container referenced by this handle.
    */
   @Public
   @Evolving
-  public Set<PreemptionContainer> getContainers();
+  public abstract ContainerId getId();
 
   @Private
   @Unstable
-  public void setContainers(Set<PreemptionContainer> containers);
+  public abstract void setId(ContainerId id);
 
 }

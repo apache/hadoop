@@ -73,6 +73,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-635. Renamed YarnRemoteException to YarnException. (Siddharth Seth via
     vinodkv)
 
+    YARN-756. Move Preemption* records to yarn.api where they really belong.
+    (Jian He via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

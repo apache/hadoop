@@ -15,16 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
+package org.apache.hadoop.yarn.api.records.impl;
 
-import org.apache.hadoop.yarn.api.protocolrecords.PreemptionContainer;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.PreemptionContainer;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionContainerProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionContainerProtoOrBuilder;
 
-public class PreemptionContainerPBImpl implements PreemptionContainer {
+public class PreemptionContainerPBImpl extends PreemptionContainer {
 
   PreemptionContainerProto proto =
     PreemptionContainerProto.getDefaultInstance();

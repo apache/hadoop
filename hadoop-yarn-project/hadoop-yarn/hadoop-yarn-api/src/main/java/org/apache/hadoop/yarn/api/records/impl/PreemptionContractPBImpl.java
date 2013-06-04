@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
+package org.apache.hadoop.yarn.api.records.impl;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -23,16 +23,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.yarn.api.protocolrecords.PreemptionContainer;
-import org.apache.hadoop.yarn.api.protocolrecords.PreemptionContract;
 import org.apache.hadoop.yarn.api.protocolrecords.PreemptionResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.PreemptionResourceRequestPBImpl;
+import org.apache.hadoop.yarn.api.records.PreemptionContainer;
+import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionContainerProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionContractProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionContractProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionResourceRequestProto;
 
-public class PreemptionContractPBImpl implements PreemptionContract {
+public class PreemptionContractPBImpl extends PreemptionContract {
 
   PreemptionContractProto proto = PreemptionContractProto.getDefaultInstance();
   PreemptionContractProto.Builder builder = null;

@@ -15,12 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords;
+package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * A {@link PreemptionMessage} is part of the RM-AM protocol, and it is used by
@@ -56,7 +57,15 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
  */
 @Public
 @Evolving
-public interface PreemptionMessage {
+public abstract class PreemptionMessage {
+
+  public static PreemptionMessage newInstance(StrictPreemptionContract set,
+      PreemptionContract contract) {
+    PreemptionMessage message = Records.newRecord(PreemptionMessage.class);
+    message.setStrictContract(set);
+    message.setContract(contract);
+    return message;
+  }
 
   /**
    * @return Specific resources that may be killed by the
@@ -64,21 +73,21 @@ public interface PreemptionMessage {
    */
   @Public
   @Evolving
-  public StrictPreemptionContract getStrictContract();
+  public abstract StrictPreemptionContract getStrictContract();
 
   @Private
   @Unstable
-  public void setStrictContract(StrictPreemptionContract set);
+  public abstract void setStrictContract(StrictPreemptionContract set);
 
   /**
    * @return Contract describing resources to return to the cluster.
    */
   @Public
   @Evolving
-  public PreemptionContract getContract();
+  public abstract PreemptionContract getContract();
 
   @Private
   @Unstable
-  public void setContract(PreemptionContract contract);
+  public abstract void setContract(PreemptionContract contract);
 
 }

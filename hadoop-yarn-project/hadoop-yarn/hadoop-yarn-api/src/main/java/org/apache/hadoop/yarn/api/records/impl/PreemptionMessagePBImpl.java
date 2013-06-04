@@ -15,17 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
+package org.apache.hadoop.yarn.api.records.impl;
 
-import org.apache.hadoop.yarn.api.protocolrecords.PreemptionContract;
-import org.apache.hadoop.yarn.api.protocolrecords.PreemptionMessage;
-import org.apache.hadoop.yarn.api.protocolrecords.StrictPreemptionContract;
+import org.apache.hadoop.yarn.api.records.PreemptionContract;
+import org.apache.hadoop.yarn.api.records.PreemptionMessage;
+import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionContractProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionMessageProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionMessageProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StrictPreemptionContractProto;
 
-public class PreemptionMessagePBImpl implements PreemptionMessage {
+public class PreemptionMessagePBImpl extends PreemptionMessage {
 
   PreemptionMessageProto proto = PreemptionMessageProto.getDefaultInstance();
   PreemptionMessageProto.Builder builder = null;
