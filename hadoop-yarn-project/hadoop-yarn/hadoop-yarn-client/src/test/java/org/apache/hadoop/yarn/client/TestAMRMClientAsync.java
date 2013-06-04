@@ -189,7 +189,7 @@ public class TestAMRMClientAsync {
     
     final AllocateResponse rebootResponse = createAllocateResponse(
         new ArrayList<ContainerStatus>(), new ArrayList<Container>());
-    rebootResponse.setReboot(true);
+    rebootResponse.setResync(true);
     when(client.allocate(anyFloat())).thenReturn(rebootResponse);
     
     AMRMClientAsync<ContainerRequest> asyncClient = 

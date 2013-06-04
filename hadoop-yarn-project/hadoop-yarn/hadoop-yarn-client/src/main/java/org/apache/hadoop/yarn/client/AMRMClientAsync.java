@@ -331,7 +331,7 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
           continue;
         }
 
-        if (response.getReboot()) {
+        if (response.getResync()) {
           handler.onRebootRequest();
           LOG.info("Reboot requested. Stopping callback.");
           break;

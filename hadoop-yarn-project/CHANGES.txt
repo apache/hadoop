@@ -93,8 +93,8 @@ Release 2.1.0-beta - UNRELEASED
     YARN-635. Renamed YarnRemoteException to YarnException. (Siddharth Seth via
     vinodkv)
 
-    YARN-756. Move Preemption* records to yarn.api where they really belong.
-    (Jian He via vinodkv)
+    YARN-755. Renamed AllocateResponse.reboot to AllocateResponse.resync. (Bikas
+    Saha via vinodkv)
 
   NEW FEATURES
 
@@ -264,6 +264,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-717. Put object creation factories for Token in the class itself and
     remove useless derivations for specific tokens. (Jian He via vinodkv)
+
+    YARN-756. Move Preemption* records to yarn.api where they really belong.
+    (Jian He via vinodkv)
 
   OPTIMIZATIONS
 

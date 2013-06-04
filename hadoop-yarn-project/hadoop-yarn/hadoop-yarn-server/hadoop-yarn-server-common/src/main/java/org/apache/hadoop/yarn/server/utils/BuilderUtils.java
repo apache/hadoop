@@ -411,7 +411,7 @@ public class BuilderUtils {
     response.setAllocatedContainers(allocatedContainers);
     response.setUpdatedNodes(updatedNodes);
     response.setAvailableResources(availResources);
-    response.setReboot(reboot);
+    response.setResync(reboot);
     response.setPreemptionMessage(preempt);
 
     return response;

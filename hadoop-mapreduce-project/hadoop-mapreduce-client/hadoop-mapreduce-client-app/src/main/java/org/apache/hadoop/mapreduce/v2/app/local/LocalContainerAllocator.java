@@ -116,7 +116,7 @@ public class LocalContainerAllocator extends RMCommunicator
       // continue to attempt to contact the RM.
       throw e;
     }
-    if (allocateResponse.getReboot()) {
+    if (allocateResponse.getResync()) {
       LOG.info("Event from RM: shutting down Application Master");
       // This can happen if the RM has been restarted. If it is in that state,
       // this application must clean itself up.
