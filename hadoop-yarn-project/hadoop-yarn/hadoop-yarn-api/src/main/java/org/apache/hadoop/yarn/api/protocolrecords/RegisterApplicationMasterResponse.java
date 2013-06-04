@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to a new 
@@ -43,8 +44,19 @@ import org.apache.hadoop.yarn.api.records.Resource;
  */
 @Public
 @Stable
-public interface RegisterApplicationMasterResponse {
-  
+public abstract class RegisterApplicationMasterResponse {
+
+  public static RegisterApplicationMasterResponse newInstance(
+      Resource minCapability, Resource maxCapability,
+      Map<ApplicationAccessType, String> acls) {
+    RegisterApplicationMasterResponse response =
+        Records.newRecord(RegisterApplicationMasterResponse.class);
+    response.setMinimumResourceCapability(minCapability);
+    response.setMaximumResourceCapability(maxCapability);
+    response.setApplicationACLs(acls);
+    return response;
+  }
+
   /**
    * Get the minimum capability for any {@link Resource} allocated by the 
    * <code>ResourceManager</code> in the cluster.
@@ -52,11 +64,11 @@ public interface RegisterApplicationMasterResponse {
    */
   @Public
   @Stable
-  public Resource getMinimumResourceCapability();
+  public abstract Resource getMinimumResourceCapability();
   
   @Private
   @Unstable
-  public void setMinimumResourceCapability(Resource capability);
+  public abstract void setMinimumResourceCapability(Resource capability);
   
   /**
    * Get the maximum capability for any {@link Resource} allocated by the 
@@ -65,11 +77,11 @@ public interface RegisterApplicationMasterResponse {
    */
   @Public
   @Stable
-  public Resource getMaximumResourceCapability();
+  public abstract Resource getMaximumResourceCapability();
   
   @Private
   @Unstable
-  public void setMaximumResourceCapability(Resource capability);
+  public abstract void setMaximumResourceCapability(Resource capability);
 
   /**
    * Get the <code>ApplicationACL</code>s for the application. 
@@ -77,7 +89,7 @@ public interface RegisterApplicationMasterResponse {
    */
   @Public
   @Stable
-  public Map<ApplicationAccessType, String> getApplicationACLs();
+  public abstract Map<ApplicationAccessType, String> getApplicationACLs();
 
   /**
    * Set the <code>ApplicationACL</code>s for the application. 
@@ -85,5 +97,5 @@ public interface RegisterApplicationMasterResponse {
    */
   @Private
   @Unstable
-  public void setApplicationACLs(Map<ApplicationAccessType, String> acls);
+  public abstract void setApplicationACLs(Map<ApplicationAccessType, String> acls);
 }

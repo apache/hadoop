@@ -22,12 +22,10 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRespons
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProtoOrBuilder;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 
-public class GetDelegationTokenResponsePBImpl extends
-ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse {
+public class GetDelegationTokenResponsePBImpl extends GetDelegationTokenResponse {
 
   Token appToken;
 
@@ -68,7 +66,6 @@ ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse
     this.appToken = appToken;
   }
 
-  @Override
   public GetDelegationTokenResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
@@ -76,6 +73,25 @@ ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse
     return proto;
   }
 
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+  }
 
   private void mergeLocalToBuilder() {
     if (appToken != null) {

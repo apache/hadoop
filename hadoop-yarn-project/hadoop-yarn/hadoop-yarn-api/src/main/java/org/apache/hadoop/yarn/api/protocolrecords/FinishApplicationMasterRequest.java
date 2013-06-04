@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The finalization request sent by the <code>ApplicationMaster</code> to
@@ -45,7 +46,19 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
  *
  * @see AMRMProtocol#finishApplicationMaster(FinishApplicationMasterRequest)
  */
-public interface FinishApplicationMasterRequest {
+public abstract class FinishApplicationMasterRequest {
+
+  public static FinishApplicationMasterRequest newInstance(
+      ApplicationAttemptId appAttemptId, FinalApplicationStatus finalAppStatus,
+      String diagnostics, String url) {
+    FinishApplicationMasterRequest request =
+        Records.newRecord(FinishApplicationMasterRequest.class);
+    request.setAppAttemptId(appAttemptId);
+    request.setFinishApplicationStatus(finalAppStatus);
+    request.setDiagnostics(diagnostics);
+    request.setTrackingUrl(url);
+    return request;
+  }
 
   /**
    * Get the <code>ApplicationAttemptId</code> being managed by the
@@ -55,7 +68,7 @@ public interface FinishApplicationMasterRequest {
    */
   @Public
   @Stable
-  ApplicationAttemptId getApplicationAttemptId();
+  public abstract ApplicationAttemptId getApplicationAttemptId();
 
   /**
    * Set the <code>ApplicationAttemptId</code> being managed by the
@@ -65,7 +78,7 @@ public interface FinishApplicationMasterRequest {
    */
   @Public
   @Stable
-  void setAppAttemptId(ApplicationAttemptId applicationAttemptId);
+  public abstract void setAppAttemptId(ApplicationAttemptId applicationAttemptId);
 
   /**
    * Get <em>final state</em> of the <code>ApplicationMaster</code>.
@@ -73,7 +86,7 @@ public interface FinishApplicationMasterRequest {
    */
   @Public
   @Stable
-  FinalApplicationStatus getFinalApplicationStatus();
+  public abstract FinalApplicationStatus getFinalApplicationStatus();
 
   /**
    * Set the <em>finish state</em> of the <code>ApplicationMaster</code>
@@ -81,7 +94,7 @@ public interface FinishApplicationMasterRequest {
    */
   @Public
   @Stable
-  void setFinishApplicationStatus(FinalApplicationStatus finishState);
+  public abstract void setFinishApplicationStatus(FinalApplicationStatus finishState);
 
   /**
    * Get <em>diagnostic information</em> on application failure.
@@ -89,7 +102,7 @@ public interface FinishApplicationMasterRequest {
    */
   @Public
   @Stable
-  String getDiagnostics();
+  public abstract String getDiagnostics();
 
   /**
    * Set <em>diagnostic information</em> on application failure.
@@ -97,7 +110,7 @@ public interface FinishApplicationMasterRequest {
    */
   @Public
   @Stable
-  void setDiagnostics(String diagnostics);
+  public abstract void setDiagnostics(String diagnostics);
 
   /**
    * Get the <em>tracking URL</em> for the <code>ApplicationMaster</code>.
@@ -105,7 +118,7 @@ public interface FinishApplicationMasterRequest {
    */
   @Public
   @Stable
-  String getTrackingUrl();
+  public abstract String getTrackingUrl();
 
   /**
    * Set the <em>tracking URL</em>for the <code>ApplicationMaster</code>
@@ -114,6 +127,6 @@ public interface FinishApplicationMasterRequest {
    */
   @Public
   @Stable
-  void setTrackingUrl(String url);
+  public abstract void setTrackingUrl(String url);
 
 }

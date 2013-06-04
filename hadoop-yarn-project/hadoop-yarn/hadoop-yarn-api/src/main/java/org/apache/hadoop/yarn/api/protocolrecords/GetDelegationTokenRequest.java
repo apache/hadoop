@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * The request issued by the client to get a delegation token from
@@ -28,7 +29,15 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
  */
 @Public
 @Evolving
-public interface GetDelegationTokenRequest {
-  String getRenewer();
-  void setRenewer(String renewer);
+public abstract class GetDelegationTokenRequest {
+
+  public GetDelegationTokenRequest newInstance(String renewer) {
+    GetDelegationTokenRequest request =
+        Records.newRecord(GetDelegationTokenRequest.class);
+    request.setRenewer(renewer);
+    return request;
+  }
+
+  public abstract String getRenewer();
+  public abstract void setRenewer(String renewer);
 }

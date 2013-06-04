@@ -24,14 +24,12 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesResponseProtoOrBuilder;
 
-public class GetClusterNodesResponsePBImpl extends
-    ProtoBase<GetClusterNodesResponseProto> implements GetClusterNodesResponse {
+public class GetClusterNodesResponsePBImpl extends GetClusterNodesResponse {
 
   GetClusterNodesResponseProto proto = 
     GetClusterNodesResponseProto.getDefaultInstance();
@@ -63,12 +61,31 @@ public class GetClusterNodesResponsePBImpl extends
     this.nodeManagerInfoList = nodeManagers;
   }
 
-  @Override
   public GetClusterNodesResponseProto getProto() {    
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToBuilder() {

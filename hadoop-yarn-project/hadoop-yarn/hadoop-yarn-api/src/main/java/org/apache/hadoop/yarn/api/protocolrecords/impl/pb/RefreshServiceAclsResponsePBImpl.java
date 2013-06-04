@@ -19,12 +19,10 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshServiceAclsResponse;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsResponseProto;
 
-public class RefreshServiceAclsResponsePBImpl 
-extends ProtoBase<RefreshServiceAclsResponseProto>
-implements RefreshServiceAclsResponse {
+public class RefreshServiceAclsResponsePBImpl extends
+    RefreshServiceAclsResponse {
 
   RefreshServiceAclsResponseProto proto = 
       RefreshServiceAclsResponseProto.getDefaultInstance();
@@ -45,5 +43,25 @@ implements RefreshServiceAclsResponse {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 }

@@ -24,15 +24,12 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueUserACLInfoPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueUserACLInfoProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetQueueUserAclsInfoResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetQueueUserAclsInfoResponseProtoOrBuilder;
 
-public class GetQueueUserAclsInfoResponsePBImpl extends 
-ProtoBase<GetQueueUserAclsInfoResponseProto> 
-implements GetQueueUserAclsInfoResponse {
+public class GetQueueUserAclsInfoResponsePBImpl extends GetQueueUserAclsInfoResponse {
 
   List<QueueUserACLInfo> queueUserAclsInfoList;
 
@@ -65,12 +62,31 @@ implements GetQueueUserAclsInfoResponse {
     this.queueUserAclsInfoList = queueUserAclsList;
   }
 
-  @Override
   public GetQueueUserAclsInfoResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToBuilder() {

@@ -24,15 +24,13 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllApplicationsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllApplicationsResponseProtoOrBuilder;
 
 public class GetAllApplicationsResponsePBImpl 
-extends ProtoBase<GetAllApplicationsResponseProto> implements 
-GetAllApplicationsResponse {
+extends GetAllApplicationsResponse {
 
   GetAllApplicationsResponseProto proto = 
     GetAllApplicationsResponseProto.getDefaultInstance();
@@ -64,12 +62,31 @@ GetAllApplicationsResponse {
     this.applicationList = applications;
   }
 
-  @Override
   public GetAllApplicationsResponseProto getProto() {    
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToBuilder() {
