@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -107,7 +106,7 @@ public class TestLocalContainerAllocator {
     }
 
     private static AppContext createAppContext() {
-      ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+      ApplicationId appId = ApplicationId.newInstance(1, 1);
       ApplicationAttemptId attemptId =
           ApplicationAttemptId.newInstance(appId, 1);
       Job job = mock(Job.class);

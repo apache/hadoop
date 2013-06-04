@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher.EventType;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
@@ -65,7 +66,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -127,12 +127,12 @@ public class TestContainerLauncherImpl {
       int id) {
     return ContainerId.newInstance(
       ApplicationAttemptId.newInstance(
-        BuilderUtils.newApplicationId(ts, appId), attemptId), id);
+        ApplicationId.newInstance(ts, appId), attemptId), id);
   }
 
   public static TaskAttemptId makeTaskAttemptId(long ts, int appId, int taskId, 
       TaskType taskType, int id) {
-    ApplicationId aID = BuilderUtils.newApplicationId(ts, appId);
+    ApplicationId aID = ApplicationId.newInstance(ts, appId);
     JobId jID = MRBuilderUtils.newJobId(aID, id);
     TaskId tID = MRBuilderUtils.newTaskId(jID, taskId, taskType);
     return MRBuilderUtils.newTaskAttemptId(tID, id);
@@ -410,7 +410,7 @@ public class TestContainerLauncherImpl {
   private Token createNewContainerToken(ContainerId contId,
       String containerManagerAddr) {
     long currentTime = System.currentTimeMillis();
-    return BuilderUtils.newContainerToken(NodeId.newInstance("127.0.0.1",
+    return MRApp.newContainerToken(NodeId.newInstance("127.0.0.1",
         1234), "password".getBytes(), new ContainerTokenIdentifier(
         contId, containerManagerAddr, "user",
         Resource.newInstance(1024, 1),

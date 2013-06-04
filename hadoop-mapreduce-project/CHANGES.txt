@@ -356,6 +356,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5245. Added back constants to JobConf to fix incompatibilities.  
     (Zhijie Shen via acmurthy) 
 
+    MAPREDUCE-5297. Updated MR App since BuilderUtils is no longer public
+    after YARN-748. (Jian He via vinodkv)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.

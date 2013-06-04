@@ -57,7 +57,6 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -425,7 +424,7 @@ public class TestClientServiceDelegate {
   }
 
   private ApplicationReport getFinishedApplicationReport() {
-    ApplicationId appId = BuilderUtils.newApplicationId(1234, 5);
+    ApplicationId appId = ApplicationId.newInstance(1234, 5);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         appId, 0);
     return ApplicationReport.newInstance(appId, attemptId, "user", "queue",
@@ -435,7 +434,7 @@ public class TestClientServiceDelegate {
   }
 
   private ApplicationReport getRunningApplicationReport(String host, int port) {
-    ApplicationId appId = BuilderUtils.newApplicationId(1234, 5);
+    ApplicationId appId = ApplicationId.newInstance(1234, 5);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         appId, 0);
     return ApplicationReport.newInstance(appId, attemptId, "user", "queue",

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import java.io.Serializable;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
@@ -61,6 +63,25 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
     request.setCapability(capability);
     request.setNumContainers(numContainers);
     return request;
+  }
+
+  public static class ResourceRequestComparator implements
+      java.util.Comparator<ResourceRequest>, Serializable {
+    @Override
+    public int compare(ResourceRequest r1, ResourceRequest r2) {
+
+      // Compare priority, host and capability
+      int ret = r1.getPriority().compareTo(r2.getPriority());
+      if (ret == 0) {
+        String h1 = r1.getResourceName();
+        String h2 = r2.getResourceName();
+        ret = h1.compareTo(h2);
+      }
+      if (ret == 0) {
+        ret = r1.getCapability().compareTo(r2.getCapability());
+      }
+      return ret;
+    }
   }
 
   /**

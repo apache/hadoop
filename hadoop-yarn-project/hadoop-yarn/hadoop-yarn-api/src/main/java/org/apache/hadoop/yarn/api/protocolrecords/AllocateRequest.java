@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The core request sent by the <code>ApplicationMaster</code> to the 
@@ -55,7 +56,20 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
  */
 @Public
 @Stable
-public interface AllocateRequest {
+public abstract class AllocateRequest {
+
+  public static AllocateRequest newInstance(
+      ApplicationAttemptId applicationAttemptId, int responseID,
+      float appProgress, List<ResourceRequest> resourceAsk,
+      List<ContainerId> containersToBeReleased) {
+    AllocateRequest allocateRequest = Records.newRecord(AllocateRequest.class);
+    allocateRequest.setApplicationAttemptId(applicationAttemptId);
+    allocateRequest.setResponseId(responseID);
+    allocateRequest.setProgress(appProgress);
+    allocateRequest.setAskList(resourceAsk);
+    allocateRequest.setReleaseList(containersToBeReleased);
+    return allocateRequest;
+  }
 
   /**
    * Get the <code>ApplicationAttemptId</code> being managed by the 
@@ -65,7 +79,7 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  ApplicationAttemptId getApplicationAttemptId();
+  public abstract ApplicationAttemptId getApplicationAttemptId();
   
   /**
    * Set the <code>ApplicationAttemptId</code> being managed by the 
@@ -75,7 +89,7 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
+  public abstract void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
 
   /**
    * Get the <em>response id</em> used to track duplicate responses.
@@ -83,7 +97,7 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  int getResponseId();
+  public abstract int getResponseId();
 
   /**
    * Set the <em>response id</em> used to track duplicate responses.
@@ -91,7 +105,7 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  void setResponseId(int id);
+  public abstract void setResponseId(int id);
 
   /**
    * Get the <em>current progress</em> of application. 
@@ -99,7 +113,7 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  float getProgress();
+  public abstract float getProgress();
   
   /**
    * Set the <em>current progress</em> of application
@@ -107,7 +121,7 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  void setProgress(float progress);
+  public abstract void setProgress(float progress);
 
   /**
    * Get the list of <code>ResourceRequest</code> to update the 
@@ -116,7 +130,7 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  List<ResourceRequest> getAskList();
+  public abstract List<ResourceRequest> getAskList();
   
   /**
    * Set list of <code>ResourceRequest</code> to update the
@@ -127,7 +141,7 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  void setAskList(List<ResourceRequest> resourceRequests);
+  public abstract void setAskList(List<ResourceRequest> resourceRequests);
 
   /**
    * Get the list of <code>ContainerId</code> of containers being 
@@ -137,7 +151,7 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  List<ContainerId> getReleaseList();
+  public abstract List<ContainerId> getReleaseList();
 
   /**
    * Set the list of <code>ContainerId</code> of containers being
@@ -148,5 +162,5 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  void setReleaseList(List<ContainerId> releaseContainers);
+  public abstract void setReleaseList(List<ContainerId> releaseContainers);
 }

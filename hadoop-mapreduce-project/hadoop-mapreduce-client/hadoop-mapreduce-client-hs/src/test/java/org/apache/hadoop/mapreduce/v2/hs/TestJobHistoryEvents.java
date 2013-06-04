@@ -43,7 +43,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.Service;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestJobHistoryEvents {
@@ -169,7 +168,7 @@ public class TestJobHistoryEvents {
         TaskAttemptState.SUCCEEDED, attempt.getState());
     Assert.assertNotNull(attempt.getAssignedContainerID());
   //Verify the wrong ctor is not being used. Remove after mrv1 is removed.
-    ContainerId fakeCid = BuilderUtils.newContainerId(-1, -1, -1, -1);
+    ContainerId fakeCid = MRApp.newContainerId(-1, -1, -1, -1);
     Assert.assertFalse(attempt.getAssignedContainerID().equals(fakeCid));
     //Verify complete contianerManagerAddress
     Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_PORT,

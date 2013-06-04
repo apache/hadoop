@@ -81,7 +81,7 @@ public class Application {
   
   final private Set<ResourceRequest> ask = 
     new TreeSet<ResourceRequest>(
-        new org.apache.hadoop.yarn.util.BuilderUtils.ResourceRequestComparator());
+        new org.apache.hadoop.yarn.api.records.ResourceRequest.ResourceRequestComparator());
 
   final private Map<String, NodeManager> nodes = 
     new HashMap<String, NodeManager>();
@@ -230,7 +230,7 @@ public class Application {
     ResourceRequest request = requests.get(resourceName);
     if (request == null) {
       request = 
-        org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
+        org.apache.hadoop.yarn.server.utils.BuilderUtils.newResourceRequest(
             priority, resourceName, capability, 1);
       requests.put(resourceName, request);
     } else {
@@ -240,7 +240,7 @@ public class Application {
     // Note this down for next interaction with ResourceManager
     ask.remove(request);
     ask.add(
-        org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
+        org.apache.hadoop.yarn.server.utils.BuilderUtils.newResourceRequest(
             request)); // clone to ensure the RM doesn't manipulate the same obj
     
     if(LOG.isDebugEnabled()) {
@@ -388,7 +388,7 @@ public class Application {
     // Note this for next interaction with ResourceManager
     ask.remove(request);
     ask.add(
-        org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
+        org.apache.hadoop.yarn.server.utils.BuilderUtils.newResourceRequest(
         request)); // clone to ensure the RM doesn't manipulate the same obj
 
     if(LOG.isDebugEnabled()) {

@@ -16,9 +16,10 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.util;
+package org.apache.hadoop.yarn.server.utils;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -60,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * Builder utilities to construct various objects.
@@ -71,7 +73,7 @@ public class BuilderUtils {
       .getRecordFactory(null);
 
   public static class ApplicationIdComparator implements
-      Comparator<ApplicationId> {
+      Comparator<ApplicationId>, Serializable {
     @Override
     public int compare(ApplicationId a1, ApplicationId a2) {
       return a1.compareTo(a2);
@@ -79,32 +81,12 @@ public class BuilderUtils {
   }
 
   public static class ContainerIdComparator implements
-      java.util.Comparator<ContainerId> {
+      java.util.Comparator<ContainerId>, Serializable {
 
     @Override
     public int compare(ContainerId c1,
         ContainerId c2) {
       return c1.compareTo(c2);
-    }
-  }
-
-  public static class ResourceRequestComparator
-  implements java.util.Comparator<org.apache.hadoop.yarn.api.records.ResourceRequest> {
-    @Override
-    public int compare(org.apache.hadoop.yarn.api.records.ResourceRequest r1,
-        org.apache.hadoop.yarn.api.records.ResourceRequest r2) {
-
-      // Compare priority, host and capability
-      int ret = r1.getPriority().compareTo(r2.getPriority());
-      if (ret == 0) {
-        String h1 = r1.getResourceName();
-        String h2 = r2.getResourceName();
-        ret = h1.compareTo(h2);
-      }
-      if (ret == 0) {
-        ret = r1.getCapability().compareTo(r2.getCapability());
-      }
-      return ret;
     }
   }
 

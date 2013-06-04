@@ -30,7 +30,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 
 /**
  * ApplicationTokenIdentifier is the TokenIdentifier to be used by
@@ -69,9 +68,9 @@ public class ApplicationTokenIdentifier extends TokenIdentifier {
     int appId = in.readInt();
     int attemptId = in.readInt();
     ApplicationId applicationId =
-        BuilderUtils.newApplicationId(clusterTimeStamp, appId);
+        ApplicationId.newInstance(clusterTimeStamp, appId);
     this.applicationAttemptId =
-        BuilderUtils.newApplicationAttemptId(applicationId, attemptId);
+        ApplicationAttemptId.newInstance(applicationId, attemptId);
   }
 
   @Override

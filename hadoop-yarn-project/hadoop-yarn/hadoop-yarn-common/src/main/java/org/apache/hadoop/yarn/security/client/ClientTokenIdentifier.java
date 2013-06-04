@@ -28,7 +28,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 public class ClientTokenIdentifier extends TokenIdentifier {
 
@@ -62,9 +62,8 @@ public class ClientTokenIdentifier extends TokenIdentifier {
   @Override
   public void readFields(DataInput in) throws IOException {
     this.applicationAttemptId =
-        BuilderUtils.newApplicationAttemptId(
-          BuilderUtils.newApplicationId(in.readLong(), in.readInt()),
-          in.readInt());
+        ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(in.readLong(), in.readInt()), in.readInt());
   }
 
   @Override

@@ -67,6 +67,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-720. container-log4j.properties should not refer to mapreduce
     property names. (Zhijie Shen via sseth)
 
+    YARN-748. Moved BuilderUtils from yarn-common to yarn-server-common for
+    eventual retirement. (Jian He via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

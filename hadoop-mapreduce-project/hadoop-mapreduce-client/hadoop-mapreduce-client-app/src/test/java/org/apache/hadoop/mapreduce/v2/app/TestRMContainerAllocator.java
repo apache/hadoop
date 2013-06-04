@@ -98,7 +98,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Test;
 
@@ -1596,7 +1595,7 @@ public class TestRMContainerAllocator {
     AppContext appContext = mock(AppContext.class);
     when(appContext.getClock()).thenReturn(clock);
     when(appContext.getApplicationID()).thenReturn(
-        BuilderUtils.newApplicationId(1, 1));
+        ApplicationId.newInstance(1, 1));
 
     RMContainerAllocator allocator = new RMContainerAllocator(
         mock(ClientService.class), appContext) {
@@ -1654,7 +1653,7 @@ public class TestRMContainerAllocator {
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(
         MRBuilderUtils.newTaskId(
             MRBuilderUtils.newJobId(1, 1, 1), 1, TaskType.MAP), 1);
-    ApplicationId applicationId = BuilderUtils.newApplicationId(1, 1);
+    ApplicationId applicationId = ApplicationId.newInstance(1, 1);
     ApplicationAttemptId applicationAttemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
     ContainerId containerId = ContainerId.newInstance(applicationAttemptId, 1);

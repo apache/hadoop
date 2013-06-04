@@ -66,7 +66,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.collect.Iterators;
@@ -621,7 +620,7 @@ public class MockJobs extends MockApps {
 
   private static AMInfo createAMInfo(int attempt) {
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
-        BuilderUtils.newApplicationId(100, 1), attempt);
+        ApplicationId.newInstance(100, 1), attempt);
     ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
     return MRBuilderUtils.newAMInfo(appAttemptId, System.currentTimeMillis(),
         containerId, NM_HOST, NM_PORT, NM_HTTP_PORT);

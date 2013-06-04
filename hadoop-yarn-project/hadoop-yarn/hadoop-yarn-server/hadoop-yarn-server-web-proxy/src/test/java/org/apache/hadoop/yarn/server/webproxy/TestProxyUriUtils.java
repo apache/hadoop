@@ -25,7 +25,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 import org.junit.Test;
 

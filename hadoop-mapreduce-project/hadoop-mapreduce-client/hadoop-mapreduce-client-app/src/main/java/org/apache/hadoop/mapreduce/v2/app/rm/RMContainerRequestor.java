@@ -46,7 +46,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 
 
 /**
@@ -74,7 +73,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   // use custom comparator to make sure ResourceRequest objects differing only in 
   // numContainers dont end up as duplicates
   private final Set<ResourceRequest> ask = new TreeSet<ResourceRequest>(
-      new org.apache.hadoop.yarn.util.BuilderUtils.ResourceRequestComparator());
+      new org.apache.hadoop.yarn.api.records.ResourceRequest.ResourceRequestComparator());
   private final Set<ContainerId> release = new TreeSet<ContainerId>(); 
 
   private boolean nodeBlacklistingEnabled;
@@ -146,7 +145,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
 
   protected AllocateResponse makeRemoteRequest() throws IOException {
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
+    AllocateRequest allocateRequest = AllocateRequest.newInstance(
         applicationAttemptId, lastResponseID, super.getApplicationProgress(),
         new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
             release));

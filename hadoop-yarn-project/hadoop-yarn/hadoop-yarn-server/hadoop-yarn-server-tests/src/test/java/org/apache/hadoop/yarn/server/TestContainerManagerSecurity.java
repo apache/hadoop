@@ -75,7 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 
@@ -499,7 +499,7 @@ public class TestContainerManagerSecurity {
     ask.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
         ResourceRequest.ANY, BuilderUtils.newResource(1024, 1), 1));
 
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
+    AllocateRequest allocateRequest = AllocateRequest.newInstance(
         BuilderUtils.newApplicationAttemptId(appID, 1), 0, 0F, ask,
         new ArrayList<ContainerId>());
     List<Container> allocatedContainers = scheduler.allocate(allocateRequest)

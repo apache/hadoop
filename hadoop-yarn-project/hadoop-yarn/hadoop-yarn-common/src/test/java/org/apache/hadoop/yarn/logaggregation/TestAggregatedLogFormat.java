@@ -48,12 +48,14 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.TestContainerId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogReader;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogWriter;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -93,7 +95,7 @@ public class TestAggregatedLogFormat {
     Path remoteAppLogFile =
         new Path(workDir.getAbsolutePath(), "aggregatedLogFile");
     Path srcFileRoot = new Path(workDir.getAbsolutePath(), "srcFiles");
-    ContainerId testContainerId = BuilderUtils.newContainerId(1, 1, 1, 1);
+    ContainerId testContainerId = TestContainerId.newContainerId(1, 1, 1, 1);
     Path t =
         new Path(srcFileRoot, testContainerId.getApplicationAttemptId()
             .getApplicationId().toString());
@@ -160,7 +162,11 @@ public class TestAggregatedLogFormat {
     String data = "Log File content for container : ";
     // Creating files for container1. Log aggregator will try to read log files
     // with illegal user.
-    ContainerId testContainerId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
+    ApplicationId applicationId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId applicationAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, 1);
+    ContainerId testContainerId1 =
+        ContainerId.newInstance(applicationAttemptId, 1);
     Path appDir =
         new Path(srcFileRoot, testContainerId1.getApplicationAttemptId()
             .getApplicationId().toString());

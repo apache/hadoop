@@ -37,7 +37,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 @InterfaceAudience.Private
@@ -55,9 +54,10 @@ public class MRDelegationTokenRenewer extends TokenRenewer {
   public long renew(Token<?> token, Configuration conf) throws IOException,
       InterruptedException {
 
-    org.apache.hadoop.yarn.api.records.Token dToken = BuilderUtils.newDelegationToken(
-        token.getIdentifier(), token.getKind().toString(), token.getPassword(),
-        token.getService().toString());
+    org.apache.hadoop.yarn.api.records.Token dToken =
+        org.apache.hadoop.yarn.api.records.Token.newInstance(
+          token.getIdentifier(), token.getKind().toString(),
+          token.getPassword(), token.getService().toString());
 
     MRClientProtocol histProxy = instantiateHistoryProxy(conf,
         SecurityUtil.getTokenServiceAddr(token));
@@ -76,9 +76,10 @@ public class MRDelegationTokenRenewer extends TokenRenewer {
   public void cancel(Token<?> token, Configuration conf) throws IOException,
       InterruptedException {
 
-    org.apache.hadoop.yarn.api.records.Token dToken = BuilderUtils.newDelegationToken(
-        token.getIdentifier(), token.getKind().toString(), token.getPassword(),
-        token.getService().toString());
+    org.apache.hadoop.yarn.api.records.Token dToken =
+        org.apache.hadoop.yarn.api.records.Token.newInstance(
+          token.getIdentifier(), token.getKind().toString(),
+          token.getPassword(), token.getService().toString());
 
     MRClientProtocol histProxy = instantiateHistoryProxy(conf,
         SecurityUtil.getTokenServiceAddr(token));

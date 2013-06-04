@@ -68,7 +68,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestContainerLauncher {
@@ -83,7 +82,7 @@ public class TestContainerLauncher {
   @Test
   public void testPoolSize() throws InterruptedException {
 
-    ApplicationId appId = BuilderUtils.newApplicationId(12345, 67);
+    ApplicationId appId = ApplicationId.newInstance(12345, 67);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
       appId, 3);
     JobId jobId = MRBuilderUtils.newJobId(appId, 8);
@@ -158,7 +157,7 @@ public class TestContainerLauncher {
 
   @Test
   public void testPoolLimits() throws InterruptedException {
-    ApplicationId appId = BuilderUtils.newApplicationId(12345, 67);
+    ApplicationId appId = ApplicationId.newInstance(12345, 67);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
       appId, 3);
     JobId jobId = MRBuilderUtils.newJobId(appId, 8);
@@ -378,7 +377,7 @@ public class TestContainerLauncher {
         throws IOException {
 
       ContainerTokenIdentifier containerTokenIdentifier =
-          BuilderUtils.newContainerTokenIdentifier(request.getContainerToken());
+          MRApp.newContainerTokenIdentifier(request.getContainerToken());
 
       // Validate that the container is what RM is giving.
       Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_PORT,

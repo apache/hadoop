@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> the  
@@ -58,7 +59,25 @@ import org.apache.hadoop.yarn.api.records.Token;
  */
 @Public
 @Stable
-public interface AllocateResponse {
+public abstract class AllocateResponse {
+
+  public static AllocateResponse newInstance(int responseId,
+      List<ContainerStatus> completedContainers,
+      List<Container> allocatedContainers, List<NodeReport> updatedNodes,
+      Resource availResources, boolean reboot, int numClusterNodes,
+      PreemptionMessage preempt) {
+    AllocateResponse response = Records.newRecord(AllocateResponse.class);
+    response.setNumClusterNodes(numClusterNodes);
+    response.setResponseId(responseId);
+    response.setCompletedContainersStatuses(completedContainers);
+    response.setAllocatedContainers(allocatedContainers);
+    response.setUpdatedNodes(updatedNodes);
+    response.setAvailableResources(availResources);
+    response.setReboot(reboot);
+    response.setPreemptionMessage(preempt);
+    return response;
+  }
+
   /**
    * Should the <code>ApplicationMaster</code> reboot for being horribly
    * out-of-sync with the <code>ResourceManager</code> as deigned by
@@ -69,11 +88,11 @@ public interface AllocateResponse {
    */
   @Public
   @Stable
-  public boolean getReboot();
+  public abstract boolean getReboot();
 
   @Private
   @Unstable
-  public void setReboot(boolean reboot);
+  public abstract void setReboot(boolean reboot);
 
   /**
    * Get the <em>last response id</em>.
@@ -81,11 +100,11 @@ public interface AllocateResponse {
    */
   @Public
   @Stable
-  public int getResponseId();
+  public abstract int getResponseId();
 
   @Private
   @Unstable
-  public void setResponseId(int responseId);
+  public abstract void setResponseId(int responseId);
 
   /**
    * Get the list of <em>newly allocated</em> <code>Container</code> by the
@@ -94,7 +113,7 @@ public interface AllocateResponse {
    */
   @Public
   @Stable
-  public List<Container> getAllocatedContainers();
+  public abstract List<Container> getAllocatedContainers();
 
   /**
    * Set the list of <em>newly allocated</em> <code>Container</code> by the
@@ -103,7 +122,7 @@ public interface AllocateResponse {
    */
   @Public
   @Stable
-  public void setAllocatedContainers(List<Container> containers);
+  public abstract void setAllocatedContainers(List<Container> containers);
 
   /**
    * Get the <em>available headroom</em> for resources in the cluster for the
@@ -113,11 +132,11 @@ public interface AllocateResponse {
    */
   @Public
   @Stable
-  public Resource getAvailableResources();
+  public abstract Resource getAvailableResources();
 
   @Private
   @Unstable
-  public void setAvailableResources(Resource limit);
+  public abstract void setAvailableResources(Resource limit);
 
   /**
    * Get the list of <em>completed containers' statuses</em>.
@@ -125,11 +144,11 @@ public interface AllocateResponse {
    */
   @Public
   @Stable
-  public List<ContainerStatus> getCompletedContainersStatuses();
+  public abstract List<ContainerStatus> getCompletedContainersStatuses();
 
   @Private
   @Unstable
-  public void setCompletedContainersStatuses(List<ContainerStatus> containers);
+  public abstract void setCompletedContainersStatuses(List<ContainerStatus> containers);
 
   /**
    * Get the list of <em>updated <code>NodeReport</code>s</em>. Updates could
@@ -138,11 +157,11 @@ public interface AllocateResponse {
    */
   @Public
   @Unstable
-  public List<NodeReport> getUpdatedNodes();
+  public abstract  List<NodeReport> getUpdatedNodes();
 
   @Private
   @Unstable
-  public void setUpdatedNodes(final List<NodeReport> updatedNodes);
+  public abstract void setUpdatedNodes(final List<NodeReport> updatedNodes);
 
   /**
    * Get the number of hosts available on the cluster.
@@ -150,11 +169,11 @@ public interface AllocateResponse {
    */
   @Public
   @Stable
-  public int getNumClusterNodes();
+  public abstract int getNumClusterNodes();
   
   @Private
   @Unstable
-  public void setNumClusterNodes(int numNodes);
+  public abstract void setNumClusterNodes(int numNodes);
 
   /**
    * Get the description of containers owned by the AM, but requested back by
@@ -172,15 +191,15 @@ public interface AllocateResponse {
    */
   @Public
   @Evolving
-  public PreemptionMessage getPreemptionMessage();
+  public abstract PreemptionMessage getPreemptionMessage();
 
   @Private
   @Unstable
-  public void setPreemptionMessage(PreemptionMessage request);
+  public abstract void setPreemptionMessage(PreemptionMessage request);
   
   @Public
   @Stable
-  public void setNMTokens(List<Token> nmTokens);
+  public abstract void setNMTokens(List<Token> nmTokens);
   
   /**
    * Get the list of NMTokens required for communicating with NM. New NMTokens
@@ -195,6 +214,6 @@ public interface AllocateResponse {
    */
   @Public
   @Stable
-  public List<Token> getNMTokens();
+  public abstract List<Token> getNMTokens();
 
 }
