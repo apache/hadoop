@@ -23,22 +23,14 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.StringReader;
-import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
-import org.apache.hadoop.mapreduce.v2.app.MockJobs;
-import org.apache.hadoop.mapreduce.v2.app.job.Job;
-import org.apache.hadoop.yarn.Clock;
-import org.apache.hadoop.yarn.ClusterInfo;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
@@ -72,82 +64,13 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestAMWebServices extends JerseyTest {
 
   private static Configuration conf = new Configuration();
-  private static TestAppContext appContext;
-
-  static class TestAppContext implements AppContext {
-    final ApplicationAttemptId appAttemptID;
-    final ApplicationId appID;
-    final String user = MockJobs.newUserName();
-    final Map<JobId, Job> jobs;
-    final long startTime = System.currentTimeMillis();
-
-    TestAppContext(int appid, int numJobs, int numTasks, int numAttempts) {
-      appID = MockJobs.newAppID(appid);
-      appAttemptID = ApplicationAttemptId.newInstance(appID, 0);
-      jobs = MockJobs.newJobs(appID, numJobs, numTasks, numAttempts);
-    }
-
-    TestAppContext() {
-      this(0, 1, 1, 1);
-    }
-
-    @Override
-    public ApplicationAttemptId getApplicationAttemptId() {
-      return appAttemptID;
-    }
-
-    @Override
-    public ApplicationId getApplicationID() {
-      return appID;
-    }
-
-    @Override
-    public CharSequence getUser() {
-      return user;
-    }
-
-    @Override
-    public Job getJob(JobId jobID) {
-      return jobs.get(jobID);
-    }
-
-    @Override
-    public Map<JobId, Job> getAllJobs() {
-      return jobs; // OK
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public EventHandler getEventHandler() {
-      return null;
-    }
-
-    @Override
-    public Clock getClock() {
-      return null;
-    }
-
-    @Override
-    public String getApplicationName() {
-      return "TestApp";
-    }
-
-    @Override
-    public long getStartTime() {
-      return startTime;
-    }
-
-    @Override
-    public ClusterInfo getClusterInfo() {
-      return null;
-    }
-  }
+  private static AppContext appContext;
 
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
     protected void configureServlets() {
 
-      appContext = new TestAppContext();
+      appContext = new MockAppContext(0, 1, 1, 1);
       bind(JAXBContextResolver.class);
       bind(AMWebServices.class);
       bind(GenericExceptionHandler.class);
@@ -318,7 +241,7 @@ public class TestAMWebServices extends JerseyTest {
     }
   }
 
-  public void verifyAMInfo(JSONObject info, TestAppContext ctx)
+  public void verifyAMInfo(JSONObject info, AppContext ctx)
       throws JSONException {
     assertEquals("incorrect number of elements", 5, info.length());
 
@@ -327,7 +250,7 @@ public class TestAMWebServices extends JerseyTest {
         info.getLong("elapsedTime"));
   }
 
-  public void verifyAMInfoXML(String xml, TestAppContext ctx)
+  public void verifyAMInfoXML(String xml, AppContext ctx)
       throws JSONException, Exception {
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
@@ -348,7 +271,7 @@ public class TestAMWebServices extends JerseyTest {
     }
   }
 
-  public void verifyAMInfoGeneric(TestAppContext ctx, String id, String user,
+  public void verifyAMInfoGeneric(AppContext ctx, String id, String user,
       String name, long startedOn, long elapsedTime) {
 
     WebServicesTestUtils.checkStringMatch("id", ctx.getApplicationID()

@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
@@ -81,78 +82,10 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestAMWebServicesJobConf extends JerseyTest {
 
   private static Configuration conf = new Configuration();
-  private static TestAppContext appContext;
+  private static AppContext appContext;
 
   private static File testConfDir = new File("target",
       TestAMWebServicesJobConf.class.getSimpleName() + "confDir");
-
-  static class TestAppContext implements AppContext {
-    final ApplicationAttemptId appAttemptID;
-    final ApplicationId appID;
-    final String user = MockJobs.newUserName();
-    final Map<JobId, Job> jobs;
-    final long startTime = System.currentTimeMillis();
-
-    TestAppContext(int appid, int numTasks, int numAttempts, Path confPath) {
-      appID = MockJobs.newAppID(appid);
-      appAttemptID = ApplicationAttemptId.newInstance(appID, 0);
-      Map<JobId, Job> map = Maps.newHashMap();
-      Job job = MockJobs.newJob(appID, 0, numTasks, numAttempts, confPath);
-      map.put(job.getID(), job);
-      jobs = map;
-    }
-
-    @Override
-    public ApplicationAttemptId getApplicationAttemptId() {
-      return appAttemptID;
-    }
-
-    @Override
-    public ApplicationId getApplicationID() {
-      return appID;
-    }
-
-    @Override
-    public CharSequence getUser() {
-      return user;
-    }
-
-    @Override
-    public Job getJob(JobId jobID) {
-      return jobs.get(jobID);
-    }
-
-    @Override
-    public Map<JobId, Job> getAllJobs() {
-      return jobs; // OK
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public EventHandler getEventHandler() {
-      return null;
-    }
-
-    @Override
-    public Clock getClock() {
-      return null;
-    }
-
-    @Override
-    public String getApplicationName() {
-      return "TestApp";
-    }
-
-    @Override
-    public long getStartTime() {
-      return startTime;
-    }
-
-    @Override
-    public ClusterInfo getClusterInfo() {
-      return null;
-    }
-  }
 
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
@@ -181,7 +114,7 @@ public class TestAMWebServicesJobConf extends JerseyTest {
         fail("error creating config file: " + e.getMessage());
       }
 
-      appContext = new TestAppContext(0, 2, 1, confPath);
+      appContext = new MockAppContext(0, 2, 1, confPath);
 
       bind(JAXBContextResolver.class);
       bind(AMWebServices.class);

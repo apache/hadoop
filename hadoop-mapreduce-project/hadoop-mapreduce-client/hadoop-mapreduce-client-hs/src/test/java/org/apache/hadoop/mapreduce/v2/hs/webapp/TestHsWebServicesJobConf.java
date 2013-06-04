@@ -41,18 +41,11 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
-import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
-import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
-import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
+import org.apache.hadoop.mapreduce.v2.hs.MockHistoryContext;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.yarn.Clock;
-import org.apache.hadoop.yarn.ClusterInfo;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -67,7 +60,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import com.google.common.collect.Maps;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceServletContextListener;
@@ -87,93 +79,11 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestHsWebServicesJobConf extends JerseyTest {
 
   private static Configuration conf = new Configuration();
-  private static TestAppContext appContext;
+  private static HistoryContext appContext;
   private static HsWebApp webApp;
 
   private static File testConfDir = new File("target",
       TestHsWebServicesJobConf.class.getSimpleName() + "confDir");
-
-  static class TestAppContext implements HistoryContext {
-    final ApplicationAttemptId appAttemptID;
-    final ApplicationId appID;
-    final String user = MockJobs.newUserName();
-    final Map<JobId, Job> jobs;
-    final long startTime = System.currentTimeMillis();
-
-    TestAppContext(int appid, int numTasks, int numAttempts, Path confPath) {
-      appID = MockJobs.newAppID(appid);
-      appAttemptID = ApplicationAttemptId.newInstance(appID, 0);
-      Map<JobId, Job> map = Maps.newHashMap();
-      Job job = MockJobs.newJob(appID, 0, numTasks, numAttempts, confPath);
-      map.put(job.getID(), job);
-      jobs = map;
-    }
-
-    @Override
-    public ApplicationAttemptId getApplicationAttemptId() {
-      return appAttemptID;
-    }
-
-    @Override
-    public ApplicationId getApplicationID() {
-      return appID;
-    }
-
-    @Override
-    public CharSequence getUser() {
-      return user;
-    }
-
-    @Override
-    public Job getJob(JobId jobID) {
-      return jobs.get(jobID);
-    }
-
-    @Override
-    public Map<JobId, Job> getAllJobs() {
-      return jobs; // OK
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public EventHandler getEventHandler() {
-      return null;
-    }
-
-    @Override
-    public Clock getClock() {
-      return null;
-    }
-
-    @Override
-    public String getApplicationName() {
-      return "TestApp";
-    }
-
-    @Override
-    public long getStartTime() {
-      return startTime;
-    }
-
-    @Override
-    public ClusterInfo getClusterInfo() {
-      return null;
-    }
-
-    @Override
-    public Map<JobId, Job> getAllJobs(ApplicationId appID) {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public JobsInfo getPartialJobs(Long offset, Long count, String user,
-        String queue, Long sBegin, Long sEnd, Long fBegin, Long fEnd,
-        JobState jobState) {
-      // TODO Auto-generated method stub
-      return null;
-    }
-  }
 
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
@@ -202,7 +112,7 @@ public class TestHsWebServicesJobConf extends JerseyTest {
         fail("error creating config file: " + e.getMessage());
       }
 
-      appContext = new TestAppContext(0, 2, 1, confPath);
+      appContext = new MockHistoryContext(0, 2, 1, confPath);
 
       webApp = mock(HsWebApp.class);
       when(webApp.name()).thenReturn("hsmockwebapp");

@@ -22,28 +22,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.StringReader;
-import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.v2.api.records.JobId;
-import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
-import org.apache.hadoop.mapreduce.v2.app.MockJobs;
-import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistory;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
-import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
+import org.apache.hadoop.mapreduce.v2.hs.MockHistoryContext;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.hadoop.yarn.Clock;
-import org.apache.hadoop.yarn.ClusterInfo;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -77,97 +67,14 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestHsWebServices extends JerseyTest {
 
   private static Configuration conf = new Configuration();
-  private static TestAppContext appContext;
+  private static HistoryContext appContext;
   private static HsWebApp webApp;
-
-  static class TestAppContext implements HistoryContext {
-    final ApplicationAttemptId appAttemptID;
-    final ApplicationId appID;
-    final String user = MockJobs.newUserName();
-    final Map<JobId, Job> jobs;
-    final long startTime = System.currentTimeMillis();
-
-    TestAppContext(int appid, int numJobs, int numTasks, int numAttempts) {
-      appID = MockJobs.newAppID(appid);
-      appAttemptID = ApplicationAttemptId.newInstance(appID, 0);
-      jobs = MockJobs.newJobs(appID, numJobs, numTasks, numAttempts);
-    }
-
-    TestAppContext() {
-      this(0, 1, 1, 1);
-    }
-
-    @Override
-    public ApplicationAttemptId getApplicationAttemptId() {
-      return appAttemptID;
-    }
-
-    @Override
-    public ApplicationId getApplicationID() {
-      return appID;
-    }
-
-    @Override
-    public CharSequence getUser() {
-      return user;
-    }
-
-    @Override
-    public Job getJob(JobId jobID) {
-      return jobs.get(jobID);
-    }
-
-    @Override
-    public Map<JobId, Job> getAllJobs() {
-      return jobs; // OK
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public EventHandler getEventHandler() {
-      return null;
-    }
-
-    @Override
-    public Clock getClock() {
-      return null;
-    }
-
-    @Override
-    public String getApplicationName() {
-      return "TestApp";
-    }
-
-    @Override
-    public long getStartTime() {
-      return startTime;
-    }
-
-    @Override
-    public ClusterInfo getClusterInfo() {
-      return null;
-    }
-
-    @Override
-    public Map<JobId, Job> getAllJobs(ApplicationId appID) {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public JobsInfo getPartialJobs(Long offset, Long count, String user,
-        String queue, Long sBegin, Long sEnd, Long fBegin, Long fEnd,
-        JobState jobState) {
-      // TODO Auto-generated method stub
-      return null;
-    }
-  }
 
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
     protected void configureServlets() {
 
-      appContext = new TestAppContext();
+      appContext = new MockHistoryContext(0, 1, 1, 1);
       JobHistory jobHistoryService = new JobHistory();
       HistoryContext historyContext = (HistoryContext) jobHistoryService;
       webApp = new HsWebApp(historyContext);
@@ -356,7 +263,7 @@ public class TestHsWebServices extends JerseyTest {
         JobHistoryServer.historyServerTimeStamp, startedon);
   }
 
-  public void verifyHSInfo(JSONObject info, TestAppContext ctx)
+  public void verifyHSInfo(JSONObject info, AppContext ctx)
       throws JSONException {
     assertEquals("incorrect number of elements", 4, info.length());
 
@@ -365,7 +272,7 @@ public class TestHsWebServices extends JerseyTest {
         info.getLong("startedOn"));
   }
 
-  public void verifyHSInfoXML(String xml, TestAppContext ctx)
+  public void verifyHSInfoXML(String xml, AppContext ctx)
       throws JSONException, Exception {
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
