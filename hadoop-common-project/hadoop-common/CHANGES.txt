@@ -207,6 +207,9 @@ Release 2.1.0-beta - UNRELEASED
     (which in turn throws SIGABRT) causing client crashes. (Colin Patrick
     McCabe via atm)
 
+    HADOOP-9481. Broken conditional logic with HADOOP_SNAPPY_LIBRARY. (Vadim
+    Bondarev via atm)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
