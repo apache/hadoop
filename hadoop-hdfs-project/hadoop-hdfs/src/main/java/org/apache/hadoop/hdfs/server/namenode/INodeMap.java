@@ -45,7 +45,7 @@ public class INodeMap {
   }
   
   /** Synchronized by external lock. */
-  private final GSet<INode, INodeWithAdditionalFields> map;
+  private GSet<INode, INodeWithAdditionalFields> map;
   
   private INodeMap(GSet<INode, INodeWithAdditionalFields> map) {
     Preconditions.checkArgument(map != null);

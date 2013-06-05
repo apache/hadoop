@@ -27,12 +27,13 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 
 /**
- * An interface for {@link INodeFile} to support snapshot.
+ * {@link INodeFile} with a link to the next element.
+ * The link of all the snapshot files and the original file form a circular
+ * linked list so that all elements are accessible by any of the elements.
  */
 @InterfaceAudience.Private
 public interface FileWithSnapshot {
@@ -43,7 +44,7 @@ public interface FileWithSnapshot {
     /** The file size at snapshot creation time. */
     private final long fileSize;
 
-    private FileDiff(Snapshot snapshot, INodeFile file) {
+    FileDiff(Snapshot snapshot, INodeFile file) {
       super(snapshot, null, null);
       fileSize = file.computeFileSize();
     }
@@ -115,34 +116,6 @@ public interface FileWithSnapshot {
         BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
       return updateQuotaAndCollectBlocks(currentINode, this,
           collectedBlocks, removedINodes);
-    }
-  }
-
-  /** A list of FileDiffs for storing snapshot data. */
-  public static class FileDiffList
-      extends AbstractINodeDiffList<INodeFile, FileDiff> {
-
-    @Override
-    FileDiff createDiff(Snapshot snapshot, INodeFile file) {
-      return new FileDiff(snapshot, file);
-    }
-    
-    @Override
-    INodeFile createSnapshotCopy(INodeFile currentINode) {
-      if (currentINode instanceof INodeFileUnderConstructionWithSnapshot) {
-        final INodeFileUnderConstruction uc = 
-            (INodeFileUnderConstruction) currentINode;
-        
-        final INodeFileUnderConstruction copy = new INodeFileUnderConstruction(
-            uc, uc.getClientName(), uc.getClientMachine(), uc.getClientNode());
-        
-        copy.setBlocks(null);
-        return copy;
-      } else {
-        final INodeFile copy = new INodeFile(currentINode);
-        copy.setBlocks(null);
-        return copy;
-      }
     }
   }
 
