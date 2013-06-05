@@ -17,7 +17,6 @@
  */
 
 /**
- * Command-line tools associated with the {@link org.apache.hadoop.mapred}
- * package.
+ * Command-line tools associated with the org.apache.hadoop.mapred package.
  */
 package org.apache.hadoop.mapred.tools;

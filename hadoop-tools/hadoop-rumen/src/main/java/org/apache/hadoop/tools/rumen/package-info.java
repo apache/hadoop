@@ -181,8 +181,8 @@
  *  <li>
  *    {@link org.apache.hadoop.tools.rumen.JobBuilder}<br>
  *      Summarizes a job history file.
- *      {@link org.apache.hadoop.tools.rumen.TraceBuilder} provides  
- *      {@link org.apache.hadoop.tools.rumen.TraceBuilder#extractJobID(String)} 
+ *      {@link org.apache.hadoop.tools.rumen.JobHistoryUtils} provides  
+ *      {@link org.apache.hadoop.tools.rumen.JobHistoryUtils#extractJobID(String)} 
  *      API for extracting job id from job history or job configuration files
  *      which can be used for instantiating {@link org.apache.hadoop.tools.rumen.JobBuilder}. 
  *      {@link org.apache.hadoop.tools.rumen.JobBuilder} generates a 
