@@ -1,6 +1,6 @@
 Hadoop HDFS Change Log
 
-Release 0.23.8 - UNRELEASED
+Release 0.23.8 - 2013-06-05
   
   INCOMPATIBLE CHANGES
   
