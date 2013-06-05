@@ -1443,7 +1443,19 @@ Release 2.0.0-alpha - 05-23-2012
     HADOOP-8655. Fix TextInputFormat for large deliminators. (Gelesh via
     bobby) 
 
-Release 0.23.8 - UNRELEASED
+Release 0.23.9 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.8 - 2013-06-05
 
   INCOMPATIBLE CHANGES
 
@@ -1470,7 +1482,7 @@ Release 0.23.8 - UNRELEASED
     HADOOP-9614. smart-test-patch.sh hangs for new version of patch (2.7.1)
     (Ravi Prakash via jeagles)
 
-Release 0.23.7 - UNRELEASED
+Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
 
@@ -1515,7 +1527,7 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9339. IPC.Server incorrectly sets UGI auth type (Daryn Sharp via 
     kihwal)
 
-Release 0.23.6 - UNRELEASED
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 

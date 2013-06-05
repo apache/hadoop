@@ -1002,7 +1002,7 @@ Release 0.23.9 - UNRELEASED
 
   BUG FIXES
 
-Release 0.23.8 - UNRELEASED
+Release 0.23.8 - 2013-06-05
 
   INCOMPATIBLE CHANGES
 
@@ -1026,7 +1026,7 @@ Release 0.23.8 - UNRELEASED
     MAPREDUCE-4927. Historyserver 500 error due to NPE when accessing specific
     counters page for failed job. (Ashwin Shankar via jlowe)
 
-Release 0.23.7 - UNRELEASED
+Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
 
@@ -1095,7 +1095,7 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-5137. AM web UI: clicking on Map Task results in 500 error
     (Thomas Graves via jlowe)
 
-Release 0.23.6 - UNRELEASED
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 
