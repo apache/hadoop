@@ -12,6 +12,9 @@ Release 0.23.9 - UNRELEASED
 
   BUG FIXES
 
+    YARN-742. Log aggregation causes a lot of redundant setPermission calls.
+    (jlowe via kihwal)
+
 Release 0.23.8 - 2013-06-05
   
   INCOMPATIBLE CHANGES

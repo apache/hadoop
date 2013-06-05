@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
@@ -31,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -163,12 +165,16 @@ public class LogAggregationService extends AbstractService implements
       LOG.warn("Some logs may not have been aggregated for " + appId);
     }
   }
-  
+
+  protected FileSystem getFileSystem(Configuration conf) throws IOException {
+    return FileSystem.get(conf);
+  }
+
   private void verifyAndCreateRemoteLogDir(Configuration conf) {
-    // Checking the existance of the TLD
+    // Checking the existence of the TLD
     FileSystem remoteFS = null;
     try {
-      remoteFS = FileSystem.get(conf);
+      remoteFS = getFileSystem(conf);
     } catch (IOException e) {
       throw new YarnException("Unable to get Remote FileSystem instance", e);
     }
@@ -219,8 +225,26 @@ public class LogAggregationService extends AbstractService implements
 
   private void createDir(FileSystem fs, Path path, FsPermission fsPerm)
       throws IOException {
-    fs.mkdirs(path, new FsPermission(fsPerm));
-    fs.setPermission(path, new FsPermission(fsPerm));
+    FsPermission dirPerm = new FsPermission(fsPerm);
+    fs.mkdirs(path, dirPerm);
+    FsPermission umask = FsPermission.getUMask(fs.getConf());
+    if (!dirPerm.equals(dirPerm.applyUMask(umask))) {
+      fs.setPermission(path, new FsPermission(fsPerm));
+    }
+  }
+
+  private boolean checkExists(FileSystem fs, Path path, FsPermission fsPerm)
+      throws IOException {
+    boolean exists = true;
+    try {
+      FileStatus appDirStatus = fs.getFileStatus(path);
+      if (!APP_DIR_PERMISSIONS.equals(appDirStatus.getPermission())) {
+        fs.setPermission(path, APP_DIR_PERMISSIONS);
+      }
+    } catch (FileNotFoundException fnfe) {
+      exists = false;
+    }
+    return exists;
   }
 
   protected void createAppDir(final String user, final ApplicationId appId,
@@ -229,57 +253,43 @@ public class LogAggregationService extends AbstractService implements
       userUgi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
-          // TODO: Reuse FS for user?
-          FileSystem remoteFS = null;
-          Path userDir = null;
-          Path suffixDir = null;
-          Path appDir = null;
           try {
-            remoteFS = FileSystem.get(getConfig());
-          } catch (IOException e) {
-            LOG.error("Failed to get remote FileSystem while processing app "
-                + appId, e);
-            throw e;
-          }
-          try {
-            userDir =
-                LogAggregationUtils.getRemoteLogUserDir(
+            // TODO: Reuse FS for user?
+            FileSystem remoteFS = getFileSystem(getConfig());
+
+            // Only creating directories if they are missing to avoid
+            // unnecessary load on the filesystem from all of the nodes
+            Path appDir = LogAggregationUtils.getRemoteAppLogDir(
+                LogAggregationService.this.remoteRootLogDir, appId, user,
+                LogAggregationService.this.remoteRootLogDirSuffix);
+            appDir = appDir.makeQualified(remoteFS.getUri(),
+                remoteFS.getWorkingDirectory());
+
+            if (!checkExists(remoteFS, appDir, APP_DIR_PERMISSIONS)) {
+              Path suffixDir = LogAggregationUtils.getRemoteLogSuffixedDir(
+                  LogAggregationService.this.remoteRootLogDir, user,
+                  LogAggregationService.this.remoteRootLogDirSuffix);
+              suffixDir = suffixDir.makeQualified(remoteFS.getUri(),
+                  remoteFS.getWorkingDirectory());
+
+              if (!checkExists(remoteFS, suffixDir, APP_DIR_PERMISSIONS)) {
+                Path userDir = LogAggregationUtils.getRemoteLogUserDir(
                     LogAggregationService.this.remoteRootLogDir, user);
-            userDir =
-                userDir.makeQualified(remoteFS.getUri(),
+                userDir = userDir.makeQualified(remoteFS.getUri(),
                     remoteFS.getWorkingDirectory());
-            createDir(remoteFS, userDir, APP_DIR_PERMISSIONS);
+
+                if (!checkExists(remoteFS, userDir, APP_DIR_PERMISSIONS)) {
+                  createDir(remoteFS, userDir, APP_DIR_PERMISSIONS);
+                }
+
+                createDir(remoteFS, suffixDir, APP_DIR_PERMISSIONS);
+              }
+
+              createDir(remoteFS, appDir, APP_DIR_PERMISSIONS);
+            }
           } catch (IOException e) {
-            LOG.error("Failed to create user dir [" + userDir
-                + "] while processing app " + appId);
-            throw e;
-          }
-          try {
-            suffixDir =
-                LogAggregationUtils.getRemoteLogSuffixedDir(
-                    LogAggregationService.this.remoteRootLogDir, user,
-                    LogAggregationService.this.remoteRootLogDirSuffix);
-            suffixDir =
-                suffixDir.makeQualified(remoteFS.getUri(),
-                    remoteFS.getWorkingDirectory());
-            createDir(remoteFS, suffixDir, APP_DIR_PERMISSIONS);
-          } catch (IOException e) {
-            LOG.error("Failed to create suffixed user dir [" + suffixDir
-                + "] while processing app " + appId);
-            throw e;
-          }
-          try {
-            appDir =
-                LogAggregationUtils.getRemoteAppLogDir(
-                    LogAggregationService.this.remoteRootLogDir, appId, user,
-                    LogAggregationService.this.remoteRootLogDirSuffix);
-            appDir =
-                appDir.makeQualified(remoteFS.getUri(),
-                    remoteFS.getWorkingDirectory());
-            createDir(remoteFS, appDir, APP_DIR_PERMISSIONS);
-          } catch (IOException e) {
-            LOG.error("Failed to  create application log dir [" + appDir
-                + "] while processing app " + appId);
+            LOG.error("Failed to setup application log directory for "
+                + appId, e);
             throw e;
           }
           return null;
@@ -300,7 +310,7 @@ public class LogAggregationService extends AbstractService implements
       eventResponse = new ApplicationEvent(appId,
           ApplicationEventType.APPLICATION_LOG_HANDLING_INITED);
     } catch (YarnException e) {
-      LOG.warn("Application failed to init aggregation: " + e.getMessage());
+      LOG.warn("Application failed to init aggregation", e);
       eventResponse = new ApplicationEvent(appId,
           ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED);
     }
