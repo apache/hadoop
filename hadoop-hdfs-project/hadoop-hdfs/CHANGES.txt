@@ -3096,7 +3096,19 @@ Release 2.0.0-alpha - 05-23-2012
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
-Release 0.23.8 - UNRELEASED
+Release 0.23.9 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+    
+  IMPROVEMENTS
+    
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.8 - 2013-06-05
 
   INCOMPATIBLE CHANGES
 
@@ -3124,7 +3136,7 @@ Release 0.23.8 - UNRELEASED
     HDFS-4807. createSocketForPipeline() should not include timeout extension
     on connect. (Cristina L. Abad via kihwal)
 
-Release 0.23.7 - UNRELEASED
+Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
 
@@ -3172,7 +3184,7 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4548. Webhdfs doesn't renegotiate SPNEGO token (daryn via kihwal)
 
-Release 0.23.6 - UNRELEASED
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 
