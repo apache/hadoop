@@ -1053,6 +1053,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4876. Fix the javadoc of FileWithSnapshot and move FileDiffList to
     FileWithSnapshot.  (szetszwo)
 
+    HDFS-4850. Fix OfflineImageViewer to work on fsimages with empty files or 
+    snapshots. (jing9) 
+
 Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -24,7 +24,7 @@ import java.util.LinkedList;
  * An XmlImageVisitor walks over an fsimage structure and writes out
  * an equivalent XML document that contains the fsimage's components.
  */
-class XmlImageVisitor extends TextWriterImageVisitor {
+public class XmlImageVisitor extends TextWriterImageVisitor {
   final private LinkedList<ImageElement> tagQ =
                                           new LinkedList<ImageElement>();
 

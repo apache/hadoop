@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -44,10 +45,13 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree.Node;
+import org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer;
+import org.apache.hadoop.hdfs.tools.offlineImageViewer.XmlImageVisitor;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
@@ -68,7 +72,13 @@ public class TestSnapshot {
     SnapshotTestHelper.disableLogs();
   }
 
-  private static final long seed = Time.now();
+  private static final long seed;
+  private static final Random random;
+  static {
+    seed = Time.now();
+    random = new Random(seed);
+    System.out.println("Random seed: " + seed);
+  }
   protected static final short REPLICATION = 3;
   protected static final int BLOCKSIZE = 1024;
   /** The number of times snapshots are created for a snapshottable directory */
@@ -81,8 +91,6 @@ public class TestSnapshot {
   protected static FSNamesystem fsn;
   protected static FSDirectory fsdir;
   protected DistributedFileSystem hdfs;
-
-  private static Random random = new Random(seed);
   
   private static String testDir =
       System.getProperty("test.build.data", "build/test/data");
@@ -220,16 +228,57 @@ public class TestSnapshot {
   @Test
   public void testSnapshot() throws Throwable {
     try {
-      runTestSnapshot();
+      runTestSnapshot(SNAPSHOT_ITERATION_NUMBER);
     } catch(Throwable t) {
       SnapshotTestHelper.LOG.info("FAILED", t);
       SnapshotTestHelper.dumpTree("FAILED", cluster);
       throw t;
     }
   }
+  
+  /**
+   * Test if the OfflineImageViewer can correctly parse a fsimage containing
+   * snapshots
+   */
+  @Test
+  public void testOfflineImageViewer() throws Throwable {
+    runTestSnapshot(SNAPSHOT_ITERATION_NUMBER);
+    
+    // retrieve the fsimage. Note that we already save namespace to fsimage at
+    // the end of each iteration of runTestSnapshot.
+    File originalFsimage = FSImageTestUtil.findLatestImageFile(
+        FSImageTestUtil.getFSImage(
+        cluster.getNameNode()).getStorage().getStorageDir(0));
+    assertNotNull("Didn't generate or can't find fsimage", originalFsimage);
+    
+    String ROOT = System.getProperty("test.build.data", "build/test/data");
+    File testFile = new File(ROOT, "/image");
+    String xmlImage = ROOT + "/image_xml";
+    boolean success = false;
+    
+    try {
+      DFSTestUtil.copyFile(originalFsimage, testFile);
+      XmlImageVisitor v = new XmlImageVisitor(xmlImage, true);
+      OfflineImageViewer oiv = new OfflineImageViewer(testFile.getPath(), v,
+          true);
+      oiv.go();
+      success = true;
+    } finally {
+      if (testFile.exists()) {
+        testFile.delete();
+      }
+      // delete the xml file if the parsing is successful
+      if (success) {
+        File xmlImageFile = new File(xmlImage);
+        if (xmlImageFile.exists()) {
+          xmlImageFile.delete();
+        }
+      }
+    }
+  }
 
-  private void runTestSnapshot() throws Exception {
-    for (int i = 0; i < SNAPSHOT_ITERATION_NUMBER; i++) {
+  private void runTestSnapshot(int iteration) throws Exception {
+    for (int i = 0; i < iteration; i++) {
       // create snapshot and check the creation
       cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
       TestDirectoryTree.Node[] ssNodes = createSnapshots();
