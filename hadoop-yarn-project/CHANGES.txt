@@ -762,7 +762,19 @@ Release 2.0.2-alpha - 2012-09-07
     YARN-138. Ensure default values for minimum/maximum container sizes is
     sane. (harsh & sseth via acmurthy)
 
-Release 0.23.8 - UNRELEASED
+Release 0.23.9 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.8 - 2013-06-05
 
   INCOMPATIBLE CHANGES
 
@@ -782,7 +794,7 @@ Release 0.23.8 - UNRELEASED
 
     YARN-690. RM exits on token cancel/renew problems (daryn via bobby)
 
-Release 0.23.7 - UNRELEASED
+Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
 
@@ -849,7 +861,7 @@ Release 0.23.7 - UNRELEASED
     YARN-460. CS user left in list of active users for the queue even when 
     application finished (tgraves)
 
-Release 0.23.6 - UNRELEASED
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 
