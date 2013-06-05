@@ -4,8 +4,6 @@ Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
 
-    HDFS-4053. Increase the default block size. (eli)
-
     HDFS-3034. Remove the deprecated DFSOutputStream.sync() method.  (szetszwo)
 
   NEW FEATURES
@@ -244,6 +242,8 @@ Trunk (Unreleased)
 Release 2.1.0-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
+
+    HDFS-4053. Increase the default block size. (eli)
 
     HDFS-4305. Add a configurable limit on number of blocks per file, and min
     block size. (Andrew Wang via atm)
