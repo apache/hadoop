@@ -170,7 +170,7 @@ public class LoggedTaskAttempt implements DeepCompare {
 
   /**
    *
-   * @returns a list of all splits vectors, ordered in enumeral order
+   * @return a list of all splits vectors, ordered in enumeral order
    *           within {@link SplitVectorKind} .  Do NOT use hard-coded
    *           indices within the return for this with a hard-coded
    *           index to get individual values; use
