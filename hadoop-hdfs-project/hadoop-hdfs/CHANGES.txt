@@ -829,6 +829,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4826. TestNestedSnapshots times out due to repeated slow edit log
     flushes when running on virtualized disk.  (Chris Nauroth via szetszwo)
 
+    HDFS-4876. Fix the javadoc of FileWithSnapshot and move FileDiffList to
+    FileWithSnapshot.  (szetszwo)
+
 Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
