@@ -678,7 +678,7 @@ public class FSDirectory implements Closeable {
               Quota.Counts.newInstance(), false, Snapshot.INVALID_ID);
           newSrcCounts.subtract(oldSrcCounts);
           srcParent.addSpaceConsumed(newSrcCounts.get(Quota.NAMESPACE),
-              newSrcCounts.get(Quota.DISKSPACE), false, Snapshot.INVALID_ID);
+              newSrcCounts.get(Quota.DISKSPACE), false);
         }
         
         return true;
@@ -944,8 +944,8 @@ public class FSDirectory implements Closeable {
           BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
           List<INode> removedINodes = new ArrayList<INode>();
           filesDeleted = removedDst.cleanSubtree(null,
-              dstIIP.getLatestSnapshot(), collectedBlocks, removedINodes).get(
-              Quota.NAMESPACE);
+              dstIIP.getLatestSnapshot(), collectedBlocks, removedINodes, true)
+              .get(Quota.NAMESPACE);
           getFSNamesystem().removePathAndBlocks(src, collectedBlocks,
               removedINodes);
         }
@@ -963,7 +963,7 @@ public class FSDirectory implements Closeable {
               Quota.Counts.newInstance(), false, Snapshot.INVALID_ID);
           newSrcCounts.subtract(oldSrcCounts);
           srcParent.addSpaceConsumed(newSrcCounts.get(Quota.NAMESPACE),
-              newSrcCounts.get(Quota.DISKSPACE), false, Snapshot.INVALID_ID);
+              newSrcCounts.get(Quota.DISKSPACE), false);
         }
         
         return filesDeleted >= 0;
@@ -1408,9 +1408,9 @@ public class FSDirectory implements Closeable {
       targetNode.destroyAndCollectBlocks(collectedBlocks, removedINodes);
     } else {
       Quota.Counts counts = targetNode.cleanSubtree(null, latestSnapshot,
-          collectedBlocks, removedINodes);
+          collectedBlocks, removedINodes, true);
       parent.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
-          -counts.get(Quota.DISKSPACE), true, Snapshot.INVALID_ID);
+          -counts.get(Quota.DISKSPACE), true);
       removed = counts.get(Quota.NAMESPACE);
     }
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -1797,7 +1797,8 @@ public class FSDirectory implements Closeable {
     final INode[] inodes = inodesInPath.getINodes();
     for(int i=0; i < numOfINodes; i++) {
       if (inodes[i].isQuotaSet()) { // a directory with quota
-        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
+        INodeDirectoryWithQuota node = (INodeDirectoryWithQuota) inodes[i]
+            .asDirectory(); 
         node.addSpaceConsumed2Cache(nsDelta, dsDelta);
       }
     }
@@ -2033,7 +2034,8 @@ public class FSDirectory implements Closeable {
       }
       if (inodes[i].isQuotaSet()) { // a directory with quota
         try {
-          ((INodeDirectoryWithQuota)inodes[i]).verifyQuota(nsDelta, dsDelta);
+          ((INodeDirectoryWithQuota) inodes[i].asDirectory()).verifyQuota(
+              nsDelta, dsDelta);
         } catch (QuotaExceededException e) {
           e.setPathName(getFullPathName(inodes, i));
           throw e;

@@ -91,7 +91,8 @@ public class INodeFileWithSnapshot extends INodeFile
 
   @Override
   public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
-      final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
+      final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes, final boolean countDiffChange) 
       throws QuotaExceededException {
     if (snapshot == null) { // delete the current file
       recordModification(prior, null);
@@ -101,7 +102,7 @@ public class INodeFileWithSnapshot extends INodeFile
     } else { // delete a snapshot
       prior = getDiffs().updatePrior(snapshot, prior);
       return diffs.deleteSnapshotDiff(snapshot, prior, this, collectedBlocks,
-          removedINodes);
+          removedINodes, countDiffChange);
     }
   }
 

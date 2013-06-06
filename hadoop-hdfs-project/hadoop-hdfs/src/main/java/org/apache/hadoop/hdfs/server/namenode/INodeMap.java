@@ -113,8 +113,8 @@ public class INodeMap {
       
       @Override
       public Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
-          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes)
-          throws QuotaExceededException {
+          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
+          boolean countDiffChange) throws QuotaExceededException {
         return null;
       }
     };

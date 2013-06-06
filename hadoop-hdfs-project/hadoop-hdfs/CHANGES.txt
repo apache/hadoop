@@ -1056,6 +1056,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4850. Fix OfflineImageViewer to work on fsimages with empty files or 
     snapshots. (jing9) 
 
+    HDFS-4877. Snapshot: fix the scenario where a directory is renamed under 
+    its prior descendant. (jing9)
+
 Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
