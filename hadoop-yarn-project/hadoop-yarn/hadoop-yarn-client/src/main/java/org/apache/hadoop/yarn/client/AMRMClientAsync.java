@@ -331,10 +331,25 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
           continue;
         }
 
-        if (response.getResync()) {
-          handler.onRebootRequest();
-          LOG.info("Reboot requested. Stopping callback.");
-          break;
+        if (response.getAMCommand() != null) {
+          boolean stop = false;
+          switch(response.getAMCommand()) {
+          case AM_RESYNC:
+          case AM_SHUTDOWN:
+            handler.onShutdownRequest();
+            LOG.info("Shutdown requested. Stopping callback.");
+            stop = true;
+            break;
+          default:
+            String msg =
+                  "Unhandled value of AMCommand: " + response.getAMCommand();
+            LOG.error(msg);
+            throw new YarnRuntimeException(msg);
+          }
+          if(stop) {
+            // should probably stop heartbeating also YARN-763
+            break;
+          }
         }
         List<NodeReport> updatedNodes = response.getUpdatedNodes();
         if (!updatedNodes.isEmpty()) {
@@ -374,11 +389,11 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
     public void onContainersAllocated(List<Container> containers);
     
     /**
-     * Called when the ResourceManager wants the ApplicationMaster to reboot
-     * for being out of sync. The ApplicationMaster should not unregister with 
-     * the RM unless the ApplicationMaster wants to be the last attempt.
+     * Called when the ResourceManager wants the ApplicationMaster to shutdown
+     * for being out of sync etc. The ApplicationMaster should not unregister
+     * with the RM unless the ApplicationMaster wants to be the last attempt.
      */
-    public void onRebootRequest();
+    public void onShutdownRequest();
     
     /**
      * Called when nodes tracked by the ResourceManager have changed in health,

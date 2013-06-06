@@ -116,14 +116,23 @@ public class LocalContainerAllocator extends RMCommunicator
       // continue to attempt to contact the RM.
       throw e;
     }
-    if (allocateResponse.getResync()) {
-      LOG.info("Event from RM: shutting down Application Master");
-      // This can happen if the RM has been restarted. If it is in that state,
-      // this application must clean itself up.
-      eventHandler.handle(new JobEvent(this.getJob().getID(),
-                                       JobEventType.JOB_AM_REBOOT));
-      throw new YarnRuntimeException("Resource Manager doesn't recognize AttemptId: " +
-                               this.getContext().getApplicationID());
+    if (allocateResponse.getAMCommand() != null) {
+      switch(allocateResponse.getAMCommand()) {
+      case AM_RESYNC:
+      case AM_SHUTDOWN:
+        LOG.info("Event from RM: shutting down Application Master");
+        // This can happen if the RM has been restarted. If it is in that state,
+        // this application must clean itself up.
+        eventHandler.handle(new JobEvent(this.getJob().getID(),
+                                         JobEventType.JOB_AM_REBOOT));
+        throw new YarnRuntimeException("Resource Manager doesn't recognize AttemptId: " +
+                                 this.getContext().getApplicationID());
+      default:
+        String msg =
+              "Unhandled value of AMCommand: " + allocateResponse.getAMCommand();
+        LOG.error(msg);
+        throw new YarnRuntimeException(msg);
+      }
     }
   }
 

@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionMessageProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.util.ProtoUtils;
 
     
 public class AllocateResponsePBImpl extends AllocateResponse {
@@ -145,15 +147,22 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   }
   
   @Override
-  public synchronized boolean getResync() {
+  public synchronized AMCommand getAMCommand() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getResync());
+    if (!p.hasAMCommand()) {
+      return null;
+    }
+    return ProtoUtils.convertFromProtoFormat(p.getAMCommand());
   }
 
   @Override
-  public synchronized void setResync(boolean resync) {
+  public synchronized void setAMCommand(AMCommand command) {
     maybeInitBuilder();
-    builder.setResync((resync));
+    if (command == null) {
+      builder.clearAMCommand();
+      return;
+    }
+    builder.setAMCommand(ProtoUtils.convertToProtoFormat(command));
   }
 
   @Override
