@@ -236,6 +236,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9481. Broken conditional logic with HADOOP_SNAPPY_LIBRARY. (Vadim
     Bondarev via atm)
 
+    HADOOP-9593. stack trace printed at ERROR for all yarn clients without
+    hadoop.home set (stevel)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
