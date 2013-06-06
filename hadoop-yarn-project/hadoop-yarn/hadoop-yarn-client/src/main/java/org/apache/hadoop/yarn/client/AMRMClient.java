@@ -43,6 +43,7 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * Object to represent container request for resources.
    * Resources may be localized to nodes and racks.
    * Resources may be assigned priorities.
+   * All getters return unmodifiable collections.
    * Can ask for multiple containers of a given type.
    */
   public static class ContainerRequest {
@@ -65,11 +66,11 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
       return capability;
     }
     
-    public ImmutableList<String> getHosts() {
+    public List<String> getHosts() {
       return hosts;
     }
     
-    public ImmutableList<String> getRacks() {
+    public List<String> getRacks() {
       return racks;
     }
     

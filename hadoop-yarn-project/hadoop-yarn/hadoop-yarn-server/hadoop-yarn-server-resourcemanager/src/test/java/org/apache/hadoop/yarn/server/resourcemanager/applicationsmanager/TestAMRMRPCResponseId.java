@@ -22,6 +22,7 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
@@ -82,7 +83,7 @@ public class TestAMRMRPCResponseId {
 
     AllocateResponse response = amService.allocate(allocateRequest);
     Assert.assertEquals(1, response.getResponseId());
-    Assert.assertFalse(response.getResync());
+    Assert.assertTrue(response.getAMCommand() == null);
     allocateRequest = AllocateRequest.newInstance(attempt
         .getAppAttemptId(), response.getResponseId(), 0F, null, null, null);
     
@@ -96,6 +97,6 @@ public class TestAMRMRPCResponseId {
     allocateRequest = AllocateRequest.newInstance(attempt
         .getAppAttemptId(), 0, 0F, null, null, null);
     response = amService.allocate(allocateRequest);
-    Assert.assertTrue(response.getResync());
+    Assert.assertTrue(response.getAMCommand() == AMCommand.AM_RESYNC);
   }
 }

@@ -32,6 +32,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -401,7 +402,7 @@ public class BuilderUtils {
   public static AllocateResponse newAllocateResponse(int responseId,
       List<ContainerStatus> completedContainers,
       List<Container> allocatedContainers, List<NodeReport> updatedNodes,
-      Resource availResources, boolean reboot, int numClusterNodes,
+      Resource availResources, AMCommand command, int numClusterNodes,
       PreemptionMessage preempt) {
     AllocateResponse response = recordFactory
         .newRecordInstance(AllocateResponse.class);
@@ -411,7 +412,7 @@ public class BuilderUtils {
     response.setAllocatedContainers(allocatedContainers);
     response.setUpdatedNodes(updatedNodes);
     response.setAvailableResources(availResources);
-    response.setResync(reboot);
+    response.setAMCommand(command);
     response.setPreemptionMessage(preempt);
 
     return response;

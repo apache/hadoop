@@ -207,6 +207,11 @@ message ResourceRequestProto {
   optional bool relax_locality = 5 [default = true];
 }
 
+enum AMCommandProto {
+  AM_RESYNC = 1;
+  AM_SHUTDOWN = 2;
+}
+
 message PreemptionMessageProto {
   optional StrictPreemptionContractProto strictContract = 1;
   optional PreemptionContractProto contract = 2;

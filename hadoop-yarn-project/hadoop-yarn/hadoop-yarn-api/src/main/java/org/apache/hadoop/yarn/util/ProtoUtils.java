@@ -25,6 +25,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -38,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationResourceUsageReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.AMCommandProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAccessTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
@@ -137,6 +139,16 @@ public class ProtoUtils {
   }
   public static LocalResourceVisibility convertFromProtoFormat(LocalResourceVisibilityProto e) {
     return LocalResourceVisibility.valueOf(e.name());
+  }
+  
+  /*
+   * AMCommand
+   */
+  public static AMCommandProto convertToProtoFormat(AMCommand e) {
+    return AMCommandProto.valueOf(e.name());
+  }
+  public static AMCommand convertFromProtoFormat(AMCommandProto e) {
+    return AMCommand.valueOf(e.name());
   }
 
   /*

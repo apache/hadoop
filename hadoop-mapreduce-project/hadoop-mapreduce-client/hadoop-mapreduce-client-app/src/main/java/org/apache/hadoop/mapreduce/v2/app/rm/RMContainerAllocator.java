@@ -570,13 +570,22 @@ public class RMContainerAllocator extends RMContainerRequestor
       // continue to attempt to contact the RM.
       throw e;
     }
-    if (response.getResync()) {
-      // This can happen if the RM has been restarted. If it is in that state,
-      // this application must clean itself up.
-      eventHandler.handle(new JobEvent(this.getJob().getID(),
-                                       JobEventType.JOB_AM_REBOOT));
-      throw new YarnRuntimeException("Resource Manager doesn't recognize AttemptId: " +
-                               this.getContext().getApplicationID());
+    if (response.getAMCommand() != null) {
+      switch(response.getAMCommand()) {
+      case AM_RESYNC:
+      case AM_SHUTDOWN:
+        // This can happen if the RM has been restarted. If it is in that state,
+        // this application must clean itself up.
+        eventHandler.handle(new JobEvent(this.getJob().getID(),
+                                         JobEventType.JOB_AM_REBOOT));
+        throw new YarnRuntimeException("Resource Manager doesn't recognize AttemptId: " +
+                                 this.getContext().getApplicationID());
+      default:
+        String msg =
+              "Unhandled value of AMCommand: " + response.getAMCommand();
+        LOG.error(msg);
+        throw new YarnRuntimeException(msg);
+      }
     }
     int newHeadRoom = getAvailableResources() != null ? getAvailableResources().getMemory() : 0;
     List<Container> newContainers = response.getAllocatedContainers();
