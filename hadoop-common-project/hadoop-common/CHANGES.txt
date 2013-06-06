@@ -429,6 +429,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-8982. TestSocketIOWithTimeout fails on Windows.
     (Chris Nauroth via suresh)
 
+    HADOOP-8958. ViewFs:Non absolute mount name failures when running 
+    multiple tests on Windows. (Chris Nauroth via suresh)
+
 Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -767,6 +770,9 @@ Release 2.0.3-alpha - 2013-02-06
 
     HADOOP-9289. FsShell rm -f fails for non-matching globs. (Daryn Sharp via
     suresh)
+
+    HADOOP-8958. ViewFs:Non absolute mount name failures when running 
+    multiple tests on Windows. (Chris Nauroth via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
