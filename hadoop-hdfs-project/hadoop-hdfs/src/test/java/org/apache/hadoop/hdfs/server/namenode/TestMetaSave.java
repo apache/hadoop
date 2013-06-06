@@ -17,26 +17,25 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.junit.Test;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.DataInputStream;
-import java.io.InputStreamReader;
-import java.io.IOException;
-import java.lang.InterruptedException;
-import java.util.Random;
 import static org.junit.Assert.assertTrue;
+
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * This class tests the creation and validation of metasave

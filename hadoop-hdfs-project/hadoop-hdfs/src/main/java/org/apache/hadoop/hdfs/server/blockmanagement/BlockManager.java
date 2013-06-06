@@ -349,7 +349,9 @@ public class BlockManager {
                              numReplicas.decommissionedReplicas();
        
         if (block instanceof BlockInfo) {
-          String fileName = ((BlockInfo)block).getINode().getFullPathName();
+          INodeFile inodeFile = ((BlockInfo) block).getINode();
+          String fileName = (inodeFile == null) ? "[orphaned]"
+            : inodeFile.getFullPathName();
           out.print(fileName + ": ");
         }
         // l: == live:, d: == decommissioned c: == corrupt e: == excess
