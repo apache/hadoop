@@ -454,7 +454,7 @@ public class TestRenameWithSnapshots {
     
     // delete snapshot s5. The diff of s5 should be combined to s4
     hdfs.deleteSnapshot(sdir1, "s5");
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     assertFalse(hdfs.exists(bar2_s5));
     final Path bar2_s4 = SnapshotTestHelper.getSnapshotPath(sdir1, "s4",
         "foo/bar2");
@@ -492,7 +492,7 @@ public class TestRenameWithSnapshots {
     assertFalse(hdfs.exists(bar3_s2));
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // delete snapshot s2.
     hdfs.deleteSnapshot(sdir2, "s2");
@@ -500,14 +500,15 @@ public class TestRenameWithSnapshots {
     assertFalse(hdfs.exists(bar2_s2));
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     hdfs.deleteSnapshot(sdir1, "s3");
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     hdfs.deleteSnapshot(sdir1, "s1");
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
   }
   
-  private void restartClusterAndCheckImage() throws IOException {
+  private void restartClusterAndCheckImage(boolean compareQuota)
+      throws IOException {
     File fsnBefore = new File(testDir, "dumptree_before");
     File fsnMiddle = new File(testDir, "dumptree_middle");
     File fsnAfter = new File(testDir, "dumptree_after");
@@ -538,8 +539,10 @@ public class TestRenameWithSnapshots {
     // dump the namespace loaded from fsimage
     SnapshotTestHelper.dumpTree2File(fsdir, fsnAfter);
     
-    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnMiddle, true);
-    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter, true);
+    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnMiddle,
+        compareQuota);
+    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter,
+        compareQuota);
   }
   
   /**
@@ -579,7 +582,7 @@ public class TestRenameWithSnapshots {
     
     // delete snapshot s5.
     hdfs.deleteSnapshot(sdir1, "s5");
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     assertFalse(hdfs.exists(foo_s5));
     status = hdfs.getFileStatus(foo_s4);
     assertEquals(REPL_1, status.getReplication());
@@ -604,18 +607,18 @@ public class TestRenameWithSnapshots {
         .getLocalName());
     
     // restart cluster
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // delete snapshot s2.
     hdfs.deleteSnapshot(sdir2, "s2");
     assertFalse(hdfs.exists(foo_s2));
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     hdfs.deleteSnapshot(sdir1, "s3");
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     hdfs.deleteSnapshot(sdir1, "s1");
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
   }
   
   /**
@@ -650,7 +653,7 @@ public class TestRenameWithSnapshots {
     hdfs.rename(bar2_dir1, bar2_dir2);
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // modification on /dir2/foo and /dir2/bar
     final Path bar1_dir2 = new Path(foo_dir2, "bar1");
@@ -686,7 +689,7 @@ public class TestRenameWithSnapshots {
     hdfs.rename(bar2_dir2, bar2_dir3);
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // modification on /dir3/foo and /dir3/bar
     final Path bar1_dir3 = new Path(foo_dir3, "bar1");
@@ -718,7 +721,7 @@ public class TestRenameWithSnapshots {
     hdfs.rename(bar2_dir3, bar2_dir2);
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // modification on /dir2/foo
     hdfs.setReplication(bar1_dir2, REPL);
@@ -773,14 +776,14 @@ public class TestRenameWithSnapshots {
         .getLocalName());
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // delete foo
     hdfs.delete(foo_dir1, true);
     hdfs.delete(bar2_dir1, true);
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // check
     assertTrue(hdfs.exists(bar1_s1));
@@ -844,7 +847,7 @@ public class TestRenameWithSnapshots {
     hdfs.setReplication(bar_dir2, REPL_1);
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // create snapshots
     SnapshotTestHelper.createSnapshot(hdfs, sdir1, "s11");
@@ -863,7 +866,7 @@ public class TestRenameWithSnapshots {
     hdfs.setReplication(bar_dir3, REPL_2);
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // create snapshots
     SnapshotTestHelper.createSnapshot(hdfs, sdir1, "s111");
@@ -917,7 +920,7 @@ public class TestRenameWithSnapshots {
     hdfs.setReplication(bar_dir2, REPL);
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // create snapshots
     SnapshotTestHelper.createSnapshot(hdfs, sdir1, "s1111");
@@ -999,14 +1002,14 @@ public class TestRenameWithSnapshots {
     assertEquals("s1", barDiffs.get(0).snapshot.getRoot().getLocalName());
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // delete foo
     hdfs.delete(foo_dir1, true);
     hdfs.delete(bar_dir1, true);
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // check
     final Path bar1_s1111 = SnapshotTestHelper.getSnapshotPath(sdir1, "s1111",
@@ -1127,7 +1130,7 @@ public class TestRenameWithSnapshots {
     hdfs.rename(foo, newfoo);
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     final Path bar2 = new Path(newfoo, "bar2");
     DFSTestUtil.createFile(hdfs, bar2, BLOCKSIZE, REPL, SEED);
@@ -1145,7 +1148,7 @@ public class TestRenameWithSnapshots {
     // delete snapshot s4. The diff of s4 should be combined to s3
     hdfs.deleteSnapshot(sdir1, "s4");
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     Path bar_s3 = SnapshotTestHelper.getSnapshotPath(sdir1, "s3", "foo/bar");
     assertFalse(hdfs.exists(bar_s3));
@@ -1175,18 +1178,18 @@ public class TestRenameWithSnapshots {
     assertEquals("s2", diffs.get(0).snapshot.getRoot().getLocalName());
     
     // restart the cluster and check fsimage
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     
     // delete snapshot s2.
     hdfs.deleteSnapshot(sdir2, "s2");
     assertFalse(hdfs.exists(bar_s2));
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     // make sure the whole referred subtree has been destroyed
     assertEquals(4, fsdir.getRoot().getNamespace());
     assertEquals(0, fsdir.getRoot().getDiskspace());
     
     hdfs.deleteSnapshot(sdir1, "s1");
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
     assertEquals(3, fsdir.getRoot().getNamespace());
     assertEquals(0, fsdir.getRoot().getDiskspace());
   }
@@ -1232,7 +1235,7 @@ public class TestRenameWithSnapshots {
     INode fooNode = fooRef.asFile();
     assertTrue(fooNode instanceof INodeFileWithSnapshot);
     
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
   }
   
   /**
@@ -1724,7 +1727,7 @@ public class TestRenameWithSnapshots {
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(REPL).build();
     cluster.waitActive();
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
   }
   
   /**
@@ -1784,7 +1787,108 @@ public class TestRenameWithSnapshots {
     final Path foo2 = new Path(bar2, "foo");
     hdfs.rename(foo, foo2);
     
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
+    
+    // delete snap1
+    hdfs.deleteSnapshot(sdir1, snap1);
+    
+    restartClusterAndCheckImage(true);
+  }
+  
+  /**
+   * move a directory to its prior descedant
+   */
+  @Test
+  public void testRename2PreDescendant_2() throws Exception {
+    final Path root = new Path("/");
+    final Path sdir1 = new Path("/dir1");
+    final Path sdir2 = new Path("/dir2");
+    final Path foo = new Path(sdir1, "foo");
+    final Path bar = new Path(foo, "bar");
+    final Path file1InBar = new Path(bar, "file1");
+    final Path file2InBar = new Path(bar, "file2");
+    hdfs.mkdirs(bar);
+    hdfs.mkdirs(sdir2);
+    DFSTestUtil.createFile(hdfs, file1InBar, BLOCKSIZE, REPL, SEED);
+    DFSTestUtil.createFile(hdfs, file2InBar, BLOCKSIZE, REPL, SEED);
+    
+    hdfs.setQuota(sdir1, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    hdfs.setQuota(sdir2, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    hdfs.setQuota(foo, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    hdfs.setQuota(bar, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    
+    // create snapshot on root
+    SnapshotTestHelper.createSnapshot(hdfs, root, snap1);
+    // delete file1InBar
+    hdfs.delete(file1InBar, true);
+    
+    // create another snapshot on root
+    SnapshotTestHelper.createSnapshot(hdfs, root, snap2);
+    // delete file2InBar
+    hdfs.delete(file2InBar, true);
+    
+    // /dir1/foo/bar -> /dir2/bar
+    final Path bar2 = new Path(sdir2, "bar2");
+    hdfs.rename(bar, bar2);
+    
+    // /dir1/foo -> /dir2/bar/foo
+    final Path foo2 = new Path(bar2, "foo2");
+    hdfs.rename(foo, foo2);
+    
+    restartClusterAndCheckImage(true);
+    
+    // delete snapshot snap2
+    hdfs.deleteSnapshot(root, snap2);
+    
+    // after deleteing snap2, the WithName node "bar", which originally was 
+    // stored in the deleted list of "foo" for snap2, is moved to its deleted 
+    // list for snap1. In that case, it will not be counted when calculating 
+    // quota for "foo". However, we do not update this quota usage change while 
+    // deleting snap2.
+    restartClusterAndCheckImage(false);
+  }
+  
+  /**
+   * move a directory to its prior descedant
+   */
+  @Test
+  public void testRename2PreDescendant_3() throws Exception {
+    final Path root = new Path("/");
+    final Path sdir1 = new Path("/dir1");
+    final Path sdir2 = new Path("/dir2");
+    final Path foo = new Path(sdir1, "foo");
+    final Path bar = new Path(foo, "bar");
+    final Path fileInBar = new Path(bar, "file");
+    hdfs.mkdirs(bar);
+    hdfs.mkdirs(sdir2);
+    DFSTestUtil.createFile(hdfs, fileInBar, BLOCKSIZE, REPL, SEED);
+    
+    hdfs.setQuota(sdir1, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    hdfs.setQuota(sdir2, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    hdfs.setQuota(foo, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    hdfs.setQuota(bar, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    
+    // create snapshot on root
+    SnapshotTestHelper.createSnapshot(hdfs, root, snap1);
+    // delete fileInBar
+    hdfs.delete(fileInBar, true);
+    // create another snapshot on root
+    SnapshotTestHelper.createSnapshot(hdfs, root, snap2);
+    
+    // /dir1/foo/bar -> /dir2/bar
+    final Path bar2 = new Path(sdir2, "bar2");
+    hdfs.rename(bar, bar2);
+    
+    // /dir1/foo -> /dir2/bar/foo
+    final Path foo2 = new Path(bar2, "foo2");
+    hdfs.rename(foo, foo2);
+    
+    restartClusterAndCheckImage(true);
+    
+    // delete snapshot snap1
+    hdfs.deleteSnapshot(root, snap1);
+    
+    restartClusterAndCheckImage(true);
   }
   
   /**
@@ -1851,7 +1955,7 @@ public class TestRenameWithSnapshots {
     assertEquals(0, diff.getList(ListType.CREATED).size());
     assertEquals(0, diff.getList(ListType.DELETED).size());
     
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
   }
   
   /**
@@ -1928,7 +2032,7 @@ public class TestRenameWithSnapshots {
     assertSame(wc, wc2);
     assertSame(fooRef2, wc.getParentReference());
     
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
   }
   
   /**
@@ -2041,7 +2145,7 @@ public class TestRenameWithSnapshots {
         .isEmpty());
     assertTrue(barNode.getChildrenList(null).isEmpty());
     
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
   }
   
   /**
@@ -2137,6 +2241,6 @@ public class TestRenameWithSnapshots {
     assertSame(fooNode.asReference().getReferredINode(),
         fooNode_s2.getReferredINode());
     
-    restartClusterAndCheckImage();
+    restartClusterAndCheckImage(true);
   }
 }

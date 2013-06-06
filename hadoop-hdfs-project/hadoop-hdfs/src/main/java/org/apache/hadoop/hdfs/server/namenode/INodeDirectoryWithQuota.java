@@ -132,7 +132,7 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
   
   @Override
   public final void addSpaceConsumed(final long nsDelta, final long dsDelta,
-      boolean verify, int snapshotId) throws QuotaExceededException {
+      boolean verify) throws QuotaExceededException {
     if (isQuotaSet()) { 
       // The following steps are important: 
       // check quotas in this inode and all ancestors before changing counts
@@ -143,11 +143,11 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
         verifyQuota(nsDelta, dsDelta);
       }
       // (2) verify quota and then add count in ancestors 
-      super.addSpaceConsumed(nsDelta, dsDelta, verify, snapshotId);
+      super.addSpaceConsumed(nsDelta, dsDelta, verify);
       // (3) add count in this inode
       addSpaceConsumed2Cache(nsDelta, dsDelta);
     } else {
-      super.addSpaceConsumed(nsDelta, dsDelta, verify, snapshotId);
+      super.addSpaceConsumed(nsDelta, dsDelta, verify);
     }
   }
   

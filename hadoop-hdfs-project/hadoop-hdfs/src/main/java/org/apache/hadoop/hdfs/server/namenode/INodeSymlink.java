@@ -76,7 +76,8 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   
   @Override
   public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
-      final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
+      final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes, final boolean countDiffChange) {
     if (snapshot == null && prior == null) {
       destroyAndCollectBlocks(collectedBlocks, removedINodes);
     }
