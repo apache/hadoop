@@ -21,6 +21,8 @@
 
 <project name="hadoopbuildcontrib" xmlns:ivy="antlib:org.apache.ivy.ant">
 
+  <property environment="env" />
+
   <property name="name" value="${ant.project.name}"/>
   <property name="root" value="${basedir}"/>
   <property name="hadoop.root" location="${root}/../../../"/>
@@ -57,6 +59,25 @@
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
   <property name="build.examples" location="${build.dir}/examples"/>
+
+  <loadresource property="nonspace.os">
+    <propertyresource name="os.name"/>
+    <filterchain>
+      <tokenfilter>
+        <filetokenizer/>
+        <replacestring from=" " to="_"/>
+      </tokenfilter>
+    </filterchain>
+  </loadresource>
+  <condition property="build.platform"
+    value="${env.OS}-${os.arch}-${sun.arch.data.model}"
+    else="${nonspace.os}-${os.arch}-${sun.arch.data.model}">
+    <os family="windows" />
+  </condition>
+  <property name="build.native" 
+    value="${hadoop.root}/build/native/${build.platform}"/>
+  <property name="lib.dir" value="${hadoop.root}/lib"/>
+
   <property name="hadoop.log.dir" location="${build.dir}/test/logs"/>
   <!-- all jars together -->
   <property name="javac.deprecation" value="off"/>
@@ -291,7 +312,7 @@
       haltonfailure="no" fork="yes" maxmemory="512m"
       errorProperty="tests.failed" failureProperty="tests.failed"
       timeout="${test.timeout}">
-      
+      <env key="HADOOP_HOME" value="${hadoop.root}"/>
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
       <sysproperty key="src.test.data" value="${src.test.data}"/>
@@ -308,6 +329,8 @@
       <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/> 
       <sysproperty key="taskcontroller-path" value="${taskcontroller-path}"/>
       <sysproperty key="taskcontroller-ugi" value="${taskcontroller-ugi}"/>
+      <sysproperty key="java.library.path"
+        value="${build.native}/lib${path.separator}${lib.dir}/native/${build.platform}"/>
       <classpath refid="test.classpath"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${build.test}" unless="testcase">
@@ -347,15 +370,6 @@
      <property name="test.debug.data" value="${build.test.system}/debug"/>
      <property name="test.log.dir" value="${build.test.system}/logs"/>
      <patternset id="empty.exclude.list.id" />
-        <exec executable="sed" inputstring="${os.name}"
-            outputproperty="nonspace.os">
-          <arg value="s/ /_/g"/>
-        </exec>
-     <property name="build.platform"
-         value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
-     <property name="build.native" 
-         value="${hadoop.root}/build/native/${build.platform}"/>
-     <property name="lib.dir" value="${hadoop.root}/lib"/>
      <property name="install.c++.examples"
          value="${hadoop.root}/build/c++-examples/${build.platform}"/>
     <condition property="tests.testcase">
@@ -396,6 +410,7 @@
         dir="${basedir}" timeout="${test.timeout}"
         errorProperty="tests.failed" failureProperty="tests.failed">
         <jvmarg value="${test.junit.jvmargs}" />
+        <env key="HADOOP_HOME" value="${hadoop.root}"/>
         <sysproperty key="java.net.preferIPv4Stack" value="true"/>
         <sysproperty key="test.build.data" value="@{test.dir}/data"/>
         <sysproperty key="test.tools.input.dir" value = "${test.tools.input.dir}"/>
@@ -408,7 +423,7 @@
         <sysproperty key="test.build.extraconf" value="@{test.dir}/extraconf" />
         <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
         <sysproperty key="java.library.path"
-          value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
+          value="${build.native}/lib${path.separator}${lib.dir}/native/${build.platform}"/>
         <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>
         <syspropertyset dynamic="no">
           <propertyref name="hadoop.tmp.dir"/>
