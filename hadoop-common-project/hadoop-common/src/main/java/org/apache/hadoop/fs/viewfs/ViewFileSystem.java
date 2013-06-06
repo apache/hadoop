@@ -64,6 +64,9 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
 public class ViewFileSystem extends FileSystem {
+
+  private static final Path ROOT_PATH = new Path(Path.SEPARATOR);
+
   static AccessControlException readOnlyMountTable(final String operation,
       final String p) {
     return new AccessControlException( 
@@ -99,23 +102,6 @@ public class ViewFileSystem extends FileSystem {
   Path homeDir = null;
   
   /**
-   * Prohibits names which contain a ".", "..", ":" or "/" 
-   */
-  private static boolean isValidName(final String src) {
-    // Check for ".." "." ":" "/"
-    final StringTokenizer tokens = new StringTokenizer(src, Path.SEPARATOR);
-    while(tokens.hasMoreTokens()) {
-      String element = tokens.nextToken();
-      if (element.equals("..") ||
-          element.equals(".")  ||
-          (element.indexOf(":") >= 0)) {
-        return false;
-      }
-    }
-    return true;
-  }
-  
-  /**
    * Make the path Absolute and get the path-part of a pathname.
    * Checks that URI matches this file system 
    * and that the path-part is a valid name.
@@ -126,10 +112,6 @@ public class ViewFileSystem extends FileSystem {
   private String getUriPath(final Path p) {
     checkPath(p);
     String s = makeAbsolute(p).toUri().getPath();
-    if (!isValidName(s)) {
-      throw new InvalidPathException("Path part " + s + " from URI" + p
-          + " is not a valid filename.");
-    }
     return s;
   }
   
@@ -689,7 +671,7 @@ public class ViewFileSystem extends FileSystem {
           PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
 
           new Path(theInternalDir.fullPath).makeQualified(
-              myUri, null));
+              myUri, ROOT_PATH));
     }
     
 

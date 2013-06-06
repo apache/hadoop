@@ -345,6 +345,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4815. TestRBWBlockInvalidation: Double call countReplicas() to fetch
     corruptReplicas and liveReplicas is not needed. (Tian Hong Wang via atm)
 
+    HADOOP-8957 HDFS tests for AbstractFileSystem#IsValidName should be overridden for
+    embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
