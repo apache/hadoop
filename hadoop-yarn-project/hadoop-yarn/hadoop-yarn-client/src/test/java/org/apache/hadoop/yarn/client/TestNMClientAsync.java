@@ -121,8 +121,11 @@ public class TestNMClientAsync {
     }
     Assert.assertEquals("Error occurs in ContainerEventProcessor", 0,
         ((MockNMClientAsync1) asyncClient).errorMsgs.size());
-    Assert.assertEquals("Completed container is not removed", 0,
-        asyncClient.containers.size());
+    // When the callback functions are all executed, the event processor threads
+    // may still not terminate and the containers may still not removed.
+    while (asyncClient.containers.size() > 0) {
+      Thread.sleep(10);
+    }
     asyncClient.stop();
     Assert.assertFalse(
         "The thread of Container Management Event Dispatcher is still alive",
