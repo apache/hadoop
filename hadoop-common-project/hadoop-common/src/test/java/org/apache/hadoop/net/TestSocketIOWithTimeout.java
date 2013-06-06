@@ -32,6 +32,7 @@ import org.apache.hadoop.test.MultithreadedTestUtil;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Shell;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -144,12 +145,20 @@ public class TestSocketIOWithTimeout {
       // Nevertheless, the output stream is closed, because
       // a partial write may have succeeded (see comment in
       // SocketOutputStream#write(byte[]), int, int)
-      try {
-        out.write(1);
-        fail("Did not throw");
-      } catch (IOException ioe) {
-        GenericTestUtils.assertExceptionContains(
-            "stream is closed", ioe);
+      // This portion of the test cannot pass on Windows due to differences in
+      // behavior of partial writes.  Windows appears to buffer large amounts of
+      // written data and send it all atomically, thus making it impossible to
+      // simulate a partial write scenario.  Attempts were made to switch the
+      // test from using a pipe to a network socket and also to use larger and
+      // larger buffers in doIO.  Nothing helped the situation though.
+      if (!Shell.WINDOWS) {
+        try {
+          out.write(1);
+          fail("Did not throw");
+        } catch (IOException ioe) {
+          GenericTestUtils.assertExceptionContains(
+              "stream is closed", ioe);
+        }
       }
       
       out.close();
