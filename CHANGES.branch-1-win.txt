@@ -268,8 +268,11 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     HADOOP-9043. disallow in winutils creating symlinks with forwards slashes.
     (Chris Nauroth via suresh)
 
-    HADOOP-9579. Contrib ant test target not setting the java.library.path
+    HADOOP-9579. Contrib ant test target not setting the java.library.path.
     (ivanmi)
+
+    HADOOP-9552. Windows log4j template should suppress info messages from
+    mortbay.log. (ivanmi)
 
   Merged from branch-1
 
