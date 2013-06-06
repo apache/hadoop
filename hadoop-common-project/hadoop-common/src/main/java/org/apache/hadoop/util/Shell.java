@@ -227,8 +227,10 @@ abstract public class Shell {
        home = homedir.getCanonicalPath();
 
     } catch (IOException ioe) {
-       LOG.error("Failed to detect a valid hadoop home directory", ioe);
-       home = null;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Failed to detect a valid hadoop home directory", ioe);
+      }
+      home = null;
     }
     
     return home;
@@ -305,10 +307,13 @@ abstract public class Shell {
       shexec = new ShellCommandExecutor(args);
       shexec.execute();
     } catch (IOException ioe) {
-      LOG.warn("setsid is not available on this machine. So not using it.");
+      LOG.debug("setsid is not available on this machine. So not using it.");
       setsidSupported = false;
     } finally { // handle the exit code
-      LOG.info("setsid exited with exit code " + shexec.getExitCode());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("setsid exited with exit code "
+                 + (shexec != null ? shexec.getExitCode() : "(null executor)"));
+      }
     }
     return setsidSupported;
   }
