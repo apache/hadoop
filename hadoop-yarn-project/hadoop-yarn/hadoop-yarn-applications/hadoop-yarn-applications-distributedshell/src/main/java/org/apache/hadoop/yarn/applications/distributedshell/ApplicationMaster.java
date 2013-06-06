@@ -631,7 +631,9 @@ public class ApplicationMaster {
     }
 
     @Override
-    public void onRebootRequest() {}
+    public void onShutdownRequest() {
+      done = true;
+    }
 
     @Override
     public void onNodesUpdated(List<NodeReport> updatedNodes) {}

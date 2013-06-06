@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -65,7 +66,7 @@ public abstract class AllocateResponse {
   public static AllocateResponse newInstance(int responseId,
       List<ContainerStatus> completedContainers,
       List<Container> allocatedContainers, List<NodeReport> updatedNodes,
-      Resource availResources, boolean resync, int numClusterNodes,
+      Resource availResources, AMCommand command, int numClusterNodes,
       PreemptionMessage preempt) {
     AllocateResponse response = Records.newRecord(AllocateResponse.class);
     response.setNumClusterNodes(numClusterNodes);
@@ -74,32 +75,27 @@ public abstract class AllocateResponse {
     response.setAllocatedContainers(allocatedContainers);
     response.setUpdatedNodes(updatedNodes);
     response.setAvailableResources(availResources);
-    response.setResync(resync);
+    response.setAMCommand(command);
     response.setPreemptionMessage(preempt);
     return response;
   }
 
   /**
-   * Should the <code>ApplicationMaster</code> take action because of being 
-   * out-of-sync with the <code>ResourceManager</code> as deigned by
-   * {@link #getResponseId()}
-   * This can be due to application errors or because the ResourceManager 
-   * has restarted. The action to be taken by the <code>ApplicationMaster</code> 
-   * is to shutdown without unregistering with the <code>ResourceManager</code>. 
-   * The ResourceManager will start a new attempt. If the application is already 
-   * done when it gets the resync command, then it may choose to shutdown after 
-   * unregistering in which case the ResourceManager will not start a new attempt. 
-   *
-   * @return <code>true</code> if the <code>ApplicationMaster</code> should
-   *         take action, <code>false</code> otherwise
+   * If the <code>ResourceManager</code> needs the
+   * <code>ApplicationMaster</code> to take some action then it will send an
+   * AMCommand to the <code>ApplicationMaster</code>. See <code>AMCommand</code> 
+   * for details on commands and actions for them.
+   * @return <code>AMCommand</code> if the <code>ApplicationMaster</code> should
+   *         take action, <code>null</code> otherwise
+   * @see AMCommand
    */
   @Public
   @Stable
-  public abstract boolean getResync();
+  public abstract AMCommand getAMCommand();
 
   @Private
   @Unstable
-  public abstract void setResync(boolean value);
+  public abstract void setAMCommand(AMCommand command);
 
   /**
    * Get the <em>last response id</em>.
