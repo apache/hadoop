@@ -41,7 +41,12 @@ public class TestShell extends TestCase {
 
     @Override
     protected String[] getExecString() {
-      return new String[] {"echo", "hello"};
+      // There is no /bin/echo equivalent on Windows so just launch it as a
+      // shell built-in.
+      //
+      return Shell.WINDOWS ?
+          (new String[] {"cmd.exe", "/c", "echo", "hello"}) :
+          (new String[] {"echo", "hello"});
     }
 
     @Override

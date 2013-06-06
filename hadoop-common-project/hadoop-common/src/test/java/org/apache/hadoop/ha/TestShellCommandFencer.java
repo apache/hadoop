@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -110,9 +111,9 @@ public class TestShellCommandFencer {
    */
   @Test
   public void testStderrLogging() {
-    assertTrue(fencer.tryFence(TEST_TARGET, "echo hello >&2"));
+    assertTrue(fencer.tryFence(TEST_TARGET, "echo hello>&2"));
     Mockito.verify(ShellCommandFencer.LOG).warn(
-        Mockito.endsWith("echo hello >&2: hello"));
+        Mockito.endsWith("echo hello>&2: hello"));
   }
 
   /**
@@ -121,9 +122,15 @@ public class TestShellCommandFencer {
    */
   @Test
   public void testConfAsEnvironment() {
-    fencer.tryFence(TEST_TARGET, "echo $in_fencing_tests");
-    Mockito.verify(ShellCommandFencer.LOG).info(
-        Mockito.endsWith("echo $in...ing_tests: yessir"));
+    if (!Shell.WINDOWS) {
+      fencer.tryFence(TEST_TARGET, "echo $in_fencing_tests");
+      Mockito.verify(ShellCommandFencer.LOG).info(
+          Mockito.endsWith("echo $in...ing_tests: yessir"));
+    } else {
+      fencer.tryFence(TEST_TARGET, "echo %in_fencing_tests%");
+      Mockito.verify(ShellCommandFencer.LOG).info(
+          Mockito.endsWith("echo %in...ng_tests%: yessir"));
+    }
   }
   
   /**
@@ -132,9 +139,15 @@ public class TestShellCommandFencer {
    */
   @Test
   public void testTargetAsEnvironment() {
-    fencer.tryFence(TEST_TARGET, "echo $target_host $target_port $target_address");
-    Mockito.verify(ShellCommandFencer.LOG).info(
-        Mockito.endsWith("echo $ta...t_address: host 1234 host:1234"));
+    if (!Shell.WINDOWS) {
+      fencer.tryFence(TEST_TARGET, "echo $target_host $target_port $target_address");
+      Mockito.verify(ShellCommandFencer.LOG).info(
+          Mockito.endsWith("echo $ta...t_address: host 1234 host:1234"));
+    } else {
+      fencer.tryFence(TEST_TARGET, "echo %target_host% %target_port% %target_address%");
+      Mockito.verify(ShellCommandFencer.LOG).info(
+          Mockito.endsWith("echo %ta..._address%: host 1234 host:1234"));
+    }
   }
 
 
