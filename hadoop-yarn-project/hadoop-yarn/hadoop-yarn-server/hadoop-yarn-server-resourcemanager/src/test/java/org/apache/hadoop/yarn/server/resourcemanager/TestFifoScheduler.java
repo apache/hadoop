@@ -273,23 +273,23 @@ public class TestFifoScheduler {
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
         ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1));
-    fs.allocate(appAttemptId1, ask1, emptyId);
+    fs.allocate(appAttemptId1, ask1, emptyId, null, null);
 
     // Ask for a 2 GB container for app 2
     List<ResourceRequest> ask2 = new ArrayList<ResourceRequest>();
     ask2.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
         ResourceRequest.ANY, BuilderUtils.newResource(2 * GB, 1), 1));
-    fs.allocate(appAttemptId2, ask2, emptyId);
+    fs.allocate(appAttemptId2, ask2, emptyId, null, null);
     
     // Trigger container assignment
     fs.handle(new NodeUpdateSchedulerEvent(n1));
     
     // Get the allocation for the applications and verify headroom
-    Allocation allocation1 = fs.allocate(appAttemptId1, emptyAsk, emptyId);
+    Allocation allocation1 = fs.allocate(appAttemptId1, emptyAsk, emptyId, null, null);
     Assert.assertEquals("Allocation headroom", 1 * GB,
         allocation1.getResourceLimit().getMemory());
 
-    Allocation allocation2 = fs.allocate(appAttemptId2, emptyAsk, emptyId);
+    Allocation allocation2 = fs.allocate(appAttemptId2, emptyAsk, emptyId, null, null);
     Assert.assertEquals("Allocation headroom", 1 * GB,
         allocation2.getResourceLimit().getMemory());
 

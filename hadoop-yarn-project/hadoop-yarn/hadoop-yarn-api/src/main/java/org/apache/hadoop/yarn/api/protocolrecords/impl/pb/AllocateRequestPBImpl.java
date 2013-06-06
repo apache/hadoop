@@ -25,12 +25,15 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceBlacklistRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProto;
@@ -46,6 +49,7 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   private ApplicationAttemptId applicationAttemptID = null;
   private List<ResourceRequest> ask = null;
   private List<ContainerId> release = null;
+  private ResourceBlacklistRequest blacklistRequest = null;
   
   
   public AllocateRequestPBImpl() {
@@ -93,6 +97,9 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     }
     if (this.release != null) {
       addReleasesToProto();
+    }
+    if (this.blacklistRequest != null) {
+      builder.setBlacklistRequest(convertToProtoFormat(this.blacklistRequest));
     }
   }
 
@@ -161,6 +168,7 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     initAsks();
     return this.ask;
   }
+  
   @Override
   public void setAskList(final List<ResourceRequest> resourceRequests) {
     if(resourceRequests == null) {
@@ -171,6 +179,28 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     this.ask.addAll(resourceRequests);
   }
   
+  @Override
+  public ResourceBlacklistRequest getResourceBlacklistRequest() {
+    AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.blacklistRequest != null) {
+      return this.blacklistRequest;
+    }
+    if (!p.hasBlacklistRequest()) {
+      return null;
+    }
+    this.blacklistRequest = convertFromProtoFormat(p.getBlacklistRequest());
+    return this.blacklistRequest;
+  }
+
+  @Override
+  public void setResourceBlacklistRequest(ResourceBlacklistRequest blacklistRequest) {
+    maybeInitBuilder();
+    if (blacklistRequest == null) {
+      builder.clearBlacklistRequest();
+    }
+    this.blacklistRequest = blacklistRequest;
+  }
+
   private void initAsks() {
     if (this.ask != null) {
       return;
@@ -302,4 +332,14 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   private ContainerIdProto convertToProtoFormat(ContainerId t) {
     return ((ContainerIdPBImpl)t).getProto();
   }
+  
+  private ResourceBlacklistRequestPBImpl convertFromProtoFormat(ResourceBlacklistRequestProto p) {
+    return new ResourceBlacklistRequestPBImpl(p);
+  }
+
+  private ResourceBlacklistRequestProto convertToProtoFormat(ResourceBlacklistRequest t) {
+    return ((ResourceBlacklistRequestPBImpl)t).getProto();
+  }
+
+
 }  

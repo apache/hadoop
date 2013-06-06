@@ -222,7 +222,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   @Override
   public Allocation allocate(
       ApplicationAttemptId applicationAttemptId, List<ResourceRequest> ask,
-      List<ContainerId> release) {
+      List<ContainerId> release, List<String> blacklistAdditions, List<String> blacklistRemovals) {
     FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.error("Calling allocate on removed " +
@@ -268,7 +268,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         application.showRequests();
 
         // Update application requests
-        application.updateResourceRequests(ask);
+        application.updateResourceRequests(ask, null, null);
 
         LOG.debug("allocate: post-update" +
             " applicationId=" + applicationAttemptId + 

@@ -22,23 +22,25 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
- * The exception is thrown when a {@link ResourceRequest} is out of the range
- * of the configured lower and upper resource boundaries.
- *
+ * The exception is thrown when an application provides an invalid
+ * specification for the blacklist.
+ * 
+ * As an e.g., currently this exceptions is thrown when an application 
+ * tries to blacklist {@link ResourceRequest#ANY}. 
  */
-public class InvalidResourceRequestException extends YarnException {
+public class InvalidResourceBlacklistRequestException extends YarnException {
 
-  private static final long serialVersionUID = 13498237L;
+  private static final long serialVersionUID = 384957911L;
 
-  public InvalidResourceRequestException(Throwable cause) {
+  public InvalidResourceBlacklistRequestException(Throwable cause) {
     super(cause);
   }
 
-  public InvalidResourceRequestException(String message) {
+  public InvalidResourceBlacklistRequestException(String message) {
     super(message);
   }
 
-  public InvalidResourceRequestException(String message, Throwable cause) {
+  public InvalidResourceBlacklistRequestException(String message, Throwable cause) {
     super(message, cause);
   }
 

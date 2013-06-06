@@ -96,7 +96,7 @@ public class LocalContainerAllocator extends RMCommunicator
     AllocateRequest allocateRequest = AllocateRequest.newInstance(
         this.applicationAttemptId, this.lastResponseID, super
             .getApplicationProgress(), new ArrayList<ResourceRequest>(),
-        new ArrayList<ContainerId>());
+        new ArrayList<ContainerId>(), null);
     AllocateResponse allocateResponse;
     try {
       allocateResponse = scheduler.allocate(allocateRequest);

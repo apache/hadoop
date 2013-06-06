@@ -134,9 +134,11 @@ public class FiCaSchedulerApp extends SchedulerApplication {
   }
 
   public synchronized void updateResourceRequests(
-      List<ResourceRequest> requests) {
+      List<ResourceRequest> requests, 
+      List<String> blacklistAdditions, List<String> blacklistRemovals) {
     if (!isStopped) {
-      this.appSchedulingInfo.updateResourceRequests(requests);
+      this.appSchedulingInfo.updateResourceRequests(requests, 
+          blacklistAdditions, blacklistRemovals);
     }
   }
 
@@ -162,6 +164,10 @@ public class FiCaSchedulerApp extends SchedulerApplication {
   
   public Resource getResource(Priority priority) {
     return this.appSchedulingInfo.getResource(priority);
+  }
+  
+  public boolean isBlacklisted(String resourceName) {
+    return this.appSchedulingInfo.isBlacklisted(resourceName);
   }
 
   /**

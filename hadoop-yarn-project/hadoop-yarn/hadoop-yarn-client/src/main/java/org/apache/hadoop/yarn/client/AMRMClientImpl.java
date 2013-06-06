@@ -228,7 +228,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
         release.clear();
         allocateRequest =
             AllocateRequest.newInstance(appAttemptId, lastResponseId,
-              progressIndicator, askList, releaseList);
+              progressIndicator, askList, releaseList, null);
       }
 
       allocateResponse = rmClient.allocate(allocateRequest);
