@@ -215,6 +215,13 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9593. stack trace printed at ERROR for all yarn clients without
     hadoop.home set (stevel)
 
+    HADOOP-8957 AbstractFileSystem#IsValidName should be overridden for
+    embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
+
+    HADOOP-9607. Fixes in Javadoc build (Timothy St. Clair via cos)
+
+    HADOOP-9605. Update junit dependency. (Timothy St. Clair via cos)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
@@ -389,9 +396,17 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-9397. Incremental dist tar build fails. (Chris Nauroth via jlowe)
 
-    HADOOP-9607. Fixes in Javadoc build (Timothy St. Clair via cos)
+    HADOOP-9131. Turn off TestLocalFileSystem#testListStatusWithColons on
+    Windows. (Chris Nauroth via suresh)
 
-    HADOOP-9605. Update junit dependency. (Timothy St. Clair via cos)
+    HADOOP-9526. TestShellCommandFencer and TestShell fail on Windows.
+    (Arpit Agarwal via suresh)
+
+    HADOOP-8982. TestSocketIOWithTimeout fails on Windows.
+    (Chris Nauroth via suresh)
+
+    HADOOP-8958. ViewFs:Non absolute mount name failures when running 
+    multiple tests on Windows. (Chris Nauroth via suresh)
 
 Release 2.0.5-alpha - UNRELEASED
 
@@ -731,6 +746,9 @@ Release 2.0.3-alpha - 2013-02-06
 
     HADOOP-9289. FsShell rm -f fails for non-matching globs. (Daryn Sharp via
     suresh)
+
+    HADOOP-8958. ViewFs:Non absolute mount name failures when running 
+    multiple tests on Windows. (Chris Nauroth via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 

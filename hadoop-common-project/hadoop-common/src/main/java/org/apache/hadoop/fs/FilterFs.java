@@ -278,4 +278,9 @@ public abstract class FilterFs extends AbstractFileSystem {
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
     return myFs.getDelegationTokens(renewer);
   }
+
+  @Override
+  public boolean isValidName(String src) {
+    return myFs.isValidName(src);
+  }
 }
