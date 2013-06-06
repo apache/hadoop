@@ -746,6 +746,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9131. Turn off TestLocalFileSystem#testListStatusWithColons on
     Windows. (Chris Nauroth via suresh)
 
+    HADOOP-9526. TestShellCommandFencer and TestShell fail on Windows.
+    (Arpit Agarwal via suresh)
+
 Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
