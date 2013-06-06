@@ -95,6 +95,8 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param appAttemptId
    * @param ask
    * @param release
+   * @param blacklistAdditions 
+   * @param blacklistRemovals 
    * @return the {@link Allocation} for the application
    */
   @Public
@@ -102,7 +104,9 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   Allocation 
   allocate(ApplicationAttemptId appAttemptId, 
       List<ResourceRequest> ask,
-      List<ContainerId> release);
+      List<ContainerId> release, 
+      List<String> blacklistAdditions, 
+      List<String> blacklistRemovals);
 
   /**
    * Get node resource usage report.

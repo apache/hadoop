@@ -330,7 +330,7 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptState());
     verify(scheduler, times(expectedAllocateCount)).
     allocate(any(ApplicationAttemptId.class), 
-        any(List.class), any(List.class));
+        any(List.class), any(List.class), any(List.class), any(List.class));
 
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertNull(applicationAttempt.getMasterContainer());
@@ -345,6 +345,7 @@ public class TestRMAppAttemptTransitions {
   /**
    * {@link RMAppAttemptState#ALLOCATED}
    */
+  @SuppressWarnings("unchecked")
   private void testAppAttemptAllocatedState(Container amContainer) {
     assertEquals(RMAppAttemptState.ALLOCATED, 
         applicationAttempt.getAppAttemptState());
@@ -354,7 +355,9 @@ public class TestRMAppAttemptTransitions {
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
     verify(scheduler, times(2)).
         allocate(
-            any(ApplicationAttemptId.class), any(List.class), any(List.class));
+            any(
+                ApplicationAttemptId.class), any(List.class), any(List.class), 
+                any(List.class), any(List.class));
   }
   
   /**
@@ -465,6 +468,7 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptScheduledState();
   }
 
+  @SuppressWarnings("unchecked")
   private Container allocateApplicationAttempt() {
     scheduleApplicationAttempt();
     
@@ -480,6 +484,8 @@ public class TestRMAppAttemptTransitions {
     when(
         scheduler.allocate(
             any(ApplicationAttemptId.class), 
+            any(List.class), 
+            any(List.class), 
             any(List.class), 
             any(List.class))).
     thenReturn(allocation);

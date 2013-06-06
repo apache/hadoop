@@ -138,7 +138,7 @@ public class FSSchedulerApp extends SchedulerApplication {
 
   public synchronized void updateResourceRequests(
       List<ResourceRequest> requests) {
-    this.appSchedulingInfo.updateResourceRequests(requests);
+    this.appSchedulingInfo.updateResourceRequests(requests, null, null);
   }
 
   public Map<String, ResourceRequest> getResourceRequests(Priority priority) {

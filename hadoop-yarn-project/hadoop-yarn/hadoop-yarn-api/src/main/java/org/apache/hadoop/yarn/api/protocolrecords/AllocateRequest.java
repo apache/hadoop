@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -61,13 +62,15 @@ public abstract class AllocateRequest {
   public static AllocateRequest newInstance(
       ApplicationAttemptId applicationAttemptId, int responseID,
       float appProgress, List<ResourceRequest> resourceAsk,
-      List<ContainerId> containersToBeReleased) {
+      List<ContainerId> containersToBeReleased, 
+      ResourceBlacklistRequest resourceBlacklistRequest) {
     AllocateRequest allocateRequest = Records.newRecord(AllocateRequest.class);
     allocateRequest.setApplicationAttemptId(applicationAttemptId);
     allocateRequest.setResponseId(responseID);
     allocateRequest.setProgress(appProgress);
     allocateRequest.setAskList(resourceAsk);
     allocateRequest.setReleaseList(containersToBeReleased);
+    allocateRequest.setResourceBlacklistRequest(resourceBlacklistRequest);
     return allocateRequest;
   }
 
@@ -127,6 +130,7 @@ public abstract class AllocateRequest {
    * Get the list of <code>ResourceRequest</code> to update the 
    * <code>ResourceManager</code> about the application's resource requirements.
    * @return the list of <code>ResourceRequest</code>
+   * @see ResourceRequest
    */
   @Public
   @Stable
@@ -138,6 +142,7 @@ public abstract class AllocateRequest {
    * @param resourceRequests list of <code>ResourceRequest</code> to update the 
    *                        <code>ResourceManager</code> about the application's 
    *                        resource requirements
+   * @see ResourceRequest
    */
   @Public
   @Stable
@@ -157,10 +162,37 @@ public abstract class AllocateRequest {
    * Set the list of <code>ContainerId</code> of containers being
    * released by the <code>ApplicationMaster</code>
    * @param releaseContainers list of <code>ContainerId</code> of 
-   *                          containers being released by the <
-   *                          code>ApplicationMaster</code>
+   *                          containers being released by the 
+   *                          <code>ApplicationMaster</code>
    */
   @Public
   @Stable
   public abstract void setReleaseList(List<ContainerId> releaseContainers);
+  
+  /**
+   * Get the <code>ResourceBlacklistRequest</code> being sent by the 
+   * <code>ApplicationMaster</code>.
+   * @return the <code>ResourceBlacklistRequest</code> being sent by the 
+   *         <code>ApplicationMaster</code>
+   * @see ResourceBlacklistRequest
+   */
+  @Public
+  @Stable
+  public abstract ResourceBlacklistRequest getResourceBlacklistRequest();
+  
+  /**
+   * Set the <code>ResourceBlacklistRequest</code> to inform the 
+   * <code>ResourceManager</code> about the blacklist additions and removals
+   * per the <code>ApplicationMaster</code>.
+   * 
+   * @param resourceBlacklistRequest the <code>ResourceBlacklistRequest</code>  
+   *                         to inform the <code>ResourceManager</code> about  
+   *                         the blacklist additions and removals
+   *                         per the <code>ApplicationMaster</code>
+   * @see ResourceBlacklistRequest
+   */
+  @Public
+  @Stable
+  public abstract void setResourceBlacklistRequest(
+      ResourceBlacklistRequest resourceBlacklistRequest);
 }

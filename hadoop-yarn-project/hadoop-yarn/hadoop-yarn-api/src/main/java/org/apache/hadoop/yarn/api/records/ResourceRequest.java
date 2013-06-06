@@ -40,8 +40,14 @@ import org.apache.hadoop.yarn.util.Records;
  *     </li>
  *     <li>{@link Resource} required for each request.</li>
  *     <li>
- *       Number of containers of such specifications which are required 
+ *       Number of containers, of above specifications, which are required 
  *       by the application.
+ *     </li>
+ *     <li>
+ *       A boolean <em>relaxLocality</em> flag, defaulting to <code>true</code>,
+ *       which tells the <code>ResourceManager</code> if the application wants
+ *       locality to be loose (i.e. allows fall-through to rack or <em>any</em>)
+ *       or strict (i.e. specify hard constraint on resource allocation).
  *     </li>
  *   </ul>
  * </p>

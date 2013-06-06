@@ -144,7 +144,7 @@ public class MockAM {
       List<ResourceRequest> resourceRequest, List<ContainerId> releases)
       throws Exception {
     AllocateRequest req = AllocateRequest.newInstance(attemptId,
-        ++responseId, 0F, resourceRequest, releases);
+        ++responseId, 0F, resourceRequest, releases, null);
     return amRMProtocol.allocate(req);
   }
 

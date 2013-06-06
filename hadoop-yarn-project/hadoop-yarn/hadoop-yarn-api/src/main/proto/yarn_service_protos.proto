@@ -54,8 +54,9 @@ message AllocateRequestProto {
   optional ApplicationAttemptIdProto application_attempt_id = 1;
   repeated ResourceRequestProto ask = 2;
   repeated ContainerIdProto release = 3;
-  optional int32 response_id = 4;
-  optional float progress = 5;
+  optional ResourceBlacklistRequestProto blacklist_request = 4;
+  optional int32 response_id = 5;
+  optional float progress = 6;
 }
 
 message AllocateResponseProto {

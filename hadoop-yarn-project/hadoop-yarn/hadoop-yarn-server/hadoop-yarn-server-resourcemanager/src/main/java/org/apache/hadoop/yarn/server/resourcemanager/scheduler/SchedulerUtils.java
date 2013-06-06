@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ContainerExitStatus;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -152,4 +153,14 @@ public class SchedulerUtils {
     }
   }
 
+  public static void validateBlacklistRequest(ResourceBlacklistRequest blacklistRequest) 
+  throws InvalidResourceBlacklistRequestException {
+    if (blacklistRequest != null) {
+      List<String> plus = blacklistRequest.getBlacklistAdditions();
+      if (plus != null && plus.contains(ResourceRequest.ANY)) {
+        throw new InvalidResourceBlacklistRequestException(
+            "Cannot add " + ResourceRequest.ANY + " to the blacklist!");
+      }
+    }
+  }
 }

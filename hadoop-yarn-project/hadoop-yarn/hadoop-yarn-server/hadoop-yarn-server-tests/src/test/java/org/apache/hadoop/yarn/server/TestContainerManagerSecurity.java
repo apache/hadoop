@@ -501,7 +501,7 @@ public class TestContainerManagerSecurity {
 
     AllocateRequest allocateRequest = AllocateRequest.newInstance(
         BuilderUtils.newApplicationAttemptId(appID, 1), 0, 0F, ask,
-        new ArrayList<ContainerId>());
+        new ArrayList<ContainerId>(), null);
     List<Container> allocatedContainers = scheduler.allocate(allocateRequest)
         .getAllocatedContainers();
 

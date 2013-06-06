@@ -78,13 +78,13 @@ public class TestAMRMRPCResponseId {
     am.registerAppAttempt();
     
     AllocateRequest allocateRequest = AllocateRequest.newInstance(attempt
-        .getAppAttemptId(), 0, 0F, null, null);
+        .getAppAttemptId(), 0, 0F, null, null, null);
 
     AllocateResponse response = amService.allocate(allocateRequest);
     Assert.assertEquals(1, response.getResponseId());
     Assert.assertFalse(response.getResync());
     allocateRequest = AllocateRequest.newInstance(attempt
-        .getAppAttemptId(), response.getResponseId(), 0F, null, null);
+        .getAppAttemptId(), response.getResponseId(), 0F, null, null, null);
     
     response = amService.allocate(allocateRequest);
     Assert.assertEquals(2, response.getResponseId());
@@ -94,7 +94,7 @@ public class TestAMRMRPCResponseId {
     
     /** try sending old request again **/
     allocateRequest = AllocateRequest.newInstance(attempt
-        .getAppAttemptId(), 0, 0F, null, null);
+        .getAppAttemptId(), 0, 0F, null, null, null);
     response = amService.allocate(allocateRequest);
     Assert.assertTrue(response.getResync());
   }
