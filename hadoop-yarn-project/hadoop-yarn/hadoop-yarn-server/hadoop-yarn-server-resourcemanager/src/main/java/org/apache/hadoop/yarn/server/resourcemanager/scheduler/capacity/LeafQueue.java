@@ -815,6 +815,11 @@ public class LeafQueue implements CSQueue {
       }
 
       synchronized (application) {
+        // Check if this resource is on the blacklist
+        if (isBlacklisted(application, node)) {
+          continue;
+        }
+        
         // Schedule in priority order
         for (Priority priority : application.getPriorities()) {
           // Required resource
@@ -896,6 +901,28 @@ public class LeafQueue implements CSQueue {
   
     return NULL_ASSIGNMENT;
 
+  }
+  
+  boolean isBlacklisted(FiCaSchedulerApp application, FiCaSchedulerNode node) {
+    if (application.isBlacklisted(node.getHostName())) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skipping 'host' " + node.getHostName() + 
+            " for " + application.getApplicationId() + 
+            " since it has been blacklisted");
+      }
+      return true;
+    }
+
+    if (application.isBlacklisted(node.getRackName())) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skipping 'rack' " + node.getRackName() + 
+            " for " + application.getApplicationId() + 
+            " since it has been blacklisted");
+      }
+      return true;
+    }
+
+    return false;
   }
 
   private synchronized CSAssignment 

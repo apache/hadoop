@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * <p>The protocol between a live instance of <code>ApplicationMaster</code> 
@@ -60,6 +61,8 @@ public interface AMRMProtocol {
    * @return registration respose
    * @throws YarnException
    * @throws IOException
+   * @see RegisterApplicationMasterRequest
+   * @see RegisterApplicationMasterResponse
    */
   public RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request) 
@@ -80,6 +83,8 @@ public interface AMRMProtocol {
    * @return completion response
    * @throws YarnException
    * @throws IOException
+   * @see FinishApplicationMasterRequest
+   * @see FinishApplicationMasterResponse
    */
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request) 
@@ -91,12 +96,16 @@ public interface AMRMProtocol {
    * 
    * <p>The <code>ApplicationMaster</code> uses this interface to provide a list  
    * of {@link ResourceRequest} and returns unused {@link Container} allocated 
-   * to it via {@link AllocateRequest}.</p>
+   * to it via {@link AllocateRequest}. Optionally, the 
+   * <code>ApplicationMaster</code> can also <em>blacklist</em> resources
+   * which it doesn't want to use.</p>
    * 
    * <p>This also doubles up as a <em>heartbeat</em> to let the 
    * <code>ResourceManager</code> know that the <code>ApplicationMaster</code>
    * is alive. Thus, applications should periodically make this call to be kept
-   * alive. The frequency depends on ??</p>
+   * alive. The frequency depends on 
+   * {@link YarnConfiguration#RM_AM_EXPIRY_INTERVAL_MS} which defaults to
+   * {@link YarnConfiguration#DEFAULT_RM_AM_EXPIRY_INTERVAL_MS}.</p>
    * 
    * <p>The <code>ResourceManager</code> responds with list of allocated 
    * {@link Container}, status of completed containers and headroom information 
@@ -110,6 +119,8 @@ public interface AMRMProtocol {
    * @return allocation response
    * @throws YarnException
    * @throws IOException
+   * @see AllocateRequest
+   * @see AllocateResponse
    */
   public AllocateResponse allocate(AllocateRequest request) 
   throws YarnException, IOException;

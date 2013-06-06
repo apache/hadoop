@@ -148,7 +148,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     AllocateRequest allocateRequest = AllocateRequest.newInstance(
         applicationAttemptId, lastResponseID, super.getApplicationProgress(),
         new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
-            release));
+            release), null);
     AllocateResponse allocateResponse;
     try {
       allocateResponse = scheduler.allocate(allocateRequest);

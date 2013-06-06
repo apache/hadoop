@@ -472,7 +472,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   @Override
   @Lock(Lock.NoLock.class)
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
-      List<ResourceRequest> ask, List<ContainerId> release) {
+      List<ResourceRequest> ask, List<ContainerId> release, 
+      List<String> blacklistAdditions, List<String> blacklistRemovals) {
 
     FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
@@ -523,7 +524,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
         application.showRequests();
   
         // Update application requests
-        application.updateResourceRequests(ask);
+        application.updateResourceRequests(ask, 
+            blacklistAdditions, blacklistRemovals);
   
         LOG.debug("allocate: post-update");
         application.showRequests();

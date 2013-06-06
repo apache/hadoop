@@ -1214,7 +1214,8 @@ public class TestRMContainerAllocator {
     @Override
     public synchronized Allocation allocate(
         ApplicationAttemptId applicationAttemptId, List<ResourceRequest> ask,
-        List<ContainerId> release) {
+        List<ContainerId> release, 
+        List<String> blacklistAdditions, List<String> blacklistRemovals) {
       List<ResourceRequest> askCopy = new ArrayList<ResourceRequest>();
       for (ResourceRequest req : ask) {
         ResourceRequest reqCopy = ResourceRequest.newInstance(req
@@ -1223,7 +1224,9 @@ public class TestRMContainerAllocator {
         askCopy.add(reqCopy);
       }
       lastAsk = ask;
-      return super.allocate(applicationAttemptId, askCopy, release);
+      return super.allocate(
+          applicationAttemptId, askCopy, release, 
+          blacklistAdditions, blacklistRemovals);
     }
   }
 

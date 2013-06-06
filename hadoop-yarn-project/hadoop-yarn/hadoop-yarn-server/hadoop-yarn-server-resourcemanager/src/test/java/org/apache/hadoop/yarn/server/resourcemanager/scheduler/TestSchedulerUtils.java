@@ -22,20 +22,47 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
+import java.security.PrivilegedAction;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMWithAMS;
+import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestSchedulerUtils {
 
+  private static final Log LOG = LogFactory.getLog(TestSchedulerUtils.class);
+  
   @Test (timeout = 30000)
   public void testNormalizeRequest() {
     ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
@@ -238,6 +265,81 @@ public class TestSchedulerUtils {
     } catch (InvalidResourceRequestException e) {
       // expected
     }
+  }
+  
+  @Test
+  public void testValidateResourceBlacklistRequest() throws Exception {
+
+    MyContainerManager containerManager = new MyContainerManager();
+    final MockRM rm =
+        new MockRMWithAMS(new YarnConfiguration(), containerManager);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("localhost:1234", 5120);
+
+    Map<ApplicationAccessType, String> acls =
+        new HashMap<ApplicationAccessType, String>(2);
+    acls.put(ApplicationAccessType.VIEW_APP, "*");
+    RMApp app = rm.submitApp(1024, "appname", "appuser", acls);
+
+    nm1.nodeHeartbeat(true);
+
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+    ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
+    waitForLaunchedState(attempt);
+
+    // Create a client to the RM.
+    final Configuration conf = rm.getConfig();
+    final YarnRPC rpc = YarnRPC.create(conf);
+
+    UserGroupInformation currentUser = 
+        UserGroupInformation.createRemoteUser(applicationAttemptId.toString());
+
+    AMRMProtocol client = currentUser
+        .doAs(new PrivilegedAction<AMRMProtocol>() {
+          @Override
+          public AMRMProtocol run() {
+            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rm
+                .getApplicationMasterService().getBindAddress(), conf);
+          }
+        });
+
+    RegisterApplicationMasterRequest request = Records
+        .newRecord(RegisterApplicationMasterRequest.class);
+    request.setApplicationAttemptId(applicationAttemptId);
+    client.registerApplicationMaster(request);
+
+    ResourceBlacklistRequest blacklistRequest =
+        ResourceBlacklistRequest.newInstance(
+            Collections.singletonList(ResourceRequest.ANY), null);
+
+    AllocateRequest allocateRequest =
+        AllocateRequest.newInstance(applicationAttemptId, 0, 0.0f, null, null, 
+            blacklistRequest);
+    boolean error = false;
+    try {
+      client.allocate(allocateRequest);
+    } catch (InvalidResourceBlacklistRequestException e) {
+      error = true;
+    }
+
+    rm.stop();
+    
+    Assert.assertTrue(
+        "Didn't not catch InvalidResourceBlacklistRequestException", error);
+  }
+
+  private void waitForLaunchedState(RMAppAttempt attempt)
+      throws InterruptedException {
+    int waitCount = 0;
+    while (attempt.getAppAttemptState() != RMAppAttemptState.LAUNCHED
+        && waitCount++ < 20) {
+      LOG.info("Waiting for AppAttempt to reach LAUNCHED state. "
+          + "Current state is " + attempt.getAppAttemptState());
+      Thread.sleep(1000);
+    }
+    Assert.assertEquals(attempt.getAppAttemptState(),
+        RMAppAttemptState.LAUNCHED);
   }
 
 }
