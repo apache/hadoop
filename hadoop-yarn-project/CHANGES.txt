@@ -422,6 +422,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-742. Log aggregation causes a lot of redundant setPermission calls.
     (jlowe via kihwal)
 
+    YARN-764. blank Used Resources on Capacity Scheduler page (Nemon Lou via
+    tgraves)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
