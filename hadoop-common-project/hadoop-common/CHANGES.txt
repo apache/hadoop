@@ -12,6 +12,8 @@ Trunk (Unreleased)
     HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
     hadoop client processes. (Yu Gao via llu)
 
+    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
