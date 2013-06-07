@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
-import org.apache.avro.AvroRuntimeException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -163,7 +162,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       super.start();
       startStatusUpdater();
     } catch (Exception e) {
-      throw new AvroRuntimeException(e);
+      String errorMessage = "Unexpected error starting NodeStatusUpdater";
+      LOG.error(errorMessage, e);
+      throw new YarnRuntimeException(e);
     }
   }
 
@@ -186,7 +187,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       statusUpdater.start();
       LOG.info("NodeStatusUpdater thread is reRegistered and restarted");
     } catch (Exception e) {
-      throw new AvroRuntimeException(e);
+      String errorMessage = "Unexpected error rebooting NodeStatusUpdater";
+      LOG.error(errorMessage, e);
+      throw new YarnRuntimeException(e);
     }
   }
 
