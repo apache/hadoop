@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.junit.After;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestFSNamesystem {
 
@@ -76,5 +78,30 @@ public class TestFSNamesystem {
     fsn.clear();
     leaseMan = fsn.getLeaseManager();
     assertEquals(0, leaseMan.countLease());
+  }
+
+  @Test
+  /**
+   * Test that isInStartupSafemode returns true only during startup safemode
+   * and not also during low-resource safemode
+   */
+  public void testStartupSafemode() throws IOException {
+    Configuration conf = new Configuration();
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+
+    fsn.leaveSafeMode();
+    assertTrue("After leaving safemode FSNamesystem.isInStartupSafeMode still "
+      + "returned true", !fsn.isInStartupSafeMode());
+    assertTrue("After leaving safemode FSNamesystem.isInSafeMode still returned"
+      + " true", !fsn.isInSafeMode());
+
+    fsn.enterSafeMode(true);
+    assertTrue("After entering safemode due to low resources FSNamesystem."
+      + "isInStartupSafeMode still returned true", !fsn.isInStartupSafeMode());
+    assertTrue("After entering safemode due to low resources FSNamesystem."
+      + "isInSafeMode still returned false",  fsn.isInSafeMode());
   }
 }

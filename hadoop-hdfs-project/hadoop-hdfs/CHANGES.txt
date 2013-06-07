@@ -3117,6 +3117,9 @@ Release 0.23.9 - UNRELEASED
     HDFS-4867. metaSave NPEs when there are invalid blocks in repl queue.
     (Plamen Jeliazkov and Ravi Prakash via shv)
 
+    HDFS-4862. SafeModeInfo.isManual() returns true when resources are low even
+    if it wasn't entered into manually (Ravi Prakash via kihwal)
+
 Release 0.23.8 - 2013-06-05
 
   INCOMPATIBLE CHANGES

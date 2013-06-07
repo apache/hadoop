@@ -4101,7 +4101,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.replQueueThreshold = 1.5f; // can never be reached
       this.blockTotal = -1;
       this.blockSafe = -1;
-      this.reached = -1;
       this.resourcesLow = resourcesLow;
       enter();
       reportStatus("STATE* Safe mode is ON.", true);
@@ -4288,17 +4287,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     private synchronized void decrementSafeBlockCount(short replication) {
       if (replication == safeReplication-1) {
         this.blockSafe--;
-        assert blockSafe >= 0 || isManual();
+        //blockSafe is set to -1 in manual / low resources safemode
+        assert blockSafe >= 0 || isManual() || areResourcesLow();
         checkMode();
       }
     }
 
     /**
-     * Check if safe mode was entered manually or automatically (at startup, or
-     * when disk space is low).
+     * Check if safe mode was entered manually
      */
     private boolean isManual() {
-      return extension == Integer.MAX_VALUE && !resourcesLow;
+      return extension == Integer.MAX_VALUE;
     }
 
     /**
@@ -4337,7 +4336,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       } else {
         leaveMsg = "Safe mode will be turned off automatically";
       }
-      if(isManual()) {
+      if(isManual() && !areResourcesLow()) {
         leaveMsg = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off";
       }
 
@@ -4375,7 +4374,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         msg += " " + leaveMsg;
       }
-      if(reached == 0 || isManual()) {  // threshold is not reached or manual       
+      // threshold is not reached or manual or resources low
+      if(reached == 0 || (isManual() && !areResourcesLow())) {
         return msg + ".";
       }
       // extension period is in progress
@@ -4519,7 +4519,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
       return false;
-    return !safeMode.isManual() && safeMode.isOn();
+    // If the NN is in safemode, and not due to manual / low resources, we
+    // assume it must be because of startup. If the NN had low resources during
+    // startup, we assume it came out of startup safemode and it is now in low
+    // resources safemode
+    return !safeMode.isManual() && !safeMode.areResourcesLow()
+      && safeMode.isOn();
   }
 
   @Override
@@ -4632,7 +4637,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Enter safe mode manually.
+   * Enter safe mode. If resourcesLow is false, then we assume it is manual
    * @throws IOException
    */
   void enterSafeMode(boolean resourcesLow) throws IOException {
@@ -4657,8 +4662,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       if (resourcesLow) {
         safeMode.setResourcesLow();
+      } else {
+        safeMode.setManual();
       }
-      safeMode.setManual();
       if (isEditlogOpenForWrite) {
         getEditLog().logSyncAll();
       }
