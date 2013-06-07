@@ -51,4 +51,25 @@ public class TestFSNamesystem {
     assertTrue("After entering safemode due to low resources FSNamesystem."
       + "isInSafeMode still returned false", fsn.isInSafeMode());
   }
+
+  @Test
+  public void testReplQueuesActiveAfterStartupSafemode() throws IOException, InterruptedException{
+    Configuration conf = new Configuration();
+
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+
+    FSNamesystem fsNamesystem = new FSNamesystem(fsImage, conf);
+    FSNamesystem fsn = Mockito.spy(fsNamesystem);
+
+    fsn.leaveSafeMode(false);
+    assertTrue("FSNamesystem didn't leave safemode", !fsn.isInSafeMode());
+    assertTrue("Replication queues weren't being populated even after leaving "
+      + "safemode", fsn.isPopulatingReplQueues());
+    fsn.enterSafeMode(false);
+    assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
+    assertTrue("Replication queues weren't being populated after entering "
+      + "safemode 2nd time", fsn.isPopulatingReplQueues());
+  }
 }
