@@ -21,9 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
 
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -39,15 +37,11 @@ public class NodeInfo {
   protected String id;
   protected String nodeHostName;
   protected String nodeHTTPAddress;
-  protected String healthStatus;
   protected long lastHealthUpdate;
   protected String healthReport;
   protected int numContainers;
   protected long usedMemoryMB;
   protected long availMemoryMB;
-
-  @XmlTransient
-  protected boolean healthy;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -55,7 +49,6 @@ public class NodeInfo {
   public NodeInfo(RMNode ni, ResourceScheduler sched) {
     NodeId id = ni.getNodeID();
     SchedulerNodeReport report = sched.getNodeReport(id);
-    NodeHealthStatus health = ni.getNodeHealthStatus();
     this.numContainers = 0;
     this.usedMemoryMB = 0;
     this.availMemoryMB = 0;
@@ -69,14 +62,8 @@ public class NodeInfo {
     this.nodeHostName = ni.getHostName();
     this.state = ni.getState();
     this.nodeHTTPAddress = ni.getHttpAddress();
-    this.healthy = health.getIsNodeHealthy();
-    this.healthStatus = health.getIsNodeHealthy() ? "Healthy" : "Unhealthy";
-    this.lastHealthUpdate = health.getLastHealthReportTime();
-    this.healthReport = String.valueOf(health.getHealthReport());
-  }
-
-  public boolean isHealthy() {
-    return this.healthy;
+    this.lastHealthUpdate = ni.getLastHealthReportTime();
+    this.healthReport = String.valueOf(ni.getHealthReport());
   }
 
   public String getRack() {
@@ -97,10 +84,6 @@ public class NodeInfo {
   
   public void setNodeHTTPAddress(String nodeHTTPAddress) {
     this.nodeHTTPAddress = nodeHTTPAddress;
-  }
-
-  public String getHealthStatus() {
-    return this.healthStatus;
   }
 
   public long getLastHealthUpdate() {

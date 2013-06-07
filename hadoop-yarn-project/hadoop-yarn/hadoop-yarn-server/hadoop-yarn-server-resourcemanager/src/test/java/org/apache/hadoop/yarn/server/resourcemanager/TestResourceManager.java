@@ -176,11 +176,8 @@ public class TestResourceManager {
     nm1.heartbeat();
     nm1.heartbeat();
     Collection<RMNode> values = resourceManager.getRMContext().getRMNodes().values();
-    for (RMNode ni : values)
-    {
-      NodeHealthStatus nodeHealthStatus = ni.getNodeHealthStatus();
-      String healthReport = nodeHealthStatus.getHealthReport();
-      assertNotNull(healthReport);
+    for (RMNode ni : values) {
+      assertNotNull(ni.getHealthReport());
     }
   }
 

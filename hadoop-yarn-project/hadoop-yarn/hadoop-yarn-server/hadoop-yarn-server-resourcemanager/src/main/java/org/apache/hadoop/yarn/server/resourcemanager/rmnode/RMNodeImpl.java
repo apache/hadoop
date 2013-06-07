@@ -93,9 +93,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final String httpAddress;
   private final Resource totalCapability;
   private final Node node;
-  private final NodeHealthStatus nodeHealthStatus = recordFactory
-      .newRecordInstance(NodeHealthStatus.class);
-  
+
+  private String healthReport;
+  private long lastHealthReportTime;
+
   /* set of containers that have just launched */
   private final Map<ContainerId, ContainerStatus> justLaunchedContainers = 
     new HashMap<ContainerId, ContainerStatus>();
@@ -180,9 +181,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.nodeAddress = hostName + ":" + cmPort;
     this.httpAddress = hostName + ":" + httpPort;
     this.node = node;
-    this.nodeHealthStatus.setIsNodeHealthy(true);
-    this.nodeHealthStatus.setHealthReport("Healthy");
-    this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
+    this.healthReport = "Healthy";
+    this.lastHealthReportTime = System.currentTimeMillis();
 
     this.latestNodeHeartBeatResponse.setResponseId(0);
 
@@ -246,25 +246,44 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
   
   @Override
-  public NodeHealthStatus getNodeHealthStatus() {
+  public String getHealthReport() {
     this.readLock.lock();
 
     try {
-      return this.nodeHealthStatus;
+      return this.healthReport;
     } finally {
       this.readLock.unlock();
     }
   }
-
-  private void setNodeHealthStatus(NodeHealthStatus status)
-  {
+  
+  public void setHealthReport(String healthReport) {
     this.writeLock.lock();
+
     try {
-      this.nodeHealthStatus.setHealthReport(status.getHealthReport());
-      this.nodeHealthStatus.setIsNodeHealthy(status.getIsNodeHealthy());
-      this.nodeHealthStatus.setLastHealthReportTime(status.getLastHealthReportTime());
+      this.healthReport = healthReport;
     } finally {
       this.writeLock.unlock();
+    }
+  }
+  
+  public void setLastHealthReportTime(long lastHealthReportTime) {
+    this.writeLock.lock();
+
+    try {
+      this.lastHealthReportTime = lastHealthReportTime;
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+  
+  @Override
+  public long getLastHealthReportTime() {
+    this.readLock.lock();
+
+    try {
+      return this.lastHealthReportTime;
+    } finally {
+      this.readLock.unlock();
     }
   }
 
@@ -511,7 +530,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       NodeHealthStatus remoteNodeHealthStatus = 
           statusEvent.getNodeHealthStatus();
-      rmNode.setNodeHealthStatus(remoteNodeHealthStatus);
+      rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
+      rmNode.setLastHealthReportTime(
+          remoteNodeHealthStatus.getLastHealthReportTime());
       if (!remoteNodeHealthStatus.getIsNodeHealthy()) {
         LOG.info("Node " + rmNode.nodeId + " reported UNHEALTHY with details: "
             + remoteNodeHealthStatus.getHealthReport());
@@ -593,7 +614,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       // Switch the last heartbeatresponse.
       rmNode.latestNodeHeartBeatResponse = statusEvent.getLatestResponse();
       NodeHealthStatus remoteNodeHealthStatus = statusEvent.getNodeHealthStatus();
-      rmNode.setNodeHealthStatus(remoteNodeHealthStatus);
+      rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
+      rmNode.setLastHealthReportTime(
+          remoteNodeHealthStatus.getLastHealthReportTime());
       if (remoteNodeHealthStatus.getIsNodeHealthy()) {
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeAddedSchedulerEvent(rmNode));

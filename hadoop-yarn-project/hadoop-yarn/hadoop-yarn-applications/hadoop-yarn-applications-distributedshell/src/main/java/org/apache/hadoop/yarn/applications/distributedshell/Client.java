@@ -330,8 +330,7 @@ public class Client extends YarnClientImpl {
           + ", nodeId=" + node.getNodeId() 
           + ", nodeAddress" + node.getHttpAddress()
           + ", nodeRackName" + node.getRackName()
-          + ", nodeNumContainers" + node.getNumContainers()
-          + ", nodeHealthStatus" + node.getNodeHealthStatus());
+          + ", nodeNumContainers" + node.getNumContainers());
     }
 
     QueueInfo queueInfo = super.getQueueInfo(this.amQueue);		

@@ -32,6 +32,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -391,15 +392,15 @@ public class TestResourceTrackerService {
       int count) throws Exception {
     
     int waitCount = 0;
-    while(rm.getRMContext().getRMNodes().get(nm1.getNodeId())
-        .getNodeHealthStatus().getIsNodeHealthy() == health
+    while((rm.getRMContext().getRMNodes().get(nm1.getNodeId())
+        .getState() != NodeState.UNHEALTHY) == health
         && waitCount++ < 20) {
       synchronized (this) {
         wait(100);
       }
     }
-    Assert.assertFalse(rm.getRMContext().getRMNodes().get(nm1.getNodeId())
-        .getNodeHealthStatus().getIsNodeHealthy() == health);
+    Assert.assertFalse((rm.getRMContext().getRMNodes().get(nm1.getNodeId())
+        .getState() != NodeState.UNHEALTHY) == health);
     Assert.assertEquals("Unhealthy metrics not incremented", count,
         ClusterMetrics.getMetrics().getUnhealthyNMs());
   }

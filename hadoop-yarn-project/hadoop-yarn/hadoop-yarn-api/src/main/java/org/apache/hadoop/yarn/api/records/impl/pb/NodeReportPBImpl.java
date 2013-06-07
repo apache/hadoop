@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeHealthStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProtoOrBuilder;
@@ -38,7 +36,6 @@ public class NodeReportPBImpl extends NodeReport {
   private NodeId nodeId;
   private Resource used;
   private Resource capability;
-  private NodeHealthStatus nodeHealthStatus;
   
   public NodeReportPBImpl() {
     builder = NodeReportProto.newBuilder();
@@ -64,19 +61,33 @@ public class NodeReportPBImpl extends NodeReport {
   }
 
   @Override
-  public NodeHealthStatus getNodeHealthStatus() {
-    if (this.nodeHealthStatus != null) {
-      return this.nodeHealthStatus;
-    }
-
+  public String getHealthReport() {
     NodeReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasNodeHealthStatus()) {
-      return null;
-    }
-    this.nodeHealthStatus = convertFromProtoFormat(p.getNodeHealthStatus());
-    return this.nodeHealthStatus;
+    return p.getHealthReport();
   }
-
+  
+  @Override
+  public void setHealthReport(String healthReport) {
+    maybeInitBuilder();
+    if (healthReport == null) {
+      builder.clearHealthReport();
+      return;
+    }
+    builder.setHealthReport(healthReport);
+  }
+  
+  @Override
+  public long getLastHealthReportTime() {
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getLastHealthReportTime();
+  }
+  
+  @Override
+  public void setLastHealthReportTime(long lastHealthReportTime) {
+    maybeInitBuilder();
+    builder.setLastHealthReportTime(lastHealthReportTime);
+  }
+  
   @Override
   public String getHttpAddress() {
     NodeReportProtoOrBuilder p = viaProto ? proto : builder;
@@ -156,14 +167,6 @@ public class NodeReportPBImpl extends NodeReport {
     if (capability == null)
       builder.clearCapability();
     this.capability = capability;
-  }
-
-  @Override
-  public void setNodeHealthStatus(NodeHealthStatus healthStatus) {
-    maybeInitBuilder();
-    if (healthStatus == null)
-      builder.clearNodeHealthStatus();
-    this.nodeHealthStatus = healthStatus;
   }
 
   @Override
@@ -247,11 +250,6 @@ public class NodeReportPBImpl extends NodeReport {
             builder.getCapability())) {
       builder.setCapability(convertToProtoFormat(this.capability));
     }
-    if (this.nodeHealthStatus != null
-        && !((NodeHealthStatusPBImpl) this.nodeHealthStatus).getProto().equals(
-            builder.getNodeHealthStatus())) {
-      builder.setNodeHealthStatus(convertToProtoFormat(this.nodeHealthStatus));
-    }
   }
 
   private void mergeLocalToProto() {
@@ -286,11 +284,4 @@ public class NodeReportPBImpl extends NodeReport {
     return ((ResourcePBImpl) r).getProto();
   }
 
-  private NodeHealthStatusPBImpl convertFromProtoFormat(NodeHealthStatusProto p) {
-    return new NodeHealthStatusPBImpl(p);
-  }
-
-  private NodeHealthStatusProto convertToProtoFormat(NodeHealthStatus r) {
-    return ((NodeHealthStatusPBImpl) r).getProto();
-  }
 }

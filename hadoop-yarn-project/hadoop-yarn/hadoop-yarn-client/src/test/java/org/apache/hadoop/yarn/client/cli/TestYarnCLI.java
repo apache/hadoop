@@ -41,7 +41,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -163,13 +162,13 @@ public class TestYarnCLI {
     PrintWriter pw = new PrintWriter(baos);
     pw.println("Total Nodes:3");
     pw.print("         Node-Id\tNode-State\tNode-Http-Address\t");
-    pw.println("Health-Status(isNodeHealthy)\tRunning-Containers");
+    pw.println("Running-Containers");
     pw.print("         host0:0\t   RUNNING\t       host1:8888");
-    pw.println("\t                     false\t                 0");
+    pw.println("\t                 0");
     pw.print("         host1:0\t   RUNNING\t       host1:8888");
-    pw.println("\t                     false\t                 0");
+    pw.println("\t                 0");
     pw.print("         host2:0\t   RUNNING\t       host1:8888");
-    pw.println("\t                     false\t                 0");
+    pw.println("\t                 0");
     pw.close();
     String nodesReportStr = baos.toString("UTF-8");
     Assert.assertEquals(nodesReportStr, sysOutStream.toString());
@@ -194,10 +193,9 @@ public class TestYarnCLI {
     pw.println("\tRack : rack1");
     pw.println("\tNode-State : RUNNING");
     pw.println("\tNode-Http-Address : host1:8888");
-    pw.println("\tHealth-Status(isNodeHealthy) : false");
     pw.println("\tLast-Health-Update : "
       + DateFormatUtils.format(new Date(0), "E dd/MMM/yy hh:mm:ss:SSzz"));
-    pw.println("\tHealth-Report : null");
+    pw.println("\tHealth-Report : ");
     pw.println("\tContainers : 0");
     pw.println("\tMemory-Used : 0M");
     pw.println("\tMemory-Capacity : 0");
@@ -246,8 +244,7 @@ public class TestYarnCLI {
       NodeReport nodeReport = NodeReport.newInstance(NodeId
         .newInstance("host" + i, 0), NodeState.RUNNING, "host" + 1 + ":8888",
           "rack1", Records.newRecord(Resource.class), Records
-              .newRecord(Resource.class), 0, Records
-              .newRecord(NodeHealthStatus.class));
+              .newRecord(Resource.class), 0, "", 0);
       nodeReports.add(nodeReport);
     }
     return nodeReports;
