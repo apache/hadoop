@@ -1168,7 +1168,13 @@ public class DatanodeManager {
 
         heartbeatManager.updateHeartbeat(nodeinfo, capacity, dfsUsed,
             remaining, blockPoolUsed, xceiverCount, failedVolumes);
-        
+
+        // If we are in safemode, do not send back any recovery / replication
+        // requests. Don't even drain the existing queue of work.
+        if(namesystem.isInSafeMode()) {
+          return new DatanodeCommand[0];
+        }
+
         //check lease recovery
         BlockInfoUnderConstruction[] blocks = nodeinfo
             .getLeaseRecoveryCommand(Integer.MAX_VALUE);

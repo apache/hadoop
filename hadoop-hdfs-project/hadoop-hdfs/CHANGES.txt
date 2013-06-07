@@ -3123,6 +3123,9 @@ Release 0.23.9 - UNRELEASED
     HDFS-4862. SafeModeInfo.isManual() returns true when resources are low even
     if it wasn't entered into manually (Ravi Prakash via kihwal)
 
+    HDFS-4832. Namenode doesn't change the number of missing blocks in
+    safemode when DNs rejoin or leave (Ravi Prakash via kihwal)
+
 Release 0.23.8 - 2013-06-05
 
   INCOMPATIBLE CHANGES

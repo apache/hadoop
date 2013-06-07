@@ -4093,7 +4093,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * 
      * @see SafeModeInfo
      */
-    private SafeModeInfo(boolean resourcesLow) {
+    private SafeModeInfo(boolean resourcesLow, boolean isReplQueuesInited) {
       this.threshold = 1.5f;  // this threshold can never be reached
       this.datanodeThreshold = Integer.MAX_VALUE;
       this.extension = Integer.MAX_VALUE;
@@ -4102,6 +4102,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.blockTotal = -1;
       this.blockSafe = -1;
       this.resourcesLow = resourcesLow;
+      this.initializedReplQueues = isReplQueuesInited;
       enter();
       reportStatus("STATE* Safe mode is ON.", true);
     }
@@ -4527,6 +4528,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       && safeMode.isOn();
   }
 
+  /**
+   * Check if replication queues are to be populated
+   * @return true when node is HAState.Active and not in the very first safemode
+   */
   @Override
   public boolean isPopulatingReplQueues() {
     if (!shouldPopulateReplQueues()) {
@@ -4657,7 +4662,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         getEditLog().logSyncAll();
       }
       if (!isInSafeMode()) {
-        safeMode = new SafeModeInfo(resourcesLow);
+        safeMode = new SafeModeInfo(resourcesLow, isPopulatingReplQueues());
         return;
       }
       if (resourcesLow) {
