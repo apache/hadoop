@@ -257,6 +257,8 @@ Release 2.1.0-beta - UNRELEASED
     YARN-750. Allow for black-listing resources in YARN API and Impl in CS
     (acmurthy via bikas)
 
+    YARN-686. Flatten NodeReport. (sandyr via tucu)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it

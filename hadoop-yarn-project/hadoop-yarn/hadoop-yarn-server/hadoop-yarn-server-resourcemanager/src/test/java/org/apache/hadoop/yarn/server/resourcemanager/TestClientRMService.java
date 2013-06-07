@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -133,8 +134,8 @@ public class TestClientRMService {
     List<NodeReport> nodeReports =
         client.getClusterNodes(request).getNodeReports();
     Assert.assertEquals(1, nodeReports.size());
-    Assert.assertTrue("Node is expected to be healthy!", nodeReports.get(0)
-      .getNodeHealthStatus().getIsNodeHealthy());
+    Assert.assertNotSame("Node is expected to be healthy!", NodeState.UNHEALTHY,
+        nodeReports.get(0).getNodeState());
 
     // Now make the node unhealthy.
     node.nodeHeartbeat(false);
@@ -142,8 +143,8 @@ public class TestClientRMService {
     // Call again
     nodeReports = client.getClusterNodes(request).getNodeReports();
     Assert.assertEquals(1, nodeReports.size());
-    Assert.assertFalse("Node is expected to be unhealthy!", nodeReports.get(0)
-      .getNodeHealthStatus().getIsNodeHealthy());
+    Assert.assertEquals("Node is expected to be unhealthy!", NodeState.UNHEALTHY,
+        nodeReports.get(0).getNodeState());
   }
   
   @Test

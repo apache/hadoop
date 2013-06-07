@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class NodeCLI extends YarnCLI {
-  private static final String NODES_PATTERN = "%16s\t%10s\t%17s\t%26s\t%18s" +
+  private static final String NODES_PATTERN = "%16s\t%10s\t%17s\t%18s" +
     System.getProperty("line.separator");
 
   public static void main(String[] args) throws Exception {
@@ -91,11 +91,10 @@ public class NodeCLI extends YarnCLI {
     List<NodeReport> nodesReport = client.getNodeReports();
     writer.println("Total Nodes:" + nodesReport.size());
     writer.printf(NODES_PATTERN, "Node-Id", "Node-State", "Node-Http-Address",
-        "Health-Status(isNodeHealthy)", "Running-Containers");
+        "Running-Containers");
     for (NodeReport nodeReport : nodesReport) {
       writer.printf(NODES_PATTERN, nodeReport.getNodeId(), nodeReport
           .getNodeState(), nodeReport.getHttpAddress(), nodeReport
-          .getNodeHealthStatus().getIsNodeHealthy(), nodeReport
           .getNumContainers());
     }
     writer.flush();
@@ -129,16 +128,13 @@ public class NodeCLI extends YarnCLI {
       nodeReportStr.println(nodeReport.getNodeState());
       nodeReportStr.print("\tNode-Http-Address : ");
       nodeReportStr.println(nodeReport.getHttpAddress());
-      nodeReportStr.print("\tHealth-Status(isNodeHealthy) : ");
-      nodeReportStr.println(nodeReport.getNodeHealthStatus()
-          .getIsNodeHealthy());
       nodeReportStr.print("\tLast-Health-Update : ");
       nodeReportStr.println(DateFormatUtils.format(
-          new Date(nodeReport.getNodeHealthStatus().
-            getLastHealthReportTime()),"E dd/MMM/yy hh:mm:ss:SSzz"));
+          new Date(nodeReport.getLastHealthReportTime()),
+            "E dd/MMM/yy hh:mm:ss:SSzz"));
       nodeReportStr.print("\tHealth-Report : ");
       nodeReportStr
-          .println(nodeReport.getNodeHealthStatus().getHealthReport());
+          .println(nodeReport.getHealthReport());
       nodeReportStr.print("\tContainers : ");
       nodeReportStr.println(nodeReport.getNumContainers());
       nodeReportStr.print("\tMemory-Used : ");

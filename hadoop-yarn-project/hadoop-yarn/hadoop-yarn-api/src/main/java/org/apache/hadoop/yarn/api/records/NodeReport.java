@@ -51,7 +51,7 @@ public abstract class NodeReport {
   @Private
   public static NodeReport newInstance(NodeId nodeId, NodeState nodeState,
       String httpAddress, String rackName, Resource used, Resource capability,
-      int numContainers, NodeHealthStatus nodeHealthStatus) {
+      int numContainers, String healthReport, long lastHealthReportTime) {
     NodeReport nodeReport = Records.newRecord(NodeReport.class);
     nodeReport.setNodeId(nodeId);
     nodeReport.setNodeState(nodeState);
@@ -60,7 +60,8 @@ public abstract class NodeReport {
     nodeReport.setUsed(used);
     nodeReport.setCapability(capability);
     nodeReport.setNumContainers(numContainers);
-    nodeReport.setNodeHealthStatus(nodeHealthStatus);
+    nodeReport.setHealthReport(healthReport);
+    nodeReport.setLastHealthReportTime(lastHealthReportTime);
     return nodeReport;
   }
 
@@ -144,15 +145,28 @@ public abstract class NodeReport {
   @Unstable
   public abstract void setNumContainers(int numContainers);
   
-  /**
-   * Get the <code>NodeHealthStatus</code> of the node. 
-   * @return <code>NodeHealthStatus</code> of the node
+
+  /** 
+   * Get the <em>diagnostic health report</em> of the node.
+   * @return <em>diagnostic health report</em> of the node
    */
   @Public
   @Stable
-  public abstract NodeHealthStatus getNodeHealthStatus();
-  
+  public abstract String getHealthReport();
+
   @Private
   @Unstable
-  public abstract void setNodeHealthStatus(NodeHealthStatus nodeHealthStatus);
+  public abstract void setHealthReport(String healthReport);
+
+  /**
+   * Get the <em>last timestamp</em> at which the health report was received.
+   * @return <em>last timestamp</em> at which the health report was received
+   */
+  @Public
+  @Stable
+  public abstract long getLastHealthReportTime();
+
+  @Private
+  @Unstable
+  public abstract void setLastHealthReportTime(long lastHealthReport);
 }
