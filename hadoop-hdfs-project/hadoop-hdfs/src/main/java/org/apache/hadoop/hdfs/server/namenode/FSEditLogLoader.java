@@ -96,6 +96,7 @@ public class FSEditLogLoader {
     fsNamesys.writeLock();
     try {
       long startTime = now();
+      FSImage.LOG.info("Start loading edits file " + edits.getName());
       long numEdits = loadEditRecords(edits, false, 
                                  expectedStartingTxId, recovery);
       FSImage.LOG.info("Edits file " + edits.getName() 
