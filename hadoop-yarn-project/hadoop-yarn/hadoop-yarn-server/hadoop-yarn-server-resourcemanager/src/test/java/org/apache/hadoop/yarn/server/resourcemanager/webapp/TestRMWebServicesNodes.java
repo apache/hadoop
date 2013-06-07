@@ -142,9 +142,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
     rm.NMwaitForState(nm3.getNodeId(), NodeState.RUNNING);
     RMNodeImpl node = (RMNodeImpl) rm.getRMContext().getRMNodes()
         .get(nm3.getNodeId());
-    NodeHealthStatus nodeHealth = node.getNodeHealthStatus();
-    nodeHealth.setHealthReport("test health report");
-    nodeHealth.setIsNodeHealthy(false);
+    NodeHealthStatus nodeHealth = NodeHealthStatus.newInstance(false,
+        "test health report", System.currentTimeMillis());
     node.handle(new RMNodeStatusEvent(nm3.getNodeId(), nodeHealth,
         new ArrayList<ContainerStatus>(), null, null));
     rm.NMwaitForState(nm3.getNodeId(), NodeState.UNHEALTHY);
@@ -357,9 +356,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
     rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
     RMNodeImpl node = (RMNodeImpl) rm.getRMContext().getRMNodes()
         .get(nm1.getNodeId());
-    NodeHealthStatus nodeHealth = node.getNodeHealthStatus();
-    nodeHealth.setHealthReport("test health report");
-    nodeHealth.setIsNodeHealthy(false);
+    NodeHealthStatus nodeHealth = NodeHealthStatus.newInstance(false,
+        "test health report", System.currentTimeMillis());
     node.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeHealth,
         new ArrayList<ContainerStatus>(), null, null));
     rm.NMwaitForState(nm1.getNodeId(), NodeState.UNHEALTHY);
@@ -699,7 +697,6 @@ public class TestRMWebServicesNodes extends JerseyTest {
       verifyNodeInfoGeneric(nm,
           WebServicesTestUtils.getXmlString(element, "state"),
           WebServicesTestUtils.getXmlString(element, "rack"),
-          WebServicesTestUtils.getXmlString(element, "healthStatus"),
           WebServicesTestUtils.getXmlString(element, "id"),
           WebServicesTestUtils.getXmlString(element, "nodeHostName"),
           WebServicesTestUtils.getXmlString(element, "nodeHTTPAddress"),
@@ -713,10 +710,10 @@ public class TestRMWebServicesNodes extends JerseyTest {
 
   public void verifyNodeInfo(JSONObject nodeInfo, MockNM nm)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 11, nodeInfo.length());
+    assertEquals("incorrect number of elements", 10, nodeInfo.length());
 
     verifyNodeInfoGeneric(nm, nodeInfo.getString("state"),
-        nodeInfo.getString("rack"), nodeInfo.getString("healthStatus"),
+        nodeInfo.getString("rack"),
         nodeInfo.getString("id"), nodeInfo.getString("nodeHostName"),
         nodeInfo.getString("nodeHTTPAddress"),
         nodeInfo.getLong("lastHealthUpdate"),
@@ -726,32 +723,29 @@ public class TestRMWebServicesNodes extends JerseyTest {
   }
 
   public void verifyNodeInfoGeneric(MockNM nm, String state, String rack,
-      String healthStatus, String id, String nodeHostName,
+      String id, String nodeHostName,
       String nodeHTTPAddress, long lastHealthUpdate, String healthReport,
       int numContainers, long usedMemoryMB, long availMemoryMB)
       throws JSONException, Exception {
 
     RMNode node = rm.getRMContext().getRMNodes().get(nm.getNodeId());
-    NodeHealthStatus health = node.getNodeHealthStatus();
     ResourceScheduler sched = rm.getResourceScheduler();
     SchedulerNodeReport report = sched.getNodeReport(nm.getNodeId());
 
     WebServicesTestUtils.checkStringMatch("state", node.getState().toString(),
         state);
     WebServicesTestUtils.checkStringMatch("rack", node.getRackName(), rack);
-    WebServicesTestUtils.checkStringMatch("healthStatus", "Healthy",
-        healthStatus);
     WebServicesTestUtils.checkStringMatch("id", nm.getNodeId().toString(), id);
     WebServicesTestUtils.checkStringMatch("nodeHostName", nm.getNodeId()
         .getHost(), nodeHostName);
     WebServicesTestUtils.checkStringMatch("healthReport",
-        String.valueOf(health.getHealthReport()), healthReport);
+        String.valueOf(node.getHealthReport()), healthReport);
     String expectedHttpAddress = nm.getNodeId().getHost() + ":"
         + nm.getHttpPort();
     WebServicesTestUtils.checkStringMatch("nodeHTTPAddress",
         expectedHttpAddress, nodeHTTPAddress);
 
-    long expectedHealthUpdate = health.getLastHealthReportTime();
+    long expectedHealthUpdate = node.getLastHealthReportTime();
     assertEquals("lastHealthUpdate doesn't match, got: " + lastHealthUpdate
         + " expected: " + expectedHealthUpdate, expectedHealthUpdate,
         lastHealthUpdate);

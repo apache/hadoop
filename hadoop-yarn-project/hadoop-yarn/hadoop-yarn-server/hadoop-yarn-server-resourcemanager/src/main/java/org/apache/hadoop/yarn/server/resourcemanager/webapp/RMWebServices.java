@@ -196,7 +196,8 @@ public class RMWebServices {
           String msg = "Error: You must specify either true or false to query on health";
           throw new BadRequestException(msg);
         }
-        if (nodeInfo.isHealthy() != Boolean.parseBoolean(healthState)) {
+        if ((ni.getState() != NodeState.UNHEALTHY)
+            != Boolean.parseBoolean(healthState)) {
           continue;
         }
       }

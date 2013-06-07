@@ -343,7 +343,8 @@ public class ApplicationMasterService extends AbstractService implements
               rmNode.getState(),
               rmNode.getHttpAddress(), rmNode.getRackName(), used,
               rmNode.getTotalCapability(), numContainers,
-              rmNode.getNodeHealthStatus());
+              rmNode.getHealthReport(),
+              rmNode.getLastHealthReportTime());
           
           updatedNodeReports.add(report);
         }
