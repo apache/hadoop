@@ -325,8 +325,8 @@ public class FSImageFormat {
       imgDigest = new MD5Hash(digester.digest());
       loaded = true;
       
-      LOG.info("Image file of size " + curFile.length() + " loaded in " 
-          + (now() - startTime)/1000 + " seconds.");
+      LOG.info("Image file " + curFile + " of size " + curFile.length() +
+          " bytes loaded in " + (now() - startTime)/1000 + " seconds.");
     }
 
   /** Update the root node's attributes */
@@ -872,8 +872,8 @@ public class FSImageFormat {
       // set md5 of the saved image
       savedDigest = new MD5Hash(digester.digest());
 
-      LOG.info("Image file of size " + newFile.length() + " saved in " 
-          + (now() - startTime)/1000 + " seconds.");
+      LOG.info("Image file " + newFile + " of size " + newFile.length() +
+          " bytes saved in " + (now() - startTime)/1000 + " seconds.");
     }
 
     /**
