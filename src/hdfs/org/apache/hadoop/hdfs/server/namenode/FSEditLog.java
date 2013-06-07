@@ -637,6 +637,8 @@ public class FSEditLog {
     long highestGenStamp = -1;
     long startTime = FSNamesystem.now();
 
+    LOG.info("Start loading edits file " + edits.getName());
+    //
     // Keep track of the file offsets of the last several opcodes.
     // This is handy when manually recovering corrupted edits files.
     PositionTrackingInputStream tracker = 
