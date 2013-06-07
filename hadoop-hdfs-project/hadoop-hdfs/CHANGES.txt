@@ -321,6 +321,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-8957 HDFS tests for AbstractFileSystem#IsValidName should be overridden for
     embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
 
+    HDFS-4586. TestDataDirs.testGetDataDirsFromURIs fails with all directories
+    in dfs.datanode.data.dir are invalid. (Ivan Mitic via atm)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
