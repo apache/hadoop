@@ -10,7 +10,7 @@ Trunk - Unreleased
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
 
-  OPTIMAZATIONS
+  OPTIMIZATIONS
 
   BUG FIXES
 
@@ -19,6 +19,30 @@ Trunk - Unreleased
 
     YARN-597. TestFSDownload fails on Windows due to dependencies on
     tar/gzip/jar tools. (Ivan Mitic via acmurthy) 
+
+Release 2.3.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.2.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.1.0-beta - UNRELEASED
 
@@ -449,6 +473,9 @@ Release 2.1.0-beta - UNRELEASED
     tgraves)
 
     YARN-761. TestNMClientAsync fails sometimes (Zhijie Shen via bikas)
+
+    YARN-760. NodeManager throws AvroRuntimeException on failed start.
+    (Niranjan Singh via jlowe)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
