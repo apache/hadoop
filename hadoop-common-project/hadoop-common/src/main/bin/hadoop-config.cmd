@@ -183,13 +183,13 @@ set JAVA_PLATFORM=%JAVA_PLATFORM: =_%
 
 @rem Check if we're running hadoop directly from the build
 set JAVA_LIBRARY_PATH=
-if exist %HADOOP_CORE_HOME%\target\bin (
-  set JAVA_LIBRARY_PATH=%HADOOP_CORE_HOME%\target\bin
+if exist %HADOOP_COMMON_HOME%\target\bin (
+  set JAVA_LIBRARY_PATH=%HADOOP_COMMON_HOME%\target\bin
 )
 
 @rem For the distro case, check the bin folder
-if exist %HADOOP_CORE_HOME%\bin (
-  set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;%HADOOP_CORE_HOME%\bin
+if exist %HADOOP_COMMON_HOME%\bin (
+  set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;%HADOOP_COMMON_HOME%\bin
 )
 
 @rem
