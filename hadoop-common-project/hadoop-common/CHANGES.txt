@@ -432,6 +432,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-8958. ViewFs:Non absolute mount name failures when running 
     multiple tests on Windows. (Chris Nauroth via suresh)
 
+    HADOOP-9599. hadoop-config.cmd doesn't set JAVA_LIBRARY_PATH correctly.
+    (Mostafa Elhemali via ivanmi)
+
 Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
