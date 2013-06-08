@@ -481,6 +481,8 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4610. Use common utils FileUtil#setReadable/Writable/Executable and 
     FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
+    HDFS-4677. Editlog should support synchronous writes. (ivanmi)
+
   BREAKDOWN OF HDFS-2802 HDFS SNAPSHOT SUBTASKS AND RELATED JIRAS
 
     HDFS-4076. Support snapshot of single files.  (szetszwo)

@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
@@ -53,13 +54,16 @@ public class TestJournal {
   private StorageErrorReporter mockErrorReporter = Mockito.mock(
       StorageErrorReporter.class);
 
+  private Configuration conf;
   private Journal journal;
 
   
   @Before
   public void setup() throws Exception {
     FileUtil.fullyDelete(TEST_LOG_DIR);
-    journal = new Journal(TEST_LOG_DIR, JID, mockErrorReporter);
+    conf = new Configuration();
+    journal = new Journal(conf, TEST_LOG_DIR, JID,
+      mockErrorReporter);
     journal.format(FAKE_NSINFO);
   }
   
@@ -135,7 +139,7 @@ public class TestJournal {
     journal.close(); // close to unlock the storage dir
     
     // Now re-instantiate, make sure history is still there
-    journal = new Journal(TEST_LOG_DIR, JID, mockErrorReporter);
+    journal = new Journal(conf, TEST_LOG_DIR, JID, mockErrorReporter);
     
     // The storage info should be read, even if no writer has taken over.
     assertEquals(storageString,
@@ -192,7 +196,7 @@ public class TestJournal {
 
     journal.newEpoch(FAKE_NSINFO,  1);
     try {
-      new Journal(TEST_LOG_DIR, JID, mockErrorReporter);
+      new Journal(conf, TEST_LOG_DIR, JID, mockErrorReporter);
       fail("Did not fail to create another journal in same dir");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
@@ -203,7 +207,7 @@ public class TestJournal {
     
     // Journal should no longer be locked after the close() call.
     // Hence, should be able to create a new Journal in the same dir.
-    Journal journal2 = new Journal(TEST_LOG_DIR, JID, mockErrorReporter);
+    Journal journal2 = new Journal(conf, TEST_LOG_DIR, JID, mockErrorReporter);
     journal2.newEpoch(FAKE_NSINFO, 2);
     journal2.close();
   }
@@ -231,7 +235,7 @@ public class TestJournal {
     // Check that, even if we re-construct the journal by scanning the
     // disk, we don't allow finalizing incorrectly.
     journal.close();
-    journal = new Journal(TEST_LOG_DIR, JID, mockErrorReporter);
+    journal = new Journal(conf, TEST_LOG_DIR, JID, mockErrorReporter);
     
     try {
       journal.finalizeLogSegment(makeRI(4), 1, 6);

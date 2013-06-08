@@ -246,7 +246,7 @@ public class FSEditLog implements LogsPurgeable {
       if (u.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
         StorageDirectory sd = storage.getStorageDirectory(u);
         if (sd != null) {
-          journalSet.add(new FileJournalManager(sd, storage), required);
+          journalSet.add(new FileJournalManager(conf, sd, storage), required);
         }
       } else {
         journalSet.add(createJournal(u), required);

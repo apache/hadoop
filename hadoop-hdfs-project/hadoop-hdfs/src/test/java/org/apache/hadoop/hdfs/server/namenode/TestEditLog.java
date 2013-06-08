@@ -762,7 +762,7 @@ public class TestEditLog {
       File log = new File(currentDir,
           NNStorage.getInProgressEditsFileName(3));
 
-      EditLogFileOutputStream stream = new EditLogFileOutputStream(log, 1024);
+      EditLogFileOutputStream stream = new EditLogFileOutputStream(conf, log, 1024);
       try {
         stream.create();
         if (!inBothDirs) {
@@ -1233,7 +1233,7 @@ public class TestEditLog {
     EditLogFileOutputStream elfos = null;
     EditLogFileInputStream elfis = null;
     try {
-      elfos = new EditLogFileOutputStream(TEST_LOG_NAME, 0);
+      elfos = new EditLogFileOutputStream(new Configuration(), TEST_LOG_NAME, 0);
       elfos.create();
       elfos.writeRaw(garbage, 0, garbage.length);
       elfos.setReadyToFlush();
