@@ -177,7 +177,11 @@ class ImageLoaderCurrent implements ImageLoader {
           imageVersion);
       if (supportSnapshot) {
         v.visit(ImageElement.SNAPSHOT_COUNTER, in.readInt());
-        v.visit(ImageElement.NUM_SNAPSHOTS_TOTAL, in.readInt());
+        int numSnapshots = in.readInt();
+        v.visit(ImageElement.NUM_SNAPSHOTS_TOTAL, numSnapshots);
+        for (int i = 0; i < numSnapshots; i++) {
+          processSnapshot(in, v);
+        }
       }
       
       if (LayoutVersion.supports(Feature.FSIMAGE_COMPRESSION, imageVersion)) {
@@ -335,8 +339,8 @@ class ImageLoaderCurrent implements ImageLoader {
     v.visitEnclosingElement(ImageElement.BLOCKS,
                             ImageElement.NUM_BLOCKS, numBlocks);
     
-    // directory or symlink, no blocks to process    
-    if(numBlocks == -1 || numBlocks == -2) { 
+    // directory or symlink or reference node, no blocks to process    
+    if(numBlocks < 0) { 
       v.leaveEnclosingElement(); // Blocks
       return;
     }
@@ -484,15 +488,22 @@ class ImageLoaderCurrent implements ImageLoader {
         // process snapshot
         v.visitEnclosingElement(ImageElement.SNAPSHOT);
         v.visit(ImageElement.SNAPSHOT_ID, in.readInt());
-        // process root of snapshot
-        v.visitEnclosingElement(ImageElement.SNAPSHOT_ROOT);
-        processINode(in, v, true, rootName, false);
-        v.leaveEnclosingElement();
         v.leaveEnclosingElement();
       }
       v.visit(ImageElement.SNAPSHOT_QUOTA, in.readInt());
       v.leaveEnclosingElement();
     }
+  }
+  
+  private void processSnapshot(DataInputStream in, ImageVisitor v)
+      throws IOException {
+    v.visitEnclosingElement(ImageElement.SNAPSHOT);
+    v.visit(ImageElement.SNAPSHOT_ID, in.readInt());
+    // process root of snapshot
+    v.visitEnclosingElement(ImageElement.SNAPSHOT_ROOT);
+    processINode(in, v, true, "", false);
+    v.leaveEnclosingElement();
+    v.leaveEnclosingElement();
   }
   
   private void processDirectoryDiffList(DataInputStream in, ImageVisitor v,
@@ -512,8 +523,8 @@ class ImageLoaderCurrent implements ImageLoader {
   private void processDirectoryDiff(DataInputStream in, ImageVisitor v,
       String currentINodeName) throws IOException {
     v.visitEnclosingElement(ImageElement.SNAPSHOT_DIR_DIFF);
-    String snapshot = FSImageSerialization.readString(in);
-    v.visit(ImageElement.SNAPSHOT_DIFF_SNAPSHOTROOT, snapshot);
+    int snapshotId = in.readInt();
+    v.visit(ImageElement.SNAPSHOT_DIFF_SNAPSHOTID, snapshotId);
     v.visit(ImageElement.SNAPSHOT_DIR_DIFF_CHILDREN_SIZE, in.readInt());
     
     // process snapshotINode
@@ -617,7 +628,7 @@ class ImageLoaderCurrent implements ImageLoader {
 
     processBlocks(in, v, numBlocks, skipBlocks);
     
-    if (numBlocks > 0) { // File
+    if (numBlocks >= 0) { // File
       if (supportSnapshot) {
         // process file diffs
         processFileDiffList(in, v, parentName);
@@ -631,6 +642,7 @@ class ImageLoaderCurrent implements ImageLoader {
           }
         }
       }
+      processPermission(in, v);
     } else if (numBlocks == -1) { // Directory
       if (supportSnapshot && supportInodeId) {
         dirNodeMap.put(inodeId, pathName);
@@ -647,6 +659,7 @@ class ImageLoaderCurrent implements ImageLoader {
           v.visit(ImageElement.IS_SNAPSHOTTABLE_DIR, Boolean.toString(snapshottable));
         }
       }
+      processPermission(in, v);
     } else if (numBlocks == -2) {
       v.visit(ImageElement.SYMLINK, Text.readString(in));
     } else if (numBlocks == -3) { // reference node
@@ -668,7 +681,6 @@ class ImageLoaderCurrent implements ImageLoader {
       }
     }
 
-    processPermission(in, v);
     v.leaveEnclosingElement(); // INode
   }
   
@@ -678,16 +690,25 @@ class ImageLoaderCurrent implements ImageLoader {
     if (size >= 0) {
       v.visitEnclosingElement(ImageElement.SNAPSHOT_FILE_DIFFS,
           ImageElement.NUM_SNAPSHOT_FILE_DIFF, size);
-      String snapshot = FSImageSerialization.readString(in);
-      v.visit(ImageElement.SNAPSHOT_DIFF_SNAPSHOTROOT, snapshot);
-      v.visit(ImageElement.SNAPSHOT_FILE_SIZE, in.readLong());
-      if (in.readBoolean()) {
-        v.visitEnclosingElement(ImageElement.SNAPSHOT_DIFF_SNAPSHOTINODE);
-        processINode(in, v, true, currentINodeName, true);
-        v.leaveEnclosingElement();
+      for (int i = 0; i < size; i++) {
+        processFileDiff(in, v, currentINodeName);
       }
       v.leaveEnclosingElement();
     }
+  }
+  
+  private void processFileDiff(DataInputStream in, ImageVisitor v,
+      String currentINodeName) throws IOException {
+    int snapshotId = in.readInt();
+    v.visitEnclosingElement(ImageElement.SNAPSHOT_FILE_DIFF,
+        ImageElement.SNAPSHOT_DIFF_SNAPSHOTID, snapshotId);
+    v.visit(ImageElement.SNAPSHOT_FILE_SIZE, in.readLong());
+    if (in.readBoolean()) {
+      v.visitEnclosingElement(ImageElement.SNAPSHOT_DIFF_SNAPSHOTINODE);
+      processINode(in, v, true, currentINodeName, true);
+      v.leaveEnclosingElement();
+    }
+    v.leaveEnclosingElement();
   }
   
   /**
