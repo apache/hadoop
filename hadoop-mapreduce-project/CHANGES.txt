@@ -532,6 +532,8 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5303. Changed MR app after moving ProtoBase to package impl.pb via
     YARN-724. (Jian He via vinodkv)
 
+    MAPREDUCE-5312. TestRMNMInfo is failing. (sandyr via tucu)
+
 Release 2.0.5-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
