@@ -342,12 +342,13 @@ public abstract class INode implements Diff.Element<byte[]> {
    *          deletion/update will be added to the given map.
    * @param removedINodes
    *          INodes collected from the descents for further cleaning up of 
-   *          inodeMap         
+   *          inodeMap
    * @return quota usage delta when deleting a snapshot
    */
   public abstract Quota.Counts cleanSubtree(final Snapshot snapshot,
       Snapshot prior, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes) throws QuotaExceededException;
+      List<INode> removedINodes, boolean countDiffChange)
+      throws QuotaExceededException;
   
   /**
    * Destroy self and clear everything! If the INode is a file, this method
@@ -388,17 +389,10 @@ public abstract class INode implements Diff.Element<byte[]> {
    * Check and add namespace/diskspace consumed to itself and the ancestors.
    * @throws QuotaExceededException if quote is violated.
    */
-  public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify,
-      int snapshotId) throws QuotaExceededException {
+  public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify) 
+      throws QuotaExceededException {
     if (parent != null) {
-      parent.addSpaceConsumed(nsDelta, dsDelta, verify, snapshotId);
-    }
-  }
-
-  public void addSpaceConsumedToRenameSrc(long nsDelta, long dsDelta,
-      boolean verify, int snapshotId) throws QuotaExceededException {
-    if (parent != null) {
-      parent.addSpaceConsumedToRenameSrc(nsDelta, dsDelta, verify, snapshotId);
+      parent.addSpaceConsumed(nsDelta, dsDelta, verify);
     }
   }
 
