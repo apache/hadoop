@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -40,6 +41,8 @@ public class TestEditLogFileOutputStream {
   final static int MIN_PREALLOCATION_LENGTH =
       EditLogFileOutputStream.MIN_PREALLOCATION_LENGTH;
 
+  private Configuration conf;
+
   static {
     // No need to fsync for the purposes of tests. This makes
     // the tests run much faster.
@@ -50,6 +53,11 @@ public class TestEditLogFileOutputStream {
   @After
   public void deleteEditsFile() {
     if (TEST_EDITS.exists()) TEST_EDITS.delete();
+  }
+
+  @Before
+  public void setUp() {
+    conf = new Configuration();
   }
 
   static void flushAndCheckLength(EditLogFileOutputStream elos,
@@ -65,7 +73,8 @@ public class TestEditLogFileOutputStream {
    */
   @Test
   public void testRawWrites() throws IOException {
-    EditLogFileOutputStream elos = new EditLogFileOutputStream(TEST_EDITS, 0);
+    EditLogFileOutputStream elos = new EditLogFileOutputStream(conf, TEST_EDITS,
+      0);
     try {
       byte[] small = new byte[] {1,2,3,4,5,8,7};
       elos.create();
@@ -104,7 +113,7 @@ public class TestEditLogFileOutputStream {
   public void testEditLogFileOutputStreamCloseAbort() throws IOException {
     // abort after a close should just ignore
     EditLogFileOutputStream editLogStream =
-      new EditLogFileOutputStream(TEST_EDITS, 0);
+      new EditLogFileOutputStream(conf, TEST_EDITS, 0);
     editLogStream.close();
     editLogStream.abort();
   }
@@ -117,7 +126,7 @@ public class TestEditLogFileOutputStream {
   public void testEditLogFileOutputStreamCloseClose() throws IOException {
     // close after a close should result in an IOE
     EditLogFileOutputStream editLogStream =
-      new EditLogFileOutputStream(TEST_EDITS, 0);
+      new EditLogFileOutputStream(conf, TEST_EDITS, 0);
     editLogStream.close();
     try {
       editLogStream.close();
@@ -135,7 +144,7 @@ public class TestEditLogFileOutputStream {
   public void testEditLogFileOutputStreamAbortAbort() throws IOException {
     // abort after a close should just ignore
     EditLogFileOutputStream editLogStream =
-      new EditLogFileOutputStream(TEST_EDITS, 0);
+      new EditLogFileOutputStream(conf, TEST_EDITS, 0);
     editLogStream.abort();
     editLogStream.abort();
   }
