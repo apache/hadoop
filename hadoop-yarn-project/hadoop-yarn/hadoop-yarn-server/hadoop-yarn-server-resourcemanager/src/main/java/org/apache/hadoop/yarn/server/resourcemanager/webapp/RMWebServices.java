@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.http.HttpServletRequest;
@@ -32,8 +31,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -75,7 +72,6 @@ import com.google.inject.Singleton;
 @Path("/ws/v1/cluster")
 public class RMWebServices {
   private static final String EMPTY = "";
-  private static final Log LOG = LogFactory.getLog(RMWebServices.class);
   private final ResourceManager rm;
   private static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
@@ -152,60 +148,57 @@ public class RMWebServices {
     return new SchedulerTypeInfo(sinfo);
   }
 
+  /**
+   * If no params are given, returns all active nodes, which includes
+   * nodes in the NEW and RUNNING states. If state param is "all", returns all
+   * nodes in all states. Otherwise, if the state param is set to a state name,
+   * returns all nodes that are in that state.
+   */
   @GET
   @Path("/nodes")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public NodesInfo getNodes(@QueryParam("state") String filterState,
-      @QueryParam("healthy") String healthState) {
+  public NodesInfo getNodes(@QueryParam("state") String state) {
     init();
     ResourceScheduler sched = this.rm.getResourceScheduler();
     if (sched == null) {
       throw new NotFoundException("Null ResourceScheduler instance");
     }
-    Collection<RMNode> rmNodes = this.rm.getRMContext().getRMNodes().values();
-    boolean isInactive = false;
-    if (filterState != null && !filterState.isEmpty()) {
-      NodeState nodeState = NodeState.valueOf(filterState.toUpperCase());
-      switch (nodeState) {
-      case DECOMMISSIONED:
-      case LOST:
-      case REBOOTED:
-        rmNodes = this.rm.getRMContext().getInactiveRMNodes().values();
-        isInactive = true;
-        break;
-      }
-    }
-    NodesInfo allNodes = new NodesInfo();
-    for (RMNode ni : rmNodes) {
-      NodeInfo nodeInfo = new NodeInfo(ni, sched);
-      if (filterState != null) {
-        if (!(nodeInfo.getState().equalsIgnoreCase(filterState))) {
-          continue;
-        }
+    
+    NodeState acceptedState = null;
+    boolean all = false;
+    
+    if (state != null && !state.isEmpty()) {
+      if (state.equalsIgnoreCase("all")) {
+        all = true;
       } else {
-        // No filter. User is asking for all nodes. Make sure you skip the
-        // unhealthy nodes.
-        if (ni.getState() == NodeState.UNHEALTHY) {
-          continue;
-        }
+        acceptedState = NodeState.valueOf(state.toUpperCase());
       }
-      if ((healthState != null) && (!healthState.isEmpty())) {
-        LOG.info("heatlh state is : " + healthState);
-        if (!healthState.equalsIgnoreCase("true")
-            && !healthState.equalsIgnoreCase("false")) {
-          String msg = "Error: You must specify either true or false to query on health";
-          throw new BadRequestException(msg);
-        }
-        if ((ni.getState() != NodeState.UNHEALTHY)
-            != Boolean.parseBoolean(healthState)) {
-          continue;
-        }
-      }
-      if (isInactive) {
-        nodeInfo.setNodeHTTPAddress(EMPTY);
-      }
-      allNodes.add(nodeInfo);
     }
+    
+    // getRMNodes() contains nodes that are NEW, RUNNING OR UNHEALTHY
+    NodesInfo allNodes = new NodesInfo();
+    for (RMNode ni : this.rm.getRMContext().getRMNodes().values()) {
+      if (all || (acceptedState == null && ni.getState() != NodeState.UNHEALTHY)
+          || acceptedState == ni.getState()) {
+        NodeInfo nodeInfo = new NodeInfo(ni, sched);
+        allNodes.add(nodeInfo);
+      }
+    }
+    
+    // getInactiveNodes() contains nodes that are DECOMMISSIONED, LOST, OR REBOOTED
+    if (all || (acceptedState != null &&
+        (acceptedState == NodeState.DECOMMISSIONED ||
+         acceptedState == NodeState.LOST ||
+         acceptedState == NodeState.REBOOTED))) {
+      for (RMNode ni : this.rm.getRMContext().getInactiveRMNodes().values()) {
+        if (all || acceptedState == ni.getState()) {
+          NodeInfo nodeInfo = new NodeInfo(ni, sched);
+          nodeInfo.setNodeHTTPAddress(EMPTY);
+          allNodes.add(nodeInfo);
+        }
+      }
+    }
+    
     return allNodes;
   }
 

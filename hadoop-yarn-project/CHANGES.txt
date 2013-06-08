@@ -109,6 +109,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-777. Removed unreferenced objects from .proto files. (Jian He via
     vinodkv) 
 
+    YARN-642. Removed health parameter from ResourceManager /nodes web-service
+    and cleaned the behaviour of the status parameter. (Sandy Ryza vid vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
