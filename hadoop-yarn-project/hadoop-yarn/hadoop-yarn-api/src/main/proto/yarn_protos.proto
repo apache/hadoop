@@ -88,25 +88,6 @@ enum FinalApplicationStatusProto {
   APP_KILLED = 3;
 }
 
-message ApplicationStatusProto {
-  optional int32 response_id = 1;
-  optional ApplicationAttemptIdProto application_attempt_id = 2;
-  optional float progress = 3;
-}
-
-message ApplicationMasterProto {
-  optional ApplicationIdProto application_id = 1;
-  optional string host = 2;
-  optional int32 rpc_port = 3;
-  optional string trackingUrl = 4;
-  optional ApplicationStatusProto status = 5;
-  optional YarnApplicationStateProto state = 6;
-  optional hadoop.common.TokenProto client_token = 7;
-  optional int32 containerCount = 8;
-  optional int32 amFailCount = 9;
-  optional string diagnostics = 10 [default = ""];
-}
-
 message URLProto {
   optional string scheme = 1;
   optional string host = 2;
@@ -325,11 +306,6 @@ enum ContainerExitStatusProto {
 ////////////////////////////////////////////////////////////////////////
 ////// From common//////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-message StringURLMapProto {
-  optional string key = 1;
-  optional URLProto value = 2;
-}
-
 message StringLocalResourceMapProto {
   optional string key = 1;
   optional LocalResourceProto value = 2;
