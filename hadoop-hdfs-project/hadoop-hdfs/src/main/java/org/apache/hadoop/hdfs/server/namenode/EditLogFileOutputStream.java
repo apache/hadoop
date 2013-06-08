@@ -29,6 +29,8 @@ import java.nio.channels.FileChannel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 
@@ -48,6 +50,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
   private FileChannel fc; // channel of the file stream for sync
   private EditsDoubleBuffer doubleBuf;
   static ByteBuffer fill = ByteBuffer.allocateDirect(MIN_PREALLOCATION_LENGTH);
+  private boolean shouldSyncWritesAndSkipFsync = false;
 
   private static boolean shouldSkipFsyncForTests = false;
 
@@ -61,17 +64,29 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
   /**
    * Creates output buffers and file object.
    * 
+   * @param conf
+   *          Configuration object
    * @param name
    *          File name to store edit log
    * @param size
    *          Size of flush buffer
    * @throws IOException
    */
-  public EditLogFileOutputStream(File name, int size) throws IOException {
+  public EditLogFileOutputStream(Configuration conf, File name, int size)
+      throws IOException {
     super();
+    shouldSyncWritesAndSkipFsync = conf.getBoolean(
+            DFSConfigKeys.DFS_NAMENODE_EDITS_NOEDITLOGCHANNELFLUSH,
+            DFSConfigKeys.DFS_NAMENODE_EDITS_NOEDITLOGCHANNELFLUSH_DEFAULT);
+
     file = name;
     doubleBuf = new EditsDoubleBuffer(size);
-    RandomAccessFile rp = new RandomAccessFile(name, "rw");
+    RandomAccessFile rp;
+    if (shouldSyncWritesAndSkipFsync) {
+      rp = new RandomAccessFile(name, "rws");
+    } else {
+      rp = new RandomAccessFile(name, "rw");
+    }
     fp = new FileOutputStream(rp.getFD()); // open for append
     fc = rp.getChannel();
     fc.position(fc.size());
@@ -182,9 +197,9 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
       LOG.info("Nothing to flush");
       return;
     }
-    preallocate(); // preallocate file if necessay
+    preallocate(); // preallocate file if necessary
     doubleBuf.flushTo(fp);
-    if (durable && !shouldSkipFsyncForTests) {
+    if (durable && !shouldSkipFsyncForTests && !shouldSyncWritesAndSkipFsync) {
       fc.force(false); // metadata updates not needed
     }
   }

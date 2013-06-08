@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -56,16 +57,18 @@ class JNStorage extends Storage {
       ImmutableList.of(Pattern.compile("(\\d+)"));
 
   /**
+   * @param conf Configuration object
    * @param logDir the path to the directory in which data will be stored
    * @param errorReporter a callback to report errors
    * @throws IOException 
    */
-  protected JNStorage(File logDir, StorageErrorReporter errorReporter) throws IOException {
+  protected JNStorage(Configuration conf, File logDir,
+      StorageErrorReporter errorReporter) throws IOException {
     super(NodeType.JOURNAL_NODE);
     
     sd = new StorageDirectory(logDir);
     this.addStorageDir(sd);
-    this.fjm = new FileJournalManager(sd, errorReporter);
+    this.fjm = new FileJournalManager(conf, sd, errorReporter);
     
     analyzeStorage();
   }
