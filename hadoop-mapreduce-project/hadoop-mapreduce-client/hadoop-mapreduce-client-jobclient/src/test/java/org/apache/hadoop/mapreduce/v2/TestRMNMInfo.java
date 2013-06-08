@@ -118,8 +118,6 @@ public class TestRMNMInfo {
       Assert.assertTrue("Node " + n.get("NodeId") + " should be RUNNING",
               n.get("State").getValueAsText().contains("RUNNING"));
       Assert.assertNotNull(n.get("NodeHTTPAddress"));
-      Assert.assertTrue("Node " + n.get("NodeId") + " should be Healthy",
-              n.get("HealthStatus").getValueAsText().contains("Healthy"));
       Assert.assertNotNull(n.get("LastHealthUpdate"));
       Assert.assertNotNull(n.get("HealthReport"));
       Assert.assertNotNull(n.get("NumContainers"));
@@ -156,8 +154,6 @@ public class TestRMNMInfo {
       Assert.assertTrue("Node " + n.get("NodeId") + " should be RUNNING",
               n.get("State").getValueAsText().contains("RUNNING"));
       Assert.assertNotNull(n.get("NodeHTTPAddress"));
-      Assert.assertTrue("Node " + n.get("NodeId") + " should be Healthy",
-              n.get("HealthStatus").getValueAsText().contains("Healthy"));
       Assert.assertNotNull(n.get("LastHealthUpdate"));
       Assert.assertNotNull(n.get("HealthReport"));
       Assert.assertNull(n.get("NumContainers"));
