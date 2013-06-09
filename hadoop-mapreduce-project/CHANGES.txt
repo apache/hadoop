@@ -424,7 +424,7 @@ Release 2.1.0-beta - UNRELEASED
 
     MAPREDUCE-5312. TestRMNMInfo is failing. (sandyr via tucu)
 
-Release 2.0.5-alpha - UNRELEASED
+Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
 

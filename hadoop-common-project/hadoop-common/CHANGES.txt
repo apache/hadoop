@@ -435,7 +435,7 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9599. hadoop-config.cmd doesn't set JAVA_LIBRARY_PATH correctly.
     (Mostafa Elhemali via ivanmi)
 
-Release 2.0.5-alpha - UNRELEASED
+Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
 
