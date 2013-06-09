@@ -535,7 +535,7 @@ Release 2.1.0-beta - UNRELEASED
     YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
     via vinodkv)
 
-Release 2.0.5-alpha - UNRELEASED
+Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
 
