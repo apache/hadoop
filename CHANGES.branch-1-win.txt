@@ -274,6 +274,8 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     HADOOP-9552. Windows log4j template should suppress info messages from
     mortbay.log. (ivanmi)
 
+    HDFS-4677. Editlog should support synchronous writes. (ivanmi)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a

@@ -38,6 +38,7 @@ import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -152,13 +153,25 @@ public class FSEditLog {
     private FileChannel fc;         // channel of the file stream for sync
     private DataOutputBuffer bufCurrent;  // current buffer for writing
     private DataOutputBuffer bufReady;    // buffer ready for flushing
+    private Configuration conf;
+    private boolean shouldSyncWritesAndSkipFsync = false;
 
     EditLogFileOutputStream(File name) throws IOException {
       super();
+      conf = new Configuration();
+      shouldSyncWritesAndSkipFsync = conf.getBoolean(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_NOEDITLOGCHANNELFLUSH,
+          DFSConfigKeys.DFS_NAMENODE_EDITS_NOEDITLOGCHANNELFLUSH_DEFAULT);
+
       file = name;
       bufCurrent = new DataOutputBuffer(sizeFlushBuffer);
       bufReady = new DataOutputBuffer(sizeFlushBuffer);
-      RandomAccessFile rp = new RandomAccessFile(name, "rw");
+      RandomAccessFile rp;
+      if (shouldSyncWritesAndSkipFsync) {
+        rp = new RandomAccessFile(name, "rws");
+      } else {
+        rp = new RandomAccessFile(name, "rw");
+      }
       fp = new FileOutputStream(rp.getFD()); // open for append
       fc = rp.getChannel();
       fc.position(fc.size());
@@ -241,7 +254,10 @@ public class FSEditLog {
       preallocate();            // preallocate file if necessary
       bufReady.writeTo(fp);     // write data to file
       bufReady.reset();         // erase all data in the buffer
-      fc.force(false);          // metadata updates not needed because of preallocation
+      if (!shouldSyncWritesAndSkipFsync) {
+        // metadata updates not needed because of preallocation
+        fc.force(false);
+      }
     }
 
     /**
