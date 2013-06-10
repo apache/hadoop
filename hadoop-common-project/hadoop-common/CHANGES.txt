@@ -222,6 +222,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-9605. Update junit dependency. (Timothy St. Clair via cos)
 
+    HADOOP-9581. hadoop --config non-existent directory should result in error
+    (Ashwin Shankar via jlowe)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
