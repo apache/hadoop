@@ -99,6 +99,19 @@ class InMemoryMapOutput<K, V> extends MapOutput<K, V> {
       reporter.progress();
       LOG.info("Read " + memory.length + " bytes from map-output for " +
                 getMapId());
+
+      /**
+       * We've gotten the amount of data we were expecting. Verify the
+       * decompressor has nothing more to offer. This action also forces the
+       * decompressor to read any trailing bytes that weren't critical
+       * for decompression, which is necessary to keep the stream
+       * in sync.
+       */
+      if (input.read() >= 0 ) {
+        throw new IOException("Unexpected extra bytes from input stream for " +
+                               getMapId());
+      }
+
     } catch (IOException ioe) {      
       // Close the streams
       IOUtils.cleanup(LOG, input);

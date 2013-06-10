@@ -389,6 +389,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5301. Updated MR code to work with YARN-635 changes of renaming
     YarnRemoteException to YarnException. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-5308. Shuffling to memory can get out-of-sync when fetching
+    multiple compressed map outputs (Nathan Roberts via jlowe)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
@@ -1003,6 +1006,9 @@ Release 0.23.9 - UNRELEASED
     Kambatla via jlowe)
 
   BUG FIXES
+
+    MAPREDUCE-5308. Shuffling to memory can get out-of-sync when fetching
+    multiple compressed map outputs (Nathan Roberts via jlowe)
 
 Release 0.23.8 - 2013-06-05
 
