@@ -823,14 +823,17 @@ public class FSImage extends Storage {
     needToSave |= recoverInterruptedCheckpoint(latestNameSD, latestEditsSD);
 
     long startTime = FSNamesystem.now();
-    long imageSize = getImageFile(latestNameSD, NameNodeFile.IMAGE).length();
+    File imageFile = getImageFile(latestNameSD, NameNodeFile.IMAGE);
+    long imageSize = imageFile.length();
 
     //
     // Load in bits
     //
     latestNameSD.read();
-    needToSave |= loadFSImage(getImageFile(latestNameSD, NameNodeFile.IMAGE));
-    LOG.info("Image file of size " + imageSize + " loaded in " 
+    LOG.info("Start loading image file " + imageFile.getPath().toString());
+    needToSave |= loadFSImage(imageFile);
+    LOG.info("Image file " + imageFile.getPath().toString() +
+        " of size " + imageSize + " bytes loaded in "
         + (FSNamesystem.now() - startTime)/1000 + " seconds.");
     
     // Load latest edits
@@ -1067,8 +1070,9 @@ public class FSImage extends Storage {
       out.close();
     }
 
-    LOG.info("Image file of size " + newFile.length() + " saved in " 
-        + (FSNamesystem.now() - startTime)/1000 + " seconds.");
+    LOG.info("Image file " + newFile + " of size " + newFile.length() +
+        " bytes saved in " + (FSNamesystem.now() - startTime)/1000 +
+        " seconds.");
   }
 
   /**

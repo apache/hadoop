@@ -8,6 +8,9 @@ Release 1.2.1 - Unreleased
 
   IMPROVEMENTS
 
+    HDFS-4880. Print the image and edits file loaded by the namenode in the
+    logs. (Arpit Agarwal via suresh)
+
   BUG FIXES
 
     MAPREDUCE-5206. Ensure that a job doesn't get added to RetiredJobs
