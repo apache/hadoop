@@ -523,6 +523,18 @@ class Fetcher<K,V> extends Thread {
       reporter.progress();
       LOG.info("Read " + shuffleData.length + " bytes from map-output for " +
                mapOutput.getMapId());
+ 
+      /**
+       * We've gotten the amount of data we were expecting. Verify the 
+       * decompressor has nothing more to offer. This action also forces the
+       * decompressor to read any trailing bytes that weren't critical
+       * for decompression, which is necessary to keep the stream
+       * in sync.
+       */
+      if (input.read() >= 0 ) {
+        throw new IOException("Unexpected extra bytes from decompressor for " +
+                              mapOutput.getMapId());
+      }
     } catch (IOException ioe) {      
       // Close the streams
       IOUtils.cleanup(LOG, input);
