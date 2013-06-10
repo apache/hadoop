@@ -60,6 +60,10 @@ then
 	  then
 	      shift
 	      confdir=$1
+	      if [ ! -d "$confdir" ]; then
+                echo "Error: Cannot find configuration directory: $confdir"
+                exit 1
+             fi
 	      shift
 	      HADOOP_CONF_DIR=$confdir
     fi
