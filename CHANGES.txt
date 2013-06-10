@@ -20,6 +20,9 @@ Release 1.2.1 - Unreleased
     MAPREDUCE-3859. Fix CapacityScheduler to correctly compute runtime queue
     limits for high-ram jobs. (Sergey Tryuber via acmurthy)
 
+    HDFS-4581. DataNode.checkDiskError should not be called on network errors.
+    (Rohit Kochar via kihwal)
+
 Release 1.2.0 - 2013.05.05
 
   INCOMPATIBLE CHANGES

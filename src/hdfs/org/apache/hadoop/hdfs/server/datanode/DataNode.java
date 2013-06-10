@@ -27,8 +27,10 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.NoSuchAlgorithmException;
@@ -923,10 +925,16 @@ public class DataNode extends Configured
   /** Check if there is no space in disk 
    *  @param e that caused this checkDiskError call
    **/
-  protected void checkDiskError(Exception e ) throws IOException {
-    
-    LOG.warn("checkDiskError: exception: ", e);
-    
+  protected void checkDiskError(Exception e ) throws IOException {    
+    LOG.warn("checkDiskError: exception: ", e);  
+    if (e instanceof SocketException || e instanceof SocketTimeoutException
+    	  || e instanceof ClosedByInterruptException 
+    	  || e.getMessage().startsWith("Broken pipe")) {
+      LOG.info("Not checking disk as checkDiskError was called on a network" +
+        " related exception");	
+      return;
+    }
+
     if (e.getMessage() != null &&
         e.getMessage().startsWith("No space left on device")) {
       throw new DiskOutOfSpaceException("No space left on device");
@@ -1543,8 +1551,11 @@ public class DataNode extends Configured
         LOG.warn(dnRegistration + ":Failed to transfer " + b + " to " + targets[0].getName()
             + " got " + StringUtils.stringifyException(ie));
         // check if there are any disk problem
-        datanode.checkDiskError();
-        
+        try{
+          checkDiskError(ie);
+        } catch(IOException e) {
+          LOG.warn("DataNode.checkDiskError failed in run() with: ", e);
+        }        
       } finally {
         xmitsInProgress.getAndDecrement();
         IOUtils.closeStream(blockSender);
