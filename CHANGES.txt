@@ -29,6 +29,9 @@ Release 1.2.1 - Unreleased
     HDFS-4699. Additional conditions for avoiding unnecessary 
     DataNode.checkDiskError calls. (Chris Nauroth via kihwal)
 
+    HDFS-4261. Fix bugs in Balaner causing infinite loop and
+    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
+
 Release 1.2.0 - 2013.05.05
 
   INCOMPATIBLE CHANGES
