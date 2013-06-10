@@ -23,6 +23,9 @@ Release 1.2.1 - Unreleased
     HDFS-4581. DataNode.checkDiskError should not be called on network errors.
     (Rohit Kochar via kihwal)
 
+    HDFS-4699. Additional conditions for avoiding unnecessary 
+    DataNode.checkDiskError calls. (Chris Nauroth via kihwal)
+
 Release 1.2.0 - 2013.05.05
 
   INCOMPATIBLE CHANGES
