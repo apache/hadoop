@@ -628,6 +628,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4661. A few little code cleanups of some HDFS-347-related code. (Colin
     Patrick McCabe via atm)
 
+    HDFS-4878. On Remove Block, block is not removed from neededReplications
+    queue. (Tao Luo via shv)
+
   BREAKDOWN OF HADOOP-8562 and HDFS-3602 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
