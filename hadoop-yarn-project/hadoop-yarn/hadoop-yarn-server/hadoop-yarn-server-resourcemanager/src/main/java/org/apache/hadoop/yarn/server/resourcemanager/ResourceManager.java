@@ -223,7 +223,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     this.resourceTracker = createResourceTrackerService();
     addService(resourceTracker);
-  
+
+    DefaultMetricsSystem.initialize("ResourceManager");
+    JvmMetrics.initSingleton("ResourceManager", null);
+
     try {
       this.scheduler.reinitialize(conf, this.rmContext);
     } catch (IOException ioe) {
@@ -598,8 +601,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     startWepApp();
-    DefaultMetricsSystem.initialize("ResourceManager");
-    JvmMetrics.initSingleton("ResourceManager", null);
     try {
       rmDTSecretManager.startThreads();
     } catch(IOException ie) {
