@@ -123,6 +123,8 @@ Trunk (Unreleased)
   OPTIMIZATIONS
 
   BUG FIXES
+    HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
+                via cmccabe)
 
     HDFS-2299. TestOfflineEditsViewer is failing on trunk. (Uma Maheswara Rao G
                via atm)
