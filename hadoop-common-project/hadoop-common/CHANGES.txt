@@ -99,6 +99,12 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-9287. Parallel-testing hadoop-common (Andrey Klochkov via jlowe)
 
+    HADOOP-9604. Javadoc of FSDataOutputStream is slightly inaccurate. (Jingguo
+    Yao via atm)
+    
+    HADOOP-9625. HADOOP_OPTS not picked up by hadoop command.
+    (Paul Han via arpit)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
