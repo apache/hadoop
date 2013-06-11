@@ -836,6 +836,8 @@ Release 2.0.5-alpha - 06/06/2013
   OPTIMIZATIONS
 
   BUG FIXES
+    HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
+                via cmccabe)
 
 Release 2.0.4-alpha - 2013-04-25
 
