@@ -101,6 +101,9 @@ public class RPCUtil {
         } else if (IOException.class.isAssignableFrom(realClass)) {
           throw instantiateException(realClass.asSubclass(IOException.class),
               re);
+        } else if (RuntimeException.class.isAssignableFrom(realClass)) {
+          throw instantiateException(
+              realClass.asSubclass(RuntimeException.class), re);
         } else {
           throw re;
         }
@@ -110,6 +113,9 @@ public class RPCUtil {
       } else if (cause instanceof IOException) {
         // RPC Client exception.
         throw (IOException) cause;
+      } else if (cause instanceof RuntimeException) {
+        // RPC RuntimeException
+        throw (RuntimeException) cause;
       } else {
         // Should not be generated.
         throw new IOException(se);
