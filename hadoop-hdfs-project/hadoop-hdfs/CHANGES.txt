@@ -327,6 +327,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4586. TestDataDirs.testGetDataDirsFromURIs fails with all directories
     in dfs.datanode.data.dir are invalid. (Ivan Mitic via atm)
 
+    HDFS-4878. On Remove Block, block is not removed from neededReplications
+    queue. (Tao Luo via shv)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
