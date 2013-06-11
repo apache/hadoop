@@ -682,7 +682,7 @@ public class BlockManager {
     }
     return machineSet;
   }
-
+  
   private List<LocatedBlock> createLocatedBlockList(final BlockInfo[] blocks,
       final long offset, final long length, final int nrBlocksToReturn,
       final AccessMode mode) throws IOException {
@@ -713,6 +713,22 @@ public class BlockManager {
     return results;
   }
 
+  private LocatedBlock createLocatedBlock(final BlockInfo[] blocks,
+      final long endPos, final AccessMode mode) throws IOException {
+    int curBlk = 0;
+    long curPos = 0;
+    int nrBlocks = (blocks[0].getNumBytes() == 0) ? 0 : blocks.length;
+    for (curBlk = 0; curBlk < nrBlocks; curBlk++) {
+      long blkSize = blocks[curBlk].getNumBytes();
+      if (curPos + blkSize >= endPos) {
+        break;
+      }
+      curPos += blkSize;
+    }
+    
+    return createLocatedBlock(blocks[curBlk], curPos, mode);
+  }
+  
   private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos,
     final BlockTokenSecretManager.AccessMode mode) throws IOException {
     final LocatedBlock lb = createLocatedBlock(blk, pos);
@@ -773,9 +789,9 @@ public class BlockManager {
   /** Create a LocatedBlocks. */
   public LocatedBlocks createLocatedBlocks(final BlockInfo[] blocks,
       final long fileSizeExcludeBlocksUnderConstruction,
-      final boolean isFileUnderConstruction,
-      final long offset, final long length, final boolean needBlockToken
-      ) throws IOException {
+      final boolean isFileUnderConstruction, final long offset,
+      final long length, final boolean needBlockToken, final boolean inSnapshot)
+      throws IOException {
     assert namesystem.hasReadOrWriteLock();
     if (blocks == null) {
       return null;
@@ -790,14 +806,23 @@ public class BlockManager {
       final List<LocatedBlock> locatedblocks = createLocatedBlockList(
           blocks, offset, length, Integer.MAX_VALUE, mode);
 
-      final BlockInfo last = blocks[blocks.length - 1];
-      final long lastPos = last.isComplete()?
-          fileSizeExcludeBlocksUnderConstruction - last.getNumBytes()
-          : fileSizeExcludeBlocksUnderConstruction;
-      final LocatedBlock lastlb = createLocatedBlock(last, lastPos, mode);
+      final LocatedBlock lastlb;
+      final boolean isComplete;
+      if (!inSnapshot) {
+        final BlockInfo last = blocks[blocks.length - 1];
+        final long lastPos = last.isComplete()?
+            fileSizeExcludeBlocksUnderConstruction - last.getNumBytes()
+            : fileSizeExcludeBlocksUnderConstruction;
+        lastlb = createLocatedBlock(last, lastPos, mode);
+        isComplete = last.isComplete();
+      } else {
+        lastlb = createLocatedBlock(blocks,
+            fileSizeExcludeBlocksUnderConstruction, mode);
+        isComplete = true;
+      }
       return new LocatedBlocks(
           fileSizeExcludeBlocksUnderConstruction, isFileUnderConstruction,
-          locatedblocks, lastlb, last.isComplete());
+          locatedblocks, lastlb, isComplete);
     }
   }
 

@@ -2536,46 +2536,40 @@ public class FSDirectory implements Closeable {
         node.getId());
   }
 
-   /**
-    * Create FileStatus with location info by file INode 
-    */
-    private HdfsLocatedFileStatus createLocatedFileStatus(
-        byte[] path, INode node, Snapshot snapshot) throws IOException {
-      assert hasReadLock();
-      long size = 0;     // length is zero for directories
-      short replication = 0;
-      long blocksize = 0;
-      LocatedBlocks loc = null;
-      if (node.isFile()) {
-        final INodeFile fileNode = node.asFile();
-        size = fileNode.computeFileSize(snapshot);
-        replication = fileNode.getFileReplication(snapshot);
-        blocksize = fileNode.getPreferredBlockSize();
+  /**
+   * Create FileStatus with location info by file INode
+   */
+  private HdfsLocatedFileStatus createLocatedFileStatus(byte[] path,
+      INode node, Snapshot snapshot) throws IOException {
+    assert hasReadLock();
+    long size = 0; // length is zero for directories
+    short replication = 0;
+    long blocksize = 0;
+    LocatedBlocks loc = null;
+    if (node.isFile()) {
+      final INodeFile fileNode = node.asFile();
+      size = fileNode.computeFileSize(snapshot);
+      replication = fileNode.getFileReplication(snapshot);
+      blocksize = fileNode.getPreferredBlockSize();
 
-        final boolean isUc = fileNode.isUnderConstruction();
-        final long fileSize = snapshot == null && isUc?
-            fileNode.computeFileSizeNotIncludingLastUcBlock(): size;
-        loc = getFSNamesystem().getBlockManager().createLocatedBlocks(
-            fileNode.getBlocks(), fileSize, isUc, 0L, size, false);
-        if (loc==null) {
-          loc = new LocatedBlocks();
-        }
+      final boolean inSnapshot = snapshot != null; 
+      final boolean isUc = inSnapshot ? false : fileNode.isUnderConstruction();
+      final long fileSize = !inSnapshot && isUc ? 
+          fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
+      loc = getFSNamesystem().getBlockManager().createLocatedBlocks(
+          fileNode.getBlocks(), fileSize, isUc, 0L, size, false,
+          inSnapshot);
+      if (loc == null) {
+        loc = new LocatedBlocks();
       }
-      return new HdfsLocatedFileStatus(
-          size, 
-          node.isDirectory(), 
-          replication, 
-          blocksize,
-          node.getModificationTime(snapshot),
-          node.getAccessTime(snapshot),
-          node.getFsPermission(snapshot),
-          node.getUserName(snapshot),
-          node.getGroupName(snapshot),
-          node.isSymlink() ? node.asSymlink().getSymlink() : null,
-          path,
-          node.getId(),
-          loc);
-      }
+    }
+    return new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
+        blocksize, node.getModificationTime(snapshot),
+        node.getAccessTime(snapshot), node.getFsPermission(snapshot),
+        node.getUserName(snapshot), node.getGroupName(snapshot),
+        node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
+        node.getId(), loc);
+  }
 
     
   /**
