@@ -268,6 +268,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-737. Throw some specific exceptions directly instead of wrapping them
     in YarnException. (Jian He via sseth)
 
+    YARN-731. RPCUtil.unwrapAndThrowException should unwrap remote
+    RuntimeExceptions. (Zhijie Shen via sseth)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it

@@ -65,6 +65,12 @@ public class TestRPCUtil {
   }
 
   @Test
+  public void testRemoteRuntimeExceptionUnwrapping() {
+    Class<? extends Throwable> exception = NullPointerException.class;
+    verifyRemoteExceptionUnwrapping(exception, exception.getName());
+  }
+
+  @Test
   public void testUnexpectedRemoteExceptionUnwrapping() {
     // Non IOException, YarnException thrown by the remote side.
     Class<? extends Throwable> exception = Exception.class;
@@ -107,6 +113,23 @@ public class TestRPCUtil {
       t = thrown;
     }
     Assert.assertTrue(FileNotFoundException.class.isInstance(t));
+    Assert.assertTrue(t.getMessage().contains(message));
+  }
+
+  @Test
+  public void testRPCRuntimeExceptionUnwrapping() {
+    String message = "RPCRuntimeExceptionUnwrapping";
+    RuntimeException re = new NullPointerException(message);
+    ServiceException se = new ServiceException(re);
+
+    Throwable t = null;
+    try {
+      RPCUtil.unwrapAndThrowException(se);
+    }  catch (Throwable thrown) {
+      t = thrown;
+    }
+
+    Assert.assertTrue(NullPointerException.class.isInstance(t));
     Assert.assertTrue(t.getMessage().contains(message));
   }
 
