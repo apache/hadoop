@@ -162,22 +162,6 @@ public abstract class Server {
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
   
   /**
-   * Serialization type for ConnectionContext and RpcRequestHeader
-   */
-  public enum IpcSerializationType {
-    // Add new serialization type to the end without affecting the enum order
-    PROTOBUF;
-    
-    void write(DataOutput out) throws IOException {
-      out.writeByte(this.ordinal());
-    }
-    
-    static IpcSerializationType fromByte(byte b) {
-      return IpcSerializationType.values()[b];
-    }
-  }
-  
-  /**
    * If the user accidentally sends an HTTP GET to an IPC port, we detect this
    * and send back a nicer response.
    */
@@ -1319,7 +1303,7 @@ public abstract class Server {
         if (!connectionHeaderRead) {
           //Every connection is expected to send the header.
           if (connectionHeaderBuf == null) {
-            connectionHeaderBuf = ByteBuffer.allocate(4);
+            connectionHeaderBuf = ByteBuffer.allocate(3);
           }
           count = channelRead(channel, connectionHeaderBuf);
           if (count < 0 || connectionHeaderBuf.remaining() > 0) {
@@ -1349,13 +1333,6 @@ public abstract class Server {
                      " got version " + version + 
                      " expected version " + CURRENT_VERSION);
             setupBadVersionResponse(version);
-            return -1;
-          }
-          
-          IpcSerializationType serializationType = IpcSerializationType
-              .fromByte(connectionHeaderBuf.get(3));
-          if (serializationType != IpcSerializationType.PROTOBUF) {
-            respondUnsupportedSerialization(serializationType);
             return -1;
           }
           
@@ -1549,18 +1526,6 @@ public abstract class Server {
         
         responder.doRespond(fakeCall);
       }
-    }
-    
-    private void respondUnsupportedSerialization(IpcSerializationType st) throws IOException {
-      String errMsg = "Server IPC version " + CURRENT_VERSION
-          + " do not support serilization " + st.toString();
-      ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-
-      Call fakeCall = new Call(-1, null, this);
-      setupResponse(buffer, fakeCall, 
-       RpcStatusProto.FATAL,  RpcErrorCodeProto.FATAL_UNSUPPORTED_SERIALIZATION,
-       null, IpcException.class.getName(), errMsg);
-      responder.doRespond(fakeCall);
     }
     
     private void setupHttpRequestOnIpcPortResponse() throws IOException {

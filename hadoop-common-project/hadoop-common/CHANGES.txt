@@ -30,17 +30,19 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-8886. Remove KFS support. (eli)
 
-    HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
+    HADOOP-9163. [RPC v9] The rpc msg in ProtobufRpcEngine.proto should be moved out to
     avoid an extra copy (Sanjay Radia)
 
-    HADOOP-9151 Include RPC error info in RpcResponseHeader instead of sending
+    HADOOP-9151. [RPC v9] Include RPC error info in RpcResponseHeader instead of sending
     it separately (sanjay Radia)
 
-    HADOOP-9380 Add totalLength to rpc response  (sanjay Radia)
+    HADOOP-9380. [RPC v9] Add totalLength to rpc response  (sanjay Radia)
 
-    HADOOP-9425 Add error codes to rpc-response (sanjay Radia)
+    HADOOP-9425. [RPC v9] Add error codes to rpc-response (sanjay Radia)
 
-    HADOOP-9194. RPC support for QoS. (Junping Du via llu)
+    HADOOP-9194. [RPC v9] RPC support for QoS. (Junping Du via llu)
+
+    HADOOP-9630. [RPC v9] Remove IpcSerializationType. (Junping Du via llu)
 
   NEW FEATURES
 
