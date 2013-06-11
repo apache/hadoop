@@ -528,10 +528,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
       catchException = true;
       Assert.assertTrue(e.getMessage().contains(
         "Container " + cId1 + " rejected as it is allocated by a previous RM"));
-      // TO DO: This should be replaced to explicitly check exception
-      // class name after YARN-142
-      Assert.assertTrue(e.getMessage().contains(
-        InvalidContainerException.class.getName()));
+      Assert.assertEquals(InvalidContainerException.class.getName(), e
+        .getClass().getName());
     }
 
     // Verify that startContainer fail because of invalid container request

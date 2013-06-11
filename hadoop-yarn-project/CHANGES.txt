@@ -265,6 +265,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-686. Flatten NodeReport. (sandyr via tucu)
 
+    YARN-737. Throw some specific exceptions directly instead of wrapping them
+    in YarnException. (Jian He via sseth)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it

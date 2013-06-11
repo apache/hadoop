@@ -394,9 +394,9 @@ public class ContainerManagerImpl extends CompositeService implements
       throws YarnException, IOException {
 
     if (blockNewContainerRequests.get()) {
-      throw RPCUtil.getRemoteException(new NMNotYetReadyException(
+      throw new NMNotYetReadyException(
           "Rejecting new containers as NodeManager has not" +
-          " yet connected with ResourceManager"));
+          " yet connected with ResourceManager");
     }
 
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
@@ -424,8 +424,7 @@ public class ContainerManagerImpl extends CompositeService implements
       String msg = "\nContainer "+ containerIDStr
           + " rejected as it is allocated by a previous RM";
       LOG.error(msg);
-      throw RPCUtil
-        .getRemoteException(new InvalidContainerException(msg));
+      throw new InvalidContainerException(msg);
     }
 
     LOG.info("Start request for " + containerIDStr + " by user "

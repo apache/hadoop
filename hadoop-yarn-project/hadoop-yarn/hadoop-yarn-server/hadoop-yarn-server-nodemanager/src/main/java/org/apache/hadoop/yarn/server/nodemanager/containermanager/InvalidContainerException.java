@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import org.apache.hadoop.yarn.YarnRuntimeException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+
 
 /**
  * This Exception happens when NM is rejecting container requests from RM
  */
-public class InvalidContainerException extends YarnRuntimeException {
+public class InvalidContainerException extends YarnException {
 
   private static final long serialVersionUID = 1L;
 
