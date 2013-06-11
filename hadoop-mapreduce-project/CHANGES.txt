@@ -1114,6 +1114,9 @@ Release 0.23.9 - UNRELEASED
     MAPREDUCE-5308. Shuffling to memory can get out-of-sync when fetching
     multiple compressed map outputs (Nathan Roberts via jlowe)
 
+    MAPREDUCE-5315.  DistCp reports success even on failure. (mithun and jlowe
+    via daryn)
+
 Release 0.23.8 - 2013-06-05
 
   INCOMPATIBLE CHANGES
