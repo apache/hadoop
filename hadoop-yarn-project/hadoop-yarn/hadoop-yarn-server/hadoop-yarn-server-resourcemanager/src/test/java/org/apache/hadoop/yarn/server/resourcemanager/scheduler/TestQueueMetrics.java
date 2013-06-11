@@ -32,10 +32,14 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
+import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -264,6 +268,16 @@ public class TestQueueMetrics {
     }
   }
 
+  @Test
+  public void testMetricsInitializedOnRMInit() {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER,
+      FifoScheduler.class, ResourceScheduler.class);
+    MockRM rm = new MockRM(conf);
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    checkApps(metrics, 0, 0, 0, 0, 0, 0);
+    MetricsAsserts.assertGauge("ReservedContainers", 0, metrics);
+  }
 
   public static void checkApps(MetricsSource source, int submitted, int pending,
       int running, int completed, int failed, int killed) {
