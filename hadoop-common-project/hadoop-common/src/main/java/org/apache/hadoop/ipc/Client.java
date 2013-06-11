@@ -748,8 +748,6 @@ public class Client {
      * +----------------------------------+
      * |  Authmethod (1 byte)             |      
      * +----------------------------------+
-     * |  IpcSerializationType (1 byte)   |      
-     * +----------------------------------+
      */
     private void writeConnectionHeader(OutputStream outStream)
         throws IOException {
@@ -759,7 +757,6 @@ public class Client {
       out.write(Server.CURRENT_VERSION);
       out.write(serviceClass);
       authMethod.write(out);
-      Server.IpcSerializationType.PROTOBUF.write(out);
       out.flush();
     }
     
