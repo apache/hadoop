@@ -363,10 +363,10 @@ public class MiniYARNCluster extends CompositeService {
                   NodeHeartbeatResponse.class);
               try {
                 response = rt.nodeHeartbeat(request);
-              } catch (YarnException ioe) {
+              } catch (YarnException e) {
                 LOG.info("Exception in heartbeat from node " + 
-                    request.getNodeStatus().getNodeId(), ioe);
-                throw RPCUtil.getRemoteException(ioe);
+                    request.getNodeStatus().getNodeId(), e);
+                throw e;
               }
               return response;
             }
@@ -379,10 +379,10 @@ public class MiniYARNCluster extends CompositeService {
                   newRecordInstance(RegisterNodeManagerResponse.class);
               try {
                 response = rt.registerNodeManager(request);
-              } catch (YarnException ioe) {
+              } catch (YarnException e) {
                 LOG.info("Exception in node registration from "
-                    + request.getNodeId().toString(), ioe);
-                throw RPCUtil.getRemoteException(ioe);
+                    + request.getNodeId().toString(), e);
+                throw e;
               }
               return response;
             }

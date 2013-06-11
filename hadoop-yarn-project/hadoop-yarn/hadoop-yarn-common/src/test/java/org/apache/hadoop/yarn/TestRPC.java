@@ -184,7 +184,6 @@ public class TestRPC {
 
       try {
         tokenId = newContainerTokenIdentifier(containerToken);
-        tokenId = new ContainerTokenIdentifier();
       } catch (IOException e) {
         throw RPCUtil.getRemoteException(e);
       }
