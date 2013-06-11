@@ -258,7 +258,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       } catch (InvalidResourceRequestException e) {
         LOG.warn("RM app submission failed in validating AM resource request"
             + " for application " + applicationId, e);
-        throw RPCUtil.getRemoteException(e);
+        throw e;
       }
     }
 

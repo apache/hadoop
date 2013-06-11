@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import org.apache.hadoop.yarn.YarnRuntimeException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
  * This exception happens when NM starts from scratch but has not yet connected
  * with RM.
  */
-public class NMNotYetReadyException extends YarnRuntimeException {
+public class NMNotYetReadyException extends YarnException {
 
   private static final long serialVersionUID = 1L;
 
