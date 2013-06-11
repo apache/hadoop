@@ -505,6 +505,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5308. Shuffling to memory can get out-of-sync when fetching
     multiple compressed map outputs (Nathan Roberts via jlowe)
 
+    MAPREDUCE-5315.  DistCp reports success even on failure. (mithun and jlowe
+    via daryn)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
