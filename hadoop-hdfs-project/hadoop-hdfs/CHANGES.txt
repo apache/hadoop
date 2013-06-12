@@ -1075,6 +1075,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4873. callGetBlockLocations returns incorrect number of blocks for 
     snapshotted files. (jing9)
 
+    HDFS-4819. Update Snapshot doc to clarify that nested snapshots are not
+    allowed.  (szetszwo)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
