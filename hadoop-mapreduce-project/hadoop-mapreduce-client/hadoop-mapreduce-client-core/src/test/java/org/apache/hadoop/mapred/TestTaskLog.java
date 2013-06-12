@@ -55,7 +55,8 @@ public class TestTaskLog {
     when(taid.toString()).thenReturn("JobId");
 
     File f = TaskLog.getTaskLogFile(taid, true, LogName.STDOUT);
-    assertTrue(f.getAbsolutePath().endsWith("testString/stdout"));
+    assertTrue(f.getAbsolutePath().endsWith("testString"
+        + File.separatorChar + "stdout"));
 
     // test getRealTaskLogFileLocation
 
@@ -69,11 +70,14 @@ public class TestTaskLog {
     TaskLog.syncLogs("location", taid, true);
 
     assertTrue(indexFile.getAbsolutePath().endsWith(
-        "userlogs/job_job_0001/JobId.cleanup/log.index"));
+        "userlogs" + File.separatorChar + "job_job_0001"
+        + File.separatorChar + "JobId.cleanup"
+        + File.separatorChar + "log.index"));
 
     f = TaskLog.getRealTaskLogFileLocation(taid, true, LogName.DEBUGOUT);
     if (f != null) {
-      assertTrue(f.getAbsolutePath().endsWith("location/debugout"));
+      assertTrue(f.getAbsolutePath().endsWith("location"
+          + File.separatorChar + "debugout"));
       FileUtils.copyFile(indexFile, f);
     }
     // test obtainLogDirOwner
