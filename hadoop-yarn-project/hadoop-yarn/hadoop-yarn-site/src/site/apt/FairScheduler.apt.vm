@@ -45,31 +45,16 @@ Hadoop MapReduce Next Generation - Fair Scheduler
   work with app priorities - the priorities are used as weights to determine the 
   fraction of total resources that each app should get.
 
-  The scheduler organizes apps further into "queues", and shares resources 
-  fairly between these queues. By default, all users share a single queue, 
-  called “default”. If an app specifically lists a queue in a container 
-  resource request, the request is submitted to that queue. It is also 
-  possible to assign queues based on the user name included with the request 
-  through configuration. Within each queue, a scheduling policy is used to share
+  The scheduler organizes apps further into "queues", and shares resources
+  fairly between these queues. By default, all users share a single queue,
+  called “default”. If an app specifically lists a queue in a container resource
+  request, the request is submitted to that queue. It is also possible to assign
+  queues based on the user name included with the request through
+  configuration. Within each queue, a scheduling policy is used to share
   resources between the running apps. The default is memory-based fair sharing,
   but FIFO and multi-resource with Dominant Resource Fairness can also be
-  configured. Queues can be configured with weights to share the cluster non-evenly.
-
-  The fair scheduler supports hierarchical queues. All queues descend from a
-  queue named "root". Available resources are distributed among the children
-  of the root queue in the typical fair scheduling fashion. Then, the children
-  distribute the resources assigned to them to their children in the same
-  fashion.  Applications may only be scheduled on leaf queues. Queues can be
-  specified as children of other queues by placing them as sub-elements of 
-  their parents in the fair scheduler configuration file.
-  
-  A queue's name starts with the names of its parents, with periods as
-  separators.  So a queue named "queue1" under the root named, would be 
-  referred to as "root.queue1", and a queue named "queue2" under a queue
-  named "parent1" would be referred to as "root.parent1.queue2". When
-  referring to queues, the root part of the name is optional, so queue1 could
-  be referred to as just "queue1", and a queue2 could be referred to as just 
-  "parent1.queue2".
+  configured. Queues can be arranged in a hierarchy to divide resources and
+  configured with weights to share the cluster in specific proportions.
 
   In addition to providing fair sharing, the Fair Scheduler allows assigning 
   guaranteed minimum shares to queues, which is useful for ensuring that 
@@ -87,9 +72,31 @@ Hadoop MapReduce Next Generation - Fair Scheduler
   cause too much intermediate data to be created or too much context-switching.
   Limiting the apps does not cause any subsequently submitted apps to fail, 
   only to wait in the scheduler's queue until some of the user's earlier apps 
-  finish. Apps to run from each user/queue are chosen in the same fair sharing
-  manner, but can alternatively be configured to be chosen in order of submit
-  time, as in the default FIFO scheduler in Hadoop.
+  finish. 
+
+* {Hierarchical queues with pluggable policies}
+
+  The fair scheduler supports hierarchical queues. All queues descend from a
+  queue named "root". Available resources are distributed among the children
+  of the root queue in the typical fair scheduling fashion. Then, the children
+  distribute the resources assigned to them to their children in the same
+  fashion.  Applications may only be scheduled on leaf queues. Queues can be
+  specified as children of other queues by placing them as sub-elements of 
+  their parents in the fair scheduler configuration file.
+  
+  A queue's name starts with the names of its parents, with periods as
+  separators. So a queue named "queue1" under the root named, would be referred
+  to as "root.queue1", and a queue named "queue2" under a queue named "parent1"
+  would be referred to as "root.parent1.queue2". When referring to queues, the
+  root part of the name is optional, so queue1 could be referred to as just
+  "queue1", and a queue2 could be referred to as just "parent1.queue2".
+
+  Additionally, the fair scheduler allows setting a different custom policy for
+  each queue to allow sharing the queue's resources in any which way the user
+  wants. A custom policy can be built by extending
+  <<<org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy>>>.
+  FifoPolicy, FairSharePolicy (default), and DominantResourceFairnessPolicy are
+  built-in and can be readily used.
 
   Certain add-ons are not yet supported which existed in the original (MR1) 
   Fair Scheduler. Among them, is the use of a custom policies governing 
@@ -201,11 +208,12 @@ Allocation file format
      default to 1, and a queue with weight 2 should receive approximately twice
      as many resources as a queue with the default weight.
 
-   * schedulingMode: either "fifo" or "fair" depending on the in-queue scheduling
-     policy desired. Defaults to "fair". If "fifo", apps with earlier submit
-     times are given preference for containers, but apps submitted later may
-     run concurrently if there is leftover space on the cluster after satisfying
-     the earlier app's requests.
+   * schedulingPolicy: to set the scheduling policy of any queue. The allowed
+     values are "fifo"/"fair"/"drf" or any class that extends
+     <<<org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy>>>. 
+     Defaults to "fair". If "fifo", apps with earlier submit times are given preference
+     for containers, but apps submitted later may run concurrently if there is
+     leftover space on the cluster after satisfying the earlier app's requests.
 
    * aclSubmitApps: a list of users that can submit apps to the queue. A (default)
      value of "*" means that any users can submit apps. A queue inherits the ACL of
@@ -236,7 +244,7 @@ Allocation file format
     <maxResources>90000 mb</maxResources>
     <maxRunningApps>50</maxRunningApps>
     <weight>2.0</weight>
-    <schedulingMode>fair</schedulingMode>
+    <schedulingPolicy>fair</schedulingPolicy>
     <queue name="sample_sub_queue">
       <minResources>5000 mb</minResources>
     </queue>
