@@ -24,7 +24,6 @@ import java.net.URISyntaxException;
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -35,7 +34,8 @@ import org.junit.BeforeClass;
 
 public class TestFcHdfsPermission extends FileContextPermissionBase {
   
-  private static final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
+  private static final FileContextTestHelper fileContextTestHelper =
+      new FileContextTestHelper("/tmp/TestFcHdfsPermission");
   private static FileContext fc;
 
   private static MiniDFSCluster cluster;

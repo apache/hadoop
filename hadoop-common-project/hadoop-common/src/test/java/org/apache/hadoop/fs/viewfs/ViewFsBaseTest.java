@@ -75,7 +75,11 @@ public class ViewFsBaseTest {
   Configuration conf;
   FileContext xfcViewWithAuthority; // same as fsView but with authority
   URI schemeWithAuthority;
-  final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
+  final FileContextTestHelper fileContextTestHelper = createFileContextHelper();
+
+  protected FileContextTestHelper createFileContextHelper() {
+    return new FileContextTestHelper();
+  }
 
   @Before
   public void setUp() throws Exception {

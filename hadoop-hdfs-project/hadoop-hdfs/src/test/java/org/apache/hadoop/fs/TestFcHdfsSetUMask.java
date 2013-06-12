@@ -42,7 +42,8 @@ import org.junit.Test;
 
 public class TestFcHdfsSetUMask {
   
-  private static FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
+  private static FileContextTestHelper fileContextTestHelper =
+      new FileContextTestHelper("/tmp/TestFcHdfsSetUMask");
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   private static FileContext fc;
