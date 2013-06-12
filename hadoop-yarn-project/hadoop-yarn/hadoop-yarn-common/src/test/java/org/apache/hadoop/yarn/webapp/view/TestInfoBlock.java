@@ -70,12 +70,12 @@ public class TestInfoBlock {
     WebAppTests.testBlock(MultilineInfoBlock.class);
     TestInfoBlock.pw.flush();
     String output = TestInfoBlock.sw.toString().replaceAll(" +", " ");
-    String expectedSinglelineData = "<tr class=\"odd\">\n"
-      + " <th>\n Single_line_value\n <td>\n This is one line.\n";
-    String expectedMultilineData = "<tr class=\"even\">\n"
-      + " <th>\n Multiple_line_value\n <td>\n <div>\n"
-      + " This is first line.\n </div>\n <div>\n"
-      + " This is second line.\n </div>\n";
+    String expectedSinglelineData = String.format("<tr class=\"odd\">%n"
+      + " <th>%n Single_line_value%n <td>%n This is one line.%n");
+    String expectedMultilineData = String.format("<tr class=\"even\">%n"
+      + " <th>%n Multiple_line_value%n <td>%n <div>%n"
+      + " This is first line.%n </div>%n <div>%n"
+      + " This is second line.%n </div>%n");
     assertTrue(output.contains(expectedSinglelineData) && output.contains(expectedMultilineData));
   }
 }
