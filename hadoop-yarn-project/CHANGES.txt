@@ -825,6 +825,9 @@ Release 0.23.9 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-427. Coverage fix for org.apache.hadoop.yarn.server.api.* (Aleksey
+    Gorshkov via jeagles)
+    
   OPTIMIZATIONS
 
   BUG FIXES
