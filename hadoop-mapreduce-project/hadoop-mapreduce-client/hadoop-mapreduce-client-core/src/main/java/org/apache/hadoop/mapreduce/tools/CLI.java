@@ -317,7 +317,7 @@ public class CLI extends Configured implements Tool {
         Job job = cluster.getJob(taskID.getJobID());
         if (job == null) {
           System.out.println("Could not find job " + jobid);
-        } else if (job.killTask(taskID)) {
+        } else if (job.killTask(taskID, false)) {
           System.out.println("Killed task " + taskid);
           exitCode = 0;
         } else {
@@ -329,7 +329,7 @@ public class CLI extends Configured implements Tool {
         Job job = cluster.getJob(taskID.getJobID());
         if (job == null) {
             System.out.println("Could not find job " + jobid);
-        } else if(job.failTask(taskID)) {
+        } else if(job.killTask(taskID, true)) {
           System.out.println("Killed task " + taskID + " by failing it");
           exitCode = 0;
         } else {
