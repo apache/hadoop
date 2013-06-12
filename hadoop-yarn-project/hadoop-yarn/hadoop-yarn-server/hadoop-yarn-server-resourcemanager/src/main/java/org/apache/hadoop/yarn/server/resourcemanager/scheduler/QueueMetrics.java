@@ -452,7 +452,7 @@ public class QueueMetrics implements MetricsSource {
   }
   
   public Resource getAllocatedResources() {
-    return BuilderUtils.newResource(allocatedMB.value(), 0);
+    return BuilderUtils.newResource(allocatedMB.value(), allocatedVCores.value());
   }
 
   public int getAllocatedMB() {

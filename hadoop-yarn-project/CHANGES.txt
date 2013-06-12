@@ -500,6 +500,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
     via vinodkv)
 
+    YARN-795. Fair scheduler queue metrics should subtract allocated vCores from 
+    available vCores. (ywskycn via tucu) 
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES

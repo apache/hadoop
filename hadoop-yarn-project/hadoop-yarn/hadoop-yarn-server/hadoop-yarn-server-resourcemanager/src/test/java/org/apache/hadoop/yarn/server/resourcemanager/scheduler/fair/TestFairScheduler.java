@@ -219,6 +219,13 @@ public class TestFairScheduler {
     createSchedulingRequestExistingApplication(request, attId);
   }
   
+  private void createSchedulingRequestExistingApplication(int memory, int vcores,
+      int priority, ApplicationAttemptId attId) {
+	ResourceRequest request = createResourceRequest(memory, vcores, ResourceRequest.ANY,
+		priority, 1, true);
+	createSchedulingRequestExistingApplication(request, attId);
+  }
+  
   private void createSchedulingRequestExistingApplication(ResourceRequest request,
       ApplicationAttemptId attId) {
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
@@ -352,17 +359,17 @@ public class TestFairScheduler {
     // Add a node
     RMNode node1 =
         MockNodes
-            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
+            .newNodeInfo(1, Resources.createResource(1024, 4), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
     // Add another node
     RMNode node2 =
-        MockNodes.newNodeInfo(1, Resources.createResource(512), 2, "127.0.0.2");
+        MockNodes.newNodeInfo(1, Resources.createResource(512, 2), 2, "127.0.0.2");
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
     scheduler.handle(nodeEvent2);
 
-    createSchedulingRequest(512, "queue1", "user1", 2);
+    createSchedulingRequest(512, 2, "queue1", "user1", 2);
 
     scheduler.update();
 
@@ -379,13 +386,18 @@ public class TestFairScheduler {
 
     assertEquals(1024, scheduler.getQueueManager().getQueue("queue1").
       getResourceUsage().getMemory());
+    assertEquals(2, scheduler.getQueueManager().getQueue("queue1").
+      getResourceUsage().getVirtualCores());
 
     // verify metrics
     QueueMetrics queue1Metrics = scheduler.getQueueManager().getQueue("queue1")
         .getMetrics();
     assertEquals(1024, queue1Metrics.getAllocatedMB());
+    assertEquals(2, queue1Metrics.getAllocatedVirtualCores());
     assertEquals(1024, scheduler.getRootQueueMetrics().getAllocatedMB());
+    assertEquals(2, scheduler.getRootQueueMetrics().getAllocatedVirtualCores());
     assertEquals(512, scheduler.getRootQueueMetrics().getAvailableMB());
+    assertEquals(4, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
   }
 
   @Test (timeout = 5000)
@@ -1334,11 +1346,11 @@ public class TestFairScheduler {
     // Add a node
     RMNode node1 =
         MockNodes
-            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
+            .newNodeInfo(1, Resources.createResource(1024, 4), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
-    ApplicationAttemptId attId = createSchedulingRequest(1024, "queue1",
+    ApplicationAttemptId attId = createSchedulingRequest(1024, 4, "queue1",
         "user1", 1, 2);
     scheduler.update();
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
@@ -1351,15 +1363,16 @@ public class TestFairScheduler {
         .getLiveContainers().iterator().next().getContainerId();
 
     // Cause reservation to be created
-    createSchedulingRequestExistingApplication(1024, 2, attId);
+    createSchedulingRequestExistingApplication(1024, 4, 2, attId);
     scheduler.update();
     scheduler.handle(updateEvent);
 
     assertEquals(1, app.getLiveContainers().size());
     assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
     
     // Create request at higher priority
-    createSchedulingRequestExistingApplication(1024, 1, attId);
+    createSchedulingRequestExistingApplication(1024, 4, 1, attId);
     scheduler.update();
     scheduler.handle(updateEvent);
     
@@ -1373,6 +1386,7 @@ public class TestFairScheduler {
     scheduler.allocate(attId, new ArrayList<ResourceRequest>(),
         Arrays.asList(containerId), null, null);
     assertEquals(1024, scheduler.getRootQueueMetrics().getAvailableMB());
+    assertEquals(4, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
     
     // Schedule at opening
     scheduler.update();
@@ -1385,6 +1399,7 @@ public class TestFairScheduler {
       Assert.assertEquals(2, liveContainer.getContainer().getPriority().getPriority());
     }
     assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
   }
   
   @Test
@@ -1708,22 +1723,27 @@ public class TestFairScheduler {
   @Test
   public void testRemoveNodeUpdatesRootQueueMetrics() {
     assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
+	assertEquals(0, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
     
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 1,
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024, 4), 1,
         "127.0.0.1");
     NodeAddedSchedulerEvent addEvent = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(addEvent);
     
     assertEquals(1024, scheduler.getRootQueueMetrics().getAvailableMB());
+    assertEquals(4, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
     scheduler.update(); // update shouldn't change things
     assertEquals(1024, scheduler.getRootQueueMetrics().getAvailableMB());
+    assertEquals(4, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
     
     NodeRemovedSchedulerEvent removeEvent = new NodeRemovedSchedulerEvent(node1);
     scheduler.handle(removeEvent);
     
     assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
     scheduler.update(); // update shouldn't change things
     assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
+    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
 }
 
   @Test
