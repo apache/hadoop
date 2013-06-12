@@ -172,18 +172,15 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
    * Next three functions operate on all the resources we are enforcing.
    */
 
-  /*
-   * TODO: After YARN-2 is committed, we should call containerResource.getCpus()
-   * (or equivalent) to multiply the weight by the number of requested cpus.
-   */
   private void setupLimits(ContainerId containerId,
                            Resource containerResource) throws IOException {
     String containerName = containerId.toString();
 
     if (isCpuWeightEnabled()) {
       createCgroup(CONTROLLER_CPU, containerName);
+      int cpuShares = CPU_DEFAULT_WEIGHT * containerResource.getVirtualCores();
       updateCgroup(CONTROLLER_CPU, containerName, "shares",
-          String.valueOf(CPU_DEFAULT_WEIGHT));
+          String.valueOf(cpuShares));
     }
   }
 
