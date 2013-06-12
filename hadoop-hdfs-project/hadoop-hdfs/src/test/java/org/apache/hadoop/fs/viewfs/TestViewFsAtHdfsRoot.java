@@ -23,6 +23,7 @@ import java.net.URISyntaxException;
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -43,6 +44,11 @@ public class TestViewFsAtHdfsRoot extends ViewFsBaseTest {
   private static HdfsConfiguration CONF = new HdfsConfiguration();
   private static FileContext fc;
   
+  @Override
+  protected FileContextTestHelper createFileContextHelper() {
+    return new FileContextTestHelper("/tmp/TestViewFsAtHdfsRoot");
+  }
+
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {

@@ -50,7 +50,8 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
   }
 
-  private static FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
+  private static FileContextTestHelper fileContextTestHelper =
+      new FileContextTestHelper("/tmp/TestFcHdfsSymlink");
   private static MiniDFSCluster cluster;
   private static WebHdfsFileSystem webhdfs;
   private static DistributedFileSystem dfs;
