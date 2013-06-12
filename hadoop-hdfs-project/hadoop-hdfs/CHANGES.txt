@@ -21,6 +21,9 @@ Release 0.23.9 - UNRELEASED
     HDFS-4832. Namenode doesn't change the number of missing blocks in
     safemode when DNs rejoin or leave (Ravi Prakash via kihwal)
 
+    HDFS-4878. On Remove Block, block is not removed from neededReplications
+    queue. (Tao Luo via shv)
+
 Release 0.23.8 - 2013-06-05
   
   INCOMPATIBLE CHANGES

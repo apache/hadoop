@@ -2445,8 +2445,9 @@ public class BlockManager {
     addToInvalidates(block);
     corruptReplicas.removeFromCorruptReplicasMap(block);
     blocksMap.removeBlock(block);
-    // Remove the block from pendingReplications
+    // Remove the block from pendingReplications and neededReplications
     pendingReplications.remove(block);
+    neededReplications.remove(block, UnderReplicatedBlocks.LEVEL);
   }
 
   public BlockInfo getStoredBlock(Block block) {
