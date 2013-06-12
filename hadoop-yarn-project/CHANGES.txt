@@ -315,6 +315,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-731. RPCUtil.unwrapAndThrowException should unwrap remote
     RuntimeExceptions. (Zhijie Shen via sseth)
 
+    YARN-600. Hook up cgroups CPU settings to the number of virtual cores 
+    allocated. (sandyr via tucu)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
