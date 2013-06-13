@@ -97,7 +97,6 @@ import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -2143,11 +2142,11 @@ public class DFSClient implements java.io.Closeable {
    * current tree of a directory.
    * @see ClientProtocol#getSnapshotDiffReport(String, String, String)
    */
-  public SnapshotDiffReport getSnapshotDiffReport(Path snapshotDir,
+  public SnapshotDiffReport getSnapshotDiffReport(String snapshotDir,
       String fromSnapshot, String toSnapshot) throws IOException {
     checkOpen();
     try {
-      return namenode.getSnapshotDiffReport(snapshotDir.toString(),
+      return namenode.getSnapshotDiffReport(snapshotDir,
           fromSnapshot, toSnapshot);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException();
