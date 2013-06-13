@@ -69,16 +69,16 @@ public class NonAggregatingLogHandler extends AbstractService implements
   }
 
   @Override
-  public void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     // Default 3 hours.
     this.deleteDelaySeconds =
         conf.getLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 3 * 60 * 60);
     sched = createScheduledThreadPoolExecutor(conf);
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (sched != null) {
       sched.shutdown();
       boolean isShutdown = false;
@@ -92,7 +92,7 @@ public class NonAggregatingLogHandler extends AbstractService implements
         sched.shutdownNow();
       }
     }
-    super.stop();
+    super.serviceStop();
   }
 
   @SuppressWarnings("unchecked")

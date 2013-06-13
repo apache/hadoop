@@ -80,7 +80,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private InetSocketAddress rmAddress;
   private Resource totalResource;
   private int httpPort;
-  private boolean isStopped;
+  private volatile boolean isStopped;
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private boolean tokenKeepAliveEnabled;
   private long tokenRemovalDelayMs;
@@ -109,7 +109,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   }
 
   @Override
-  public synchronized void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     this.rmAddress = conf.getSocketAddr(
         YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
@@ -146,11 +146,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         " physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
         " physical-cores=" + cpuCores + " virtual-cores=" + virtualCores);
     
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
 
     // NodeManager is the last service to start, so NodeId is available.
     this.nodeId = this.context.getNodeId();
@@ -159,7 +159,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       // Registration has to be in start so that ContainerManager can get the
       // perNM tokens needed to authenticate ContainerTokens.
       registerWithRM();
-      super.start();
+      super.serviceStart();
       startStatusUpdater();
     } catch (Exception e) {
       String errorMessage = "Unexpected error starting NodeStatusUpdater";
@@ -169,10 +169,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   }
 
   @Override
-  public synchronized void stop() {
+  protected void serviceStop() throws Exception {
     // Interrupt the updater.
     this.isStopped = true;
-    super.stop();
+    super.serviceStop();
   }
 
   protected void rebootNodeStatusUpdater() {

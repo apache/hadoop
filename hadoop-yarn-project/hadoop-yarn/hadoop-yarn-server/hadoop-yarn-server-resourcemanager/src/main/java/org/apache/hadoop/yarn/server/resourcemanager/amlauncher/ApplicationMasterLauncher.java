@@ -50,9 +50,10 @@ public class ApplicationMasterLauncher extends AbstractService implements
     this.launcherHandlingThread = new LauncherThread();
   }
   
-  public void start() {
+  @Override
+  protected void serviceStart() throws Exception {
     launcherHandlingThread.start();
-    super.start();
+    super.serviceStart();
   }
   
   protected Runnable createRunnableLauncher(RMAppAttempt application, 
@@ -69,7 +70,8 @@ public class ApplicationMasterLauncher extends AbstractService implements
   }
   
 
-  public void stop() {
+  @Override
+  protected void serviceStop() throws Exception {
     launcherHandlingThread.interrupt();
     try {
       launcherHandlingThread.join();
@@ -77,7 +79,6 @@ public class ApplicationMasterLauncher extends AbstractService implements
       LOG.info(launcherHandlingThread.getName() + " interrupted during join ", 
           ie);    }
     launcherPool.shutdown();
-    super.stop();
   }
 
   private class LauncherThread extends Thread {

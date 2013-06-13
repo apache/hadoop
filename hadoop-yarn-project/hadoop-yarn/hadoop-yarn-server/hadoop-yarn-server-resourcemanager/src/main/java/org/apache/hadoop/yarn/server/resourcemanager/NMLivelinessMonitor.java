@@ -37,12 +37,12 @@ public class NMLivelinessMonitor extends AbstractLivelinessMonitor<NodeId> {
     this.dispatcher = d.getEventHandler();
   }
 
-  public void init(Configuration conf) {
-    super.init(conf);
+  public void serviceInit(Configuration conf) throws Exception {
     int expireIntvl = conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
     setExpireInterval(expireIntvl);
     setMonitorInterval(expireIntvl/3);
+    super.serviceInit(conf);
   }
 
   @Override

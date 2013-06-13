@@ -73,7 +73,8 @@ public class TestLocalDirsHandlerService {
       Assert.fail("Service should have thrown an exception due to wrong URI");
     } catch (YarnRuntimeException e) {
     }
-    Assert.assertTrue("Service should not be inited", dirSvc.getServiceState()
-        .compareTo(STATE.NOTINITED) == 0);
+    Assert.assertEquals("Service should not be inited",
+                        STATE.STOPPED,
+                        dirSvc.getServiceState());
   }
 }

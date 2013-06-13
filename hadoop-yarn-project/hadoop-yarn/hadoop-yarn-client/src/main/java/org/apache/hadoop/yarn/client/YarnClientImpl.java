@@ -79,7 +79,11 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   }
   
   public YarnClientImpl(InetSocketAddress rmAddress) {
-    super(YarnClientImpl.class.getName());
+    this(YarnClientImpl.class.getName(), rmAddress);
+  }
+
+  public YarnClientImpl(String name, InetSocketAddress rmAddress) {
+    super(name);
     this.rmAddress = rmAddress;
   }
 
@@ -89,18 +93,18 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   }
 
   @Override
-  public synchronized void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     if (this.rmAddress == null) {
       this.rmAddress = getRmAddress(conf);
     }
     statePollIntervalMillis = conf.getLong(
         YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS,
         YarnConfiguration.DEFAULT_YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS);
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
-  public synchronized void start() {
+  protected void serviceStart() throws Exception {
     YarnRPC rpc = YarnRPC.create(getConfig());
 
     this.rmClient = (ClientRMProtocol) rpc.getProxy(
@@ -108,15 +112,15 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Connecting to ResourceManager at " + rmAddress);
     }
-    super.start();
+    super.serviceStart();
   }
 
   @Override
-  public synchronized void stop() {
+  protected void serviceStop() throws Exception {
     if (this.rmClient != null) {
       RPC.stopProxy(this.rmClient);
     }
-    super.stop();
+    super.serviceStop();
   }
 
   @Override

@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.service.Service;
 import org.junit.Test;
 
 
@@ -185,10 +186,13 @@ import org.junit.Test;
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc, 1); //no retry
      appMaster.init(conf);
+     assertTrue("appMaster.isLastAMRetry() is false", appMaster.isLastAMRetry());
      //simulate the process being killed
      MRAppMaster.MRAppMasterShutdownHook hook = 
        new MRAppMaster.MRAppMasterShutdownHook(appMaster);
      hook.run();
+     assertTrue("MRAppMaster isn't stopped",
+                appMaster.isInState(Service.STATE.STOPPED));
      verify(fs).delete(stagingJobPath, true);
    }
 
@@ -240,8 +244,8 @@ import org.junit.Test;
      }
 
      @Override
-     public void start() {
-       super.start();
+     public void serviceStart() throws Exception {
+       super.serviceStart();
        DefaultMetricsSystem.shutdown();
      }
 
@@ -329,9 +333,9 @@ import org.junit.Test;
       }
 
       @Override
-      public synchronized void stop() {
+      protected void serviceStop() throws Exception {
         stoppedContainerAllocator = true;
-        super.stop();
+        super.serviceStop();
       }
     }
 

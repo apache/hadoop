@@ -436,6 +436,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5304. mapreduce.Job killTask/failTask/getTaskCompletionEvents 
     methods have incompatible signature changes. (kkambatl via tucu)
 
+    MAPREDUCE-5298. Moved MapReduce services to YARN-530 stricter lifecycle.
+    (Steve Loughran via vinodkv)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES

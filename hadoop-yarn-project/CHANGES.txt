@@ -112,6 +112,10 @@ Release 2.1.0-beta - UNRELEASED
     YARN-642. Removed health parameter from ResourceManager /nodes web-service
     and cleaned the behaviour of the status parameter. (Sandy Ryza vid vinodkv)
 
+    YARN-530. Defined Service model strictly, implemented AbstractService for
+    robust subclassing and migrated yarn-common services. (Steve Loughran via
+    vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
@@ -481,6 +485,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-700. TestInfoBlock fails on Windows because of line ending missmatch.
     (Ivan Mitic via cnauroth)
+
+    YARN-117. Migrated rest of YARN to the new service model. (Steve Louhran via
+    vinodkv)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 

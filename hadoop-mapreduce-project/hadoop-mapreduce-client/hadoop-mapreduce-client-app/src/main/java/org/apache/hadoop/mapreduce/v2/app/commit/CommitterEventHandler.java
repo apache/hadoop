@@ -87,8 +87,8 @@ public class CommitterEventHandler extends AbstractService
   }
 
   @Override
-  public void init(Configuration conf) {
-    super.init(conf);
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
     commitThreadCancelTimeoutMs = conf.getInt(
         MRJobConfig.MR_AM_COMMITTER_CANCEL_TIMEOUT_MS,
         MRJobConfig.DEFAULT_MR_AM_COMMITTER_CANCEL_TIMEOUT_MS);
@@ -108,7 +108,7 @@ public class CommitterEventHandler extends AbstractService
   }
 
   @Override
-  public void start() {    
+  protected void serviceStart() throws Exception {
     ThreadFactory tf = new ThreadFactoryBuilder()
       .setNameFormat("CommitterEvent Processor #%d")
       .build();
@@ -134,7 +134,7 @@ public class CommitterEventHandler extends AbstractService
     });
     eventHandlingThread.setName("CommitterEvent Handler");
     eventHandlingThread.start();
-    super.start();
+    super.serviceStart();
   }
 
 
@@ -148,14 +148,18 @@ public class CommitterEventHandler extends AbstractService
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (stopped.getAndSet(true)) {
       // return if already stopped
       return;
     }
-    eventHandlingThread.interrupt();
-    launcherPool.shutdown();
-    super.stop();
+    if (eventHandlingThread != null) {
+      eventHandlingThread.interrupt();
+    }
+    if (launcherPool != null) {
+      launcherPool.shutdown();
+    }
+    super.serviceStop();
   }
 
   private synchronized void jobCommitStarted() throws IOException {

@@ -130,7 +130,7 @@ public class MRAppBenchmark {
         }
       }
       @Override
-      public void start() {
+      protected void serviceStart() throws Exception {
         thread = new Thread(new Runnable() {
           @Override
           public void run() {
@@ -168,13 +168,15 @@ public class MRAppBenchmark {
           }
         });
         thread.start();
-        super.start();
+        super.serviceStart();
       }
 
       @Override
-      public void stop() {
-        thread.interrupt();
-        super.stop();
+      protected void serviceStop() throws Exception {
+        if (thread != null) {
+          thread.interrupt();
+        }
+        super.serviceStop();
       }
     }
   }

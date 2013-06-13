@@ -194,7 +194,7 @@ public class ResourceLocalizationService extends CompositeService
   }
 
   @Override
-  public void init(Configuration conf) {
+  public void serviceInit(Configuration conf) throws Exception {
     this.validateConf(conf);
     this.publicRsrc =
         new LocalResourcesTrackerImpl(null, dispatcher, true, conf);
@@ -239,7 +239,7 @@ public class ResourceLocalizationService extends CompositeService
     localizerTracker = createLocalizerTracker(conf);
     addService(localizerTracker);
     dispatcher.register(LocalizerEventType.class, localizerTracker);
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
@@ -248,7 +248,7 @@ public class ResourceLocalizationService extends CompositeService
   }
 
   @Override
-  public void start() {
+  public void serviceStart() throws Exception {
     cacheCleanup.scheduleWithFixedDelay(new CacheCleanup(dispatcher),
         cacheCleanupPeriod, cacheCleanupPeriod, TimeUnit.MILLISECONDS);
     server = createServer();
@@ -257,7 +257,7 @@ public class ResourceLocalizationService extends CompositeService
         getConfig().updateConnectAddr(YarnConfiguration.NM_LOCALIZER_ADDRESS,
                                       server.getListenerAddress());
     LOG.info("Localizer started on port " + server.getPort());
-    super.start();
+    super.serviceStart();
   }
 
   LocalizerTracker createLocalizerTracker(Configuration conf) {
@@ -288,12 +288,12 @@ public class ResourceLocalizationService extends CompositeService
   }
 
   @Override
-  public void stop() {
+  public void serviceStop() throws Exception {
     if (server != null) {
       server.stop();
     }
     cacheCleanup.shutdown();
-    super.stop();
+    super.serviceStop();
   }
 
   @Override
@@ -536,9 +536,9 @@ public class ResourceLocalizationService extends CompositeService
     }
     
     @Override
-    public synchronized void start() {
+    public synchronized void serviceStart() throws Exception {
       publicLocalizer.start();
-      super.start();
+      super.serviceStart();
     }
 
     public LocalizerHeartbeatResponse processHeartbeat(LocalizerStatus status) {
@@ -559,12 +559,12 @@ public class ResourceLocalizationService extends CompositeService
     }
     
     @Override
-    public void stop() {
+    public void serviceStop() throws Exception {
       for (LocalizerRunner localizer : privLocalizers.values()) {
         localizer.interrupt();
       }
       publicLocalizer.interrupt();
-      super.stop();
+      super.serviceStop();
     }
 
     @Override
