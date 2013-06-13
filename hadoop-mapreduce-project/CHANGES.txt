@@ -21,6 +21,9 @@ Release 0.23.9 - UNRELEASED
     MAPREDUCE-5315.  DistCp reports success even on failure. (mithun and jlowe
     via daryn)
 
+    MAPREDUCE-4019. -list-attempt-ids is not working (Ashwin Shankar,
+    Devaraj K, and B Anil Kumar via jlowe)
+
 Release 0.23.8 - 2013-06-05
 
   INCOMPATIBLE CHANGES
