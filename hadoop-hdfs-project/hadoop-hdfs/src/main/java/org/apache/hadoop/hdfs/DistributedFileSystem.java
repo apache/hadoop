@@ -1031,7 +1031,7 @@ public class DistributedFileSystem extends FileSystem {
    */
   public SnapshotDiffReport getSnapshotDiffReport(Path snapshotDir,
       String fromSnapshot, String toSnapshot) throws IOException {
-    return dfs.getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
+    return dfs.getSnapshotDiffReport(getPathName(snapshotDir), fromSnapshot, toSnapshot);
   }
  
   /**

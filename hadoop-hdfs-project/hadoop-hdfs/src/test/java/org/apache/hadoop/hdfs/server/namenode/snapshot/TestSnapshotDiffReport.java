@@ -210,7 +210,12 @@ public class TestSnapshotDiffReport {
     report = hdfs.getSnapshotDiffReport(subsubsub1, "s0", "s2");
     System.out.println(report);
     assertEquals(0, report.getDiffList().size());
-    
+
+    // test path with scheme also works
+    report = hdfs.getSnapshotDiffReport(hdfs.makeQualified(subsubsub1), "s0", "s2");
+    System.out.println(report);
+    assertEquals(0, report.getDiffList().size());
+
     verifyDiffReport(sub1, "s0", "s2", 
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
         new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
