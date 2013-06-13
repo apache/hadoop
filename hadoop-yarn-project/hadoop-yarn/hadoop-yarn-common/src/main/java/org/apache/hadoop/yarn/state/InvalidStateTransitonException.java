@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.state;
 
-import org.apache.hadoop.yarn.YarnRuntimeException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 public class InvalidStateTransitonException extends YarnRuntimeException {
 
