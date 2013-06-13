@@ -116,6 +116,10 @@ Release 2.1.0-beta - UNRELEASED
     robust subclassing and migrated yarn-common services. (Steve Loughran via
     vinodkv)
 
+    YARN-746. Renamed Service.register() and Service.unregister() to
+    registerServiceListener() & unregisterServiceListener() respectively.
+    (Steve Loughran via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
