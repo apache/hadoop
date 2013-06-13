@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
-
 /**
  * This Exception happens when NM is rejecting container requests from RM
  */

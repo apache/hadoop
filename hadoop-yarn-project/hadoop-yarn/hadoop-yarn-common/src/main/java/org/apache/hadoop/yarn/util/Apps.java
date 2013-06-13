@@ -22,8 +22,8 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.util.StringInterner;
-import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import static org.apache.hadoop.yarn.util.StringHelper.*;
 
