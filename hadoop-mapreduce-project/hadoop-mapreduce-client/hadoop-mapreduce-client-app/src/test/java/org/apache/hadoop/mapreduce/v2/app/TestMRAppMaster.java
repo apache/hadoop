@@ -438,9 +438,9 @@ class MRAppMasterTest extends MRAppMaster {
   }
 
   @Override
-  public void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     if (!overrideInit) {
-      super.init(conf);
+      super.serviceInit(conf);
     }
     this.conf = conf;
   }
@@ -472,7 +472,7 @@ class MRAppMasterTest extends MRAppMaster {
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     if (overrideStart) {
       try {
         UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -483,7 +483,7 @@ class MRAppMasterTest extends MRAppMaster {
         fail(e.getMessage());
       }
     } else {
-      super.start();
+      super.serviceStart();
     }
   }
 

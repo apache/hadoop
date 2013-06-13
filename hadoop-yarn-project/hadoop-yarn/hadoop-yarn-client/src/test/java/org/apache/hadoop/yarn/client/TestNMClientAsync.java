@@ -52,6 +52,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
+import org.apache.hadoop.yarn.service.ServiceOperations;
+import org.junit.After;
 import org.junit.Test;
 
 
@@ -63,6 +65,11 @@ public class TestNMClientAsync {
   private NMClientAsync asyncClient;
   private NodeId nodeId;
   private Token containerToken;
+
+  @After
+  public void teardown() {
+    ServiceOperations.stop(asyncClient);
+  }
 
   @Test (timeout = 30000)
   public void testNMClientAsync() throws Exception {

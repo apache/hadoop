@@ -166,18 +166,18 @@ public class NMClientAsync extends AbstractService {
   }
 
   @Override
-  public void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     this.maxThreadPoolSize = conf.getInt(
         YarnConfiguration.NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE,
         YarnConfiguration.DEFAULT_NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE);
     LOG.info("Upper bound of the thread pool size is " + maxThreadPoolSize);
 
     client.init(conf);
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     client.start();
 
     ThreadFactory tf = new ThreadFactoryBuilder().setNameFormat(
@@ -243,31 +243,39 @@ public class NMClientAsync extends AbstractService {
     eventDispatcherThread.setDaemon(false);
     eventDispatcherThread.start();
 
-    super.start();
+    super.serviceStart();
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (stopped.getAndSet(true)) {
       // return if already stopped
       return;
     }
-    eventDispatcherThread.interrupt();
-    try {
-      eventDispatcherThread.join();
-    } catch (InterruptedException e) {
-      LOG.error("The thread of " + eventDispatcherThread.getName() +
-          " didn't finish normally.", e);
+    if (eventDispatcherThread != null) {
+      eventDispatcherThread.interrupt();
+      try {
+        eventDispatcherThread.join();
+      } catch (InterruptedException e) {
+        LOG.error("The thread of " + eventDispatcherThread.getName() +
+                  " didn't finish normally.", e);
+      }
     }
-    threadPool.shutdownNow();
-    // If NMClientImpl doesn't stop running containers, the states doesn't
-    // need to be cleared.
-    if (!(client instanceof NMClientImpl) ||
-        ((NMClientImpl) client).cleanupRunningContainers.get()) {
-      containers.clear();
+    if (threadPool != null) {
+      threadPool.shutdownNow();
     }
-    client.stop();
-    super.stop();
+    if (client != null) {
+      // If NMClientImpl doesn't stop running containers, the states doesn't
+      // need to be cleared.
+      if (!(client instanceof NMClientImpl) ||
+          ((NMClientImpl) client).cleanupRunningContainers.get()) {
+        if (containers != null) {
+          containers.clear();
+        }
+      }
+      client.stop();
+    }
+    super.serviceStop();
   }
 
   public void startContainer(

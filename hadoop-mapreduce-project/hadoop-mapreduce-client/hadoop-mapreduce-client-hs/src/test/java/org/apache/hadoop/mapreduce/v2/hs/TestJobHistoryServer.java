@@ -76,12 +76,15 @@ public class TestJobHistoryServer {
     historyServer.init(config);
     assertEquals(STATE.INITED, historyServer.getServiceState());
     assertEquals(3, historyServer.getServices().size());
+    HistoryClientService historyService = historyServer.getClientService();
+    assertNotNull(historyServer.getClientService());
+    assertEquals(STATE.INITED, historyService.getServiceState());
+
     historyServer.start();
     assertEquals(STATE.STARTED, historyServer.getServiceState());
+    assertEquals(STATE.STARTED, historyService.getServiceState());
     historyServer.stop();
     assertEquals(STATE.STOPPED, historyServer.getServiceState());
-    assertNotNull(historyServer.getClientService());
-    HistoryClientService historyService = historyServer.getClientService();
     assertNotNull(historyService.getClientHandler().getConnectAddress());
 
     
@@ -202,7 +205,7 @@ public class TestJobHistoryServer {
   
   @After
   public void stop(){
-    if(historyServer !=null && !STATE.STOPPED.equals(historyServer.getServiceState())){
+    if(historyServer != null) {
       historyServer.stop();
     }
   }

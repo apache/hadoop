@@ -86,7 +86,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
       new ConcurrentHashMap<ContainerId, StartedContainer>();
 
   //enabled by default
-  protected AtomicBoolean cleanupRunningContainers = new AtomicBoolean(true);
+  protected final AtomicBoolean cleanupRunningContainers = new AtomicBoolean(true);
 
   public NMClientImpl() {
     super(NMClientImpl.class.getName());
@@ -97,13 +97,13 @@ public class NMClientImpl extends AbstractService implements NMClient {
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     // Usually, started-containers are stopped when this client stops. Unless
     // the flag cleanupRunningContainers is set to false.
     if (cleanupRunningContainers.get()) {
       cleanupRunningContainers();
     }
-    super.stop();
+    super.serviceStop();
   }
 
   protected synchronized void cleanupRunningContainers() {
@@ -171,7 +171,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
     }
 
     @Override
-    public synchronized void start() {
+    protected void serviceStart() throws Exception {
       final YarnRPC rpc = YarnRPC.create(getConfig());
 
       final InetSocketAddress containerAddress =
@@ -195,10 +195,11 @@ public class NMClientImpl extends AbstractService implements NMClient {
           });
 
       LOG.debug("Connecting to ContainerManager at " + containerAddress);
+      super.serviceStart();
     }
 
     @Override
-    public synchronized void stop() {
+    protected void serviceStop() throws Exception {
       if (this.containerManager != null) {
         RPC.stopProxy(this.containerManager);
 
@@ -209,6 +210,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
               containerAddress);
         }
       }
+      super.serviceStop();
     }
 
     public synchronized Map<String, ByteBuffer> startContainer(

@@ -128,6 +128,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.service.ServiceOperations;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -227,7 +228,7 @@ public class MRAppMaster extends CompositeService {
   }
 
   @Override
-  public void init(final Configuration conf) {
+  protected void serviceInit(final Configuration conf) throws Exception {
     conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
     downloadTokensAndSetupUGI(conf);
@@ -416,7 +417,7 @@ public class MRAppMaster extends CompositeService {
       addIfService(historyService);
     }
     
-    super.init(conf);
+    super.serviceInit(conf);
   } // end of init()
   
   protected Dispatcher createDispatcher() {
@@ -784,7 +785,7 @@ public class MRAppMaster extends CompositeService {
     }
 
     @Override
-    public synchronized void start() {
+    protected void serviceStart() throws Exception {
       if (job.isUber()) {
         this.containerAllocator = new LocalContainerAllocator(
             this.clientService, this.context, nmHost, nmPort, nmHttpPort
@@ -795,13 +796,13 @@ public class MRAppMaster extends CompositeService {
       }
       ((Service)this.containerAllocator).init(getConfig());
       ((Service)this.containerAllocator).start();
-      super.start();
+      super.serviceStart();
     }
 
     @Override
-    public synchronized void stop() {
-      ((Service)this.containerAllocator).stop();
-      super.stop();
+    protected void serviceStop() throws Exception {
+      ServiceOperations.stop((Service) this.containerAllocator);
+      super.serviceStop();
     }
 
     @Override
@@ -843,7 +844,7 @@ public class MRAppMaster extends CompositeService {
     }
 
     @Override
-    public synchronized void start() {
+    protected void serviceStart() throws Exception {
       if (job.isUber()) {
         this.containerLauncher = new LocalContainerLauncher(context,
             (TaskUmbilicalProtocol) taskAttemptListener);
@@ -852,7 +853,7 @@ public class MRAppMaster extends CompositeService {
       }
       ((Service)this.containerLauncher).init(getConfig());
       ((Service)this.containerLauncher).start();
-      super.start();
+      super.serviceStart();
     }
 
     @Override
@@ -861,9 +862,9 @@ public class MRAppMaster extends CompositeService {
     }
 
     @Override
-    public synchronized void stop() {
-      ((Service)this.containerLauncher).stop();
-      super.stop();
+    protected void serviceStop() throws Exception {
+      ServiceOperations.stop((Service) this.containerLauncher);
+      super.serviceStop();
     }
   }
 
@@ -873,7 +874,7 @@ public class MRAppMaster extends CompositeService {
     }
 
     @Override
-    public synchronized void stop() {
+    protected void serviceStop() throws Exception {
       try {
         if(isLastAMRetry) {
           cleanupStagingDir();
@@ -884,7 +885,7 @@ public class MRAppMaster extends CompositeService {
       } catch (IOException io) {
         LOG.error("Failed to cleanup staging dir: ", io);
       }
-      super.stop();
+      super.serviceStop();
     }
   }
 
@@ -951,7 +952,7 @@ public class MRAppMaster extends CompositeService {
 
   @SuppressWarnings("unchecked")
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
 
     amInfos = new LinkedList<AMInfo>();
     completedTasksFromPreviousRun = new HashMap<TaskId, TaskInfo>();
@@ -1011,7 +1012,7 @@ public class MRAppMaster extends CompositeService {
     }
 
     //start all the components
-    super.start();
+    super.serviceStart();
 
     // All components have started, start the job.
     startJobs();

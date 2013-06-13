@@ -206,7 +206,7 @@ public class TestJobHistoryEvents {
         AppContext context) {
       return new JobHistoryEventHandler(context, getStartCount()) {
         @Override
-        public void start() {
+        protected void serviceStart() {
           // Don't start any event draining thread.
           super.eventHandlingThread = new Thread();
           super.eventHandlingThread.start();

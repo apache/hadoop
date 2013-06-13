@@ -63,20 +63,20 @@ public class TestAuxServices {
     }
 
     public ArrayList<Integer> getAppIdsStopped() {
-      return (ArrayList)this.stoppedApps.clone();
+      return (ArrayList<Integer>)this.stoppedApps.clone();
     }
 
-    @Override
-    public void init(Configuration conf) {
+    @Override 
+    protected void serviceInit(Configuration conf) throws Exception {
       remaining_init = conf.getInt(idef + ".expected.init", 0);
       remaining_stop = conf.getInt(idef + ".expected.stop", 0);
-      super.init(conf);
+      super.serviceInit(conf);
     }
     @Override
-    public void stop() {
+    protected void serviceStop() throws Exception {
       assertEquals(0, remaining_init);
       assertEquals(0, remaining_stop);
-      super.stop();
+      super.serviceStop();
     }
     @Override
     public void initApp(String user, ApplicationId appId, ByteBuffer data) {

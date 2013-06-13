@@ -202,8 +202,7 @@ public abstract class BaseContainerManagerTest {
 
   @After
   public void tearDown() throws IOException, InterruptedException {
-    if (containerManager != null
-        && containerManager.getServiceState() == STATE.STARTED) {
+    if (containerManager != null) {
       containerManager.stop();
     }
     createContainerExecutor().deleteAsUser(user,

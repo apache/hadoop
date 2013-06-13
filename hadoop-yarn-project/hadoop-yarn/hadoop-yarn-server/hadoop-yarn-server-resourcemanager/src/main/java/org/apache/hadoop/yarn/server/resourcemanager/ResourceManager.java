@@ -137,7 +137,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
   
   @Override
-  public synchronized void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
 
     validateConfigs(conf);
 
@@ -257,7 +257,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     new RMNMInfo(this.rmContext, this.scheduler);
     
-    super.init(conf);
+    super.serviceInit(conf);
   }
   
   @VisibleForTesting
@@ -398,17 +398,17 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     @Override
-    public synchronized void init(Configuration conf) {
+    protected void serviceInit(Configuration conf) throws Exception {
       this.shouldExitOnError =
           conf.getBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY,
             Dispatcher.DEFAULT_DISPATCHER_EXIT_ON_ERROR);
-      super.init(conf);
+      super.serviceInit(conf);
     }
 
     @Override
-    public synchronized void start() {
+    protected void serviceStart() throws Exception {
       this.eventProcessor.start();
-      super.start();
+      super.serviceStart();
     }
 
     private final class EventProcessor implements Runnable {
@@ -448,7 +448,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     @Override
-    public synchronized void stop() {
+    protected void serviceStop() throws Exception {
       this.stopped = true;
       this.eventProcessor.interrupt();
       try {
@@ -456,7 +456,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       } catch (InterruptedException e) {
         throw new YarnRuntimeException(e);
       }
-      super.stop();
+      super.serviceStop();
     }
 
     @Override
@@ -577,7 +577,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     try {
       doSecureLogin();
     } catch(IOException ie) {
@@ -616,7 +616,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, resolvedAddress);
     }
     
-    super.start();
+    super.serviceStart();
 
     /*synchronized(shutdown) {
       try {
@@ -635,14 +635,20 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (webApp != null) {
       webApp.stop();
     }
-    rmDTSecretManager.stopThreads();
+    if (rmDTSecretManager != null) {
+      rmDTSecretManager.stopThreads();
+    }
 
-    this.appTokenSecretManager.stop();
-    this.containerTokenSecretManager.stop();
+    if (appTokenSecretManager != null) {
+      this.appTokenSecretManager.stop();
+    }
+    if (containerTokenSecretManager != null) {
+      this.containerTokenSecretManager.stop();
+    }
 
     /*synchronized(shutdown) {
       shutdown.set(true);
@@ -651,14 +657,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     DefaultMetricsSystem.shutdown();
 
-    RMStateStore store = rmContext.getStateStore();
-    try {
-      store.close();
-    } catch (Exception e) {
-      LOG.error("Error closing store.", e);
+    if (rmContext != null) {
+      RMStateStore store = rmContext.getStateStore();
+      try {
+        store.close();
+      } catch (Exception e) {
+        LOG.error("Error closing store.", e);
+      }
     }
-      
-    super.stop();
+
+    super.serviceStop();
   }
   
   protected ResourceTrackerService createResourceTrackerService() {

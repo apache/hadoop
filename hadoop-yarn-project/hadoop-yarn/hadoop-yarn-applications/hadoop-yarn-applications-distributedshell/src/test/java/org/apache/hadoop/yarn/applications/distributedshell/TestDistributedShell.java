@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -63,9 +64,16 @@ public class TestDistributedShell {
       if (url == null) {
         throw new RuntimeException("Could not find 'yarn-site.xml' dummy file in classpath");
       }
-      yarnCluster.getConfig().set("yarn.application.classpath", new File(url.getPath()).getParent());
+      Configuration yarnClusterConfig = yarnCluster.getConfig();
+      yarnClusterConfig.set("yarn.application.classpath", new File(url.getPath()).getParent());
+      //write the document to a buffer (not directly to the file, as that
+      //can cause the file being written to get read -which will then fail.
+      ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+      yarnClusterConfig.writeXml(bytesOut);
+      bytesOut.close();
+      //write the bytes to the file in the classpath
       OutputStream os = new FileOutputStream(new File(url.getPath()));
-      yarnCluster.getConfig().writeXml(os);
+      os.write(bytesOut.toByteArray());
       os.close();
     }
     try {
@@ -78,8 +86,11 @@ public class TestDistributedShell {
   @AfterClass
   public static void tearDown() throws IOException {
     if (yarnCluster != null) {
-      yarnCluster.stop();
-      yarnCluster = null;
+      try {
+        yarnCluster.stop();
+      } finally {
+        yarnCluster = null;
+      }
     }
   }
 

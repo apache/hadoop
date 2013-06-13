@@ -267,7 +267,7 @@ public class ShuffleHandler extends AbstractService
   }
 
   @Override
-  public synchronized void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     manageOsCache = conf.getBoolean(SHUFFLE_MANAGE_OS_CACHE,
         DEFAULT_SHUFFLE_MANAGE_OS_CACHE);
 
@@ -287,12 +287,12 @@ public class ShuffleHandler extends AbstractService
     selector = new NioServerSocketChannelFactory(
         Executors.newCachedThreadPool(bossFactory),
         Executors.newCachedThreadPool(workerFactory));
-    super.init(new Configuration(conf));
+    super.serviceInit(new Configuration(conf));
   }
 
   // TODO change AbstractService to throw InterruptedException
   @Override
-  public synchronized void start() {
+  protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
     ServerBootstrap bootstrap = new ServerBootstrap(selector);
     try {
@@ -308,19 +308,23 @@ public class ShuffleHandler extends AbstractService
     conf.set(SHUFFLE_PORT_CONFIG_KEY, Integer.toString(port));
     pipelineFact.SHUFFLE.setPort(port);
     LOG.info(getName() + " listening on port " + port);
-    super.start();
+    super.serviceStart();
 
     sslFileBufferSize = conf.getInt(SUFFLE_SSL_FILE_BUFFER_SIZE_KEY,
                                     DEFAULT_SUFFLE_SSL_FILE_BUFFER_SIZE);
   }
 
   @Override
-  public synchronized void stop() {
+  protected void serviceStop() throws Exception {
     accepted.close().awaitUninterruptibly(10, TimeUnit.SECONDS);
-    ServerBootstrap bootstrap = new ServerBootstrap(selector);
-    bootstrap.releaseExternalResources();
-    pipelineFact.destroy();
-    super.stop();
+    if (selector != null) {
+      ServerBootstrap bootstrap = new ServerBootstrap(selector);
+      bootstrap.releaseExternalResources();
+    }
+    if (pipelineFact != null) {
+      pipelineFact.destroy();
+    }
+    super.serviceStop();
   }
 
   @Override

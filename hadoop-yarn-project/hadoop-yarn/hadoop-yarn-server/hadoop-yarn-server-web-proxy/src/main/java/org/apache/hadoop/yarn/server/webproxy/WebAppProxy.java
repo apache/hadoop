@@ -51,7 +51,7 @@ public class WebAppProxy extends AbstractService {
   }
   
   @Override
-  public void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     String auth =  conf.get(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION);
     if (auth == null || "simple".equals(auth)) {
       isSecurityEnabled = false;
@@ -81,11 +81,11 @@ public class WebAppProxy extends AbstractService {
     }
     acl = new AccessControlList(conf.get(YarnConfiguration.YARN_ADMIN_ACL, 
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
-    super.init(conf);
+    super.serviceInit(conf);
   }
   
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     try {
       proxyServer = new HttpServer("proxy", bindAddress, port,
           port == 0, getConfig(), acl);
@@ -99,11 +99,11 @@ public class WebAppProxy extends AbstractService {
       LOG.fatal("Could not start proxy web server",e);
       throw new YarnRuntimeException("Could not start proxy web server",e);
     }
-    super.start();
+    super.serviceStart();
   }
   
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if(proxyServer != null) {
       try {
         proxyServer.stop();
@@ -112,7 +112,7 @@ public class WebAppProxy extends AbstractService {
         throw new YarnRuntimeException("Error stopping proxy web server",e);
       }
     }
-    super.stop();
+    super.serviceStop();
   }
 
   public void join() {

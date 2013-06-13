@@ -60,7 +60,8 @@ public class CachedHistoryStorage extends AbstractService implements
 
   @SuppressWarnings("serial")
   @Override
-  public void init(Configuration conf) throws YarnRuntimeException {
+  public void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
     LOG.info("CachedHistoryStorage Init");
 
     loadedJobCacheSize = conf.getInt(
@@ -74,8 +75,6 @@ public class CachedHistoryStorage extends AbstractService implements
         return super.size() > loadedJobCacheSize;
       }
     });
-
-    super.init(conf);
   }
 
   public CachedHistoryStorage() {

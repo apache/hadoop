@@ -24,6 +24,11 @@
     <Class name="~org\.apache\.hadoop\.yarn\.ipc\.RpcProtos.*" />
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.yarn.service.AbstractService" />
+    <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER" />
+  </Match>
+
   <!-- Ignore unchecked Event casts -->
   <Match>
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl" />
@@ -171,6 +176,11 @@
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer"/>
     <Field name="renewalTimer" />
     <Bug code="IS"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.client.NMClientImpl$NMCommunicator"/>
+    <Field name="containerManager" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC"/>
   </Match>
 
   <!-- Don't care if putIfAbsent value is ignored -->
