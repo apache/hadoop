@@ -156,7 +156,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
     // Start configurable services
     auxiliaryServices = new AuxServices();
-    auxiliaryServices.register(this);
+    auxiliaryServices.registerServiceListener(this);
     addService(auxiliaryServices);
 
     this.containersMonitor =
@@ -265,7 +265,7 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   public void serviceStop() throws Exception {
     if (auxiliaryServices.getServiceState() == STARTED) {
-      auxiliaryServices.unregister(this);
+      auxiliaryServices.unregisterServiceListener(this);
     }
     if (server != null) {
       server.stop();

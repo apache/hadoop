@@ -129,16 +129,19 @@ public interface Service extends Closeable {
   void close() throws IOException;
 
   /**
-   * Register an instance of the service state change events.
+   * Register a listener to the service state change events.
+   * If the supplied listener is already listening to this service,
+   * this method is a no-op.
    * @param listener a new listener
    */
-  void register(ServiceStateChangeListener listener);
+  void registerServiceListener(ServiceStateChangeListener listener);
 
   /**
-   * Unregister a previously instance of the service state change events.
+   * Unregister a previously registered listener of the service state
+   * change events. No-op if the listener is already unregistered.
    * @param listener the listener to unregister.
    */
-  void unregister(ServiceStateChangeListener listener);
+  void unregisterServiceListener(ServiceStateChangeListener listener);
 
   /**
    * Get the name of this service.

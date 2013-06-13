@@ -54,13 +54,13 @@ public class FilterService implements Service {
   }
 
   @Override
-  public void register(ServiceStateChangeListener listener) {
-    service.register(listener);
+  public void registerServiceListener(ServiceStateChangeListener listener) {
+    service.registerServiceListener(listener);
   }
 
   @Override
-  public void unregister(ServiceStateChangeListener listener) {
-    service.unregister(listener);
+  public void unregisterServiceListener(ServiceStateChangeListener listener) {
+    service.unregisterServiceListener(listener);
   }
 
   @Override
