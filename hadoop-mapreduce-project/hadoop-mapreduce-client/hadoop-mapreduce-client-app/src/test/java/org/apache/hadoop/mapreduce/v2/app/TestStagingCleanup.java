@@ -270,7 +270,7 @@ import org.junit.Test;
      }
 
      @Override
-     protected void downloadTokensAndSetupUGI(Configuration conf) {
+     protected void initJobCredentialsAndUGI(Configuration conf) {
      }
 
      public boolean getTestIsLastAMRetry(){

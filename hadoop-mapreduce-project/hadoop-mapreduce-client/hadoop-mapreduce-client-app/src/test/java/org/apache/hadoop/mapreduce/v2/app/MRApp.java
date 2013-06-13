@@ -141,7 +141,7 @@ public class MRApp extends MRAppMaster {
   }
   
   @Override
-  protected void downloadTokensAndSetupUGI(Configuration conf) {
+  protected void initJobCredentialsAndUGI(Configuration conf) {
     // Fake a shuffle secret that normally is provided by the job client.
     String shuffleSecret = "fake-shuffle-secret";
     TokenCache.setShuffleSecretKey(shuffleSecret.getBytes(), getCredentials());

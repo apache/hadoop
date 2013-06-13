@@ -58,11 +58,11 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -344,6 +344,13 @@ public class TestMRAppMaster {
         new Token<TokenIdentifier>(identifier, password, kind, service);
     Text tokenAlias = new Text("myToken");
     credentials.addToken(tokenAlias, myToken);
+
+    Text appTokenService = new Text("localhost:0");
+    Token<ApplicationTokenIdentifier> appToken =
+        new Token<ApplicationTokenIdentifier>(identifier, password,
+            ApplicationTokenIdentifier.KIND_NAME, appTokenService);
+    credentials.addToken(appTokenService, appToken);
+    
     Text keyAlias = new Text("mySecretKeyAlias");
     credentials.addSecretKey(keyAlias, "mySecretKey".getBytes());
     Token<? extends TokenIdentifier> storedToken =
@@ -379,13 +386,13 @@ public class TestMRAppMaster {
           System.currentTimeMillis(), 1, false, true);
     MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
 
-    // Now validate the credentials
-    Credentials appMasterCreds = appMaster.credentials;
+    // Now validate the task credentials
+    Credentials appMasterCreds = appMaster.getCredentials();
     Assert.assertNotNull(appMasterCreds);
     Assert.assertEquals(1, appMasterCreds.numberOfSecretKeys());
     Assert.assertEquals(1, appMasterCreds.numberOfTokens());
 
-    // Validate the tokens
+    // Validate the tokens - app token should not be present
     Token<? extends TokenIdentifier> usedToken =
         appMasterCreds.getToken(tokenAlias);
     Assert.assertNotNull(usedToken);
@@ -397,13 +404,24 @@ public class TestMRAppMaster {
     Assert.assertEquals("mySecretKey", new String(usedKey));
 
     // The credentials should also be added to conf so that OuputCommitter can
-    // access it
+    // access it - app token should not be present
     Credentials confCredentials = conf.getCredentials();
     Assert.assertEquals(1, confCredentials.numberOfSecretKeys());
     Assert.assertEquals(1, confCredentials.numberOfTokens());
     Assert.assertEquals(storedToken, confCredentials.getToken(tokenAlias));
     Assert.assertEquals("mySecretKey",
       new String(confCredentials.getSecretKey(keyAlias)));
+    
+    // Verify the AM's ugi - app token should be present
+    Credentials ugiCredentials = appMaster.getUgi().getCredentials();
+    Assert.assertEquals(1, ugiCredentials.numberOfSecretKeys());
+    Assert.assertEquals(2, ugiCredentials.numberOfTokens());
+    Assert.assertEquals(storedToken, ugiCredentials.getToken(tokenAlias));
+    Assert.assertEquals(appToken, ugiCredentials.getToken(appTokenService));
+    Assert.assertEquals("mySecretKey",
+      new String(ugiCredentials.getSecretKey(keyAlias)));
+
+
   }
 }
 
@@ -416,7 +434,6 @@ class MRAppMasterTest extends MRAppMaster {
   ContainerAllocator mockContainerAllocator;
   CommitterEventHandler mockCommitterEventHandler;
   RMHeartbeatHandler mockRMHeartbeatHandler;
-  Credentials credentials;
 
   public MRAppMasterTest(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String host, int port, int httpPort,
@@ -445,15 +462,6 @@ class MRAppMasterTest extends MRAppMaster {
     this.conf = conf;
   }
   
-  @Override 
-  protected void downloadTokensAndSetupUGI(Configuration conf) {
-    try {
-      this.currentUser = UserGroupInformation.getCurrentUser();
-    } catch (IOException e) {
-      throw new YarnRuntimeException(e);
-    }
-  }
-  
   @Override
   protected ContainerAllocator createContainerAllocator(
       final ClientService clientService, final AppContext context) {
@@ -477,7 +485,6 @@ class MRAppMasterTest extends MRAppMaster {
       try {
         UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
         String user = ugi.getShortUserName();
-        this.credentials = ugi.getCredentials();
         stagingDirPath = MRApps.getStagingAreaDir(conf, user);
       } catch (Exception e) {
         fail(e.getMessage());
@@ -487,4 +494,12 @@ class MRAppMasterTest extends MRAppMaster {
     }
   }
 
+  @Override
+  public Credentials getCredentials() {
+    return super.getCredentials();
+  }
+  
+  public UserGroupInformation getUgi() {
+    return currentUser;
+  }
 }
