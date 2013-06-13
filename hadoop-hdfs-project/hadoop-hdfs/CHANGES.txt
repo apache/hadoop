@@ -169,6 +169,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-2857. Cleanup BlockInfo class. (suresh)
 
+    HDFS-3009. Remove duplicate code in DFSClient#isLocalAddress by using 
+    NetUtils. (Hari Mankude via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
