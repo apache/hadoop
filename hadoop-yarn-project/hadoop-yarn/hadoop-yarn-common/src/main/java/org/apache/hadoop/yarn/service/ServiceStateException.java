@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.service;
 
-import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 /**
  * Exception that is raised on state change operations.

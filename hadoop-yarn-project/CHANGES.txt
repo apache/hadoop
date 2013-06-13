@@ -284,6 +284,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-648. FS: Add documentation for pluggable policy. (kkambatl via tucu)
 
+    YARN-773. Moved YarnRuntimeException from package api.yarn to
+    api.yarn.exceptions. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it

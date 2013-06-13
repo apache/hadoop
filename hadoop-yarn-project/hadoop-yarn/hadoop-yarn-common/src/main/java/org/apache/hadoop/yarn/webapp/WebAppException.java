@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import org.apache.hadoop.yarn.YarnRuntimeException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 public class WebAppException extends YarnRuntimeException {
 
