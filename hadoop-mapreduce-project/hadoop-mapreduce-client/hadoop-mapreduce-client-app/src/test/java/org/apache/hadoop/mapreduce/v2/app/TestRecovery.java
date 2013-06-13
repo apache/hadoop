@@ -1595,7 +1595,7 @@ public class TestRecovery {
     }
 
     @Override
-    protected void downloadTokensAndSetupUGI(Configuration conf) {
+    protected void initJobCredentialsAndUGI(Configuration conf) {
       // do NOT put a shuffle secret in the job credentials
     }
   }
