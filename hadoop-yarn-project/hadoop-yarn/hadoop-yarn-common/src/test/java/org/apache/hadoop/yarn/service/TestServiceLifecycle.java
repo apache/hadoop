@@ -186,7 +186,7 @@ public class TestServiceLifecycle extends ServiceAssert {
   @Test
   public void testStopFailingInitAndStop() throws Throwable {
     BreakableService svc = new BreakableService(true, false, true);
-    svc.register(new LoggingStateChangeListener());
+    svc.registerServiceListener(new LoggingStateChangeListener());
     try {
       svc.init(new Configuration());
       fail("Expected a failure, got " + svc);
@@ -220,7 +220,7 @@ public class TestServiceLifecycle extends ServiceAssert {
   public void testServiceNotifications() throws Throwable {
     BreakableService svc = new BreakableService(false, false, false);
     BreakableStateChangeListener listener = new BreakableStateChangeListener();
-    svc.register(listener);
+    svc.registerServiceListener(listener);
     svc.init(new Configuration());
     assertEventCount(listener, 1);
     svc.start();
@@ -239,10 +239,10 @@ public class TestServiceLifecycle extends ServiceAssert {
   public void testServiceNotificationsStopOnceUnregistered() throws Throwable {
     BreakableService svc = new BreakableService(false, false, false);
     BreakableStateChangeListener listener = new BreakableStateChangeListener();
-    svc.register(listener);
+    svc.registerServiceListener(listener);
     svc.init(new Configuration());
     assertEventCount(listener, 1);
-    svc.unregister(listener);
+    svc.unregisterServiceListener(listener);
     svc.start();
     assertEventCount(listener, 1);
     svc.stop();
@@ -267,12 +267,12 @@ public class TestServiceLifecycle extends ServiceAssert {
       new SelfUnregisteringBreakableStateChangeListener();
     BreakableStateChangeListener l2 =
       new BreakableStateChangeListener();
-    svc.register(listener);
-    svc.register(l2);
+    svc.registerServiceListener(listener);
+    svc.registerServiceListener(l2);
     svc.init(new Configuration());
     assertEventCount(listener, 1);
     assertEventCount(l2, 1);
-    svc.unregister(listener);
+    svc.unregisterServiceListener(listener);
     svc.start();
     assertEventCount(listener, 1);
     assertEventCount(l2, 2);
@@ -287,7 +287,7 @@ public class TestServiceLifecycle extends ServiceAssert {
     @Override
     public synchronized void stateChanged(Service service) {
       super.stateChanged(service);
-      service.unregister(this);
+      service.unregisterServiceListener(this);
     }
   }
 
@@ -301,7 +301,7 @@ public class TestServiceLifecycle extends ServiceAssert {
     BreakableService svc = new BreakableService(false, false, false);
     BreakableStateChangeListener listener = new BreakableStateChangeListener();
     listener.setFailingState(Service.STATE.STARTED);
-    svc.register(listener);
+    svc.registerServiceListener(listener);
     svc.init(new Configuration());
     assertEventCount(listener, 1);
     //start this; the listener failed but this won't show
@@ -326,7 +326,7 @@ public class TestServiceLifecycle extends ServiceAssert {
     //this tests that a listener can get notified when a service is stopped
     AsyncSelfTerminatingService service = new AsyncSelfTerminatingService(2000);
     NotifyingListener listener = new NotifyingListener();
-    service.register(listener);
+    service.registerServiceListener(listener);
     service.init(new Configuration());
     service.start();
     assertServiceInState(service, Service.STATE.STARTED);
@@ -344,7 +344,7 @@ public class TestServiceLifecycle extends ServiceAssert {
   public void testSelfTerminatingService() throws Throwable {
     SelfTerminatingService service = new SelfTerminatingService();
     BreakableStateChangeListener listener = new BreakableStateChangeListener();
-    service.register(listener);
+    service.registerServiceListener(listener);
     service.init(new Configuration());
     assertEventCount(listener, 1);
     //start the service
@@ -357,7 +357,7 @@ public class TestServiceLifecycle extends ServiceAssert {
   public void testStartInInitService() throws Throwable {
     Service service = new StartInInitService();
     BreakableStateChangeListener listener = new BreakableStateChangeListener();
-    service.register(listener);
+    service.registerServiceListener(listener);
     service.init(new Configuration());
     assertServiceInState(service, Service.STATE.STARTED);
     assertEventCount(listener, 1);
@@ -367,7 +367,7 @@ public class TestServiceLifecycle extends ServiceAssert {
   public void testStopInInitService() throws Throwable {
     Service service = new StopInInitService();
     BreakableStateChangeListener listener = new BreakableStateChangeListener();
-    service.register(listener);
+    service.registerServiceListener(listener);
     service.init(new Configuration());
     assertServiceInState(service, Service.STATE.STOPPED);
     assertEventCount(listener, 1);

@@ -120,7 +120,7 @@ public class AuxServices extends AbstractService
       AuxiliaryService service = entry.getValue();
       String name = entry.getKey();
       service.start();
-      service.register(this);
+      service.registerServiceListener(this);
       ByteBuffer meta = service.getMeta();
       if(meta != null) {
         serviceMeta.put(name, meta);
@@ -135,7 +135,7 @@ public class AuxServices extends AbstractService
       synchronized (serviceMap) {
         for (Service service : serviceMap.values()) {
           if (service.getServiceState() == Service.STATE.STARTED) {
-            service.unregister(this);
+            service.unregisterServiceListener(this);
             service.stop();
           }
         }
