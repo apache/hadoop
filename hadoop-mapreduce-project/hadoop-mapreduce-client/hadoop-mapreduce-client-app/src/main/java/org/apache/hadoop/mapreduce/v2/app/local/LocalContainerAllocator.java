@@ -80,8 +80,8 @@ public class LocalContainerAllocator extends RMCommunicator
   }
 
   @Override
-  public void init(Configuration conf) {
-    super.init(conf);
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
     retryInterval =
         getConfig().getLong(MRJobConfig.MR_AM_TO_RM_WAIT_INTERVAL_MS,
             MRJobConfig.DEFAULT_MR_AM_TO_RM_WAIT_INTERVAL_MS);

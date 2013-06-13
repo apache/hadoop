@@ -19,10 +19,13 @@
 
 package org.apache.hadoop.yarn.service;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
 
 public class TestServiceLifecycle extends ServiceAssert {
+  private static Log LOG = LogFactory.getLog(TestServiceLifecycle.class);
 
   /**
    * Walk the {@link BreakableService} through it's lifecycle, 
@@ -59,13 +62,8 @@ public class TestServiceLifecycle extends ServiceAssert {
     Configuration conf = new Configuration();
     conf.set("test.init","t");
     svc.init(conf);
-    try {
-      svc.init(new Configuration());
-      fail("Expected a failure, got " + svc);
-    } catch (IllegalStateException e) {
-      //expected
-    }
-    assertStateCount(svc, Service.STATE.INITED, 2);
+    svc.init(new Configuration());
+    assertStateCount(svc, Service.STATE.INITED, 1);
     assertServiceConfigurationContains(svc, "test.init");
   }
 
@@ -78,21 +76,14 @@ public class TestServiceLifecycle extends ServiceAssert {
     BreakableService svc = new BreakableService();
     svc.init(new Configuration());
     svc.start();
-    try {
-      svc.start();
-      fail("Expected a failure, got " + svc);
-    } catch (IllegalStateException e) {
-      //expected
-    }
-    assertStateCount(svc, Service.STATE.STARTED, 2);
+    svc.start();
+    assertStateCount(svc, Service.STATE.STARTED, 1);
   }
 
 
   /**
    * Verify that when a service is stopped more than once, no exception
-   * is thrown, and the counter is incremented.
-   * This is because the state change operations happen after the counter in
-   * the subclass is incremented, even though stop is meant to be a no-op
+   * is thrown.
    * @throws Throwable if necessary
    */
   @Test
@@ -103,7 +94,7 @@ public class TestServiceLifecycle extends ServiceAssert {
     svc.stop();
     assertStateCount(svc, Service.STATE.STOPPED, 1);
     svc.stop();
-    assertStateCount(svc, Service.STATE.STOPPED, 2);
+    assertStateCount(svc, Service.STATE.STOPPED, 1);
   }
 
 
@@ -124,12 +115,12 @@ public class TestServiceLifecycle extends ServiceAssert {
       //expected
     }
     //the service state wasn't passed
-    assertServiceStateCreated(svc);
+    assertServiceStateStopped(svc);
     assertStateCount(svc, Service.STATE.INITED, 1);
+    assertStateCount(svc, Service.STATE.STOPPED, 1);
     //now try to stop
     svc.stop();
-    //even after the stop operation, we haven't entered the state
-    assertServiceStateCreated(svc);
+    assertStateCount(svc, Service.STATE.STOPPED, 1);
   }
 
 
@@ -151,18 +142,12 @@ public class TestServiceLifecycle extends ServiceAssert {
       //expected
     }
     //the service state wasn't passed
-    assertServiceStateInited(svc);
-    assertStateCount(svc, Service.STATE.INITED, 1);
-    //now try to stop
-    svc.stop();
-    //even after the stop operation, we haven't entered the state
-    assertServiceStateInited(svc);
+    assertServiceStateStopped(svc);
   }
 
   /**
    * verify that when a service fails during its stop operation,
-   * its state does not change, and the subclass invocation counter
-   * increments.
+   * its state does not change.
    * @throws Throwable if necessary
    */
   @Test
@@ -177,42 +162,302 @@ public class TestServiceLifecycle extends ServiceAssert {
       //expected
     }
     assertStateCount(svc, Service.STATE.STOPPED, 1);
-    assertServiceStateStarted(svc);
-    //now try again, and expect it to happen again
-    try {
-      svc.stop();
-      fail("Expected a failure, got " + svc);
-    } catch (BreakableService.BrokenLifecycleEvent e) {
-      //expected
-    }
-    assertStateCount(svc, Service.STATE.STOPPED, 2);
   }
 
   /**
-   * verify that when a service that is not started is stopped, its counter
-   * of stop calls is still incremented-and the service remains in its
-   * original state..
+   * verify that when a service that is not started is stopped, the
+   * service enters the stopped state
    * @throws Throwable on a failure
    */
   @Test
   public void testStopUnstarted() throws Throwable {
     BreakableService svc = new BreakableService();
     svc.stop();
-    assertServiceStateCreated(svc);
-    assertStateCount(svc, Service.STATE.STOPPED, 1);
-
-    //stop failed, now it can be initialised
-    svc.init(new Configuration());
-
-    //and try to stop again, with no state change but an increment
-    svc.stop();
-    assertServiceStateInited(svc);
-    assertStateCount(svc, Service.STATE.STOPPED, 2);
-
-    //once started, the service can be stopped reliably
-    svc.start();
-    ServiceOperations.stop(svc);
     assertServiceStateStopped(svc);
-    assertStateCount(svc, Service.STATE.STOPPED, 3);
+    assertStateCount(svc, Service.STATE.INITED, 0);
+    assertStateCount(svc, Service.STATE.STOPPED, 1);
   }
+
+  /**
+   * Show that if the service failed during an init
+   * operation, stop was called.
+   */
+
+  @Test
+  public void testStopFailingInitAndStop() throws Throwable {
+    BreakableService svc = new BreakableService(true, false, true);
+    svc.register(new LoggingStateChangeListener());
+    try {
+      svc.init(new Configuration());
+      fail("Expected a failure, got " + svc);
+    } catch (BreakableService.BrokenLifecycleEvent e) {
+      assertEquals(Service.STATE.INITED, e.state);
+    }
+    //the service state is stopped
+    assertServiceStateStopped(svc);
+    assertEquals(Service.STATE.INITED, svc.getFailureState());
+
+    Throwable failureCause = svc.getFailureCause();
+    assertNotNull("Null failure cause in " + svc, failureCause);
+    BreakableService.BrokenLifecycleEvent cause =
+      (BreakableService.BrokenLifecycleEvent) failureCause;
+    assertNotNull("null state in " + cause + " raised by " + svc, cause.state);
+    assertEquals(Service.STATE.INITED, cause.state);
+  }
+
+  @Test
+  public void testInitNullConf() throws Throwable {
+    BreakableService svc = new BreakableService(false, false, false);
+    try {
+      svc.init(null);
+      LOG.warn("Null Configurations are permitted ");
+    } catch (ServiceStateException e) {
+      //expected
+    }
+  }
+
+  @Test
+  public void testServiceNotifications() throws Throwable {
+    BreakableService svc = new BreakableService(false, false, false);
+    BreakableStateChangeListener listener = new BreakableStateChangeListener();
+    svc.register(listener);
+    svc.init(new Configuration());
+    assertEventCount(listener, 1);
+    svc.start();
+    assertEventCount(listener, 2);
+    svc.stop();
+    assertEventCount(listener, 3);
+    svc.stop();
+    assertEventCount(listener, 3);
+  }
+
+  /**
+   * Test that when a service listener is unregistered, it stops being invoked
+   * @throws Throwable on a failure
+   */
+  @Test
+  public void testServiceNotificationsStopOnceUnregistered() throws Throwable {
+    BreakableService svc = new BreakableService(false, false, false);
+    BreakableStateChangeListener listener = new BreakableStateChangeListener();
+    svc.register(listener);
+    svc.init(new Configuration());
+    assertEventCount(listener, 1);
+    svc.unregister(listener);
+    svc.start();
+    assertEventCount(listener, 1);
+    svc.stop();
+    assertEventCount(listener, 1);
+    svc.stop();
+  }
+
+  /**
+   * This test uses a service listener that unregisters itself during the callbacks.
+   * This a test that verifies the concurrency logic on the listener management
+   * code, that it doesn't throw any immutable state change exceptions
+   * if you change list membership during the notifications.
+   * The standard <code>AbstractService</code> implementation copies the list
+   * to an array in a <code>synchronized</code> block then iterates through
+   * the copy precisely to prevent this problem.
+   * @throws Throwable on a failure
+   */
+  @Test
+  public void testServiceNotificationsUnregisterDuringCallback() throws Throwable {
+    BreakableService svc = new BreakableService(false, false, false);
+    BreakableStateChangeListener listener =
+      new SelfUnregisteringBreakableStateChangeListener();
+    BreakableStateChangeListener l2 =
+      new BreakableStateChangeListener();
+    svc.register(listener);
+    svc.register(l2);
+    svc.init(new Configuration());
+    assertEventCount(listener, 1);
+    assertEventCount(l2, 1);
+    svc.unregister(listener);
+    svc.start();
+    assertEventCount(listener, 1);
+    assertEventCount(l2, 2);
+    svc.stop();
+    assertEventCount(listener, 1);
+    svc.stop();
+  }
+
+  private static class SelfUnregisteringBreakableStateChangeListener
+    extends BreakableStateChangeListener {
+
+    @Override
+    public synchronized void stateChanged(Service service) {
+      super.stateChanged(service);
+      service.unregister(this);
+    }
+  }
+
+  private void assertEventCount(BreakableStateChangeListener listener,
+                                int expected) {
+    assertEquals(listener.toString(), expected, listener.getEventCount());
+  }
+
+  @Test
+  public void testServiceFailingNotifications() throws Throwable {
+    BreakableService svc = new BreakableService(false, false, false);
+    BreakableStateChangeListener listener = new BreakableStateChangeListener();
+    listener.setFailingState(Service.STATE.STARTED);
+    svc.register(listener);
+    svc.init(new Configuration());
+    assertEventCount(listener, 1);
+    //start this; the listener failed but this won't show
+    svc.start();
+    //counter went up
+    assertEventCount(listener, 2);
+    assertEquals(1, listener.getFailureCount());
+    //stop the service -this doesn't fail
+    svc.stop();
+    assertEventCount(listener, 3);
+    assertEquals(1, listener.getFailureCount());
+    svc.stop();
+  }
+
+  /**
+   * This test verifies that you can block waiting for something to happen
+   * and use notifications to manage it
+   * @throws Throwable on a failure
+   */
+  @Test
+  public void testListenerWithNotifications() throws Throwable {
+    //this tests that a listener can get notified when a service is stopped
+    AsyncSelfTerminatingService service = new AsyncSelfTerminatingService(2000);
+    NotifyingListener listener = new NotifyingListener();
+    service.register(listener);
+    service.init(new Configuration());
+    service.start();
+    assertServiceInState(service, Service.STATE.STARTED);
+    long start = System.currentTimeMillis();
+    synchronized (listener) {
+      listener.wait(20000);
+    }
+    long duration = System.currentTimeMillis() - start;
+    assertEquals(Service.STATE.STOPPED, listener.notifyingState);
+    assertServiceInState(service, Service.STATE.STOPPED);
+    assertTrue("Duration of " + duration + " too long", duration < 10000);
+  }
+
+  @Test
+  public void testSelfTerminatingService() throws Throwable {
+    SelfTerminatingService service = new SelfTerminatingService();
+    BreakableStateChangeListener listener = new BreakableStateChangeListener();
+    service.register(listener);
+    service.init(new Configuration());
+    assertEventCount(listener, 1);
+    //start the service
+    service.start();
+    //and expect an event count of exactly two
+    assertEventCount(listener, 2);
+  }
+
+  @Test
+  public void testStartInInitService() throws Throwable {
+    Service service = new StartInInitService();
+    BreakableStateChangeListener listener = new BreakableStateChangeListener();
+    service.register(listener);
+    service.init(new Configuration());
+    assertServiceInState(service, Service.STATE.STARTED);
+    assertEventCount(listener, 1);
+  }
+
+  @Test
+  public void testStopInInitService() throws Throwable {
+    Service service = new StopInInitService();
+    BreakableStateChangeListener listener = new BreakableStateChangeListener();
+    service.register(listener);
+    service.init(new Configuration());
+    assertServiceInState(service, Service.STATE.STOPPED);
+    assertEventCount(listener, 1);
+  }
+
+  /**
+   * Listener that wakes up all threads waiting on it
+   */
+  private static class NotifyingListener implements ServiceStateChangeListener {
+    public Service.STATE notifyingState = Service.STATE.NOTINITED;
+
+    public synchronized void stateChanged(Service service) {
+      notifyingState = service.getServiceState();
+      this.notifyAll();
+    }
+  }
+
+  /**
+   * Service that terminates itself after starting and sleeping for a while
+   */
+  private static class AsyncSelfTerminatingService extends AbstractService
+                                               implements Runnable {
+    final int timeout;
+    private AsyncSelfTerminatingService(int timeout) {
+      super("AsyncSelfTerminatingService");
+      this.timeout = timeout;
+    }
+
+    @Override
+    protected void serviceStart() throws Exception {
+      new Thread(this).start();
+      super.serviceStart();
+    }
+
+    @Override
+    public void run() {
+      try {
+        Thread.sleep(timeout);
+      } catch (InterruptedException ignored) {
+
+      }
+      this.stop();
+    }
+  }
+
+  /**
+   * Service that terminates itself in startup
+   */
+  private static class SelfTerminatingService extends AbstractService {
+    private SelfTerminatingService() {
+      super("SelfTerminatingService");
+    }
+
+    @Override
+    protected void serviceStart() throws Exception {
+      //start
+      super.serviceStart();
+      //then stop
+      stop();
+    }
+  }
+
+  /**
+   * Service that starts itself in init
+   */
+  private static class StartInInitService extends AbstractService {
+    private StartInInitService() {
+      super("StartInInitService");
+    }
+
+    @Override
+    protected void serviceInit(Configuration conf) throws Exception {
+      super.serviceInit(conf);
+      start();
+    }
+  }
+
+  /**
+   * Service that starts itself in init
+   */
+  private static class StopInInitService extends AbstractService {
+    private StopInInitService() {
+      super("StopInInitService");
+    }
+
+    @Override
+    protected void serviceInit(Configuration conf) throws Exception {
+      super.serviceInit(conf);
+      stop();
+    }
+  }
+
 }

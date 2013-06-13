@@ -237,7 +237,7 @@ public class TestResourceLocalizationService {
     dirsHandler.init(conf);
 
     DeletionService delService = new DeletionService(exec);
-    delService.init(null);
+    delService.init(new Configuration());
     delService.start();
 
     ResourceLocalizationService rawService =

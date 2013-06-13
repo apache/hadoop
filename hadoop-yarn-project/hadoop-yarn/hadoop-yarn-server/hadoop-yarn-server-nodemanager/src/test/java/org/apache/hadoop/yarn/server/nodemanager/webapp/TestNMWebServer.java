@@ -104,21 +104,32 @@ public class TestNMWebServer {
     conf.set(YarnConfiguration.NM_WEBAPP_ADDRESS, webAddr);
     WebServer server = new WebServer(nmContext, resourceView,
         new ApplicationACLsManager(conf), dirsHandler);
-    server.init(conf);
-    server.start();
-    return server.getPort();
+    try {
+      server.init(conf);
+      server.start();
+      return server.getPort();
+    } finally {
+      server.stop();
+      healthChecker.stop();
+    }
   }
   
   @Test
   public void testNMWebAppWithOutPort() throws IOException {
     int port = startNMWebAppServer("0.0.0.0");
-    Assert.assertTrue("Port is not updated", port > 0);
+    validatePortVal(port);
   }
-  
+
+  private void validatePortVal(int portVal) {
+    Assert.assertTrue("Port is not updated", portVal > 0);
+    Assert.assertTrue("Port is default "+ YarnConfiguration.DEFAULT_NM_PORT,
+                      portVal !=YarnConfiguration.DEFAULT_NM_PORT);
+  }
+
   @Test
   public void testNMWebAppWithEphemeralPort() throws IOException {
     int port = startNMWebAppServer("0.0.0.0:0"); 
-    Assert.assertTrue("Port is not updated", port > 0);
+    validatePortVal(port);
   }
 
   @Test

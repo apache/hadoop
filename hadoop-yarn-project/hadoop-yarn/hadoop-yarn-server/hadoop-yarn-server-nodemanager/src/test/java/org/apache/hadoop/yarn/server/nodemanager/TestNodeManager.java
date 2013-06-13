@@ -49,6 +49,8 @@ public class TestNodeManager {
     } catch (YarnRuntimeException e) {
       //PASS
       assert(e.getCause().getMessage().contains("dummy executor init called"));
+    } finally {
+      nm.stop();
     }
   }
   

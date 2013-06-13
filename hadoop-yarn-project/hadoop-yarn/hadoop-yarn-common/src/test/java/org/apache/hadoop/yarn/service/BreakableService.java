@@ -55,13 +55,7 @@ public class BreakableService extends AbstractService {
   }
 
   private int convert(STATE state) {
-    switch (state) {
-      case NOTINITED: return 0;
-      case INITED:    return 1;
-      case STARTED:   return 2;
-      case STOPPED:   return 3;
-      default:        return 0;
-    }
+    return state.getValue();
   }
 
   private void inc(STATE state) {
@@ -75,29 +69,27 @@ public class BreakableService extends AbstractService {
 
   private void maybeFail(boolean fail, String action) {
     if (fail) {
-      throw new BrokenLifecycleEvent(action);
+      throw new BrokenLifecycleEvent(this, action);
     }
   }
 
   @Override
-  public void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     inc(STATE.INITED);
     maybeFail(failOnInit, "init");
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() {
     inc(STATE.STARTED);
     maybeFail(failOnStart, "start");
-    super.start();
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() {
     inc(STATE.STOPPED);
     maybeFail(failOnStop, "stop");
-    super.stop();
   }
 
   public void setFailOnInit(boolean failOnInit) {
@@ -116,8 +108,13 @@ public class BreakableService extends AbstractService {
    * The exception explicitly raised on a failure
    */
   public static class BrokenLifecycleEvent extends RuntimeException {
-    BrokenLifecycleEvent(String action) {
-      super("Lifecycle Failure during " + action);
+
+    final STATE state;
+
+    public BrokenLifecycleEvent(Service service, String action) {
+      super("Lifecycle Failure during " + action + " state is "
+            + service.getServiceState());
+      state = service.getServiceState();
     }
   }
 }

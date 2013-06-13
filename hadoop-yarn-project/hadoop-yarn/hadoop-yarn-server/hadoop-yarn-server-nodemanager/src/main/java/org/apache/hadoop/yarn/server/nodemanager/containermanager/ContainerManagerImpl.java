@@ -177,13 +177,13 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @Override
-  public void init(Configuration conf) {
+  public void serviceInit(Configuration conf) throws Exception {
     LogHandler logHandler =
       createLogHandler(conf, this.context, this.deletionService);
     addIfService(logHandler);
     dispatcher.register(LogHandlerEventType.class, logHandler);
     
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   private void addIfService(Object object) {
@@ -220,7 +220,7 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
 
     // Enqueue user dirs in deletion context
 
@@ -254,7 +254,7 @@ public class ContainerManagerImpl extends CompositeService implements
       connectAddress.getPort());
     ((NodeManager.NMContext)context).setNodeId(nodeId);
     LOG.info("ContainerManager started at " + connectAddress);
-    super.start();
+    super.serviceStart();
   }
 
   void refreshServiceAcls(Configuration configuration, 
@@ -263,14 +263,14 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @Override
-  public void stop() {
+  public void serviceStop() throws Exception {
     if (auxiliaryServices.getServiceState() == STARTED) {
       auxiliaryServices.unregister(this);
     }
     if (server != null) {
       server.stop();
     }
-    super.stop();
+    super.serviceStop();
   }
 
   // Get the remoteUGI corresponding to the api call.

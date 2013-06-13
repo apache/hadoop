@@ -39,13 +39,13 @@ public class NodeHealthCheckerService extends CompositeService {
   }
 
   @Override
-  public void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     if (NodeHealthScriptRunner.shouldRun(conf)) {
       nodeHealthScriptRunner = new NodeHealthScriptRunner();
       addService(nodeHealthScriptRunner);
     }
     addService(dirsHandler);
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   /**

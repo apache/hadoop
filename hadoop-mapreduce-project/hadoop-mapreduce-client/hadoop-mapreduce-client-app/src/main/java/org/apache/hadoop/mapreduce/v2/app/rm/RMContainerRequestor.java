@@ -124,8 +124,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
 
   @Override
-  public void init(Configuration conf) {
-    super.init(conf);
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
     nodeBlacklistingEnabled = 
       conf.getBoolean(MRJobConfig.MR_AM_JOB_NODE_BLACKLISTING_ENABLE, true);
     LOG.info("nodeBlacklistingEnabled:" + nodeBlacklistingEnabled);

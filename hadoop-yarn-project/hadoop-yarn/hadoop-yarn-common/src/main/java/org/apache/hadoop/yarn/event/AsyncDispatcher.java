@@ -82,24 +82,24 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   }
 
   @Override
-  public synchronized void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     this.exitOnDispatchException =
         conf.getBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY,
           Dispatcher.DEFAULT_DISPATCHER_EXIT_ON_ERROR);
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     //start all the components
-    super.start();
+    super.serviceStart();
     eventHandlingThread = new Thread(createThread());
     eventHandlingThread.setName("AsyncDispatcher event handler");
     eventHandlingThread.start();
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     stopped = true;
     if (eventHandlingThread != null) {
       eventHandlingThread.interrupt();
@@ -111,7 +111,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     }
 
     // stop all the components
-    super.stop();
+    super.serviceStop();
   }
 
   @SuppressWarnings("unchecked")

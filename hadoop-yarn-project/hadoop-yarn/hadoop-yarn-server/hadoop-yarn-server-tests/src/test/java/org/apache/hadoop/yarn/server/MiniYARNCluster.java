@@ -92,7 +92,7 @@ public class MiniYARNCluster extends CompositeService {
           new Path(targetWorkDir.getAbsolutePath()), true);
     } catch (Exception e) {
       LOG.warn("COULD NOT CLEANUP", e);
-      throw new YarnRuntimeException("could not cleanup test dir", e);
+      throw new YarnRuntimeException("could not cleanup test dir: "+ e, e);
     } 
 
     if (Shell.WINDOWS) {
@@ -140,9 +140,10 @@ public class MiniYARNCluster extends CompositeService {
   }
   
   @Override
-  public void init(Configuration conf) {
-    super.init(conf instanceof YarnConfiguration ? conf
-        : new YarnConfiguration(conf));
+  public void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf instanceof YarnConfiguration ? conf
+                                                        : new YarnConfiguration(
+                                                          conf));
   }
 
   public File getTestWorkDir() {
@@ -172,23 +173,24 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     @Override
-    public synchronized void start() {
+    public synchronized void serviceStart() throws Exception {
       try {
         getConfig().setBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, true);
         if (!getConfig().getBoolean(
             YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,
             YarnConfiguration.DEFAULT_YARN_MINICLUSTER_FIXED_PORTS)) {
           // pick free random ports.
+          String hostname = MiniYARNCluster.getHostname();
           getConfig().set(YarnConfiguration.RM_ADDRESS,
-              MiniYARNCluster.getHostname() + ":0");
+              hostname + ":0");
           getConfig().set(YarnConfiguration.RM_ADMIN_ADDRESS,
-              MiniYARNCluster.getHostname() + ":0");
+              hostname + ":0");
           getConfig().set(YarnConfiguration.RM_SCHEDULER_ADDRESS,
-              MiniYARNCluster.getHostname() + ":0");
+              hostname + ":0");
           getConfig().set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
-              MiniYARNCluster.getHostname() + ":0");
+              hostname + ":0");
           getConfig().set(YarnConfiguration.RM_WEBAPP_ADDRESS,
-              MiniYARNCluster.getHostname() + ":0");
+              hostname + ":0");
         }
         resourceManager = new ResourceManager() {
           @Override
@@ -214,7 +216,7 @@ public class MiniYARNCluster extends CompositeService {
               "ResourceManager failed to start. Final state is "
                   + resourceManager.getServiceState());
         }
-        super.start();
+        super.serviceStart();
       } catch (Throwable t) {
         throw new YarnRuntimeException(t);
       }
@@ -225,11 +227,11 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     @Override
-    public synchronized void stop() {
+    public synchronized void serviceStop() throws Exception {
       if (resourceManager != null) {
         resourceManager.stop();
       }
-      super.stop();
+      super.serviceStop();
 
       if (Shell.WINDOWS) {
         // On Windows, clean up the short temporary symlink that was created to
@@ -254,10 +256,10 @@ public class MiniYARNCluster extends CompositeService {
       index = i;
     }
 
-    public synchronized void init(Configuration conf) {                          
-      Configuration config = new YarnConfiguration(conf);                            
-      super.init(config);                                                        
-    }                                                                            
+    public synchronized void serviceInit(Configuration conf) throws Exception {
+      Configuration config = new YarnConfiguration(conf);
+      super.serviceInit(config);
+    }
 
     /**
      * Create local/log directories
@@ -279,7 +281,7 @@ public class MiniYARNCluster extends CompositeService {
       return dirsString;
     }
 
-    public synchronized void start() {
+    public synchronized void serviceStart() throws Exception {
       try {
         // create nm-local-dirs and configure them for the nodemanager
         String localDirsString = prepareDirs("local", numLocalDirs);
@@ -319,18 +321,18 @@ public class MiniYARNCluster extends CompositeService {
           // RM could have failed.
           throw new IOException("NodeManager " + index + " failed to start");
         }
-        super.start();
+        super.serviceStart();
       } catch (Throwable t) {
         throw new YarnRuntimeException(t);
       }
     }
 
     @Override
-    public synchronized void stop() {
+    public synchronized void serviceStop() throws Exception {
       if (nodeManagers[index] != null) {
         nodeManagers[index].stop();
       }
-      super.stop();
+      super.serviceStop();
     }
   }
   

@@ -138,9 +138,9 @@ public class TestDeletionService {
     }
     DeletionService del =
       new DeletionService(new FakeDefaultContainerExecutor());
-    del.init(new Configuration());
-    del.start();
     try {
+      del.init(new Configuration());
+      del.start();
       for (Path p : content) {
         assertTrue(lfs.util().exists(new Path(baseDirs.get(0), p)));
         del.delete((Long.parseLong(p.getName()) % 2) == 0 ? null : "dingo",
@@ -176,9 +176,9 @@ public class TestDeletionService {
     conf.setInt(YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC, -1);
     exec.setConf(conf);
     DeletionService del = new DeletionService(exec);
-    del.init(conf);
-    del.start();
     try {
+      del.init(conf);
+      del.start();
       for (Path p : dirs) {
         del.delete((Long.parseLong(p.getName()) % 2) == 0 ? null : "dingo", p,
             null);
@@ -201,9 +201,9 @@ public class TestDeletionService {
     DeletionService del = new DeletionService(Mockito.mock(ContainerExecutor.class));
     Configuration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC, 60);
-    del.init(conf);
-    del.start();
     try {
+      del.init(conf);
+      del.start();
       del.delete("dingo", new Path("/does/not/exist"));
     } finally {
       del.stop();

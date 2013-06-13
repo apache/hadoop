@@ -128,13 +128,13 @@ public class ClientRMService extends AbstractService implements
   }
 
   @Override
-  public void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     clientBindAddress = getBindAddress(conf);
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     this.server =   
@@ -157,16 +157,15 @@ public class ClientRMService extends AbstractService implements
     // enable RM to short-circuit token operations directly to itself
     RMDelegationTokenIdentifier.Renewer.setSecretManager(
         rmDTSecretManager, clientBindAddress);
-    
-    super.start();
+    super.serviceStart();
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (this.server != null) {
         this.server.stop();
     }
-    super.stop();
+    super.serviceStop();
   }
 
   InetSocketAddress getBindAddress(Configuration conf) {

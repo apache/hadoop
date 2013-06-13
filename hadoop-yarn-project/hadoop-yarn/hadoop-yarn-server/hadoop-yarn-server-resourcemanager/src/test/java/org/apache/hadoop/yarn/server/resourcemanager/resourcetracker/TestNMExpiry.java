@@ -59,9 +59,9 @@ public class TestNMExpiry {
     }
 
     @Override
-    public void init(Configuration conf) {
+    public void serviceInit(Configuration conf) throws Exception {
       conf.setLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS, 1000);
-      super.init(conf);
+      super.serviceInit(conf);
     }
   }
 

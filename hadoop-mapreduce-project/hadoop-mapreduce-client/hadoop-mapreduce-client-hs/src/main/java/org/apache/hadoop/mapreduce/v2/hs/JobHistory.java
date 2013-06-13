@@ -71,7 +71,7 @@ public class JobHistory extends AbstractService implements HistoryContext {
   private HistoryFileManager hsManager = null;
 
   @Override
-  public void init(Configuration conf) throws YarnRuntimeException {
+  protected void serviceInit(Configuration conf) throws Exception {
     LOG.info("JobHistory Init");
     this.conf = conf;
     this.appID = ApplicationId.newInstance(0, 0);
@@ -98,11 +98,11 @@ public class JobHistory extends AbstractService implements HistoryContext {
     }
     storage.setHistoryFileManager(hsManager);
 
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     hsManager.start();
     if (storage instanceof Service) {
       ((Service) storage).start();
@@ -126,11 +126,11 @@ public class JobHistory extends AbstractService implements HistoryContext {
           .scheduleAtFixedRate(new HistoryCleaner(),
               30 * 1000l, runInterval, TimeUnit.MILLISECONDS);
     }
-    super.start();
+    super.serviceStart();
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     LOG.info("Stopping JobHistory");
     if (scheduledExecutor != null) {
       LOG.info("Stopping History Cleaner/Move To Done");
@@ -151,11 +151,13 @@ public class JobHistory extends AbstractService implements HistoryContext {
         scheduledExecutor.shutdownNow();
       }
     }
-    if (storage instanceof Service) {
+    if (storage != null && storage instanceof Service) {
       ((Service) storage).stop();
     }
-    hsManager.stop();
-    super.stop();
+    if (hsManager != null) {
+      hsManager.stop();
+    }
+    super.serviceStop();
   }
 
   public JobHistory() {
