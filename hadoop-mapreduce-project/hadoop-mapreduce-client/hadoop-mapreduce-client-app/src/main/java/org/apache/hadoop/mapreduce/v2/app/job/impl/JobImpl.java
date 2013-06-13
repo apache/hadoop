@@ -594,7 +594,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private float cleanupProgress;
   private boolean isUber = false;
 
-  private Credentials fsTokens;
+  private Credentials jobCredentials;
   private Token<JobTokenIdentifier> jobToken;
   private JobTokenSecretManager jobTokenSecretManager;
   
@@ -604,7 +604,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       Configuration conf, EventHandler eventHandler,
       TaskAttemptListener taskAttemptListener,
       JobTokenSecretManager jobTokenSecretManager,
-      Credentials fsTokenCredentials, Clock clock,
+      Credentials jobCredentials, Clock clock,
       Map<TaskId, TaskInfo> completedTasksFromPreviousRun, MRAppMetrics metrics,
       OutputCommitter committer, boolean newApiCommitter, String userName,
       long appSubmitTime, List<AMInfo> amInfos, AppContext appContext,
@@ -631,7 +631,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.readLock = readWriteLock.readLock();
     this.writeLock = readWriteLock.writeLock();
 
-    this.fsTokens = fsTokenCredentials;
+    this.jobCredentials = jobCredentials;
     this.jobTokenSecretManager = jobTokenSecretManager;
 
     this.aclsManager = new JobACLsManager(conf);
@@ -1414,11 +1414,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
       // If the job client did not setup the shuffle secret then reuse
       // the job token secret for the shuffle.
-      if (TokenCache.getShuffleSecretKey(job.fsTokens) == null) {
+      if (TokenCache.getShuffleSecretKey(job.jobCredentials) == null) {
         LOG.warn("Shuffle secret key missing from job credentials."
             + " Using job token secret as shuffle secret.");
         TokenCache.setShuffleSecretKey(job.jobToken.getPassword(),
-            job.fsTokens);
+            job.jobCredentials);
       }
     }
 
@@ -1431,7 +1431,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.remoteJobConfFile, 
                 job.conf, splits[i], 
                 job.taskAttemptListener, 
-                job.jobToken, job.fsTokens,
+                job.jobToken, job.jobCredentials,
                 job.clock,
                 job.applicationAttemptId.getAttemptId(),
                 job.metrics, job.appContext);
@@ -1449,7 +1449,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.remoteJobConfFile, 
                 job.conf, job.numMapTasks, 
                 job.taskAttemptListener, job.jobToken,
-                job.fsTokens, job.clock,
+                job.jobCredentials, job.clock,
                 job.applicationAttemptId.getAttemptId(),
                 job.metrics, job.appContext);
         job.addTask(task);

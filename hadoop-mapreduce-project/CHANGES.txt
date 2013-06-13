@@ -282,6 +282,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5283. Over 10 different tests have near identical
     implementations of AppContext (Sandy Ryza via jlowe)
 
+    MAPREDUCE-5199. Removing ApplicationTokens file as it is no longer needed.
+    (Daryn Sharp via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
