@@ -329,6 +329,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-789. Enable zero capabilities resource requests in fair scheduler. 
     (tucu)
 
+    YARN-639. Modified Distributed Shell application to start using the new
+    NMClient library. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
