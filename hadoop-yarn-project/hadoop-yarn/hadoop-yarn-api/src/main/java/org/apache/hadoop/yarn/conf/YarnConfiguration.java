@@ -470,14 +470,9 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "vmem-pmem-ratio";
   public static final float DEFAULT_NM_VMEM_PMEM_RATIO = 2.1f;
   
-  /** Number of Physical CPU Cores which can be allocated for containers.*/
-  public static final String NM_VCORES = NM_PREFIX + "resource.cpu-cores";
+  /** Number of Virtual CPU Cores which can be allocated for containers.*/
+  public static final String NM_VCORES = NM_PREFIX + "resource.cpu-vcores";
   public static final int DEFAULT_NM_VCORES = 8;
-
-  /** Conversion ratio for physical cores to virtual cores. */
-  public static final String NM_VCORES_PCORES_RATIO =
-      NM_PREFIX + "vcores-pcores-ratio";
-  public static final float DEFAULT_NM_VCORES_PCORES_RATIO = 2.0f;
   
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
