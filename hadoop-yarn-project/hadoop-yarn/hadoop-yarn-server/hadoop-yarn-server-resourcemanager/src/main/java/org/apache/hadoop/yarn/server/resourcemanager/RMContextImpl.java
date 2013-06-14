@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -58,6 +59,7 @@ public class RMContextImpl implements RMContext {
   private final DelegationTokenRenewer tokenRenewer;
   private final ApplicationTokenSecretManager appTokenSecretManager;
   private final RMContainerTokenSecretManager containerTokenSecretManager;
+  private final NMTokenSecretManagerInRM nmTokenSecretManager;
   private final ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager;
 
   public RMContextImpl(Dispatcher rmDispatcher,
@@ -68,6 +70,7 @@ public class RMContextImpl implements RMContext {
       DelegationTokenRenewer tokenRenewer,
       ApplicationTokenSecretManager appTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
+      NMTokenSecretManagerInRM nmTokenSecretManager,
       ClientToAMTokenSecretManagerInRM clientTokenSecretManager) {
     this.rmDispatcher = rmDispatcher;
     this.stateStore = store;
@@ -77,6 +80,7 @@ public class RMContextImpl implements RMContext {
     this.tokenRenewer = tokenRenewer;
     this.appTokenSecretManager = appTokenSecretManager;
     this.containerTokenSecretManager = containerTokenSecretManager;
+    this.nmTokenSecretManager = nmTokenSecretManager;
     this.clientToAMTokenSecretManager = clientTokenSecretManager;
   }
 
@@ -89,10 +93,12 @@ public class RMContextImpl implements RMContext {
       DelegationTokenRenewer tokenRenewer,
       ApplicationTokenSecretManager appTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
+      NMTokenSecretManagerInRM nmTokenSecretManager,
       ClientToAMTokenSecretManagerInRM clientTokenSecretManager) {
     this(rmDispatcher, null, containerAllocationExpirer, amLivelinessMonitor, 
           amFinishingMonitor, tokenRenewer, appTokenSecretManager, 
-          containerTokenSecretManager, clientTokenSecretManager);
+          containerTokenSecretManager, nmTokenSecretManager,
+          clientTokenSecretManager);
     RMStateStore nullStore = new NullRMStateStore();
     nullStore.setDispatcher(rmDispatcher);
     try {
@@ -157,7 +163,12 @@ public class RMContextImpl implements RMContext {
   public RMContainerTokenSecretManager getContainerTokenSecretManager() {
     return this.containerTokenSecretManager;
   }
-
+  
+  @Override
+  public NMTokenSecretManagerInRM getNMTokenSecretManager() {
+    return this.nmTokenSecretManager;
+  }
+  
   @Override
   public ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager() {
     return this.clientToAMTokenSecretManager;

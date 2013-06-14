@@ -137,7 +137,7 @@ public class TestRM {
     rm.stop();
   }
 
-  @Test (timeout = 30000)
+  @Test (timeout = 300000)
   public void testActivatingApplicationAfterAddingNM() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
 

@@ -46,7 +46,8 @@ public class LocalRMInterface implements ResourceTracker {
     masterKey.setKeyId(123);
     masterKey.setBytes(ByteBuffer.wrap(new byte[] { new Integer(123)
       .byteValue() }));
-    response.setMasterKey(masterKey);
+    response.setContainerTokenMasterKey(masterKey);
+    response.setNMTokenMasterKey(masterKey);
     return response;
   }
 

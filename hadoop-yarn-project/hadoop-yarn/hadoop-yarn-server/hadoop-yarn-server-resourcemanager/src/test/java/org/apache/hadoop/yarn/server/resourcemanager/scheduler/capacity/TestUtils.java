@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 
 public class TestUtils {
   private static final Log LOG = LogFactory.getLog(TestUtils.class);
@@ -87,6 +88,7 @@ public class TestUtils {
         new RMContextImpl(nullDispatcher, cae, null, null, null,
           new ApplicationTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
+          new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM());
     
     return rmContext;

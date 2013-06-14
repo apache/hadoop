@@ -204,7 +204,7 @@ public class TestFifoScheduler {
     testMinimumAllocation(conf, allocMB / 2);
   }
 
-  @Test (timeout = 5000)
+  @Test (timeout = 50000)
   public void testReconnectedNode() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.setQueues("default", new String[] {"default"});
@@ -233,7 +233,7 @@ public class TestFifoScheduler {
     Assert.assertEquals(4 * GB, fs.getRootQueueMetrics().getAvailableMB());
   }
   
-  @Test (timeout = 5000)
+  @Test (timeout = 50000)
   public void testHeadroom() throws Exception {
     
     Configuration conf = new Configuration();

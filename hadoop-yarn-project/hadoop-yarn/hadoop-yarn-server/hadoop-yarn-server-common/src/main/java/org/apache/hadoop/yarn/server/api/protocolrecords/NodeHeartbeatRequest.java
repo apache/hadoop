@@ -26,6 +26,9 @@ public interface NodeHeartbeatRequest {
   NodeStatus getNodeStatus();
   void setNodeStatus(NodeStatus status);
 
-  MasterKey getLastKnownMasterKey();
-  void setLastKnownMasterKey(MasterKey secretKey);
+  MasterKey getLastKnownContainerTokenMasterKey();
+  void setLastKnownContainerTokenMasterKey(MasterKey secretKey);
+  
+  MasterKey getLastKnownNMTokenMasterKey();
+  void setLastKnownNMTokenMasterKey(MasterKey secretKey);
 }

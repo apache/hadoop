@@ -48,7 +48,8 @@ public class MockNM {
   private final int vCores = 1;
   private ResourceTrackerService resourceTracker;
   private final int httpPort = 2;
-  private MasterKey currentMasterKey;
+  private MasterKey currentContainerTokenMasterKey;
+  private MasterKey currentNMTokenMasterKey;
 
   public MockNM(String nodeIdStr, int memory, ResourceTrackerService resourceTracker) {
     this.memory = memory;
@@ -86,7 +87,9 @@ public class MockNM {
     req.setResource(resource);
     RegisterNodeManagerResponse registrationResponse =
         resourceTracker.registerNodeManager(req);
-    this.currentMasterKey = registrationResponse.getMasterKey();
+    this.currentContainerTokenMasterKey =
+        registrationResponse.getContainerTokenMasterKey();
+    this.currentNMTokenMasterKey = registrationResponse.getNMTokenMasterKey();
     return registrationResponse;
   }
 
@@ -129,14 +132,25 @@ public class MockNM {
     healthStatus.setLastHealthReportTime(1);
     status.setNodeHealthStatus(healthStatus);
     req.setNodeStatus(status);
-    req.setLastKnownMasterKey(this.currentMasterKey);
+    req.setLastKnownContainerTokenMasterKey(this.currentContainerTokenMasterKey);
+    req.setLastKnownNMTokenMasterKey(this.currentNMTokenMasterKey);
     NodeHeartbeatResponse heartbeatResponse =
         resourceTracker.nodeHeartbeat(req);
-    MasterKey masterKeyFromRM = heartbeatResponse.getMasterKey();
-    this.currentMasterKey =
-        (masterKeyFromRM != null
-            && masterKeyFromRM.getKeyId() != this.currentMasterKey.getKeyId()
-            ? masterKeyFromRM : this.currentMasterKey);
+    
+    MasterKey masterKeyFromRM = heartbeatResponse.getContainerTokenMasterKey();
+    if (masterKeyFromRM != null
+        && masterKeyFromRM.getKeyId() != this.currentContainerTokenMasterKey
+            .getKeyId()) {
+      this.currentContainerTokenMasterKey = masterKeyFromRM;
+    }
+
+    masterKeyFromRM = heartbeatResponse.getNMTokenMasterKey();
+    if (masterKeyFromRM != null
+        && masterKeyFromRM.getKeyId() != this.currentNMTokenMasterKey
+            .getKeyId()) {
+      this.currentNMTokenMasterKey = masterKeyFromRM;
+    }
+    
     return heartbeatResponse;
   }
 

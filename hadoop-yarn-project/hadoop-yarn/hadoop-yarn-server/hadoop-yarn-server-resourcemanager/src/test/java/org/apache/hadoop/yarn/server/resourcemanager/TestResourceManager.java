@@ -53,6 +53,7 @@ public class TestResourceManager {
     resourceManager = new ResourceManager();
     resourceManager.init(conf);
     resourceManager.getRMContainerTokenSecretManager().rollMasterKey();
+    resourceManager.getRMNMTokenSecretManager().rollMasterKey();
   }
 
   @After
