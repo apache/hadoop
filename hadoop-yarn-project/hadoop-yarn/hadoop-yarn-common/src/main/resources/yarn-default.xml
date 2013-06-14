@@ -510,16 +510,8 @@
   <property>
     <description>Number of CPU cores that can be allocated 
     for containers.</description>
-    <name>yarn.nodemanager.resource.cpu-cores</name>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
     <value>8</value>
-  </property>
-
-  <property>
-    <description>Ratio between virtual cores to physical cores when
-    allocating CPU resources to containers. 
-    </description>
-    <name>yarn.nodemanager.vcores-pcores-ratio</name>
-    <value>2</value>
   </property>
 
   <property>
