@@ -159,12 +159,6 @@ message NodeIdProto {
   optional int32 port = 2;
 }
 
-message NodeHealthStatusProto {
-  optional bool is_node_healthy = 1;
-  optional string health_report = 2;
-  optional int64 last_health_report_time = 3;
-}
-
 message NodeReportProto {
   optional NodeIdProto nodeId = 1;
   optional string httpAddress = 2;
