@@ -120,6 +120,8 @@ Trunk (Unreleased)
     HDFS-4633 TestDFSClientExcludedNodes fails sporadically if excluded nodes
     cache expires too quickly  (Chris Nauroth via Sanjay)
 
+    HDFS-4904. Remove JournalService. (Arpit Agarwal via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
