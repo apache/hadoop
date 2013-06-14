@@ -1402,11 +1402,6 @@ public class TestRMContainerAllocator {
     }
 
     @Override
-    protected Resource getMinContainerCapability() {
-      return Resource.newInstance(1024, 1);
-    }
-
-    @Override
     protected Resource getMaxContainerCapability() {
       return Resource.newInstance(10240, 1);
     }
