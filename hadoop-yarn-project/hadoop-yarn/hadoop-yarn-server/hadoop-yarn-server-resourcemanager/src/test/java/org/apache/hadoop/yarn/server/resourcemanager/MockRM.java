@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -92,10 +93,10 @@ public class MockRM extends ResourceManager {
     RMApp app = getRMContext().getRMApps().get(appId);
     Assert.assertNotNull("app shouldn't be null", app);
     int timeoutSecs = 0;
-    while (!finalState.equals(app.getState()) && timeoutSecs++ < 20) {
+    while (!finalState.equals(app.getState()) && timeoutSecs++ < 40) {
       System.out.println("App : " + appId + " State is : " + app.getState()
           + " Waiting for state : " + finalState);
-      Thread.sleep(500);
+      Thread.sleep(1000);
     }
     System.out.println("App State is : " + app.getState());
     Assert.assertEquals("App state is not correct (timedout)", finalState,
@@ -109,11 +110,11 @@ public class MockRM extends ResourceManager {
     Assert.assertNotNull("app shouldn't be null", app);
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     int timeoutSecs = 0;
-    while (!finalState.equals(attempt.getAppAttemptState()) && timeoutSecs++ < 20) {
+    while (!finalState.equals(attempt.getAppAttemptState()) && timeoutSecs++ < 40) {
       System.out.println("AppAttempt : " + attemptId 
           + " State is : " + attempt.getAppAttemptState()
           + " Waiting for state : " + finalState);
-      Thread.sleep(500);
+      Thread.sleep(1000);
     }
     System.out.println("Attempt State is : " + attempt.getAppAttemptState());
     Assert.assertEquals("Attempt state is not correct (timedout)", finalState,
@@ -306,11 +307,12 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ResourceTrackerService createResourceTrackerService() {
-    RMContainerTokenSecretManager containerTokenSecretManager =
-        new RMContainerTokenSecretManager(new Configuration());
+    Configuration conf = new Configuration();
+    
     containerTokenSecretManager.rollMasterKey();
     return new ResourceTrackerService(getRMContext(), nodesListManager,
-        this.nmLivelinessMonitor, containerTokenSecretManager) {
+        this.nmLivelinessMonitor, containerTokenSecretManager,
+        nmTokenSecretManager) {
 
       @Override
       protected void serviceStart() {

@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.junit.After;
@@ -97,7 +98,7 @@ public abstract class BaseContainerManagerTest {
   protected static final int HTTP_PORT = 5412;
   protected Configuration conf = new YarnConfiguration();
   protected Context context = new NMContext(new NMContainerTokenSecretManager(
-    conf)) {
+    conf), new NMTokenSecretManagerInNM()) {
     public int getHttpPort() {
       return HTTP_PORT;
     };

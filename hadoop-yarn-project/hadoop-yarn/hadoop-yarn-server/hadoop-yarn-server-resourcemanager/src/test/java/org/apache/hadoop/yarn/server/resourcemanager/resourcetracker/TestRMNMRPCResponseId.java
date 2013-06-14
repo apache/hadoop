@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -69,16 +70,19 @@ public class TestRMNMRPCResponseId {
     });
     RMContext context =
         new RMContextImpl(dispatcher, null, null, null, null,
-          null, new RMContainerTokenSecretManager(conf), null);
+          null, new RMContainerTokenSecretManager(conf),
+          new NMTokenSecretManagerInRM(conf), null);
     dispatcher.register(RMNodeEventType.class,
         new ResourceManager.NodeEventDispatcher(context));
     NodesListManager nodesListManager = new NodesListManager(context);
     nodesListManager.init(conf);
     
     context.getContainerTokenSecretManager().rollMasterKey();
+    context.getNMTokenSecretManager().rollMasterKey();
     resourceTrackerService = new ResourceTrackerService(context,
         nodesListManager, new NMLivelinessMonitor(dispatcher),
-        context.getContainerTokenSecretManager());
+        context.getContainerTokenSecretManager(),
+        context.getNMTokenSecretManager());
     resourceTrackerService.init(conf);
   }
   

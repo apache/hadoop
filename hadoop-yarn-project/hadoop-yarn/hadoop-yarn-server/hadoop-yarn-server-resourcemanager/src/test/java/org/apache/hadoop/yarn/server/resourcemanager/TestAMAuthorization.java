@@ -187,7 +187,7 @@ public class TestAMAuthorization {
     nm1.nodeHeartbeat(true);
 
     int waitCount = 0;
-    while (containerManager.amTokens == null && waitCount++ < 20) {
+    while (containerManager.amTokens == null && waitCount++ < 40) {
       LOG.info("Waiting for AM Launch to happen..");
       Thread.sleep(1000);
     }
@@ -270,7 +270,7 @@ public class TestAMAuthorization {
       throws InterruptedException {
     int waitCount = 0;
     while (attempt.getAppAttemptState() != RMAppAttemptState.LAUNCHED
-        && waitCount++ < 20) {
+        && waitCount++ < 40) {
       LOG.info("Waiting for AppAttempt to reach LAUNCHED state. "
           + "Current state is " + attempt.getAppAttemptState());
       Thread.sleep(1000);

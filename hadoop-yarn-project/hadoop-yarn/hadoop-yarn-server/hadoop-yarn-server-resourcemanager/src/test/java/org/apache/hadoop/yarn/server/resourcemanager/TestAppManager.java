@@ -101,7 +101,7 @@ public class TestAppManager{
         rmDispatcher);
     return new RMContextImpl(rmDispatcher,
         containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-        null, null, null, null) {
+        null, null, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;

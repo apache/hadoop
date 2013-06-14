@@ -42,12 +42,14 @@ public class YarnServerBuilderUtils {
   public static NodeHeartbeatResponse newNodeHeartbeatResponse(int responseId,
       NodeAction action, List<ContainerId> containersToCleanUp,
       List<ApplicationId> applicationsToCleanUp,
-      MasterKey masterKey, long nextHeartbeatInterval) {
+      MasterKey containerTokenMasterKey, MasterKey nmTokenMasterKey,
+      long nextHeartbeatInterval) {
     NodeHeartbeatResponse response = recordFactory
         .newRecordInstance(NodeHeartbeatResponse.class);
     response.setResponseId(responseId);
     response.setNodeAction(action);
-    response.setMasterKey(masterKey);
+    response.setContainerTokenMasterKey(containerTokenMasterKey);
+    response.setNMTokenMasterKey(nmTokenMasterKey);
     response.setNextHeartBeatInterval(nextHeartbeatInterval);
     if(containersToCleanUp != null) {
       response.addAllContainersToCleanup(containersToCleanUp);

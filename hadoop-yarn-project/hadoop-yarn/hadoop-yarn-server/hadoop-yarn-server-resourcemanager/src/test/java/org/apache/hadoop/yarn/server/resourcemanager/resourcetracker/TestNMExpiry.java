@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -71,7 +72,7 @@ public class TestNMExpiry {
     // Dispatcher that processes events inline
     Dispatcher dispatcher = new InlineDispatcher();
     RMContext context = new RMContextImpl(dispatcher, null,
-        null, null, null, null, null, null);
+        null, null, null, null, null, null, null);
     dispatcher.register(SchedulerEventType.class,
         new InlineDispatcher.EmptyEventHandler());
     dispatcher.register(RMNodeEventType.class,
@@ -85,8 +86,12 @@ public class TestNMExpiry {
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
     containerTokenSecretManager.start();
+    NMTokenSecretManagerInRM nmTokenSecretManager =
+        new NMTokenSecretManagerInRM(conf);
+    nmTokenSecretManager.start();
     resourceTrackerService = new ResourceTrackerService(context,
-        nodesListManager, nmLivelinessMonitor, containerTokenSecretManager);
+        nodesListManager, nmLivelinessMonitor, containerTokenSecretManager,
+        nmTokenSecretManager);
     
     resourceTrackerService.init(conf);
     resourceTrackerService.start();

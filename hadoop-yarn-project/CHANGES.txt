@@ -287,6 +287,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-773. Moved YarnRuntimeException from package api.yarn to
     api.yarn.exceptions. (Jian He via vinodkv)
 
+    YARN-692. Creating NMToken master key on RM and sharing it with NM as a part
+    of RM-NM heartbeat. (Omkar Vinit Joshi via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it

@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.security.MasterKeyData;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -69,13 +70,17 @@ public class NMContainerTokenSecretManager extends
     LOG.info("Rolling master-key for container-tokens, got key with id "
         + masterKeyRecord.getKeyId());
     if (super.currentMasterKey == null) {
-      super.currentMasterKey = new MasterKeyData(masterKeyRecord);
+      super.currentMasterKey =
+          new MasterKeyData(masterKeyRecord, createSecretKey(masterKeyRecord
+            .getBytes().array()));
     } else {
       if (super.currentMasterKey.getMasterKey().getKeyId() != masterKeyRecord
           .getKeyId()) {
         // Update keys only if the key has changed.
         this.previousMasterKey = super.currentMasterKey;
-        super.currentMasterKey = new MasterKeyData(masterKeyRecord);
+        super.currentMasterKey =
+            new MasterKeyData(masterKeyRecord, createSecretKey(masterKeyRecord
+              .getBytes().array()));
       }
     }
   }
