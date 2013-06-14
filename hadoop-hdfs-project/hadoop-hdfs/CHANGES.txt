@@ -23,8 +23,6 @@ Release 2.2.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-    HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
-                via cmccabe)
 
 Release 2.1.0-beta - UNRELEASED
 
@@ -370,6 +368,13 @@ Release 2.1.0-beta - UNRELEASED
     in dfs.datanode.data.dir are invalid. (Ivan Mitic via atm)
 
     HDFS-3792. Fix two findbugs introduced by HDFS-3695 (todd)
+
+    HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
+                via cmccabe)
+
+    HDFS-3163. TestHDFSCLI.testAll fails if the user name is not all lowercase.
+    (Brandon Li via atm)
+
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
