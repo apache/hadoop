@@ -800,7 +800,7 @@ public class FileUtil {
    * @throws InterruptedException
    */
   public static int chmod(String filename, String perm
-                          ) throws IOException, InterruptedException {
+                          ) throws IOException {
     return chmod(filename, perm, false);
   }
 
