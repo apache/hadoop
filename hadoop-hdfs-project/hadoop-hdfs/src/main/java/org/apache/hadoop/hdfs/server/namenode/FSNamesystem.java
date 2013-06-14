@@ -2916,7 +2916,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync(); 
     removeBlocks(collectedBlocks); // Incremental deletion of blocks
     collectedBlocks.clear();
-    dir.removeFromInodeMap(removedINodes);
+    dir.writeLock();
+    try {
+      dir.removeFromInodeMap(removedINodes);
+    } finally {
+      dir.writeUnlock();
+    }
     removedINodes.clear();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* Namesystem.delete: "

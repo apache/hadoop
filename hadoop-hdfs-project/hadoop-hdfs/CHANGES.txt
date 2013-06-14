@@ -377,6 +377,8 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-3163. TestHDFSCLI.testAll fails if the user name is not all lowercase.
     (Brandon Li via atm)
 
+    HDFS-4845. FSNamesystem.deleteInternal should acquire write-lock before
+    changing the inode map.  (Arpit Agarwal via szetszwo)
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
