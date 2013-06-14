@@ -54,19 +54,25 @@ public class DefaultResourceCalculator extends ResourceCalculator {
 
   @Override
   public Resource normalize(Resource r, Resource minimumResource,
-      Resource maximumResource) {
+      Resource maximumResource, Resource stepFactor) {
     int normalizedMemory = Math.min(
         roundUp(
             Math.max(r.getMemory(), minimumResource.getMemory()),
-            minimumResource.getMemory()),
+            stepFactor.getMemory()),
             maximumResource.getMemory());
     return Resources.createResource(normalizedMemory);
   }
 
   @Override
-  public Resource roundUp(Resource r, Resource minimumResource) {
+  public Resource normalize(Resource r, Resource minimumResource,
+                            Resource maximumResource) {
+    return normalize(r, minimumResource, maximumResource, minimumResource);
+  }
+
+  @Override
+  public Resource roundUp(Resource r, Resource stepFactor) {
     return Resources.createResource(
-        roundUp(r.getMemory(),minimumResource.getMemory())
+        roundUp(r.getMemory(), stepFactor.getMemory())
         );
   }
 

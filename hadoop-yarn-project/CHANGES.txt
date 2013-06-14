@@ -302,6 +302,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-803. factor out scheduler config validation from the ResourceManager 
     to each scheduler implementation. (tucu)
 
+    YARN-789. Enable zero capabilities resource requests in fair scheduler. 
+    (tucu)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it

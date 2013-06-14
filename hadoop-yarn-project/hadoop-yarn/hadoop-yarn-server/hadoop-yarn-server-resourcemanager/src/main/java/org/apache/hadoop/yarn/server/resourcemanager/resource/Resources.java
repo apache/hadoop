@@ -132,9 +132,9 @@ public class Resources {
   }
   
   public static Resource normalize(
-      ResourceCalculator calculator, Resource lhs, Resource factor,
-      Resource limit) {
-    return calculator.normalize(lhs, factor, limit);
+      ResourceCalculator calculator, Resource lhs, Resource min,
+      Resource max, Resource increment) {
+    return calculator.normalize(lhs, min, max, increment);
   }
   
   public static Resource roundUp(
