@@ -72,7 +72,6 @@ public abstract class RMCommunicator extends AbstractService
   protected AMRMProtocol scheduler;
   private final ClientService clientService;
   protected int lastResponseID;
-  private Resource minContainerCapability;
   private Resource maxContainerCapability;
   protected Map<ApplicationAccessType, String> applicationACLs;
   private volatile long lastHeartbeatTime;
@@ -152,14 +151,10 @@ public abstract class RMCommunicator extends AbstractService
       }
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
-      minContainerCapability = response.getMinimumResourceCapability();
       maxContainerCapability = response.getMaximumResourceCapability();
-      this.context.getClusterInfo().setMinContainerCapability(
-          minContainerCapability);
       this.context.getClusterInfo().setMaxContainerCapability(
           maxContainerCapability);
       this.applicationACLs = response.getApplicationACLs();
-      LOG.info("minContainerCapability: " + minContainerCapability.getMemory());
       LOG.info("maxContainerCapability: " + maxContainerCapability.getMemory());
     } catch (Exception are) {
       LOG.error("Exception while registering", are);
@@ -200,10 +195,6 @@ public abstract class RMCommunicator extends AbstractService
     } catch(Exception are) {
       LOG.error("Exception while unregistering ", are);
     }
-  }
-
-  protected Resource getMinContainerCapability() {
-    return minContainerCapability;
   }
 
   protected Resource getMaxContainerCapability() {
