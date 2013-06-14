@@ -485,6 +485,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4752. TestRBWBlockInvalidation fails on Windows due to file locking.
     (Chris Nauroth via suresh)
 
+    HDFS-4783. TestDelegationTokensWithHA#testHAUtilClonesDelegationTokens fails
+    on Windows. (cnauroth)
+
   BREAKDOWN OF HDFS-2802 HDFS SNAPSHOT SUBTASKS AND RELATED JIRAS
 
     HDFS-4076. Support snapshot of single files.  (szetszwo)
