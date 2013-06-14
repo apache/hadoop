@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records.impl.pb;
+package org.apache.hadoop.yarn.server.api.records.impl.pb;
 
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeHealthStatusProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeHealthStatusProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProtoOrBuilder;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 
 public class NodeHealthStatusPBImpl extends NodeHealthStatus {
 

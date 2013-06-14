@@ -37,11 +37,9 @@ import org.apache.hadoop.yarn.util.Records;
  *     <li>Used {@link Resource} on the node.</li>
  *     <li>Total available {@link Resource} of the node.</li>
  *     <li>Number of running containers on the node.</li>
- *     <li>{@link NodeHealthStatus} of the node.</li>
  *   </ul>
  * </p>
  *
- * @see NodeHealthStatus
  * @see ClientRMProtocol#getClusterNodes(org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest)
  */
 @Public
