@@ -297,13 +297,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             + message);
     }
 
-    MasterKey masterKey = regNMResponse.getMasterKey();
+    MasterKey masterKey = regNMResponse.getContainerTokenMasterKey();
     // do this now so that its set before we start heartbeating to RM
     // It is expected that status updater is started by this point and
     // RM gives the shared secret in registration during
     // StatusUpdater#start().
     if (masterKey != null) {
       this.context.getContainerTokenSecretManager().setMasterKey(masterKey);
+    }
+    
+    masterKey = regNMResponse.getNMTokenMasterKey();
+    if (masterKey != null) {
+      this.context.getNMTokenSecretManager().setMasterKey(masterKey);
     }
 
     LOG.info("Registered with ResourceManager as " + this.nodeId
@@ -434,8 +439,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             NodeHeartbeatRequest request = recordFactory
                 .newRecordInstance(NodeHeartbeatRequest.class);
             request.setNodeStatus(nodeStatus);
-            request.setLastKnownMasterKey(NodeStatusUpdaterImpl.this.context
-              .getContainerTokenSecretManager().getCurrentKey());
+            request
+              .setLastKnownContainerTokenMasterKey(NodeStatusUpdaterImpl.this.context
+                .getContainerTokenSecretManager().getCurrentKey());
+            request
+              .setLastKnownNMTokenMasterKey(NodeStatusUpdaterImpl.this.context
+                .getNMTokenSecretManager().getCurrentKey());
             while (!isStopped) {
               try {
                 rmRetryCount++;
@@ -463,13 +472,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             }
             //get next heartbeat interval from response
             nextHeartBeatInterval = response.getNextHeartBeatInterval();
-            // See if the master-key has rolled over
-            MasterKey updatedMasterKey = response.getMasterKey();
-            if (updatedMasterKey != null) {
-              // Will be non-null only on roll-over on RM side
-              context.getContainerTokenSecretManager().setMasterKey(
-                updatedMasterKey);
-            }
+            updateMasterKeys(response);
 
             if (response.getNodeAction() == NodeAction.SHUTDOWN) {
               LOG
@@ -531,6 +534,20 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               }
             }
           }
+        }
+      }
+
+      private void updateMasterKeys(NodeHeartbeatResponse response) {
+        // See if the master-key has rolled over
+        MasterKey updatedMasterKey = response.getContainerTokenMasterKey();
+        if (updatedMasterKey != null) {
+          // Will be non-null only on roll-over on RM side
+          context.getContainerTokenSecretManager().setMasterKey(updatedMasterKey);
+        }
+        
+        updatedMasterKey = response.getNMTokenMasterKey();
+        if (updatedMasterKey != null) {
+          context.getNMTokenSecretManager().setMasterKey(updatedMasterKey);
         }
       }
     };

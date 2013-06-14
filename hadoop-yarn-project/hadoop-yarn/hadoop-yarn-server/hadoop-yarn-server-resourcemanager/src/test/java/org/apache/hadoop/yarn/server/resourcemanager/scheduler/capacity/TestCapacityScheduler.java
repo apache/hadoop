@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -272,6 +273,7 @@ public class TestCapacityScheduler {
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
+      new NMTokenSecretManagerInRM(conf),
       new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
@@ -370,6 +372,7 @@ public class TestCapacityScheduler {
 
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
+      new NMTokenSecretManagerInRM(conf),
       new ClientToAMTokenSecretManagerInRM()));
   }
 
@@ -382,6 +385,7 @@ public class TestCapacityScheduler {
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(csConf, new RMContextImpl(null, null, null, null,
       null, null, new RMContainerTokenSecretManager(csConf),
+      new NMTokenSecretManagerInRM(csConf),
       new ClientToAMTokenSecretManagerInRM()));
 
     RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
@@ -408,6 +412,7 @@ public class TestCapacityScheduler {
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
+      new NMTokenSecretManagerInRM(conf),
       new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 

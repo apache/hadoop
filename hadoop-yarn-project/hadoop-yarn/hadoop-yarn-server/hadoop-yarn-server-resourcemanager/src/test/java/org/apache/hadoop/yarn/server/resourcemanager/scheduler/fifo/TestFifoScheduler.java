@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -125,7 +126,7 @@ public class TestFifoScheduler {
   public void testAppAttemptMetrics() throws Exception {
     AsyncDispatcher dispatcher = new InlineDispatcher();
     RMContext rmContext = new RMContextImpl(dispatcher, null,
-        null, null, null, null, null, null);
+        null, null, null, null, null, null, null);
 
     FifoScheduler schedular = new FifoScheduler();
     schedular.reinitialize(new Configuration(), rmContext);
@@ -150,11 +151,15 @@ public class TestFifoScheduler {
   @Test(timeout=2000)
   public void testNodeLocalAssignment() throws Exception {
     AsyncDispatcher dispatcher = new InlineDispatcher();
+    Configuration conf = new Configuration();
     RMContainerTokenSecretManager containerTokenSecretManager =
-        new RMContainerTokenSecretManager(new Configuration());
+        new RMContainerTokenSecretManager(conf);
     containerTokenSecretManager.rollMasterKey();
+    NMTokenSecretManagerInRM nmTokenSecretManager =
+        new NMTokenSecretManagerInRM(conf);
+    nmTokenSecretManager.rollMasterKey();
     RMContext rmContext = new RMContextImpl(dispatcher, null, null, null, null,
-        null, containerTokenSecretManager, null);
+        null, containerTokenSecretManager, nmTokenSecretManager, null);
 
     FifoScheduler scheduler = new FifoScheduler();
     scheduler.reinitialize(new Configuration(), rmContext);

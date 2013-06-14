@@ -75,7 +75,8 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
       masterKey.setKeyId(123);
       masterKey.setBytes(ByteBuffer.wrap(new byte[] { new Integer(123)
         .byteValue() }));
-      response.setMasterKey(masterKey);
+      response.setContainerTokenMasterKey(masterKey);
+      response.setNMTokenMasterKey(masterKey);
       return response;
     }
 
@@ -88,7 +89,7 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
 
       NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils
           .newNodeHeartbeatResponse(heartBeatID, null, null,
-              null, null, 1000L);
+              null, null, null, 1000L);
       return nhResponse;
     }
   }

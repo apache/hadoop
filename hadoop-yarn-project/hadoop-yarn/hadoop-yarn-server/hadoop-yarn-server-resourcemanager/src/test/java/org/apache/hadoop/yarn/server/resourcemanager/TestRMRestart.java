@@ -88,7 +88,7 @@ public class TestRMRestart {
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
   }
 
-  @Test (timeout=60000)
+  @Test (timeout=180000)
   public void testRMRestart() throws Exception {
     Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,

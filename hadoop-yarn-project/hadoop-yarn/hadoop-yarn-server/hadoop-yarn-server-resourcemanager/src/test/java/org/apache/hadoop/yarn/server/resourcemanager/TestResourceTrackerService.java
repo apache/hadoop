@@ -60,7 +60,7 @@ public class TestResourceTrackerService {
    * Test RM read NM next heartBeat Interval correctly from Configuration file,
    * and NM get next heartBeat Interval from RM correctly
    */
-  @Test (timeout = 5000)
+  @Test (timeout = 50000)
   public void testGetNextHeartBeatInterval() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, "4000");

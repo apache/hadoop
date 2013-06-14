@@ -41,24 +41,50 @@ public class TestRegisterNodeManagerResponse {
   public void testRoundTrip() throws Exception {
     RegisterNodeManagerResponse resp = recordFactory
     .newRecordInstance(RegisterNodeManagerResponse.class);
-    MasterKey mk = recordFactory.newRecordInstance(MasterKey.class);
-    mk.setKeyId(54321);
+
     byte b [] = {0,1,2,3,4,5};
-    mk.setBytes(ByteBuffer.wrap(b));
-    resp.setMasterKey(mk);
-    resp.setNodeAction(NodeAction.NORMAL);
     
+    MasterKey containerTokenMK =
+        recordFactory.newRecordInstance(MasterKey.class);
+    containerTokenMK.setKeyId(54321);
+    containerTokenMK.setBytes(ByteBuffer.wrap(b));
+    resp.setContainerTokenMasterKey(containerTokenMK);
+
+    MasterKey nmTokenMK =
+        recordFactory.newRecordInstance(MasterKey.class);
+    nmTokenMK.setKeyId(12345);
+    nmTokenMK.setBytes(ByteBuffer.wrap(b));
+    resp.setNMTokenMasterKey(nmTokenMK);
+
+    resp.setNodeAction(NodeAction.NORMAL);
+
     assertEquals(NodeAction.NORMAL, resp.getNodeAction());
-    assertNotNull(resp.getMasterKey());
-    assertEquals(54321, resp.getMasterKey().getKeyId());
-    assertArrayEquals(b, resp.getMasterKey().getBytes().array());
+    
+    // Verifying containerTokenMasterKey
+    assertNotNull(resp.getContainerTokenMasterKey());
+    assertEquals(54321, resp.getContainerTokenMasterKey().getKeyId());
+    assertArrayEquals(b, resp.getContainerTokenMasterKey().getBytes().array());
     
     RegisterNodeManagerResponse respCopy = serDe(resp);
     
     assertEquals(NodeAction.NORMAL, respCopy.getNodeAction());
-    assertNotNull(respCopy.getMasterKey());
-    assertEquals(54321, respCopy.getMasterKey().getKeyId());
-    assertArrayEquals(b, respCopy.getMasterKey().getBytes().array());
+    assertNotNull(respCopy.getContainerTokenMasterKey());
+    assertEquals(54321, respCopy.getContainerTokenMasterKey().getKeyId());
+    assertArrayEquals(b, respCopy.getContainerTokenMasterKey().getBytes()
+        .array());
+    
+    // Verifying nmTokenMasterKey
+    assertNotNull(resp.getNMTokenMasterKey());
+    assertEquals(12345, resp.getNMTokenMasterKey().getKeyId());
+    assertArrayEquals(b, resp.getNMTokenMasterKey().getBytes().array());
+    
+    respCopy = serDe(resp);
+    
+    assertEquals(NodeAction.NORMAL, respCopy.getNodeAction());
+    assertNotNull(respCopy.getNMTokenMasterKey());
+    assertEquals(12345, respCopy.getNMTokenMasterKey().getKeyId());
+    assertArrayEquals(b, respCopy.getNMTokenMasterKey().getBytes().array());
+    
   }
 
   public static RegisterNodeManagerResponse serDe(RegisterNodeManagerResponse orig) throws Exception {

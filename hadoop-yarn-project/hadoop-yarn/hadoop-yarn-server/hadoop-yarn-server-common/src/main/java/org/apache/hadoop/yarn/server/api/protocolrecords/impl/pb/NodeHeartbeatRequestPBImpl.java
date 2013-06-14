@@ -36,7 +36,8 @@ public class NodeHeartbeatRequestPBImpl extends
   boolean viaProto = false;
   
   private NodeStatus nodeStatus = null;
-  private MasterKey lastKnownMasterKey = null;
+  private MasterKey lastKnownContainerTokenMasterKey = null;
+  private MasterKey lastKnownNMTokenMasterKey = null;
   
   public NodeHeartbeatRequestPBImpl() {
     builder = NodeHeartbeatRequestProto.newBuilder();
@@ -58,9 +59,13 @@ public class NodeHeartbeatRequestPBImpl extends
     if (this.nodeStatus != null) {
       builder.setNodeStatus(convertToProtoFormat(this.nodeStatus));
     }
-    if (this.lastKnownMasterKey != null) {
-      builder
-        .setLastKnownMasterKey(convertToProtoFormat(this.lastKnownMasterKey));
+    if (this.lastKnownContainerTokenMasterKey != null) {
+      builder.setLastKnownContainerTokenMasterKey(
+          convertToProtoFormat(this.lastKnownContainerTokenMasterKey));
+    }
+    if (this.lastKnownNMTokenMasterKey != null) {
+      builder.setLastKnownNmTokenMasterKey(
+          convertToProtoFormat(this.lastKnownNMTokenMasterKey));
     }
   }
 
@@ -102,24 +107,47 @@ public class NodeHeartbeatRequestPBImpl extends
   }
 
   @Override
-  public MasterKey getLastKnownMasterKey() {
+  public MasterKey getLastKnownContainerTokenMasterKey() {
     NodeHeartbeatRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.lastKnownMasterKey != null) {
-      return this.lastKnownMasterKey;
+    if (this.lastKnownContainerTokenMasterKey != null) {
+      return this.lastKnownContainerTokenMasterKey;
     }
-    if (!p.hasLastKnownMasterKey()) {
+    if (!p.hasLastKnownContainerTokenMasterKey()) {
       return null;
     }
-    this.lastKnownMasterKey = convertFromProtoFormat(p.getLastKnownMasterKey());
-    return this.lastKnownMasterKey;
+    this.lastKnownContainerTokenMasterKey =
+        convertFromProtoFormat(p.getLastKnownContainerTokenMasterKey());
+    return this.lastKnownContainerTokenMasterKey;
   }
 
   @Override
-  public void setLastKnownMasterKey(MasterKey masterKey) {
+  public void setLastKnownContainerTokenMasterKey(MasterKey masterKey) {
     maybeInitBuilder();
     if (masterKey == null) 
-      builder.clearLastKnownMasterKey();
-    this.lastKnownMasterKey = masterKey;
+      builder.clearLastKnownContainerTokenMasterKey();
+    this.lastKnownContainerTokenMasterKey = masterKey;
+  }
+
+  @Override
+  public MasterKey getLastKnownNMTokenMasterKey() {
+    NodeHeartbeatRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.lastKnownNMTokenMasterKey != null) {
+      return this.lastKnownNMTokenMasterKey;
+    }
+    if (!p.hasLastKnownNmTokenMasterKey()) {
+      return null;
+    }
+    this.lastKnownNMTokenMasterKey =
+        convertFromProtoFormat(p.getLastKnownNmTokenMasterKey());
+    return this.lastKnownNMTokenMasterKey;
+  }
+
+  @Override
+  public void setLastKnownNMTokenMasterKey(MasterKey masterKey) {
+    maybeInitBuilder();
+    if (masterKey == null) 
+      builder.clearLastKnownNmTokenMasterKey();
+    this.lastKnownNMTokenMasterKey = masterKey;
   }
 
   private NodeStatusPBImpl convertFromProtoFormat(NodeStatusProto p) {

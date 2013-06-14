@@ -60,37 +60,6 @@ public class BaseContainerTokenSecretManager extends
    */
   protected MasterKeyData currentMasterKey;
 
-  protected final class MasterKeyData {
-
-    private final MasterKey masterKeyRecord;
-    // Underlying secret-key also stored to avoid repetitive encoding and
-    // decoding the masterKeyRecord bytes.
-    private final SecretKey generatedSecretKey;
-
-    private MasterKeyData() {
-      this.masterKeyRecord = Records.newRecord(MasterKey.class);
-      this.masterKeyRecord.setKeyId(serialNo++);
-      this.generatedSecretKey = generateSecret();
-      this.masterKeyRecord.setBytes(ByteBuffer.wrap(generatedSecretKey
-        .getEncoded()));
-    }
-
-    public MasterKeyData(MasterKey masterKeyRecord) {
-      this.masterKeyRecord = masterKeyRecord;
-      this.generatedSecretKey =
-          SecretManager.createSecretKey(this.masterKeyRecord.getBytes().array()
-            .clone());
-    }
-
-    public MasterKey getMasterKey() {
-      return this.masterKeyRecord;
-    }
-
-    private SecretKey getSecretKey() {
-      return this.generatedSecretKey;
-    }
-  }
-
   protected final long containerTokenExpiryInterval;
 
   public BaseContainerTokenSecretManager(Configuration conf) {
@@ -103,7 +72,7 @@ public class BaseContainerTokenSecretManager extends
   protected MasterKeyData createNewMasterKey() {
     this.writeLock.lock();
     try {
-    return new MasterKeyData();
+      return new MasterKeyData(serialNo++, generateSecret());
     } finally {
       this.writeLock.unlock();
     }

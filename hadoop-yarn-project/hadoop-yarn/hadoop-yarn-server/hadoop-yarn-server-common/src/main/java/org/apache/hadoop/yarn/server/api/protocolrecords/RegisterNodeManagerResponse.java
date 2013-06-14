@@ -22,9 +22,13 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 
 public interface RegisterNodeManagerResponse {
-  MasterKey getMasterKey();
+  MasterKey getContainerTokenMasterKey();
 
-  void setMasterKey(MasterKey secretKey);
+  void setContainerTokenMasterKey(MasterKey secretKey);
+
+  MasterKey getNMTokenMasterKey();
+
+  void setNMTokenMasterKey(MasterKey secretKey);
 
   NodeAction getNodeAction();
 

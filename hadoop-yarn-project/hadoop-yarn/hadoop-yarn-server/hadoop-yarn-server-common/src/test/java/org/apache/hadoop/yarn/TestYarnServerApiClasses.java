@@ -63,14 +63,16 @@ public class TestYarnServerApiClasses {
   public void testRegisterNodeManagerResponsePBImpl() {
     RegisterNodeManagerResponsePBImpl original =
         new RegisterNodeManagerResponsePBImpl();
-    original.setMasterKey(getMasterKey());
+    original.setContainerTokenMasterKey(getMasterKey());
+    original.setNMTokenMasterKey(getMasterKey());
     original.setNodeAction(NodeAction.NORMAL);
     original.setDiagnosticsMessage("testDiagnosticMessage");
 
     RegisterNodeManagerResponsePBImpl copy =
         new RegisterNodeManagerResponsePBImpl(
             original.getProto());
-    assertEquals(1, copy.getMasterKey().getKeyId());
+    assertEquals(1, copy.getContainerTokenMasterKey().getKeyId());
+    assertEquals(1, copy.getNMTokenMasterKey().getKeyId());
     assertEquals(NodeAction.NORMAL, copy.getNodeAction());
     assertEquals("testDiagnosticMessage", copy.getDiagnosticsMessage());
 
@@ -82,11 +84,13 @@ public class TestYarnServerApiClasses {
   @Test
   public void testNodeHeartbeatRequestPBImpl() {
     NodeHeartbeatRequestPBImpl original = new NodeHeartbeatRequestPBImpl();
-    original.setLastKnownMasterKey(getMasterKey());
+    original.setLastKnownContainerTokenMasterKey(getMasterKey());
+    original.setLastKnownNMTokenMasterKey(getMasterKey());
     original.setNodeStatus(getNodeStatus());
     NodeHeartbeatRequestPBImpl copy = new NodeHeartbeatRequestPBImpl(
         original.getProto());
-    assertEquals(1, copy.getLastKnownMasterKey().getKeyId());
+    assertEquals(1, copy.getLastKnownContainerTokenMasterKey().getKeyId());
+    assertEquals(1, copy.getLastKnownNMTokenMasterKey().getKeyId());
     assertEquals("localhost", copy.getNodeStatus().getNodeId().getHost());
   }
 
@@ -99,7 +103,8 @@ public class TestYarnServerApiClasses {
     NodeHeartbeatResponsePBImpl original = new NodeHeartbeatResponsePBImpl();
 
     original.setDiagnosticsMessage("testDiagnosticMessage");
-    original.setMasterKey(getMasterKey());
+    original.setContainerTokenMasterKey(getMasterKey());
+    original.setNMTokenMasterKey(getMasterKey());
     original.setNextHeartBeatInterval(1000);
     original.setNodeAction(NodeAction.NORMAL);
     original.setResponseId(100);
@@ -109,7 +114,8 @@ public class TestYarnServerApiClasses {
     assertEquals(100, copy.getResponseId());
     assertEquals(NodeAction.NORMAL, copy.getNodeAction());
     assertEquals(1000, copy.getNextHeartBeatInterval());
-    assertEquals(1, copy.getMasterKey().getKeyId());
+    assertEquals(1, copy.getContainerTokenMasterKey().getKeyId());
+    assertEquals(1, copy.getNMTokenMasterKey().getKeyId());
     assertEquals("testDiagnosticMessage", copy.getDiagnosticsMessage());
   }
 

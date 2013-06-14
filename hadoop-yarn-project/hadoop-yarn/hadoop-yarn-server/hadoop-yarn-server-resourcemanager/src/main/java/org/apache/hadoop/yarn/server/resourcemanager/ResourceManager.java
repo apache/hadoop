@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
@@ -104,6 +105,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       new ClientToAMTokenSecretManagerInRM();
   
   protected RMContainerTokenSecretManager containerTokenSecretManager;
+  protected NMTokenSecretManagerInRM nmTokenSecretManager;
 
   protected ApplicationTokenSecretManager appTokenSecretManager;
 
@@ -164,6 +166,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(tokenRenewer);
 
     this.containerTokenSecretManager = createContainerTokenSecretManager(conf);
+    this.nmTokenSecretManager = createNMTokenSecretManager(conf);
     
     boolean isRecoveryEnabled = conf.getBoolean(
         YarnConfiguration.RECOVERY_ENABLED,
@@ -191,7 +194,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
         new RMContextImpl(this.rmDispatcher, rmStore,
           this.containerAllocationExpirer, amLivelinessMonitor,
           amFinishingMonitor, tokenRenewer, this.appTokenSecretManager,
-          this.containerTokenSecretManager, this.clientToAMSecretManager);
+          this.containerTokenSecretManager, this.nmTokenSecretManager,
+          this.clientToAMSecretManager);
     
     // Register event handler for NodesListManager
     this.nodesListManager = new NodesListManager(this.rmContext);
@@ -271,6 +275,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new RMContainerTokenSecretManager(conf);
   }
 
+  protected NMTokenSecretManagerInRM createNMTokenSecretManager(
+      Configuration conf) {
+    return new NMTokenSecretManagerInRM(conf);
+  }
+  
   protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
     return new SchedulerEventDispatcher(this.scheduler);
   }
@@ -586,6 +595,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     this.appTokenSecretManager.start();
     this.containerTokenSecretManager.start();
+    this.nmTokenSecretManager.start();
 
     if(recoveryEnabled) {
       try {
@@ -649,6 +659,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     if (containerTokenSecretManager != null) {
       this.containerTokenSecretManager.stop();
     }
+    if(nmTokenSecretManager != null) {
+      nmTokenSecretManager.stop();
+    }
 
     /*synchronized(shutdown) {
       shutdown.set(true);
@@ -671,7 +684,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   
   protected ResourceTrackerService createResourceTrackerService() {
     return new ResourceTrackerService(this.rmContext, this.nodesListManager,
-        this.nmLivelinessMonitor, this.containerTokenSecretManager);
+        this.nmLivelinessMonitor, this.containerTokenSecretManager,
+        this.nmTokenSecretManager);
   }
 
   protected RMDelegationTokenSecretManager
@@ -747,6 +761,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return this.containerTokenSecretManager;
   }
 
+  @Private
+  public NMTokenSecretManagerInRM getRMNMTokenSecretManager() {
+    return this.nmTokenSecretManager;
+  }
+  
   @Private
   public ApplicationTokenSecretManager getApplicationTokenSecretManager(){
     return this.appTokenSecretManager;

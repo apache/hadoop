@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 
 /**
  * Context of the ResourceManager.
@@ -59,6 +60,8 @@ public interface RMContext {
   ApplicationTokenSecretManager getApplicationTokenSecretManager();
 
   RMContainerTokenSecretManager getContainerTokenSecretManager();
+  
+  NMTokenSecretManagerInRM getNMTokenSecretManager();
 
   ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager();
 }

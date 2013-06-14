@@ -76,7 +76,7 @@ public class TestNMWebServer {
   }
   
   private int startNMWebAppServer(String webAddr) {
-    Context nmContext = new NodeManager.NMContext(null);
+    Context nmContext = new NodeManager.NMContext(null, null);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -134,7 +134,7 @@ public class TestNMWebServer {
 
   @Test
   public void testNMWebApp() throws IOException {
-    Context nmContext = new NodeManager.NMContext(null);
+    Context nmContext = new NodeManager.NMContext(null, null);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {

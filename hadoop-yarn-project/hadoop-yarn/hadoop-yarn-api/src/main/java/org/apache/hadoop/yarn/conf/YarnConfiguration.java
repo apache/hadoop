@@ -286,6 +286,11 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
       24 * 60 * 60;
 
+  public static final String RM_NMTOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
+      RM_PREFIX + "nm-tokens.master-key-rolling-interval-secs";
+  
+  public static final long DEFAULT_RM_NMTOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
+      24 * 60 * 60;
   ////////////////////////////////
   // Node Manager Configs
   ////////////////////////////////

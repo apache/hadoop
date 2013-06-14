@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.CompositeService;
@@ -118,8 +119,10 @@ public class NodeManager extends CompositeService
     return new DeletionService(exec);
   }
 
-  protected NMContext createNMContext(NMContainerTokenSecretManager containerTokenSecretManager) {
-    return new NMContext(containerTokenSecretManager);
+  protected NMContext createNMContext(
+      NMContainerTokenSecretManager containerTokenSecretManager,
+      NMTokenSecretManagerInNM nmTokenSecretManager) {
+    return new NMContext(containerTokenSecretManager, nmTokenSecretManager);
   }
 
   protected void doSecureLogin() throws IOException {
@@ -135,7 +138,11 @@ public class NodeManager extends CompositeService
     NMContainerTokenSecretManager containerTokenSecretManager =
         new NMContainerTokenSecretManager(conf);
 
-    this.context = createNMContext(containerTokenSecretManager);
+    NMTokenSecretManagerInNM nmTokenSecretManager =
+        new NMTokenSecretManagerInNM();
+    
+    this.context =
+        createNMContext(containerTokenSecretManager, nmTokenSecretManager);
 
     this.aclsManager = new ApplicationACLsManager(conf);
 
@@ -299,13 +306,16 @@ public class NodeManager extends CompositeService
         new ConcurrentSkipListMap<ContainerId, Container>();
 
     private final NMContainerTokenSecretManager containerTokenSecretManager;
+    private final NMTokenSecretManagerInNM nmTokenSecretManager;
     private ContainerManager containerManager;
     private WebServer webServer;
     private final NodeHealthStatus nodeHealthStatus = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);
 
-    public NMContext(NMContainerTokenSecretManager containerTokenSecretManager) {
+    public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
+        NMTokenSecretManagerInNM nmTokenSecretManager) {
       this.containerTokenSecretManager = containerTokenSecretManager;
+      this.nmTokenSecretManager = nmTokenSecretManager;
       this.nodeHealthStatus.setIsNodeHealthy(true);
       this.nodeHealthStatus.setHealthReport("Healthy");
       this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
@@ -338,6 +348,12 @@ public class NodeManager extends CompositeService
     public NMContainerTokenSecretManager getContainerTokenSecretManager() {
       return this.containerTokenSecretManager;
     }
+    
+    @Override
+    public NMTokenSecretManagerInNM getNMTokenSecretManager() {
+      return this.nmTokenSecretManager;
+    }
+    
     @Override
     public NodeHealthStatus getNodeHealthStatus() {
       return this.nodeHealthStatus;

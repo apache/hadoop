@@ -79,6 +79,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -168,6 +169,7 @@ public class TestRMAppAttemptTransitions {
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, new ApplicationTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
+          new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM());
     
     RMStateStore store = mock(RMStateStore.class);
