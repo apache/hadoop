@@ -96,6 +96,9 @@ Release 2.1.0-beta - UNRELEASED
     registerServiceListener() & unregisterServiceListener() respectively.
     (Steve Loughran via vinodkv)
 
+    YARN-792. Moved NodeHealthStatus from yarn.api.record to
+    yarn.server.api.record. (Jian He via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
