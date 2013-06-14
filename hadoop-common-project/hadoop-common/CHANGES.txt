@@ -20,6 +20,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-9630. [RPC v9] Remove IpcSerializationType. (Junping Du via llu)
 
+    HADOOP-9646.  Inconsistent exception specifications in FileUtils#chmod
+    (Colin Patrick McCabe)
+
   NEW FEATURES
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
