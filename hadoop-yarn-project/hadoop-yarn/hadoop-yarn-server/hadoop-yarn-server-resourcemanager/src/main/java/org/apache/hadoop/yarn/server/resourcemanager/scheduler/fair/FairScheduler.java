@@ -116,6 +116,7 @@ public class FairScheduler implements ResourceScheduler {
   private RMContext rmContext;
   private Resource minimumAllocation;
   private Resource maximumAllocation;
+  private Resource incrAllocation;
   private QueueManager queueMgr;
   private Clock clock;
 
@@ -300,7 +301,7 @@ public class FairScheduler implements ResourceScheduler {
    */
   boolean isStarvedForMinShare(FSLeafQueue sched) {
     Resource desiredShare = Resources.min(RESOURCE_CALCULATOR, clusterCapacity,
-        sched.getMinShare(), sched.getDemand());
+      sched.getMinShare(), sched.getDemand());
     return Resources.lessThan(RESOURCE_CALCULATOR, clusterCapacity,
         sched.getResourceUsage(), desiredShare);
   }
@@ -560,6 +561,10 @@ public class FairScheduler implements ResourceScheduler {
     return minimumAllocation;
   }
 
+  public Resource getIncrementResourceCapability() {
+    return incrAllocation;
+  }
+
   @Override
   public Resource getMaximumResourceCapability() {
     return maximumAllocation;
@@ -769,7 +774,7 @@ public class FairScheduler implements ResourceScheduler {
 
     // Sanity check
     SchedulerUtils.normalizeRequests(ask, new DominantResourceCalculator(),
-        clusterCapacity, minimumAllocation, maximumAllocation);
+        clusterCapacity, minimumAllocation, maximumAllocation, incrAllocation);
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
@@ -1028,6 +1033,7 @@ public class FairScheduler implements ResourceScheduler {
     validateConf(this.conf);
     minimumAllocation = this.conf.getMinimumAllocation();
     maximumAllocation = this.conf.getMaximumAllocation();
+    incrAllocation = this.conf.getIncrementAllocation();
     userAsDefaultQueue = this.conf.getUserAsDefaultQueue();
     nodeLocalityThreshold = this.conf.getLocalityThresholdNode();
     rackLocalityThreshold = this.conf.getLocalityThresholdRack();
