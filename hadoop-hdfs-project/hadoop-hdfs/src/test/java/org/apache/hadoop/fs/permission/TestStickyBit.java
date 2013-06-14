@@ -141,16 +141,7 @@ public class TestStickyBit {
     hdfs.setPermission(p1, new FsPermission(withSB));
     assertTrue(hdfs.getFileStatus(p1).getPermission().getStickyBit());
 
-    // However, while you can set the sticky bit on files, it has no effect,
-    // following the linux/unix model:
-    //
-    // [user@host test]$ ls -alh
-    // -rw-r--r-- 1 user users 0 Dec 31 01:46 aFile
-    // [user@host test]$ chmod +t aFile
-    // [user@host test]$ ls -alh
-    // -rw-r--r-- 1 user users 0 Dec 31 01:46 aFile
-
-    // Write a file to the fs, try to set its sticky bit, expect to be ignored
+    // Write a file to the fs, try to set its sticky bit
     Path f = new Path(baseDir, "somefile");
     writeFile(hdfs, f);
     assertFalse(hdfs.getFileStatus(f).getPermission().getStickyBit());
@@ -159,7 +150,7 @@ public class TestStickyBit {
 
     hdfs.setPermission(f, new FsPermission(withSB));
 
-    assertFalse(hdfs.getFileStatus(f).getPermission().getStickyBit());
+    assertTrue(hdfs.getFileStatus(f).getPermission().getStickyBit());
   }
 
   @Test

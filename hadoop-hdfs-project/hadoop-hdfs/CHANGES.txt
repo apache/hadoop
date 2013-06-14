@@ -48,6 +48,8 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
     (Junping Du via szetszwo)
 
+    HDFS-4659 Support setting execution bit for regular files (Brandon Li via sanjay)
+
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 

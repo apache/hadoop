@@ -66,9 +66,6 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
     return inode.asFile();
   }
 
-  static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
-
-
   /** Format: [16 bits for replication][48 bits for PreferredBlockSize] */
   private static class HeaderFormat {
     /** Number of bits for Block size */
@@ -126,16 +123,6 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
   @Override
   public final boolean isFile() {
     return true;
-  }
-
-  /**
-   * Set the {@link FsPermission} of this {@link INodeFile}.
-   * Since this is a file,
-   * the {@link FsAction#EXECUTE} action, if any, is ignored.
-   */
-  @Override
-  void setPermission(FsPermission permission) {
-    super.setPermission(permission.applyUMask(UMASK));
   }
 
   /** @return this object. */
