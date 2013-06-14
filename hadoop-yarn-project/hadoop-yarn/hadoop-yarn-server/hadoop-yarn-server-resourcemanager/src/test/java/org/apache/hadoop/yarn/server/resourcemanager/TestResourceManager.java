@@ -201,34 +201,6 @@ public class TestResourceManager {
       if (!e.getMessage().startsWith(
               "Invalid global max attempts configuration")) throw e;
     }
-
-    conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 2048);
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 1024);
-    resourceManager = new ResourceManager();
-    try {
-      resourceManager.init(conf);
-      fail("Exception is expected because the min memory allocation is" +
-          " larger than the max memory allocation.");
-    } catch (YarnRuntimeException e) {
-      // Exception is expected.
-      if (!e.getMessage().startsWith(
-        "Invalid resource scheduler memory")) throw e;
-    }
-
-    conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 2);
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, 1);
-    resourceManager = new ResourceManager();
-    try {
-      resourceManager.init(conf);
-      fail("Exception is expected because the min vcores allocation is" +
-          " larger than the max vcores allocation.");
-    } catch (YarnRuntimeException e) {
-      // Exception is expected.
-      if (!e.getMessage().startsWith(
-        "Invalid resource scheduler vcores")) throw e;
-    }
   }
 
 }
