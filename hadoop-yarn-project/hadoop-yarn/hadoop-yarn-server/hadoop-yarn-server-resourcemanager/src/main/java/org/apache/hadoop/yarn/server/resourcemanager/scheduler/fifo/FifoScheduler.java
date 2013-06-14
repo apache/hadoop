@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.Lock;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -175,6 +176,26 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     this.conf = conf;
   }
   
+  private void validateConf(Configuration conf) {
+    // validate scheduler memory allocation setting
+    int minMem = conf.getInt(
+      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
+    int maxMem = conf.getInt(
+      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+
+    if (minMem <= 0 || minMem > maxMem) {
+      throw new YarnRuntimeException("Invalid resource scheduler memory"
+        + " allocation configuration"
+        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
+        + "=" + minMem
+        + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
+        + "=" + maxMem + ", min and max should be greater than 0"
+        + ", max should be no smaller than min.");
+    }
+  }
+  
   @Override
   public synchronized Configuration getConf() {
     return conf;
@@ -201,6 +222,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   {
     setConf(conf);
     if (!this.initialized) {
+      validateConf(conf);
       this.rmContext = rmContext;
       this.minimumAllocation = 
         Resources.createResource(conf.getInt(
