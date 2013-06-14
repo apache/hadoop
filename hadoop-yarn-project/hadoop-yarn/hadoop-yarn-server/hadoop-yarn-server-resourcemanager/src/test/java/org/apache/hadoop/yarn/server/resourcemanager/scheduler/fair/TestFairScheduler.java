@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -81,6 +82,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemoved
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -120,7 +123,9 @@ public class TestFairScheduler {
   public void setUp() throws IOException {
     scheduler = new FairScheduler();
     Configuration conf = createConfiguration();
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 1024);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0);
+    conf.setInt(FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
+      1024);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 10240);
     // All tests assume only one assignment per node update
     conf.set(FairSchedulerConfiguration.ASSIGN_MULTIPLE, "false");
@@ -281,6 +286,8 @@ public class TestFairScheduler {
     conf.setDouble(FairSchedulerConfiguration.LOCALITY_THRESHOLD_RACK, .7);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 1024);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 512);
+    conf.setInt(FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB, 
+      128);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
     Assert.assertEquals(true, scheduler.assignMultiple);
     Assert.assertEquals(3, scheduler.maxAssign);
@@ -289,7 +296,43 @@ public class TestFairScheduler {
     Assert.assertEquals(.7, scheduler.rackLocalityThreshold, .01);
     Assert.assertEquals(1024, scheduler.getMaximumResourceCapability().getMemory());
     Assert.assertEquals(512, scheduler.getMinimumResourceCapability().getMemory());
+    Assert.assertEquals(128, 
+      scheduler.getIncrementResourceCapability().getMemory());
   }
+  
+  @Test  
+  public void testNonMinZeroResourcesSettings() throws IOException {
+    FairScheduler fs = new FairScheduler();
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 256);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 1);
+    conf.setInt(
+      FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB, 512);
+    conf.setInt(
+      FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES, 2);
+    fs.reinitialize(conf, null);
+    Assert.assertEquals(256, fs.getMinimumResourceCapability().getMemory());
+    Assert.assertEquals(1, fs.getMinimumResourceCapability().getVirtualCores());
+    Assert.assertEquals(512, fs.getIncrementResourceCapability().getMemory());
+    Assert.assertEquals(2, fs.getIncrementResourceCapability().getVirtualCores());
+  }  
+  
+  @Test  
+  public void testMinZeroResourcesSettings() throws IOException {  
+    FairScheduler fs = new FairScheduler();  
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 0);
+    conf.setInt(
+      FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB, 512);
+    conf.setInt(
+      FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES, 2);
+    fs.reinitialize(conf, null);  
+    Assert.assertEquals(0, fs.getMinimumResourceCapability().getMemory());  
+    Assert.assertEquals(0, fs.getMinimumResourceCapability().getVirtualCores());
+    Assert.assertEquals(512, fs.getIncrementResourceCapability().getMemory());
+    Assert.assertEquals(2, fs.getIncrementResourceCapability().getVirtualCores());
+  }  
   
   @Test
   public void testAggregateCapacityTracking() throws Exception {
@@ -412,8 +455,8 @@ public class TestFairScheduler {
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
     scheduler.handle(updateEvent);
 
-    // Asked for less than min_allocation.
-    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+    // Asked for less than increment allocation.
+    assertEquals(FairSchedulerConfiguration.DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
         scheduler.getQueueManager().getQueue("queue1").
         getResourceUsage().getMemory());
 
@@ -571,7 +614,8 @@ public class TestFairScheduler {
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
     scheduler.addApplication(id22, "root.queue2", "user1");
 
-    int minReqSize = YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB;
+    int minReqSize = 
+        FairSchedulerConfiguration.DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB;
     
     // First ask, queue1 requests 1 large (minReqSize * 2).
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();

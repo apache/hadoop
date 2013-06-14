@@ -124,26 +124,26 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   @Override
   public Resource normalize(Resource r, Resource minimumResource,
-      Resource maximumResource) {
+                            Resource maximumResource, Resource stepFactor) {
     int normalizedMemory = Math.min(
-        roundUp(
-            Math.max(r.getMemory(), minimumResource.getMemory()),
-            minimumResource.getMemory()),
-            maximumResource.getMemory());
+      roundUp(
+        Math.max(r.getMemory(), minimumResource.getMemory()),
+        stepFactor.getMemory()),
+      maximumResource.getMemory());
     int normalizedCores = Math.min(
-        roundUp(
-            Math.max(r.getVirtualCores(), minimumResource.getVirtualCores()),
-            minimumResource.getVirtualCores()),
-            maximumResource.getVirtualCores());
+      roundUp(
+        Math.max(r.getVirtualCores(), minimumResource.getVirtualCores()),
+        stepFactor.getVirtualCores()),
+      maximumResource.getVirtualCores());
     return Resources.createResource(normalizedMemory,
-        normalizedCores);
+      normalizedCores);
   }
 
   @Override
-  public Resource roundUp(Resource r, Resource minimumResource) {
+  public Resource roundUp(Resource r, Resource stepFactor) {
     return Resources.createResource(
-        roundUp(r.getMemory(), minimumResource.getMemory()), 
-        roundUp(r.getVirtualCores(), minimumResource.getVirtualCores())
+        roundUp(r.getMemory(), stepFactor.getMemory()), 
+        roundUp(r.getVirtualCores(), stepFactor.getVirtualCores())
         );
   }
 
