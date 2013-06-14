@@ -299,6 +299,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-782. vcores-pcores ratio functions differently from vmem-pmem ratio in 
     misleading way. (sandyr via tucu)
 
+    YARN-803. factor out scheduler config validation from the ResourceManager 
+    to each scheduler implementation. (tucu)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
