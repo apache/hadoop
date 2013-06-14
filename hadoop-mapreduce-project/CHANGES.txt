@@ -445,6 +445,8 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5298. Moved MapReduce services to YARN-530 stricter lifecycle.
     (Steve Loughran via vinodkv)
 
+    MAPREDUCE-5319. Set user.name in job.xml. (Xuan Gong via acmurthy)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES

@@ -53,6 +53,7 @@ import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -354,6 +355,8 @@ class JobSubmitter {
     Path submitJobDir = new Path(jobStagingArea, jobId.toString());
     JobStatus status = null;
     try {
+      conf.set(MRJobConfig.USER_NAME,
+          UserGroupInformation.getCurrentUser().getShortUserName());
       conf.set("hadoop.http.filter.initializers", 
           "org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer");
       conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, submitJobDir.toString());
