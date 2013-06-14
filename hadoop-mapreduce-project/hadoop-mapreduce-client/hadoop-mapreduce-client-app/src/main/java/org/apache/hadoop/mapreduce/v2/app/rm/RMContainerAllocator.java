@@ -291,9 +291,6 @@ public class RMContainerAllocator extends RMContainerRequestor
       if (reqEvent.getAttemptID().getTaskId().getTaskType().equals(TaskType.MAP)) {
         if (mapResourceReqt == 0) {
           mapResourceReqt = reqEvent.getCapability().getMemory();
-          int minSlotMemSize = getMinContainerCapability().getMemory();
-          mapResourceReqt = (int) Math.ceil((float) mapResourceReqt/minSlotMemSize)
-              * minSlotMemSize;
           eventHandler.handle(new JobHistoryEvent(jobId, 
               new NormalizedResourceEvent(org.apache.hadoop.mapreduce.TaskType.MAP,
               mapResourceReqt)));
@@ -314,10 +311,6 @@ public class RMContainerAllocator extends RMContainerRequestor
       } else {
         if (reduceResourceReqt == 0) {
           reduceResourceReqt = reqEvent.getCapability().getMemory();
-          int minSlotMemSize = getMinContainerCapability().getMemory();
-          //round off on slotsize
-          reduceResourceReqt = (int) Math.ceil((float) 
-              reduceResourceReqt/minSlotMemSize) * minSlotMemSize;
           eventHandler.handle(new JobHistoryEvent(jobId, 
               new NormalizedResourceEvent(
                   org.apache.hadoop.mapreduce.TaskType.REDUCE,

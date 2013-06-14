@@ -557,6 +557,9 @@ Release 2.1.0-beta - UNRELEASED
 
     MAPREDUCE-5319. Set user.name in job.xml. (Xuan Gong via acmurthy)
 
+    MAPREDUCE-5310. MRAM should not normalize allocation request capabilities.
+    (tucu)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
