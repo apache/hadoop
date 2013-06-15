@@ -134,8 +134,8 @@ public interface NamenodeProtocol {
    * @return  {@link NamenodeRegistration} of the node,
    *          which this node has just registered with.
    */
-  public NamenodeRegistration register(NamenodeRegistration registration)
-  throws IOException;
+  public NamenodeRegistration registerSubordinateNamenode(
+      NamenodeRegistration registration) throws IOException;
 
   /**
    * A request to the active name-node to start a checkpoint.

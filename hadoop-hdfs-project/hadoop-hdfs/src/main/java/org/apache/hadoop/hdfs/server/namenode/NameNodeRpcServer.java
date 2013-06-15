@@ -383,8 +383,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // NamenodeProtocol
-  public NamenodeRegistration register(NamenodeRegistration registration)
-  throws IOException {
+  public NamenodeRegistration registerSubordinateNamenode(
+      NamenodeRegistration registration) throws IOException {
     namesystem.checkSuperuserPrivilege();
     verifyLayoutVersion(registration.getVersion());
     NamenodeRegistration myRegistration = nn.setRegistration();
