@@ -156,6 +156,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-398. Make it possible to specify hard locality constraints in resource
     requests for CapacityScheduler. (acmurthy)
 
+    YARN-781. Exposing LOGDIR in all containers' environment which should be used
+    by containers for logging purposes. (Jian He via vinodkv)
+
   IMPROVEMENTS
 
     YARN-365. Change NM heartbeat handling to not generate a scheduler event

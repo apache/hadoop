@@ -177,7 +177,15 @@ public interface ApplicationConstants {
      * $LOCAL_DIRS
      * Final, exported by NodeManager and non-modifiable by users.
      */
-    LOCAL_DIRS("LOCAL_DIRS");
+    LOCAL_DIRS("LOCAL_DIRS"),
+
+    /**
+     * $LOG_DIRS
+     * Final, exported by NodeManager and non-modifiable by users.
+     * Comma separate list of directories that the container should use for
+     * logging.
+     */
+    LOG_DIRS("LOG_DIRS");
 
     private final String variable;
     private Environment(String variable) {
