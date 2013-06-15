@@ -188,7 +188,7 @@ public abstract class RMCommunicator extends AbstractService
       FinishApplicationMasterRequest request =
           recordFactory.newRecordInstance(FinishApplicationMasterRequest.class);
       request.setAppAttemptId(this.applicationAttemptId);
-      request.setFinishApplicationStatus(finishState);
+      request.setFinalApplicationStatus(finishState);
       request.setDiagnostics(sb.toString());
       request.setTrackingUrl(historyUrl);
       scheduler.finishApplicationMaster(request);

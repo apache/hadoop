@@ -54,7 +54,7 @@ public abstract class FinishApplicationMasterRequest {
     FinishApplicationMasterRequest request =
         Records.newRecord(FinishApplicationMasterRequest.class);
     request.setAppAttemptId(appAttemptId);
-    request.setFinishApplicationStatus(finalAppStatus);
+    request.setFinalApplicationStatus(finalAppStatus);
     request.setDiagnostics(diagnostics);
     request.setTrackingUrl(url);
     return request;
@@ -89,12 +89,12 @@ public abstract class FinishApplicationMasterRequest {
   public abstract FinalApplicationStatus getFinalApplicationStatus();
 
   /**
-   * Set the <em>finish state</em> of the <code>ApplicationMaster</code>
-   * @param finishState <em>finish state</em> of the <code>ApplicationMaster</code>
+   * Set the <em>final state</em> of the <code>ApplicationMaster</code>
+   * @param finalState <em>final state</em> of the <code>ApplicationMaster</code>
    */
   @Public
   @Stable
-  public abstract void setFinishApplicationStatus(FinalApplicationStatus finishState);
+  public abstract void setFinalApplicationStatus(FinalApplicationStatus finalState);
 
   /**
    * Get <em>diagnostic information</em> on application failure.

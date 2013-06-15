@@ -153,7 +153,7 @@ public class MockAM {
     FinishApplicationMasterRequest req = Records.newRecord(FinishApplicationMasterRequest.class);
     req.setAppAttemptId(attemptId);
     req.setDiagnostics("");
-    req.setFinishApplicationStatus(FinalApplicationStatus.SUCCEEDED);
+    req.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
     req.setTrackingUrl("");
     amRMProtocol.finishApplicationMaster(req);
   }

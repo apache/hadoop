@@ -116,7 +116,7 @@ public class TestApplicationTokens {
           Records.newRecord(FinishApplicationMasterRequest.class);
       finishAMRequest.setAppAttemptId(applicationAttemptId);
       finishAMRequest
-        .setFinishApplicationStatus(FinalApplicationStatus.SUCCEEDED);
+        .setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
       finishAMRequest.setDiagnostics("diagnostics");
       finishAMRequest.setTrackingUrl("url");
       rmClient.finishApplicationMaster(finishAMRequest);
