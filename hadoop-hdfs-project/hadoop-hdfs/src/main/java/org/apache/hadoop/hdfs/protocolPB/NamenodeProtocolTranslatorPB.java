@@ -167,12 +167,13 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   }
 
   @Override
-  public NamenodeRegistration register(NamenodeRegistration registration)
-      throws IOException {
+  public NamenodeRegistration registerSubordinateNamenode(
+      NamenodeRegistration registration) throws IOException {
     RegisterRequestProto req = RegisterRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration)).build();
     try {
-      return PBHelper.convert(rpcProxy.register(NULL_CONTROLLER, req)
+      return PBHelper.convert(
+          rpcProxy.registerSubordinateNamenode(NULL_CONTROLLER, req)
           .getRegistration());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

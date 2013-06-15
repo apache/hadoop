@@ -38,6 +38,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-2802. Add HDFS Snapshot feature.  (See breakdown of tasks below for
     subtasks and contributors)
 
+    HDFS-4866. Protocol buffer support cannot compile under C. (Arpit Agarwal via
+    cnauroth)
+
   NEW FEATURES
 
     HDFS-1804. Add a new block-volume device choosing policy that looks at
