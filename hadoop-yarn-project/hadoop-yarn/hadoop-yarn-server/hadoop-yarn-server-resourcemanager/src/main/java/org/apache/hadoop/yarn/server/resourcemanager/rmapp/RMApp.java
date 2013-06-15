@@ -168,9 +168,9 @@ public interface RMApp extends EventHandler<RMAppEvent> {
 
   /**
    * The final finish state of the AM when unregistering as in
-   * {@link FinishApplicationMasterRequest#setFinishApplicationStatus(FinalApplicationStatus)}.
+   * {@link FinishApplicationMasterRequest#setFinalApplicationStatus(FinalApplicationStatus)}.
    * @return the final finish state of the AM as set in
-   * {@link FinishApplicationMasterRequest#setFinishApplicationStatus(FinalApplicationStatus)}.
+   * {@link FinishApplicationMasterRequest#setFinalApplicationStatus(FinalApplicationStatus)}.
    */
   FinalApplicationStatus getFinalApplicationStatus();
 
