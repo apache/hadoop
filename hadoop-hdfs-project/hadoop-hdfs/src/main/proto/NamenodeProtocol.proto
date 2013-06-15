@@ -225,7 +225,7 @@ service NamenodeProtocolService {
   /**
    * Request to register a sub-ordinate namenode
    */
-  rpc register(RegisterRequestProto) returns(RegisterResponseProto);
+  rpc registerSubordinateNamenode(RegisterRequestProto) returns(RegisterResponseProto);
 
   /**
    * Request to start a checkpoint. 
