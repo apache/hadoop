@@ -132,9 +132,10 @@ public class ContainerLaunch implements Callable<Integer> {
       // Before the container script gets written out.
       List<String> newCmds = new ArrayList<String>(command.size());
       String appIdStr = app.getAppId().toString();
+      String relativeContainerLogDir = ContainerLaunch
+          .getRelativeContainerLogDir(appIdStr, containerIdStr);
       Path containerLogDir =
-          dirsHandler.getLogPathForWrite(ContainerLaunch
-              .getRelativeContainerLogDir(appIdStr, containerIdStr), false);
+          dirsHandler.getLogPathForWrite(relativeContainerLogDir, false);
       for (String str : command) {
         // TODO: Should we instead work via symlinks without this grammar?
         newCmds.add(str.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
@@ -189,6 +190,11 @@ public class ContainerLaunch implements Callable<Integer> {
       List<String> localDirs = dirsHandler.getLocalDirs();
       List<String> logDirs = dirsHandler.getLogDirs();
 
+      List<String> containerLogDirs = new ArrayList<String>();
+      for( String logDir : logDirs) {
+        containerLogDirs.add(logDir + Path.SEPARATOR + relativeContainerLogDir);
+      }
+
       if (!dirsHandler.areDisksHealthy()) {
         ret = ContainerExitStatus.DISKS_FAILED;
         throw new IOException("Most of the disks failed. "
@@ -215,7 +221,8 @@ public class ContainerLaunch implements Callable<Integer> {
                 FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
 
         // Sanitize the container's environment
-        sanitizeEnv(environment, containerWorkDir, appDirs, localResources);
+        sanitizeEnv(environment, containerWorkDir, appDirs, containerLogDirs,
+          localResources);
         
         // Write out the environment
         writeLaunchEnv(containerScriptOutStream, environment, localResources,
@@ -543,9 +550,9 @@ public class ContainerLaunch implements Callable<Integer> {
     }
   }
   
-  public void sanitizeEnv(Map<String, String> environment, 
-      Path pwd, List<Path> appDirs, Map<Path, List<String>> resources)
-      throws IOException {
+  public void sanitizeEnv(Map<String, String> environment, Path pwd,
+      List<Path> appDirs, List<String> containerLogDirs,
+      Map<Path, List<String>> resources) throws IOException {
     /**
      * Non-modifiable environment variables
      */
@@ -564,6 +571,9 @@ public class ContainerLaunch implements Callable<Integer> {
 
     environment.put(Environment.LOCAL_DIRS.name(),
         StringUtils.join(",", appDirs));
+
+    environment.put(Environment.LOG_DIRS.name(),
+      StringUtils.join(",", containerLogDirs));
 
     putEnvIfNotNull(environment, Environment.USER.name(), container.getUser());
     

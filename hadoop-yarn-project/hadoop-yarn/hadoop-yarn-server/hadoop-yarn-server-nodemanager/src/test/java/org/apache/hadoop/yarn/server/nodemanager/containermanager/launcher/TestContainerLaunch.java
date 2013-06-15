@@ -248,12 +248,20 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     // Now verify the contents of the file
     List<String> localDirs = dirsHandler.getLocalDirs();
+    List<String> logDirs = dirsHandler.getLogDirs();
+
     List<Path> appDirs = new ArrayList<Path>(localDirs.size());
     for (String localDir : localDirs) {
       Path usersdir = new Path(localDir, ContainerLocalizer.USERCACHE);
       Path userdir = new Path(usersdir, user);
       Path appsdir = new Path(userdir, ContainerLocalizer.APPCACHE);
       appDirs.add(new Path(appsdir, appId.toString()));
+    }
+    List<String> containerLogDirs = new ArrayList<String>();
+    String relativeContainerLogDir = ContainerLaunch
+        .getRelativeContainerLogDir(appId.toString(), cId.toString());
+    for(String logDir : logDirs){
+      containerLogDirs.add(logDir + Path.SEPARATOR + relativeContainerLogDir);
     }
     BufferedReader reader =
         new BufferedReader(new FileReader(processStartFile));
@@ -274,6 +282,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       .getEnvironment().get(Environment.NM_HTTP_PORT.name()));
     Assert.assertEquals(StringUtils.join(",", appDirs), containerLaunchContext
         .getEnvironment().get(Environment.LOCAL_DIRS.name()));
+    Assert.assertEquals(StringUtils.join(",", containerLogDirs),
+      containerLaunchContext.getEnvironment().get(Environment.LOG_DIRS.name()));
+
     // Get the pid of the process
     String pid = reader.readLine().trim();
     // No more lines
