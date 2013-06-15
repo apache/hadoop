@@ -150,13 +150,13 @@ public class FinishApplicationMasterRequestPBImpl extends FinishApplicationMaste
   }
 
   @Override
-  public void setFinishApplicationStatus(FinalApplicationStatus finishState) {
+  public void setFinalApplicationStatus(FinalApplicationStatus finalState) {
     maybeInitBuilder();
-    if (finishState == null) {
+    if (finalState == null) {
       builder.clearFinalApplicationStatus();
       return;
     }
-    builder.setFinalApplicationStatus(convertToProtoFormat(finishState));
+    builder.setFinalApplicationStatus(convertToProtoFormat(finalState));
   }
 
   private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {

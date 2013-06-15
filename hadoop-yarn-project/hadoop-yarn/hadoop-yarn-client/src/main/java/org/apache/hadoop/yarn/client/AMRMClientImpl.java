@@ -272,7 +272,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
     FinishApplicationMasterRequest request = recordFactory
                   .newRecordInstance(FinishApplicationMasterRequest.class);
     request.setAppAttemptId(appAttemptId);
-    request.setFinishApplicationStatus(appStatus);
+    request.setFinalApplicationStatus(appStatus);
     if(appMessage != null) {
       request.setDiagnostics(appMessage);
     }

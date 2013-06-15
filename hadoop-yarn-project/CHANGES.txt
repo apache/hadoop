@@ -102,6 +102,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-806. Moved ContainerExitStatus from yarn.api to yarn.api.records. (Jian
     He via vinodkv)
 
+    YARN-821. Renamed setFinishApplicationStatus to setFinalApplicationStatus in
+    FinishApplicationMasterRequest for consistency. (Jian He via vinodk)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
