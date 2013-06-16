@@ -82,7 +82,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.security.client.RMTokenSelector;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenSelector;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
@@ -187,7 +187,7 @@ public class YARNRunner implements ClientProtocol {
        * note that get delegation token was called. Again this is hack for oozie
        * to make sure we add history server delegation tokens to the credentials
        */
-      RMTokenSelector tokenSelector = new RMTokenSelector();
+      RMDelegationTokenSelector tokenSelector = new RMDelegationTokenSelector();
       Text service = SecurityUtil.buildTokenService(resMgrDelegate
           .getConnectAddress());
       if (tokenSelector.selectToken(service, ts.getAllTokens()) != null) {

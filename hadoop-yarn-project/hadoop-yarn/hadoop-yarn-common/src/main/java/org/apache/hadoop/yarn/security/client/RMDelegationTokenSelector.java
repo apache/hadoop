@@ -27,11 +27,11 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
 
-public class RMTokenSelector implements
+public class RMDelegationTokenSelector implements
     TokenSelector<RMDelegationTokenIdentifier> {
 
   private static final Log LOG = LogFactory
-      .getLog(RMTokenSelector.class);
+      .getLog(RMDelegationTokenSelector.class);
 
   @SuppressWarnings("unchecked")
   public Token<RMDelegationTokenIdentifier> selectToken(Text service,
