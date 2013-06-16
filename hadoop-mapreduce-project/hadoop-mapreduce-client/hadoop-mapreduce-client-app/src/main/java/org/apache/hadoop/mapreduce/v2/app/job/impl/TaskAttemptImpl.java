@@ -122,6 +122,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -1245,9 +1246,9 @@ public abstract class TaskAttemptImpl implements
     int slotMemoryReq =
         taskAttempt.getMemoryRequired(taskAttempt.conf, taskType);
 
-    int minSlotMemSize =
-        taskAttempt.appContext.getClusterInfo().getMinContainerCapability()
-            .getMemory();
+    int minSlotMemSize = taskAttempt.conf.getInt(
+      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
 
     int simSlotsRequired =
         minSlotMemSize == 0 ? 0 : (int) Math.ceil((float) slotMemoryReq

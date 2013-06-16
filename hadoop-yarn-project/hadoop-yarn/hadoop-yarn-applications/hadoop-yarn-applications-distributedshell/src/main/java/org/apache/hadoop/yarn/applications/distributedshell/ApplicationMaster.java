@@ -463,22 +463,11 @@ public class ApplicationMaster {
             appMasterTrackingUrl);
     // Dump out information about cluster capability as seen by the
     // resource manager
-    int minMem = response.getMinimumResourceCapability().getMemory();
     int maxMem = response.getMaximumResourceCapability().getMemory();
-    LOG.info("Min mem capabililty of resources in this cluster " + minMem);
     LOG.info("Max mem capabililty of resources in this cluster " + maxMem);
 
-    // A resource ask has to be atleast the minimum of the capability of the
-    // cluster, the value has to be a multiple of the min value and cannot
-    // exceed the max.
-    // If it is not an exact multiple of min, the RM will allocate to the
-    // nearest multiple of min
-    if (containerMemory < minMem) {
-      LOG.info("Container memory specified below min threshold of cluster."
-          + " Using min value." + ", specified=" + containerMemory + ", min="
-          + minMem);
-      containerMemory = minMem;
-    } else if (containerMemory > maxMem) {
+    // A resource ask cannot exceed the max.
+    if (containerMemory > maxMem) {
       LOG.info("Container memory specified above max threshold of cluster."
           + " Using max value." + ", specified=" + containerMemory + ", max="
           + maxMem);

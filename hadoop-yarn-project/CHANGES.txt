@@ -105,6 +105,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-821. Renamed setFinishApplicationStatus to setFinalApplicationStatus in
     FinishApplicationMasterRequest for consistency. (Jian He via vinodk)
 
+    YARN-787. Removed minimum resource from RegisterApplicationMasterResponse.
+    (tucu via acmurthy)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

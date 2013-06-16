@@ -204,8 +204,6 @@ public class MRAppBenchmark {
                       throws IOException {
                 RegisterApplicationMasterResponse response =
                     Records.newRecord(RegisterApplicationMasterResponse.class);
-                response.setMinimumResourceCapability(Resource.newInstance(
-                  1024, 1));
                 response.setMaximumResourceCapability(Resource.newInstance(
                   10240, 1));
                 return response;

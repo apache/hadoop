@@ -210,8 +210,6 @@ public class ApplicationMasterService extends AbstractService implements
       // Pick up min/max resource from scheduler...
       RegisterApplicationMasterResponse response = recordFactory
           .newRecordInstance(RegisterApplicationMasterResponse.class);
-      response.setMinimumResourceCapability(rScheduler
-          .getMinimumResourceCapability());
       response.setMaximumResourceCapability(rScheduler
           .getMaximumResourceCapability());
       response.setApplicationACLs(app.getRMAppAttempt(applicationAttemptId)
