@@ -36,7 +36,7 @@ public class TestShellCommandFencer {
   private ShellCommandFencer fencer = createFencer();
   private static final HAServiceTarget TEST_TARGET =
       new DummyHAService(HAServiceState.ACTIVE,
-          new InetSocketAddress("host", 1234));
+          new InetSocketAddress("dummyhost", 1234));
   
   @BeforeClass
   public static void setupLogSpy() {
@@ -140,13 +140,13 @@ public class TestShellCommandFencer {
   @Test
   public void testTargetAsEnvironment() {
     if (!Shell.WINDOWS) {
-      fencer.tryFence(TEST_TARGET, "echo $target_host $target_port $target_address");
+      fencer.tryFence(TEST_TARGET, "echo $target_host $target_port");
       Mockito.verify(ShellCommandFencer.LOG).info(
-          Mockito.endsWith("echo $ta...t_address: host 1234 host:1234"));
+          Mockito.endsWith("echo $ta...rget_port: dummyhost 1234"));
     } else {
-      fencer.tryFence(TEST_TARGET, "echo %target_host% %target_port% %target_address%");
+      fencer.tryFence(TEST_TARGET, "echo %target_host% %target_port%");
       Mockito.verify(ShellCommandFencer.LOG).info(
-          Mockito.endsWith("echo %ta..._address%: host 1234 host:1234"));
+          Mockito.endsWith("echo %ta...get_port%: dummyhost 1234"));
     }
   }
 

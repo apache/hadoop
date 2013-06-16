@@ -585,6 +585,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9638. Parallel test changes caused invalid test path for several HDFS
     tests on Windows (Andrey Klochkov via cnauroth)
 
+    HADOOP-9632. TestShellCommandFencer will fail if there is a 'host' machine in
+    the network. (Chuan Liu via cnauroth)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
