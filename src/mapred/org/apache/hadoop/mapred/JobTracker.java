@@ -2366,7 +2366,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         if (fs == null) {
           fs = mrOwner.doAs(new PrivilegedExceptionAction<FileSystem>() {
             public FileSystem run() throws IOException {
-              return FileSystem.get(conf);
+              Path systemDir = new Path(conf.get("mapred.system.dir",
+                "/tmp/hadoop/mapred/system"));
+              return FileSystem.get(systemDir.toUri(), conf);
           }});
         }
         // clean up the system dir, which will only work if hdfs is out of 
