@@ -267,6 +267,51 @@ public class TestAMRMClient {
     assertTrue(matches.size() == 1);
     assertTrue(matches.get(0).size() == matchSize);    
   }
+  
+  @Test (timeout=60000)
+  public void testAMRMClientMatchingFitInferredRack() throws YarnException, IOException {
+    AMRMClientImpl<StoredContainerRequest> amClient = null;
+    try {
+      // start am rm client
+      amClient = new AMRMClientImpl<StoredContainerRequest>(attemptId);
+      amClient.init(conf);
+      amClient.start();
+      amClient.registerApplicationMaster("Host", 10000, "");
+      
+      Resource capability = Resource.newInstance(1024, 2);
+
+      StoredContainerRequest storedContainer1 = 
+          new StoredContainerRequest(capability, nodes, null, priority);
+      amClient.addContainerRequest(storedContainer1);
+
+      // verify matching with original node and inferred rack
+      List<? extends Collection<StoredContainerRequest>> matches;
+      StoredContainerRequest storedRequest;
+      // exact match node
+      matches = amClient.getMatchingRequests(priority, node, capability);
+      verifyMatches(matches, 1);
+      storedRequest = matches.get(0).iterator().next();
+      assertTrue(storedContainer1 == storedRequest);
+      // inferred match rack
+      matches = amClient.getMatchingRequests(priority, rack, capability);
+      verifyMatches(matches, 1);
+      storedRequest = matches.get(0).iterator().next();
+      assertTrue(storedContainer1 == storedRequest);
+      
+      // inferred rack match no longer valid after request is removed
+      amClient.removeContainerRequest(storedContainer1);
+      matches = amClient.getMatchingRequests(priority, rack, capability);
+      assertTrue(matches.isEmpty());
+      
+      amClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED,
+          null, null);
+
+    } finally {
+      if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
+        amClient.stop();
+      }
+    }
+  }
 
   @Test (timeout=60000)
   public void testAMRMClientMatchStorage() throws YarnException, IOException {

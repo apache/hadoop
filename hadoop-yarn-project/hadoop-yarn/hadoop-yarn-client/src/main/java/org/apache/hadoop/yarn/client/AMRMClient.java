@@ -42,23 +42,36 @@ import com.google.common.collect.ImmutableList;
 public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Service {
 
   /**
-   * Object to represent container request for resources.
-   * Resources may be localized to nodes and racks.
-   * Resources may be assigned priorities.
-   * All getters return unmodifiable collections.
-   * Can ask for multiple containers of a given type.
+   * Object to represent container request for resources. Scheduler
+   * documentation should be consulted for the specifics of how the parameters
+   * are honored.
+   * All getters return immutable values.
+   * 
+   * @param capability
+   *    The {@link Resource} to be requested for each container.
+   * @param nodes
+   *    Any hosts to request that the containers are placed on.
+   * @param racks
+   *    Any racks to request that the containers are placed on. The racks
+   *    corresponding to any hosts requested will be automatically added to
+   *    this list.
+   * @param priority
+   *    The priority at which to request the containers. Higher priorities have
+   *    lower numerical values.
+   * @param containerCount
+   *    The number of containers to request.
    */
   public static class ContainerRequest {
     final Resource capability;
-    final ImmutableList<String> hosts;
-    final ImmutableList<String> racks;
+    final List<String> nodes;
+    final List<String> racks;
     final Priority priority;
     final int containerCount;
         
-    public ContainerRequest(Resource capability, String[] hosts,
+    public ContainerRequest(Resource capability, String[] nodes,
         String[] racks, Priority priority, int containerCount) {
       this.capability = capability;
-      this.hosts = (hosts != null ? ImmutableList.copyOf(hosts) : null);
+      this.nodes = (nodes != null ? ImmutableList.copyOf(nodes) : null);
       this.racks = (racks != null ? ImmutableList.copyOf(racks) : null);
       this.priority = priority;
       this.containerCount = containerCount;
@@ -68,8 +81,8 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
       return capability;
     }
     
-    public List<String> getHosts() {
-      return hosts;
+    public List<String> getNodes() {
+      return nodes;
     }
     
     public List<String> getRacks() {
@@ -103,9 +116,9 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * AMRMClient can remove it from its internal store.
    */
   public static class StoredContainerRequest extends ContainerRequest {    
-    public StoredContainerRequest(Resource capability, String[] hosts,
+    public StoredContainerRequest(Resource capability, String[] nodes,
         String[] racks, Priority priority) {
-      super(capability, hosts, racks, priority, 1);
+      super(capability, nodes, racks, priority, 1);
     }
   }
   

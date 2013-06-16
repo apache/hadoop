@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -64,6 +65,9 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.util.RackResolver;
+
+import com.google.common.base.Joiner;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -139,7 +143,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
   
   //Key -> Priority
   //Value -> Map
-  //Key->ResourceName (e.g., hostname, rackname, *)
+  //Key->ResourceName (e.g., nodename, rackname, *)
   //Value->Map
   //Key->Resource Capability
   //Value->ResourceRequest
@@ -160,6 +164,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    RackResolver.init(conf);
     super.serviceInit(conf);
   }
 
@@ -309,20 +314,35 @@ public class AMRMClientImpl<T extends ContainerRequest>
   
   @Override
   public synchronized void addContainerRequest(T req) {
-    // Create resource requests
-    // add check for dup locations
-    if (req.hosts != null) {
-      for (String host : req.hosts) {
-        addResourceRequest(req.priority, host, req.capability,
+    Set<String> allRacks = new HashSet<String>();
+    if (req.racks != null) {
+      allRacks.addAll(req.racks);
+      if(req.racks.size() != allRacks.size()) {
+        Joiner joiner = Joiner.on(',');
+        LOG.warn("ContainerRequest has duplicate racks: "
+            + joiner.join(req.racks));
+      }
+    }
+    allRacks.addAll(resolveRacks(req.nodes));
+    
+    if (req.nodes != null) {
+      HashSet<String> dedupedNodes = new HashSet<String>(req.nodes);
+      if(dedupedNodes.size() != req.nodes.size()) {
+        Joiner joiner = Joiner.on(',');
+        LOG.warn("ContainerRequest has duplicate nodes: "
+            + joiner.join(req.nodes));        
+      }
+      for (String node : dedupedNodes) {
+        // Ensure node requests are accompanied by requests for
+        // corresponding rack
+        addResourceRequest(req.priority, node, req.capability,
             req.containerCount, req);
       }
     }
 
-    if (req.racks != null) {
-      for (String rack : req.racks) {
-        addResourceRequest(req.priority, rack, req.capability,
-            req.containerCount, req);
-      }
+    for (String rack : allRacks) {
+      addResourceRequest(req.priority, rack, req.capability,
+          req.containerCount, req);
     }
 
     // Off-switch
@@ -332,19 +352,23 @@ public class AMRMClientImpl<T extends ContainerRequest>
 
   @Override
   public synchronized void removeContainerRequest(T req) {
+    Set<String> allRacks = new HashSet<String>();
+    if (req.racks != null) {
+      allRacks.addAll(req.racks);
+    }
+    allRacks.addAll(resolveRacks(req.nodes));
+
     // Update resource requests
-    if (req.hosts != null) {
-      for (String hostName : req.hosts) {
-        decResourceRequest(req.priority, hostName, req.capability,
+    if (req.nodes != null) {
+      for (String node : new HashSet<String>(req.nodes)) {
+        decResourceRequest(req.priority, node, req.capability,
             req.containerCount, req);
       }
     }
 
-    if (req.racks != null) {
-      for (String rack : req.racks) {
-        decResourceRequest(req.priority, rack, req.capability,
-            req.containerCount, req);
-      }
+    for (String rack : allRacks) {
+      decResourceRequest(req.priority, rack, req.capability,
+          req.containerCount, req);
     }
 
     decResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
@@ -402,6 +426,24 @@ public class AMRMClientImpl<T extends ContainerRequest>
     
     // no match found
     return list;          
+  }
+  
+  private Set<String> resolveRacks(List<String> nodes) {
+    Set<String> racks = new HashSet<String>();    
+    if (nodes != null) {
+      for (String node : nodes) {
+        // Ensure node requests are accompanied by requests for
+        // corresponding rack
+        String rack = RackResolver.resolve(node).getNetworkLocation();
+        if (rack == null) {
+          LOG.warn("Failed to resolve rack for node " + node + ".");
+        } else {
+          racks.add(rack);
+        }
+      }
+    }
+    
+    return racks;
   }
   
   private void addResourceRequestToAsk(ResourceRequest remoteRequest) {
