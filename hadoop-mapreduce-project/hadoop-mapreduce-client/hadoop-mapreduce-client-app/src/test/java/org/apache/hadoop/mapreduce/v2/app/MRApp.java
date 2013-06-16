@@ -220,13 +220,9 @@ public class MRApp extends MRAppMaster {
     
     super.serviceInit(conf);
     if (this.clusterInfo != null) {
-      getContext().getClusterInfo().setMinContainerCapability(
-          this.clusterInfo.getMinContainerCapability());
       getContext().getClusterInfo().setMaxContainerCapability(
           this.clusterInfo.getMaxContainerCapability());
     } else {
-      getContext().getClusterInfo().setMinContainerCapability(
-          Resource.newInstance(1024, 1));
       getContext().getClusterInfo().setMaxContainerCapability(
           Resource.newInstance(10240, 1));
     }

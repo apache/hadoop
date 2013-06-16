@@ -22,25 +22,14 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
 
 public class ClusterInfo {
-  private Resource minContainerCapability;
   private Resource maxContainerCapability;
 
   public ClusterInfo() {
-    this.minContainerCapability = Records.newRecord(Resource.class);
     this.maxContainerCapability = Records.newRecord(Resource.class);
   }
 
-  public ClusterInfo(Resource minCapability, Resource maxCapability) {
-    this.minContainerCapability = minCapability;
+  public ClusterInfo(Resource maxCapability) {
     this.maxContainerCapability = maxCapability;
-  }
-
-  public Resource getMinContainerCapability() {
-    return minContainerCapability;
-  }
-
-  public void setMinContainerCapability(Resource minContainerCapability) {
-    this.minContainerCapability = minContainerCapability;
   }
 
   public Resource getMaxContainerCapability() {

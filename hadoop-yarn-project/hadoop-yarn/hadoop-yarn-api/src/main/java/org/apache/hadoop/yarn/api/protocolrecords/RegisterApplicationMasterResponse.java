@@ -51,24 +51,10 @@ public abstract class RegisterApplicationMasterResponse {
       Map<ApplicationAccessType, String> acls) {
     RegisterApplicationMasterResponse response =
         Records.newRecord(RegisterApplicationMasterResponse.class);
-    response.setMinimumResourceCapability(minCapability);
     response.setMaximumResourceCapability(maxCapability);
     response.setApplicationACLs(acls);
     return response;
   }
-
-  /**
-   * Get the minimum capability for any {@link Resource} allocated by the 
-   * <code>ResourceManager</code> in the cluster.
-   * @return minimum capability of allocated resources in the cluster
-   */
-  @Public
-  @Stable
-  public abstract Resource getMinimumResourceCapability();
-  
-  @Private
-  @Unstable
-  public abstract void setMinimumResourceCapability(Resource capability);
   
   /**
    * Get the maximum capability for any {@link Resource} allocated by the 
