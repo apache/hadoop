@@ -424,4 +424,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
         hosts, orig.racks, orig.priority); 
     return newReq;
   }
+  
+  public Set<String> getBlacklistedNodes() {
+    return blacklistedNodes;
+  }
 }

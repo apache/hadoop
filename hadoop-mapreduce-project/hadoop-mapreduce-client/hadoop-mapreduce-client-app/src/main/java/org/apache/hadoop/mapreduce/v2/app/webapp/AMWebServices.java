@@ -45,6 +45,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AppInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptsInfo;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.BlacklistedNodesInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobCounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobInfo;
@@ -215,6 +216,14 @@ public class AMWebServices {
   public AppInfo getAppInfo() {
     init();
     return new AppInfo(this.app, this.app.context);
+  }
+  
+  @GET
+  @Path("/blacklistednodes")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public BlacklistedNodesInfo getBlacklistedNodes() {
+    init();
+    return new BlacklistedNodesInfo(this.app.context);
   }
 
   @GET
