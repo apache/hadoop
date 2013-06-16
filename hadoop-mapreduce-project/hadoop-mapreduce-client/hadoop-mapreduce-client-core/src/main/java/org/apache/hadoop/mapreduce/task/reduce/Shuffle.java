@@ -49,7 +49,7 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
   private ShuffleClientMetrics metrics;
   private TaskUmbilicalProtocol umbilical;
   
-  private ShuffleScheduler<K,V> scheduler;
+  private ShuffleSchedulerImpl<K,V> scheduler;
   private MergeManager<K, V> merger;
   private Throwable throwable = null;
   private String throwingThreadName = null;
@@ -70,8 +70,8 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     this.taskStatus = context.getStatus();
     this.reduceTask = context.getReduceTask();
     
-    scheduler = new ShuffleScheduler<K,V>(jobConf, taskStatus, this,
-        copyPhase, context.getShuffledMapsCounter(),
+    scheduler = new ShuffleSchedulerImpl<K, V>(jobConf, taskStatus, reduceId,
+        this, copyPhase, context.getShuffledMapsCounter(),
         context.getReduceShuffleBytes(), context.getFailedShuffleCounter());
     merger = createMergeManager(context);
   }

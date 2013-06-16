@@ -43,7 +43,8 @@ import org.mockito.InOrder;
 public class TestEventFetcher {
 
   @Test
-  public void testConsecutiveFetch() throws IOException {
+  public void testConsecutiveFetch()
+      throws IOException, InterruptedException {
     final int MAX_EVENTS_TO_FETCH = 100;
     TaskAttemptID tid = new TaskAttemptID("12345", 1, TaskType.REDUCE, 1, 1);
 
@@ -63,7 +64,8 @@ public class TestEventFetcher {
       .thenReturn(getMockedCompletionEventsUpdate(MAX_EVENTS_TO_FETCH*2, 3));
 
     @SuppressWarnings("unchecked")
-    ShuffleScheduler<String,String> scheduler = mock(ShuffleScheduler.class);
+    ShuffleScheduler<String,String> scheduler =
+      mock(ShuffleScheduler.class);
     ExceptionReporter reporter = mock(ExceptionReporter.class);
 
     EventFetcherForTest<String,String> ef =
@@ -79,8 +81,8 @@ public class TestEventFetcher {
         eq(MAX_EVENTS_TO_FETCH), eq(MAX_EVENTS_TO_FETCH), eq(tid));
     inOrder.verify(umbilical).getMapCompletionEvents(any(JobID.class),
         eq(MAX_EVENTS_TO_FETCH*2), eq(MAX_EVENTS_TO_FETCH), eq(tid));
-    verify(scheduler, times(MAX_EVENTS_TO_FETCH*2 + 3)).addKnownMapOutput(
-        anyString(), anyString(), any(TaskAttemptID.class));
+    verify(scheduler, times(MAX_EVENTS_TO_FETCH*2 + 3)).resolve(
+        any(TaskCompletionEvent.class));
   }
 
   private MapTaskCompletionEventsUpdate getMockedCompletionEventsUpdate(
@@ -108,7 +110,8 @@ public class TestEventFetcher {
     }
 
     @Override
-    public int getMapCompletionEvents() throws IOException {
+    public int getMapCompletionEvents()
+        throws IOException, InterruptedException {
       return super.getMapCompletionEvents();
     }
 

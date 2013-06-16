@@ -285,6 +285,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5199. Removing ApplicationTokens file as it is no longer needed.
     (Daryn Sharp via vinodkv)
 
+    MAPREDUCE-5192. Allow for alternate resolutions of TaskCompletionEvents.
+    (cdouglas via acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
