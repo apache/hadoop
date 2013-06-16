@@ -1424,8 +1424,6 @@ public class TestRecovery {
     when(minContainerRequirements.getMemory()).thenReturn(1000);
 
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
-    when(clusterInfo.getMinContainerCapability()).thenReturn(
-        minContainerRequirements);
     AppContext appContext = mock(AppContext.class);
     when(appContext.getClusterInfo()).thenReturn(clusterInfo);
 

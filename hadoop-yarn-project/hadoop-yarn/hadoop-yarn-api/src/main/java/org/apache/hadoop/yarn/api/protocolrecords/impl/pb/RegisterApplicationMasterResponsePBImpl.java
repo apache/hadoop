@@ -42,7 +42,6 @@ public class RegisterApplicationMasterResponsePBImpl extends
   RegisterApplicationMasterResponseProto.Builder builder = null;
   boolean viaProto = false;
 
-  private Resource minimumResourceCapability;
   private Resource maximumResourceCapability;
   private Map<ApplicationAccessType, String> applicationACLS = null;
 
@@ -91,10 +90,6 @@ public class RegisterApplicationMasterResponsePBImpl extends
   }
 
   private void mergeLocalToBuilder() {
-    if (this.minimumResourceCapability != null) {
-      builder.setMinimumCapability(
-          convertToProtoFormat(this.minimumResourceCapability));
-    }
     if (this.maximumResourceCapability != null) {
       builder.setMaximumCapability(
           convertToProtoFormat(this.maximumResourceCapability));
@@ -128,21 +123,6 @@ public class RegisterApplicationMasterResponsePBImpl extends
   }
 
   @Override
-  public Resource getMinimumResourceCapability() {
-    if (this.minimumResourceCapability != null) {
-      return this.minimumResourceCapability;
-    }
-
-    RegisterApplicationMasterResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasMinimumCapability()) {
-      return null;
-    }
-
-    this.minimumResourceCapability = convertFromProtoFormat(p.getMinimumCapability());
-    return this.minimumResourceCapability;
-  }
-
-  @Override
   public void setMaximumResourceCapability(Resource capability) {
     maybeInitBuilder();
     if(maximumResourceCapability == null) {
@@ -150,16 +130,6 @@ public class RegisterApplicationMasterResponsePBImpl extends
     }
     this.maximumResourceCapability = capability;
   }
-
-  @Override
-  public void setMinimumResourceCapability(Resource capability) {
-    maybeInitBuilder();
-    if(minimumResourceCapability == null) {
-      builder.clearMinimumCapability();
-    }
-    this.minimumResourceCapability = capability;
-  }
-
 
   @Override
   public Map<ApplicationAccessType, String> getApplicationACLs() {
