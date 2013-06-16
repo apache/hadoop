@@ -328,6 +328,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-693. Modified RM to send NMTokens on allocate call so that AMs can then
     use them for authentication with NMs. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-752. In AMRMClient, automatically add corresponding rack requests for 
+    requested nodes. (sandyr via tucu)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
