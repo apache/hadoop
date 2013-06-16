@@ -135,6 +135,8 @@ Release 2.1.0-beta - UNRELEASED
     YARN-829. Renamed RMTokenSelector to be RMDelegationTokenSelector. (Zhijie
     Shen via vinodkv)
 
+    YARN-828. Removed the unsed YarnVersionAnnotation. (Zhijie Shen via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
