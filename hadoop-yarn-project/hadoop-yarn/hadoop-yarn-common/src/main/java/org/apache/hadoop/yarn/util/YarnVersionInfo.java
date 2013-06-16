@@ -25,8 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * This class finds the package info for Yarn and the YarnVersionAnnotation
- * information.
+ * This class finds the package info for Yarn.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
