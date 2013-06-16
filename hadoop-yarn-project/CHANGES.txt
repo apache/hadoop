@@ -137,6 +137,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-828. Removed the unsed YarnVersionAnnotation. (Zhijie Shen via vinodkv)
 
+    YARN-823. Moved RMAdmin from yarn.client to yarn.client.cli and renamed it to
+    be RMAdminCLI. (Jian He via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

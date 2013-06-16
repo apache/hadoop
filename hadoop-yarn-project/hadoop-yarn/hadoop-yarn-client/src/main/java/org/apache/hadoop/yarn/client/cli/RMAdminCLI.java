@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.cli;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,16 +42,16 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 
-public class RMAdmin extends Configured implements Tool {
+public class RMAdminCLI extends Configured implements Tool {
 
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
 
-  public RMAdmin() {
+  public RMAdminCLI() {
     super();
   }
 
-  public RMAdmin(Configuration conf) {
+  public RMAdminCLI(Configuration conf) {
     super(conf);
   }
 
@@ -345,7 +345,7 @@ public class RMAdmin extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    int result = ToolRunner.run(new RMAdmin(), args);
+    int result = ToolRunner.run(new RMAdminCLI(), args);
     System.exit(result);
   }
 }
