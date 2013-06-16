@@ -72,7 +72,7 @@ class Fetcher<K,V> extends Thread {
   private final Counters.Counter wrongMapErrs;
   private final Counters.Counter wrongReduceErrs;
   private final MergeManager<K,V> merger;
-  private final ShuffleScheduler<K,V> scheduler;
+  private final ShuffleSchedulerImpl<K,V> scheduler;
   private final ShuffleClientMetrics metrics;
   private final ExceptionReporter exceptionReporter;
   private final int id;
@@ -90,7 +90,7 @@ class Fetcher<K,V> extends Thread {
   private static SSLFactory sslFactory;
 
   public Fetcher(JobConf job, TaskAttemptID reduceId, 
-                 ShuffleScheduler<K,V> scheduler, MergeManager<K,V> merger,
+                 ShuffleSchedulerImpl<K,V> scheduler, MergeManager<K,V> merger,
                  Reporter reporter, ShuffleClientMetrics metrics,
                  ExceptionReporter exceptionReporter, SecretKey shuffleKey) {
     this.reporter = reporter;

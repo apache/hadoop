@@ -18,7 +18,6 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.IOException;
-import java.net.URI;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,11 +36,9 @@ class EventFetcher<K,V> extends Thread {
   private final TaskUmbilicalProtocol umbilical;
   private final ShuffleScheduler<K,V> scheduler;
   private int fromEventIdx = 0;
-  private int maxEventsToFetch;
-  private ExceptionReporter exceptionReporter = null;
+  private final int maxEventsToFetch;
+  private final ExceptionReporter exceptionReporter;
   
-  private int maxMapRuntime = 0;
-
   private volatile boolean stopped = false;
   
   public EventFetcher(TaskAttemptID reduce,
@@ -113,7 +110,8 @@ class EventFetcher<K,V> extends Thread {
    * from a given event ID.
    * @throws IOException
    */  
-  protected int getMapCompletionEvents() throws IOException {
+  protected int getMapCompletionEvents()
+      throws IOException, InterruptedException {
     
     int numNewMaps = 0;
     TaskCompletionEvent events[] = null;
@@ -129,14 +127,7 @@ class EventFetcher<K,V> extends Thread {
       LOG.debug("Got " + events.length + " map completion events from " +
                fromEventIdx);
 
-      // Check if the reset is required.
-      // Since there is no ordering of the task completion events at the
-      // reducer, the only option to sync with the new jobtracker is to reset
-      // the events index
-      if (update.shouldReset()) {
-        fromEventIdx = 0;
-        scheduler.resetKnownMaps();
-      }
+      assert !update.shouldReset() : "Unexpected legacy state";
 
       // Update the last seen event ID
       fromEventIdx += events.length;
@@ -148,49 +139,14 @@ class EventFetcher<K,V> extends Thread {
       // 3. Remove TIPFAILED maps from neededOutputs since we don't need their
       //    outputs at all.
       for (TaskCompletionEvent event : events) {
-        switch (event.getTaskStatus()) {
-        case SUCCEEDED:
-          URI u = getBaseURI(event.getTaskTrackerHttp());
-          scheduler.addKnownMapOutput(u.getHost() + ":" + u.getPort(),
-              u.toString(),
-              event.getTaskAttemptId());
-          numNewMaps ++;
-          int duration = event.getTaskRunTime();
-          if (duration > maxMapRuntime) {
-            maxMapRuntime = duration;
-            scheduler.informMaxMapRunTime(maxMapRuntime);
-          }
-          break;
-        case FAILED:
-        case KILLED:
-        case OBSOLETE:
-          scheduler.obsoleteMapOutput(event.getTaskAttemptId());
-          LOG.info("Ignoring obsolete output of " + event.getTaskStatus() + 
-              " map-task: '" + event.getTaskAttemptId() + "'");
-          break;
-        case TIPFAILED:
-          scheduler.tipFailed(event.getTaskAttemptId().getTaskID());
-          LOG.info("Ignoring output of failed map TIP: '" +  
-              event.getTaskAttemptId() + "'");
-          break;
+        scheduler.resolve(event);
+        if (TaskCompletionEvent.Status.SUCCEEDED == event.getTaskStatus()) {
+          ++numNewMaps;
         }
       }
     } while (events.length == maxEventsToFetch);
 
     return numNewMaps;
   }
-  
-  private URI getBaseURI(String url) {
-    StringBuffer baseUrl = new StringBuffer(url);
-    if (!url.endsWith("/")) {
-      baseUrl.append("/");
-    }
-    baseUrl.append("mapOutput?job=");
-    baseUrl.append(reduce.getJobID());
-    baseUrl.append("&reduce=");
-    baseUrl.append(reduce.getTaskID().getId());
-    baseUrl.append("&map=");
-    URI u = URI.create(baseUrl.toString());
-    return u;
-  }
+
 }
