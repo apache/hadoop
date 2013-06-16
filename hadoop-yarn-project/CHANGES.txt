@@ -314,6 +314,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-639. Modified Distributed Shell application to start using the new
     NMClient library. (Zhijie Shen via vinodkv)
 
+    YARN-693. Modified RM to send NMTokens on allocate call so that AMs can then
+    use them for authentication with NMs. (Omkar Vinit Joshi via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it

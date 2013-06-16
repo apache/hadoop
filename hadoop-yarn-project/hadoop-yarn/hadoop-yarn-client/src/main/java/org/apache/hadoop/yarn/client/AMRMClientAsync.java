@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -41,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -259,6 +261,19 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
    */
   public int getClusterNodeCount() {
     return client.getClusterNodeCount();
+  }
+
+  /**
+   * It returns the NMToken received on allocate call. It will not communicate
+   * with RM to get NMTokens. On allocate call whenever we receive new token
+   * along with new container AMRMClientAsync will cache this NMToken per node
+   * manager. This map returned should be shared with any application which is
+   * communicating with NodeManager (ex. NMClient / NMClientAsync) using
+   * NMTokens. If a new NMToken is received for the same node manager
+   * then it will be replaced. 
+   */
+  public ConcurrentMap<String, Token> getNMTokens() {
+    return client.getNMTokens();
   }
   
   private class HeartbeatThread extends Thread {

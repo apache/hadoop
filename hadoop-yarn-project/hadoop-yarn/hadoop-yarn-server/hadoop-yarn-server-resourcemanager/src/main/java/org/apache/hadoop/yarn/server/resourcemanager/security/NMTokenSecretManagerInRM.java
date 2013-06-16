@@ -18,17 +18,34 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.NMToken;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
+
+import com.google.common.annotations.VisibleForTesting;
 
 
 public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
@@ -42,6 +59,7 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
   private final Timer timer;
   private final long rollingInterval;
   private final long activationDelay;
+  private final ConcurrentHashMap<ApplicationAttemptId, HashSet<NodeId>> appAttemptToNodeKeyMap;
   
   public NMTokenSecretManagerInRM(Configuration conf) {
     this.conf = conf;
@@ -70,6 +88,8 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
               + " should be more than 2 X "
               + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS);
     }
+    appAttemptToNodeKeyMap =
+        new ConcurrentHashMap<ApplicationAttemptId, HashSet<NodeId>>();
   }
   
   /**
@@ -119,8 +139,20 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
           + this.nextMasterKey.getMasterKey().getKeyId());
       this.currentMasterKey = this.nextMasterKey;
       this.nextMasterKey = null;
+      clearApplicationNMTokenKeys();
     } finally {
       super.writeLock.unlock();
+    }
+  }
+
+  private void clearApplicationNMTokenKeys() {
+    // We should clear all node entries from this set.
+    // TODO : Once we have per node master key then it will change to only
+    // remove specific node from it.
+    Iterator<HashSet<NodeId>> nodeSetI =
+        this.appAttemptToNodeKeyMap.values().iterator();
+    while (nodeSetI.hasNext()) {
+      nodeSetI.next().clear();
     }
   }
 
@@ -149,5 +181,130 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
       // roll-over. But that is only possible when we move to per-NM keys. TODO:
       activateNextMasterKey();
     }
+  }
+  
+  public List<NMToken> getNMTokens(String applicationSubmitter,
+      ApplicationAttemptId appAttemptId, List<Container> containers) {
+    try {
+      this.readLock.lock();
+      List<NMToken> nmTokens = new ArrayList<NMToken>();
+      HashSet<NodeId> nodeSet = this.appAttemptToNodeKeyMap.get(appAttemptId);
+      if (nodeSet != null) {
+        for (Container container : containers) {
+          if (!nodeSet.contains(container.getNodeId())) {
+            LOG.debug("Sending NMToken for nodeId : "
+                + container.getNodeId().toString());
+            Token token = createNMToken(appAttemptId, container.getNodeId(),
+                applicationSubmitter);
+            NMToken nmToken =
+                NMToken.newInstance(container.getNodeId(), token);
+            nmTokens.add(nmToken);
+            nodeSet.add(container.getNodeId());
+          }
+        }
+      }
+      return nmTokens;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+  
+  public void registerApplicationAttempt(ApplicationAttemptId appAttemptId) {
+    try {
+      this.writeLock.lock();
+      this.appAttemptToNodeKeyMap.put(appAttemptId, new HashSet<NodeId>());
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+  
+  @Private
+  @VisibleForTesting
+  public boolean isApplicationAttemptRegistered(
+      ApplicationAttemptId appAttemptId) {
+    try {
+      this.readLock.lock();
+      return this.appAttemptToNodeKeyMap.containsKey(appAttemptId);
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+  
+  @Private
+  @VisibleForTesting
+  public boolean isApplicationAttemptNMTokenPresent(
+      ApplicationAttemptId appAttemptId, NodeId nodeId) {
+    try {
+      this.readLock.lock();
+      HashSet<NodeId> nodes = this.appAttemptToNodeKeyMap.get(appAttemptId);
+      if (nodes != null && nodes.contains(nodeId)) {
+        return true;
+      } else {
+        return false;
+      }
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+  
+  public void unregisterApplicationAttempt(ApplicationAttemptId appAttemptId) {
+    try {
+      this.writeLock.lock();
+      this.appAttemptToNodeKeyMap.remove(appAttemptId);
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+  
+  /**
+   * This is to be called when NodeManager reconnects or goes down. This will
+   * remove if NMTokens if present for any running application from cache.
+   * @param nodeId
+   */
+  public void removeNodeKey(NodeId nodeId) {
+    try {
+      this.writeLock.lock();
+      Iterator<HashSet<NodeId>> appNodeKeySetIterator =
+          this.appAttemptToNodeKeyMap.values().iterator();
+      while (appNodeKeySetIterator.hasNext()) {
+        appNodeKeySetIterator.next().remove(nodeId);
+      }
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+  
+  public static Token newNMToken(byte[] password,
+      NMTokenIdentifier identifier) {
+    NodeId nodeId = identifier.getNodeId();
+    // RPC layer client expects ip:port as service for tokens
+    InetSocketAddress addr =
+        NetUtils.createSocketAddrForHost(nodeId.getHost(), nodeId.getPort());
+    Token nmToken =
+        Token.newInstance(identifier.getBytes(),
+          NMTokenIdentifier.KIND.toString(), password, SecurityUtil
+            .buildTokenService(addr).toString());
+    return nmToken;
+  }
+  
+  /**
+   * Helper function for creating NMTokens.
+   */
+  public Token createNMToken(ApplicationAttemptId applicationAttemptId,
+      NodeId nodeId, String applicationSubmitter) {
+    byte[] password;
+    NMTokenIdentifier identifier;
+    
+    this.readLock.lock();
+    try {
+      identifier =
+          new NMTokenIdentifier(applicationAttemptId, nodeId,
+              applicationSubmitter, this.currentMasterKey.getMasterKey()
+                  .getKeyId());
+      password = this.createPassword(identifier);
+    } finally {
+      this.readLock.unlock();
+    }
+    return newNMToken(password, identifier);
   }
 }
