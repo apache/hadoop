@@ -33,9 +33,11 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
@@ -49,9 +51,11 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -60,6 +64,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
+
+import com.google.common.annotations.VisibleForTesting;
 
 // TODO check inputs for null etc. YARN-654
 
@@ -73,6 +79,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
       RecordFactoryProvider.getRecordFactory(null);
   
   private int lastResponseId = 0;
+  private ConcurrentHashMap<String, Token> nmTokens;
 
   protected AMRMProtocol rmClient;
   protected final ApplicationAttemptId appAttemptId;  
@@ -148,6 +155,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
   public AMRMClientImpl(ApplicationAttemptId appAttemptId) {
     super(AMRMClientImpl.class.getName());
     this.appAttemptId = appAttemptId;
+    this.nmTokens = new ConcurrentHashMap<String, Token>();
   }
 
   @Override
@@ -238,6 +246,9 @@ public class AMRMClientImpl<T extends ContainerRequest>
         clusterNodeCount = allocateResponse.getNumClusterNodes();
         lastResponseId = allocateResponse.getResponseId();
         clusterAvailableResources = allocateResponse.getAvailableResources();
+        if (!allocateResponse.getNMTokens().isEmpty()) {
+          populateNMTokens(allocateResponse);
+        }
       }
     } finally {
       // TODO how to differentiate remote yarn exception vs error in rpc
@@ -263,6 +274,20 @@ public class AMRMClientImpl<T extends ContainerRequest>
       }
     }
     return allocateResponse;
+  }
+
+  @Private
+  @VisibleForTesting
+  protected void populateNMTokens(AllocateResponse allocateResponse) {
+    for (NMToken token : allocateResponse.getNMTokens()) {
+      String nodeId = token.getNodeId().toString();
+      if (nmTokens.containsKey(nodeId)) {
+        LOG.debug("Replacing token for : " + nodeId);
+      } else {
+        LOG.debug("Received new token for : " + nodeId);
+      }
+      nmTokens.put(nodeId, token.getToken());
+    }
   }
 
   @Override
@@ -512,4 +537,8 @@ public class AMRMClientImpl<T extends ContainerRequest>
     }
   }
 
+  @Override
+  public ConcurrentHashMap<String, Token> getNMTokens() {
+    return nmTokens;
+  }
 }

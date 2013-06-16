@@ -25,9 +25,14 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+
+import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
@@ -49,6 +54,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.AMRMClient.StoredContainerRequest;
@@ -437,6 +443,11 @@ public class TestAMRMClient {
     int allocatedContainerCount = 0;
     int iterationsLeft = 2;
     Set<ContainerId> releases = new TreeSet<ContainerId>();
+    
+    ConcurrentHashMap<String, Token> nmTokens = amClient.getNMTokens();
+    Assert.assertEquals(0, nmTokens.size());
+    HashMap<String, Token> receivedNMTokens = new HashMap<String, Token>();
+    
     while (allocatedContainerCount < containersRequestedAny
         && iterationsLeft-- > 0) {
       AllocateResponse allocResponse = amClient.allocate(0.1f);
@@ -450,12 +461,32 @@ public class TestAMRMClient {
         releases.add(rejectContainerId);
         amClient.releaseAssignedContainer(rejectContainerId);
       }
+      Assert.assertEquals(nmTokens.size(), amClient.getNMTokens().size());
+      Iterator<String> nodeI = nmTokens.keySet().iterator();
+      while (nodeI.hasNext()) {
+        String nodeId = nodeI.next();
+        if (!receivedNMTokens.containsKey(nodeId)) {
+          receivedNMTokens.put(nodeId, nmTokens.get(nodeId));
+        } else {
+          Assert.fail("Received token again for : " + nodeId);
+        }
+      }
+      nodeI = receivedNMTokens.keySet().iterator();
+      while (nodeI.hasNext()) {
+        nmTokens.remove(nodeI.next());
+      }
+      
       if(allocatedContainerCount < containersRequestedAny) {
         // sleep to let NM's heartbeat to RM and trigger allocations
         sleep(1000);
       }
     }
-
+    
+    Assert.assertEquals(0, amClient.getNMTokens().size());
+    // Should receive atleast 1 token
+    Assert.assertTrue(receivedNMTokens.size() > 0
+        && receivedNMTokens.size() <= nodeCount);
+    
     assertTrue(allocatedContainerCount == containersRequestedAny);
     assertTrue(amClient.release.size() == 2);
     assertTrue(amClient.ask.size() == 0);
@@ -523,7 +554,6 @@ public class TestAMRMClient {
         sleep(1000);
       }
     }
-    
     assertTrue(amClient.ask.size() == 0);
     assertTrue(amClient.release.size() == 0);
   }

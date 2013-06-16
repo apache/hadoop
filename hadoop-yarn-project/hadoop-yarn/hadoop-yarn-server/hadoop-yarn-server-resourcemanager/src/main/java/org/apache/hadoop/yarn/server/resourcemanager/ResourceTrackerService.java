@@ -218,7 +218,9 @@ public class ResourceTrackerService extends AbstractService implements
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMNodeReconnectEvent(nodeId, rmNode));
     }
-
+    // On every node manager register we will be clearing NMToken keys if
+    // present for any running application.
+    this.nmTokenSecretManager.removeNodeKey(nodeId);
     this.nmLivelinessMonitor.register(nodeId);
 
     String message =

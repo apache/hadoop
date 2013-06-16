@@ -29,10 +29,10 @@ import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -67,7 +67,7 @@ public abstract class AllocateResponse {
       List<ContainerStatus> completedContainers,
       List<Container> allocatedContainers, List<NodeReport> updatedNodes,
       Resource availResources, AMCommand command, int numClusterNodes,
-      PreemptionMessage preempt) {
+      PreemptionMessage preempt, List<NMToken> nmTokens) {
     AllocateResponse response = Records.newRecord(AllocateResponse.class);
     response.setNumClusterNodes(numClusterNodes);
     response.setResponseId(responseId);
@@ -77,6 +77,7 @@ public abstract class AllocateResponse {
     response.setAvailableResources(availResources);
     response.setAMCommand(command);
     response.setPreemptionMessage(preempt);
+    response.setNMTokens(nmTokens);
     return response;
   }
 
@@ -202,7 +203,7 @@ public abstract class AllocateResponse {
   
   @Public
   @Stable
-  public abstract void setNMTokens(List<Token> nmTokens);
+  public abstract void setNMTokens(List<NMToken> nmTokens);
   
   /**
    * Get the list of NMTokens required for communicating with NM. New NMTokens
@@ -217,6 +218,6 @@ public abstract class AllocateResponse {
    */
   @Public
   @Stable
-  public abstract List<Token> getNMTokens();
+  public abstract List<NMToken> getNMTokens();
 
 }

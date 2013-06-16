@@ -59,6 +59,11 @@ message AllocateRequestProto {
   optional float progress = 6;
 }
 
+message NMTokenProto {
+  optional NodeIdProto nodeId = 1; 
+  optional hadoop.common.TokenProto token = 2;
+}
+
 message AllocateResponseProto {
   optional AMCommandProto a_m_command = 1;
   optional int32 response_id = 2;
@@ -68,7 +73,7 @@ message AllocateResponseProto {
   repeated NodeReportProto updated_nodes = 6;
   optional int32 num_cluster_nodes = 7;
   optional PreemptionMessageProto preempt = 8;
-  repeated hadoop.common.TokenProto nm_tokens = 9;
+  repeated NMTokenProto nm_tokens = 9;
 }
 
 //////////////////////////////////////////////////////
