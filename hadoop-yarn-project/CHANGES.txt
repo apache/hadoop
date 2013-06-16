@@ -103,10 +103,13 @@ Release 2.1.0-beta - UNRELEASED
     He via vinodkv)
 
     YARN-821. Renamed setFinishApplicationStatus to setFinalApplicationStatus in
-    FinishApplicationMasterRequest for consistency. (Jian He via vinodk)
+    FinishApplicationMasterRequest for consistency. (Jian He via vinodkv)
 
     YARN-787. Removed minimum resource from RegisterApplicationMasterResponse.
     (tucu via acmurthy)
+
+    YARN-829. Renamed RMTokenSelector to be RMDelegationTokenSelector. (Zhijie
+    Shen via vinodkv)
 
   NEW FEATURES
 

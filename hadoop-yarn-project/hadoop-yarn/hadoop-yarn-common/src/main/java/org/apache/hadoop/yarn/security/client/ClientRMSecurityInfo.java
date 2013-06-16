@@ -72,7 +72,7 @@ public class ClientRMSecurityInfo extends SecurityInfo {
       @Override
       public Class<? extends TokenSelector<? extends TokenIdentifier>>
           value() {
-        return RMTokenSelector.class;
+        return RMDelegationTokenSelector.class;
       }
     };
   }
