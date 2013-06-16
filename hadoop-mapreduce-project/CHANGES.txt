@@ -151,6 +151,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5192. Allow for alternate resolutions of TaskCompletionEvents.
     (cdouglas via acmurthy)
 
+    MAPREDUCE-5184. Document compatibility for MapReduce applications in
+    hadoop-2 vis-a-vis hadoop-1. (Zhijie Shen via acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
