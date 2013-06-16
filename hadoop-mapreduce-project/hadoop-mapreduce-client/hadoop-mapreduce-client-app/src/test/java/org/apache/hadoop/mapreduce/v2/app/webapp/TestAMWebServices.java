@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.StringReader;
+import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
@@ -33,6 +34,7 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Before;
@@ -42,6 +44,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import com.google.common.collect.Sets;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceServletContextListener;
@@ -64,13 +67,15 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestAMWebServices extends JerseyTest {
 
   private static Configuration conf = new Configuration();
-  private static AppContext appContext;
+  private static MockAppContext appContext;
 
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
     protected void configureServlets() {
 
       appContext = new MockAppContext(0, 1, 1, 1);
+      appContext.setBlacklistedNodes(Sets.newHashSet("badnode1", "badnode2"));
+      
       bind(JAXBContextResolver.class);
       bind(AMWebServices.class);
       bind(GenericExceptionHandler.class);
@@ -240,6 +245,29 @@ public class TestAMWebServices extends JerseyTest {
           "error string exists and shouldn't", "", responseStr);
     }
   }
+  
+  @Test
+  public void testBlacklistedNodes() throws JSONException, Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("mapreduce")
+        .path("blacklistednodes").accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    verifyBlacklistedNodesInfo(json, appContext);
+  }
+  
+  @Test
+  public void testBlacklistedNodesXML() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("mapreduce")
+        .path("blacklistednodes").accept(MediaType.APPLICATION_XML)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+    String xml = response.getEntity(String.class);
+    verifyBlacklistedNodesInfoXML(xml, appContext);
+  }
 
   public void verifyAMInfo(JSONObject info, AppContext ctx)
       throws JSONException {
@@ -284,5 +312,34 @@ public class TestAMWebServices extends JerseyTest {
     assertEquals("startedOn incorrect", ctx.getStartTime(), startedOn);
     assertTrue("elapsedTime not greater then 0", (elapsedTime > 0));
 
+  }
+  
+  public void verifyBlacklistedNodesInfo(JSONObject blacklist, AppContext ctx)
+    throws JSONException, Exception{
+    JSONArray array = blacklist.getJSONArray("blacklistedNodes");
+    assertEquals(array.length(), ctx.getBlacklistedNodes().size());
+    for (int i = 0; i < array.length(); i++) {
+      assertTrue(ctx.getBlacklistedNodes().contains(array.getString(i)));
+    }
+  }
+  
+  public void verifyBlacklistedNodesInfoXML(String xml, AppContext ctx)
+      throws JSONException, Exception {
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(xml));
+    Document dom = db.parse(is);
+    NodeList infonodes = dom.getElementsByTagName("blacklistednodesinfo");
+    assertEquals("incorrect number of elements", 1, infonodes.getLength());
+    NodeList nodes = dom.getElementsByTagName("blacklistedNodes");
+    Set<String> blacklistedNodes = ctx.getBlacklistedNodes();
+    assertEquals("incorrect number of elements", blacklistedNodes.size(),
+        nodes.getLength());
+    for (int i = 0; i < nodes.getLength(); i++) {
+      Element element = (Element) nodes.item(i);
+      assertTrue(
+          blacklistedNodes.contains(element.getFirstChild().getNodeValue()));
+    }
   }
 }
