@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -56,4 +57,6 @@ public interface AppContext {
   Clock getClock();
   
   ClusterInfo getClusterInfo();
+  
+  Set<String> getBlacklistedNodes();
 }

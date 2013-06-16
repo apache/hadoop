@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.hs;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -299,6 +300,12 @@ public class JobHistory extends AbstractService implements HistoryContext {
   // TODO AppContext - Not Required
   @Override
   public ClusterInfo getClusterInfo() {
+    return null;
+  }
+
+  // TODO AppContext - Not Required
+  @Override
+  public Set<String> getBlacklistedNodes() {
     return null;
   }
 }
