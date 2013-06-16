@@ -175,7 +175,7 @@ if [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit
 elif [ "$COMMAND" = "rmadmin" ] ; then
-  CLASS='org.apache.hadoop.yarn.client.RMAdmin'
+  CLASS='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
 elif [ "$COMMAND" = "application" ] ; then
   CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
