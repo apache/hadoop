@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
@@ -66,11 +67,11 @@ public class TestAMRMClientAsync {
     List<Container> allocated1 = Arrays.asList(
         Container.newInstance(null, null, null, null, null, null));
     final AllocateResponse response1 = createAllocateResponse(
-        new ArrayList<ContainerStatus>(), allocated1);
+        new ArrayList<ContainerStatus>(), allocated1, null);
     final AllocateResponse response2 = createAllocateResponse(completed1,
-        new ArrayList<Container>());
+        new ArrayList<Container>(), null);
     final AllocateResponse emptyResponse = createAllocateResponse(
-        new ArrayList<ContainerStatus>(), new ArrayList<Container>());
+        new ArrayList<ContainerStatus>(), new ArrayList<Container>(), null);
 
     TestCallbackHandler callbackHandler = new TestCallbackHandler();
     final AMRMClient<ContainerRequest> client = mock(AMRMClientImpl.class);
@@ -146,7 +147,7 @@ public class TestAMRMClientAsync {
     Assert.assertEquals(null, callbackHandler.takeAllocatedContainers());
     Assert.assertEquals(null, callbackHandler.takeCompletedContainers());
   }
-  
+
   @Test(timeout=10000)
   public void testAMRMClientAsyncException() throws Exception {
     Configuration conf = new Configuration();
@@ -189,7 +190,7 @@ public class TestAMRMClientAsync {
     AMRMClient<ContainerRequest> client = mock(AMRMClientImpl.class);
     
     final AllocateResponse rebootResponse = createAllocateResponse(
-        new ArrayList<ContainerStatus>(), new ArrayList<Container>());
+        new ArrayList<ContainerStatus>(), new ArrayList<Container>(), null);
     rebootResponse.setAMCommand(AMCommand.AM_RESYNC);
     when(client.allocate(anyFloat())).thenReturn(rebootResponse);
     
@@ -215,9 +216,11 @@ public class TestAMRMClientAsync {
   }
   
   private AllocateResponse createAllocateResponse(
-      List<ContainerStatus> completed, List<Container> allocated) {
-    AllocateResponse response = AllocateResponse.newInstance(0, completed, allocated,
-        new ArrayList<NodeReport>(), null, null, 1, null);
+      List<ContainerStatus> completed, List<Container> allocated,
+      List<NMToken> nmTokens) {
+    AllocateResponse response =
+        AllocateResponse.newInstance(0, completed, allocated,
+            new ArrayList<NodeReport>(), null, null, 1, null, nmTokens);
     return response;
   }
 

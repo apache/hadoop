@@ -373,6 +373,12 @@ public class ApplicationMasterService extends AbstractService implements
       // add preemption to the allocateResponse message (if any)
       allocateResponse.setPreemptionMessage(generatePreemptionMessage(allocation));
       
+      // Adding NMTokens for allocated containers.
+      if (!allocation.getContainers().isEmpty()) {
+        allocateResponse.setNMTokens(rmContext.getNMTokenSecretManager()
+            .getNMTokens(app.getUser(), appAttemptId,
+                allocation.getContainers()));
+      }
       return allocateResponse;
     }
   }
@@ -433,12 +439,15 @@ public class ApplicationMasterService extends AbstractService implements
     AllocateResponse response =
         recordFactory.newRecordInstance(AllocateResponse.class);
     response.setResponseId(0);
-    LOG.info("Registering " + attemptId);
+    LOG.info("Registering app attempt : " + attemptId);
     responseMap.put(attemptId, response);
+    rmContext.getNMTokenSecretManager().registerApplicationAttempt(attemptId);
   }
 
   public void unregisterAttempt(ApplicationAttemptId attemptId) {
+    LOG.info("Unregistering app attempt : " + attemptId);
     responseMap.remove(attemptId);
+    rmContext.getNMTokenSecretManager().unregisterApplicationAttempt(attemptId);
   }
 
   public void refreshServiceAcls(Configuration configuration, 

@@ -18,13 +18,10 @@
 
 package org.apache.hadoop.yarn.server.security;
 
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import javax.crypto.SecretKey;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,7 +31,6 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
-import org.apache.hadoop.yarn.util.Records;
 
 /**
  * SecretManager for ContainerTokens. Extended by both RM and NM and hence is

@@ -65,12 +65,12 @@ public class MockAM {
     RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
     int timeoutSecs = 0;
     while (!finalState.equals(attempt.getAppAttemptState())
-        && timeoutSecs++ < 20) {
+        && timeoutSecs++ < 40) {
       System.out
           .println("AppAttempt : " + attemptId + " State is : " 
               + attempt.getAppAttemptState()
               + " Waiting for state : " + finalState);
-      Thread.sleep(500);
+      Thread.sleep(1000);
     }
     System.out.println("AppAttempt State is : " + attempt.getAppAttemptState());
     Assert.assertEquals("AppAttempt state is not correct (timedout)",
