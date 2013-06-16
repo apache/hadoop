@@ -56,9 +56,10 @@ public class TestFetcher {
     private HttpURLConnection connection;
 
     public FakeFetcher(JobConf job, TaskAttemptID reduceId,
-        ShuffleScheduler<K,V> scheduler, MergeManagerImpl<K,V> merger, Reporter reporter,
-        ShuffleClientMetrics metrics, ExceptionReporter exceptionReporter,
-        SecretKey jobTokenSecret, HttpURLConnection connection) {
+        ShuffleSchedulerImpl<K,V> scheduler, MergeManagerImpl<K,V> merger,
+        Reporter reporter, ShuffleClientMetrics metrics,
+        ExceptionReporter exceptionReporter, SecretKey jobTokenSecret,
+        HttpURLConnection connection) {
       super(job, reduceId, scheduler, merger, reporter, metrics, exceptionReporter,
           jobTokenSecret);
       this.connection = connection;
@@ -79,7 +80,7 @@ public class TestFetcher {
     LOG.info("testCopyFromHostConnectionTimeout");
     JobConf job = new JobConf();
     TaskAttemptID id = TaskAttemptID.forName("attempt_0_1_r_1_1");
-    ShuffleScheduler<Text, Text> ss = mock(ShuffleScheduler.class);
+    ShuffleSchedulerImpl<Text, Text> ss = mock(ShuffleSchedulerImpl.class);
     MergeManagerImpl<Text, Text> mm = mock(MergeManagerImpl.class);
     Reporter r = mock(Reporter.class);
     ShuffleClientMetrics metrics = mock(ShuffleClientMetrics.class);
@@ -127,7 +128,7 @@ public class TestFetcher {
     LOG.info("testCopyFromHostBogusHeader");
     JobConf job = new JobConf();
     TaskAttemptID id = TaskAttemptID.forName("attempt_0_1_r_1_1");
-    ShuffleScheduler<Text, Text> ss = mock(ShuffleScheduler.class);
+    ShuffleSchedulerImpl<Text, Text> ss = mock(ShuffleSchedulerImpl.class);
     MergeManagerImpl<Text, Text> mm = mock(MergeManagerImpl.class);
     Reporter r = mock(Reporter.class);
     ShuffleClientMetrics metrics = mock(ShuffleClientMetrics.class);
@@ -182,7 +183,7 @@ public class TestFetcher {
     LOG.info("testCopyFromHostWait");
     JobConf job = new JobConf();
     TaskAttemptID id = TaskAttemptID.forName("attempt_0_1_r_1_1");
-    ShuffleScheduler<Text, Text> ss = mock(ShuffleScheduler.class);
+    ShuffleSchedulerImpl<Text, Text> ss = mock(ShuffleSchedulerImpl.class);
     MergeManagerImpl<Text, Text> mm = mock(MergeManagerImpl.class);
     Reporter r = mock(Reporter.class);
     ShuffleClientMetrics metrics = mock(ShuffleClientMetrics.class);
@@ -240,7 +241,7 @@ public class TestFetcher {
     LOG.info("testCopyFromHostWaitExtraBytes");
     JobConf job = new JobConf();
     TaskAttemptID id = TaskAttemptID.forName("attempt_0_1_r_1_1");
-    ShuffleScheduler<Text, Text> ss = mock(ShuffleScheduler.class);
+    ShuffleSchedulerImpl<Text, Text> ss = mock(ShuffleSchedulerImpl.class);
     MergeManagerImpl<Text, Text> mm = mock(MergeManagerImpl.class);
     InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
 
@@ -256,7 +257,6 @@ public class TestFetcher {
     
     Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
-    
 
     MapHost host = new MapHost("localhost", "http://localhost:8080/");
     
@@ -315,7 +315,7 @@ public class TestFetcher {
     LOG.info("testCopyFromHostCompressFailure");
     JobConf job = new JobConf();
     TaskAttemptID id = TaskAttemptID.forName("attempt_0_1_r_1_1");
-    ShuffleScheduler<Text, Text> ss = mock(ShuffleScheduler.class);
+    ShuffleSchedulerImpl<Text, Text> ss = mock(ShuffleSchedulerImpl.class);
     MergeManagerImpl<Text, Text> mm = mock(MergeManagerImpl.class);
     InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
     Reporter r = mock(Reporter.class);

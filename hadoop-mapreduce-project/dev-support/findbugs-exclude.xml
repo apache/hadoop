@@ -271,12 +271,19 @@
        <Class name="org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl" />
        <Bug pattern="SC_START_IN_CTOR" />
      </Match>
+    <!--
+     This class is unlikely to get subclassed, so ignore
+    -->
+    <Match>
+     <Class name="org.apache.hadoop.mapreduce.task.reduce.ShuffleSchedulerImpl" />
+     <Bug pattern="SC_START_IN_CTOR" />
+    </Match>
 
     <!--
       Do not bother if equals is not implemented. We will not need it here
     -->
      <Match>
-      <Class name="org.apache.hadoop.mapreduce.task.reduce.ShuffleScheduler$Penalty" />
+      <Class name="org.apache.hadoop.mapreduce.task.reduce.ShuffleSchedulerImpl$Penalty" />
       <Bug pattern="EQ_COMPARETO_USE_OBJECT_EQUALS" />
      </Match>
 

@@ -47,8 +47,10 @@ public class TestShuffleScheduler {
     };
     Progress progress = new Progress();
 
-    ShuffleScheduler scheduler = new ShuffleScheduler(job, status, null,
-        progress, null, null, null);
+    TaskAttemptID reduceId = new TaskAttemptID("314159", 0, TaskType.REDUCE,
+        0, 0);
+    ShuffleSchedulerImpl scheduler = new ShuffleSchedulerImpl(job, status,
+        reduceId, null, progress, null, null, null);
 
     JobID jobId = new JobID();
     TaskID taskId1 = new TaskID(jobId, TaskType.REDUCE, 1);
