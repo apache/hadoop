@@ -166,6 +166,9 @@ Release 2.1.0-beta - UNRELEASED
     ContainerManager -> ContainerManagementProtocol
     (vinodkv via acmurthy)
 
+    YARN-831. Removed minimum resource from GetNewApplicationResponse as a
+    follow-up to YARN-787. (Jian He via acmurthy)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

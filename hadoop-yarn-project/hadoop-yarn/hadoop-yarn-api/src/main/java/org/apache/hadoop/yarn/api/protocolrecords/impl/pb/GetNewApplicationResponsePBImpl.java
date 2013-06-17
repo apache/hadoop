@@ -35,7 +35,6 @@ public class GetNewApplicationResponsePBImpl extends GetNewApplicationResponse {
   boolean viaProto = false;
   
   private ApplicationId applicationId = null;
-  private Resource minimumResourceCapability = null;
   private Resource maximumResourceCapability = null;
   
   public GetNewApplicationResponsePBImpl() {
@@ -77,9 +76,6 @@ public class GetNewApplicationResponsePBImpl extends GetNewApplicationResponse {
   private void mergeLocalToBuilder() {
     if (applicationId != null) {
       builder.setApplicationId(convertToProtoFormat(this.applicationId));
-    }
-    if (minimumResourceCapability != null) {
-    	builder.setMinimumCapability(convertToProtoFormat(this.minimumResourceCapability));
     }
     if (maximumResourceCapability != null) {
     	builder.setMaximumCapability(convertToProtoFormat(this.maximumResourceCapability));
@@ -141,21 +137,6 @@ public class GetNewApplicationResponsePBImpl extends GetNewApplicationResponse {
   }
 
   @Override
-  public Resource getMinimumResourceCapability() {
-    if (this.minimumResourceCapability != null) {
-      return this.minimumResourceCapability;
-    }
-    
-    GetNewApplicationResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasMinimumCapability()) {
-      return null;
-    }
-    
-    this.minimumResourceCapability = convertFromProtoFormat(p.getMinimumCapability());
-    return this.minimumResourceCapability;
-  }
-
-  @Override
   public void setMaximumResourceCapability(Resource capability) {
     maybeInitBuilder();
     if(maximumResourceCapability == null) {
@@ -163,16 +144,7 @@ public class GetNewApplicationResponsePBImpl extends GetNewApplicationResponse {
     }
     this.maximumResourceCapability = capability;
   }
-
-  @Override
-  public void setMinimumResourceCapability(Resource capability) {
-    maybeInitBuilder();
-    if(minimumResourceCapability == null) {
-      builder.clearMinimumCapability();
-    }
-    this.minimumResourceCapability = capability;
-  }
-    
+ 
   private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
     return new ApplicationIdPBImpl(p);
   }
