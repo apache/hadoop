@@ -64,18 +64,15 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.RackResolver;
 
-import com.google.common.base.Joiner;
-
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 
 // TODO check inputs for null etc. YARN-654
 
 @Unstable
-public class AMRMClientImpl<T extends ContainerRequest> 
-                          extends AbstractService implements AMRMClient<T> {
+public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
 
   private static final Log LOG = LogFactory.getLog(AMRMClientImpl.class);
   

@@ -23,6 +23,8 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -31,11 +33,34 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.service.AbstractService;
 
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public interface NMClient extends Service {
+public abstract class NMClient extends AbstractService {
+
+  /**
+   * Create a new instance of NMClient.
+   */
+  @Public
+  public static NMClient createNMClient() {
+    NMClient client = new NMClientImpl();
+    return client;
+  }
+
+  /**
+   * Create a new instance of NMClient.
+   */
+  @Public
+  public static NMClient createNMClient(String name) {
+    NMClient client = new NMClientImpl(name);
+    return client;
+  }
+
+  @Private
+  protected NMClient(String name) {
+    super(name);
+  }
 
   /**
    * <p>Start an allocated container.</p>
@@ -54,7 +79,7 @@ public interface NMClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  Map<String, ByteBuffer> startContainer(Container container,
+  public abstract Map<String, ByteBuffer> startContainer(Container container,
       ContainerLaunchContext containerLaunchContext)
           throws YarnException, IOException;
 
@@ -68,7 +93,7 @@ public interface NMClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  void stopContainer(ContainerId containerId, NodeId nodeId,
+  public abstract void stopContainer(ContainerId containerId, NodeId nodeId,
       Token containerToken) throws YarnException, IOException;
 
   /**
@@ -82,7 +107,7 @@ public interface NMClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  ContainerStatus getContainerStatus(ContainerId containerId, NodeId nodeId,
+  public abstract ContainerStatus getContainerStatus(ContainerId containerId, NodeId nodeId,
       Token containerToken) throws YarnException, IOException;
 
   /**
@@ -92,6 +117,6 @@ public interface NMClient extends Service {
    *
    * @param enabled whether the feature is enabled or not
    */
-  void cleanupRunningContainersOnStop(boolean enabled);
+  public abstract void cleanupRunningContainersOnStop(boolean enabled);
 
 }
