@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
@@ -430,7 +430,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     try {
       ApplicationAttemptId currentApplicationAttemptId = null;
-      org.apache.hadoop.yarn.api.records.Token clientToken = null;
+      org.apache.hadoop.yarn.api.records.Token clientToAMToken = null;
       String trackingUrl = UNAVAILABLE;
       String host = UNAVAILABLE;
       String origTrackingUrl = UNAVAILABLE;
@@ -445,13 +445,15 @@ public class RMAppImpl implements RMApp, Recoverable {
           currentApplicationAttemptId = this.currentAttempt.getAppAttemptId();
           trackingUrl = this.currentAttempt.getTrackingUrl();
           origTrackingUrl = this.currentAttempt.getOriginalTrackingUrl();
-          Token<ClientTokenIdentifier> attemptClientToken =
-              this.currentAttempt.getClientToken();
-          if (attemptClientToken != null) {
-            clientToken =
-                BuilderUtils.newClientToken(attemptClientToken.getIdentifier(),
-                  attemptClientToken.getKind().toString(), attemptClientToken
-                    .getPassword(), attemptClientToken.getService().toString());
+          Token<ClientToAMTokenIdentifier> attemptClientToAMToken =
+              this.currentAttempt.getClientToAMToken();
+          if (attemptClientToAMToken != null) {
+            clientToAMToken =
+                BuilderUtils.newClientToAMToken(
+                    attemptClientToAMToken.getIdentifier(),
+                    attemptClientToAMToken.getKind().toString(),
+                    attemptClientToAMToken.getPassword(),
+                    attemptClientToAMToken.getService().toString());
           }
           host = this.currentAttempt.getHost();
           rpcPort = this.currentAttempt.getRpcPort();
@@ -469,7 +471,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
       return BuilderUtils.newApplicationReport(this.applicationId,
           currentApplicationAttemptId, this.user, this.queue,
-          this.name, host, rpcPort, clientToken,
+          this.name, host, rpcPort, clientToAMToken,
           createApplicationState(this.stateMachine.getCurrentState()), diags,
           trackingUrl, this.startTime, this.finishTime, finishState,
           appUsageReport, origTrackingUrl, progress, this.applicationType);

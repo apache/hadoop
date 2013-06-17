@@ -19,17 +19,18 @@
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
 import javax.security.sasl.SaslException;
 
 import junit.framework.Assert;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.RPC;
@@ -45,26 +46,21 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
-import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientTokenSelector;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
+import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMWithCustomAMLauncher;
@@ -74,7 +70,7 @@ import org.apache.hadoop.yarn.util.ProtoUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 
-public class TestClientTokens {
+public class TestClientToAMTokens {
 
   private interface CustomProtocol {
     @SuppressWarnings("unused")
@@ -97,7 +93,7 @@ public class TestClientTokens {
         @Override
         public Class<? extends TokenSelector<? extends TokenIdentifier>>
             value() {
-          return ClientTokenSelector.class;
+          return ClientToAMTokenSelector.class;
         }
       };
     }
@@ -112,14 +108,15 @@ public class TestClientTokens {
       CustomProtocol {
 
     private final ApplicationAttemptId appAttemptId;
-    private final String secretKey;
+    private final byte[] secretKey;
     private InetSocketAddress address;
     private boolean pinged = false;
-
-    public CustomAM(ApplicationAttemptId appId, String secretKeyStr) {
+    private ClientToAMTokenSecretManager secretManager;
+    
+    public CustomAM(ApplicationAttemptId appId, byte[] secretKey) {
       super("CustomAM");
       this.appAttemptId = appId;
-      this.secretKey = secretKeyStr;
+      this.secretKey = secretKey;
     }
 
     @Override
@@ -131,9 +128,7 @@ public class TestClientTokens {
     protected void serviceStart() throws Exception {
       Configuration conf = getConfig();
 
-      ClientToAMTokenSecretManager secretManager = null;
-      byte[] bytes = Base64.decodeBase64(this.secretKey);
-      secretManager = new ClientToAMTokenSecretManager(this.appAttemptId, bytes);
+      secretManager = new ClientToAMTokenSecretManager(this.appAttemptId, secretKey);
       Server server;
       try {
         server =
@@ -147,44 +142,22 @@ public class TestClientTokens {
       this.address = NetUtils.getConnectAddress(server);
       super.serviceStart();
     }
-  }
-
-  private static class CustomNM implements ContainerManagementProtocol {
-
-    public String clientTokensSecret;
-
-    @Override
-    public StartContainerResponse startContainer(StartContainerRequest request)
-        throws YarnException {
-      this.clientTokensSecret =
-          request.getContainerLaunchContext().getEnvironment()
-            .get(ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME);
-      return null;
+    
+    public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
+      return this.secretManager;
     }
-
-    @Override
-    public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnException {
-      return null;
-    }
-
-    @Override
-    public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnException {
-      return null;
-    }
-
   }
 
   @Test
-  public void testClientTokens() throws Exception {
+  public void testClientToAMs() throws Exception {
 
     final Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
       "kerberos");
     UserGroupInformation.setConfiguration(conf);
 
-    CustomNM containerManager = new CustomNM();
+    ContainerManagementProtocol containerManager =
+        mock(ContainerManagementProtocol.class);
     final DrainDispatcher dispatcher = new DrainDispatcher();
 
     MockRM rm = new MockRMWithCustomAMLauncher(conf, containerManager) {
@@ -207,10 +180,13 @@ public class TestClientTokens {
 
     // Submit an app
     RMApp app = rm.submitApp(1024);
-    dispatcher.await();
 
     // Set up a node.
     MockNM nm1 = rm.registerNode("localhost:1234", 3072);
+    nm1.nodeHeartbeat(true);
+    dispatcher.await();
+    
+
     nm1.nodeHeartbeat(true);
     dispatcher.await();
 
@@ -221,21 +197,43 @@ public class TestClientTokens {
     GetApplicationReportResponse reportResponse =
         rm.getClientRMService().getApplicationReport(request);
     ApplicationReport appReport = reportResponse.getApplicationReport();
-    org.apache.hadoop.yarn.api.records.Token clientToken = appReport.getClientToken();
+    org.apache.hadoop.yarn.api.records.Token clientToAMToken =
+        appReport.getClientToAMToken();
 
-    // Wait till AM is 'launched'
-    int waitTime = 0;
-    while (containerManager.clientTokensSecret == null && waitTime++ < 20) {
-      Thread.sleep(1000);
-    }
-    Assert.assertNotNull(containerManager.clientTokensSecret);
+    ApplicationAttemptId appAttempt = app.getCurrentAppAttempt().getAppAttemptId();
+    final MockAM mockAM =
+        new MockAM(rm.getRMContext(), rm.getApplicationMasterService(),
+            app.getCurrentAppAttempt().getAppAttemptId());
+    UserGroupInformation appUgi =
+        UserGroupInformation.createRemoteUser(appAttempt.toString());
+    RegisterApplicationMasterResponse response =
+        appUgi.doAs(new PrivilegedAction<RegisterApplicationMasterResponse>() {
 
+          @Override
+          public RegisterApplicationMasterResponse run() {
+            RegisterApplicationMasterResponse response = null;
+            try {
+              response = mockAM.registerAppAttempt();
+            } catch (Exception e) {
+              Assert.fail("Exception was not expected");
+            }
+            return response;
+          }
+        });
+     
+    // ClientToAMToken master key should have been received on register
+    // application master response.
+    Assert.assertNotNull(response.getClientToAMTokenMasterKey());
+    Assert
+        .assertTrue(response.getClientToAMTokenMasterKey().array().length > 0);
+    
     // Start the AM with the correct shared-secret.
     ApplicationAttemptId appAttemptId =
         app.getAppAttempts().keySet().iterator().next();
     Assert.assertNotNull(appAttemptId);
     final CustomAM am =
-        new CustomAM(appAttemptId, containerManager.clientTokensSecret);
+        new CustomAM(appAttemptId, response.getClientToAMTokenMasterKey()
+            .array());
     am.init(conf);
     am.start();
 
@@ -256,17 +254,17 @@ public class TestClientTokens {
 
     // Verify denial for a malicious user
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("me");
-    Token<ClientTokenIdentifier> token =
-        ProtoUtils.convertFromProtoFormat(clientToken, am.address);
+    Token<ClientToAMTokenIdentifier> token =
+        ProtoUtils.convertFromProtoFormat(clientToAMToken, am.address);
 
     // Malicious user, messes with appId
-    ClientTokenIdentifier maliciousID =
-        new ClientTokenIdentifier(BuilderUtils.newApplicationAttemptId(
+    ClientToAMTokenIdentifier maliciousID =
+        new ClientToAMTokenIdentifier(BuilderUtils.newApplicationAttemptId(
           BuilderUtils.newApplicationId(app.getApplicationId()
             .getClusterTimestamp(), 42), 43));
 
-    Token<ClientTokenIdentifier> maliciousToken =
-        new Token<ClientTokenIdentifier>(maliciousID.getBytes(),
+    Token<ClientToAMTokenIdentifier> maliciousToken =
+        new Token<ClientToAMTokenIdentifier>(maliciousID.getBytes(),
           token.getPassword(), token.getKind(),
           token.getService());
     ugi.addToken(maliciousToken);

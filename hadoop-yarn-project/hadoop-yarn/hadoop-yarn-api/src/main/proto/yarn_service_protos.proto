@@ -36,7 +36,8 @@ message RegisterApplicationMasterRequestProto {
 
 message RegisterApplicationMasterResponseProto {
   optional ResourceProto maximumCapability = 1;
-  repeated ApplicationACLMapProto application_ACLs = 2;
+  optional bytes client_to_am_token_master_key = 2;
+  repeated ApplicationACLMapProto application_ACLs = 3;
 }
 
 message FinishApplicationMasterRequestProto {

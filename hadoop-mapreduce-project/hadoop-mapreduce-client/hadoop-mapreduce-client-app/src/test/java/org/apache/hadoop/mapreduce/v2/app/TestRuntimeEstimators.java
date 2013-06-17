@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Assert;
@@ -853,6 +854,11 @@ public class TestRuntimeEstimators {
 
     @Override
     public Set<String> getBlacklistedNodes() {
+      return null;
+    }
+    
+    public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
+      // Not Implemented
       return null;
     }
   }

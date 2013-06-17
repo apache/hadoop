@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
@@ -206,7 +206,7 @@ public class TestRMStateStore {
 
   ContainerId storeAttempt(RMStateStore store, ApplicationAttemptId attemptId,
       String containerIdStr, Token<AMRMTokenIdentifier> appToken,
-      Token<ClientTokenIdentifier> clientToken, TestDispatcher dispatcher)
+      Token<ClientToAMTokenIdentifier> clientToAMToken, TestDispatcher dispatcher)
       throws Exception {
 
     Container container = new ContainerPBImpl();
@@ -215,7 +215,7 @@ public class TestRMStateStore {
     when(mockAttempt.getAppAttemptId()).thenReturn(attemptId);
     when(mockAttempt.getMasterContainer()).thenReturn(container);
     when(mockAttempt.getAMRMToken()).thenReturn(appToken);
-    when(mockAttempt.getClientToken()).thenReturn(clientToken);
+    when(mockAttempt.getClientToAMToken()).thenReturn(clientToAMToken);
     dispatcher.attemptId = attemptId;
     dispatcher.storedException = null;
     store.storeApplicationAttempt(mockAttempt);
@@ -233,7 +233,7 @@ public class TestRMStateStore {
 
     AMRMTokenSecretManager appTokenMgr =
         new AMRMTokenSecretManager(conf);
-    ClientToAMTokenSecretManagerInRM clientTokenMgr =
+    ClientToAMTokenSecretManagerInRM clientToAMTokenMgr =
         new ClientToAMTokenSecretManagerInRM();
 
     ApplicationAttemptId attemptId1 = ConverterUtils
@@ -243,14 +243,14 @@ public class TestRMStateStore {
 
     // create application token1 for attempt1
     List<Token<?>> appAttemptToken1 =
-        generateTokens(attemptId1, appTokenMgr, clientTokenMgr, conf);
+        generateTokens(attemptId1, appTokenMgr, clientToAMTokenMgr, conf);
     HashSet<Token<?>> attemptTokenSet1 = new HashSet<Token<?>>();
     attemptTokenSet1.addAll(appAttemptToken1);
 
     ContainerId containerId1 = storeAttempt(store, attemptId1,
           "container_1352994193343_0001_01_000001",
           (Token<AMRMTokenIdentifier>) (appAttemptToken1.get(0)),
-          (Token<ClientTokenIdentifier>)(appAttemptToken1.get(1)),
+          (Token<ClientToAMTokenIdentifier>)(appAttemptToken1.get(1)),
           dispatcher);
 
     String appAttemptIdStr2 = "appattempt_1352994193343_0001_000002";
@@ -259,14 +259,14 @@ public class TestRMStateStore {
 
     // create application token2 for attempt2
     List<Token<?>> appAttemptToken2 =
-        generateTokens(attemptId2, appTokenMgr, clientTokenMgr, conf);
+        generateTokens(attemptId2, appTokenMgr, clientToAMTokenMgr, conf);
     HashSet<Token<?>> attemptTokenSet2 = new HashSet<Token<?>>();
     attemptTokenSet2.addAll(appAttemptToken2);
 
     ContainerId containerId2 = storeAttempt(store, attemptId2,
           "container_1352994193343_0001_02_000001",
           (Token<AMRMTokenIdentifier>) (appAttemptToken2.get(0)),
-          (Token<ClientTokenIdentifier>)(appAttemptToken2.get(1)),
+          (Token<ClientToAMTokenIdentifier>)(appAttemptToken2.get(1)),
           dispatcher);
 
     ApplicationAttemptId attemptIdRemoved = ConverterUtils
@@ -373,21 +373,22 @@ public class TestRMStateStore {
 
   private List<Token<?>> generateTokens(ApplicationAttemptId attemptId,
       AMRMTokenSecretManager appTokenMgr,
-      ClientToAMTokenSecretManagerInRM clientTokenMgr, Configuration conf) {
+      ClientToAMTokenSecretManagerInRM clientToAMTokenMgr, Configuration conf) {
     AMRMTokenIdentifier appTokenId =
         new AMRMTokenIdentifier(attemptId);
     Token<AMRMTokenIdentifier> appToken =
         new Token<AMRMTokenIdentifier>(appTokenId, appTokenMgr);
     appToken.setService(new Text("appToken service"));
 
-    ClientTokenIdentifier clientTokenId = new ClientTokenIdentifier(attemptId);
-    clientTokenMgr.registerApplication(attemptId);
-    Token<ClientTokenIdentifier> clientToken =
-        new Token<ClientTokenIdentifier>(clientTokenId, clientTokenMgr);
-    clientToken.setService(new Text("clientToken service"));
+    ClientToAMTokenIdentifier clientToAMTokenId =
+        new ClientToAMTokenIdentifier(attemptId);
+    clientToAMTokenMgr.registerApplication(attemptId);
+    Token<ClientToAMTokenIdentifier> clientToAMToken =
+        new Token<ClientToAMTokenIdentifier>(clientToAMTokenId, clientToAMTokenMgr);
+    clientToAMToken.setService(new Text("clientToAMToken service"));
     List<Token<?>> tokenPair = new ArrayList<Token<?>>();
     tokenPair.add(0, appToken);
-    tokenPair.add(1, clientToken);
+    tokenPair.add(1, clientToAMToken);
     return tokenPair;
   }
 }

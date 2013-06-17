@@ -63,8 +63,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.AMRMTokenSelector;
-import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientTokenSelector;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
@@ -129,7 +129,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final WriteLock writeLock;
 
   private final ApplicationAttemptId applicationAttemptId;
-  private Token<ClientTokenIdentifier> clientToken;
+  private Token<ClientToAMTokenIdentifier> clientToAMToken;
   private final ApplicationSubmissionContext submissionContext;
   private Token<AMRMTokenIdentifier> amrmToken = null;
 
@@ -498,8 +498,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public Token<ClientTokenIdentifier> getClientToken() {
-    return this.clientToken;
+  public Token<ClientToAMTokenIdentifier> getClientToAMToken() {
+    return this.clientToAMToken;
   }
 
   @Override
@@ -673,9 +673,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
     if (UserGroupInformation.isSecurityEnabled()) {
 
-      ClientTokenSelector clientTokenSelector = new ClientTokenSelector();
-      this.clientToken =
-          clientTokenSelector.selectToken(new Text(),
+      ClientToAMTokenSelector clientToAMTokenSelector =
+          new ClientToAMTokenSelector();
+      this.clientToAMToken =
+          clientToAMTokenSelector.selectToken(new Text(),
             appAttemptTokens.getAllTokens());
 
       InetSocketAddress serviceAddr = conf.getSocketAddr(
@@ -720,9 +721,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         appAttempt.rmContext.getClientToAMTokenSecretManager()
           .registerApplication(appAttempt.applicationAttemptId);
 
-        // create clientToken
-        appAttempt.clientToken =
-            new Token<ClientTokenIdentifier>(new ClientTokenIdentifier(
+        // create clientToAMToken
+        appAttempt.clientToAMToken =
+            new Token<ClientToAMTokenIdentifier>(new ClientToAMTokenIdentifier(
               appAttempt.applicationAttemptId),
               appAttempt.rmContext.getClientToAMTokenSecretManager());
 
@@ -1050,7 +1051,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.rmContext.getAMFinishingMonitor().unregister(
           appAttempt.getAppAttemptId());
 
-      // Unregister from the ClientTokenSecretManager
+      // Unregister from the ClientToAMTokenSecretManager
       if (UserGroupInformation.isSecurityEnabled()) {
         appAttempt.rmContext.getClientToAMTokenSecretManager()
           .unRegisterApplication(appAttempt.getAppAttemptId());

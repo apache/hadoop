@@ -165,12 +165,12 @@ public class AMLauncher implements Runnable {
             new String[0])));
     
     // Finalize the container
-    setupTokensAndEnv(container, containerID);
+    setupTokens(container, containerID);
     
     return container;
   }
 
-  private void setupTokensAndEnv(
+  private void setupTokens(
       ContainerLaunchContext container, ContainerId containerID)
       throws IOException {
     Map<String, String> environment = container.getEnvironment();
@@ -210,15 +210,6 @@ public class AMLauncher implements Runnable {
       credentials.writeTokenStorageToStream(dob);
       container.setTokens(ByteBuffer.wrap(dob.getData(), 0,
         dob.getLength()));
-
-      SecretKey clientSecretKey =
-          this.rmContext.getClientToAMTokenSecretManager().getMasterKey(
-            application.getAppAttemptId());
-      String encoded =
-          Base64.encodeBase64URLSafeString(clientSecretKey.getEncoded());
-      environment.put(
-          ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME, 
-          encoded);
     }
   }
   

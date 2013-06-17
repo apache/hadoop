@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -79,14 +78,11 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
@@ -117,19 +113,9 @@ public class MRClientService extends AbstractService
     YarnRPC rpc = YarnRPC.create(conf);
     InetSocketAddress address = new InetSocketAddress(0);
 
-    ClientToAMTokenSecretManager secretManager = null;
-    if (UserGroupInformation.isSecurityEnabled()) {
-      String secretKeyStr =
-          System
-              .getenv(ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME);
-      byte[] bytes = Base64.decodeBase64(secretKeyStr);
-      secretManager =
-          new ClientToAMTokenSecretManager(
-            this.appContext.getApplicationAttemptId(), bytes);
-    }
     server =
         rpc.getServer(MRClientProtocol.class, protocolHandler, address,
-            conf, secretManager,
+            conf, appContext.getClientToAMTokenSecretManager(),
             conf.getInt(MRJobConfig.MR_AM_JOB_CLIENT_THREAD_COUNT, 
                 MRJobConfig.DEFAULT_MR_AM_JOB_CLIENT_THREAD_COUNT),
                 MRJobConfig.MR_AM_JOB_CLIENT_PORT_RANGE);
