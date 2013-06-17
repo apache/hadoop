@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
-import org.apache.hadoop.yarn.api.ContainerManagerPB;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocolPB;
 
@@ -35,8 +35,8 @@ public class NMPolicyProvider extends PolicyProvider {
   private static final Service[] nodeManagerServices = 
       new Service[] {
     new Service(
-        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGER, 
-        ContainerManagerPB.class),
+        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGEMENT_PROTOCOL, 
+        ContainerManagementProtocolPB.class),
     new Service(YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER, 
         LocalizationProtocolPB.class)
   };

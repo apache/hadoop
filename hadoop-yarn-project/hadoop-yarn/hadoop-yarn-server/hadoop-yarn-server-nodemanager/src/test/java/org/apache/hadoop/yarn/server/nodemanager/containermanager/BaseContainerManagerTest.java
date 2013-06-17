@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -210,13 +210,13 @@ public abstract class BaseContainerManagerTest {
         new Path(localDir.getAbsolutePath()), new Path[] {});
   }
 
-  public static void waitForContainerState(ContainerManager containerManager,
+  public static void waitForContainerState(ContainerManagementProtocol containerManager,
       ContainerId containerID, ContainerState finalState)
       throws InterruptedException, YarnException, IOException {
     waitForContainerState(containerManager, containerID, finalState, 20);
   }
 
-  public static void waitForContainerState(ContainerManager containerManager,
+  public static void waitForContainerState(ContainerManagementProtocol containerManager,
           ContainerId containerID, ContainerState finalState, int timeOutMax)
           throws InterruptedException, YarnException, IOException {
     GetContainerStatusRequest request =

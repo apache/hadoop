@@ -26,8 +26,8 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequest
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.ClientRMProtocolPB;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
@@ -87,11 +87,11 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationResponseP
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class ClientRMProtocolPBServiceImpl implements ClientRMProtocolPB {
+public class ApplicationClientProtocolPBServiceImpl implements ApplicationClientProtocolPB {
 
-  private ClientRMProtocol real;
+  private ApplicationClientProtocol real;
   
-  public ClientRMProtocolPBServiceImpl(ClientRMProtocol impl) {
+  public ApplicationClientProtocolPBServiceImpl(ApplicationClientProtocol impl) {
     this.real = impl;
   }
   

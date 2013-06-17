@@ -18,10 +18,11 @@
 package org.apache.hadoop.yarn.api;
 
 import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.yarn.proto.ClientRMProtocol.ClientRMProtocolService;
+import org.apache.hadoop.yarn.proto.ContainerManagementProtocol.ContainerManagementProtocolService;
 
-@ProtocolInfo(protocolName = "org.apache.hadoop.yarn.api.ClientRMProtocolPB",
+@ProtocolInfo(
+    protocolName = "org.apache.hadoop.yarn.api.ContainerManagementProtocolPB",
     protocolVersion = 1)
-public interface ClientRMProtocolPB extends ClientRMProtocolService.BlockingInterface {
+public interface ContainerManagementProtocolPB extends ContainerManagementProtocolService.BlockingInterface {
 
 }

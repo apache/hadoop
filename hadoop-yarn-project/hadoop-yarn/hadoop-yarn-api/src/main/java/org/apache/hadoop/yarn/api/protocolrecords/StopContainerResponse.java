@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.util.Records;
  * 
  * <p>Currently, this is empty.</p>
  * 
- * @see ContainerManager#stopContainer(StopContainerRequest)
+ * @see ContainerManagementProtocol#stopContainer(StopContainerRequest)
  */
 @Public
 @Stable

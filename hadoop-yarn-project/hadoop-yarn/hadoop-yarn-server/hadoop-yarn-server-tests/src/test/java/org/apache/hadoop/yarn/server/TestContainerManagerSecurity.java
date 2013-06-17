@@ -44,8 +44,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
@@ -141,7 +141,7 @@ public class TestContainerManagerSecurity {
     ApplicationId appID = resourceManager.getClientRMService()
         .getNewApplication(Records.newRecord(GetNewApplicationRequest.class))
         .getApplicationId();
-    AMRMProtocol scheduler = submitAndRegisterApplication(resourceManager,
+    ApplicationMasterProtocol scheduler = submitAndRegisterApplication(resourceManager,
         yarnRPC, appID);
 
     // Now request a container.
@@ -162,8 +162,8 @@ public class TestContainerManagerSecurity {
     authenticatedUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        ContainerManager client = (ContainerManager) yarnRPC.getProxy(
-            ContainerManager.class, NetUtils
+        ContainerManagementProtocol client = (ContainerManagementProtocol) yarnRPC.getProxy(
+            ContainerManagementProtocol.class, NetUtils
                 .createSocketAddr(allocatedContainer.getNodeId().toString()),
             conf);
         LOG.info("Going to make a legal stopContainer() request");
@@ -203,7 +203,7 @@ public class TestContainerManagerSecurity {
     ApplicationId appID = resourceManager.getClientRMService()
         .getNewApplication(Records.newRecord(GetNewApplicationRequest.class))
         .getApplicationId();
-    AMRMProtocol scheduler = submitAndRegisterApplication(resourceManager,
+    ApplicationMasterProtocol scheduler = submitAndRegisterApplication(resourceManager,
         yarnRPC, appID);
 
     // Now request a container.
@@ -270,8 +270,8 @@ public class TestContainerManagerSecurity {
     maliceUser.doAs(new PrivilegedAction<Void>() {
       @Override
       public Void run() {
-        ContainerManager client = (ContainerManager) yarnRPC.getProxy(
-            ContainerManager.class, NetUtils
+        ContainerManagementProtocol client = (ContainerManagementProtocol) yarnRPC.getProxy(
+            ContainerManagementProtocol.class, NetUtils
                 .createSocketAddr(allocatedContainer.getNodeId().toString()),
             conf);
 
@@ -318,7 +318,7 @@ public class TestContainerManagerSecurity {
     final ApplicationId appID = resourceManager.getClientRMService()
         .getNewApplication(Records.newRecord(GetNewApplicationRequest.class))
         .getApplicationId();
-    AMRMProtocol scheduler = submitAndRegisterApplication(resourceManager,
+    ApplicationMasterProtocol scheduler = submitAndRegisterApplication(resourceManager,
         yarnRPC, appID);
 
     // Now request a container.
@@ -358,8 +358,8 @@ public class TestContainerManagerSecurity {
     unauthorizedUser.doAs(new PrivilegedAction<Void>() {
       @Override
       public Void run() {
-        ContainerManager client = (ContainerManager) yarnRPC.getProxy(
-            ContainerManager.class, NetUtils
+        ContainerManagementProtocol client = (ContainerManagementProtocol) yarnRPC.getProxy(
+            ContainerManagementProtocol.class, NetUtils
                 .createSocketAddr(allocatedContainer.getNodeId().toString()),
             conf);
 
@@ -403,7 +403,7 @@ public class TestContainerManagerSecurity {
     resourceManager.getClientRMService().forceKillApplication(request);
   }
   
-  private AMRMProtocol submitAndRegisterApplication(
+  private ApplicationMasterProtocol submitAndRegisterApplication(
       ResourceManager resourceManager, final YarnRPC yarnRPC,
       ApplicationId appID) throws IOException,
       UnsupportedFileSystemException, YarnException,
@@ -472,11 +472,11 @@ public class TestContainerManagerSecurity {
       currentUser.addToken(appToken);
     }
     
-    AMRMProtocol scheduler = currentUser
-        .doAs(new PrivilegedAction<AMRMProtocol>() {
+    ApplicationMasterProtocol scheduler = currentUser
+        .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
-          public AMRMProtocol run() {
-            return (AMRMProtocol) yarnRPC.getProxy(AMRMProtocol.class,
+          public ApplicationMasterProtocol run() {
+            return (ApplicationMasterProtocol) yarnRPC.getProxy(ApplicationMasterProtocol.class,
                 schedulerAddr, conf);
           }
         });
@@ -490,7 +490,7 @@ public class TestContainerManagerSecurity {
     return scheduler;
   }
 
-  private Container requestAndGetContainer(AMRMProtocol scheduler,
+  private Container requestAndGetContainer(ApplicationMasterProtocol scheduler,
       ApplicationId appID) throws YarnException, InterruptedException,
       IOException {
 

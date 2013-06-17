@@ -15,14 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api;
 
-import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.yarn.proto.RMAdminProtocol.RMAdminProtocolService;
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "ApplicationMasterProtocol";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
 
-@ProtocolInfo(
-    protocolName = "org.apache.hadoop.yarn.api.RMAdminProtocolPB",
-    protocolVersion = 1)
-public interface RMAdminProtocolPB extends RMAdminProtocolService.BlockingInterface {
+import "yarn_service_protos.proto";
 
+
+service ApplicationMasterProtocolService {
+  rpc registerApplicationMaster (RegisterApplicationMasterRequestProto) returns (RegisterApplicationMasterResponseProto);
+  rpc finishApplicationMaster (FinishApplicationMasterRequestProto) returns (FinishApplicationMasterResponseProto);
+  rpc allocate (AllocateRequestProto) returns (AllocateResponseProto);
 }

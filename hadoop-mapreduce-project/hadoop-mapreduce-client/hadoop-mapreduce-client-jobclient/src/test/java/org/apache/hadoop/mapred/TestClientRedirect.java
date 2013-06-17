@@ -68,7 +68,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
@@ -223,7 +223,7 @@ public class TestClientRedirect {
     Assert.assertEquals(1, counters.countCounters());
   }
 
-  class RMService extends AbstractService implements ClientRMProtocol {
+  class RMService extends AbstractService implements ApplicationClientProtocol {
     private String clientServiceBindAddress;
     InetSocketAddress clientBindAddress;
     private Server server;
@@ -250,7 +250,7 @@ public class TestClientRedirect {
       // Kerberos if security is enabled, so no secretManager.
       YarnRPC rpc = YarnRPC.create(getConfig());
       Configuration clientServerConf = new Configuration(getConfig());
-      this.server = rpc.getServer(ClientRMProtocol.class, this,
+      this.server = rpc.getServer(ApplicationClientProtocol.class, this,
           clientBindAddress, clientServerConf, null, 1);
       this.server.start();
       super.serviceStart();

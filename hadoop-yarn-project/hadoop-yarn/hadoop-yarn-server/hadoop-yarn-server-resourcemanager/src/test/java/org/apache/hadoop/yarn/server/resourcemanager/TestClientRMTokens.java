@@ -52,7 +52,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -108,7 +108,7 @@ public class TestClientRMTokens {
     clientRMService.init(conf);
     clientRMService.start();
 
-    ClientRMProtocol clientRMWithDT = null;
+    ApplicationClientProtocol clientRMWithDT = null;
     try {
 
       // Create a user for the renewr and fake the authentication-method
@@ -351,7 +351,7 @@ public class TestClientRMTokens {
   // the kerberos based rpc.
   private org.apache.hadoop.yarn.api.records.Token getDelegationToken(
       final UserGroupInformation loggedInUser,
-      final ClientRMProtocol clientRMService, final String renewerString)
+      final ApplicationClientProtocol clientRMService, final String renewerString)
       throws IOException, InterruptedException {
     org.apache.hadoop.yarn.api.records.Token token = loggedInUser
         .doAs(new PrivilegedExceptionAction<org.apache.hadoop.yarn.api.records.Token>() {
@@ -369,7 +369,7 @@ public class TestClientRMTokens {
   }
   
   private long renewDelegationToken(final UserGroupInformation loggedInUser,
-      final ClientRMProtocol clientRMService,
+      final ApplicationClientProtocol clientRMService,
       final org.apache.hadoop.yarn.api.records.Token dToken)
       throws IOException, InterruptedException {
     long nextExpTime = loggedInUser.doAs(new PrivilegedExceptionAction<Long>() {
@@ -386,7 +386,7 @@ public class TestClientRMTokens {
   }
   
   private void cancelDelegationToken(final UserGroupInformation loggedInUser,
-      final ClientRMProtocol clientRMService,
+      final ApplicationClientProtocol clientRMService,
       final org.apache.hadoop.yarn.api.records.Token dToken)
       throws IOException, InterruptedException {
     loggedInUser.doAs(new PrivilegedExceptionAction<Void>() {
@@ -401,7 +401,7 @@ public class TestClientRMTokens {
     });
   }
   
-  private ClientRMProtocol getClientRMProtocolWithDT(
+  private ApplicationClientProtocol getClientRMProtocolWithDT(
       org.apache.hadoop.yarn.api.records.Token token,
       final InetSocketAddress rmAddress, String user, final Configuration conf) {
     // Maybe consider converting to Hadoop token, serialize de-serialize etc
@@ -412,11 +412,11 @@ public class TestClientRMTokens {
     ugi.addToken(ProtoUtils.convertFromProtoFormat(token, rmAddress));
 
     final YarnRPC rpc = YarnRPC.create(conf);
-    ClientRMProtocol clientRMWithDT = ugi
-        .doAs(new PrivilegedAction<ClientRMProtocol>() {
+    ApplicationClientProtocol clientRMWithDT = ugi
+        .doAs(new PrivilegedAction<ApplicationClientProtocol>() {
           @Override
-          public ClientRMProtocol run() {
-            return (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,
+          public ApplicationClientProtocol run() {
+            return (ApplicationClientProtocol) rpc.getProxy(ApplicationClientProtocol.class,
                 rmAddress, conf);
           }
         });

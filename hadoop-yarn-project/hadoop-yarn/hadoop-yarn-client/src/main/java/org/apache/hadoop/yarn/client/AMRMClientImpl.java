@@ -43,7 +43,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -85,7 +85,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
   private int lastResponseId = 0;
   private ConcurrentHashMap<String, Token> nmTokens;
 
-  protected AMRMProtocol rmClient;
+  protected ApplicationMasterProtocol rmClient;
   protected final ApplicationAttemptId appAttemptId;  
   protected Resource clusterAvailableResources;
   protected int clusterNodeCount;
@@ -185,10 +185,10 @@ public class AMRMClientImpl<T extends ContainerRequest>
     }
 
     // CurrentUser should already have AMToken loaded.
-    rmClient = currentUser.doAs(new PrivilegedAction<AMRMProtocol>() {
+    rmClient = currentUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
       @Override
-      public AMRMProtocol run() {
-        return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rmAddress,
+      public ApplicationMasterProtocol run() {
+        return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class, rmAddress,
             conf);
       }
     });

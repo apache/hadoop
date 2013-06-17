@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -79,13 +79,13 @@ public class TestContainerLaunchRPC {
     YarnRPC rpc = YarnRPC.create(conf);
     String bindAddr = "localhost:0";
     InetSocketAddress addr = NetUtils.createSocketAddr(bindAddr);
-    Server server = rpc.getServer(ContainerManager.class,
+    Server server = rpc.getServer(ContainerManagementProtocol.class,
         new DummyContainerManager(), addr, conf, null, 1);
     server.start();
     try {
 
-      ContainerManager proxy = (ContainerManager) rpc.getProxy(
-          ContainerManager.class,
+      ContainerManagementProtocol proxy = (ContainerManagementProtocol) rpc.getProxy(
+          ContainerManagementProtocol.class,
           server.getListenerAddress(), conf);
       ContainerLaunchContext containerLaunchContext = recordFactory
           .newRecordInstance(ContainerLaunchContext.class);
@@ -124,7 +124,7 @@ public class TestContainerLaunchRPC {
     Assert.fail("timeout exception should have occurred!");
   }
 
-  public class DummyContainerManager implements ContainerManager {
+  public class DummyContainerManager implements ContainerManagementProtocol {
 
     private ContainerStatus status = null;
 

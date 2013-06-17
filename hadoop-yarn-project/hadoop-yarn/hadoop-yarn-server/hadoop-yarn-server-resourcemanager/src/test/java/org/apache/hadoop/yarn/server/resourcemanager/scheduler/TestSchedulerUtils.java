@@ -31,7 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -295,11 +295,11 @@ public class TestSchedulerUtils {
     UserGroupInformation currentUser = 
         UserGroupInformation.createRemoteUser(applicationAttemptId.toString());
 
-    AMRMProtocol client = currentUser
-        .doAs(new PrivilegedAction<AMRMProtocol>() {
+    ApplicationMasterProtocol client = currentUser
+        .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
-          public AMRMProtocol run() {
-            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rm
+          public ApplicationMasterProtocol run() {
+            return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class, rm
                 .getApplicationMasterService().getBindAddress(), conf);
           }
         });

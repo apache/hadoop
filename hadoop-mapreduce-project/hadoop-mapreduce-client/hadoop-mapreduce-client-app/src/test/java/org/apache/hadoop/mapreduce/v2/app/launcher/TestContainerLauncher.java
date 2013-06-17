@@ -49,7 +49,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttemptStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -232,7 +232,7 @@ public class TestContainerLauncher {
     YarnRPC rpc = YarnRPC.create(conf);
     String bindAddr = "localhost:0";
     InetSocketAddress addr = NetUtils.createSocketAddr(bindAddr);
-    server = rpc.getServer(ContainerManager.class, new DummyContainerManager(),
+    server = rpc.getServer(ContainerManagementProtocol.class, new DummyContainerManager(),
         addr, conf, null, 1);
     server.start();
 
@@ -345,12 +345,12 @@ public class TestContainerLauncher {
     protected ContainerLauncher createContainerLauncher(AppContext context) {
       return new ContainerLauncherImpl(context) {
         @Override
-        protected ContainerManager getCMProxy(ContainerId containerID,
+        protected ContainerManagementProtocol getCMProxy(ContainerId containerID,
             String containerManagerBindAddr, Token containerToken)
             throws IOException {
           // make proxy connect to our local containerManager server
-          ContainerManager proxy = (ContainerManager) rpc.getProxy(
-              ContainerManager.class,
+          ContainerManagementProtocol proxy = (ContainerManagementProtocol) rpc.getProxy(
+              ContainerManagementProtocol.class,
               NetUtils.getConnectAddress(server), conf);
           return proxy;
         }
@@ -359,7 +359,7 @@ public class TestContainerLauncher {
     };
   }
 
-  public class DummyContainerManager implements ContainerManager {
+  public class DummyContainerManager implements ContainerManagementProtocol {
 
     private ContainerStatus status = null;
 

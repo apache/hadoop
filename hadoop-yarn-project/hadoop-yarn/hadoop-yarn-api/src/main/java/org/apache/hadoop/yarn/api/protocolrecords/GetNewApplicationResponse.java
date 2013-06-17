@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.util.Records;
  * <p>The response sent by the <code>ResourceManager</code> to the client for 
  * a request to get a new {@link ApplicationId} for submitting applications.</p>
  * 
- * @see ClientRMProtocol#getNewApplication(GetNewApplicationRequest)
+ * @see ApplicationClientProtocol#getNewApplication(GetNewApplicationRequest)
  */
 @Public
 @Stable

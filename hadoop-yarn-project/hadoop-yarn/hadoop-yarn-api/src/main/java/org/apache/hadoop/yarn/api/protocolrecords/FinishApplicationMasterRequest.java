@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.util.Records;
@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.util.Records;
  *   </ul>
  * </p>
  *
- * @see AMRMProtocol#finishApplicationMaster(FinishApplicationMasterRequest)
+ * @see ApplicationMasterProtocol#finishApplicationMaster(FinishApplicationMasterRequest)
  */
 public abstract class FinishApplicationMasterRequest {
 

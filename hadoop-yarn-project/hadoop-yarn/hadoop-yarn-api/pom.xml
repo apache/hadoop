@@ -54,11 +54,11 @@
                 <includes>
                   <include>yarn_protos.proto</include>
                   <include>yarn_service_protos.proto</include>
-                  <include>AM_RM_protocol.proto</include>
-                  <include>client_RM_protocol.proto</include>
-                  <include>container_manager.proto</include>
+                  <include>applicationmaster_protocol.proto</include>
+                  <include>applicationclient_protocol.proto</include>
+                  <include>containermanagement_protocol.proto</include>
                   <include>yarn_server_resourcemanager_service_protos.proto</include>
-                  <include>RMAdminProtocol.proto</include>
+                  <include>resourcemanager_administration_protocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>

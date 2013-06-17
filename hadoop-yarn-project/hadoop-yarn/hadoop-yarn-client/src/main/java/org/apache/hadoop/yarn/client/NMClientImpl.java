@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -160,7 +160,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
     private ContainerId containerId;
     private NodeId nodeId;
     private Token containerToken;
-    private ContainerManager containerManager;
+    private ContainerManagementProtocol containerManager;
 
     public NMCommunicator(ContainerId containerId, NodeId nodeId,
         Token containerToken) {
@@ -186,10 +186,10 @@ public class NMClientImpl extends AbstractService implements NMClient {
       currentUser.addToken(token);
 
       containerManager = currentUser
-          .doAs(new PrivilegedAction<ContainerManager>() {
+          .doAs(new PrivilegedAction<ContainerManagementProtocol>() {
             @Override
-            public ContainerManager run() {
-              return (ContainerManager) rpc.getProxy(ContainerManager.class,
+            public ContainerManagementProtocol run() {
+              return (ContainerManagementProtocol) rpc.getProxy(ContainerManagementProtocol.class,
                   containerAddress, getConfig());
             }
           });

@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.api.impl.pb.service;
 
 import java.io.IOException;
 
-import org.apache.hadoop.yarn.api.AMRMProtocol;
-import org.apache.hadoop.yarn.api.AMRMProtocolPB;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -42,11 +42,11 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterR
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class AMRMProtocolPBServiceImpl implements AMRMProtocolPB {
+public class ApplicationMasterProtocolPBServiceImpl implements ApplicationMasterProtocolPB {
 
-  private AMRMProtocol real;
+  private ApplicationMasterProtocol real;
   
-  public AMRMProtocolPBServiceImpl(AMRMProtocol impl) {
+  public ApplicationMasterProtocolPBServiceImpl(ApplicationMasterProtocol impl) {
     this.real = impl;
   }
   

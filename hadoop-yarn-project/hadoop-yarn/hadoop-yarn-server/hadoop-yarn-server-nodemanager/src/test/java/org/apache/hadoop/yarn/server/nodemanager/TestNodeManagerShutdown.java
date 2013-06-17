@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -192,15 +192,15 @@ public class TestNodeManagerShutdown {
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(cId.toString());
 
-    ContainerManager containerManager =
-        currentUser.doAs(new PrivilegedAction<ContainerManager>() {
+    ContainerManagementProtocol containerManager =
+        currentUser.doAs(new PrivilegedAction<ContainerManagementProtocol>() {
           @Override
-          public ContainerManager run() {
+          public ContainerManagementProtocol run() {
             Configuration conf = new Configuration();
             YarnRPC rpc = YarnRPC.create(conf);
             InetSocketAddress containerManagerBindAddress =
                 NetUtils.createSocketAddrForHost("127.0.0.1", 12345);
-            return (ContainerManager) rpc.getProxy(ContainerManager.class,
+            return (ContainerManagementProtocol) rpc.getProxy(ContainerManagementProtocol.class,
               containerManagerBindAddress, conf);
           }
         });

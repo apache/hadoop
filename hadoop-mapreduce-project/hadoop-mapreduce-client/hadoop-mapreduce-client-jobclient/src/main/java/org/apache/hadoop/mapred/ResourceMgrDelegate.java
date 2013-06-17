@@ -37,7 +37,7 @@ import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -54,7 +54,7 @@ public class ResourceMgrDelegate extends YarnClientImpl {
   private ApplicationId applicationId;
 
   /**
-   * Delegate responsible for communicating with the Resource Manager's {@link ClientRMProtocol}.
+   * Delegate responsible for communicating with the Resource Manager's {@link ApplicationClientProtocol}.
    * @param conf the configuration object.
    */
   public ResourceMgrDelegate(YarnConfiguration conf) {

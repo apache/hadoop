@@ -17,14 +17,14 @@
  */
 
 option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "ClientRMProtocol";
+option java_outer_classname = "ApplicationClientProtocol";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
 import "Security.proto";
 import "yarn_service_protos.proto";
 
-service ClientRMProtocolService {
+service ApplicationClientProtocolService {
   rpc getNewApplication (GetNewApplicationRequestProto) returns (GetNewApplicationResponseProto);
   rpc getApplicationReport (GetApplicationReportRequestProto) returns (GetApplicationReportResponseProto);
   rpc submitApplication (SubmitApplicationRequestProto) returns (SubmitApplicationResponseProto);

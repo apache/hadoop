@@ -18,11 +18,10 @@
 package org.apache.hadoop.yarn.api;
 
 import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.yarn.proto.ContainerManager.ContainerManagerService;
+import org.apache.hadoop.yarn.proto.ApplicationMasterProtocol.ApplicationMasterProtocolService;
 
-@ProtocolInfo(
-    protocolName = "org.apache.hadoop.yarn.api.ContainerManagerPB",
+@ProtocolInfo(protocolName = "org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB",
     protocolVersion = 1)
-public interface ContainerManagerPB extends ContainerManagerService.BlockingInterface {
+public interface ApplicationMasterProtocolPB extends ApplicationMasterProtocolService.BlockingInterface {
 
 }

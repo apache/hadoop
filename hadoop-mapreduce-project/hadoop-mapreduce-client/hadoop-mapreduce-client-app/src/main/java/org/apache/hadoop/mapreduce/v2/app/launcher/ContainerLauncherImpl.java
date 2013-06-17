@@ -48,7 +48,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
@@ -140,7 +140,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         return;
       }
       
-      ContainerManager proxy = null;
+      ContainerManagementProtocol proxy = null;
       try {
 
         proxy = getCMProxy(containerID, containerMgrAddress,
@@ -198,7 +198,7 @@ public class ContainerLauncherImpl extends AbstractService implements
       } else if (!isCompletelyDone()) {
         LOG.info("KILLING " + taskAttemptID);
 
-        ContainerManager proxy = null;
+        ContainerManagementProtocol proxy = null;
         try {
           proxy = getCMProxy(this.containerID, this.containerMgrAddress,
               this.containerToken);
@@ -348,7 +348,7 @@ public class ContainerLauncherImpl extends AbstractService implements
     return new EventProcessor(event);
   }
 
-  protected ContainerManager getCMProxy(ContainerId containerID,
+  protected ContainerManagementProtocol getCMProxy(ContainerId containerID,
       final String containerManagerBindAddr,
       org.apache.hadoop.yarn.api.records.Token containerToken)
       throws IOException {
@@ -364,11 +364,11 @@ public class ContainerLauncherImpl extends AbstractService implements
         ProtoUtils.convertFromProtoFormat(containerToken, cmAddr);
     user.addToken(token);
 
-    ContainerManager proxy = user
-        .doAs(new PrivilegedAction<ContainerManager>() {
+    ContainerManagementProtocol proxy = user
+        .doAs(new PrivilegedAction<ContainerManagementProtocol>() {
           @Override
-          public ContainerManager run() {
-            return (ContainerManager) rpc.getProxy(ContainerManager.class,
+          public ContainerManagementProtocol run() {
+            return (ContainerManagementProtocol) rpc.getProxy(ContainerManagementProtocol.class,
                 cmAddr, getConfig());
           }
         });

@@ -45,7 +45,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
@@ -149,7 +149,7 @@ public class TestClientTokens {
     }
   }
 
-  private static class CustomNM implements ContainerManager {
+  private static class CustomNM implements ContainerManagementProtocol {
 
     public String clientTokensSecret;
 

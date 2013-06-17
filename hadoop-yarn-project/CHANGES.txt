@@ -140,6 +140,12 @@ Release 2.1.0-beta - UNRELEASED
     YARN-823. Moved RMAdmin from yarn.client to yarn.client.cli and renamed it to
     be RMAdminCLI. (Jian He via vinodkv)
 
+    YARN-387. Renamed YARN protocols for consistency.
+    ClientRMProtocol -> ApplicationClientProtocol
+    AMRMProtocol -> ApplicationMasterProtocol
+    ContainerManager -> ContainerManagementProtocol
+    (vinodkv via acmurthy)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
