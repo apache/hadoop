@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -68,7 +68,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
 
   private static final Log LOG = LogFactory.getLog(YarnClientImpl.class);
 
-  protected ClientRMProtocol rmClient;
+  protected ApplicationClientProtocol rmClient;
   protected InetSocketAddress rmAddress;
   protected long statePollIntervalMillis;
 
@@ -107,8 +107,8 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   protected void serviceStart() throws Exception {
     YarnRPC rpc = YarnRPC.create(getConfig());
 
-    this.rmClient = (ClientRMProtocol) rpc.getProxy(
-        ClientRMProtocol.class, rmAddress, getConfig());
+    this.rmClient = (ApplicationClientProtocol) rpc.getProxy(
+        ApplicationClientProtocol.class, rmAddress, getConfig());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Connecting to ResourceManager at " + rmAddress);
     }

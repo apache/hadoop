@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.api.impl.pb.service;
 
 import java.io.IOException;
 
-import org.apache.hadoop.yarn.api.ContainerManager;
-import org.apache.hadoop.yarn.api.ContainerManagerPB;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
@@ -42,11 +42,11 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainerResponseProto
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class ContainerManagerPBServiceImpl implements ContainerManagerPB  {
+public class ContainerManagementProtocolPBServiceImpl implements ContainerManagementProtocolPB  {
 
-  private ContainerManager real;
+  private ContainerManagementProtocol real;
   
-  public ContainerManagerPBServiceImpl(ContainerManager impl) {
+  public ContainerManagementProtocolPBServiceImpl(ContainerManagementProtocol impl) {
     this.real = impl;
   }
 

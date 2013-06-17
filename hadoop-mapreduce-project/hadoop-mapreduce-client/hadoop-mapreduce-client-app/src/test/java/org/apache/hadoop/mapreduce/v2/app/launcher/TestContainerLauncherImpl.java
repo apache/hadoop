@@ -46,7 +46,7 @@ import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher.EventType;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -147,8 +147,8 @@ public class TestContainerLauncherImpl {
     EventHandler mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
 
-    ContainerManager mockCM = mock(ContainerManager.class);
-    when(mockRpc.getProxy(eq(ContainerManager.class), 
+    ContainerManagementProtocol mockCM = mock(ContainerManagementProtocol.class);
+    when(mockRpc.getProxy(eq(ContainerManagementProtocol.class), 
         any(InetSocketAddress.class), any(Configuration.class)))
         .thenReturn(mockCM);
     
@@ -213,8 +213,8 @@ public class TestContainerLauncherImpl {
     EventHandler mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
 
-    ContainerManager mockCM = mock(ContainerManager.class);
-    when(mockRpc.getProxy(eq(ContainerManager.class), 
+    ContainerManagementProtocol mockCM = mock(ContainerManagementProtocol.class);
+    when(mockRpc.getProxy(eq(ContainerManagementProtocol.class), 
         any(InetSocketAddress.class), any(Configuration.class)))
         .thenReturn(mockCM);
     
@@ -279,8 +279,8 @@ public class TestContainerLauncherImpl {
     EventHandler mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
 
-    ContainerManager mockCM = mock(ContainerManager.class);
-    when(mockRpc.getProxy(eq(ContainerManager.class),
+    ContainerManagementProtocol mockCM = mock(ContainerManagementProtocol.class);
+    when(mockRpc.getProxy(eq(ContainerManagementProtocol.class),
         any(InetSocketAddress.class), any(Configuration.class)))
         .thenReturn(mockCM);
 
@@ -338,8 +338,8 @@ public class TestContainerLauncherImpl {
     EventHandler mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
 
-    ContainerManager mockCM = new ContainerManagerForTest(startLaunchBarrier, completeLaunchBarrier);
-    when(mockRpc.getProxy(eq(ContainerManager.class), 
+    ContainerManagementProtocol mockCM = new ContainerManagerForTest(startLaunchBarrier, completeLaunchBarrier);
+    when(mockRpc.getProxy(eq(ContainerManagementProtocol.class), 
         any(InetSocketAddress.class), any(Configuration.class)))
         .thenReturn(mockCM);
     
@@ -417,7 +417,7 @@ public class TestContainerLauncherImpl {
         currentTime + 10000L, 123, currentTime));
   }
 
-  private static class ContainerManagerForTest implements ContainerManager {
+  private static class ContainerManagerForTest implements ContainerManagementProtocol {
 
     private CyclicBarrier startLaunchBarrier;
     private CyclicBarrier completeLaunchBarrier;

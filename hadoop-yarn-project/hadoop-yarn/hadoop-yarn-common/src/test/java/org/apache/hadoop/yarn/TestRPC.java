@@ -30,9 +30,9 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.ContainerManager;
-import org.apache.hadoop.yarn.api.ContainerManagerPB;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -74,13 +74,13 @@ public class TestRPC {
     YarnRPC rpc = YarnRPC.create(conf);
     String bindAddr = "localhost:0";
     InetSocketAddress addr = NetUtils.createSocketAddr(bindAddr);
-    Server server = rpc.getServer(ContainerManager.class,
+    Server server = rpc.getServer(ContainerManagementProtocol.class,
         new DummyContainerManager(), addr, conf, null, 1);
     server.start();
 
     // Any unrelated protocol would do
-    ClientRMProtocol proxy = (ClientRMProtocol) rpc.getProxy(
-        ClientRMProtocol.class, NetUtils.getConnectAddress(server), conf);
+    ApplicationClientProtocol proxy = (ApplicationClientProtocol) rpc.getProxy(
+        ApplicationClientProtocol.class, NetUtils.getConnectAddress(server), conf);
 
     try {
       proxy.getNewApplication(Records
@@ -89,8 +89,8 @@ public class TestRPC {
     } catch (YarnException e) {
       Assert.assertTrue(e.getMessage().matches(
           "Unknown method getNewApplication called on.*"
-              + "org.apache.hadoop.yarn.proto.ClientRMProtocol"
-              + "\\$ClientRMProtocolService\\$BlockingInterface protocol."));
+              + "org.apache.hadoop.yarn.proto.ApplicationClientProtocol"
+              + "\\$ApplicationClientProtocolService\\$BlockingInterface protocol."));
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -107,12 +107,12 @@ public class TestRPC {
     YarnRPC rpc = YarnRPC.create(conf);
     String bindAddr = "localhost:0";
     InetSocketAddress addr = NetUtils.createSocketAddr(bindAddr);
-    Server server = rpc.getServer(ContainerManager.class, 
+    Server server = rpc.getServer(ContainerManagementProtocol.class, 
             new DummyContainerManager(), addr, conf, null, 1);
     server.start();
-    RPC.setProtocolEngine(conf, ContainerManagerPB.class, ProtobufRpcEngine.class);
-    ContainerManager proxy = (ContainerManager) 
-        rpc.getProxy(ContainerManager.class, 
+    RPC.setProtocolEngine(conf, ContainerManagementProtocolPB.class, ProtobufRpcEngine.class);
+    ContainerManagementProtocol proxy = (ContainerManagementProtocol) 
+        rpc.getProxy(ContainerManagementProtocol.class, 
             NetUtils.getConnectAddress(server), conf);
     ContainerLaunchContext containerLaunchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
@@ -162,7 +162,7 @@ public class TestRPC {
     Assert.assertEquals(ContainerState.RUNNING, status.getState());
   }
 
-  public class DummyContainerManager implements ContainerManager {
+  public class DummyContainerManager implements ContainerManagementProtocol {
 
     private ContainerStatus status = null;    
     

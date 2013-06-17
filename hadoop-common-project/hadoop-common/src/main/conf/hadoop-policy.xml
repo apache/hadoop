@@ -140,7 +140,7 @@
   <property>
     <name>security.resourcetracker.protocol.acl</name>
     <value>*</value>
-    <description>ACL for ResourceTracker protocol, used by the
+    <description>ACL for ResourceTrackerProtocol, used by the
     ResourceManager and NodeManager to communicate with each other.
     The ACL is a comma-separated list of user and group names. The user and
     group list is separated by a blank. For e.g. "alice,bob users,wheel".
@@ -148,18 +148,18 @@
   </property>
 
   <property>
-    <name>security.admin.protocol.acl</name>
+    <name>security.resourcemanager-administration.protocol.acl</name>
     <value>*</value>
-    <description>ACL for RMAdminProtocol, for admin commands. 
+    <description>ACL for ResourceManagerAdministrationProtocol, for admin commands. 
     The ACL is a comma-separated list of user and group names. The user and
     group list is separated by a blank. For e.g. "alice,bob users,wheel".
     A special value of "*" means all users are allowed.</description>
   </property>
 
   <property>
-    <name>security.client.resourcemanager.protocol.acl</name>
+    <name>security.applicationclient.protocol.acl</name>
     <value>*</value>
-    <description>ACL for ClientRMProtocol, used by the ResourceManager 
+    <description>ACL for ApplicationClientProtocol, used by the ResourceManager 
     and applications submission clients to communicate with each other.
     The ACL is a comma-separated list of user and group names. The user and
     group list is separated by a blank. For e.g. "alice,bob users,wheel".
@@ -167,9 +167,9 @@
   </property>
 
   <property>
-    <name>security.applicationmaster.resourcemanager.protocol.acl</name>
+    <name>security.applicationmaster.protocol.acl</name>
     <value>*</value>
-    <description>ACL for AMRMProtocol, used by the ResourceManager 
+    <description>ACL for ApplicationMasterProtocol, used by the ResourceManager 
     and ApplicationMasters to communicate with each other.
     The ACL is a comma-separated list of user and group names. The user and
     group list is separated by a blank. For e.g. "alice,bob users,wheel".
@@ -177,9 +177,9 @@
   </property>
 
   <property>
-    <name>security.containermanager.protocol.acl</name>
+    <name>security.containermanagement.protocol.acl</name>
     <value>*</value>
-    <description>ACL for ContainerManager protocol, used by the NodeManager 
+    <description>ACL for ContainerManagementProtocol protocol, used by the NodeManager 
     and ApplicationMasters to communicate with each other.
     The ACL is a comma-separated list of user and group names. The user and
     group list is separated by a blank. For e.g. "alice,bob users,wheel".

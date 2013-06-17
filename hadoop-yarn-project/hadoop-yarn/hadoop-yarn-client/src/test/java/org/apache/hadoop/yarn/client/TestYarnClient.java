@@ -30,7 +30,7 @@ import java.util.HashMap;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -146,7 +146,7 @@ public class TestYarnClient {
 
     @Override
     public void start() {
-      rmClient = mock(ClientRMProtocol.class);
+      rmClient = mock(ApplicationClientProtocol.class);
       GetApplicationReportResponse mockResponse =
           mock(GetApplicationReportResponse.class);
       mockReport = mock(ApplicationReport.class);

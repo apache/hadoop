@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.util.Records;
  * as user, queue, name, host on which the <code>ApplicationMaster</code> is 
  * running, RPC port, tracking URL, diagnostics, start time etc.</p>
  * 
- * @see ClientRMProtocol#getApplicationReport(GetApplicationReportRequest)
+ * @see ApplicationClientProtocol#getApplicationReport(GetApplicationReportRequest)
  */
 @Public
 @Stable

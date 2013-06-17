@@ -32,8 +32,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
@@ -67,7 +67,7 @@ public class TestAMAuthorization {
     UserGroupInformation.setConfiguration(confWithSecurityEnabled);
   }
 
-  public static final class MyContainerManager implements ContainerManager {
+  public static final class MyContainerManager implements ContainerManagementProtocol {
 
     public ByteBuffer amTokens;
 
@@ -99,7 +99,7 @@ public class TestAMAuthorization {
 
   public static class MockRMWithAMS extends MockRMWithCustomAMLauncher {
 
-    public MockRMWithAMS(Configuration conf, ContainerManager containerManager) {
+    public MockRMWithAMS(Configuration conf, ContainerManagementProtocol containerManager) {
       super(conf, containerManager);
     }
 
@@ -154,11 +154,11 @@ public class TestAMAuthorization {
     credentials.readTokenStorageStream(buf);
     currentUser.addCredentials(credentials);
 
-    AMRMProtocol client = currentUser
-        .doAs(new PrivilegedAction<AMRMProtocol>() {
+    ApplicationMasterProtocol client = currentUser
+        .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
-          public AMRMProtocol run() {
-            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rm
+          public ApplicationMasterProtocol run() {
+            return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class, rm
               .getApplicationMasterService().getBindAddress(), conf);
           }
         });
@@ -208,11 +208,11 @@ public class TestAMAuthorization {
         .createRemoteUser(applicationAttemptId.toString());
 
     // First try contacting NM without tokens
-    AMRMProtocol client = currentUser
-        .doAs(new PrivilegedAction<AMRMProtocol>() {
+    ApplicationMasterProtocol client = currentUser
+        .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
-          public AMRMProtocol run() {
-            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class,
+          public ApplicationMasterProtocol run() {
+            return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class,
                 serviceAddr, conf);
           }
         });
@@ -240,10 +240,10 @@ public class TestAMAuthorization {
 
     // Create a client to the RM.
     client = currentUser
-        .doAs(new PrivilegedAction<AMRMProtocol>() {
+        .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
-          public AMRMProtocol run() {
-            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class,
+          public ApplicationMasterProtocol run() {
+            return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class,
                 serviceAddr, conf);
           }
         });

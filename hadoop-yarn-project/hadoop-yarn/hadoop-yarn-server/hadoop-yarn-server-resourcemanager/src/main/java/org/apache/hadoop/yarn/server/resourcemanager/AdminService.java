@@ -32,7 +32,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.apache.hadoop.yarn.api.RMAdminProtocol;
+import org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshNodesRequest;
@@ -56,7 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
 
-public class AdminService extends AbstractService implements RMAdminProtocol {
+public class AdminService extends AbstractService implements ResourceManagerAdministrationProtocol {
 
   private static final Log LOG = LogFactory.getLog(AdminService.class);
 
@@ -108,7 +108,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     this.server =
-      rpc.getServer(RMAdminProtocol.class, this, masterServiceAddress,
+      rpc.getServer(ResourceManagerAdministrationProtocol.class, this, masterServiceAddress,
           conf, null,
           conf.getInt(YarnConfiguration.RM_ADMIN_CLIENT_THREAD_COUNT, 
               YarnConfiguration.DEFAULT_RM_ADMIN_CLIENT_THREAD_COUNT));

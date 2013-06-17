@@ -32,10 +32,10 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
 
   The general concept is that an 'Application Submission Client' submits an 
   'Application' to the YARN Resource Manager. The client communicates with the 
-  ResourceManager using the 'ClientRMProtocol' to first acquire a new 
-  'ApplicationId' if needed via ClientRMProtocol#getNewApplication and then 
-  submit the 'Application' to be run via ClientRMProtocol#submitApplication. As 
-  part of the ClientRMProtocol#submitApplication call, the client needs to 
+  ResourceManager using the 'ApplicationClientProtocol' to first acquire a new 
+  'ApplicationId' if needed via ApplicationClientProtocol#getNewApplication and then 
+  submit the 'Application' to be run via ApplicationClientProtocol#submitApplication. As 
+  part of the ApplicationClientProtocol#submitApplication call, the client needs to 
   provide sufficient information to the ResourceManager to 'launch' the 
   application's first container i.e. the ApplicationMaster. 
   You need to provide information such as the details about the local 
@@ -47,35 +47,35 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
 
   The YARN ResourceManager will then launch the ApplicationMaster (as specified) 
   on an allocated container. The ApplicationMaster is then expected to 
-  communicate with the ResourceManager using the 'AMRMProtocol'. Firstly, the 
+  communicate with the ResourceManager using the 'ApplicationMasterProtocol'. Firstly, the 
   ApplicationMaster needs to register itself with the ResourceManager. To 
   complete the task assigned to it, the ApplicationMaster can then request for 
-  and receive containers via AMRMProtocol#allocate. After a container is 
+  and receive containers via ApplicationMasterProtocol#allocate. After a container is 
   allocated to it, the ApplicationMaster communicates with the NodeManager using 
   ContainerManager#startContainer to launch the container for its task. As part 
   of launching this container, the ApplicationMaster has to specify the 
   ContainerLaunchContext which, similar to the ApplicationSubmissionContext, 
   has the launch information such as command line specification, environment, 
   etc. Once the task is completed, the ApplicationMaster has to signal the 
-  ResourceManager of its completion via the AMRMProtocol#finishApplicationMaster. 
+  ResourceManager of its completion via the ApplicationMasterProtocol#finishApplicationMaster. 
 
   Meanwhile, the client can monitor the application's status by querying the 
   ResourceManager or by directly querying the ApplicationMaster if it supports 
   such a service. If needed, it can also kill the application via 
-  ClientRMProtocol#forceKillApplication.  
+  ApplicationClientProtocol#forceKillApplication.  
 
 * Interfaces 
 
   The interfaces you'd most like be concerned with are:
 
-  * ClientRMProtocol - Client\<--\>ResourceManager\
+  * ApplicationClientProtocol - Client\<--\>ResourceManager\
     The protocol for a client that wishes to communicate with the 
     ResourceManager to launch a new application (i.e. the ApplicationMaster), 
     check on the status of the application or kill the application. For example, 
     a job-client (a job launching program from the gateway) would use this 
     protocol. 
   
-  * AMRMProtocol - ApplicationMaster\<--\>ResourceManager\
+  * ApplicationMasterProtocol - ApplicationMaster\<--\>ResourceManager\
     The protocol used by the ApplicationMaster to register/unregister itself 
     to/from the ResourceManager as well as to request for resources from the 
     Scheduler to complete its tasks. 
@@ -93,7 +93,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
     interface of the ResourceManager. 
 
 +---+
-    ClientRMProtocol applicationsManager; 
+    ApplicationClientProtocol applicationsManager; 
     YarnConfiguration yarnConf = new YarnConfiguration(conf);
     InetSocketAddress rmAddress = 
         NetUtils.createSocketAddr(yarnConf.get(
@@ -104,8 +104,8 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
     appsManagerServerConf.setClass(
         YarnConfiguration.YARN_SECURITY_INFO,
         ClientRMSecurityInfo.class, SecurityInfo.class);
-    applicationsManager = ((ClientRMProtocol) rpc.getProxy(
-        ClientRMProtocol.class, rmAddress, appsManagerServerConf));    
+    applicationsManager = ((ApplicationClientProtocol) rpc.getProxy(
+        ApplicationClientProtocol.class, rmAddress, appsManagerServerConf));    
 +---+
 
   * Once a handle is obtained to the ASM, the client needs to request the 
@@ -256,7 +256,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
   * There are multiple ways a client can track progress of the actual task. 
   
     * It can communicate with the ResourceManager and request for a report of 
-      the application via ClientRMProtocol#getApplicationReport. 
+      the application via ApplicationClientProtocol#getApplicationReport. 
 
 +-----+     
       GetApplicationReportRequest reportRequest = 
@@ -299,7 +299,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
 
   * In certain situations, if the application is taking too long or due to 
     other factors, the client may wish to kill the application. The 
-    ClientRMProtocol supports the forceKillApplication call that allows a 
+    ApplicationClientProtocol supports the forceKillApplication call that allows a 
     client to send a kill signal to the ApplicationMaster via the 
     ResourceManager. An ApplicationMaster if so designed may also support an 
     abort call via its rpc layer that a client may be able to leverage.
@@ -350,7 +350,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
   
   * After an ApplicationMaster has initialized itself completely, it needs to 
     register with the ResourceManager via 
-    AMRMProtocol#registerApplicationMaster. The ApplicationMaster always 
+    ApplicationMasterProtocol#registerApplicationMaster. The ApplicationMaster always 
     communicate via the Scheduler interface of the ResourceManager. 
   
 +---+
@@ -361,8 +361,8 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
             YarnConfiguration.RM_SCHEDULER_ADDRESS,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS));		
     LOG.info("Connecting to ResourceManager at " + rmAddress);
-    AMRMProtocol resourceManager = 
-        (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rmAddress, conf);
+    ApplicationMasterProtocol resourceManager = 
+        (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class, rmAddress, conf);
 
     // Register the AM with the RM
     // Set the required info into the registration request: 
@@ -391,7 +391,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
     timeout expiry interval at the ResourceManager is defined by a config 
     setting accessible via YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS with the 
     default being defined by YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS. 
-    The AMRMProtocol#allocate calls to the ResourceManager count as heartbeats 
+    The ApplicationMasterProtocol#allocate calls to the ResourceManager count as heartbeats 
     as it also supports sending progress update information. Therefore, an 
     allocate call with no containers requested and progress information updated 
     if any is a valid way for making heartbeat calls to the ResourceManager. 
@@ -682,7 +682,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
 +---+                
       
   * The ApplicationMaster, as mentioned previously, will get updates of 
-    completed containers as part of the response from the AMRMProtocol#allocate 
+    completed containers as part of the response from the ApplicationMasterProtocol#allocate 
     calls. It can also monitor its launched containers pro-actively by querying 
     the ContainerManager for the status. 
     

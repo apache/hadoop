@@ -27,8 +27,8 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.ContainerManager;
-import org.apache.hadoop.yarn.api.ContainerManagerPB;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainerRequestProto;
 
 import com.google.protobuf.ServiceException;
 
-public class ContainerManagerPBClientImpl implements ContainerManager,
+public class ContainerManagementProtocolPBClientImpl implements ContainerManagementProtocol,
     Closeable {
 
   // Not a documented config. Only used for tests
@@ -62,17 +62,17 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
    */
   static final int DEFAULT_COMMAND_TIMEOUT = 60000;
 
-  private ContainerManagerPB proxy;
+  private ContainerManagementProtocolPB proxy;
 
-  public ContainerManagerPBClientImpl(long clientVersion,
+  public ContainerManagementProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, ContainerManagerPB.class,
+    RPC.setProtocolEngine(conf, ContainerManagementProtocolPB.class,
       ProtobufRpcEngine.class);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
     int expireIntvl = conf.getInt(NM_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT);
     proxy =
-        (ContainerManagerPB) RPC.getProxy(ContainerManagerPB.class,
+        (ContainerManagementProtocolPB) RPC.getProxy(ContainerManagementProtocolPB.class,
           clientVersion, addr, ugi, conf,
           NetUtils.getDefaultSocketFactory(conf), expireIntvl);
   }

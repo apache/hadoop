@@ -17,18 +17,14 @@
  */
 
 option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "RMAdminProtocol";
+option java_outer_classname = "ContainerManagementProtocol";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
-import "yarn_server_resourcemanager_service_protos.proto";
+import "yarn_service_protos.proto";
 
-service RMAdminProtocolService {
-  rpc refreshQueues(RefreshQueuesRequestProto) returns (RefreshQueuesResponseProto);
-  rpc refreshNodes(RefreshNodesRequestProto) returns (RefreshNodesResponseProto);
-  rpc refreshSuperUserGroupsConfiguration(RefreshSuperUserGroupsConfigurationRequestProto) returns (RefreshSuperUserGroupsConfigurationResponseProto);
-  rpc refreshUserToGroupsMappings(RefreshUserToGroupsMappingsRequestProto) returns (RefreshUserToGroupsMappingsResponseProto);
-  rpc refreshAdminAcls(RefreshAdminAclsRequestProto) returns (RefreshAdminAclsResponseProto);
-  rpc refreshServiceAcls(RefreshServiceAclsRequestProto) returns (RefreshServiceAclsResponseProto);
-  rpc getGroupsForUser(GetGroupsForUserRequestProto) returns (GetGroupsForUserResponseProto);
+service ContainerManagementProtocolService {
+  rpc startContainer(StartContainerRequestProto) returns (StartContainerResponseProto);
+  rpc stopContainer(StopContainerRequestProto) returns (StopContainerResponseProto);
+  rpc getContainerStatus(GetContainerStatusRequestProto) returns (GetContainerStatusResponseProto);
 }

@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -550,9 +550,9 @@ public class TestAMRMClient {
     snoopRequest = amClient.ask.iterator().next();
     assertTrue(snoopRequest.getNumContainers() == 2);
     
-    AMRMProtocol realRM = amClient.rmClient;
+    ApplicationMasterProtocol realRM = amClient.rmClient;
     try {
-      AMRMProtocol mockRM = mock(AMRMProtocol.class);
+      ApplicationMasterProtocol mockRM = mock(ApplicationMasterProtocol.class);
       when(mockRM.allocate(any(AllocateRequest.class))).thenAnswer(
           new Answer<AllocateResponse>() {
             public AllocateResponse answer(InvocationOnMock invocation)

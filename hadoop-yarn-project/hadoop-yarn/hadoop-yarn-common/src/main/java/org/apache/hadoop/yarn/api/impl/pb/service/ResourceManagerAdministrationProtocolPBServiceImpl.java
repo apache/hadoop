@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.api.impl.pb.service;
 
 import java.io.IOException;
 
-import org.apache.hadoop.yarn.api.RMAdminProtocol;
-import org.apache.hadoop.yarn.api.RMAdminProtocolPB;
+import org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocol;
+import org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshQueuesResponse;
@@ -46,11 +46,11 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.*;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
+public class ResourceManagerAdministrationProtocolPBServiceImpl implements ResourceManagerAdministrationProtocolPB {
 
-  private RMAdminProtocol real;
+  private ResourceManagerAdministrationProtocol real;
   
-  public RMAdminProtocolPBServiceImpl(RMAdminProtocol impl) {
+  public ResourceManagerAdministrationProtocolPBServiceImpl(ResourceManagerAdministrationProtocol impl) {
     this.real = impl;
   }
   

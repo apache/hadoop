@@ -15,16 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.api;
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "ContainerManager";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
+import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.yarn.proto.ResourceManagerAdministrationProtocol.ResourceManagerAdministrationProtocolService;
 
-import "yarn_service_protos.proto";
+@ProtocolInfo(
+    protocolName = "org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocolPB",
+    protocolVersion = 1)
+public interface ResourceManagerAdministrationProtocolPB extends ResourceManagerAdministrationProtocolService.BlockingInterface {
 
-service ContainerManagerService {
-  rpc startContainer(StartContainerRequestProto) returns (StartContainerResponseProto);
-  rpc stopContainer(StopContainerRequestProto) returns (StopContainerResponseProto);
-  rpc getContainerStatus(GetContainerStatusRequestProto) returns (GetContainerStatusResponseProto);
 }

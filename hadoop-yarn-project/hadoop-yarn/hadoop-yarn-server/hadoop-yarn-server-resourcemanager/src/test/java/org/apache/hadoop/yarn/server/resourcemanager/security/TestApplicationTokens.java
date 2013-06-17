@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
@@ -75,7 +75,7 @@ public class TestApplicationTokens {
 
     final Configuration conf = rm.getConfig();
     final YarnRPC rpc = YarnRPC.create(conf);
-    AMRMProtocol rmClient = null;
+    ApplicationMasterProtocol rmClient = null;
 
     try {
       MockNM nm1 = rm.registerNode("localhost:1234", 5120);
@@ -167,7 +167,7 @@ public class TestApplicationTokens {
 
     final Configuration conf = rm.getConfig();
     final YarnRPC rpc = YarnRPC.create(conf);
-    AMRMProtocol rmClient = null;
+    ApplicationMasterProtocol rmClient = null;
 
     try {
       MockNM nm1 = rm.registerNode("localhost:1234", 5120);
@@ -235,13 +235,13 @@ public class TestApplicationTokens {
     }
   }
 
-  private AMRMProtocol createRMClient(final MockRM rm,
+  private ApplicationMasterProtocol createRMClient(final MockRM rm,
       final Configuration conf, final YarnRPC rpc,
       UserGroupInformation currentUser) {
-    return currentUser.doAs(new PrivilegedAction<AMRMProtocol>() {
+    return currentUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
       @Override
-      public AMRMProtocol run() {
-        return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rm
+      public ApplicationMasterProtocol run() {
+        return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class, rm
           .getApplicationMasterService().getBindAddress(), conf);
       }
     });

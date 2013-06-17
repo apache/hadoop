@@ -21,10 +21,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
-import org.apache.hadoop.yarn.api.AMRMProtocolPB;
-import org.apache.hadoop.yarn.api.ClientRMProtocolPB;
-import org.apache.hadoop.yarn.api.ContainerManagerPB;
-import org.apache.hadoop.yarn.api.RMAdminProtocolPB;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocolPB;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
+import org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocolPB;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.ResourceTrackerPB;
 
@@ -38,20 +38,20 @@ public class RMPolicyProvider extends PolicyProvider {
   private static final Service[] resourceManagerServices = 
       new Service[] {
     new Service(
-        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCETRACKER, 
+        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCETRACKER_PROTOCOL, 
         ResourceTrackerPB.class),
     new Service(
-        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_CLIENT_RESOURCEMANAGER, 
-        ClientRMProtocolPB.class),
+        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONCLIENT_PROTOCOL, 
+        ApplicationClientProtocolPB.class),
     new Service(
-        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_RESOURCEMANAGER, 
-        AMRMProtocolPB.class),
+        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_PROTOCOL, 
+        ApplicationMasterProtocolPB.class),
     new Service(
-        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_ADMIN, 
-        RMAdminProtocolPB.class),
+        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCEMANAGER_ADMINISTRATION_PROTOCOL, 
+        ResourceManagerAdministrationProtocolPB.class),
     new Service(
-        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGER, 
-        ContainerManagerPB.class),
+        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGEMENT_PROTOCOL, 
+        ContainerManagementProtocolPB.class),
   };
 
   @Override

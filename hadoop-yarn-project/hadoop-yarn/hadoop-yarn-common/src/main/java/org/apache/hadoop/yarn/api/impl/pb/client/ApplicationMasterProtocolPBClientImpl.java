@@ -25,8 +25,8 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
-import org.apache.hadoop.yarn.api.AMRMProtocolPB;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -47,15 +47,15 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterR
 
 import com.google.protobuf.ServiceException;
 
-public class AMRMProtocolPBClientImpl implements AMRMProtocol, Closeable {
+public class ApplicationMasterProtocolPBClientImpl implements ApplicationMasterProtocol, Closeable {
 
-  private AMRMProtocolPB proxy;
+  private ApplicationMasterProtocolPB proxy;
 
-  public AMRMProtocolPBClientImpl(long clientVersion, InetSocketAddress addr,
+  public ApplicationMasterProtocolPBClientImpl(long clientVersion, InetSocketAddress addr,
       Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, AMRMProtocolPB.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, ApplicationMasterProtocolPB.class, ProtobufRpcEngine.class);
     proxy =
-        (AMRMProtocolPB) RPC.getProxy(AMRMProtocolPB.class, clientVersion,
+        (ApplicationMasterProtocolPB) RPC.getProxy(ApplicationMasterProtocolPB.class, clientVersion,
           addr, conf);
   }
 

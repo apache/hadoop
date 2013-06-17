@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RefreshSuperUserGroupsConfigur
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
 
-public interface RMAdminProtocol extends GetUserMappingsProtocol {
+public interface ResourceManagerAdministrationProtocol extends GetUserMappingsProtocol {
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request) 
   throws YarnException, IOException;
   

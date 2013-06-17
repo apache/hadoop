@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
  */
 @Public
 @Stable
-public interface ContainerManager {
+public interface ContainerManagementProtocol {
   /**
    * <p>The <code>ApplicationMaster</code> requests a <code>NodeManager</code>
    * to <em>start</em> a {@link Container} allocated to it using this interface.

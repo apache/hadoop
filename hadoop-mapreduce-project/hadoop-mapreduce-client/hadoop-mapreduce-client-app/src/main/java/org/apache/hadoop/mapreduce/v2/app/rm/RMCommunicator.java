@@ -39,7 +39,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -69,7 +69,7 @@ public abstract class RMCommunicator extends AbstractService
   protected Thread allocatorThread;
   @SuppressWarnings("rawtypes")
   protected EventHandler eventHandler;
-  protected AMRMProtocol scheduler;
+  protected ApplicationMasterProtocol scheduler;
   private final ClientService clientService;
   protected int lastResponseID;
   private Resource maxContainerCapability;
@@ -254,7 +254,7 @@ public abstract class RMCommunicator extends AbstractService
     allocatorThread.start();
   }
 
-  protected AMRMProtocol createSchedulerProxy() {
+  protected ApplicationMasterProtocol createSchedulerProxy() {
     final Configuration conf = getConfig();
     final YarnRPC rpc = YarnRPC.create(conf);
     final InetSocketAddress serviceAddr = conf.getSocketAddr(
@@ -270,10 +270,10 @@ public abstract class RMCommunicator extends AbstractService
     }
 
     // CurrentUser should already have AMToken loaded.
-    return currentUser.doAs(new PrivilegedAction<AMRMProtocol>() {
+    return currentUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
       @Override
-      public AMRMProtocol run() {
-        return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class,
+      public ApplicationMasterProtocol run() {
+        return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class,
             serviceAddr, conf);
       }
     });

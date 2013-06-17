@@ -43,10 +43,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -99,7 +99,7 @@ import org.apache.hadoop.yarn.util.Records;
  * The <code>ApplicationMaster</code> needs to send a heartbeat to the
  * <code>ResourceManager</code> at regular intervals to inform the
  * <code>ResourceManager</code> that it is up and alive. The
- * {@link AMRMProtocol#allocate} to the <code>ResourceManager</code> from the
+ * {@link ApplicationMasterProtocol#allocate} to the <code>ResourceManager</code> from the
  * <code>ApplicationMaster</code> acts as a heartbeat.
  * 
  * <p>
@@ -118,15 +118,15 @@ import org.apache.hadoop.yarn.util.Records;
  * up the necessary launch context via {@link ContainerLaunchContext} to specify
  * the allocated container id, local resources required by the executable, the
  * environment to be setup for the executable, commands to execute, etc. and
- * submit a {@link StartContainerRequest} to the {@link ContainerManager} to
+ * submit a {@link StartContainerRequest} to the {@link ContainerManagementProtocol} to
  * launch and execute the defined commands on the given allocated container.
  * </p>
  * 
  * <p>
  * The <code>ApplicationMaster</code> can monitor the launched container by
  * either querying the <code>ResourceManager</code> using
- * {@link AMRMProtocol#allocate} to get updates on completed containers or via
- * the {@link ContainerManager} by querying for the status of the allocated
+ * {@link ApplicationMasterProtocol#allocate} to get updates on completed containers or via
+ * the {@link ContainerManagementProtocol} by querying for the status of the allocated
  * container's {@link ContainerId}.
  *
  * <p>
@@ -707,7 +707,7 @@ public class ApplicationMaster {
   }
 
   /**
-   * Thread to connect to the {@link ContainerManager} and launch the container
+   * Thread to connect to the {@link ContainerManagementProtocol} and launch the container
    * that will execute the shell command.
    */
   private class LaunchContainerRunnable implements Runnable {
