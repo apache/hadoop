@@ -172,6 +172,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-824. Added static factory methods to hadoop-yarn-client interfaces. 
     (Jian He via acmurthy)
 
+    YARN-826. Moved Clock and SystemClock into yarn.util package. (Zhijie Shen
+    via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
