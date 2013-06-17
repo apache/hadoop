@@ -17,9 +17,11 @@
  */
 
 
-package org.apache.hadoop.yarn.service;
+package org.apache.hadoop.service;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.Service;
 
 /**
  * This is a service that can be configured to break on any of the lifecycle

@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.service.AbstractService;
 
 /**
  * A simple liveliness monitor with which clients can register, trust the

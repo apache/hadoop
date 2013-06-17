@@ -16,10 +16,13 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.yarn.service;
+package org.apache.hadoop.service;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceStateChangeListener;
 
 /**
  * A state change listener that logs the number of state change events received,
