@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.webapp;
 
 import java.io.PrintWriter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A light-weight JSON rendering interface
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public interface ToJSON {
   void toJSON(PrintWriter out);
 }

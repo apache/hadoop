@@ -21,11 +21,12 @@ package org.apache.hadoop.yarn.webapp.view;
 import java.io.CharArrayWriter;
 import java.io.PrintWriter;
 
-import static org.apache.hadoop.yarn.webapp.Params.*;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * A jquery-ui themeable error page
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class ErrorPage extends HtmlPage {
 
   @Override

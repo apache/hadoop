@@ -387,6 +387,8 @@ Release 2.1.0-beta - UNRELEASED
     YARN-752. In AMRMClient, automatically add corresponding rack requests for 
     requested nodes. (sandyr via tucu)
 
+    YARN-825. Fixed javadoc and annotations for yarn-common module. (vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it

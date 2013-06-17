@@ -18,15 +18,19 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import com.google.common.collect.Lists;
+import static org.apache.commons.lang.StringEscapeUtils.escapeJavaScript;
+import static org.apache.hadoop.yarn.util.StringHelper.djoin;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.util.StringHelper.split;
 
 import java.util.List;
 
-import static org.apache.commons.lang.StringEscapeUtils.*;
-import static org.apache.hadoop.yarn.util.StringHelper.*;
-
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.HTML;
 
+import com.google.common.collect.Lists;
+
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class JQueryUI extends HtmlBlock {
 
   // UI params

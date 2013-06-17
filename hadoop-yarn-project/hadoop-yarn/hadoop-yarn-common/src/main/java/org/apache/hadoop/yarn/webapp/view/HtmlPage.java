@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.webapp.view;
 import java.io.PrintWriter;
 import java.util.EnumSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.WebAppException;
@@ -31,6 +32,7 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
  * {@link #render(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)}
  * to actually render the page.
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public abstract class HtmlPage extends TextView {
 
   public static class _ implements Hamlet._ {

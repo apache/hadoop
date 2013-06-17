@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import com.google.inject.Inject;
-
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.SubView;
 
 /**
@@ -29,6 +28,7 @@ import org.apache.hadoop.yarn.webapp.SubView;
  * sad state of css (v2/3 anyway) layout.
  * @see TwoColumnLayout
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class TwoColumnCssLayout extends HtmlPage {
 
   @Override protected void render(Page.HTML<_> html) {

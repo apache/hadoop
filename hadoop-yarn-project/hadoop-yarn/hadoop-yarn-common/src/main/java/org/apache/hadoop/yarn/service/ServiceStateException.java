@@ -18,13 +18,19 @@
 
 package org.apache.hadoop.yarn.service;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 /**
  * Exception that is raised on state change operations.
  */
+@Public
+@Evolving
 public class ServiceStateException extends YarnRuntimeException {
+
+  private static final long serialVersionUID = 1110000352259232646L;
 
   public ServiceStateException(String message) {
     super(message);

@@ -24,9 +24,18 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+/**
+ * A simple liveliness monitor with which clients can register, trust the
+ * component to monitor liveliness, get a call-back on expiry and then finally
+ * unregister.
+ */
+@Public
+@Evolving
 public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
 
   private static final Log LOG = LogFactory.getLog(AbstractLivelinessMonitor.class);

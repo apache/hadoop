@@ -24,6 +24,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -35,6 +37,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
  * ApplicationTokenIdentifier is the TokenIdentifier to be used by
  * ApplicationMasters to authenticate to the ResourceManager.
  */
+@Public
+@Evolving
 public class ApplicationTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND_NAME = new Text("YARN_APPLICATION_TOKEN");

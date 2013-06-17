@@ -30,6 +30,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServlet;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
@@ -61,6 +62,7 @@ import com.google.inject.servlet.GuiceFilter;
  *     }
  *   });</pre>
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class WebApps {
   static final Logger LOG = LoggerFactory.getLogger(WebApps.class);
 

@@ -22,16 +22,17 @@ import java.io.File;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.spi.LoggingEvent;
 
 /**
- * A simple log4j-appender for the task child's 
- * map-reduce system logs.
+ * A simple log4j-appender for container's logs.
  * 
  */
-@InterfaceStability.Unstable
+@Public
+@Unstable
 public class ContainerLogAppender extends FileAppender {
   private String containerLogDir;
   //so that log4j can configure it from the configuration(log4j.properties). 

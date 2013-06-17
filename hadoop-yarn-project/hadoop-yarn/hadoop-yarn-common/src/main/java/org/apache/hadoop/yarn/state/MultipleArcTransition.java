@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.yarn.state;
 
-
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
  * Hook for Transition. 
  * Post state is decided by Transition hook. Post state must be one of the 
  * valid post states registered in StateMachine.
  */
+@Public
+@Evolving
 public interface MultipleArcTransition
         <OPERAND, EVENT, STATE extends Enum<STATE>> {
 

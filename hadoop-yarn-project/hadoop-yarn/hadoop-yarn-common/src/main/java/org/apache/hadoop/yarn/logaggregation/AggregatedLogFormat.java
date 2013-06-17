@@ -42,6 +42,9 @@ import java.util.Map.Entry;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -60,9 +63,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+@Public
+@Evolving
 public class AggregatedLogFormat {
 
-  static final Log LOG = LogFactory.getLog(AggregatedLogFormat.class);
+  private static final Log LOG = LogFactory.getLog(AggregatedLogFormat.class);
   private static final LogKey APPLICATION_ACL_KEY = new LogKey("APPLICATION_ACL");
   private static final LogKey APPLICATION_OWNER_KEY = new LogKey("APPLICATION_OWNER");
   private static final LogKey VERSION_KEY = new LogKey("VERSION");
@@ -84,7 +89,8 @@ public class AggregatedLogFormat {
     RESERVED_KEYS.put(APPLICATION_OWNER_KEY.toString(), APPLICATION_OWNER_KEY);
     RESERVED_KEYS.put(VERSION_KEY.toString(), VERSION_KEY);
   }
-  
+
+  @Public
   public static class LogKey implements Writable {
 
     private String keyString;
@@ -118,11 +124,13 @@ public class AggregatedLogFormat {
       return false;
     }
 
+    @Private
     @Override
     public void write(DataOutput out) throws IOException {
       out.writeUTF(this.keyString);
     }
 
+    @Private
     @Override
     public void readFields(DataInput in) throws IOException {
       this.keyString = in.readUTF();
@@ -134,6 +142,7 @@ public class AggregatedLogFormat {
     }
   }
 
+  @Private
   public static class LogValue {
 
     private final List<String> rootLogDirs;
@@ -207,6 +216,10 @@ public class AggregatedLogFormat {
     }
   }
 
+  /**
+   * The writer that writes out the aggregated logs.
+   */
+  @Private
   public static class LogWriter {
 
     private final FSDataOutputStream fsDataOStream;
@@ -295,6 +308,8 @@ public class AggregatedLogFormat {
     }
   }
 
+  @Public
+  @Evolving
   public static class LogReader {
 
     private final FSDataInputStream fsDataIStream;
@@ -411,6 +426,7 @@ public class AggregatedLogFormat {
      *         logs could not be found
      * @throws IOException
      */
+    @Private
     public ContainerLogsReader getContainerLogsReader(
         ContainerId containerId) throws IOException {
       ContainerLogsReader logReader = null;
@@ -559,6 +575,7 @@ public class AggregatedLogFormat {
     }
   }
 
+  @Private
   public static class ContainerLogsReader {
     private DataInputStream valueStream;
     private String currentLogType = null;

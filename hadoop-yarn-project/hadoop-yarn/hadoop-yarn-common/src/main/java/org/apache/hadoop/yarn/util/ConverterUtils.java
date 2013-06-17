@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
  * from/to 'serializableFormat' to/from hadoop/nativejava data structures.
  *
  */
+@Private
 public class ConverterUtils {
 
   public static final String APPLICATION_PREFIX = "application";

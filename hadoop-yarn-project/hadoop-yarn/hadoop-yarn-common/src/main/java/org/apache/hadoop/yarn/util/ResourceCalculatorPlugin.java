@@ -29,7 +29,7 @@ import org.apache.hadoop.util.Shell;
  * Plugin to calculate resource information on the system.
  *
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({"YARN", "MAPREDUCE"})
 @InterfaceStability.Unstable
 public abstract class ResourceCalculatorPlugin extends Configured {
   

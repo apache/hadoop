@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.yarn.service;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+
 /**
  * Interface to notify state changes of a service.
  */
+@Public
+@Stable
 public interface ServiceStateChangeListener {
 
   /**

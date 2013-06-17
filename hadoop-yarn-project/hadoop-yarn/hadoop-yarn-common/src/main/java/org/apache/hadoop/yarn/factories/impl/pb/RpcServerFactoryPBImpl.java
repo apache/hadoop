@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.Server;
@@ -39,6 +40,7 @@ import org.apache.hadoop.yarn.factories.RpcServerFactory;
 
 import com.google.protobuf.BlockingService;
 
+@Private
 public class RpcServerFactoryPBImpl implements RpcServerFactory {
 
   private static final Log LOG = LogFactory.getLog(RpcServerFactoryPBImpl.class);
