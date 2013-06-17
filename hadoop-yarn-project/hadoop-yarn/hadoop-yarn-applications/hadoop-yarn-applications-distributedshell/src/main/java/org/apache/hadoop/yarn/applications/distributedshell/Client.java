@@ -601,7 +601,7 @@ public class Client {
 
       LOG.info("Got application report from ASM for"
           + ", appId=" + appId.getId()
-          + ", clientToken=" + report.getClientToken()
+          + ", clientToAMToken=" + report.getClientToAMToken()
           + ", appDiagnostics=" + report.getDiagnostics()
           + ", appMasterHost=" + report.getHost()
           + ", appQueue=" + report.getQueue()

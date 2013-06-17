@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -306,6 +307,12 @@ public class JobHistory extends AbstractService implements HistoryContext {
   // TODO AppContext - Not Required
   @Override
   public Set<String> getBlacklistedNodes() {
+    // Not Implemented
+    return null;
+  }
+  @Override
+  public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
+    // Not implemented.
     return null;
   }
 }

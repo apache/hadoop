@@ -28,10 +28,6 @@ import org.apache.hadoop.util.Shell;
  * TODO: Investigate the semantics and security of each cross-boundary refs.
  */
 public interface ApplicationConstants {
-
-  // TODO: They say tokens via env isn't good.
-  public static final String APPLICATION_CLIENT_SECRET_ENV_NAME =
-    "AppClientSecretEnv";
   
   /**
    * The environment variable for APP_SUBMIT_TIME. Set in AppMaster environment

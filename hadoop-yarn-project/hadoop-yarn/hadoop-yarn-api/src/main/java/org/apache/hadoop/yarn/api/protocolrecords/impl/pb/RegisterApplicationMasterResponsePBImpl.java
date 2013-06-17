@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -33,6 +34,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.util.ProtoUtils;
+
+import com.google.protobuf.ByteString;
 
 
 public class RegisterApplicationMasterResponsePBImpl extends
@@ -200,7 +203,23 @@ public class RegisterApplicationMasterResponsePBImpl extends
     this.applicationACLS.clear();
     this.applicationACLS.putAll(appACLs);
   }
-
+  
+  @Override
+  public void setClientToAMTokenMasterKey(ByteBuffer key) {
+    if (key == null) {
+      return;
+    }
+    maybeInitBuilder();
+    builder.setClientToAmTokenMasterKey(ByteString.copyFrom(key));
+  }
+  
+  @Override
+  public ByteBuffer getClientToAMTokenMasterKey() {
+    ByteBuffer key =
+        ByteBuffer.wrap(builder.getClientToAmTokenMasterKey().toByteArray());
+    return key;
+  }
+  
   private Resource convertFromProtoFormat(ResourceProto resource) {
     return new ResourcePBImpl(resource);
   }

@@ -71,7 +71,7 @@ public class RMContextImpl implements RMContext {
       AMRMTokenSecretManager appTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager,
-      ClientToAMTokenSecretManagerInRM clientTokenSecretManager) {
+      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager) {
     this.rmDispatcher = rmDispatcher;
     this.stateStore = store;
     this.containerAllocationExpirer = containerAllocationExpirer;
@@ -81,7 +81,7 @@ public class RMContextImpl implements RMContext {
     this.appTokenSecretManager = appTokenSecretManager;
     this.containerTokenSecretManager = containerTokenSecretManager;
     this.nmTokenSecretManager = nmTokenSecretManager;
-    this.clientToAMTokenSecretManager = clientTokenSecretManager;
+    this.clientToAMTokenSecretManager = clientToAMTokenSecretManager;
   }
 
   @VisibleForTesting
@@ -94,11 +94,11 @@ public class RMContextImpl implements RMContext {
       AMRMTokenSecretManager appTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager,
-      ClientToAMTokenSecretManagerInRM clientTokenSecretManager) {
+      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager) {
     this(rmDispatcher, null, containerAllocationExpirer, amLivelinessMonitor, 
           amFinishingMonitor, tokenRenewer, appTokenSecretManager, 
           containerTokenSecretManager, nmTokenSecretManager,
-          clientTokenSecretManager);
+          clientToAMTokenSecretManager);
     RMStateStore nullStore = new NullRMStateStore();
     nullStore.setDispatcher(rmDispatcher);
     try {
