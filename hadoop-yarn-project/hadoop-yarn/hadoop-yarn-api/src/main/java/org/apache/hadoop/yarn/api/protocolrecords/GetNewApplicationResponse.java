@@ -43,7 +43,6 @@ public abstract class GetNewApplicationResponse {
     GetNewApplicationResponse response =
         Records.newRecord(GetNewApplicationResponse.class);
     response.setApplicationId(applicationId);
-    response.setMinimumResourceCapability(minCapability);
     response.setMaximumResourceCapability(maxCapability);
     return response;
   }
@@ -61,20 +60,7 @@ public abstract class GetNewApplicationResponse {
   @Private
   @Unstable
   public abstract void setApplicationId(ApplicationId applicationId);
-  
-  /**
-   * Get the minimum capability for any {@link Resource} allocated by the 
-   * <code>ResourceManager</code> in the cluster.
-   * @return minimum capability of allocated resources in the cluster
-   */
-  @Public
-  @Stable
-  public abstract Resource getMinimumResourceCapability();
-  
-  @Private
-  @Unstable
-  public abstract void setMinimumResourceCapability(Resource capability);
-  
+
   /**
    * Get the maximum capability for any {@link Resource} allocated by the 
    * <code>ResourceManager</code> in the cluster.
