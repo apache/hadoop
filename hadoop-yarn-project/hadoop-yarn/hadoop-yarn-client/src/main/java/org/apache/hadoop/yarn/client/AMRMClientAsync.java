@@ -120,7 +120,7 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
   
   @Private
   @VisibleForTesting
-  public AMRMClientAsync(AMRMClient<T> client, int intervalMs,
+  protected AMRMClientAsync(AMRMClient<T> client, int intervalMs,
       CallbackHandler callbackHandler) {
     super(AMRMClientAsync.class.getName());
     this.client = client;

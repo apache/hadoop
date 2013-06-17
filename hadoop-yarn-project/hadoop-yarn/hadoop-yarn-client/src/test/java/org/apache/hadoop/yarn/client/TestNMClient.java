@@ -82,7 +82,7 @@ public class TestNMClient {
     assertEquals(STATE.STARTED, yarnCluster.getServiceState());
 
     // start rm client
-    yarnClient = new YarnClientImpl();
+    yarnClient = (YarnClientImpl) YarnClient.createYarnClient();
     yarnClient.init(conf);
     yarnClient.start();
     assertNotNull(yarnClient);
@@ -136,14 +136,16 @@ public class TestNMClient {
     }
 
     // start am rm client
-    rmClient = new AMRMClientImpl<ContainerRequest>(attemptId);
+    rmClient =
+        (AMRMClientImpl<ContainerRequest>) AMRMClient
+          .<ContainerRequest> createAMRMClient(attemptId);
     rmClient.init(conf);
     rmClient.start();
     assertNotNull(rmClient);
     assertEquals(STATE.STARTED, rmClient.getServiceState());
 
     // start am nm client
-    nmClient = new NMClientImpl();
+    nmClient = (NMClientImpl) NMClient.createNMClient();
     nmClient.init(conf);
     nmClient.start();
     assertNotNull(nmClient);

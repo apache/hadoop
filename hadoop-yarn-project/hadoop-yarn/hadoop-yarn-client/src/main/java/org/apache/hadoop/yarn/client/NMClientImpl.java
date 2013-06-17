@@ -42,8 +42,8 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -76,7 +76,7 @@ import org.apache.hadoop.yarn.util.Records;
  * {@link #stopContainer}.
  * </p>
  */
-public class NMClientImpl extends AbstractService implements NMClient {
+public class NMClientImpl extends NMClient {
 
   private static final Log LOG = LogFactory.getLog(NMClientImpl.class);
 

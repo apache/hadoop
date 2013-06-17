@@ -19,9 +19,12 @@
 package org.apache.hadoop.yarn.client;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -34,11 +37,44 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.service.AbstractService;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface YarnClient extends Service {
+public abstract class YarnClient extends AbstractService {
+
+  /**
+   * Create a new instance of YarnClient.
+   */
+  @Public
+  public static YarnClient createYarnClient() {
+    YarnClient client = new YarnClientImpl();
+    return client;
+  }
+
+  /**
+   * Create a new instance of YarnClient.
+   */
+  @Public
+  public static YarnClient createYarnClient(InetSocketAddress rmAddress) {
+    YarnClient client = new YarnClientImpl(rmAddress);
+    return client;
+  }
+
+  /**
+   * Create a new instance of YarnClient.
+   */
+  @Public
+  public static YarnClient createYarnClient(String name,
+      InetSocketAddress rmAddress) {
+    YarnClient client = new YarnClientImpl(name, rmAddress);
+    return client;
+  }
+
+  @Private
+  protected YarnClient(String name) {
+    super(name);
+  }
 
   /**
    * <p>
@@ -61,7 +97,7 @@ public interface YarnClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  GetNewApplicationResponse getNewApplication() throws YarnException,
+  public abstract GetNewApplicationResponse getNewApplication() throws YarnException,
       IOException;
 
   /**
@@ -79,7 +115,7 @@ public interface YarnClient extends Service {
    * @throws IOException
    * @see #getNewApplication()
    */
-  ApplicationId submitApplication(ApplicationSubmissionContext appContext)
+  public abstract ApplicationId submitApplication(ApplicationSubmissionContext appContext)
       throws YarnException, IOException;
 
   /**
@@ -95,7 +131,7 @@ public interface YarnClient extends Service {
    * @throws IOException
    * @see #getQueueAclsInfo()
    */
-  void killApplication(ApplicationId applicationId) throws YarnException,
+  public abstract void killApplication(ApplicationId applicationId) throws YarnException,
       IOException;
 
   /**
@@ -128,7 +164,7 @@ public interface YarnClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  ApplicationReport getApplicationReport(ApplicationId appId)
+  public abstract ApplicationReport getApplicationReport(ApplicationId appId)
       throws YarnException, IOException;
 
   /**
@@ -146,7 +182,7 @@ public interface YarnClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  List<ApplicationReport> getApplicationList() throws YarnException,
+  public abstract List<ApplicationReport> getApplicationList() throws YarnException,
       IOException;
 
   /**
@@ -158,7 +194,7 @@ public interface YarnClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  YarnClusterMetrics getYarnClusterMetrics() throws YarnException,
+  public abstract YarnClusterMetrics getYarnClusterMetrics() throws YarnException,
       IOException;
 
   /**
@@ -170,7 +206,7 @@ public interface YarnClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  List<NodeReport> getNodeReports() throws YarnException, IOException;
+  public abstract List<NodeReport> getNodeReports() throws YarnException, IOException;
 
   /**
    * <p>
@@ -184,7 +220,7 @@ public interface YarnClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  Token getRMDelegationToken(Text renewer)
+  public abstract Token getRMDelegationToken(Text renewer)
       throws YarnException, IOException;
 
   /**
@@ -200,7 +236,7 @@ public interface YarnClient extends Service {
    *           access-control restrictions.
    * @throws IOException
    */
-  QueueInfo getQueueInfo(String queueName) throws YarnException,
+  public abstract QueueInfo getQueueInfo(String queueName) throws YarnException,
       IOException;
 
   /**
@@ -213,7 +249,7 @@ public interface YarnClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  List<QueueInfo> getAllQueues() throws YarnException, IOException;
+  public abstract List<QueueInfo> getAllQueues() throws YarnException, IOException;
 
   /**
    * <p>
@@ -224,7 +260,7 @@ public interface YarnClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  List<QueueInfo> getRootQueueInfos() throws YarnException, IOException;
+  public abstract List<QueueInfo> getRootQueueInfos() throws YarnException, IOException;
 
   /**
    * <p>
@@ -239,7 +275,7 @@ public interface YarnClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  List<QueueInfo> getChildQueueInfos(String parent) throws YarnException,
+  public abstract List<QueueInfo> getChildQueueInfos(String parent) throws YarnException,
       IOException;
 
   /**
@@ -253,6 +289,6 @@ public interface YarnClient extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  List<QueueUserACLInfo> getQueueAclsInfo() throws YarnException,
+  public abstract List<QueueUserACLInfo> getQueueAclsInfo() throws YarnException,
       IOException;
 }

@@ -59,12 +59,11 @@ import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.Records;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class YarnClientImpl extends AbstractService implements YarnClient {
+public class YarnClientImpl extends YarnClient {
 
   private static final Log LOG = LogFactory.getLog(YarnClientImpl.class);
 
