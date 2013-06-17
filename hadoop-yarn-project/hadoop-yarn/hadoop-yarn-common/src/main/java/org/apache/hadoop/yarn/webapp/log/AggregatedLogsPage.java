@@ -26,10 +26,11 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 
-
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class AggregatedLogsPage extends TwoColumnLayout {
 
   /* (non-Javadoc)

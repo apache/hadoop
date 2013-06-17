@@ -25,6 +25,8 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -39,6 +41,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
  * {@link Resource} needed by the container and the target NMs host-address.
  * 
  */
+@Public
+@Evolving
 public class ContainerTokenIdentifier extends TokenIdentifier {
 
   private static Log LOG = LogFactory.getLog(ContainerTokenIdentifier.class);

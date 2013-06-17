@@ -18,17 +18,19 @@
 
 package org.apache.hadoop.yarn.util;
 
+import java.lang.reflect.Constructor;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.util.ReflectionUtils;
-import java.lang.reflect.Constructor;
 
 /**
  * Interface class to obtain process resource usage
  *
  */
+@Private
 public abstract class ResourceCalculatorProcessTree extends Configured {
   static final Log LOG = LogFactory
       .getLog(ResourceCalculatorProcessTree.class);

@@ -22,9 +22,12 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+
 /**
  * Common string manipulation helpers
  */
+@Private
 public final class StringHelper {
   // Common joiners to avoid per join creation of joiners
   public static final Joiner SSV_JOINER = Joiner.on(' ');

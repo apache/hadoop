@@ -20,10 +20,14 @@ package org.apache.hadoop.yarn.service;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
  * This is a state change listener that logs events at INFO level
  */
+@Public
+@Evolving
 public class LoggingStateChangeListener implements ServiceStateChangeListener {
 
   private static final Log LOG = LogFactory.getLog(LoggingStateChangeListener.class);

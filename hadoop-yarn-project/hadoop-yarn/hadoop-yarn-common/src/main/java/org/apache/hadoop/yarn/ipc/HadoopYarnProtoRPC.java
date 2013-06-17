@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.SecretManager;
@@ -35,6 +36,7 @@ import org.apache.hadoop.yarn.factory.providers.RpcFactoryProvider;
  * RPC wire format is non-standard, but it does permit use of Protocol Buffers
  *  protocol versioning features for inter-Java RPCs.
  */
+@InterfaceAudience.LimitedPrivate({ "MapReduce", "YARN" })
 public class HadoopYarnProtoRPC extends YarnRPC {
 
   private static final Log LOG = LogFactory.getLog(HadoopYarnProtoRPC.class);

@@ -22,6 +22,8 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Contains the exception information from an exception thrown
  * by the web service REST API's.
@@ -31,6 +33,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *   message - a detailed message explaining the exception
  *
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 @XmlRootElement(name = "RemoteException")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class RemoteExceptionData {

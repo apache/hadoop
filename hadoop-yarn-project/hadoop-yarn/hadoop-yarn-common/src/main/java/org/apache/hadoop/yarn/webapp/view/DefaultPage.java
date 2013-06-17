@@ -23,6 +23,9 @@ import java.util.Enumeration;
 
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class DefaultPage extends TextPage {
   static final Joiner valJoiner = Joiner.on(", ");
 

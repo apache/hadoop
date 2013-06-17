@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -92,6 +93,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationRequestPr
 
 import com.google.protobuf.ServiceException;
 
+@Private
 public class ApplicationClientProtocolPBClientImpl implements ApplicationClientProtocol,
     Closeable {
 

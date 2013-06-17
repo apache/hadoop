@@ -22,6 +22,8 @@ import java.lang.Thread.UncaughtExceptionHandler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 
@@ -34,6 +36,8 @@ import org.apache.hadoop.util.ShutdownHookManager;
  * Note: Right now it only will shut down the program if a Error is caught, but
  * not any other exception.  Anything else is just logged.
  */
+@Public
+@Evolving
 public class YarnUncaughtExceptionHandler implements UncaughtExceptionHandler {
   private static final Log LOG = LogFactory.getLog(YarnUncaughtExceptionHandler.class);
   

@@ -18,6 +18,14 @@
 
 package org.apache.hadoop.yarn;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+
+/**
+ * A simple clock interface that gives you time.
+ */
+@Public
+@Stable
 public interface Clock {
 
   long getTime();

@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.webapp.view;
 
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * This class holds utility functions for HTML
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class Html {
   static final Pattern validIdRe = Pattern.compile("^[a-zA-Z_.0-9]+$");
 

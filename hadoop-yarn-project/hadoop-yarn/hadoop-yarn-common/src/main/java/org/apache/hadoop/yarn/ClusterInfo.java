@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
 
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class ClusterInfo {
   private Resource maxContainerCapability;
 

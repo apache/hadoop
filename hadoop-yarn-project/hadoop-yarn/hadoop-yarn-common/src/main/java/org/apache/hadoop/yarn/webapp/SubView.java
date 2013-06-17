@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.yarn.webapp;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Interface for SubView to avoid top-level inclusion
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public interface SubView {
   /**
    * render the sub-view

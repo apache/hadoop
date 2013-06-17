@@ -27,13 +27,18 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+
 import com.google.inject.Singleton;
 
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 @Singleton
 public class DefaultWrapperServlet extends HttpServlet {
 
 private static final long serialVersionUID = 1L;
 
+@Private
 public void doGet(HttpServletRequest req, HttpServletResponse resp)
 throws ServletException, IOException {
   RequestDispatcher rd = getServletContext().getNamedDispatcher("default");

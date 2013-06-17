@@ -21,11 +21,14 @@ package org.apache.hadoop.yarn.webapp;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /*
  * Created our own NotFoundException because com.sun.jersey.api.NotFoundException
  * sets the Response and therefore won't be handled by the GenericExceptionhandler
  * to fill in correct response.
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class NotFoundException extends WebApplicationException {
 
   private static final long serialVersionUID = 1L;

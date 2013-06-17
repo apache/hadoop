@@ -24,9 +24,12 @@ import com.google.inject.servlet.RequestScoped;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A class to help passing around request scoped info
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 @RequestScoped
 public class ResponseInfo implements Iterable<ResponseInfo.Item> {
 

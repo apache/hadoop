@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import static org.apache.hadoop.yarn.util.StringHelper.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Base class for all views
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public abstract class View implements Params {
   public static final Logger LOG = LoggerFactory.getLogger(View.class);
 
