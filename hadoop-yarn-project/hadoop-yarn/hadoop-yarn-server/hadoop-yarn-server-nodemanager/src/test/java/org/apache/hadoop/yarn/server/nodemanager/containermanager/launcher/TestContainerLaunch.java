@@ -190,6 +190,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           + processStartFile);
       fileWriter.println("@echo " + Environment.LOCAL_DIRS.$() + ">> "
           + processStartFile);
+      fileWriter.println("@echo " + cId + ">> " + processStartFile);
       fileWriter.println("@ping -n 100 127.0.0.1 >nul");
     } else {
       fileWriter.write("\numask 0"); // So that start file is readable by the test

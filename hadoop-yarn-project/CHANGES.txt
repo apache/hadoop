@@ -641,6 +641,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
     via vinodkv)
 
+    YARN-839. TestContainerLaunch.testContainerEnvVariables fails on Windows.
+    (Chuan Liu via cnauroth)
+
     YARN-795. Fair scheduler queue metrics should subtract allocated vCores from 
     available vCores. (ywskycn via tucu) 
 
