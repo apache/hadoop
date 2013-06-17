@@ -28,8 +28,8 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.ClientRMProtocolPB;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
@@ -92,16 +92,16 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationRequestPr
 
 import com.google.protobuf.ServiceException;
 
-public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
+public class ApplicationClientProtocolPBClientImpl implements ApplicationClientProtocol,
     Closeable {
 
-  private ClientRMProtocolPB proxy;
+  private ApplicationClientProtocolPB proxy;
 
-  public ClientRMProtocolPBClientImpl(long clientVersion,
+  public ApplicationClientProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, ClientRMProtocolPB.class,
+    RPC.setProtocolEngine(conf, ApplicationClientProtocolPB.class,
       ProtobufRpcEngine.class);
-    proxy = RPC.getProxy(ClientRMProtocolPB.class, clientVersion, addr, conf);
+    proxy = RPC.getProxy(ApplicationClientProtocolPB.class, clientVersion, addr, conf);
   }
 
   @Override

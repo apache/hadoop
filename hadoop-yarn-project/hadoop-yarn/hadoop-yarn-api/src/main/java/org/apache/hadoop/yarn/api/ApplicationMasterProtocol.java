@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
  */
 @Public
 @Stable
-public interface AMRMProtocol {
+public interface ApplicationMasterProtocol {
   
   /**
    * <p>The interface used by a new <code>ApplicationMaster</code> to register 

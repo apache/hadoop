@@ -63,7 +63,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
  */
 @Public
 @Stable
-public interface ClientRMProtocol {
+public interface ApplicationClientProtocol {
   /**
    * <p>The interface used by clients to obtain a new {@link ApplicationId} for 
    * submitting new applications.</p>

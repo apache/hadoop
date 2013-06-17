@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -60,5 +60,5 @@ public interface Context {
 
   NodeHealthStatus getNodeHealthStatus();
 
-  ContainerManager getContainerManager();
+  ContainerManagementProtocol getContainerManager();
 }

@@ -15,17 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.api;
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "AMRMProtocol";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
+import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.yarn.proto.ApplicationClientProtocol.ApplicationClientProtocolService;
 
-import "yarn_service_protos.proto";
+@ProtocolInfo(protocolName = "org.apache.hadoop.yarn.api.ApplicationClientProtocolPB",
+    protocolVersion = 1)
+public interface ApplicationClientProtocolPB extends ApplicationClientProtocolService.BlockingInterface {
 
-
-service AMRMProtocolService {
-  rpc registerApplicationMaster (RegisterApplicationMasterRequestProto) returns (RegisterApplicationMasterResponseProto);
-  rpc finishApplicationMaster (FinishApplicationMasterRequestProto) returns (FinishApplicationMasterResponseProto);
-  rpc allocate (AllocateRequestProto) returns (AllocateResponseProto);
 }

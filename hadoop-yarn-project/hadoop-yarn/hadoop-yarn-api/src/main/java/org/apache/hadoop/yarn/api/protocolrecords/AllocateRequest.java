@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.util.Records;
  *   </ul>
  * </p>
  * 
- * @see AMRMProtocol#allocate(AllocateRequest)
+ * @see ApplicationMasterProtocol#allocate(AllocateRequest)
  */
 @Public
 @Stable

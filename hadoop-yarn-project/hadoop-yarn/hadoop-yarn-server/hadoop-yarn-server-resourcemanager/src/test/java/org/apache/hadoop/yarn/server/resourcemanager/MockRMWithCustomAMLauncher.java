@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
@@ -28,14 +28,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 
 public class MockRMWithCustomAMLauncher extends MockRM {
 
-  private final ContainerManager containerManager;
+  private final ContainerManagementProtocol containerManager;
 
-  public MockRMWithCustomAMLauncher(ContainerManager containerManager) {
+  public MockRMWithCustomAMLauncher(ContainerManagementProtocol containerManager) {
     this(new Configuration(), containerManager);
   }
 
   public MockRMWithCustomAMLauncher(Configuration conf,
-      ContainerManager containerManager) {
+      ContainerManagementProtocol containerManager) {
     super(conf);
     this.containerManager = containerManager;
   }
@@ -48,7 +48,7 @@ public class MockRMWithCustomAMLauncher extends MockRM {
           AMLauncherEventType event) {
         return new AMLauncher(context, application, event, getConfig()) {
           @Override
-          protected ContainerManager getContainerMgrProxy(
+          protected ContainerManagementProtocol getContainerMgrProxy(
               ContainerId containerId) {
             return containerManager;
           }

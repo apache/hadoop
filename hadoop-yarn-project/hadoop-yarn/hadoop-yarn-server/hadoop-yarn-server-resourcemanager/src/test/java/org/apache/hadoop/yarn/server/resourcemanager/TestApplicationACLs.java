@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -78,7 +78,7 @@ public class TestApplicationACLs {
       YarnConfiguration.RM_ADDRESS,
       YarnConfiguration.DEFAULT_RM_ADDRESS,
       YarnConfiguration.DEFAULT_RM_PORT);
-  private static ClientRMProtocol rmClient;
+  private static ApplicationClientProtocol rmClient;
 
   private static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(conf);
@@ -121,10 +121,10 @@ public class TestApplicationACLs {
 
     UserGroupInformation owner = UserGroupInformation
         .createRemoteUser(APP_OWNER);
-    rmClient = owner.doAs(new PrivilegedExceptionAction<ClientRMProtocol>() {
+    rmClient = owner.doAs(new PrivilegedExceptionAction<ApplicationClientProtocol>() {
       @Override
-      public ClientRMProtocol run() throws Exception {
-        return (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,
+      public ApplicationClientProtocol run() throws Exception {
+        return (ApplicationClientProtocol) rpc.getProxy(ApplicationClientProtocol.class,
             rmAddress, conf);
       }
     });
@@ -178,15 +178,15 @@ public class TestApplicationACLs {
     return applicationId;
   }
 
-  private ClientRMProtocol getRMClientForUser(String user)
+  private ApplicationClientProtocol getRMClientForUser(String user)
       throws IOException, InterruptedException {
     UserGroupInformation userUGI = UserGroupInformation
         .createRemoteUser(user);
-    ClientRMProtocol userClient = userUGI
-        .doAs(new PrivilegedExceptionAction<ClientRMProtocol>() {
+    ApplicationClientProtocol userClient = userUGI
+        .doAs(new PrivilegedExceptionAction<ApplicationClientProtocol>() {
           @Override
-          public ClientRMProtocol run() throws Exception {
-            return (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,
+          public ApplicationClientProtocol run() throws Exception {
+            return (ApplicationClientProtocol) rpc.getProxy(ApplicationClientProtocol.class,
                 rmAddress, conf);
           }
         });
@@ -237,7 +237,7 @@ public class TestApplicationACLs {
         .newRecordInstance(KillApplicationRequest.class);
     finishAppRequest.setApplicationId(applicationId);
 
-    ClientRMProtocol superUserClient = getRMClientForUser(SUPER_USER);
+    ApplicationClientProtocol superUserClient = getRMClientForUser(SUPER_USER);
 
     // View as the superUser
     superUserClient.getApplicationReport(appReportRequest);
@@ -268,7 +268,7 @@ public class TestApplicationACLs {
         .newRecordInstance(KillApplicationRequest.class);
     finishAppRequest.setApplicationId(applicationId);
 
-    ClientRMProtocol friendClient = getRMClientForUser(FRIEND);
+    ApplicationClientProtocol friendClient = getRMClientForUser(FRIEND);
 
     // View as the friend
     friendClient.getApplicationReport(appReportRequest);
@@ -299,7 +299,7 @@ public class TestApplicationACLs {
         .newRecordInstance(KillApplicationRequest.class);
     finishAppRequest.setApplicationId(applicationId);
 
-    ClientRMProtocol enemyRmClient = getRMClientForUser(ENEMY);
+    ApplicationClientProtocol enemyRmClient = getRMClientForUser(ENEMY);
 
     // View as the enemy
     ApplicationReport appReport = enemyRmClient.getApplicationReport(

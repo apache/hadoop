@@ -34,7 +34,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -97,7 +97,7 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
     @Override
     public long renew(Token<?> token, Configuration conf) throws IOException,
         InterruptedException {
-      final ClientRMProtocol rmClient = getRmClient(token, conf);
+      final ApplicationClientProtocol rmClient = getRmClient(token, conf);
       if (rmClient != null) {
         try {
           RenewDelegationTokenRequest request =
@@ -119,7 +119,7 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
     @Override
     public void cancel(Token<?> token, Configuration conf) throws IOException,
         InterruptedException {
-      final ClientRMProtocol rmClient = getRmClient(token, conf);
+      final ApplicationClientProtocol rmClient = getRmClient(token, conf);
       if (rmClient != null) {
         try {
           CancelDelegationTokenRequest request =
@@ -137,7 +137,7 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
       }
     }
     
-    private static ClientRMProtocol getRmClient(Token<?> token,
+    private static ApplicationClientProtocol getRmClient(Token<?> token,
         Configuration conf) {
       InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
       if (localSecretManager != null) {
@@ -152,7 +152,7 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
         }
       }
       final YarnRPC rpc = YarnRPC.create(conf);
-      return (ClientRMProtocol)rpc.getProxy(ClientRMProtocol.class, addr, conf);        
+      return (ApplicationClientProtocol)rpc.getProxy(ApplicationClientProtocol.class, addr, conf);        
     }
 
     // get renewer so we can always renew our own tokens

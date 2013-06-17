@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.util.Records;
  * <p>The request includes the {@link ApplicationId} of the application to be
  * aborted.</p>
  * 
- * @see ClientRMProtocol#forceKillApplication(KillApplicationRequest)
+ * @see ApplicationClientProtocol#forceKillApplication(KillApplicationRequest)
  */
 @Public
 @Stable

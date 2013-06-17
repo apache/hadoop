@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.util.Records;
  * is running, RPC port, tracking URL, diagnostics, start time etc.</p>
  * 
  * @see ApplicationReport
- * @see ClientRMProtocol#getAllApplications(GetAllApplicationsRequest)
+ * @see ApplicationClientProtocol#getAllApplications(GetAllApplicationsRequest)
  */
 @Public
 @Stable

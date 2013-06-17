@@ -23,7 +23,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.util.Records;
  * <code>ApplicationMaster</code> when asked to <em>start</em> an
  * allocated container.</p>
  * 
- * @see ContainerManager#startContainer(StartContainerRequest)
+ * @see ContainerManagementProtocol#startContainer(StartContainerRequest)
  */
 @Public
 @Stable

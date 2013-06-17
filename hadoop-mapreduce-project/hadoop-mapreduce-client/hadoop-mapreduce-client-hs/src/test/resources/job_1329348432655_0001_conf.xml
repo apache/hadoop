@@ -258,7 +258,7 @@
 <property><!--Loaded from job.xml--><name>mapreduce.tasktracker.instrumentation</name><value>org.apache.hadoop.mapred.TaskTrackerMetricsInst</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.tasktracker.http.address</name><value>0.0.0.0:50060</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobhistory.webapp.address</name><value>0.0.0.0:19888</value></property>
-<property><!--Loaded from Unknown--><name>rpc.engine.org.apache.hadoop.yarn.proto.AMRMProtocol$AMRMProtocolService$BlockingInterface</name><value>org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine</value></property>
+<property><!--Loaded from Unknown--><name>rpc.engine.org.apache.hadoop.yarn.proto.ApplicationMasterProtocol$ApplicationMasterProtocolService$BlockingInterface</name><value>org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine</value></property>
 <property><!--Loaded from job.xml--><name>yarn.ipc.rpc.class</name><value>org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.name</name><value>Sleep job</value></property>
 <property><!--Loaded from job.xml--><name>kfs.blocksize</name><value>67108864</value></property>

@@ -24,7 +24,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -55,7 +55,7 @@ public class TestApplicationMasterLauncher {
       .getLog(TestApplicationMasterLauncher.class);
 
   private static final class MyContainerManagerImpl implements
-      ContainerManager {
+      ContainerManagementProtocol {
 
     boolean launched = false;
     boolean cleanedup = false;

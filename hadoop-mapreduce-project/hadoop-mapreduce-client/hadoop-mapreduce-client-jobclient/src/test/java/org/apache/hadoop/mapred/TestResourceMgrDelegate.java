@@ -26,7 +26,7 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.JobStatus.State;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -52,7 +52,7 @@ public class TestResourceMgrDelegate {
    */
   @Test
   public void testGetRootQueues() throws IOException, InterruptedException {
-    final ClientRMProtocol applicationsManager = Mockito.mock(ClientRMProtocol.class);
+    final ApplicationClientProtocol applicationsManager = Mockito.mock(ApplicationClientProtocol.class);
     GetQueueInfoResponse response = Mockito.mock(GetQueueInfoResponse.class);
     org.apache.hadoop.yarn.api.records.QueueInfo queueInfo =
       Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
@@ -90,7 +90,7 @@ public class TestResourceMgrDelegate {
 
   @Test
   public void tesAllJobs() throws Exception {
-    final ClientRMProtocol applicationsManager = Mockito.mock(ClientRMProtocol.class);
+    final ApplicationClientProtocol applicationsManager = Mockito.mock(ApplicationClientProtocol.class);
     GetAllApplicationsResponse allApplicationsResponse = Records
         .newRecord(GetAllApplicationsResponse.class);
     List<ApplicationReport> applications = new ArrayList<ApplicationReport>();

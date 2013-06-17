@@ -29,7 +29,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.yarn.api.RMAdminProtocol;
+import org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshQueuesRequest;
@@ -165,7 +165,7 @@ public class RMAdminCLI extends Configured implements Tool {
     return UserGroupInformation.getCurrentUser();
   }
 
-  private RMAdminProtocol createAdminProtocol() throws IOException {
+  private ResourceManagerAdministrationProtocol createAdminProtocol() throws IOException {
     // Get the current configuration
     final YarnConfiguration conf = new YarnConfiguration(getConf());
 
@@ -176,11 +176,11 @@ public class RMAdminCLI extends Configured implements Tool {
         YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
     final YarnRPC rpc = YarnRPC.create(conf);
     
-    RMAdminProtocol adminProtocol =
-      getUGI(conf).doAs(new PrivilegedAction<RMAdminProtocol>() {
+    ResourceManagerAdministrationProtocol adminProtocol =
+      getUGI(conf).doAs(new PrivilegedAction<ResourceManagerAdministrationProtocol>() {
         @Override
-        public RMAdminProtocol run() {
-          return (RMAdminProtocol) rpc.getProxy(RMAdminProtocol.class,
+        public ResourceManagerAdministrationProtocol run() {
+          return (ResourceManagerAdministrationProtocol) rpc.getProxy(ResourceManagerAdministrationProtocol.class,
               addr, conf);
         }
       });
@@ -190,7 +190,7 @@ public class RMAdminCLI extends Configured implements Tool {
   
   private int refreshQueues() throws IOException, YarnException {
     // Refresh the queue properties
-    RMAdminProtocol adminProtocol = createAdminProtocol();
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshQueuesRequest request = 
       recordFactory.newRecordInstance(RefreshQueuesRequest.class);
     adminProtocol.refreshQueues(request);
@@ -199,7 +199,7 @@ public class RMAdminCLI extends Configured implements Tool {
 
   private int refreshNodes() throws IOException, YarnException {
     // Refresh the nodes
-    RMAdminProtocol adminProtocol = createAdminProtocol();
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshNodesRequest request = 
       recordFactory.newRecordInstance(RefreshNodesRequest.class);
     adminProtocol.refreshNodes(request);
@@ -209,7 +209,7 @@ public class RMAdminCLI extends Configured implements Tool {
   private int refreshUserToGroupsMappings() throws IOException,
       YarnException {
     // Refresh the user-to-groups mappings
-    RMAdminProtocol adminProtocol = createAdminProtocol();
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshUserToGroupsMappingsRequest request = 
       recordFactory.newRecordInstance(RefreshUserToGroupsMappingsRequest.class);
     adminProtocol.refreshUserToGroupsMappings(request);
@@ -219,7 +219,7 @@ public class RMAdminCLI extends Configured implements Tool {
   private int refreshSuperUserGroupsConfiguration() throws IOException,
       YarnException {
     // Refresh the super-user groups
-    RMAdminProtocol adminProtocol = createAdminProtocol();
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshSuperUserGroupsConfigurationRequest request = 
       recordFactory.newRecordInstance(RefreshSuperUserGroupsConfigurationRequest.class);
     adminProtocol.refreshSuperUserGroupsConfiguration(request);
@@ -228,7 +228,7 @@ public class RMAdminCLI extends Configured implements Tool {
   
   private int refreshAdminAcls() throws IOException, YarnException {
     // Refresh the admin acls
-    RMAdminProtocol adminProtocol = createAdminProtocol();
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshAdminAclsRequest request = 
       recordFactory.newRecordInstance(RefreshAdminAclsRequest.class);
     adminProtocol.refreshAdminAcls(request);
@@ -237,7 +237,7 @@ public class RMAdminCLI extends Configured implements Tool {
   
   private int refreshServiceAcls() throws IOException, YarnException {
     // Refresh the service acls
-    RMAdminProtocol adminProtocol = createAdminProtocol();
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshServiceAclsRequest request = 
       recordFactory.newRecordInstance(RefreshServiceAclsRequest.class);
     adminProtocol.refreshServiceAcls(request);
@@ -246,7 +246,7 @@ public class RMAdminCLI extends Configured implements Tool {
   
   private int getGroups(String[] usernames) throws IOException {
     // Get groups users belongs to
-    RMAdminProtocol adminProtocol = createAdminProtocol();
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
 
     if (usernames.length == 0) {
       usernames = new String[] { UserGroupInformation.getCurrentUser().getUserName() };

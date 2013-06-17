@@ -36,7 +36,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -307,7 +307,7 @@ public class NodeManager extends CompositeService
 
     private final NMContainerTokenSecretManager containerTokenSecretManager;
     private final NMTokenSecretManagerInNM nmTokenSecretManager;
-    private ContainerManager containerManager;
+    private ContainerManagementProtocol containerManager;
     private WebServer webServer;
     private final NodeHealthStatus nodeHealthStatus = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);
@@ -360,11 +360,11 @@ public class NodeManager extends CompositeService
     }
 
     @Override
-    public ContainerManager getContainerManager() {
+    public ContainerManagementProtocol getContainerManager() {
       return this.containerManager;
     }
 
-    public void setContainerManager(ContainerManager containerManager) {
+    public void setContainerManager(ContainerManagementProtocol containerManager) {
       this.containerManager = containerManager;
     }
 

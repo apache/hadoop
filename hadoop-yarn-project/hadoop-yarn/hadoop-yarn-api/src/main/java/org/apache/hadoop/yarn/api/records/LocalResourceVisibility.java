@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 
 /**
  * <p><code>LocalResourceVisibility</code> specifies the <em>visibility</em>
@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.api.ContainerManager;
  * @see LocalResource
  * @see ContainerLaunchContext
  * @see ApplicationSubmissionContext
- * @see ContainerManager#startContainer(org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest)
+ * @see ContainerManagementProtocol#startContainer(org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest)
  */
 @Public
 @Stable

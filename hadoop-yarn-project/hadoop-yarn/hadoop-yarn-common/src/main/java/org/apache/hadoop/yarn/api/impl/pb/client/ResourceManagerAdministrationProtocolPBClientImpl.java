@@ -26,8 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.yarn.api.RMAdminProtocol;
-import org.apache.hadoop.yarn.api.RMAdminProtocolPB;
+import org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocol;
+import org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshNodesRequest;
@@ -66,16 +66,16 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Refre
 import com.google.protobuf.ServiceException;
 
 
-public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
+public class ResourceManagerAdministrationProtocolPBClientImpl implements ResourceManagerAdministrationProtocol, Closeable {
 
-  private RMAdminProtocolPB proxy;
+  private ResourceManagerAdministrationProtocolPB proxy;
   
-  public RMAdminProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, 
+  public ResourceManagerAdministrationProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, 
       Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, RMAdminProtocolPB.class, 
+    RPC.setProtocolEngine(conf, ResourceManagerAdministrationProtocolPB.class, 
         ProtobufRpcEngine.class);
-    proxy = (RMAdminProtocolPB)RPC.getProxy(
-        RMAdminProtocolPB.class, clientVersion, addr, conf);
+    proxy = (ResourceManagerAdministrationProtocolPB)RPC.getProxy(
+        ResourceManagerAdministrationProtocolPB.class, clientVersion, addr, conf);
   }
 
   @Override

@@ -606,21 +606,21 @@ public class YarnConfiguration extends Configuration {
    * YARN Service Level Authorization
    */
   public static final String 
-  YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCETRACKER =
+  YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCETRACKER_PROTOCOL =
       "security.resourcetracker.protocol.acl";
   public static final String 
-  YARN_SECURITY_SERVICE_AUTHORIZATION_CLIENT_RESOURCEMANAGER =
-      "security.client.resourcemanager.protocol.acl";
+  YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONCLIENT_PROTOCOL =
+      "security.applicationclient.protocol.acl";
   public static final String 
-  YARN_SECURITY_SERVICE_AUTHORIZATION_ADMIN =
-      "security.admin.protocol.acl";
+  YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCEMANAGER_ADMINISTRATION_PROTOCOL =
+      "security.resourcemanager-administration.protocol.acl";
   public static final String 
-  YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_RESOURCEMANAGER =
-      "security.applicationmaster.resourcemanager.protocol.acl";
+  YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_PROTOCOL =
+      "security.applicationmaster.protocol.acl";
 
   public static final String 
-  YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGER =
-      "security.containermanager.protocol.acl";
+  YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGEMENT_PROTOCOL =
+      "security.containermanagement.protocol.acl";
   public static final String 
   YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER =
       "security.resourcelocalizer.protocol.acl";

@@ -38,7 +38,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -68,7 +68,7 @@ public class AMLauncher implements Runnable {
 
   private static final Log LOG = LogFactory.getLog(AMLauncher.class);
 
-  private ContainerManager containerMgrProxy;
+  private ContainerManagementProtocol containerMgrProxy;
 
   private final RMAppAttempt application;
   private final Configuration conf;
@@ -125,7 +125,7 @@ public class AMLauncher implements Runnable {
   }
 
   // Protected. For tests.
-  protected ContainerManager getContainerMgrProxy(
+  protected ContainerManagementProtocol getContainerMgrProxy(
       final ContainerId containerId) {
 
     final NodeId node = masterContainer.getNodeId();
@@ -142,10 +142,10 @@ public class AMLauncher implements Runnable {
               .getContainerToken(), containerManagerBindAddress);
       currentUser.addToken(token);
     }
-    return currentUser.doAs(new PrivilegedAction<ContainerManager>() {
+    return currentUser.doAs(new PrivilegedAction<ContainerManagementProtocol>() {
       @Override
-      public ContainerManager run() {
-        return (ContainerManager) rpc.getProxy(ContainerManager.class,
+      public ContainerManagementProtocol run() {
+        return (ContainerManagementProtocol) rpc.getProxy(ContainerManagementProtocol.class,
             containerManagerBindAddress, conf);
       }
     });
