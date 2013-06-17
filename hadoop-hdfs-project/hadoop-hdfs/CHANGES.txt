@@ -1089,6 +1089,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4902. DFSClient.getSnapshotDiffReport should use string path rather 
     than o.a.h.fs.Path. (Binglin Chang via jing9) 
 
+    HDFS-4875. Add a test for testing snapshot file length. 
+    (Arpit Agarwal via jing9)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
