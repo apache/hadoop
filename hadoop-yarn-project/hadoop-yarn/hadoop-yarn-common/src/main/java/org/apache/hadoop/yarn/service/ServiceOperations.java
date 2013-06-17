@@ -18,19 +18,20 @@
 
 package org.apache.hadoop.yarn.service;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ShutdownHookManager;
-
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
  * This class contains a set of methods to work with services, especially
  * to walk them through their lifecycle.
  */
+@Public
+@Evolving
 public final class ServiceOperations {
   private static final Log LOG = LogFactory.getLog(AbstractService.class);
 

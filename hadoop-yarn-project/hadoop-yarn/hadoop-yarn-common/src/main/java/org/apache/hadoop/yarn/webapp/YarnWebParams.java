@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.webapp;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public interface YarnWebParams {
   String NM_NODENAME = "nm.id";
   String APPLICATION_ID = "app.id";

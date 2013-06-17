@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.yarn.service;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+
 /**
  * Implements the service state model for YARN.
  */
+@Public
+@Evolving
 public class ServiceStateModel {
 
   /**

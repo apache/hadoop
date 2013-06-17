@@ -18,15 +18,13 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import com.google.common.base.CharMatcher;
-import static com.google.common.base.Preconditions.*;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static org.apache.hadoop.yarn.util.StringHelper.djoin;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.NoSuchMethodException;
-import java.lang.SecurityException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -34,15 +32,18 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
-
-import static org.apache.hadoop.yarn.util.StringHelper.*;
-
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.CharMatcher;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 
 /**
  * Manages path info to controller#action routing.
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 class Router {
   static final Logger LOG = LoggerFactory.getLogger(Router.class);
   static final ImmutableList<String> EMPTY_LIST = ImmutableList.of();

@@ -18,18 +18,24 @@
 
 package org.apache.hadoop.yarn.util;
 
+import static org.apache.hadoop.yarn.util.StringHelper._split;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.util.StringHelper.sjoin;
+
 import java.util.Iterator;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import static org.apache.hadoop.yarn.util.StringHelper.*;
-
 /**
  * Yarn application related utilities
  */
+@Private
 public class Apps {
   public static final String APP = "application";
   public static final String ID = "ID";
@@ -98,6 +104,8 @@ public class Apps {
   private static final String SYSTEM_PATH_SEPARATOR =
       System.getProperty("path.separator");
 
+  @Public
+  @Unstable
   public static void addToEnvironment(
       Map<String, String> environment,
       String variable, String value) {

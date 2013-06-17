@@ -24,6 +24,7 @@ import java.util.TimerTask;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,6 +33,10 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+/**
+ * A service that periodically deletes aggregated logs.
+ */
+@Private
 public class AggregatedLogDeletionService extends AbstractService {
   private static final Log LOG = LogFactory.getLog(AggregatedLogDeletionService.class);
   

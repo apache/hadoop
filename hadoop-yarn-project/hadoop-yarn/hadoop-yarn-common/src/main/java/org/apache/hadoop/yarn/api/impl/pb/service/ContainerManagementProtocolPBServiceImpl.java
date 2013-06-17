@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.impl.pb.service;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainerResponseProto
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
+@Private
 public class ContainerManagementProtocolPBServiceImpl implements ContainerManagementProtocolPB  {
 
   private ContainerManagementProtocol real;

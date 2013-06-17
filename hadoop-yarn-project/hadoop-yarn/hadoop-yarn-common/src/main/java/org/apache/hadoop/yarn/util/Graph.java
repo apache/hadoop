@@ -25,7 +25,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 
+@Private
 public class Graph {
   public class Edge {
     Node from;

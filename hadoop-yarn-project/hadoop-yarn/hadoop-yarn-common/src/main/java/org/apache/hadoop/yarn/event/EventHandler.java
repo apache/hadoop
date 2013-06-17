@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.yarn.event;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+
 /**
  * Interface for handling events of type T
  *
- * @param <T> paremeterized event of type T
+ * @param <T> parameterized event of type T
  */
+@SuppressWarnings("rawtypes")
+@Public
+@Evolving
 public interface EventHandler<T extends Event> {
 
   void handle(T event);

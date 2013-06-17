@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
 import org.slf4j.Logger;
@@ -46,6 +47,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 /**
  * @see WebApps for a usage example
  */
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public abstract class WebApp extends ServletModule {
   private static final Logger LOG = LoggerFactory.getLogger(WebApp.class);
 

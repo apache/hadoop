@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.util;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+
+@Private
 public class Times {
   static final ThreadLocal<SimpleDateFormat> dateFormat =
       new ThreadLocal<SimpleDateFormat>() {

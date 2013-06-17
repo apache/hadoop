@@ -18,12 +18,17 @@
 
 package org.apache.hadoop.yarn.event;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+
 /**
  * Event Dispatcher interface. It dispatches events to registered 
  * event handlers based on event types.
  * 
  */
 @SuppressWarnings("rawtypes")
+@Public
+@Evolving
 public interface Dispatcher {
 
   // Configuration to make sure dispatcher crashes but doesn't do system-exit in

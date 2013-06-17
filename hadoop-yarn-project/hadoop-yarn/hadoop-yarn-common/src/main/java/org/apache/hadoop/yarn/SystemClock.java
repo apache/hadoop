@@ -17,6 +17,15 @@
 */
 package org.apache.hadoop.yarn;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+
+/**
+ * Implementation of {@link Clock} that gives the current time from the system
+ * clock in milliseconds.
+ */
+@Public
+@Stable
 public class SystemClock implements Clock {
 
   public long getTime() {
