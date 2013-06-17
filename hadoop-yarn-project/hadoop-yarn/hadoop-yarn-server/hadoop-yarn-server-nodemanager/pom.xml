@@ -111,7 +111,7 @@
                   <goal>java</goal>
                 </goals>
                 <configuration>
-                  <mainClass>org.apache.hadoop.yarn.util.VisualizeStateMachine</mainClass>
+                  <mainClass>org.apache.hadoop.yarn.state.VisualizeStateMachine</mainClass>
 		  <classpathScope>compile</classpathScope>
                   <arguments>
                     <argument>NodeManager</argument>

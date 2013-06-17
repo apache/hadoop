@@ -28,7 +28,6 @@ import java.util.Stack;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.yarn.util.Graph;
 
 /**
  * State machine topology.
