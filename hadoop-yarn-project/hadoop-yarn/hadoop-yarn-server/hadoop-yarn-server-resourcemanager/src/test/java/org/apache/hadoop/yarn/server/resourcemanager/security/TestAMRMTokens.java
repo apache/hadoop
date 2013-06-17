@@ -47,9 +47,9 @@ import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TestApplicationTokens {
+public class TestAMRMTokens {
 
-  private static final Log LOG = LogFactory.getLog(TestApplicationTokens.class);
+  private static final Log LOG = LogFactory.getLog(TestAMRMTokens.class);
 
   private static final Configuration confWithSecurityEnabled =
       new Configuration();
@@ -212,8 +212,8 @@ public class TestApplicationTokens {
           rmClient.allocate(allocateRequest).getAMCommand() == null);
 
       // Simulate a master-key-roll-over
-      ApplicationTokenSecretManager appTokenSecretManager =
-          rm.getRMContext().getApplicationTokenSecretManager();
+      AMRMTokenSecretManager appTokenSecretManager =
+          rm.getRMContext().getAMRMTokenSecretManager();
       SecretKey oldKey = appTokenSecretManager.getMasterKey();
       appTokenSecretManager.rollMasterKey();
       SecretKey newKey = appTokenSecretManager.getMasterKey();

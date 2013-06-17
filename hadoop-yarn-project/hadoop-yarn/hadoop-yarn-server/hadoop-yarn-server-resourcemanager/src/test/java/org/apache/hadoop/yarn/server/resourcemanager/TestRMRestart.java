@@ -536,7 +536,7 @@ public class TestRMRestart {
 
     // the appToken and clientToken that are generated when RMAppAttempt is created,
     HashSet<Token<?>> tokenSet = new HashSet<Token<?>>();
-    tokenSet.add(attempt1.getApplicationToken());
+    tokenSet.add(attempt1.getAMRMToken());
     tokenSet.add(attempt1.getClientToken());
 
     // assert application Token is saved
@@ -555,7 +555,7 @@ public class TestRMRestart {
     // assert loaded attempt recovered attempt tokens
     Assert.assertNotNull(loadedAttempt1);
     savedTokens.clear();
-    savedTokens.add(loadedAttempt1.getApplicationToken());
+    savedTokens.add(loadedAttempt1.getAMRMToken());
     savedTokens.add(loadedAttempt1.getClientToken());
     Assert.assertEquals(tokenSet, savedTokens);
 

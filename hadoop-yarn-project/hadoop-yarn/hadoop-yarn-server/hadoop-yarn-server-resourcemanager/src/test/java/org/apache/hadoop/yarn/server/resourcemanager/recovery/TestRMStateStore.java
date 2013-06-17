@@ -54,7 +54,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
@@ -64,7 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMSta
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
@@ -205,7 +205,7 @@ public class TestRMStateStore {
   }
 
   ContainerId storeAttempt(RMStateStore store, ApplicationAttemptId attemptId,
-      String containerIdStr, Token<ApplicationTokenIdentifier> appToken,
+      String containerIdStr, Token<AMRMTokenIdentifier> appToken,
       Token<ClientTokenIdentifier> clientToken, TestDispatcher dispatcher)
       throws Exception {
 
@@ -214,7 +214,7 @@ public class TestRMStateStore {
     RMAppAttempt mockAttempt = mock(RMAppAttempt.class);
     when(mockAttempt.getAppAttemptId()).thenReturn(attemptId);
     when(mockAttempt.getMasterContainer()).thenReturn(container);
-    when(mockAttempt.getApplicationToken()).thenReturn(appToken);
+    when(mockAttempt.getAMRMToken()).thenReturn(appToken);
     when(mockAttempt.getClientToken()).thenReturn(clientToken);
     dispatcher.attemptId = attemptId;
     dispatcher.storedException = null;
@@ -231,8 +231,8 @@ public class TestRMStateStore {
     TestDispatcher dispatcher = new TestDispatcher();
     store.setDispatcher(dispatcher);
 
-    ApplicationTokenSecretManager appTokenMgr =
-        new ApplicationTokenSecretManager(conf);
+    AMRMTokenSecretManager appTokenMgr =
+        new AMRMTokenSecretManager(conf);
     ClientToAMTokenSecretManagerInRM clientTokenMgr =
         new ClientToAMTokenSecretManagerInRM();
 
@@ -249,7 +249,7 @@ public class TestRMStateStore {
 
     ContainerId containerId1 = storeAttempt(store, attemptId1,
           "container_1352994193343_0001_01_000001",
-          (Token<ApplicationTokenIdentifier>) (appAttemptToken1.get(0)),
+          (Token<AMRMTokenIdentifier>) (appAttemptToken1.get(0)),
           (Token<ClientTokenIdentifier>)(appAttemptToken1.get(1)),
           dispatcher);
 
@@ -265,7 +265,7 @@ public class TestRMStateStore {
 
     ContainerId containerId2 = storeAttempt(store, attemptId2,
           "container_1352994193343_0001_02_000001",
-          (Token<ApplicationTokenIdentifier>) (appAttemptToken2.get(0)),
+          (Token<AMRMTokenIdentifier>) (appAttemptToken2.get(0)),
           (Token<ClientTokenIdentifier>)(appAttemptToken2.get(1)),
           dispatcher);
 
@@ -372,12 +372,12 @@ public class TestRMStateStore {
   }
 
   private List<Token<?>> generateTokens(ApplicationAttemptId attemptId,
-      ApplicationTokenSecretManager appTokenMgr,
+      AMRMTokenSecretManager appTokenMgr,
       ClientToAMTokenSecretManagerInRM clientTokenMgr, Configuration conf) {
-    ApplicationTokenIdentifier appTokenId =
-        new ApplicationTokenIdentifier(attemptId);
-    Token<ApplicationTokenIdentifier> appToken =
-        new Token<ApplicationTokenIdentifier>(appTokenId, appTokenMgr);
+    AMRMTokenIdentifier appTokenId =
+        new AMRMTokenIdentifier(attemptId);
+    Token<AMRMTokenIdentifier> appToken =
+        new Token<AMRMTokenIdentifier>(appTokenId, appTokenMgr);
     appToken.setService(new Text("appToken service"));
 
     ClientTokenIdentifier clientTokenId = new ClientTokenIdentifier(attemptId);

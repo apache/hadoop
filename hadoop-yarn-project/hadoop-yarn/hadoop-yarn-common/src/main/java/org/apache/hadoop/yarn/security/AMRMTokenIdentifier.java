@@ -34,21 +34,21 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 /**
- * ApplicationTokenIdentifier is the TokenIdentifier to be used by
+ * AMRMTokenIdentifier is the TokenIdentifier to be used by
  * ApplicationMasters to authenticate to the ResourceManager.
  */
 @Public
 @Evolving
-public class ApplicationTokenIdentifier extends TokenIdentifier {
+public class AMRMTokenIdentifier extends TokenIdentifier {
 
-  public static final Text KIND_NAME = new Text("YARN_APPLICATION_TOKEN");
+  public static final Text KIND_NAME = new Text("YARN_AM_RM_TOKEN");
 
   private ApplicationAttemptId applicationAttemptId;
 
-  public ApplicationTokenIdentifier() {
+  public AMRMTokenIdentifier() {
   }
 
-  public ApplicationTokenIdentifier(ApplicationAttemptId appAttemptId) {
+  public AMRMTokenIdentifier(ApplicationAttemptId appAttemptId) {
     this();
     this.applicationAttemptId = appAttemptId;
   }

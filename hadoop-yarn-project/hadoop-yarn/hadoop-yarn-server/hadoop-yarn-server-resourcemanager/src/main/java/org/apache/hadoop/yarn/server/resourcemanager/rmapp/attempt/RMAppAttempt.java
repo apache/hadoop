@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 
@@ -149,10 +149,10 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
   ApplicationSubmissionContext getSubmissionContext();
 
   /**
-   * The application token belonging to this app attempt
-   * @return The application token belonging to this app attempt
+   * The AMRMToken belonging to this app attempt
+   * @return The AMRMToken belonging to this app attempt
    */
-  Token<ApplicationTokenIdentifier> getApplicationToken();
+  Token<AMRMTokenIdentifier> getAMRMToken();
 
   /**
    * Get application container and resource usage information.

@@ -54,7 +54,7 @@ public class SchedulerSecurityInfo extends SecurityInfo {
       @Override
       public Class<? extends TokenSelector<? extends TokenIdentifier>>
           value() {
-        return ApplicationTokenSelector.class;
+        return AMRMTokenSelector.class;
       }
     };
   }
