@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -84,4 +85,18 @@ public abstract class RegisterApplicationMasterResponse {
   @Private
   @Unstable
   public abstract void setApplicationACLs(Map<ApplicationAccessType, String> acls);
+  
+  /**
+   * Set ClientToAMToken master key.
+   */
+  @Public
+  @Stable
+  public abstract void setClientToAMTokenMasterKey(ByteBuffer key);
+  
+  /**
+   * Get ClientToAMToken master key.
+   */
+  @Public
+  @Stable
+  public abstract ByteBuffer getClientToAMTokenMasterKey();
 }

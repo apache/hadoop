@@ -131,7 +131,7 @@ message ApplicationReportProto {
   optional string name = 4;
   optional string host = 5;
   optional int32 rpc_port = 6;
-  optional hadoop.common.TokenProto client_token = 7;
+  optional hadoop.common.TokenProto client_to_am_token = 7;
   optional YarnApplicationStateProto yarn_application_state = 8;
   optional string trackingUrl = 9;
   optional string diagnostics = 10 [default = "N/A"];

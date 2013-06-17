@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 
 import com.google.common.collect.Maps;
 
@@ -125,4 +126,8 @@ public class MockAppContext implements AppContext {
     this.blacklistedNodes = blacklistedNodes;
   }
 
+  public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
+    // Not implemented
+    return null;
+  }
 }

@@ -13,5 +13,5 @@
 #
 org.apache.hadoop.yarn.security.ContainerTokenIdentifier
 org.apache.hadoop.yarn.security.AMRMTokenIdentifier
-org.apache.hadoop.yarn.security.client.ClientTokenIdentifier
+org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier
 org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier

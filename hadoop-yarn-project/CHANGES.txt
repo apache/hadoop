@@ -183,6 +183,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-822. Renamed ApplicationToken to be AMRMToken, and similarly the
     corresponding TokenSelector and SecretManager. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-610. ClientToken is no longer set in the environment of the Containers.
+    (Omkar Vinit Joshi via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

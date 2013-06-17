@@ -42,7 +42,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
 
   private ApplicationId applicationId;
   private ApplicationAttemptId currentApplicationAttemptId;
-  private Token clientToken = null;
+  private Token clientToAMToken = null;
 
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
@@ -160,16 +160,16 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   }
 
   @Override
-  public Token getClientToken() {
+  public Token getClientToAMToken() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.clientToken != null) {
-      return this.clientToken;
+    if (this.clientToAMToken != null) {
+      return this.clientToAMToken;
     }
-    if (!p.hasClientToken()) {
+    if (!p.hasClientToAmToken()) {
       return null;
     }
-    this.clientToken = convertFromProtoFormat(p.getClientToken());
-    return this.clientToken;
+    this.clientToAMToken = convertFromProtoFormat(p.getClientToAmToken());
+    return this.clientToAMToken;
   }
 
   @Override
@@ -309,11 +309,11 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   }
 
   @Override
-  public void setClientToken(Token clientToken) {
+  public void setClientToAMToken(Token clientToAMToken) {
     maybeInitBuilder();
-    if (clientToken == null) 
-      builder.clearClientToken();
-    this.clientToken = clientToken;
+    if (clientToAMToken == null) 
+      builder.clearClientToAmToken();
+    this.clientToAMToken = clientToAMToken;
   }
 
   @Override
@@ -412,10 +412,10 @@ public class ApplicationReportPBImpl extends ApplicationReport {
             builder.getCurrentApplicationAttemptId())) {
       builder.setCurrentApplicationAttemptId(convertToProtoFormat(this.currentApplicationAttemptId));
     }
-    if (this.clientToken != null
-        && !((TokenPBImpl) this.clientToken).getProto().equals(
-            builder.getClientToken())) {
-      builder.setClientToken(convertToProtoFormat(this.clientToken));
+    if (this.clientToAMToken != null
+        && !((TokenPBImpl) this.clientToAMToken).getProto().equals(
+            builder.getClientToAmToken())) {
+      builder.setClientToAmToken(convertToProtoFormat(this.clientToAMToken));
     }
   }
 

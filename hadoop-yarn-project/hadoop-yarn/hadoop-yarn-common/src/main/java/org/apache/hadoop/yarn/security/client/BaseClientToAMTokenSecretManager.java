@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 @Public
 @Evolving
 public abstract class BaseClientToAMTokenSecretManager extends
-    SecretManager<ClientTokenIdentifier> {
+    SecretManager<ClientToAMTokenIdentifier> {
 
   @Private
   public abstract SecretKey getMasterKey(
@@ -45,14 +45,14 @@ public abstract class BaseClientToAMTokenSecretManager extends
   @Private
   @Override
   public synchronized byte[] createPassword(
-      ClientTokenIdentifier identifier) {
+      ClientToAMTokenIdentifier identifier) {
     return createPassword(identifier.getBytes(),
       getMasterKey(identifier.getApplicationAttemptID()));
   }
 
   @Private
   @Override
-  public byte[] retrievePassword(ClientTokenIdentifier identifier)
+  public byte[] retrievePassword(ClientToAMTokenIdentifier identifier)
       throws SecretManager.InvalidToken {
     SecretKey masterKey = getMasterKey(identifier.getApplicationAttemptID());
     if (masterKey == null) {
@@ -63,8 +63,8 @@ public abstract class BaseClientToAMTokenSecretManager extends
 
   @Private
   @Override
-  public ClientTokenIdentifier createIdentifier() {
-    return new ClientTokenIdentifier();
+  public ClientToAMTokenIdentifier createIdentifier() {
+    return new ClientToAMTokenIdentifier();
   }
 
 }

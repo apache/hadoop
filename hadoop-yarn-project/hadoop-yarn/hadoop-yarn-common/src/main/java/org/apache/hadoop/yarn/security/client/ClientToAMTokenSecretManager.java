@@ -38,12 +38,17 @@ public class ClientToAMTokenSecretManager extends
     BaseClientToAMTokenSecretManager {
 
   // Only one client-token and one master-key for AM
-  private final SecretKey masterKey;
+  private SecretKey masterKey;
 
   public ClientToAMTokenSecretManager(
-      ApplicationAttemptId applicationAttemptID, byte[] secretKeyBytes) {
+      ApplicationAttemptId applicationAttemptID, byte[] key) {
     super();
-    this.masterKey = SecretManager.createSecretKey(secretKeyBytes);
+    if (key !=  null) {
+      this.masterKey = SecretManager.createSecretKey(key);
+    } else {
+      this.masterKey = null;
+    }
+    
   }
 
   @Override
@@ -52,4 +57,7 @@ public class ClientToAMTokenSecretManager extends
     return this.masterKey;
   }
 
+  public void setMasterKey(byte[] key) {
+    this.masterKey = SecretManager.createSecretKey(key);
+  }
 }
