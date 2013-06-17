@@ -61,8 +61,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
-import org.apache.hadoop.yarn.security.ApplicationTokenSelector;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenSelector;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientTokenSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
@@ -131,7 +131,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final ApplicationAttemptId applicationAttemptId;
   private Token<ClientTokenIdentifier> clientToken;
   private final ApplicationSubmissionContext submissionContext;
-  private Token<ApplicationTokenIdentifier> applicationToken = null;
+  private Token<AMRMTokenIdentifier> amrmToken = null;
 
   //nodes on while this attempt's containers ran
   private final Set<NodeId> ranNodes =
@@ -503,8 +503,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public Token<ApplicationTokenIdentifier> getApplicationToken() {
-    return this.applicationToken;
+  public Token<AMRMTokenIdentifier> getAMRMToken() {
+    return this.amrmToken;
   }
 
   @Override
@@ -682,14 +682,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             YarnConfiguration.RM_SCHEDULER_ADDRESS,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
-      ApplicationTokenSelector appTokenSelector = new ApplicationTokenSelector();
-      this.applicationToken =
+      AMRMTokenSelector appTokenSelector = new AMRMTokenSelector();
+      this.amrmToken =
           appTokenSelector.selectToken(
             SecurityUtil.buildTokenService(serviceAddr),
             appAttemptTokens.getAllTokens());
 
       // For now, no need to populate tokens back to
-      // ApplicationTokenSecretManager, because running attempts are rebooted
+      // AMRMTokenSecretManager, because running attempts are rebooted
       // Later in work-preserve restart, we'll create NEW->RUNNING transition
       // in which the restored tokens will be added to the secret manager
     }
@@ -727,11 +727,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               appAttempt.rmContext.getClientToAMTokenSecretManager());
 
         // create application token
-        ApplicationTokenIdentifier id =
-            new ApplicationTokenIdentifier(appAttempt.applicationAttemptId);
-        Token<ApplicationTokenIdentifier> applicationToken =
-            new Token<ApplicationTokenIdentifier>(id,
-              appAttempt.rmContext.getApplicationTokenSecretManager());
+        AMRMTokenIdentifier id =
+            new AMRMTokenIdentifier(appAttempt.applicationAttemptId);
+        Token<AMRMTokenIdentifier> amRmToken =
+            new Token<AMRMTokenIdentifier>(id,
+              appAttempt.rmContext.getAMRMTokenSecretManager());
         InetSocketAddress serviceAddr =
             appAttempt.conf.getSocketAddr(
               YarnConfiguration.RM_SCHEDULER_ADDRESS,
@@ -739,9 +739,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
         // normally the client should set the service after acquiring the
         // token, but this token is directly provided to the AMs
-        SecurityUtil.setTokenService(applicationToken, serviceAddr);
+        SecurityUtil.setTokenService(amRmToken, serviceAddr);
 
-        appAttempt.applicationToken = applicationToken;
+        appAttempt.amrmToken = amRmToken;
 
       }
 
@@ -902,8 +902,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.eventHandler.handle(new AppRemovedSchedulerEvent(appAttemptId,
         finalAttemptState));
 
-      // Remove the AppAttempt from the ApplicationTokenSecretManager
-      appAttempt.rmContext.getApplicationTokenSecretManager()
+      // Remove the AppAttempt from the AMRMTokenSecretManager
+      appAttempt.rmContext.getAMRMTokenSecretManager()
         .applicationMasterFinished(appAttemptId);
     }
   }
@@ -1125,8 +1125,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
       appAttempt.rmContext.getAMLivelinessMonitor().unregister(appAttemptId);
 
-      // Remove the AppAttempt from the ApplicationTokenSecretManager
-      appAttempt.rmContext.getApplicationTokenSecretManager()
+      // Remove the AppAttempt from the AMRMTokenSecretManager
+      appAttempt.rmContext.getAMRMTokenSecretManager()
         .applicationMasterFinished(appAttemptId);
 
       appAttempt.progress = 1.0f;

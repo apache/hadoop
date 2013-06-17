@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -201,10 +201,10 @@ public class AMLauncher implements Runnable {
       }
 
       // Add application token
-      Token<ApplicationTokenIdentifier> applicationToken =
-          application.getApplicationToken();
-      if(applicationToken != null) {
-        credentials.addToken(applicationToken.getService(), applicationToken);
+      Token<AMRMTokenIdentifier> amrmToken =
+          application.getAMRMToken();
+      if(amrmToken != null) {
+        credentials.addToken(amrmToken.getService(), amrmToken);
       }
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);

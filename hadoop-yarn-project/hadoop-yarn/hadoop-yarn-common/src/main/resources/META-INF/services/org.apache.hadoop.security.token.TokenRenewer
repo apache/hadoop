@@ -11,6 +11,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-org.apache.hadoop.yarn.security.ApplicationTokenIdentifier$Renewer
+org.apache.hadoop.yarn.security.AMRMTokenIdentifier$Renewer
 org.apache.hadoop.yarn.security.ContainerTokenIdentifier$Renewer
 org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier$Renewer
