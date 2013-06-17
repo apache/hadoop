@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.service;
+package org.apache.hadoop.service;
 
 import java.util.ArrayList;
 import java.util.Collections;

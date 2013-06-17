@@ -320,4 +320,17 @@
        <Field name="in" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+
+     <!-- Synchronization performed on util.concurrent instance. -->
+     <Match>
+       <Class name="org.apache.hadoop.service.AbstractService" />
+       <Method name="stop" />
+       <Bug code="JLM" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.service.AbstractService" />
+       <Method name="waitForServiceToStop" />
+       <Bug code="JLM" />
+     </Match>
  </FindBugsFilter>
