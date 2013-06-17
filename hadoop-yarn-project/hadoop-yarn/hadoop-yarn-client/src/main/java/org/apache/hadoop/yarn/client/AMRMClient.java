@@ -24,22 +24,48 @@ import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.service.AbstractService;
 
 import com.google.common.collect.ImmutableList;
 
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Service {
+public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
+    AbstractService {
+
+  /**
+   * Create a new instance of AMRMClient.
+   * For usage:
+   * <pre>
+   * {@code
+   * AMRMClient.<T>createAMRMClientContainerRequest(appAttemptId)
+   * }</pre>
+   * @param appAttemptId the appAttemptId associated with the AMRMClient
+   * @return the newly create AMRMClient instance.
+   */
+  @Public
+  public static <T extends ContainerRequest> AMRMClient<T> createAMRMClient(
+      ApplicationAttemptId appAttemptId) {
+    AMRMClient<T> client = new AMRMClientImpl<T>(appAttemptId);
+    return client;
+  }
+
+  @Private
+  protected AMRMClient(String name) {
+    super(name);
+  }
 
   /**
    * Object to represent container request for resources. Scheduler
@@ -132,7 +158,7 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * @throws YarnException
    * @throws IOException
    */
-  public RegisterApplicationMasterResponse 
+  public abstract RegisterApplicationMasterResponse 
                registerApplicationMaster(String appHostName,
                                          int appHostPort,
                                          String appTrackingUrl) 
@@ -153,7 +179,7 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * @throws YarnException
    * @throws IOException
    */
-  public AllocateResponse allocate(float progressIndicator) 
+  public abstract AllocateResponse allocate(float progressIndicator) 
                            throws YarnException, IOException;
   
   /**
@@ -164,7 +190,7 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * @throws YarnException
    * @throws IOException
    */
-  public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
+  public abstract void unregisterApplicationMaster(FinalApplicationStatus appStatus,
                                            String appMessage,
                                            String appTrackingUrl) 
                throws YarnException, IOException;
@@ -173,7 +199,7 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * Request containers for resources before calling <code>allocate</code>
    * @param req Resource request
    */
-  public void addContainerRequest(T req);
+  public abstract void addContainerRequest(T req);
   
   /**
    * Remove previous container request. The previous container request may have 
@@ -182,7 +208,7 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * even after the remove request
    * @param req Resource request
    */
-  public void removeContainerRequest(T req);
+  public abstract void removeContainerRequest(T req);
   
   /**
    * Release containers assigned by the Resource Manager. If the app cannot use
@@ -191,21 +217,21 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * it still needs it. eg. it released non-local resources
    * @param containerId
    */
-  public void releaseAssignedContainer(ContainerId containerId);
+  public abstract void releaseAssignedContainer(ContainerId containerId);
   
   /**
    * Get the currently available resources in the cluster.
    * A valid value is available after a call to allocate has been made
    * @return Currently available resources
    */
-  public Resource getClusterAvailableResources();
+  public abstract Resource getClusterAvailableResources();
   
   /**
    * Get the current number of nodes in the cluster.
    * A valid values is available after a call to allocate has been made
    * @return Current number of nodes in the cluster
    */
-  public int getClusterNodeCount();
+  public abstract int getClusterNodeCount();
 
   /**
    * Get outstanding <code>StoredContainerRequest</code>s matching the given 
@@ -218,7 +244,7 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * collection, requests will be returned in the same order as they were added.
    * @return Collection of request matching the parameters
    */
-  public List<? extends Collection<T>> getMatchingRequests(
+  public abstract List<? extends Collection<T>> getMatchingRequests(
                                            Priority priority, 
                                            String resourceName, 
                                            Resource capability);
@@ -231,5 +257,5 @@ public interface AMRMClient<T extends AMRMClient.ContainerRequest> extends Servi
    * communicating with NodeManager (ex. NMClient) using NMTokens. If a new
    * NMToken is received for the same node manager then it will be replaced. 
    */
-  public ConcurrentMap<String, Token> getNMTokens();
+  public abstract ConcurrentMap<String, Token> getNMTokens();
 }

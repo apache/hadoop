@@ -62,7 +62,7 @@ public class TestYarnClient {
     rm.init(conf);
     rm.start();
 
-    YarnClient client = new YarnClientImpl();
+    YarnClient client = YarnClient.createYarnClient();
     client.init(conf);
     client.start();
     client.stop();

@@ -36,7 +36,7 @@ public abstract class YarnCLI extends Configured implements Tool {
 
   public YarnCLI() {
     super(new YarnConfiguration());
-    client = new YarnClientImpl();
+    client = YarnClient.createYarnClient();
     client.init(getConf());
     client.start();
   }
