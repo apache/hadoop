@@ -58,7 +58,6 @@ public class TestRM {
     
     GetNewApplicationResponse resp = rm.getNewAppId();
     assert (resp.getApplicationId().getId() != 0);    
-    assert (resp.getMinimumResourceCapability().getMemory() > 0);
     assert (resp.getMaximumResourceCapability().getMemory() > 0);    
     rm.stop();
   }

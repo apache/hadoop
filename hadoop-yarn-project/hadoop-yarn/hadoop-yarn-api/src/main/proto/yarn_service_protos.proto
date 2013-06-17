@@ -84,8 +84,7 @@ message GetNewApplicationRequestProto {
 
 message GetNewApplicationResponseProto {
   optional ApplicationIdProto application_id = 1;
-  optional ResourceProto minimumCapability = 2;
-  optional ResourceProto maximumCapability = 3;
+  optional ResourceProto maximumCapability = 2;
 }
 
 message GetApplicationReportRequestProto {
