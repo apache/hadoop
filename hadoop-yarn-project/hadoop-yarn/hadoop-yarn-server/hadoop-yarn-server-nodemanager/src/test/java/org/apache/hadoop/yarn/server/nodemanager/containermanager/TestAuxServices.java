@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import static org.apache.hadoop.yarn.service.Service.STATE.INITED;
-import static org.apache.hadoop.yarn.service.Service.STATE.STARTED;
-import static org.apache.hadoop.yarn.service.Service.STATE.STOPPED;
+import static org.apache.hadoop.service.Service.STATE.INITED;
+import static org.apache.hadoop.service.Service.STATE.STARTED;
+import static org.apache.hadoop.service.Service.STATE.STOPPED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -33,10 +33,10 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.service.Service;
 import org.junit.Test;
 
 public class TestAuxServices {

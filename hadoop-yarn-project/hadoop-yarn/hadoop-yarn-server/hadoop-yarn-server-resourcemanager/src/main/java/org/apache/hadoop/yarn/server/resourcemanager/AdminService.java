@@ -32,6 +32,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsResponse;
@@ -54,7 +55,6 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
-import org.apache.hadoop.yarn.service.AbstractService;
 
 public class AdminService extends AbstractService implements ResourceManagerAdministrationProtocol {
 

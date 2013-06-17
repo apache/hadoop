@@ -24,12 +24,12 @@ import static org.junit.Assert.fail;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.service.BreakableService;
+import org.apache.hadoop.service.BreakableService;
+import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceStateException;
+import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.service.CompositeService;
-import org.apache.hadoop.yarn.service.Service;
-import org.apache.hadoop.yarn.service.Service.STATE;
-import org.apache.hadoop.yarn.service.ServiceStateException;
 import org.junit.Before;
 import org.junit.Test;
 

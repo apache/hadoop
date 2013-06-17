@@ -105,6 +105,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9625. HADOOP_OPTS not picked up by hadoop command.
     (Paul Han via arpit)
 
+    HADOOP-9649. Promoted YARN service life-cycle libraries into Hadoop Common
+    for usage across all Hadoop projects. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs

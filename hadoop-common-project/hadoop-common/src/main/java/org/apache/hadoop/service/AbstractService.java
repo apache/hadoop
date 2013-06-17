@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.service;
+package org.apache.hadoop.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * This is the base implementation class for YARN services.
+ * This is the base implementation class for services.
  */
 @Public
 @Evolving
