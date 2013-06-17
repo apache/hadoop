@@ -155,6 +155,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-826. Moved Clock and SystemClock into yarn.util package. (Zhijie Shen
     via vinodkv)
 
+    YARN-837. Moved yarn.ClusterInfo into MapReduce project as it doesn't belong
+    to YARN. (Zhijie Shen via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
