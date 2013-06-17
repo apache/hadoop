@@ -110,7 +110,7 @@
                 </goals>
                 <configuration>
                   <classpathScope>test</classpathScope>
-                  <mainClass>org.apache.hadoop.yarn.util.VisualizeStateMachine</mainClass>
+                  <mainClass>org.apache.hadoop.yarn.state.VisualizeStateMachine</mainClass>
                   <arguments>
                     <argument>MapReduce</argument>
                     <argument>org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl,

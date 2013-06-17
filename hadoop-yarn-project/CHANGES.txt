@@ -392,6 +392,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-825. Fixed javadoc and annotations for yarn-common module. (vinodkv)
 
+    YARN-833. Moved Graph and VisualizeStateMachine into yarn.state package.
+    (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
