@@ -132,6 +132,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9649. Promoted YARN service life-cycle libraries into Hadoop Common
     for usage across all Hadoop projects. (Zhijie Shen via vinodkv)
 
+    HADOOP-9517. Documented various aspects of compatibility for Apache
+    Hadoop. (Karthik Kambatla via acmurthy)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
