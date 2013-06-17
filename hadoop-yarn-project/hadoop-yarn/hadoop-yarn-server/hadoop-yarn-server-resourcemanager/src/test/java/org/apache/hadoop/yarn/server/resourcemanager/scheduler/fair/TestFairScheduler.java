@@ -43,7 +43,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -85,6 +84,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.Fif
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.Clock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
