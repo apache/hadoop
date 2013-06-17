@@ -62,7 +62,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -346,9 +346,9 @@ public class TestMRAppMaster {
     credentials.addToken(tokenAlias, myToken);
 
     Text appTokenService = new Text("localhost:0");
-    Token<ApplicationTokenIdentifier> appToken =
-        new Token<ApplicationTokenIdentifier>(identifier, password,
-            ApplicationTokenIdentifier.KIND_NAME, appTokenService);
+    Token<AMRMTokenIdentifier> appToken =
+        new Token<AMRMTokenIdentifier>(identifier, password,
+            AMRMTokenIdentifier.KIND_NAME, appTokenService);
     credentials.addToken(appTokenService, appToken);
     
     Text keyAlias = new Text("mySecretKeyAlias");

@@ -31,14 +31,14 @@ import org.apache.hadoop.security.token.TokenSelector;
 
 @Public
 @Evolving
-public class ApplicationTokenSelector implements
-    TokenSelector<ApplicationTokenIdentifier> {
+public class AMRMTokenSelector implements
+    TokenSelector<AMRMTokenIdentifier> {
 
   private static final Log LOG = LogFactory
-      .getLog(ApplicationTokenSelector.class);
+      .getLog(AMRMTokenSelector.class);
 
   @SuppressWarnings("unchecked")
-  public Token<ApplicationTokenIdentifier> selectToken(Text service,
+  public Token<AMRMTokenIdentifier> selectToken(Text service,
       Collection<Token<? extends TokenIdentifier>> tokens) {
     if (service == null) {
       return null;
@@ -47,9 +47,9 @@ public class ApplicationTokenSelector implements
     for (Token<? extends TokenIdentifier> token : tokens) {
       LOG.debug("Token kind is " + token.getKind().toString()
           + " and the token's service name is " + token.getService());
-      if (ApplicationTokenIdentifier.KIND_NAME.equals(token.getKind())
+      if (AMRMTokenIdentifier.KIND_NAME.equals(token.getKind())
           && service.equals(token.getService())) {
-        return (Token<ApplicationTokenIdentifier>) token;
+        return (Token<AMRMTokenIdentifier>) token;
       }
     }
     return null;

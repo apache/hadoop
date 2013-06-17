@@ -61,7 +61,7 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -104,7 +104,7 @@ public class TestPipeApplication {
 
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
       // token for authorization
-      Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
+      Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
               "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
       TokenCache.setJobToken(token,  conf.getCredentials());
@@ -168,7 +168,7 @@ public class TestPipeApplication {
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
 
       // token for authorization
-      Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
+      Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
               "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
 
@@ -389,7 +389,7 @@ public class TestPipeApplication {
     File[] psw = cleanTokenPasswordFile();
     JobConf conf = new JobConf();
     try {
-      Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
+      Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
               "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
       TokenCache.setJobToken(token, conf.getCredentials());

@@ -118,7 +118,7 @@ public class ApplicationMasterService extends AbstractService implements
 
     this.server =
       rpc.getServer(ApplicationMasterProtocol.class, this, masterServiceAddress,
-          conf, this.rmContext.getApplicationTokenSecretManager(),
+          conf, this.rmContext.getAMRMTokenSecretManager(),
           conf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
               YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
     

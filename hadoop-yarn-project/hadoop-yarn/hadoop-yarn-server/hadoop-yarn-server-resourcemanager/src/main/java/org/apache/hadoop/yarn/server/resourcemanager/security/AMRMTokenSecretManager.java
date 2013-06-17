@@ -32,20 +32,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 
 /**
- * Application-tokens are per ApplicationAttempt. If users redistribute their
+ * AMRM-tokens are per ApplicationAttempt. If users redistribute their
  * tokens, it is their headache, god save them. I mean you are not supposed to
  * distribute keys to your vault, right? Anyways, ResourceManager saves each
  * token locally in memory till application finishes and to a store for restart,
  * so no need to remember master-keys even after rolling them.
  */
-public class ApplicationTokenSecretManager extends
-    SecretManager<ApplicationTokenIdentifier> {
+public class AMRMTokenSecretManager extends
+    SecretManager<AMRMTokenIdentifier> {
 
   private static final Log LOG = LogFactory
-    .getLog(ApplicationTokenSecretManager.class);
+    .getLog(AMRMTokenSecretManager.class);
 
   private SecretKey masterKey;
   private final Timer timer;
@@ -55,16 +55,16 @@ public class ApplicationTokenSecretManager extends
       new HashMap<ApplicationAttemptId, byte[]>();
 
   /**
-   * Create an {@link ApplicationTokenSecretManager}
+   * Create an {@link AMRMTokenSecretManager}
    */
-  public ApplicationTokenSecretManager(Configuration conf) {
+  public AMRMTokenSecretManager(Configuration conf) {
     rollMasterKey();
     this.timer = new Timer();
     this.rollingInterval =
         conf
           .getLong(
-            YarnConfiguration.RM_APP_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
-            YarnConfiguration.DEFAULT_RM_APP_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS) * 1000;
+            YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
+            YarnConfiguration.DEFAULT_RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS) * 1000;
   }
 
   public void start() {
@@ -102,17 +102,17 @@ public class ApplicationTokenSecretManager extends
 
   @Private
   synchronized void rollMasterKey() {
-    LOG.info("Rolling master-key for application-tokens");
+    LOG.info("Rolling master-key for amrm-tokens");
     this.masterKey = generateSecret();
   }
 
   /**
-   * Create a password for a given {@link ApplicationTokenIdentifier}. Used to
+   * Create a password for a given {@link AMRMTokenIdentifier}. Used to
    * send to the AppicationAttempt which can give it back during authentication.
    */
   @Override
   public synchronized byte[] createPassword(
-      ApplicationTokenIdentifier identifier) {
+      AMRMTokenIdentifier identifier) {
     ApplicationAttemptId applicationAttemptId =
         identifier.getApplicationAttemptId();
     if (LOG.isDebugEnabled()) {
@@ -124,12 +124,12 @@ public class ApplicationTokenSecretManager extends
   }
 
   /**
-   * Retrieve the password for the given {@link ApplicationTokenIdentifier}.
-   * Used by RPC layer to validate a remote {@link ApplicationTokenIdentifier}.
+   * Retrieve the password for the given {@link AMRMTokenIdentifier}.
+   * Used by RPC layer to validate a remote {@link AMRMTokenIdentifier}.
    */
   @Override
   public synchronized byte[] retrievePassword(
-      ApplicationTokenIdentifier identifier) throws InvalidToken {
+      AMRMTokenIdentifier identifier) throws InvalidToken {
     ApplicationAttemptId applicationAttemptId =
         identifier.getApplicationAttemptId();
     if (LOG.isDebugEnabled()) {
@@ -145,11 +145,11 @@ public class ApplicationTokenSecretManager extends
 
   /**
    * Creates an empty TokenId to be used for de-serializing an
-   * {@link ApplicationTokenIdentifier} by the RPC layer.
+   * {@link AMRMTokenIdentifier} by the RPC layer.
    */
   @Override
-  public ApplicationTokenIdentifier createIdentifier() {
-    return new ApplicationTokenIdentifier();
+  public AMRMTokenIdentifier createIdentifier() {
+    return new AMRMTokenIdentifier();
   }
 
 }
