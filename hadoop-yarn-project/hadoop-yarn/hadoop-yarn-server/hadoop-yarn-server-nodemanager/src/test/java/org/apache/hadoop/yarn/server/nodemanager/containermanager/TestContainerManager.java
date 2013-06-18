@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -125,6 +126,14 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     containerManager.start();
 
+    InetAddress localAddr = InetAddress.getLocalHost();
+    String fqdn = localAddr.getCanonicalHostName();
+    if (!localAddr.getHostAddress().equals(fqdn)) {
+      // only check if fqdn is not same as ip
+      // api returns ip in case of resolution failure
+      Assert.assertEquals(fqdn, context.getNodeId().getHost());
+    }
+  
     // Just do a query for a non-existing container.
     boolean throwsException = false;
     try {
