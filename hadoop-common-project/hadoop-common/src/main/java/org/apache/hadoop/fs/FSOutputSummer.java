@@ -53,6 +53,15 @@ abstract public class FSOutputSummer extends OutputStream {
    */
   protected abstract void writeChunk(byte[] b, int offset, int len, byte[] checksum)
   throws IOException;
+  
+  /**
+   * Check if the implementing OutputStream is closed and should no longer
+   * accept writes. Implementations should do nothing if this stream is not
+   * closed, and should throw an {@link IOException} if it is closed.
+   * 
+   * @throws IOException if this stream is already closed.
+   */
+  protected abstract void checkClosed() throws IOException;
 
   /** Write one byte */
   @Override
@@ -84,7 +93,10 @@ abstract public class FSOutputSummer extends OutputStream {
    */
   @Override
   public synchronized void write(byte b[], int off, int len)
-  throws IOException {
+      throws IOException {
+    
+    checkClosed();
+    
     if (off < 0 || len < 0 || off > b.length - len) {
       throw new ArrayIndexOutOfBoundsException();
     }
