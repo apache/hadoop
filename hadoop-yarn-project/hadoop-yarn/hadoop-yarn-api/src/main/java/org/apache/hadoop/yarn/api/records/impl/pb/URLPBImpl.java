@@ -19,12 +19,14 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.proto.YarnProtos.URLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.URLProtoOrBuilder;
 
-
-    
+@Private
+@Unstable
 public class URLPBImpl extends URL {
   URLProto proto = URLProto.getDefaultInstance();
   URLProto.Builder builder = null;

@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Stable
 public abstract class GetQueueUserAclsInfoRequest {
+  @Public
+  @Stable
   public static GetQueueUserAclsInfoRequest newInstance() {
     GetQueueUserAclsInfoRequest request =
         Records.newRecord(GetQueueUserAclsInfoRequest.class);

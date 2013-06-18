@@ -40,6 +40,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class GetApplicationReportResponse {
 
+  @Private
+  @Unstable
   public static GetApplicationReportResponse newInstance(
       ApplicationReport ApplicationReport) {
     GetApplicationReportResponse response =

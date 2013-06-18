@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class QueueUserACLInfo {
 
   @Private
+  @Unstable
   public static QueueUserACLInfo newInstance(String queueName,
       List<QueueACL> acls) {
     QueueUserACLInfo info = Records.newRecord(QueueUserACLInfo.class);

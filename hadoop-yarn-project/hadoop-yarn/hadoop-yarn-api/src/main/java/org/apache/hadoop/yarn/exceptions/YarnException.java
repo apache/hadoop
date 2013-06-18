@@ -18,6 +18,15 @@
 
 package org.apache.hadoop.yarn.exceptions;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+
+/**
+ * YarnException indicates exceptions from yarn servers. On the other hand,
+ * IOExceptions indicates exceptions from RPC layer.
+ */
+@Public
+@Stable
 public class YarnException extends Exception {
 
   private static final long serialVersionUID = 1L;

@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class GetContainerStatusResponse {
 
+  @Private
+  @Unstable
   public static GetContainerStatusResponse newInstance(
       ContainerStatus containerStatus) {
     GetContainerStatusResponse response =

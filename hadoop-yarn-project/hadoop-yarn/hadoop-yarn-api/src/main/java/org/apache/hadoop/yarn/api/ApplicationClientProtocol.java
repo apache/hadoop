@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
@@ -73,7 +74,7 @@ public interface ApplicationClientProtocol {
    * a new application.</p>
    *
    * <p>The <code>ResourceManager</code> also responds with details such 
-   * as minimum and maximum resource capabilities in the cluster as specified in
+   * as maximum resource capabilities in the cluster as specified in
    * {@link GetNewApplicationResponse}.</p>
    *
    * @param request request to get a new <code>ApplicationId</code>
@@ -83,6 +84,8 @@ public interface ApplicationClientProtocol {
    * @throws IOException
    * @see #submitApplication(SubmitApplicationRequest)
    */
+  @Public
+  @Stable
   public GetNewApplicationResponse getNewApplication(
       GetNewApplicationRequest request)
   throws YarnException, IOException;
@@ -112,6 +115,8 @@ public interface ApplicationClientProtocol {
    * @throws IOException
    * @see #getNewApplication(GetNewApplicationRequest)
    */
+  @Public
+  @Stable
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) 
   throws YarnException, IOException;
@@ -129,13 +134,15 @@ public interface ApplicationClientProtocol {
    * <p>Currently, the <code>ResourceManager</code> returns an empty response
    * on success and throws an exception on rejecting the request.</p>
    * 
-   * @param request request to abort a submited application
+   * @param request request to abort a submitted application
    * @return <code>ResourceManager</code> returns an empty response
    *         on success and throws an exception on rejecting the request
    * @throws YarnException
    * @throws IOException
    * @see #getQueueUserAcls(GetQueueUserAclsInfoRequest) 
    */
+  @Public
+  @Stable
   public KillApplicationResponse forceKillApplication(
       KillApplicationRequest request) 
   throws YarnException, IOException;
@@ -171,6 +178,8 @@ public interface ApplicationClientProtocol {
    * @throws YarnException
    * @throws IOException
    */
+  @Public
+  @Stable
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) 
   throws YarnException, IOException;
@@ -189,6 +198,8 @@ public interface ApplicationClientProtocol {
    * @throws YarnException
    * @throws IOException
    */
+  @Public
+  @Stable
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) 
   throws YarnException, IOException;
@@ -211,6 +222,8 @@ public interface ApplicationClientProtocol {
    * @throws YarnException
    * @throws IOException
    */
+  @Public
+  @Stable
   public GetAllApplicationsResponse getAllApplications(
       GetAllApplicationsRequest request) 
   throws YarnException, IOException;
@@ -228,6 +241,8 @@ public interface ApplicationClientProtocol {
    * @throws YarnException
    * @throws IOException
    */
+  @Public
+  @Stable
   public GetClusterNodesResponse getClusterNodes(
       GetClusterNodesRequest request) 
   throws YarnException, IOException;
@@ -247,6 +262,8 @@ public interface ApplicationClientProtocol {
    * @throws YarnException
    * @throws IOException
    */
+  @Public
+  @Stable
   public GetQueueInfoResponse getQueueInfo(
       GetQueueInfoRequest request) 
   throws YarnException, IOException;
@@ -264,6 +281,8 @@ public interface ApplicationClientProtocol {
    * @throws YarnException
    * @throws IOException
    */
+  @Public
+  @Stable
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
       GetQueueUserAclsInfoRequest request) 
   throws YarnException, IOException;
@@ -272,7 +291,7 @@ public interface ApplicationClientProtocol {
    * <p>The interface used by clients to get delegation token, enabling the 
    * containers to be able to talk to the service using those tokens.
    * 
-   *  <p> The <code>ResourceManager</code> responds with the delegation token
+   *  <p> The <code>ResourceManager</code> responds with the delegation
    *  {@link Token} that can be used by the client to speak to this
    *  service.
    * @param request request to get a delegation token for the client.
@@ -280,12 +299,14 @@ public interface ApplicationClientProtocol {
    * @throws YarnException
    * @throws IOException
    */
+  @Public
+  @Stable
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) 
   throws YarnException, IOException;
   
   /**
-   * Renew an existing delegation token.
+   * Renew an existing delegation {@link Token}.
    * 
    * @param request the delegation token to be renewed.
    * @return the new expiry time for the delegation token.
@@ -293,12 +314,13 @@ public interface ApplicationClientProtocol {
    * @throws IOException
    */
   @Private
+  @Unstable
   public RenewDelegationTokenResponse renewDelegationToken(
       RenewDelegationTokenRequest request) throws YarnException,
       IOException;
 
   /**
-   * Cancel an existing delegation token.
+   * Cancel an existing delegation {@link Token}.
    * 
    * @param request the delegation token to be cancelled.
    * @return an empty response.
@@ -306,6 +328,7 @@ public interface ApplicationClientProtocol {
    * @throws IOException
    */
   @Private
+  @Unstable
   public CancelDelegationTokenResponse cancelDelegationToken(
       CancelDelegationTokenRequest request) throws YarnException,
       IOException;

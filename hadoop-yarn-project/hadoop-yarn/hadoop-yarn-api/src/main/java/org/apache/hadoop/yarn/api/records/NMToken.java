@@ -21,13 +21,37 @@ package org.apache.hadoop.yarn.api.records;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * NMToken is returned by RM on AllocateResponse.
+ * <p>The NMToken is used for authenticating communication with
+ * <code>NodeManager</code></p>
+ * <p>It is issued by <code>ResourceMananger</code> when <code>ApplicationMaster</code>
+ * negotiates resource with <code>ResourceManager</code> and
+ * validated on <code>NodeManager</code> side.</p>
+ * @see  AllocateResponse#getNMTokens()
  */
+@Public
+@Stable
 public abstract class NMToken {
 
+  @Private
+  @Unstable
+  public static NMToken newInstance(NodeId nodeId, Token token) {
+    NMToken nmToken = Records.newRecord(NMToken.class);
+    nmToken.setNodeId(nodeId);
+    nmToken.setToken(token);
+    return nmToken;
+  }
+
+  /**
+   * Get the {@link NodeId} of the <code>NodeManager</code> for which the NMToken
+   * is used to authenticate.
+   * @return the {@link NodeId} of the <code>NodeManager</code> for which the
+   * NMToken is used to authenticate.
+   */
   @Public
   @Stable
   public abstract NodeId getNodeId();
@@ -35,7 +59,11 @@ public abstract class NMToken {
   @Public
   @Stable
   public abstract void setNodeId(NodeId nodeId);
-  
+
+  /**
+   * Get the {@link Token} used for authenticating with <code>NodeManager</code>
+   * @return the {@link Token} used for authenticating with <code>NodeManager</code>
+   */
   @Public
   @Stable
   public abstract Token getToken();
@@ -43,12 +71,5 @@ public abstract class NMToken {
   @Public
   @Stable
   public abstract void setToken(Token token);
-  
-  @Private
-  public static NMToken newInstance(NodeId nodeId, Token token) {
-    NMToken nmToken = Records.newRecord(NMToken.class);
-    nmToken.setNodeId(nodeId);
-    nmToken.setToken(token);
-    return nmToken;
-  }
+
 }

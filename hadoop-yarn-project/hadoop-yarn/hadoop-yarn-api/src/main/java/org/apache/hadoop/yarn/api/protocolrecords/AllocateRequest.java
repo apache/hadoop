@@ -59,6 +59,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class AllocateRequest {
 
+  @Public
+  @Stable
   public static AllocateRequest newInstance(
       ApplicationAttemptId applicationAttemptId, int responseID,
       float appProgress, List<ResourceRequest> resourceAsk,

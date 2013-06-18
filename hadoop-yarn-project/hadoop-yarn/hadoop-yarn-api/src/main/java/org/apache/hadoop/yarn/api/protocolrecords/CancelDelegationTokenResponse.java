@@ -18,17 +18,19 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
  * The response from the {@code ResourceManager} to a cancelDelegationToken
  * request.
  */
-@Public
-@Evolving
+@Private
+@Unstable
 public abstract class CancelDelegationTokenResponse {
+  @Private
+  @Unstable
   public static CancelDelegationTokenResponse newInstance() {
     CancelDelegationTokenResponse response =
         Records.newRecord(CancelDelegationTokenResponse.class);

@@ -43,6 +43,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class GetClusterNodesResponse {
 
+  @Private
+  @Unstable
   public static GetClusterNodesResponse
       newInstance(List<NodeReport> nodeReports) {
     GetClusterNodesResponse response =

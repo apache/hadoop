@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Stable
 public abstract class GetClusterNodesRequest {
+  @Public
+  @Stable 
   public static GetClusterNodesRequest newInstance() {
     GetClusterNodesRequest request =
         Records.newRecord(GetClusterNodesRequest.class);

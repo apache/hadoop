@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.util;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
@@ -54,6 +56,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
 import com.google.protobuf.ByteString;
 
+@Private
+@Unstable
 public class ProtoUtils {
 
 

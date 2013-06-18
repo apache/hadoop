@@ -33,6 +33,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class GetQueueInfoRequest {
 
+  @Public
+  @Stable
   public static GetQueueInfoRequest
       newInstance(String queueName, boolean includeApplications,
           boolean includeChildQueues, boolean recursive) {
@@ -48,12 +50,16 @@ public abstract class GetQueueInfoRequest {
    * Get the <em>queue name</em> for which to get queue information.
    * @return <em>queue name</em> for which to get queue information
    */
+  @Public
+  @Stable
   public abstract String getQueueName();
   
   /**
    * Set the <em>queue name</em> for which to get queue information
    * @param queueName <em>queue name</em> for which to get queue information
    */
+  @Public
+  @Stable
   public abstract void setQueueName(String queueName);
 
   /**
@@ -61,6 +67,8 @@ public abstract class GetQueueInfoRequest {
    * @return <code>true</code> if applications' information is to be included,
    *         else <code>false</code>
    */
+  @Public
+  @Stable
   public abstract boolean getIncludeApplications();
 
   /**
@@ -68,6 +76,8 @@ public abstract class GetQueueInfoRequest {
    * @param includeApplications fetch information about <em>active 
    *                            applications</em>?
    */
+  @Public
+  @Stable
   public abstract void setIncludeApplications(boolean includeApplications);
 
   /**
@@ -75,12 +85,16 @@ public abstract class GetQueueInfoRequest {
    * @return <code>true</code> if information about child queues is required,
    *         else <code>false</code>
    */
+  @Public
+  @Stable
   public abstract boolean getIncludeChildQueues();
   
   /**
    * Should we fetch information about <em>child queues</em>?
    * @param includeChildQueues fetch information about <em>child queues</em>?
    */
+  @Public
+  @Stable
   public abstract void setIncludeChildQueues(boolean includeChildQueues);
 
   /**
@@ -88,6 +102,8 @@ public abstract class GetQueueInfoRequest {
    * @return <code>true</code> if information about entire hierarchy is 
    *         required, <code>false</code> otherwise
    */
+  @Public
+  @Stable
   public abstract boolean getRecursive();
   
   /**
@@ -95,6 +111,8 @@ public abstract class GetQueueInfoRequest {
    * @param recursive fetch information on the entire <em>child queue 
    *                  hierarchy</em>?
    */
+  @Public
+  @Stable
   public abstract void setRecursive(boolean recursive);
 }
 

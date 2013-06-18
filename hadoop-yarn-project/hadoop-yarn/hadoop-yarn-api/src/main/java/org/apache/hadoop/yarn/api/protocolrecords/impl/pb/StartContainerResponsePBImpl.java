@@ -25,6 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringBytesMapProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerResponseProto;
@@ -32,7 +34,9 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerResponseProt
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
 import com.google.protobuf.ByteString;
-    
+
+@Private
+@Unstable
 public class StartContainerResponsePBImpl extends StartContainerResponse {
   StartContainerResponseProto proto = StartContainerResponseProto.getDefaultInstance();
   StartContainerResponseProto.Builder builder = null;

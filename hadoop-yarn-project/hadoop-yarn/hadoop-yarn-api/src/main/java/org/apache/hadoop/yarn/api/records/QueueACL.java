@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
  * </p>
  * 
  * <p>
- * The ACLs are one of:
+ * The ACL is one of:
  * <ul>
  * <li>{@link #SUBMIT_APPLICATIONS} - ACL to submit applications to the
  * queue.</li>

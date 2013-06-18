@@ -18,12 +18,17 @@
 
 package org.apache.hadoop.yarn.exceptions;
 
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
 /** Base Yarn Exception.
  *
  * NOTE: All derivatives of this exception, which may be thrown by a remote
  * service, must include a String only constructor for the exception to be
  * unwrapped on the client.
  */
+@LimitedPrivate({ "MapReduce", "YARN" })
+@Unstable
 public class YarnRuntimeException extends RuntimeException {
 
   private static final long serialVersionUID = -7153142425412203936L;

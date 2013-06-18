@@ -44,6 +44,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class GetQueueUserAclsInfoResponse {
 
+  @Private
+  @Unstable
   public static GetQueueUserAclsInfoResponse newInstance(
       List<QueueUserACLInfo> queueUserAclsList) {
     GetQueueUserAclsInfoResponse response =

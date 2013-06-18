@@ -19,11 +19,13 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainerResponseProto;
 
-
-    
+@Private
+@Unstable
 public class StopContainerResponsePBImpl extends StopContainerResponse {
   StopContainerResponseProto proto = StopContainerResponseProto.getDefaultInstance();
   StopContainerResponseProto.Builder builder = null;

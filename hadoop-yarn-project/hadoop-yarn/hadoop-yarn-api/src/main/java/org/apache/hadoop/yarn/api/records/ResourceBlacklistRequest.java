@@ -35,7 +35,9 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Stable
 public abstract class ResourceBlacklistRequest {
-  
+
+  @Public
+  @Stable
   public static ResourceBlacklistRequest newInstance(
       List<String> additions, List<String> removals) {
     ResourceBlacklistRequest blacklistRequest = 
@@ -46,38 +48,46 @@ public abstract class ResourceBlacklistRequest {
   }
   
   /**
-   * Get the list of resources which should be added to the 
+   * Get the list of resource-names which should be added to the 
    * application blacklist.
    * 
-   * @return list of resources which should be added to the 
+   * @return list of resource-names which should be added to the 
    *         application blacklist
    */
+  @Public
+  @Stable
   public abstract List<String> getBlacklistAdditions();
   
   /**
-   * Set list of resources which should be added to the application blacklist.
+   * Set list of resource-names which should be added to the application blacklist.
    * 
-   * @param resourceNames list of resources which should be added to the 
+   * @param resourceNames list of resource-names which should be added to the 
    *                  application blacklist
    */
+  @Public
+  @Stable
   public abstract void setBlacklistAdditions(List<String> resourceNames);
   
   /**
-   * Get the list of resources which should be removed from the 
+   * Get the list of resource-names which should be removed from the 
    * application blacklist.
    * 
-   * @return list of resources which should be removed from the 
+   * @return list of resource-names which should be removed from the 
    *         application blacklist
    */
+  @Public
+  @Stable
   public abstract List<String> getBlacklistRemovals();
   
   /**
-   * Set list of resources which should be removed from the 
+   * Set list of resource-names which should be removed from the 
    * application blacklist.
    * 
-   * @param resourceNames list of resources which should be removed from the 
+   * @param resourceNames list of resource-names which should be removed from the 
    *                  application blacklist
    */
+  @Public
+  @Stable
   public abstract void setBlacklistRemovals(List<String> resourceNames);
 
 }
