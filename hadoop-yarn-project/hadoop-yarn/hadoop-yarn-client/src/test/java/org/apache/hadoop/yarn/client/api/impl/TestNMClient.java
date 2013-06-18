@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -51,7 +51,13 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.NMClient;
+import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
+import org.apache.hadoop.yarn.client.api.impl.NMClientImpl;
+import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -164,9 +170,9 @@ public class TestNMClient {
     // leave one unclosed
     assertEquals(1, nmClient.startedContainers.size());
     // default true
-    assertTrue(nmClient.cleanupRunningContainers.get());
+    assertTrue(nmClient.getCleanupRunningContainers().get());
     nmClient.cleanupRunningContainersOnStop(stopContainers);
-    assertEquals(stopContainers, nmClient.cleanupRunningContainers.get());
+    assertEquals(stopContainers, nmClient.getCleanupRunningContainers().get());
     nmClient.stop();
   }
 
@@ -201,7 +207,7 @@ public class TestNMClient {
     // stop the running containers on close
     assertFalse(nmClient.startedContainers.isEmpty());
     nmClient.cleanupRunningContainersOnStop(true);
-    assertTrue(nmClient.cleanupRunningContainers.get());
+    assertTrue(nmClient.getCleanupRunningContainers().get());
     nmClient.stop();
   }
 

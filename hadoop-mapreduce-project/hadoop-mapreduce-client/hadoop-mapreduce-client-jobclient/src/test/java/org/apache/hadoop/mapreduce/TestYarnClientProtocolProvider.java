@@ -37,6 +37,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
+import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -110,8 +111,9 @@ public class TestYarnClientProtocolProvider extends TestCase {
       ResourceMgrDelegate rmgrDelegate = new ResourceMgrDelegate(
           new YarnConfiguration(conf)) {
         @Override
-        protected void serviceStart() {
-          this.rmClient = cRMProtocol;
+        protected void serviceStart() throws Exception {
+          assertTrue(this.client instanceof YarnClientImpl);
+          ((YarnClientImpl) this.client).setRMClient(cRMProtocol);
         }
       };
       yrunner.setResourceMgrDelegate(rmgrDelegate);

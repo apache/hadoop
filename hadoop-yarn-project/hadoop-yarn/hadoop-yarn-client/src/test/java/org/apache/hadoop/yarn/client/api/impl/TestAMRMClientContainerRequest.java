@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.api.impl;
 
 import java.util.Arrays;
 import java.util.List;
@@ -29,9 +29,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.junit.Test;
 
-import static org.apache.hadoop.yarn.client.AMRMClientImpl.ContainerRequest;
 import static org.junit.Assert.assertEquals;
 
 public class TestAMRMClientContainerRequest {
@@ -72,8 +73,8 @@ public class TestAMRMClientContainerRequest {
   private void verifyResourceRequestLocation(
       AMRMClientImpl<ContainerRequest> client, ContainerRequest request,
       String location) {
-    ResourceRequest ask =  client.remoteRequestsTable.get(request.priority)
-        .get(location).get(request.capability).remoteRequest;
+    ResourceRequest ask =  client.remoteRequestsTable.get(request.getPriority())
+        .get(location).get(request.getCapability()).remoteRequest;
     assertEquals(location, ask.getResourceName());
     assertEquals(request.getContainerCount(), ask.getNumContainers());
   }

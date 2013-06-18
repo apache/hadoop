@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.api.async.impl;
 
 import static org.mockito.Matchers.anyFloat;
 import static org.mockito.Matchers.anyInt;
@@ -46,7 +46,10 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
+import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -105,7 +108,7 @@ public class TestAMRMClientAsync {
     });
     
     AMRMClientAsync<ContainerRequest> asyncClient = 
-        new AMRMClientAsync<ContainerRequest>(client, 20, callbackHandler);
+        AMRMClientAsync.createAMRMClientAsync(client, 20, callbackHandler);
     asyncClient.init(conf);
     asyncClient.start();
     asyncClient.registerApplicationMaster("localhost", 1234, null);
@@ -160,7 +163,7 @@ public class TestAMRMClientAsync {
     when(client.allocate(anyFloat())).thenThrow(mockException);
 
     AMRMClientAsync<ContainerRequest> asyncClient = 
-        new AMRMClientAsync<ContainerRequest>(client, 20, callbackHandler);
+        AMRMClientAsync.createAMRMClientAsync(client, 20, callbackHandler);
     asyncClient.init(conf);
     asyncClient.start();
     
@@ -195,7 +198,7 @@ public class TestAMRMClientAsync {
     when(client.allocate(anyFloat())).thenReturn(rebootResponse);
     
     AMRMClientAsync<ContainerRequest> asyncClient = 
-        new AMRMClientAsync<ContainerRequest>(client, 20, callbackHandler);
+        AMRMClientAsync.createAMRMClientAsync(client, 20, callbackHandler);
     asyncClient.init(conf);
     asyncClient.start();
     

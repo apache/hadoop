@@ -67,9 +67,9 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
-import org.apache.hadoop.yarn.client.AMRMClientAsync;
-import org.apache.hadoop.yarn.client.NMClientAsync;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
+import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -436,17 +436,18 @@ public class ApplicationMaster {
    * @throws YarnException
    * @throws IOException
    */
-  @SuppressWarnings({ "rawtypes", "unchecked" })
+  @SuppressWarnings({ "unchecked" })
   public boolean run() throws YarnException, IOException {
     LOG.info("Starting ApplicationMaster");
 
     AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
-    resourceManager = new AMRMClientAsync(appAttemptID, 1000, allocListener);
+    resourceManager = 
+        AMRMClientAsync.createAMRMClientAsync(appAttemptID, 1000, allocListener);
     resourceManager.init(conf);
     resourceManager.start();
 
     containerListener = new NMCallbackHandler();
-    nmClientAsync = new NMClientAsync(containerListener);
+    nmClientAsync = NMClientAsync.createNMClientAsync(containerListener);
     nmClientAsync.init(conf);
     nmClientAsync.start();
 
@@ -682,7 +683,7 @@ public class ApplicationMaster {
       }
       Container container = containers.get(containerId);
       if (container != null) {
-        nmClientAsync.getContainerStatus(containerId, container.getNodeId(),
+        nmClientAsync.getContainerStatusAsync(containerId, container.getNodeId(),
             container.getContainerToken());
       }
     }
@@ -802,7 +803,7 @@ public class ApplicationMaster {
       ctx.setCommands(commands);
 
       containerListener.addContainer(container.getId(), container);
-      nmClientAsync.startContainer(container, ctx);
+      nmClientAsync.startContainerAsync(container, ctx);
     }
   }
 

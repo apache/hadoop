@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -25,8 +25,8 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
@@ -56,13 +56,16 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.Records;
 
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+import com.google.common.annotations.VisibleForTesting;
+
+@Private
+@Unstable
 public class YarnClientImpl extends YarnClient {
 
   private static final Log LOG = LogFactory.getLog(YarnClientImpl.class);
@@ -303,5 +306,11 @@ public class YarnClientImpl extends YarnClient {
         getChildQueues(child, queues, recursive);
       }
     }
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setRMClient(ApplicationClientProtocol rmClient) {
+    this.rmClient = rmClient;
   }
 }

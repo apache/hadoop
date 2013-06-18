@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.api.async.impl;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -48,6 +48,9 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.client.api.NMClient;
+import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
+import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -62,7 +65,7 @@ public class TestNMClientAsync {
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
 
-  private NMClientAsync asyncClient;
+  private NMClientAsyncImpl asyncClient;
   private NodeId nodeId;
   private Token containerToken;
 
@@ -71,7 +74,7 @@ public class TestNMClientAsync {
     ServiceOperations.stop(asyncClient);
   }
 
-  @Test (timeout = 30000)
+  @Test (timeout = 10000)
   public void testNMClientAsync() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(YarnConfiguration.NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE, 10);
@@ -89,40 +92,42 @@ public class TestNMClientAsync {
 
     for (int i = 0; i < expectedSuccess + expectedFailure; ++i) {
       if (i == expectedSuccess) {
-        while (!((TestCallbackHandler1) asyncClient.callbackHandler)
+        while (!((TestCallbackHandler1) asyncClient.getCallbackHandler())
             .isAllSuccessCallsExecuted()) {
           Thread.sleep(10);
         }
-        asyncClient.client = mockNMClient(1);
+        asyncClient.setClient(mockNMClient(1));
       }
       Container container = mockContainer(i);
       ContainerLaunchContext clc =
           recordFactory.newRecordInstance(ContainerLaunchContext.class);
-      asyncClient.startContainer(container, clc);
+      asyncClient.startContainerAsync(container, clc);
     }
-    while (!((TestCallbackHandler1) asyncClient.callbackHandler)
+    while (!((TestCallbackHandler1) asyncClient.getCallbackHandler())
         .isStartAndQueryFailureCallsExecuted()) {
       Thread.sleep(10);
     }
-    asyncClient.client = mockNMClient(2);
-    ((TestCallbackHandler1) asyncClient.callbackHandler).path = false;
+    asyncClient.setClient(mockNMClient(2));
+    ((TestCallbackHandler1) asyncClient.getCallbackHandler()).path = false;
     for (int i = 0; i < expectedFailure; ++i) {
       Container container = mockContainer(
           expectedSuccess + expectedFailure + i);
       ContainerLaunchContext clc =
           recordFactory.newRecordInstance(ContainerLaunchContext.class);
-      asyncClient.startContainer(container, clc);
+      asyncClient.startContainerAsync(container, clc);
     }
-    while (!((TestCallbackHandler1) asyncClient.callbackHandler)
+    while (!((TestCallbackHandler1) asyncClient.getCallbackHandler())
         .isStopFailureCallsExecuted()) {
       Thread.sleep(10);
     }
     for (String errorMsg :
-        ((TestCallbackHandler1) asyncClient.callbackHandler).errorMsgs) {
+        ((TestCallbackHandler1) asyncClient.getCallbackHandler())
+            .errorMsgs) {
       System.out.println(errorMsg);
     }
     Assert.assertEquals("Error occurs in CallbackHandler", 0,
-        ((TestCallbackHandler1) asyncClient.callbackHandler).errorMsgs.size());
+        ((TestCallbackHandler1) asyncClient.getCallbackHandler())
+            .errorMsgs.size());
     for (String errorMsg : ((MockNMClientAsync1) asyncClient).errorMsgs) {
       System.out.println(errorMsg);
     }
@@ -141,7 +146,7 @@ public class TestNMClientAsync {
         asyncClient.threadPool.isShutdown());
   }
 
-  private class MockNMClientAsync1 extends NMClientAsync {
+  private class MockNMClientAsync1 extends NMClientAsyncImpl {
     private Set<String> errorMsgs =
         Collections.synchronizedSet(new HashSet<String>());
 
@@ -227,10 +232,10 @@ public class TestNMClientAsync {
         actualStartSuccessArray.set(containerId.getId(), 1);
 
         // move on to the following success tests
-        asyncClient.getContainerStatus(containerId, nodeId, containerToken);
+        asyncClient.getContainerStatusAsync(containerId, nodeId, containerToken);
       } else {
         // move on to the following failure tests
-        asyncClient.stopContainer(containerId, nodeId, containerToken);
+        asyncClient.stopContainerAsync(containerId, nodeId, containerToken);
       }
 
       // Shouldn't crash the test thread
@@ -248,7 +253,7 @@ public class TestNMClientAsync {
       actualQuerySuccess.addAndGet(1);
       actualQuerySuccessArray.set(containerId.getId(), 1);
       // move on to the following success tests
-      asyncClient.stopContainer(containerId, nodeId, containerToken);
+      asyncClient.stopContainerAsync(containerId, nodeId, containerToken);
 
       // Shouldn't crash the test thread
       throw new RuntimeException("Ignorable Exception");
@@ -285,7 +290,7 @@ public class TestNMClientAsync {
       actualStartFailure.addAndGet(1);
       actualStartFailureArray.set(containerId.getId() - expectedSuccess, 1);
       // move on to the following failure tests
-      asyncClient.getContainerStatus(containerId, nodeId, containerToken);
+      asyncClient.getContainerStatusAsync(containerId, nodeId, containerToken);
 
       // Shouldn't crash the test thread
       throw new RuntimeException("Ignorable Exception");
@@ -426,22 +431,22 @@ public class TestNMClientAsync {
     Thread t = new Thread() {
       @Override
       public void run() {
-        asyncClient.startContainer(container, clc);
+        asyncClient.startContainerAsync(container, clc);
       }
     };
     t.start();
 
     barrierA.await();
-    asyncClient.stopContainer(container.getId(), container.getNodeId(),
+    asyncClient.stopContainerAsync(container.getId(), container.getNodeId(),
         container.getContainerToken());
     barrierC.await();
 
     Assert.assertFalse("Starting and stopping should be out of order",
-        ((TestCallbackHandler2) asyncClient.callbackHandler)
+        ((TestCallbackHandler2) asyncClient.getCallbackHandler())
             .exceptionOccurred.get());
   }
 
-  private class MockNMClientAsync2 extends NMClientAsync {
+  private class MockNMClientAsync2 extends NMClientAsyncImpl {
     private CyclicBarrier barrierA;
     private CyclicBarrier barrierB;
 
@@ -510,7 +515,7 @@ public class TestNMClientAsync {
 
     @Override
     public void onStartContainerError(ContainerId containerId, Throwable t) {
-      if (!t.getMessage().equals(NMClientAsync.StatefulContainer
+      if (!t.getMessage().equals(NMClientAsyncImpl.StatefulContainer
           .OutOfOrderTransition.STOP_BEFORE_START_ERROR_MSG)) {
         exceptionOccurred.set(true);
         return;

@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -57,7 +57,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -71,6 +72,7 @@ import com.google.common.base.Joiner;
 
 // TODO check inputs for null etc. YARN-654
 
+@Private
 @Unstable
 public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
 
@@ -312,64 +314,64 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   @Override
   public synchronized void addContainerRequest(T req) {
     Set<String> allRacks = new HashSet<String>();
-    if (req.racks != null) {
-      allRacks.addAll(req.racks);
-      if(req.racks.size() != allRacks.size()) {
+    if (req.getRacks() != null) {
+      allRacks.addAll(req.getRacks());
+      if(req.getRacks().size() != allRacks.size()) {
         Joiner joiner = Joiner.on(',');
         LOG.warn("ContainerRequest has duplicate racks: "
-            + joiner.join(req.racks));
+            + joiner.join(req.getRacks()));
       }
     }
-    allRacks.addAll(resolveRacks(req.nodes));
+    allRacks.addAll(resolveRacks(req.getNodes()));
     
-    if (req.nodes != null) {
-      HashSet<String> dedupedNodes = new HashSet<String>(req.nodes);
-      if(dedupedNodes.size() != req.nodes.size()) {
+    if (req.getNodes() != null) {
+      HashSet<String> dedupedNodes = new HashSet<String>(req.getNodes());
+      if(dedupedNodes.size() != req.getNodes().size()) {
         Joiner joiner = Joiner.on(',');
         LOG.warn("ContainerRequest has duplicate nodes: "
-            + joiner.join(req.nodes));        
+            + joiner.join(req.getNodes()));        
       }
       for (String node : dedupedNodes) {
         // Ensure node requests are accompanied by requests for
         // corresponding rack
-        addResourceRequest(req.priority, node, req.capability,
-            req.containerCount, req);
+        addResourceRequest(req.getPriority(), node, req.getCapability(),
+            req.getContainerCount(), req);
       }
     }
 
     for (String rack : allRacks) {
-      addResourceRequest(req.priority, rack, req.capability,
-          req.containerCount, req);
+      addResourceRequest(req.getPriority(), rack, req.getCapability(),
+          req.getContainerCount(), req);
     }
 
     // Off-switch
-    addResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
-        req.containerCount, req);
+    addResourceRequest(req.getPriority(), ResourceRequest.ANY, req.getCapability(),
+        req.getContainerCount(), req);
   }
 
   @Override
   public synchronized void removeContainerRequest(T req) {
     Set<String> allRacks = new HashSet<String>();
-    if (req.racks != null) {
-      allRacks.addAll(req.racks);
+    if (req.getRacks() != null) {
+      allRacks.addAll(req.getRacks());
     }
-    allRacks.addAll(resolveRacks(req.nodes));
+    allRacks.addAll(resolveRacks(req.getNodes()));
 
     // Update resource requests
-    if (req.nodes != null) {
-      for (String node : new HashSet<String>(req.nodes)) {
-        decResourceRequest(req.priority, node, req.capability,
-            req.containerCount, req);
+    if (req.getNodes() != null) {
+      for (String node : new HashSet<String>(req.getNodes())) {
+        decResourceRequest(req.getPriority(), node, req.getCapability(),
+            req.getContainerCount(), req);
       }
     }
 
     for (String rack : allRacks) {
-      decResourceRequest(req.priority, rack, req.capability,
-          req.containerCount, req);
+      decResourceRequest(req.getPriority(), rack, req.getCapability(),
+          req.getContainerCount(), req);
     }
 
-    decResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
-        req.containerCount, req);
+    decResourceRequest(req.getPriority(), ResourceRequest.ANY, req.getCapability(),
+        req.getContainerCount(), req);
   }
 
   @Override
