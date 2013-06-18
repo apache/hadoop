@@ -95,7 +95,7 @@ public class TestAMRMClientAsync {
     }).thenReturn(emptyResponse);
     when(client.registerApplicationMaster(anyString(), anyInt(), anyString()))
       .thenReturn(null);
-    when(client.getClusterAvailableResources()).thenAnswer(new Answer<Resource>() {
+    when(client.getAvailableResources()).thenAnswer(new Answer<Resource>() {
       @Override
       public Resource answer(InvocationOnMock invocation)
           throws Throwable {
@@ -123,7 +123,7 @@ public class TestAMRMClientAsync {
     // heartbeat will be blocked. make sure we can call client methods at this
     // time. Checks that heartbeat is not holding onto client lock
     assert(secondHeartbeatSync.get() < 2);
-    asyncClient.getClusterAvailableResources();
+    asyncClient.getAvailableResources();
     // method returned. now unblock heartbeat
     assert(secondHeartbeatSync.get() < 2);
     synchronized (heartbeatBlock) {
