@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 
 /**
@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
  * @see AllocateResponse
  */
 @Public
-@Stable
+@Unstable
 public enum AMCommand {
   /**
    * Sent by Resource Manager when it is out of sync with the AM and wants the 

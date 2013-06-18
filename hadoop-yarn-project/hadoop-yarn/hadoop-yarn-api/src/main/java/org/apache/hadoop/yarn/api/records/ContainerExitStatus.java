@@ -19,13 +19,13 @@
 package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
  * Container exit statuses indicating special exit circumstances.
  */
 @Public
-@Evolving
+@Unstable
 public class ContainerExitStatus {
   public static final int SUCCESS = 0;
   public static final int INVALID = -1000;

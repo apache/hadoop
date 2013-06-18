@@ -53,7 +53,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * AMRMClient.<T>createAMRMClientContainerRequest(appAttemptId)
    * }</pre>
    * @param appAttemptId the appAttemptId associated with the AMRMClient
-   * @return the newly create AMRMClient instance.
+   * @return the newly created AMRMClient instance.
    */
   @Public
   public static <T extends ContainerRequest> AMRMClient<T> createAMRMClient(

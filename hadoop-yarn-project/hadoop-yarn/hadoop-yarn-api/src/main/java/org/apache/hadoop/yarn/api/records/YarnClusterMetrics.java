@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class YarnClusterMetrics {
   
   @Private
+  @Unstable
   public static YarnClusterMetrics newInstance(int numNodeManagers) {
     YarnClusterMetrics metrics = Records.newRecord(YarnClusterMetrics.class);
     metrics.setNumNodeManagers(numNodeManagers);

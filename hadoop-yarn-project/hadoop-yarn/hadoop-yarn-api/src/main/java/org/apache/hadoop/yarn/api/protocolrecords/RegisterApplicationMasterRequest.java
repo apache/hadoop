@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.util.Records;
@@ -48,6 +46,17 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class RegisterApplicationMasterRequest {
 
+  /**
+   * Create a new instance of <code>RegisterApplicationMasterRequest</code>.
+   * If <em>port, trackingUrl</em> is not used, use the following default value:
+   * <ul>
+   *  <li>port: -1</li>
+   *  <li>trackingUrl: null</li>
+   * </ul>
+   * @return the new instance of <code>RegisterApplicationMasterRequest</code>
+   */
+  @Public
+  @Stable
   public static RegisterApplicationMasterRequest newInstance(
       ApplicationAttemptId applicationAttemptId, String host, int port,
       String trackingUrl) {
@@ -95,8 +104,8 @@ public abstract class RegisterApplicationMasterRequest {
    * @param host <em>host</em> on which the <code>ApplicationMaster</code> 
    *             is running
    */
-  @Private
-  @Unstable
+  @Public
+  @Stable
   public abstract void setHost(String host);
 
   /**

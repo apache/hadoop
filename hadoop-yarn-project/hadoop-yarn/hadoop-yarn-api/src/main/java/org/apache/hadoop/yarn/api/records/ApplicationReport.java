@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.util.Records;
  *     <li>{@link YarnApplicationState} of the application.</li>
  *     <li>Diagnostic information in case of errors.</li>
  *     <li>Start time of the application.</li>
- *     <li>Client token of the application (if security is enabled).</li>
+ *     <li>Client {@link Token} of the application (if security is enabled).</li>
  *   </ul>
  * </p>
  *
@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class ApplicationReport {
 
   @Private
-  @Stable
+  @Unstable
   public static ApplicationReport newInstance(ApplicationId applicationId,
       ApplicationAttemptId applicationAttemptId, String user, String queue,
       String name, String host, int rpcPort, Token clientToAMToken,
@@ -98,8 +98,8 @@ public abstract class ApplicationReport {
    * attempt of the application
    * @return <code>ApplicationAttemptId</code> of the attempt
    */
-  @Private
-  @Unstable
+  @Public
+  @Stable
   public abstract ApplicationAttemptId getCurrentApplicationAttemptId();
   
   @Private

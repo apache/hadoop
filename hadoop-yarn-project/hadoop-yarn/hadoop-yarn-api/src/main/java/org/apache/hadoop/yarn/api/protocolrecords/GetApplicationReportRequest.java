@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class GetApplicationReportRequest {
 
+  @Public
+  @Stable
   public static GetApplicationReportRequest newInstance(
       ApplicationId applicationId) {
     GetApplicationReportRequest request =
@@ -51,11 +53,15 @@ public abstract class GetApplicationReportRequest {
    * Get the <code>ApplicationId</code> of the application.
    * @return <code>ApplicationId</code> of the application
    */
+  @Public
+  @Stable
   public abstract ApplicationId getApplicationId();
   
   /**
    * Set the <code>ApplicationId</code> of the application
    * @param applicationId <code>ApplicationId</code> of the application
    */
+  @Public
+  @Stable
   public abstract void setApplicationId(ApplicationId applicationId);
 }

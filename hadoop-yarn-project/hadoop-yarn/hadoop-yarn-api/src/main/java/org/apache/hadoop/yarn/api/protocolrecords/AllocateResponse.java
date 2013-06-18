@@ -43,10 +43,10 @@ import org.apache.hadoop.yarn.util.Records;
  *   <ul>
  *     <li>Response ID to track duplicate responses.</li>
  *     <li>
- *       A reboot flag to let the <code>ApplicationMaster</code> know that its 
- *       horribly out of sync and needs to reboot.</li>
+ *       An AMCommand sent by ResourceManager to let the <code>ApplicationMaster</code>
+ *       take some actions (resync, shutdown etc.).
  *     <li>A list of newly allocated {@link Container}.</li>
- *     <li>A list of completed {@link Container}.</li>
+ *     <li>A list of completed {@link Container}s' statuses.</li>
  *     <li>
  *       The available headroom for resources in the cluster for the
  *       application. 
@@ -63,6 +63,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class AllocateResponse {
 
+  @Public
+  @Stable
   public static AllocateResponse newInstance(int responseId,
       List<ContainerStatus> completedContainers,
       List<Container> allocatedContainers, List<NodeReport> updatedNodes,
@@ -124,8 +126,8 @@ public abstract class AllocateResponse {
    * <code>ResourceManager</code>.
    * @param containers list of <em>newly allocated</em> <code>Container</code>
    */
-  @Public
-  @Stable
+  @Private
+  @Unstable
   public abstract void setAllocatedContainers(List<Container> containers);
 
   /**
@@ -160,7 +162,7 @@ public abstract class AllocateResponse {
    * @return The delta of updated nodes since the last response
    */
   @Public
-  @Unstable
+  @Stable
   public abstract  List<NodeReport> getUpdatedNodes();
 
   @Private
@@ -180,16 +182,16 @@ public abstract class AllocateResponse {
   public abstract void setNumClusterNodes(int numNodes);
 
   /**
-   * Get the description of containers owned by the AM, but requested back by
+   * <p>Get the description of containers owned by the AM, but requested back by
    * the cluster. Note that the RM may have an inconsistent view of the
    * resources owned by the AM. These messages are advisory, and the AM may
-   * elect to ignore them.
+   * elect to ignore them.<p>
    *
-   * The message is a snapshot of the resources the RM wants back from the AM.
+   * <p>The message is a snapshot of the resources the RM wants back from the AM.
    * While demand persists, the RM will repeat its request; applications should
-   * not interpret each message as a request for <emph>additional<emph>
+   * not interpret each message as a request for <em>additional<em>
    * resources on top of previous messages. Resources requested consistently
-   * over some duration may be forcibly killed by the RM.
+   * over some duration may be forcibly killed by the RM.<p>
    *
    * @return A specification of the resources to reclaim from this AM.
    */
@@ -200,24 +202,23 @@ public abstract class AllocateResponse {
   @Private
   @Unstable
   public abstract void setPreemptionMessage(PreemptionMessage request);
-  
-  @Public
-  @Stable
-  public abstract void setNMTokens(List<NMToken> nmTokens);
-  
+
   /**
-   * Get the list of NMTokens required for communicating with NM. New NMTokens
-   * issued only if
-   * 1) AM is receiving first container on underlying NodeManager.
-   * OR
+   * <p>Get the list of NMTokens required for communicating with NM. New NMTokens
+   * issued only if<p>
+   * <p>1) AM is receiving first container on underlying NodeManager.<br>
+   * OR<br>
    * 2) NMToken master key rolled over in ResourceManager and AM is getting new
-   * container on the same underlying NodeManager.
-   * AM will receive one NMToken per NM irrespective of the number of containers
+   * container on the same underlying NodeManager.<p>
+   * <p>AM will receive one NMToken per NM irrespective of the number of containers
    * issued on same NM. AM is expected to store these tokens until issued a
-   * new token for the same NM.
+   * new token for the same NM.<p>
    */
   @Public
   @Stable
   public abstract List<NMToken> getNMTokens();
 
+  @Private
+  @Unstable
+  public abstract void setNMTokens(List<NMToken> nmTokens);
 }

@@ -21,8 +21,10 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -37,6 +39,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class StartContainerResponse {
 
+  @Private
+  @Unstable
   public static StartContainerResponse newInstance(
       Map<String, ByteBuffer> serviceResponses) {
     StartContainerResponse response =
@@ -52,6 +56,8 @@ public abstract class StartContainerResponse {
    * and their corresponding opaque blob <code>ByteBuffer</code>s</p> 
    * @return a Map between the auxiliary service names and their outputs
    */
+  @Public
+  @Stable
   public abstract Map<String, ByteBuffer> getAllServiceResponse();
 
   /**
@@ -61,5 +67,7 @@ public abstract class StartContainerResponse {
    * @param serviceResponses A map from auxiliary service names to the opaque
    * blob <code>ByteBuffer</code>s for that auxiliary service
    */
+  @Private
+  @Unstable
   public abstract void setAllServiceResponse(Map<String, ByteBuffer> serviceResponses);
 }

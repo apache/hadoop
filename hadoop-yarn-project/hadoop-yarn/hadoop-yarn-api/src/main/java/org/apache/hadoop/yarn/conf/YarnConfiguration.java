@@ -23,6 +23,8 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -30,6 +32,8 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 
 import com.google.common.base.Joiner;
 
+@Public
+@Evolving
 public class YarnConfiguration extends Configuration {
 
   private static final Joiner JOINER = Joiner.on("");

@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class GetClusterMetricsResponse {
 
+  @Private
+  @Unstable
   public static GetClusterMetricsResponse
       newInstance(YarnClusterMetrics metrics) {
     GetClusterMetricsResponse response =

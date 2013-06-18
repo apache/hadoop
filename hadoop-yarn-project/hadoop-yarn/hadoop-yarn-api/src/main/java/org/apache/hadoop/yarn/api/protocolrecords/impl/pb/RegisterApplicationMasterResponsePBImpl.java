@@ -25,6 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -38,6 +40,8 @@ import org.apache.hadoop.yarn.util.ProtoUtils;
 import com.google.protobuf.ByteString;
 
 
+@Private
+@Unstable
 public class RegisterApplicationMasterResponsePBImpl extends
     RegisterApplicationMasterResponse {
   RegisterApplicationMasterResponseProto proto =

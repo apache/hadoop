@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -29,8 +31,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProtoOrBuilder;
 
-
-    
+@Private
+@Unstable
 public class StartContainerRequestPBImpl extends StartContainerRequest {
   StartContainerRequestProto proto = StartContainerRequestProto.getDefaultInstance();
   StartContainerRequestProto.Builder builder = null;

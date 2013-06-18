@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.yarn.util;
 
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
 /**
  * Convenient API record utils
  */
+@LimitedPrivate({ "MapReduce", "YARN" })
+@Unstable
 public class Records {
   // The default record factory
   private static final RecordFactory factory =

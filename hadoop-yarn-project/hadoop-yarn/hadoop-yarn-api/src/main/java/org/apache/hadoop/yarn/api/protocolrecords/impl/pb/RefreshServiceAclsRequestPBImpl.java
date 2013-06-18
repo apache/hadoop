@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshServiceAclsRequest;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsRequestProto;
 
+@Private
+@Unstable
 public class RefreshServiceAclsRequestPBImpl extends RefreshServiceAclsRequest {
 
   RefreshServiceAclsRequestProto proto = 

@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesRequestProto;
 
+@Private
+@Unstable
 public class GetClusterNodesRequestPBImpl extends GetClusterNodesRequest {
 
   GetClusterNodesRequestProto proto = GetClusterNodesRequestProto.getDefaultInstance();

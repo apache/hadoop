@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
@@ -26,8 +28,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusResponseProtoOrBuilder;
 
-
-    
+@Private
+@Unstable
 public class GetContainerStatusResponsePBImpl extends  GetContainerStatusResponse {
   GetContainerStatusResponseProto proto = GetContainerStatusResponseProto.getDefaultInstance();
   GetContainerStatusResponseProto.Builder builder = null;

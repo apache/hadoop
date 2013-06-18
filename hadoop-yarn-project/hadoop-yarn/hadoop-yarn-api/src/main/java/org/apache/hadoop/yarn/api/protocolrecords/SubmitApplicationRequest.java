@@ -42,6 +42,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class SubmitApplicationRequest {
 
+  @Public
+  @Stable
   public static SubmitApplicationRequest newInstance(
       ApplicationSubmissionContext context) {
     SubmitApplicationRequest request =

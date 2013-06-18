@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class StopContainerRequest {
 
+  @Public
+  @Stable
   public static StopContainerRequest newInstance(ContainerId containerId) {
     StopContainerRequest request =
         Records.newRecord(StopContainerRequest.class);

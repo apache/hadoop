@@ -54,7 +54,7 @@ public interface ApplicationMasterProtocol {
    * {@link RegisterApplicationMasterRequest}.</p>
    * 
    * <p>The <code>ResourceManager</code> responds with critical details such 
-   * as minimum and maximum resource capabilities in the cluster as specified in
+   * as maximum resource capabilities in the cluster as specified in
    * {@link RegisterApplicationMasterResponse}.</p>
    *  
    * @param request registration request
@@ -64,6 +64,8 @@ public interface ApplicationMasterProtocol {
    * @see RegisterApplicationMasterRequest
    * @see RegisterApplicationMasterResponse
    */
+  @Public
+  @Stable
   public RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request) 
   throws YarnException, IOException;
@@ -86,6 +88,8 @@ public interface ApplicationMasterProtocol {
    * @see FinishApplicationMasterRequest
    * @see FinishApplicationMasterResponse
    */
+  @Public
+  @Stable
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request) 
   throws YarnException, IOException;
@@ -122,6 +126,8 @@ public interface ApplicationMasterProtocol {
    * @see AllocateRequest
    * @see AllocateResponse
    */
+  @Public
+  @Stable
   public AllocateResponse allocate(AllocateRequest request) 
   throws YarnException, IOException;
 }

@@ -46,8 +46,12 @@ import org.apache.hadoop.yarn.util.Records;
  *
  * @see ApplicationMasterProtocol#finishApplicationMaster(FinishApplicationMasterRequest)
  */
+@Public
+@Stable
 public abstract class FinishApplicationMasterRequest {
 
+  @Public
+  @Stable
   public static FinishApplicationMasterRequest newInstance(
       ApplicationAttemptId appAttemptId, FinalApplicationStatus finalAppStatus,
       String diagnostics, String url) {

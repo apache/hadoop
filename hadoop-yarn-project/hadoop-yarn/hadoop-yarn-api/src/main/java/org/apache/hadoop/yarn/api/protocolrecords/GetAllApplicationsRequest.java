@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Stable
 public abstract class GetAllApplicationsRequest {
+  @Public
+  @Stable
   public static GetAllApplicationsRequest newInstance() {
     GetAllApplicationsRequest request =
         Records.newRecord(GetAllApplicationsRequest.class);

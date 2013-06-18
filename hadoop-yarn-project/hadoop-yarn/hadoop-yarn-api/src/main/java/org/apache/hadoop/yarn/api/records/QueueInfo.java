@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class QueueInfo {
 
   @Private
+  @Unstable
   public static QueueInfo newInstance(String queueName, float capacity,
       float maximumCapacity, float currentCapacity,
       List<QueueInfo> childQueues, List<ApplicationReport> applications,

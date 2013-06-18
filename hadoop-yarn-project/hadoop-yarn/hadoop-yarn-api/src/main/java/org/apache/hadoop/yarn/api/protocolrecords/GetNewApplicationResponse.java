@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class GetNewApplicationResponse {
 
+  @Private
+  @Unstable
   public static GetNewApplicationResponse newInstance(
       ApplicationId applicationId, Resource minCapability,
       Resource maxCapability) {
