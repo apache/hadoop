@@ -130,7 +130,8 @@ public class TestNameNodeMXBean {
       
       // This will cause the first dir to fail.
       File failedNameDir = new File(nameDirUris.toArray(new URI[0])[0]);
-      assertEquals(0, FileUtil.chmod(failedNameDir.getAbsolutePath(), "000"));
+      assertEquals(0, FileUtil.chmod(
+        new File(failedNameDir, "current").getAbsolutePath(), "000"));
       cluster.getNameNodeRpc().rollEditLog();
       
       nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
@@ -150,7 +151,8 @@ public class TestNameNodeMXBean {
     } finally {
       if (cluster != null) {
         for (URI dir : cluster.getNameDirs(0)) {
-          FileUtil.chmod(new File(dir).toString(), "700");
+          FileUtil.chmod(
+            new File(new File(dir), "current").getAbsolutePath(), "755");
         }
         cluster.shutdown();
       }
