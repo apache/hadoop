@@ -82,6 +82,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -200,8 +201,9 @@ public class TestYARNRunner extends TestCase {
     final ApplicationClientProtocol clientRMProtocol = mock(ApplicationClientProtocol.class);
     ResourceMgrDelegate delegate = new ResourceMgrDelegate(conf) {
       @Override
-      protected void serviceStart() {
-        this.rmClient = clientRMProtocol;
+      protected void serviceStart() throws Exception {
+        assertTrue(this.client instanceof YarnClientImpl);
+        ((YarnClientImpl) this.client).setRMClient(clientRMProtocol);
       }
     };
     /* make sure kill calls finish application master */

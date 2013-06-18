@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
@@ -67,8 +68,9 @@ public class TestResourceMgrDelegate {
     ResourceMgrDelegate delegate = new ResourceMgrDelegate(
       new YarnConfiguration()) {
       @Override
-      protected void serviceStart() {
-        this.rmClient = applicationsManager;
+      protected void serviceStart() throws Exception {
+        Assert.assertTrue(this.client instanceof YarnClientImpl);
+        ((YarnClientImpl) this.client).setRMClient(applicationsManager);
       }
     };
     delegate.getRootQueues();
@@ -110,8 +112,9 @@ public class TestResourceMgrDelegate {
     ResourceMgrDelegate resourceMgrDelegate = new ResourceMgrDelegate(
       new YarnConfiguration()) {
       @Override
-      protected void serviceStart() {
-        this.rmClient = applicationsManager;
+      protected void serviceStart() throws Exception {
+        Assert.assertTrue(this.client instanceof YarnClientImpl);
+        ((YarnClientImpl) this.client).setRMClient(applicationsManager);
       }
     };
     JobStatus[] allJobs = resourceMgrDelegate.getAllJobs();

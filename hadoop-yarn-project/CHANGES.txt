@@ -166,6 +166,10 @@ Release 2.1.0-beta - UNRELEASED
     YARN-610. ClientToken is no longer set in the environment of the Containers.
     (Omkar Vinit Joshi via vinodkv)
 
+    YARN-834. Fixed annotations for yarn-client module, reorganized packages and
+    clearly differentiated *Async apis. (Arun C Murthy and Zhijie Shen via
+    vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
