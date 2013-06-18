@@ -253,8 +253,9 @@ public class ContainerManagerImpl extends CompositeService implements
     this.setBlockNewContainerRequests(true);
     server.start();
     InetSocketAddress connectAddress = NetUtils.getConnectAddress(server);
-    NodeId nodeId = NodeId.newInstance(connectAddress.getHostName(),
-      connectAddress.getPort());
+    NodeId nodeId = NodeId.newInstance(
+        connectAddress.getAddress().getCanonicalHostName(),
+        connectAddress.getPort());
     ((NodeManager.NMContext)context).setNodeId(nodeId);
     this.context.getNMTokenSecretManager().setNodeId(nodeId);
     this.context.getContainerTokenSecretManager().setNodeId(nodeId);
