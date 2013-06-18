@@ -19,11 +19,13 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterResponseProto;
 
-
-    
+@Private
+@Unstable
 public class FinishApplicationMasterResponsePBImpl extends FinishApplicationMasterResponse {
   FinishApplicationMasterResponseProto proto = FinishApplicationMasterResponseProto.getDefaultInstance();
   FinishApplicationMasterResponseProto.Builder builder = null;
@@ -63,16 +65,4 @@ public class FinishApplicationMasterResponsePBImpl extends FinishApplicationMast
   public String toString() {
     return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
-
-  private void maybeInitBuilder() {
-    if (viaProto || builder == null) {
-      builder = FinishApplicationMasterResponseProto.newBuilder(proto);
-    }
-    viaProto = false;
-  }
-    
-  
-
-
-
 }  

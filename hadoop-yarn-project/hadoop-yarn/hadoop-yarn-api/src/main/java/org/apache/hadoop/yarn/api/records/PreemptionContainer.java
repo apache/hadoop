@@ -28,8 +28,12 @@ import org.apache.hadoop.yarn.util.Records;
  * @see PreemptionContract
  * @see StrictPreemptionContract
  */
+@Public
+@Evolving
 public abstract class PreemptionContainer {
 
+  @Private
+  @Unstable
   public static PreemptionContainer newInstance(ContainerId id) {
     PreemptionContainer container = Records.newRecord(PreemptionContainer.class);
     container.setId(id);

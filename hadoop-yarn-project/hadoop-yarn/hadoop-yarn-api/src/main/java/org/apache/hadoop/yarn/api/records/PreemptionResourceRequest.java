@@ -29,8 +29,12 @@ import org.apache.hadoop.yarn.util.Records;
  * @see PreemptionContract
  * @see AllocateRequest#setAskList(java.util.List)
  */
+@Public
+@Evolving
 public abstract class PreemptionResourceRequest {
 
+  @Private
+  @Unstable
   public static PreemptionResourceRequest newInstance(ResourceRequest req) {
     PreemptionResourceRequest request =
         Records.newRecord(PreemptionResourceRequest.class);

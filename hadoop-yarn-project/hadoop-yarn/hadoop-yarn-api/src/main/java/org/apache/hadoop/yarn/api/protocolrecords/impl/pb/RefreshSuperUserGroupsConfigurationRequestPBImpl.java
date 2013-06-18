@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshSuperUserGroupsConfigurationRequestProto;
 
+@Private
+@Unstable
 public class RefreshSuperUserGroupsConfigurationRequestPBImpl 
 extends RefreshSuperUserGroupsConfigurationRequest {
 

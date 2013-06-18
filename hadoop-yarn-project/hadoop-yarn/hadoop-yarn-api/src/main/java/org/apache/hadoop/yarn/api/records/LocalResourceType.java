@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
  *       {@link #ARCHIVE} - Archive, which is automatically unarchived by the 
  *       <code>NodeManager</code>.
  *     </li>
+ *     <li>
+ *       {@link #PATTERN} - A hybrid between {@link #ARCHIVE} and {@link #FILE}.
  *   </ul>
  * </p>
  *

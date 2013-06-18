@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -27,10 +27,11 @@ import org.apache.hadoop.yarn.util.Records;
  * The request issued by the client to renew a delegation token from
  * the {@code ResourceManager}.
  */
-@Public
-@Evolving
+@Private
+@Unstable
 public abstract class RenewDelegationTokenRequest {
-
+  @Private
+  @Unstable
   public static RenewDelegationTokenRequest newInstance(Token dToken) {
     RenewDelegationTokenRequest request =
         Records.newRecord(RenewDelegationTokenRequest.class);
@@ -38,7 +39,15 @@ public abstract class RenewDelegationTokenRequest {
     return request;
   }
 
+  /**
+   * Get the delegation token requested to be renewed by the client.
+   * @return the delegation token requested to be renewed by the client.
+   */
+  @Private
+  @Unstable
   public abstract Token getDelegationToken();
 
+  @Private
+  @Unstable
   public abstract void setDelegationToken(Token dToken);
 }

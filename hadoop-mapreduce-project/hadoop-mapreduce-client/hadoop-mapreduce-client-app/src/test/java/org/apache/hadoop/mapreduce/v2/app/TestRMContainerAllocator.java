@@ -1219,7 +1219,7 @@ public class TestRMContainerAllocator {
       for (ResourceRequest req : ask) {
         ResourceRequest reqCopy = ResourceRequest.newInstance(req
             .getPriority(), req.getResourceName(), req.getCapability(), req
-            .getNumContainers());
+            .getNumContainers(), req.getRelaxLocality());
         askCopy.add(reqCopy);
       }
       lastAsk = ask;

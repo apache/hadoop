@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.api;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsRequest;
@@ -35,26 +37,41 @@ import org.apache.hadoop.yarn.api.protocolrecords.RefreshSuperUserGroupsConfigur
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
 
+@Public
+@Stable
 public interface ResourceManagerAdministrationProtocol extends GetUserMappingsProtocol {
+
+  @Public
+  @Stable
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request) 
   throws YarnException, IOException;
-  
+
+  @Public
+  @Stable
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
   throws YarnException, IOException;
-  
+
+  @Public
+  @Stable
   public RefreshSuperUserGroupsConfigurationResponse 
   refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
   throws YarnException, IOException;
 
+  @Public
+  @Stable
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
   throws YarnException, IOException;
-  
+
+  @Public
+  @Stable
   public RefreshAdminAclsResponse refreshAdminAcls(
       RefreshAdminAclsRequest request)
   throws YarnException, IOException;
-  
+
+  @Public
+  @Stable
   public RefreshServiceAclsResponse refreshServiceAcls(
       RefreshServiceAclsRequest request)
   throws YarnException, IOException;

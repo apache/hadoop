@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class GetContainerStatusRequest {
 
+  @Public
+  @Stable
   public static GetContainerStatusRequest newInstance(ContainerId containerId) {
     GetContainerStatusRequest request =
         Records.newRecord(GetContainerStatusRequest.class);

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -145,8 +146,8 @@ public abstract class ApplicationSubmissionContext {
    * Set the <code>Priority</code> of the application.
    * @param priority <code>Priority</code> of the application
    */
-  @Public
-  @Stable
+  @Private
+  @Unstable
   public abstract void setPriority(Priority priority);
 
   /**
@@ -183,14 +184,14 @@ public abstract class ApplicationSubmissionContext {
    * @return true if the AM is not managed by the RM
    */
   @Public
-  @Unstable
+  @Stable
   public abstract boolean getUnmanagedAM();
   
   /**
    * @param value true if RM should not manage the AM
    */
   @Public
-  @Unstable
+  @Stable
   public abstract void setUnmanagedAM(boolean value);
 
   /**
@@ -214,7 +215,7 @@ public abstract class ApplicationSubmissionContext {
    * @return the number of max attempts of the application to be submitted
    */
   @Public
-  @Unstable
+  @Stable
   public abstract int getMaxAppAttempts();
 
   /**
@@ -225,31 +226,44 @@ public abstract class ApplicationSubmissionContext {
    * to be submitted.
    */
   @Public
-  @Unstable
+  @Stable
   public abstract void setMaxAppAttempts(int maxAppAttempts);
 
+  /**
+   * Get the resource required by the <code>ApplicationMaster</code> for this
+   * application.
+   * 
+   * @return the resource required by the <code>ApplicationMaster</code> for
+   *         this application.
+   */
   @Public
   @Stable
   public abstract Resource getResource();
 
+  /**
+   * Set the resource required by the <code>ApplicationMaster</code> for this
+   * application.
+   *
+   * @param resource the resource required by the <code>ApplicationMaster</code>
+   * for this application.
+   */
   @Public
   @Stable
   public abstract void setResource(Resource resource);
   
   /**
-   * Get the <em>applicationType</em> is the application type
+   * Get the application type
    * 
-   * @return <em>applicationType</em> is the application type
+   * @return the application type
    */
   @Public
   @Stable
   public abstract String getApplicationType();
 
   /**
-   * Set the <em>applicationType</em> is the application type
+   * Set the application type
    * 
-   * @param applicationType
-   *          <em>applicationType</em> is the application type
+   * @param applicationType the application type
    */
   @Public
   @Stable

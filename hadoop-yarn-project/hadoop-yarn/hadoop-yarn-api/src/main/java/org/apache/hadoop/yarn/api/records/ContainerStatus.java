@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class ContainerStatus {
 
   @Private
+  @Unstable
   public static ContainerStatus newInstance(ContainerId containerId,
       ContainerState containerState, String diagnostics, int exitStatus) {
     ContainerStatus containerStatus = Records.newRecord(ContainerStatus.class);
@@ -96,7 +97,7 @@ public abstract class ContainerStatus {
    * @return <em>exit status</em> for the container
    */
   @Public
-  @Stable
+  @Unstable
   public abstract int getExitStatus();
   
   @Private

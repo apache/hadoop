@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+
 /**
  * <p>State of a <code>Container</code>.</p>
  */
+@Public
+@Stable
 public enum ContainerState {
   /** New container */
   NEW, 

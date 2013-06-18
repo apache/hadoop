@@ -18,6 +18,8 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -29,8 +31,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceVisibilityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.URLProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
-
-    
+@Private
+@Unstable
 public class LocalResourcePBImpl extends LocalResource {
   LocalResourceProto proto = LocalResourceProto.getDefaultInstance();
   LocalResourceProto.Builder builder = null;

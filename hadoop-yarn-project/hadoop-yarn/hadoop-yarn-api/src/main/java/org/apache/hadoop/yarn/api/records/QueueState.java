@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 /**
  * <p>State of a Queue.</p>
  * 
- * <p>A queue is one of:
+ * <p>A queue is in one of:
  *   <ul>
  *     <li>{@link #RUNNING} - normal state.</li> 
  *     <li>{@link #STOPPED} - not accepting new application submissions.

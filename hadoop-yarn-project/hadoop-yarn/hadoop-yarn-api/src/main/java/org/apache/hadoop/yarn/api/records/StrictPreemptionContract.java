@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Evolving
 public abstract class StrictPreemptionContract {
 
+  @Private
+  @Unstable
   public static StrictPreemptionContract newInstance(Set<PreemptionContainer> containers) {
     StrictPreemptionContract contract =
         Records.newRecord(StrictPreemptionContract.class);
