@@ -64,6 +64,7 @@ import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -317,8 +318,10 @@ public class TestShuffleHandler {
           new Token<JobTokenIdentifier>("identifier".getBytes(),
               "password".getBytes(), new Text(user), new Text("shuffleService"));
       jt.write(outputBuffer);
-      shuffleHandler.initApp(user, appId,
-          ByteBuffer.wrap(outputBuffer.getData(), 0, outputBuffer.getLength()));
+      shuffleHandler
+        .initializeApplication(new ApplicationInitializationContext(user,
+          appId, ByteBuffer.wrap(outputBuffer.getData(), 0,
+            outputBuffer.getLength())));
       URL url =
           new URL(
               "http://127.0.0.1:"

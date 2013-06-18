@@ -73,10 +73,11 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
+import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
+import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
+import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -112,8 +113,7 @@ import org.jboss.netty.util.CharsetUtil;
 import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-public class ShuffleHandler extends AbstractService 
-    implements AuxServices.AuxiliaryService {
+public class ShuffleHandler extends AuxiliaryService {
 
   private static final Log LOG = LogFactory.getLog(ShuffleHandler.class);
   
@@ -244,7 +244,11 @@ public class ShuffleHandler extends AbstractService
   }
 
   @Override
-  public void initApp(String user, ApplicationId appId, ByteBuffer secret) {
+  public void initializeApplication(ApplicationInitializationContext context) {
+
+    String user = context.getUser();
+    ApplicationId appId = context.getApplicationId();
+    ByteBuffer secret = context.getApplicationDataForService();
     // TODO these bytes should be versioned
     try {
       Token<JobTokenIdentifier> jt = deserializeServiceData(secret);
@@ -260,7 +264,8 @@ public class ShuffleHandler extends AbstractService
   }
 
   @Override
-  public void stopApp(ApplicationId appId) {
+  public void stopApplication(ApplicationTerminationContext context) {
+    ApplicationId appId = context.getApplicationId();
     JobID jobId = new JobID(Long.toString(appId.getClusterTimestamp()), appId.getId());
     secretManager.removeTokenForJob(jobId.toString());
     userRsrc.remove(jobId.toString());
@@ -328,7 +333,7 @@ public class ShuffleHandler extends AbstractService
   }
 
   @Override
-  public synchronized ByteBuffer getMeta() {
+  public synchronized ByteBuffer getMetaData() {
     try {
       return serializeMetaData(port); 
     } catch (IOException e) {

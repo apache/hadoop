@@ -33,17 +33,19 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
+import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
+import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.junit.Test;
 
 public class TestAuxServices {
   private static final Log LOG = LogFactory.getLog(TestAuxServices.class);
 
-  static class LightService extends AbstractService
-      implements AuxServices.AuxiliaryService {
+  static class LightService extends AuxiliaryService implements Service
+       {
     private final char idef;
     private final int expected_appId;
     private int remaining_init;
@@ -79,17 +81,18 @@ public class TestAuxServices {
       super.serviceStop();
     }
     @Override
-    public void initApp(String user, ApplicationId appId, ByteBuffer data) {
+    public void initializeApplication(ApplicationInitializationContext context) {
+      ByteBuffer data = context.getApplicationDataForService();
       assertEquals(idef, data.getChar());
       assertEquals(expected_appId, data.getInt());
-      assertEquals(expected_appId, appId.getId());
+      assertEquals(expected_appId, context.getApplicationId().getId());
     }
     @Override
-    public void stopApp(ApplicationId appId) {
-      stoppedApps.add(appId.getId());
+    public void stopApplication(ApplicationTerminationContext context) {
+      stoppedApps.add(context.getApplicationId().getId());
     }
     @Override
-    public ByteBuffer getMeta() {
+    public ByteBuffer getMetaData() {
       return meta;
     }
   }
@@ -133,8 +136,8 @@ public class TestAuxServices {
         AuxServicesEventType.APPLICATION_STOP, "user0", appId2, "Bsrv", null);
     // verify all services got the stop event 
     aux.handle(event);
-    Collection<AuxServices.AuxiliaryService> servs = aux.getServices();
-    for (AuxServices.AuxiliaryService serv: servs) {
+    Collection<AuxiliaryService> servs = aux.getServices();
+    for (AuxiliaryService serv: servs) {
       ArrayList<Integer> appIds = ((LightService)serv).getAppIdsStopped();
       assertEquals("app not properly stopped", 1, appIds.size());
       assertTrue("wrong app stopped", appIds.contains((Integer)66));
@@ -196,7 +199,7 @@ public class TestAuxServices {
       assertEquals(STARTED, s.getServiceState());
     }
 
-    Map<String, ByteBuffer> meta = aux.getMeta();
+    Map<String, ByteBuffer> meta = aux.getMetaData();
     assertEquals(2, meta.size());
     assertEquals("A", new String(meta.get("Asrv").array()));
     assertEquals("B", new String(meta.get("Bsrv").array()));
