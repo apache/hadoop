@@ -48,7 +48,7 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -262,7 +262,7 @@ public class TestJHSSecurity {
   private MRClientProtocol getMRClientProtocol(Token token,
       final InetSocketAddress hsAddress, String user, final Configuration conf) {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
-    ugi.addToken(ProtoUtils.convertFromProtoFormat(token, hsAddress));
+    ugi.addToken(ConverterUtils.convertFromYarn(token, hsAddress));
 
     final YarnRPC rpc = YarnRPC.create(conf);
     MRClientProtocol hsWithDT = ugi

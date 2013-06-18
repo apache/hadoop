@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueACLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueUserACLInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueUserACLInfoProtoOrBuilder;
-import org.apache.hadoop.yarn.util.ProtoUtils;
 
 @Private
 @Unstable

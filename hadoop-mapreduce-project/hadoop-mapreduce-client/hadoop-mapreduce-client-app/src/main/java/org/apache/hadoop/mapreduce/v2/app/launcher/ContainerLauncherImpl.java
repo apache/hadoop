@@ -58,7 +58,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -361,7 +361,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         UserGroupInformation.createRemoteUser(containerID.toString());
 
     Token<ContainerTokenIdentifier> token =
-        ProtoUtils.convertFromProtoFormat(containerToken, cmAddr);
+        ConverterUtils.convertFromYarn(containerToken, cmAddr);
     user.addToken(token);
 
     ContainerManagementProtocol proxy = user

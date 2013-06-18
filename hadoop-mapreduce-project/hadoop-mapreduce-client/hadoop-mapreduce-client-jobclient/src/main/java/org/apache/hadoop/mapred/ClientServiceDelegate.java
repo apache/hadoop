@@ -75,7 +75,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ClientServiceDelegate {
   private static final Log LOG = LogFactory.getLog(ClientServiceDelegate.class);
@@ -183,7 +183,7 @@ public class ClientServiceDelegate {
             org.apache.hadoop.yarn.api.records.Token clientToAMToken =
                 application.getClientToAMToken();
             Token<ClientToAMTokenIdentifier> token =
-                ProtoUtils.convertFromProtoFormat(clientToAMToken, serviceAddr);
+                ConverterUtils.convertFromYarn(clientToAMToken, serviceAddr);
             newUgi.addToken(token);
           }
           LOG.debug("Connecting to " + serviceAddr);

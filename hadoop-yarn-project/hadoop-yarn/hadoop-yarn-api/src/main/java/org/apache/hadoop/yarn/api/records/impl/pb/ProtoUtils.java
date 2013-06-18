@@ -16,17 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.util;
+package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -39,8 +34,6 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationResourceUsageReportPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.AMCommandProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAccessTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
@@ -212,25 +205,5 @@ public class ProtoUtils {
       ApplicationAccessTypeProto e) {
     return ApplicationAccessType.valueOf(e.name().replace(
         APP_ACCESS_TYPE_PREFIX, ""));
-  }
-
-  /**
-   * Convert a protobuf token into a rpc token and set its service
-   * 
-   * @param protoToken the yarn token
-   * @param serviceAddr the connect address for the service
-   * @return rpc token
-   */
-  public static <T extends TokenIdentifier> Token<T> convertFromProtoFormat(
-      org.apache.hadoop.yarn.api.records.Token protoToken,
-      InetSocketAddress serviceAddr) {
-    Token<T> token = new Token<T>(protoToken.getIdentifier().array(),
-                                  protoToken.getPassword().array(),
-                                  new Text(protoToken.getKind()),
-                                  new Text(protoToken.getService()));
-    if (serviceAddr != null) {
-      SecurityUtil.setTokenService(token, serviceAddr);
-    }
-    return token;
   }
 }

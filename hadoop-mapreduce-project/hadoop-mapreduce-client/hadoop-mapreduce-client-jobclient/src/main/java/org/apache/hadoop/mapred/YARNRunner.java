@@ -79,12 +79,10 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenSelector;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.util.ProtoUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -209,7 +207,7 @@ public class YARNRunner implements ClientProtocol {
     org.apache.hadoop.yarn.api.records.Token mrDelegationToken;
     mrDelegationToken = hsProxy.getDelegationToken(request)
         .getDelegationToken();
-    return ProtoUtils.convertFromProtoFormat(mrDelegationToken,
+    return ConverterUtils.convertFromYarn(mrDelegationToken,
         hsProxy.getConnectAddress());
   }
 

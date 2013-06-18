@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
-import org.apache.hadoop.yarn.util.ProtoUtils;
 
 @Private
 @Unstable

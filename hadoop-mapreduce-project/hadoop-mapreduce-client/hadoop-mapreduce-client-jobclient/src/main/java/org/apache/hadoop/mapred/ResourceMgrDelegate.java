@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -165,7 +165,7 @@ public class ResourceMgrDelegate extends YarnClient {
   public Token getDelegationToken(Text renewer) throws IOException,
       InterruptedException {
     try {
-      return ProtoUtils.convertFromProtoFormat(
+      return ConverterUtils.convertFromYarn(
           client.getRMDelegationToken(renewer), rmAddress);
     } catch (YarnException e) {
       throw new IOException(e);

@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -187,7 +187,7 @@ public class NMClientImpl extends NMClient {
           UserGroupInformation.createRemoteUser(containerId.toString());
 
       org.apache.hadoop.security.token.Token<ContainerTokenIdentifier> token =
-          ProtoUtils.convertFromProtoFormat(containerToken, containerAddress);
+          ConverterUtils.convertFromYarn(containerToken, containerAddress);
       currentUser.addToken(token);
 
       containerManager = currentUser
