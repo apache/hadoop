@@ -66,7 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Before;
 import org.junit.Test;
@@ -409,7 +409,7 @@ public class TestClientRMTokens {
 
     UserGroupInformation ugi = UserGroupInformation
         .createRemoteUser(user);
-    ugi.addToken(ProtoUtils.convertFromProtoFormat(token, rmAddress));
+    ugi.addToken(ConverterUtils.convertFromYarn(token, rmAddress));
 
     final YarnRPC rpc = YarnRPC.create(conf);
     ApplicationClientProtocol clientRMWithDT = ugi

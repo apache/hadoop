@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceVisibilityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.URLProto;
-import org.apache.hadoop.yarn.util.ProtoUtils;
 
 @Private
 @Unstable
