@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -368,6 +369,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     private FSDataOutputStream datas;    
     private FSDataOutputStream sums;
     private static final float CHKSUM_AS_FRACTION = 0.01f;
+    private boolean isClosed = false;
     
     public ChecksumFSOutputSummer(ChecksumFileSystem fs, 
                           Path file, 
@@ -391,9 +393,13 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     
     @Override
     public void close() throws IOException {
-      flushBuffer();
-      sums.close();
-      datas.close();
+      try {
+        flushBuffer();
+        sums.close();
+        datas.close();
+      } finally {
+        isClosed = true;
+      }
     }
     
     @Override
@@ -401,6 +407,13 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     throws IOException {
       datas.write(b, offset, len);
       sums.write(checksum);
+    }
+
+    @Override
+    protected void checkClosed() throws IOException {
+      if (isClosed) {
+        throw new ClosedChannelException();
+      }
     }
   }
 

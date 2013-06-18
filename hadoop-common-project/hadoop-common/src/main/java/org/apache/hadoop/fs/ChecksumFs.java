@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.net.URISyntaxException;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -325,6 +326,7 @@ public abstract class ChecksumFs extends FilterFs {
     private FSDataOutputStream datas;    
     private FSDataOutputStream sums;
     private static final float CHKSUM_AS_FRACTION = 0.01f;
+    private boolean isClosed = false;
     
     
     public ChecksumFSOutputSummer(final ChecksumFs fs, final Path file, 
@@ -356,9 +358,13 @@ public abstract class ChecksumFs extends FilterFs {
     
     @Override
     public void close() throws IOException {
-      flushBuffer();
-      sums.close();
-      datas.close();
+      try {
+        flushBuffer();
+        sums.close();
+        datas.close();
+      } finally {
+        isClosed = true;
+      }
     }
     
     @Override
@@ -366,6 +372,13 @@ public abstract class ChecksumFs extends FilterFs {
       throws IOException {
       datas.write(b, offset, len);
       sums.write(checksum);
+    }
+
+    @Override
+    protected void checkClosed() throws IOException {
+      if (isClosed) {
+        throw new ClosedChannelException();
+      }
     }
   }
 
