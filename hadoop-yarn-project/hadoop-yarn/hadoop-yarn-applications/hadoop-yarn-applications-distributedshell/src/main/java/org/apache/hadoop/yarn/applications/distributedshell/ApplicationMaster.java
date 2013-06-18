@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
+import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -447,7 +448,8 @@ public class ApplicationMaster {
     resourceManager.start();
 
     containerListener = new NMCallbackHandler();
-    nmClientAsync = NMClientAsync.createNMClientAsync(containerListener);
+    nmClientAsync =
+        new NMClientAsyncImpl(containerListener, resourceManager.getNMTokens());
     nmClientAsync.init(conf);
     nmClientAsync.start();
 
@@ -683,8 +685,7 @@ public class ApplicationMaster {
       }
       Container container = containers.get(containerId);
       if (container != null) {
-        nmClientAsync.getContainerStatusAsync(containerId, container.getNodeId(),
-            container.getContainerToken());
+        nmClientAsync.getContainerStatusAsync(containerId, container.getNodeId());
       }
     }
 

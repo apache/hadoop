@@ -37,6 +37,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
@@ -229,14 +231,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     // set up the rest of the container
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
-    Resource r = BuilderUtils.newResource(1024, 1);
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
-    Token containerToken =
-        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
-          port, user, r, System.currentTimeMillis() + 10000L, 1234,
-          "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
-    startRequest.setContainerToken(containerToken);
+    startRequest.setContainerToken(createContainerToken(cId));
     containerManager.startContainer(startRequest);
 
     int timeoutSecs = 0;
@@ -378,12 +375,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     // set up the rest of the container
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
-    Resource r = BuilderUtils.newResource(1024, 1);
-    Token containerToken =
-        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
-          port, user, r, System.currentTimeMillis() + 10000L, 123,
-          "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
-    StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
+    Token containerToken = createContainerToken(cId);
+    StartContainerRequest startRequest =
+        recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
     startRequest.setContainerToken(containerToken);
     containerManager.startContainer(startRequest);
@@ -439,6 +433,19 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       Assert.assertTrue("Did not find sigterm message", foundSigTermMessage);
       reader.close();
     }
+  }
+
+  protected Token createContainerToken(ContainerId cId) throws InvalidToken {
+    Resource r = BuilderUtils.newResource(1024, 1);
+    ContainerTokenIdentifier containerTokenIdentifier =
+        new ContainerTokenIdentifier(cId, context.getNodeId().toString(), user,
+          r, System.currentTimeMillis() + 10000L, 123, DUMMY_RM_IDENTIFIER);
+    Token containerToken =
+        BuilderUtils.newContainerToken(
+          context.getNodeId(),
+          context.getContainerTokenSecretManager().retrievePassword(
+            containerTokenIdentifier), containerTokenIdentifier);
+    return containerToken;
   }
 
 }

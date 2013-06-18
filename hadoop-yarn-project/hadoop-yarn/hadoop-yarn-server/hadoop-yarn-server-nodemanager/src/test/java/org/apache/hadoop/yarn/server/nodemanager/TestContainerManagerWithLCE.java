@@ -74,7 +74,7 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
   }
 
   @Override
-  public void testContainerSetup() throws IOException, InterruptedException,
+  public void testContainerSetup() throws Exception, InterruptedException,
       YarnException {
     // Don't run the test if the binary is not available.
     if (!shouldRunTest()) {

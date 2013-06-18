@@ -30,12 +30,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The NM maintains only two master-keys. The current key that RM knows and the
@@ -51,6 +50,7 @@ public class NMContainerTokenSecretManager extends
   private MasterKeyData previousMasterKey;
   
   private final Map<ApplicationId, ConcurrentMap<ContainerId, MasterKeyData>> oldMasterKeys;
+  private String nodeHostAddr;
   
   public NMContainerTokenSecretManager(Configuration conf) {
     super(conf);
@@ -122,6 +122,15 @@ public class NMContainerTokenSecretManager extends
       masterKeyToUse = this.oldMasterKeys.get(appId).get(containerId);
     }
 
+    if (nodeHostAddr != null
+        && !identifier.getNmHostAddress().equals(nodeHostAddr)) {
+      // Valid container token used for incorrect node.
+      throw new SecretManager.InvalidToken("Given Container "
+          + identifier.getContainerID().toString()
+          + " identifier is not valid for current Node manager. Expected : "
+          + nodeHostAddr + " Found : " + identifier.getNmHostAddress());
+    }
+    
     if (masterKeyToUse != null) {
       return retrievePasswordInternal(identifier, masterKeyToUse);
     }
@@ -186,4 +195,9 @@ public class NMContainerTokenSecretManager extends
   public synchronized void appFinished(ApplicationId appId) {
     this.oldMasterKeys.remove(appId);
   }
+  
+  public synchronized void setNodeId(NodeId nodeId) {
+    nodeHostAddr = nodeId.toString();
+    LOG.info("Updating node address : " + nodeHostAddr);
+  } 
 }

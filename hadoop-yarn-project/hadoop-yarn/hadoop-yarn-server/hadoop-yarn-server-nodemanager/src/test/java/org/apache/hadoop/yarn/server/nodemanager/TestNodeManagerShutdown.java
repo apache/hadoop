@@ -52,16 +52,17 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
@@ -161,7 +162,7 @@ public class TestNodeManagerShutdown {
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
-    NodeId nodeId = BuilderUtils.newNodeId("localhost", 1234);
+    NodeId nodeId = BuilderUtils.newNodeId("localhost", 12345);
     
     URL localResourceUri =
         ConverterUtils.getYarnUrlFromPath(localFS
@@ -180,17 +181,22 @@ public class TestNodeManagerShutdown {
     containerLaunchContext.setLocalResources(localResources);
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
-    Resource resource = BuilderUtils.newResource(1024, 1);
-    Token containerToken =
-        BuilderUtils.newContainerToken(cId, nodeId.getHost(), nodeId.getPort(),
-          user, resource, System.currentTimeMillis() + 10000L, 123,
-          "password".getBytes(), 0);
     StartContainerRequest startRequest =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
-    startRequest.setContainerToken(containerToken);
+    startRequest
+      .setContainerToken(TestContainerManager.createContainerToken(cId, 0,
+        nodeId, user, nm.getNMContext().getContainerTokenSecretManager()));
+    final InetSocketAddress containerManagerBindAddress =
+        NetUtils.createSocketAddrForHost("127.0.0.1", 12345);
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(cId.toString());
+    org.apache.hadoop.security.token.Token<NMTokenIdentifier> nmToken =
+        ConverterUtils.convertFromYarn(
+          nm.getNMContext().getNMTokenSecretManager()
+            .createNMToken(cId.getApplicationAttemptId(), nodeId, user),
+          containerManagerBindAddress);
+    currentUser.addToken(nmToken);
 
     ContainerManagementProtocol containerManager =
         currentUser.doAs(new PrivilegedAction<ContainerManagementProtocol>() {

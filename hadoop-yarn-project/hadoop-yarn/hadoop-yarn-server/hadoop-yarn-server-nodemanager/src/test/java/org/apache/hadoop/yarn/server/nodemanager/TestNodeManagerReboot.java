@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -50,17 +49,16 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.NMTokenIdentifier;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
@@ -131,24 +129,23 @@ public class TestNodeManagerReboot {
     containerLaunchContext.setLocalResources(localResources);
     List<String> commands = new ArrayList<String>();
     containerLaunchContext.setCommands(commands);
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(1024);
-    NodeId nodeId = BuilderUtils.newNodeId("127.0.0.1", 12345);
-    Token containerToken =
-        BuilderUtils.newContainerToken(cId, nodeId.getHost(), nodeId.getPort(),
-          user, resource, System.currentTimeMillis() + 10000L, 123,
-          "password".getBytes(), 0);
     
     final StartContainerRequest startRequest =
         Records.newRecord(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
-    startRequest.setContainerToken(containerToken);
+    NodeId nodeId = nm.getNMContext().getNodeId();
+    startRequest.setContainerToken(TestContainerManager.createContainerToken(
+      cId, 0, nodeId, destinationFile, nm.getNMContext()
+        .getContainerTokenSecretManager()));
     final UserGroupInformation currentUser = UserGroupInformation
-        .createRemoteUser(cId.toString());
+        .createRemoteUser(cId.getApplicationAttemptId().toString());
+    NMTokenIdentifier nmIdentifier =
+        new NMTokenIdentifier(cId.getApplicationAttemptId(), nodeId, user, 123);
+    currentUser.addTokenIdentifier(nmIdentifier);
     currentUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws YarnException, IOException {
-        containerManager.startContainer(startRequest);
+        nm.getContainerManager().startContainer(startRequest);
         return null;
       }
     });
@@ -208,8 +205,6 @@ public class TestNodeManagerReboot {
             ContainerLocalizer.FILECACHE) == 0 && numOfLocalDirs(nmLocalDir
             .getAbsolutePath(), ResourceLocalizationService.NM_PRIVATE_DIR)
               == 0);
-    verify(delService, times(1)).delete(eq(user),
-        argThat(new PathInclude(user)));
     verify(delService, times(1)).delete(
         (String) isNull(),
         argThat(new PathInclude(ResourceLocalizationService.NM_PRIVATE_DIR

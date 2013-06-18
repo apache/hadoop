@@ -114,4 +114,38 @@ public class BaseNMTokenSecretManager extends
   public NMTokenIdentifier createIdentifier() {
     return new NMTokenIdentifier();
   }
+  
+  /**
+   * Helper function for creating NMTokens.
+   */
+  public Token createNMToken(ApplicationAttemptId applicationAttemptId,
+      NodeId nodeId, String applicationSubmitter) {
+    byte[] password;
+    NMTokenIdentifier identifier;
+    
+    this.readLock.lock();
+    try {
+      identifier =
+          new NMTokenIdentifier(applicationAttemptId, nodeId,
+              applicationSubmitter, this.currentMasterKey.getMasterKey()
+                  .getKeyId());
+      password = this.createPassword(identifier);
+    } finally {
+      this.readLock.unlock();
+    }
+    return newInstance(password, identifier);
+  }
+  
+  public static Token newInstance(byte[] password,
+      NMTokenIdentifier identifier) {
+    NodeId nodeId = identifier.getNodeId();
+    // RPC layer client expects ip:port as service for tokens
+    InetSocketAddress addr =
+        NetUtils.createSocketAddrForHost(nodeId.getHost(), nodeId.getPort());
+    Token nmToken =
+        Token.newInstance(identifier.getBytes(),
+          NMTokenIdentifier.KIND.toString(), password, SecurityUtil
+            .buildTokenService(addr).toString());
+    return nmToken;
+  }
 }

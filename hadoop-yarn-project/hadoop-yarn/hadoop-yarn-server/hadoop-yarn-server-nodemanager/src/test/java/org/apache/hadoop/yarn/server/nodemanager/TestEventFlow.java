@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -133,18 +134,13 @@ public class TestEventFlow {
         ApplicationAttemptId.newInstance(applicationId, 0);
     ContainerId cID = ContainerId.newInstance(applicationAttemptId, 0);
 
-    Resource r = BuilderUtils.newResource(1024, 1);
     String user = "testing";
-    String host = "127.0.0.1";
-    int port = 1234;
-    Token containerToken =
-        BuilderUtils.newContainerToken(cID, host, port, user, r,
-          System.currentTimeMillis() + 10000L, 123, "password".getBytes(),
-          SIMULATED_RM_IDENTIFIER);
     StartContainerRequest request = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(launchContext);
-    request.setContainerToken(containerToken);
+    request.setContainerToken(TestContainerManager.createContainerToken(cID,
+      SIMULATED_RM_IDENTIFIER, context.getNodeId(), user,
+      context.getContainerTokenSecretManager()));
     containerManager.startContainer(request);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cID,

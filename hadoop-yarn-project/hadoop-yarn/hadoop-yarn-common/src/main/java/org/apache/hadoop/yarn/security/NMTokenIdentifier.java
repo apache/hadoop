@@ -21,21 +21,17 @@ package org.apache.hadoop.yarn.security;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Token;
 
 @Public
 @Evolving
@@ -48,14 +44,14 @@ public class NMTokenIdentifier extends TokenIdentifier {
   private ApplicationAttemptId appAttemptId;
   private NodeId nodeId;
   private String appSubmitter;
-  private int masterKeyId;
+  private int keyId;
 
   public NMTokenIdentifier(ApplicationAttemptId appAttemptId, NodeId nodeId,
       String applicationSubmitter, int masterKeyId) {
     this.appAttemptId = appAttemptId;
     this.nodeId = nodeId;
     this.appSubmitter = applicationSubmitter;
-    this.masterKeyId = masterKeyId;
+    this.keyId = masterKeyId;
   }
   
   /**
@@ -76,8 +72,8 @@ public class NMTokenIdentifier extends TokenIdentifier {
     return appSubmitter;
   }
   
-  public int getMastKeyId() {
-    return masterKeyId;
+  public int getKeyId() {
+    return keyId;
   }
   
   @Override
@@ -89,7 +85,7 @@ public class NMTokenIdentifier extends TokenIdentifier {
     out.writeInt(appAttemptId.getAttemptId());
     out.writeUTF(this.nodeId.toString());
     out.writeUTF(this.appSubmitter);
-    out.writeInt(this.masterKeyId);
+    out.writeInt(this.keyId);
   }
 
   @Override
@@ -101,7 +97,7 @@ public class NMTokenIdentifier extends TokenIdentifier {
     String[] hostAddr = in.readUTF().split(":");
     nodeId = NodeId.newInstance(hostAddr[0], Integer.parseInt(hostAddr[1]));
     appSubmitter = in.readUTF();
-    masterKeyId = in.readInt();
+    keyId = in.readInt();
   }
 
   @Override

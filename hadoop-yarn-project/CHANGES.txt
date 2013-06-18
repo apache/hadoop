@@ -199,6 +199,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-850. Rename getClusterAvailableResources to getAvailableResources in
     AMRMClients (Jian He via bikas)
 
+    YARN-694. Starting to use NMTokens to authenticate all communication with
+    NodeManagers. (Omkar Vinit Joshi via vinodkv) 
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

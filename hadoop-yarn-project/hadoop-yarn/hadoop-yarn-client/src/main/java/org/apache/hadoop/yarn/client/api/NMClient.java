@@ -1,4 +1,5 @@
 /**
+
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,16 +22,19 @@ package org.apache.hadoop.yarn.client.api;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.api.impl.NMClientImpl;
@@ -42,19 +46,30 @@ public abstract class NMClient extends AbstractService {
 
   /**
    * Create a new instance of NMClient.
+   * @param nmTokens need to pass map of NMTokens which are received on
+   * {@link AMRMClient#allocate(float)} call as a part of
+   * {@link AllocateResponse}. 
+   * key :- NodeAddr (host:port)
+   * Value :- Token {@link NMToken#getToken()}
    */
   @Public
-  public static NMClient createNMClient() {
-    NMClient client = new NMClientImpl();
+  public static NMClient createNMClient(ConcurrentMap<String, Token> nmTokens) {
+    NMClient client = new NMClientImpl(nmTokens);
     return client;
   }
 
   /**
    * Create a new instance of NMClient.
+   * @param nmTokens need to pass map of NMTokens which are received on
+   * {@link AMRMClient#allocate(float)} call as a part of
+   * {@link AllocateResponse}. 
+   * key :- NodeAddr (host:port)
+   * Value :- Token {@link NMToken#getToken()}
    */
   @Public
-  public static NMClient createNMClient(String name) {
-    NMClient client = new NMClientImpl(name);
+  public static NMClient createNMClient(String name,
+      ConcurrentMap<String, Token> nmTokens) {
+    NMClient client = new NMClientImpl(name, nmTokens);
     return client;
   }
 
@@ -89,35 +104,33 @@ public abstract class NMClient extends AbstractService {
    *
    * @param containerId the Id of the started container
    * @param nodeId the Id of the <code>NodeManager</code>
-   * @param containerToken the security token to verify authenticity of the
-   *                       started container
+   * 
    * @throws YarnException
    * @throws IOException
    */
-  public abstract void stopContainer(ContainerId containerId, NodeId nodeId,
-      Token containerToken) throws YarnException, IOException;
+  public abstract void stopContainer(ContainerId containerId, NodeId nodeId)
+      throws YarnException, IOException;
 
   /**
    * <p>Query the status of a container.</p>
    *
    * @param containerId the Id of the started container
    * @param nodeId the Id of the <code>NodeManager</code>
-   * @param containerToken the security token to verify authenticity of the
-   *                       started container
+   * 
    * @return the status of a container
    * @throws YarnException
    * @throws IOException
    */
-  public abstract ContainerStatus getContainerStatus(ContainerId containerId, NodeId nodeId,
-      Token containerToken) throws YarnException, IOException;
+  public abstract ContainerStatus getContainerStatus(ContainerId containerId,
+      NodeId nodeId) throws YarnException, IOException;
 
   /**
    * <p>Set whether the containers that are started by this client, and are
    * still running should be stopped when the client stops. By default, the
-   * feature should be enabled.</p>
+   * feature should be enabled.</p> However, containers will be stopped only  
+   * when service is stopped. i.e. after {@link NMClient#stop()}. 
    *
    * @param enabled whether the feature is enabled or not
    */
   public abstract void cleanupRunningContainersOnStop(boolean enabled);
-
 }
