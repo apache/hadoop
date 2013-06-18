@@ -95,11 +95,6 @@ public class TestContainerLauncherImpl {
       this.rpc = rpc;
     }
     
-    @Override
-    protected YarnRPC createYarnRPC(Configuration conf) {
-      return rpc;
-    }
-    
     public void waitForPoolToIdle() throws InterruptedException {
       //I wish that we did not need the sleep, but it is here so that we are sure
       // That the other thread had time to insert the event into the queue and

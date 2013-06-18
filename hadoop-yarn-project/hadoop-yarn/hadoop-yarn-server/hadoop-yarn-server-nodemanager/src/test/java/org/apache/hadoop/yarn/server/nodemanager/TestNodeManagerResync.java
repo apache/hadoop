@@ -184,6 +184,7 @@ public class TestNodeManagerResync {
         } catch (InterruptedException e) {
         } catch (BrokenBarrierException e) {
         } catch (AssertionError ae) {
+          ae.printStackTrace();
           assertionFailedInThread.set(true);
         }
       }
@@ -228,6 +229,7 @@ public class TestNodeManagerResync {
               .setStopThreadFlag(false);
               super.setBlockNewContainerRequests(blockNewContainerRequests);
             } catch (InterruptedException e) {
+              e.printStackTrace();
             }
           }
         }
@@ -258,6 +260,7 @@ public class TestNodeManagerResync {
         } catch (InterruptedException e) {
         } catch (BrokenBarrierException e) {
         } catch (AssertionError ae) {
+          ae.printStackTrace();
           assertionFailedInThread.set(true);
         }
       }
@@ -296,6 +299,7 @@ public class TestNodeManagerResync {
               Assert.assertEquals(NMNotYetReadyException.class.getName(), e
                 .getClass().getName());
             } catch (IOException e) {
+              e.printStackTrace();
               assertionFailedInThread.set(true);
             }
           }

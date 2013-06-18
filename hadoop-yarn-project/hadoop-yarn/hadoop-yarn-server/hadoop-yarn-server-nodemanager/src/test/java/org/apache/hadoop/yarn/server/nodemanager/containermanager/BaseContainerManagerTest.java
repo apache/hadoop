@@ -30,21 +30,20 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -58,6 +57,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -150,7 +150,7 @@ public abstract class BaseContainerManagerTest {
     LOG.info("Created localDir in " + localDir.getAbsolutePath());
     LOG.info("Created tmpDir in " + tmpDir.getAbsolutePath());
 
-    String bindAddress = "0.0.0.0:5555";
+    String bindAddress = "127.0.0.1:12345";
     conf.set(YarnConfiguration.NM_ADDRESS, bindAddress);
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
@@ -173,6 +173,7 @@ public abstract class BaseContainerManagerTest {
 
   protected ContainerManagerImpl
       createContainerManager(DeletionService delSrvc) {
+    
     return new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
       metrics, new ApplicationACLsManager(conf), dirsHandler) {
       @Override
@@ -182,11 +183,24 @@ public abstract class BaseContainerManagerTest {
       }
 
       @Override
-      protected void authorizeRequest(String containerIDStr,
-          ContainerLaunchContext launchContext, UserGroupInformation remoteUgi,
-          ContainerTokenIdentifier tokenId) throws YarnException {
-        // do nothing
-      }
+        protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
+            Container container, boolean stopRequest) throws YarnException {
+          // do nothing
+        }
+      
+      @Override
+        protected void authorizeStartRequest(
+            NMTokenIdentifier nmTokenIdentifier,
+            ContainerTokenIdentifier containerTokenIdentifier,
+            UserGroupInformation ugi) throws YarnException {
+          // do nothing
+        }
+      
+      @Override
+        protected void updateNMTokenIdentifier(
+            NMTokenIdentifier nmTokenIdentifier) throws InvalidToken {
+          // Do nothing
+        }
     };
   }
 
@@ -242,7 +256,7 @@ public abstract class BaseContainerManagerTest {
       throws InterruptedException {
     // Wait for app-finish
     Application app =
-        containerManager.context.getApplications().get(appID);
+        containerManager.getContext().getApplications().get(appID);
     int timeout = 0;
     while (!(app.getApplicationState().equals(finalState))
         && timeout++ < 15) {

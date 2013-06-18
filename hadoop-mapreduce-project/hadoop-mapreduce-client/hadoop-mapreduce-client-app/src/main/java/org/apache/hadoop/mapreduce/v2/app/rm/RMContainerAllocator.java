@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -584,6 +585,14 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
     int newHeadRoom = getAvailableResources() != null ? getAvailableResources().getMemory() : 0;
     List<Container> newContainers = response.getAllocatedContainers();
+    // Setting NMTokens
+    if (response.getNMTokens() != null) {
+      for (NMToken nmToken : response.getNMTokens()) {
+        getContext().getNMTokens().put(nmToken.getNodeId().toString(),
+            nmToken.getToken());
+      }
+    }
+    
     List<ContainerStatus> finishedContainers = response.getCompletedContainersStatuses();
     if (newContainers.size() + finishedContainers.size() > 0 || headRoom != newHeadRoom) {
       //something changed

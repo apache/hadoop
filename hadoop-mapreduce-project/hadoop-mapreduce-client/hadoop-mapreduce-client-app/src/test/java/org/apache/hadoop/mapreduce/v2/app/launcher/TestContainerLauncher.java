@@ -62,12 +62,15 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy;
+import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.ContainerManagementProtocolProxyData;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.junit.Test;
 
 public class TestContainerLauncher {
@@ -342,16 +345,26 @@ public class TestContainerLauncher {
     }
 
     @Override
-    protected ContainerLauncher createContainerLauncher(AppContext context) {
+    protected ContainerLauncher
+        createContainerLauncher(final AppContext context) {
       return new ContainerLauncherImpl(context) {
+
         @Override
-        protected ContainerManagementProtocol getCMProxy(ContainerId containerID,
-            String containerManagerBindAddr, Token containerToken)
+        public ContainerManagementProtocolProxyData getCMProxy(
+            String containerMgrBindAddr, ContainerId containerId)
             throws IOException {
-          // make proxy connect to our local containerManager server
-          ContainerManagementProtocol proxy = (ContainerManagementProtocol) rpc.getProxy(
-              ContainerManagementProtocol.class,
-              NetUtils.getConnectAddress(server), conf);
+          Token dummyToken =
+              Token.newInstance("NMTokenIdentifier".getBytes(),
+                  NMTokenIdentifier.KIND.toString(), "password".getBytes(),
+                  "NMToken");
+          ContainerManagementProtocolProxy cmProxy =
+              new ContainerManagementProtocolProxy(conf, context.getNMTokens());
+          InetSocketAddress addr = NetUtils.getConnectAddress(server);
+          ContainerManagementProtocolProxyData proxy =
+              cmProxy.new ContainerManagementProtocolProxyData(
+                  YarnRPC.create(conf),
+                  addr.getHostName() + ":" + addr.getPort(), containerId,
+                  dummyToken);
           return proxy;
         }
       };

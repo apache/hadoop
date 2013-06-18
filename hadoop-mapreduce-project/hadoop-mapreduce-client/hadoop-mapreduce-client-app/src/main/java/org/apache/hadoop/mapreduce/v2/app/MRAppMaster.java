@@ -886,6 +886,8 @@ public class MRAppMaster extends CompositeService {
     private final Configuration conf;
     private final ClusterInfo clusterInfo = new ClusterInfo();
     private final ClientToAMTokenSecretManager clientToAMTokenSecretManager;
+    private final ConcurrentHashMap<String, org.apache.hadoop.yarn.api.records.Token> nmTokens =
+        new ConcurrentHashMap<String, org.apache.hadoop.yarn.api.records.Token>();
 
     public RunningAppContext(Configuration config) {
       this.conf = config;
@@ -951,6 +953,11 @@ public class MRAppMaster extends CompositeService {
     @Override
     public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
       return clientToAMTokenSecretManager;
+    }
+    
+    @Override
+    public Map<String, org.apache.hadoop.yarn.api.records.Token> getNMTokens() {
+      return this.nmTokens;
     }
   }
 

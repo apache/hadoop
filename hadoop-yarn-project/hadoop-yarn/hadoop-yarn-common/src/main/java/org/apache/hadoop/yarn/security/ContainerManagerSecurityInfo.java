@@ -55,7 +55,7 @@ public class ContainerManagerSecurityInfo extends SecurityInfo {
       @Override
       public Class<? extends TokenSelector<? extends TokenIdentifier>>
           value() {
-        return ContainerTokenSelector.class;
+        return NMTokenSelector.class;
       }
     };
 

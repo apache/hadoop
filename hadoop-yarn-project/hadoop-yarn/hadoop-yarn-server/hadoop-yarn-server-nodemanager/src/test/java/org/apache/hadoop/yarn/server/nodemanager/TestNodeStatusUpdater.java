@@ -201,7 +201,7 @@ public class TestNodeStatusUpdater {
         String user = "testUser";
         ContainerTokenIdentifier containerToken =
             BuilderUtils.newContainerTokenIdentifier(BuilderUtils
-              .newContainerToken(firstContainerID, "127.0.0.1", 1234, user,
+              .newContainerToken(firstContainerID, "localhost", 1234, user,
                 resource, currentTime + 10000, 123, "password".getBytes(),
                 currentTime));
         Container container =
@@ -232,7 +232,7 @@ public class TestNodeStatusUpdater {
         Resource resource = BuilderUtils.newResource(3, 1);
         ContainerTokenIdentifier containerToken =
             BuilderUtils.newContainerTokenIdentifier(BuilderUtils
-              .newContainerToken(secondContainerID, "127.0.0.1", 1234, user,
+              .newContainerToken(secondContainerID, "localhost", 1234, user,
                 resource, currentTime + 10000, 123,
                 "password".getBytes(), currentTime));
         Container container =
@@ -1168,8 +1168,8 @@ public class TestNodeStatusUpdater {
   private YarnConfiguration createNMConfig() {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.NM_PMEM_MB, 5*1024); // 5GB
-    conf.set(YarnConfiguration.NM_ADDRESS, "127.0.0.1:12345");
-    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "127.0.0.1:12346");
+    conf.set(YarnConfiguration.NM_ADDRESS, "localhost:12345");
+    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "localhost:12346");
     conf.set(YarnConfiguration.NM_LOG_DIRS, new Path(basedir, "logs").toUri()
         .getPath());
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, new Path(basedir,

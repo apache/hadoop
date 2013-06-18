@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
@@ -229,13 +230,16 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     StartContainerRequest startRequest =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
+    ContainerTokenIdentifier containerIdentifier =
+        new ContainerTokenIdentifier(cId, context.getNodeId().toString(), user,
+          r, System.currentTimeMillis() + 120000, 123, DUMMY_RM_IDENTIFIER);
     Token containerToken =
-        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
-          port, user, r, System.currentTimeMillis() + 10000L, 123,
-          "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
+        BuilderUtils.newContainerToken(context.getNodeId(),
+          containerManager.getContext().getContainerTokenSecretManager()
+            .createPassword(containerIdentifier), containerIdentifier);
     startRequest.setContainerToken(containerToken);
     containerManager.startContainer(startRequest);
-
+    
     int timeoutSecs = 0;
     while (!processStartFile.exists() && timeoutSecs++ < 20) {
       Thread.sleep(1000);

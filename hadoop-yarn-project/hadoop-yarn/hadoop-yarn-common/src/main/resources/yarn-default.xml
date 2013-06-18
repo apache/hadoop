@@ -659,7 +659,25 @@
     <name>yarn.client.nodemanager-client-async.thread-pool-max-size</name>
     <value>500</value>
   </property>
-
+  
+  <property>
+  	<description>
+  	  Maximum number of proxy connections for node manager. It should always be
+      more than 1. NMClient and MRAppMaster will use this to cache connection
+      with node manager. There will be at max one connection per node manager.
+      Ex. configuring it to a value of 5 will make sure that client will at
+      max have 5 connections cached with 5 different node managers. These
+      connections will be timed out if idle for more than system wide idle
+      timeout period. The token if used for authentication then it will be used
+      only at connection creation time. If new token is received then earlier
+      connection should be closed in order to use newer token. This and
+      (yarn.client.nodemanager-client-async.thread-pool-max-size) are related
+      and should be sync (no need for them to be equal).
+  	</description>
+  	<name>yarn.client.max-nodemanagers-proxies</name>
+  	<value>500</value>
+  </property>
+  
   <!--Map Reduce configuration-->
   <property>
     <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>

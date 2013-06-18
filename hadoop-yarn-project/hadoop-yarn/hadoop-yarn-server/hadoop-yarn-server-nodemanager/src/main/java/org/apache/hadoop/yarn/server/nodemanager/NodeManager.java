@@ -435,7 +435,7 @@ public class NodeManager extends CompositeService
   }
 
   @VisibleForTesting
-  Context getNMContext() {
+  public Context getNMContext() {
     return this.context;
   }
 

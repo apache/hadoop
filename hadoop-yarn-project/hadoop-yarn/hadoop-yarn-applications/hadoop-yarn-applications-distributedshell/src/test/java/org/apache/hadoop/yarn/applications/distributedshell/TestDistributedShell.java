@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.net.URL;
 
 import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,8 @@ import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.junit.AfterClass;
@@ -50,7 +53,7 @@ public class TestDistributedShell {
   protected static String APPMASTER_JAR = JarFinder.getJar(ApplicationMaster.class);
 
   @BeforeClass
-  public static void setup() throws InterruptedException, IOException {
+  public static void setup() throws InterruptedException, Exception {
     LOG.info("Starting up YARN cluster");
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, 
@@ -60,6 +63,9 @@ public class TestDistributedShell {
         TestDistributedShell.class.getSimpleName(), 1, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
+      NodeManager  nm = yarnCluster.getNodeManager(0);
+      waitForNMToRegister(nm);
+      
       URL url = Thread.currentThread().getContextClassLoader().getResource("yarn-site.xml");
       if (url == null) {
         throw new RuntimeException("Could not find 'yarn-site.xml' dummy file in classpath");
@@ -195,5 +201,14 @@ public class TestDistributedShell {
     }
   }
 
+  protected static void waitForNMToRegister(NodeManager nm)
+      throws Exception {
+    int attempt = 60;
+    ContainerManagerImpl cm =
+        ((ContainerManagerImpl) nm.getNMContext().getContainerManager());
+    while (cm.getBlockNewContainerRequestsStatus() && attempt-- > 0) {
+      Thread.sleep(2000);
+    }
+  }
 }
 
