@@ -22,9 +22,9 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.HashSet;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -68,7 +68,9 @@ public class CLI extends Configured implements Tool {
   protected Cluster cluster;
   private static final Set<String> taskTypes = new HashSet<String>(
       Arrays.asList("MAP", "REDUCE"));
-
+  private final Set<String> taskStates = new HashSet<String>(Arrays.asList(
+      "running", "completed", "pending", "failed", "killed"));
+ 
   public CLI() {
   }
   
@@ -221,7 +223,12 @@ public class CLI extends Configured implements Tool {
       taskState = argv[3];
       displayTasks = true;
       if (!taskTypes.contains(taskType.toUpperCase())) {
-        System.out.println("Error: Invalid task-type: "+taskType);
+        System.out.println("Error: Invalid task-type: " + taskType);
+        displayUsage(cmd);
+        return exitCode;
+      }
+      if (!taskStates.contains(taskState.toLowerCase())) {
+        System.out.println("Error: Invalid task-state: " + taskState);
         displayUsage(cmd);
         return exitCode;
       }
@@ -569,11 +576,11 @@ public class CLI extends Configured implements Tool {
     TaskReport[] reports = job.getTaskReports(TaskType.valueOf(type.toUpperCase()));
     for (TaskReport report : reports) {
       TIPStatus status = report.getCurrentStatus();
-      if ((state.equals("pending") && status ==TIPStatus.PENDING) ||
-          (state.equals("running") && status ==TIPStatus.RUNNING) ||
-          (state.equals("completed") && status == TIPStatus.COMPLETE) ||
-          (state.equals("failed") && status == TIPStatus.FAILED) ||
-          (state.equals("killed") && status == TIPStatus.KILLED)) {
+      if ((state.equalsIgnoreCase("pending") && status ==TIPStatus.PENDING) ||
+          (state.equalsIgnoreCase("running") && status ==TIPStatus.RUNNING) ||
+          (state.equalsIgnoreCase("completed") && status == TIPStatus.COMPLETE) ||
+          (state.equalsIgnoreCase("failed") && status == TIPStatus.FAILED) ||
+          (state.equalsIgnoreCase("killed") && status == TIPStatus.KILLED)) {
         printTaskAttempts(report);
       }
     }

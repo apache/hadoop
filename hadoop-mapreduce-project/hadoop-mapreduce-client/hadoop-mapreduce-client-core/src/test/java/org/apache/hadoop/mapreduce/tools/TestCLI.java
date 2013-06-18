@@ -58,13 +58,19 @@ public class TestCLI {
     int retCode_REDUCE = cli.run(new String[] { "-list-attempt-ids", jobIdStr,
         "REDUCE", "running" });
 
+    int retCode_completed = cli.run(new String[] { "-list-attempt-ids",
+        jobIdStr, "REDUCE", "completed" });
+
     assertEquals("MAP is a valid input,exit code should be 0", 0, retCode_MAP);
     assertEquals("map is a valid input,exit code should be 0", 0, retCode_map);
     assertEquals("REDUCE is a valid input,exit code should be 0", 0,
         retCode_REDUCE);
+    assertEquals(
+        "REDUCE and completed are a valid inputs to -list-attempt-ids,exit code should be 0",
+        0, retCode_completed);
 
     verify(job, times(2)).getTaskReports(TaskType.MAP);
-    verify(job, times(1)).getTaskReports(TaskType.REDUCE);
+    verify(job, times(2)).getTaskReports(TaskType.REDUCE);
   }
 
   @Test
@@ -79,13 +85,19 @@ public class TestCLI {
 
     int retCode_JOB_SETUP = cli.run(new String[] { "-list-attempt-ids",
         jobIdStr, "JOB_SETUP", "running" });
+
     int retCode_JOB_CLEANUP = cli.run(new String[] { "-list-attempt-ids",
         jobIdStr, "JOB_CLEANUP", "running" });
 
-    assertEquals("JOB_SETUP is a invalid input,exit code should be -1", -1,
+    int retCode_invalidTaskState = cli.run(new String[] { "-list-attempt-ids",
+        jobIdStr, "REDUCE", "complete" });
+
+    assertEquals("JOB_SETUP is an invalid input,exit code should be -1", -1,
         retCode_JOB_SETUP);
-    assertEquals("JOB_CLEANUP is a invalid input,exit code should be -1", -1,
+    assertEquals("JOB_CLEANUP is an invalid input,exit code should be -1", -1,
         retCode_JOB_CLEANUP);
+    assertEquals("complete is an invalid input,exit code should be -1", -1,
+        retCode_invalidTaskState);
 
   }
 

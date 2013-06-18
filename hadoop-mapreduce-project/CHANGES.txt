@@ -12,6 +12,9 @@ Release 2.3.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
+    task-state (Ashwin Shankar via jlowe)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1044,6 +1047,9 @@ Release 0.23.9 - UNRELEASED
 
     MAPREDUCE-4019. -list-attempt-ids is not working (Ashwin Shankar,
     Devaraj K, and B Anil Kumar via jlowe)
+
+    MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
+    task-state (Ashwin Shankar via jlowe)
 
 Release 0.23.8 - 2013-06-05
 
