@@ -225,7 +225,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * A valid value is available after a call to allocate has been made
    * @return Currently available resources
    */
-  public abstract Resource getClusterAvailableResources();
+  public abstract Resource getAvailableResources();
   
   /**
    * Get the current number of nodes in the cluster.
