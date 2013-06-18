@@ -707,6 +707,71 @@ CheckAccessEnd:
   return dwRtnCode;
 }
 
+
+//----------------------------------------------------------------------------
+// Function: FindFileOwnerAndPermissionByHandle
+//
+// Description:
+//	Find the owner, primary group and permissions of a file object given the
+//  the file object handle. The function will always follow symbolic links.
+//
+// Returns:
+//	ERROR_SUCCESS: on success
+//  Error code otherwise
+//
+// Notes:
+//  - Caller needs to destroy the memeory of owner and group names by calling
+//    LocalFree() function.
+//
+//  - If the user or group name does not exist, the user or group SID will be
+//    returned as the name.
+//
+DWORD FindFileOwnerAndPermissionByHandle(
+  __in HANDLE fileHandle,
+  __out_opt LPWSTR *pOwnerName,
+  __out_opt LPWSTR *pGroupName,
+  __out_opt PINT pMask)
+{
+  LPWSTR path = NULL;
+  DWORD cchPathLen = 0;
+  DWORD dwRtnCode = ERROR_SUCCESS;
+
+  DWORD ret = ERROR_SUCCESS;
+
+  dwRtnCode = GetFinalPathNameByHandle(fileHandle, path, cchPathLen, 0);
+  if (dwRtnCode == 0)
+  {
+    ret = GetLastError();
+    goto FindFileOwnerAndPermissionByHandleEnd;
+  }
+  cchPathLen = dwRtnCode;
+  path = (LPWSTR) LocalAlloc(LPTR, cchPathLen * sizeof(WCHAR));
+  if (path == NULL)
+  {
+    ret = GetLastError();
+    goto FindFileOwnerAndPermissionByHandleEnd;
+  }
+
+  dwRtnCode = GetFinalPathNameByHandle(fileHandle, path, cchPathLen, 0);
+  if (dwRtnCode != cchPathLen - 1)
+  {
+    ret = GetLastError();
+    goto FindFileOwnerAndPermissionByHandleEnd;
+  }
+
+  dwRtnCode = FindFileOwnerAndPermission(path, TRUE, pOwnerName, pGroupName, pMask);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    ret = dwRtnCode;
+    goto FindFileOwnerAndPermissionByHandleEnd;
+  }
+
+FindFileOwnerAndPermissionByHandleEnd:
+  LocalFree(path);
+  return ret;
+}
+
+
 //----------------------------------------------------------------------------
 // Function: FindFileOwnerAndPermission
 //
@@ -726,6 +791,7 @@ CheckAccessEnd:
 //
 DWORD FindFileOwnerAndPermission(
   __in LPCWSTR pathName,
+  __in BOOL followLink,
   __out_opt LPWSTR *pOwnerName,
   __out_opt LPWSTR *pGroupName,
   __out_opt PINT pMask)
@@ -739,6 +805,9 @@ DWORD FindFileOwnerAndPermission(
   PSID psidEveryone = NULL;
   DWORD cbSid = SECURITY_MAX_SID_SIZE;
   PACL pDacl = NULL;
+
+  BOOL isSymlink;
+  BY_HANDLE_FILE_INFORMATION fileInformation;
 
   ACCESS_MASK ownerAccessRights = 0;
   ACCESS_MASK groupAccessRights = 0;
@@ -800,6 +869,28 @@ DWORD FindFileOwnerAndPermission(
   }
 
   if (pMask == NULL) goto FindFileOwnerAndPermissionEnd;
+
+  dwRtnCode = GetFileInformationByName(pathName,
+    followLink, &fileInformation);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    ret = dwRtnCode;
+    goto FindFileOwnerAndPermissionEnd;
+  }
+
+  dwRtnCode = SymbolicLinkCheck(pathName, &isSymlink);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    ret = dwRtnCode;
+    goto FindFileOwnerAndPermissionEnd;
+  }
+
+  if (isSymlink)
+    *pMask |= UX_SYMLINK;
+  else if (IsDirFileInfo(&fileInformation))
+    *pMask |= UX_DIRECTORY;
+  else
+    *pMask |= UX_REGULAR;
 
   if ((dwRtnCode = GetEffectiveRightsForSid(pSd,
     psidOwner, &ownerAccessRights)) != ERROR_SUCCESS)

@@ -50,6 +50,7 @@
 // the NativeIO$POSIX$Stat inner class and its constructor
 static jclass stat_clazz;
 static jmethodID stat_ctor;
+static jmethodID stat_ctor2;
 
 // the NativeIOException class and its constructor
 static jclass nioe_clazz;
@@ -84,10 +85,12 @@ static int workaround_non_threadsafe_calls(JNIEnv *env, jclass clazz) {
   return result;
 }
 
-#ifdef UNIX
 static void stat_init(JNIEnv *env, jclass nativeio_class) {
+  jclass clazz = NULL;
+  jclass obj_class = NULL;
+  jmethodID  obj_ctor = NULL;
   // Init Stat
-  jclass clazz = (*env)->FindClass(env, "org/apache/hadoop/io/nativeio/NativeIO$POSIX$Stat");
+  clazz = (*env)->FindClass(env, "org/apache/hadoop/io/nativeio/NativeIO$POSIX$Stat");
   if (!clazz) {
     return; // exception has been raised
   }
@@ -100,12 +103,16 @@ static void stat_init(JNIEnv *env, jclass nativeio_class) {
   if (!stat_ctor) {
     return; // exception has been raised
   }
-
-  jclass obj_class = (*env)->FindClass(env, "java/lang/Object");
+  stat_ctor2 = (*env)->GetMethodID(env, stat_clazz, "<init>",
+    "(Ljava/lang/String;Ljava/lang/String;I)V");
+  if (!stat_ctor2) {
+    return; // exception has been raised
+  }
+  obj_class = (*env)->FindClass(env, "java/lang/Object");
   if (!obj_class) {
     return; // exception has been raised
   }
-  jmethodID  obj_ctor = (*env)->GetMethodID(env, obj_class,
+  obj_ctor = (*env)->GetMethodID(env, obj_class,
     "<init>", "()V");
   if (!obj_ctor) {
     return; // exception has been raised
@@ -130,7 +137,6 @@ static void stat_deinit(JNIEnv *env) {
     pw_lock_object = NULL;
   }
 }
-#endif
 
 static void nioe_init(JNIEnv *env) {
   // Init NativeIOException
@@ -168,10 +174,8 @@ static void nioe_deinit(JNIEnv *env) {
 JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_nativeio_NativeIO_initNative(
 	JNIEnv *env, jclass clazz) {
-#ifdef UNIX
   stat_init(env, clazz);
   PASS_EXCEPTIONS_GOTO(env, error);
-#endif
   nioe_init(env);
   PASS_EXCEPTIONS_GOTO(env, error);
   fd_init(env);
@@ -229,9 +233,44 @@ cleanup:
 #endif
 
 #ifdef WINDOWS
-  THROW(env, "java/io/IOException",
-    "The function POSIX.fstat() is not supported on Windows");
-  return NULL;
+  LPWSTR owner = NULL;
+  LPWSTR group = NULL;
+  int mode;
+  jstring jstr_owner = NULL;
+  jstring jstr_group = NULL;
+  int rc;
+  jobject ret = NULL;
+  HANDLE hFile = (HANDLE) fd_get(env, fd_object);
+  PASS_EXCEPTIONS_GOTO(env, cleanup);
+
+  rc = FindFileOwnerAndPermissionByHandle(hFile, &owner, &group, &mode);
+  if (rc != ERROR_SUCCESS) {
+    throw_ioe(env, rc);
+    goto cleanup;
+  }
+
+  jstr_owner = (*env)->NewString(env, owner, (jsize) wcslen(owner));
+  if (jstr_owner == NULL) goto cleanup;
+
+  jstr_group = (*env)->NewString(env, group, (jsize) wcslen(group));;
+  if (jstr_group == NULL) goto cleanup;
+
+  ret = (*env)->NewObject(env, stat_clazz, stat_ctor2,
+    jstr_owner, jstr_group, (jint)mode);
+
+cleanup:
+  if (ret == NULL) {
+    if (jstr_owner != NULL)
+      (*env)->ReleaseStringChars(env, jstr_owner, owner);
+
+    if (jstr_group != NULL)
+      (*env)->ReleaseStringChars(env, jstr_group, group);
+  }
+
+  LocalFree(owner);
+  LocalFree(group);
+
+  return ret;
 #endif
 }
 

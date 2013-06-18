@@ -52,7 +52,7 @@ static DWORD ChangeFileOwnerBySid(__in LPCWSTR path,
 
   // Get a pointer to the existing owner information and DACL
   //
-  dwRtnCode = FindFileOwnerAndPermission(longPathName, NULL, NULL, &oldMode);
+  dwRtnCode = FindFileOwnerAndPermission(longPathName, FALSE, NULL, NULL, &oldMode);
   if (dwRtnCode != ERROR_SUCCESS)
   {
     goto ChangeFileOwnerByNameEnd;
