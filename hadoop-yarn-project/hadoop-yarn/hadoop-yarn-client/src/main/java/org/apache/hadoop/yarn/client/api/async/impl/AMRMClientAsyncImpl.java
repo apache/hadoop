@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.api.async.impl;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -24,15 +24,12 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -44,65 +41,24 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
+import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
 
-/**
- * <code>AMRMClientAsync</code> handles communication with the ResourceManager
- * and provides asynchronous updates on events such as container allocations and
- * completions.  It contains a thread that sends periodic heartbeats to the
- * ResourceManager.
- * 
- * It should be used by implementing a CallbackHandler:
- * <pre>
- * {@code
- * class MyCallbackHandler implements AMRMClientAsync.CallbackHandler {
- *   public void onContainersAllocated(List<Container> containers) {
- *     [run tasks on the containers]
- *   }
- *   
- *   public void onContainersCompleted(List<ContainerStatus> statuses) {
- *     [update progress, check whether app is done]
- *   }
- *   
- *   public void onNodesUpdated(List<NodeReport> updated) {}
- *   
- *   public void onReboot() {}
- * }
- * }
- * </pre>
- * 
- * The client's lifecycle should be managed similarly to the following:
- * 
- * <pre>
- * {@code
- * AMRMClientAsync asyncClient = new AMRMClientAsync(appAttId, 1000, new MyCallbackhandler());
- * asyncClient.init(conf);
- * asyncClient.start();
- * RegisterApplicationMasterResponse response = asyncClient
- *    .registerApplicationMaster(appMasterHostname, appMasterRpcPort,
- *       appMasterTrackingUrl);
- * asyncClient.addContainerRequest(containerRequest);
- * [... wait for application to complete]
- * asyncClient.unregisterApplicationMaster(status, appMsg, trackingUrl);
- * asyncClient.stop();
- * }
- * </pre>
- */
+@Private
 @Unstable
-@Evolving
-public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService {
+public class AMRMClientAsyncImpl<T extends ContainerRequest> 
+extends AMRMClientAsync<T> {
   
-  private static final Log LOG = LogFactory.getLog(AMRMClientAsync.class);
+  private static final Log LOG = LogFactory.getLog(AMRMClientAsyncImpl.class);
   
-  private final AMRMClient<T> client;
-  private final AtomicInteger heartbeatIntervalMs = new AtomicInteger();
   private final HeartbeatThread heartbeatThread;
   private final CallbackHandlerThread handlerThread;
-  private final CallbackHandler handler;
 
   private final BlockingQueue<AllocateResponse> responseQueue;
   
@@ -113,19 +69,16 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
   
   private volatile Exception savedException;
   
-  public AMRMClientAsync(ApplicationAttemptId id, int intervalMs,
+  public AMRMClientAsyncImpl(ApplicationAttemptId id, int intervalMs,
       CallbackHandler callbackHandler) {
     this(new AMRMClientImpl<T>(id), intervalMs, callbackHandler);
   }
   
   @Private
   @VisibleForTesting
-  protected AMRMClientAsync(AMRMClient<T> client, int intervalMs,
+  public AMRMClientAsyncImpl(AMRMClient<T> client, int intervalMs,
       CallbackHandler callbackHandler) {
-    super(AMRMClientAsync.class.getName());
-    this.client = client;
-    this.heartbeatIntervalMs.set(intervalMs);
-    handler = callbackHandler;
+    super(client, intervalMs, callbackHandler);
     heartbeatThread = new HeartbeatThread();
     handlerThread = new CallbackHandlerThread();
     responseQueue = new LinkedBlockingQueue<AllocateResponse>();
@@ -385,39 +338,5 @@ public class AMRMClientAsync<T extends ContainerRequest> extends AbstractService
         progress = handler.getProgress();
       }
     }
-  }
-  
-  public interface CallbackHandler {
-    
-    /**
-     * Called when the ResourceManager responds to a heartbeat with completed
-     * containers. If the response contains both completed containers and
-     * allocated containers, this will be called before containersAllocated.
-     */
-    public void onContainersCompleted(List<ContainerStatus> statuses);
-    
-    /**
-     * Called when the ResourceManager responds to a heartbeat with allocated
-     * containers. If the response containers both completed containers and
-     * allocated containers, this will be called after containersCompleted.
-     */
-    public void onContainersAllocated(List<Container> containers);
-    
-    /**
-     * Called when the ResourceManager wants the ApplicationMaster to shutdown
-     * for being out of sync etc. The ApplicationMaster should not unregister
-     * with the RM unless the ApplicationMaster wants to be the last attempt.
-     */
-    public void onShutdownRequest();
-    
-    /**
-     * Called when nodes tracked by the ResourceManager have changed in health,
-     * availability etc.
-     */
-    public void onNodesUpdated(List<NodeReport> updatedNodes);
-    
-    public float getProgress();
-    
-    public void onError(Exception e);
   }
 }

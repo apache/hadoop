@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.api;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,10 +33,11 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.client.api.impl.NMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
+@InterfaceStability.Stable
 public abstract class NMClient extends AbstractService {
 
   /**

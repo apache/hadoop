@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -29,6 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -45,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -76,6 +79,8 @@ import org.apache.hadoop.yarn.util.Records;
  * {@link #stopContainer}.
  * </p>
  */
+@Private
+@Unstable
 public class NMClientImpl extends NMClient {
 
   private static final Log LOG = LogFactory.getLog(NMClientImpl.class);
@@ -86,7 +91,7 @@ public class NMClientImpl extends NMClient {
       new ConcurrentHashMap<ContainerId, StartedContainer>();
 
   //enabled by default
-  protected final AtomicBoolean cleanupRunningContainers = new AtomicBoolean(true);
+  private final AtomicBoolean cleanupRunningContainers = new AtomicBoolean(true);
 
   public NMClientImpl() {
     super(NMClientImpl.class.getName());
@@ -100,7 +105,7 @@ public class NMClientImpl extends NMClient {
   protected void serviceStop() throws Exception {
     // Usually, started-containers are stopped when this client stops. Unless
     // the flag cleanupRunningContainers is set to false.
-    if (cleanupRunningContainers.get()) {
+    if (getCleanupRunningContainers().get()) {
       cleanupRunningContainers();
     }
     super.serviceStop();
@@ -126,7 +131,7 @@ public class NMClientImpl extends NMClient {
 
   @Override
   public void cleanupRunningContainersOnStop(boolean enabled) {
-    cleanupRunningContainers.set(enabled);
+    getCleanupRunningContainers().set(enabled);
   }
 
   protected static class StartedContainer {
@@ -171,7 +176,7 @@ public class NMClientImpl extends NMClient {
     }
 
     @Override
-    protected void serviceStart() throws Exception {
+    protected synchronized void serviceStart() throws Exception {
       final YarnRPC rpc = YarnRPC.create(getConfig());
 
       final InetSocketAddress containerAddress =
@@ -199,7 +204,7 @@ public class NMClientImpl extends NMClient {
     }
 
     @Override
-    protected void serviceStop() throws Exception {
+    protected synchronized void serviceStop() throws Exception {
       if (this.containerManager != null) {
         RPC.stopProxy(this.containerManager);
 
@@ -395,6 +400,10 @@ public class NMClientImpl extends NMClient {
   protected synchronized StartedContainer getStartedContainer(
       ContainerId containerId) {
     return startedContainers.get(containerId);
+  }
+
+  public AtomicBoolean getCleanupRunningContainers() {
+    return cleanupRunningContainers;
   }
 
 }

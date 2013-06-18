@@ -23,6 +23,8 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ipc.RemoteException;
@@ -42,6 +44,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 
+@Private
+@Unstable
 public class RMAdminCLI extends Configured implements Tool {
 
   private final RecordFactory recordFactory = 
