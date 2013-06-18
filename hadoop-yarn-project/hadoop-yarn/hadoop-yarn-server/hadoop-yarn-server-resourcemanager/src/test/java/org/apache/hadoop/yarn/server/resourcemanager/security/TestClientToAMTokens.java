@@ -66,7 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMWithCustomAMLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 
@@ -255,7 +255,7 @@ public class TestClientToAMTokens {
     // Verify denial for a malicious user
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("me");
     Token<ClientToAMTokenIdentifier> token =
-        ProtoUtils.convertFromProtoFormat(clientToAMToken, am.address);
+        ConverterUtils.convertFromYarn(clientToAMToken, am.address);
 
     // Malicious user, messes with appId
     ClientToAMTokenIdentifier maliciousID =

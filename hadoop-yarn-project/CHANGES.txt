@@ -146,6 +146,9 @@ Release 2.1.0-beta - UNRELEASED
     clearly differentiated *Async apis. (Arun C Murthy and Zhijie Shen via
     vinodkv)
 
+    YARN-840. Moved ProtoUtils to yarn.api.records.pb.impl. (Jian He via
+    acmurthy) 
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

@@ -25,7 +25,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProtoOrBuilder;
 import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.util.ProtoUtils;
 
 import com.google.protobuf.ByteString;
 

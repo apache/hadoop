@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -101,7 +101,7 @@ public class TestRMDelegationTokens {
     org.apache.hadoop.yarn.api.records.Token delegationToken =
         response.getRMDelegationToken();
     Token<RMDelegationTokenIdentifier> token1 =
-        ProtoUtils.convertFromProtoFormat(delegationToken, null);
+        ConverterUtils.convertFromYarn(delegationToken, null);
     RMDelegationTokenIdentifier dtId1 = token1.decodeIdentifier();
 
     // wait for the first rollMasterKey

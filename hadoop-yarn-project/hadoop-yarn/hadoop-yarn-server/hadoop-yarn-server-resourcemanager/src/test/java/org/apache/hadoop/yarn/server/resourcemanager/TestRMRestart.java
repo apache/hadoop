@@ -65,7 +65,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -600,7 +600,7 @@ public class TestRMRestart {
     org.apache.hadoop.yarn.api.records.Token delegationToken1 =
         response1.getRMDelegationToken();
     Token<RMDelegationTokenIdentifier> token1 =
-        ProtoUtils.convertFromProtoFormat(delegationToken1, null);
+        ConverterUtils.convertFromYarn(delegationToken1, null);
     RMDelegationTokenIdentifier dtId1 = token1.decodeIdentifier();
 
     HashSet<RMDelegationTokenIdentifier> tokenIdentSet =
@@ -639,7 +639,7 @@ public class TestRMRestart {
     org.apache.hadoop.yarn.api.records.Token delegationToken2 =
         response2.getRMDelegationToken();
     Token<RMDelegationTokenIdentifier> token2 =
-        ProtoUtils.convertFromProtoFormat(delegationToken2, null);
+        ConverterUtils.convertFromYarn(delegationToken2, null);
     RMDelegationTokenIdentifier dtId2 = token2.decodeIdentifier();
 
     // cancel token2

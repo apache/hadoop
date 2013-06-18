@@ -24,9 +24,6 @@ import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.Map;
 
-import javax.crypto.SecretKey;
-
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -59,7 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * The launch of the AM itself.
@@ -138,7 +135,7 @@ public class AMLauncher implements Runnable {
         .createRemoteUser(containerId.toString());
     if (UserGroupInformation.isSecurityEnabled()) {
       Token<ContainerTokenIdentifier> token =
-          ProtoUtils.convertFromProtoFormat(masterContainer
+          ConverterUtils.convertFromYarn(masterContainer
               .getContainerToken(), containerManagerBindAddress);
       currentUser.addToken(token);
     }
