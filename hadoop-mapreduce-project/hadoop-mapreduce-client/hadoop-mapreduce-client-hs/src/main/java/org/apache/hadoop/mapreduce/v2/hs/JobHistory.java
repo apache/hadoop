@@ -44,6 +44,7 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -313,6 +314,12 @@ public class JobHistory extends AbstractService implements HistoryContext {
   @Override
   public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
     // Not implemented.
+    return null;
+  }
+  
+  @Override
+  public Map<String, Token> getNMTokens() {
+    // Not Implemented.
     return null;
   }
 }

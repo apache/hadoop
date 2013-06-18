@@ -82,12 +82,14 @@ public class NMClientAsyncImpl extends NMClientAsync {
   protected ConcurrentMap<ContainerId, StatefulContainer> containers =
       new ConcurrentHashMap<ContainerId, StatefulContainer>();
 
-  public NMClientAsyncImpl(CallbackHandler callbackHandler) {
-    this (NMClientAsyncImpl.class.getName(), callbackHandler);
+  public NMClientAsyncImpl(CallbackHandler callbackHandler,
+      ConcurrentMap<String, Token> nmTokens) {
+    this(NMClientAsync.class.getName(), callbackHandler, nmTokens);
   }
 
-  public NMClientAsyncImpl(String name, CallbackHandler callbackHandler) {
-    this (name, new NMClientImpl(), callbackHandler);
+  public NMClientAsyncImpl(String name, CallbackHandler callbackHandler,
+      ConcurrentMap<String, Token> nmTokens) {
+    this(name, new NMClientImpl(nmTokens), callbackHandler);
   }
 
   @Private
@@ -229,15 +231,14 @@ public class NMClientAsyncImpl extends NMClientAsync {
     }
   }
 
-  public void stopContainerAsync(ContainerId containerId, NodeId nodeId,
-      Token containerToken) {
+  public void stopContainerAsync(ContainerId containerId, NodeId nodeId) {
     if (containers.get(containerId) == null) {
       callbackHandler.onStopContainerError(containerId,
           RPCUtil.getRemoteException("Container " + containerId +
               " is neither started nor scheduled to start"));
     }
     try {
-      events.put(new ContainerEvent(containerId, nodeId, containerToken,
+      events.put(new ContainerEvent(containerId, nodeId, null,
           ContainerEventType.STOP_CONTAINER));
     } catch (InterruptedException e) {
       LOG.warn("Exception when scheduling the event of stopping Container " +
@@ -246,10 +247,9 @@ public class NMClientAsyncImpl extends NMClientAsync {
     }
   }
 
-  public void getContainerStatusAsync(ContainerId containerId, NodeId nodeId,
-      Token containerToken) {
+ public void getContainerStatusAsync(ContainerId containerId, NodeId nodeId) {
     try {
-      events.put(new ContainerEvent(containerId, nodeId, containerToken,
+      events.put(new ContainerEvent(containerId, nodeId, null,
           ContainerEventType.QUERY_CONTAINER));
     } catch (InterruptedException e) {
       LOG.warn("Exception when scheduling the event of querying the status" +
@@ -421,9 +421,9 @@ public class NMClientAsyncImpl extends NMClientAsync {
           StatefulContainer container, ContainerEvent event) {
         ContainerId containerId = event.getContainerId();
         try {
-          container.nmClientAsync.getClient().stopContainer(
-              containerId, event.getNodeId(), event.getContainerToken());
-          try {
+         container.nmClientAsync.getClient().stopContainer(
+              containerId, event.getNodeId());
+         try {
             container.nmClientAsync.getCallbackHandler().onContainerStopped(
                 event.getContainerId());
           } catch (Throwable thr) {
@@ -534,7 +534,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
       if (event.getType() == ContainerEventType.QUERY_CONTAINER) {
         try {
           ContainerStatus containerStatus = client.getContainerStatus(
-              containerId, event.getNodeId(), event.getContainerToken());
+              containerId, event.getNodeId());
           try {
             callbackHandler.onContainerStatusReceived(
                 containerId, containerStatus);

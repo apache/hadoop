@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -46,10 +47,12 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.NMClient;
@@ -75,7 +78,8 @@ public class TestNMClient {
   List<NodeReport> nodeReports = null;
   ApplicationAttemptId attemptId = null;
   int nodeCount = 3;
-
+  ConcurrentHashMap<String, Token> nmTokens;
+  
   @Before
   public void setup() throws YarnException, IOException {
     // start minicluster
@@ -140,6 +144,7 @@ public class TestNMClient {
     if (iterationsLeft == 0) {
       fail("Application hasn't bee started");
     }
+    nmTokens = new ConcurrentHashMap<String, Token>();
 
     // start am rm client
     rmClient =
@@ -151,7 +156,7 @@ public class TestNMClient {
     assertEquals(STATE.STARTED, rmClient.getServiceState());
 
     // start am nm client
-    nmClient = (NMClientImpl) NMClient.createNMClient();
+    nmClient = (NMClientImpl) NMClient.createNMClient(nmTokens);
     nmClient.init(conf);
     nmClient.start();
     assertNotNull(nmClient);
@@ -194,14 +199,13 @@ public class TestNMClient {
     assertEquals(0, nmClient.startedContainers.size());
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 200000)
   public void testNMClient()
       throws YarnException, IOException {
-
     rmClient.registerApplicationMaster("Host", 10000, "");
 
     testContainerManagement(nmClient, allocateContainers(rmClient, 5));
-
+    
     rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED,
         null, null);
     // stop the running containers on close
@@ -243,6 +247,11 @@ public class TestNMClient {
       for(Container container : allocResponse.getAllocatedContainers()) {
         containers.add(container);
       }
+      if (!allocResponse.getNMTokens().isEmpty()) {
+        for (NMToken token : allocResponse.getNMTokens()) {
+          nmTokens.put(token.getNodeId().toString(), token.getToken());
+        }
+      }
       if(allocatedContainerCount < containersRequestedAny) {
         // sleep to let NM's heartbeat to RM and trigger allocations
         sleep(1000);
@@ -261,8 +270,7 @@ public class TestNMClient {
       // getContainerStatus shouldn't be called before startContainer,
       // otherwise, NodeManager cannot find the container
       try {
-        nmClient.getContainerStatus(container.getId(), container.getNodeId(),
-            container.getContainerToken());
+        nmClient.getContainerStatus(container.getId(), container.getNodeId());
         fail("Exception is expected");
       } catch (YarnException e) {
         assertTrue("The thrown exception is not expected",
@@ -272,12 +280,11 @@ public class TestNMClient {
       // stopContainer shouldn't be called before startContainer,
       // otherwise, an exception will be thrown
       try {
-        nmClient.stopContainer(container.getId(), container.getNodeId(),
-            container.getContainerToken());
+        nmClient.stopContainer(container.getId(), container.getNodeId());
         fail("Exception is expected");
       } catch (YarnException e) {
         if (!e.getMessage()
-              .contains("is either not started yet or already stopped")) {
+              .contains("is not handled by this NodeManager")) {
           throw (AssertionError)
             (new AssertionError("Exception is not expected: " + e).initCause(
               e));
@@ -306,8 +313,7 @@ public class TestNMClient {
             -1000);
 
         try {
-          nmClient.stopContainer(container.getId(), container.getNodeId(),
-              container.getContainerToken());
+          nmClient.stopContainer(container.getId(), container.getNodeId());
         } catch (YarnException e) {
           throw (AssertionError)
             (new AssertionError("Exception is not expected: " + e)
@@ -335,8 +341,7 @@ public class TestNMClient {
     while (true) {
       try {
         ContainerStatus status = nmClient.getContainerStatus(
-            container.getId(), container.getNodeId(),
-                container.getContainerToken());
+            container.getId(), container.getNodeId());
         // NodeManager may still need some time to get the stable
         // container status
         if (status.getState() == state) {

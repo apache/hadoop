@@ -380,7 +380,7 @@ public class ApplicationMasterService extends AbstractService implements
       // Adding NMTokens for allocated containers.
       if (!allocation.getContainers().isEmpty()) {
         allocateResponse.setNMTokens(rmContext.getNMTokenSecretManager()
-            .getNMTokens(app.getUser(), appAttemptId,
+            .createAndGetNMTokens(app.getUser(), appAttemptId,
                 allocation.getContainers()));
       }
       return allocateResponse;

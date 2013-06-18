@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -47,10 +48,13 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
@@ -59,8 +63,11 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestContainerManager extends BaseContainerManagerTest {
@@ -72,6 +79,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
   static {
     LOG = LogFactory.getLog(TestContainerManager.class);
   }
+  
+  @Override
+  @Before
+  public void setup() throws IOException {
+    super.setup();
+  }
 
   private ContainerId createContainerId() {
     ApplicationId appId = ApplicationId.newInstance(0, 0);
@@ -79,6 +92,32 @@ public class TestContainerManager extends BaseContainerManagerTest {
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newInstance(appAttemptId, 0);
     return containerId;
+  }
+  
+  @Override
+  protected ContainerManagerImpl
+      createContainerManager(DeletionService delSrvc) {
+    return new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
+      metrics, new ApplicationACLsManager(conf), dirsHandler) {
+      @Override
+      public void
+          setBlockNewContainerRequests(boolean blockNewContainerRequests) {
+        // do nothing
+      }
+
+      @Override
+      protected UserGroupInformation getRemoteUgi() throws YarnException {
+        ApplicationId appId = ApplicationId.newInstance(0, 0);
+        ApplicationAttemptId appAttemptId =
+            ApplicationAttemptId.newInstance(appId, 1);
+        UserGroupInformation ugi =
+            UserGroupInformation.createRemoteUser(appAttemptId.toString());
+        ugi.addTokenIdentifier(new NMTokenIdentifier(appAttemptId, context
+          .getNodeId(), user, context.getNMTokenSecretManager().getCurrentKey()
+          .getKeyId()));
+        return ugi;
+      }
+    };
   }
   
   @Test
@@ -101,8 +140,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
   }
 
   @Test
-  public void testContainerSetup() throws IOException, InterruptedException,
-      YarnException {
+  public void testContainerSetup() throws Exception {
 
     containerManager.start();
 
@@ -134,16 +172,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    Resource r = BuilderUtils.newResource(512, 1);
-    int port = 12345;
-    Token containerToken =
-        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
-          port, user, r, System.currentTimeMillis() + 10000L, 123,
-          "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
     StartContainerRequest startRequest = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
-    startRequest.setContainerToken(containerToken);
+    startRequest.setContainerToken(createContainerToken(cId,
+      DUMMY_RM_IDENTIFIER, context.getNodeId(), user,
+      context.getContainerTokenSecretManager()));
 
     containerManager.startContainer(startRequest);
 
@@ -227,16 +261,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
     containerLaunchContext.setLocalResources(localResources);
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
-    Resource r = BuilderUtils.newResource(100, 1);
-    int port = 12345;
-    Token containerToken =
-        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
-          port, user, r, System.currentTimeMillis() + 10000L, 123,
-          "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
 
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
-    startRequest.setContainerToken(containerToken);
+    startRequest.setContainerToken(createContainerToken(cId,
+      DUMMY_RM_IDENTIFIER, context.getNodeId(), user,
+      context.getContainerTokenSecretManager()));
     containerManager.startContainer(startRequest);
  
     int timeoutSecs = 0;
@@ -335,15 +365,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
 	  containerLaunchContext.setLocalResources(localResources);
 	  List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
 	  containerLaunchContext.setCommands(commands);
-    Resource r = BuilderUtils.newResource(100, 1);
-    int port = 12345;
-    Token containerToken =
-        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
-          port, user, r, System.currentTimeMillis() + 10000L, 123,
-          "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
+
 	  StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
 	  startRequest.setContainerLaunchContext(containerLaunchContext);
-	  startRequest.setContainerToken(containerToken);
+    startRequest.setContainerToken(createContainerToken(cId,
+      DUMMY_RM_IDENTIFIER, context.getNodeId(), user,
+      context.getContainerTokenSecretManager()));
 	  containerManager.startContainer(startRequest);
 
 	  BaseContainerManagerTest.waitForContainerState(containerManager, cId,
@@ -423,16 +450,10 @@ public class TestContainerManager extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    Resource r = BuilderUtils.newResource(100, 1);
-    int port = 12345;
-
-    Token containerToken =
-        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
-          port, user, r, System.currentTimeMillis() + 10000L, 123,
-          "password".getBytes(), super.DUMMY_RM_IDENTIFIER);
     StartContainerRequest request = recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(containerLaunchContext);
-    request.setContainerToken(containerToken);
+    request.setContainerToken(createContainerToken(cId, DUMMY_RM_IDENTIFIER,
+      context.getNodeId(), user, context.getContainerTokenSecretManager()));
     containerManager.startContainer(request);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cId,
@@ -503,24 +524,19 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
-    String host = "127.0.0.1";
-    int port = 1234;
     ContainerId cId1 = createContainerId();
     ContainerId cId2 = createContainerId();
     containerLaunchContext
       .setLocalResources(new HashMap<String, LocalResource>());
-    Resource mockResource = BuilderUtils.newResource(1024, 1);
 
     // Construct the Container with Invalid RMIdentifier
     StartContainerRequest startRequest1 =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest1.setContainerLaunchContext(containerLaunchContext);
     
-    Token containerToken1 =
-        BuilderUtils.newContainerToken(cId1, host, port, user, mockResource,
-          System.currentTimeMillis() + 10000, 123, "password".getBytes(), 
-          (long) ResourceManagerConstants.RM_INVALID_IDENTIFIER);
-    startRequest1.setContainerToken(containerToken1);
+    startRequest1.setContainerToken(createContainerToken(cId1,
+      ResourceManagerConstants.RM_INVALID_IDENTIFIER, context.getNodeId(),
+      user, context.getContainerTokenSecretManager()));
     boolean catchException = false;
     try {
       containerManager.startContainer(startRequest1);
@@ -528,8 +544,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
       catchException = true;
       Assert.assertTrue(e.getMessage().contains(
         "Container " + cId1 + " rejected as it is allocated by a previous RM"));
-      Assert.assertEquals(InvalidContainerException.class.getName(), e
-        .getClass().getName());
+      Assert.assertTrue(e.getClass().getName()
+        .equalsIgnoreCase(InvalidContainerException.class.getName()));
     }
 
     // Verify that startContainer fail because of invalid container request
@@ -539,11 +555,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
     StartContainerRequest startRequest2 =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest2.setContainerLaunchContext(containerLaunchContext);
-    Token containerToken2 =
-        BuilderUtils.newContainerToken(cId1, host, port, user, mockResource,
-          System.currentTimeMillis() + 10000, 123, "password".getBytes(),
-          super.DUMMY_RM_IDENTIFIER);
-    startRequest2.setContainerToken(containerToken2);
+    startRequest2.setContainerToken(createContainerToken(cId2,
+      DUMMY_RM_IDENTIFIER, context.getNodeId(), user,
+      context.getContainerTokenSecretManager()));
     boolean noException = true;
     try {
       containerManager.startContainer(startRequest2);
@@ -552,5 +566,21 @@ public class TestContainerManager extends BaseContainerManagerTest {
     }
     // Verify that startContainer get no YarnException
     Assert.assertTrue(noException);
+  }
+  
+  public static Token createContainerToken(ContainerId cId, long rmIdentifier,
+      NodeId nodeId, String user,
+      NMContainerTokenSecretManager containerTokenSecretManager)
+      throws IOException {
+    Resource r = BuilderUtils.newResource(1024, 1);
+    ContainerTokenIdentifier containerTokenIdentifier =
+        new ContainerTokenIdentifier(cId, nodeId.toString(), user, r,
+          System.currentTimeMillis() + 100000L, 123, rmIdentifier);
+    Token containerToken =
+        BuilderUtils
+          .newContainerToken(nodeId, containerTokenSecretManager
+            .retrievePassword(containerTokenIdentifier),
+            containerTokenIdentifier);
+    return containerToken;
   }
 }

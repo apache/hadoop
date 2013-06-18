@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.client.api.async;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -110,16 +111,19 @@ public abstract class NMClientAsync extends AbstractService {
   protected NMClient client;
   protected CallbackHandler callbackHandler;
 
-  public static NMClientAsync createNMClientAsync(CallbackHandler callbackHandler) {
-    return new NMClientAsyncImpl(callbackHandler);
+  public static NMClientAsync createNMClientAsync(
+      CallbackHandler callbackHandler, ConcurrentMap<String, Token> nmTokens) {
+    return new NMClientAsyncImpl(callbackHandler, nmTokens);
   }
   
-  protected NMClientAsync(CallbackHandler callbackHandler) {
-    this (NMClientAsync.class.getName(), callbackHandler);
+  protected NMClientAsync(CallbackHandler callbackHandler,
+      ConcurrentMap<String, Token> nmTokens) {
+    this (NMClientAsync.class.getName(), callbackHandler, nmTokens);
   }
 
-  protected NMClientAsync(String name, CallbackHandler callbackHandler) {
-    this (name, new NMClientImpl(), callbackHandler);
+  protected NMClientAsync(String name, CallbackHandler callbackHandler,
+      ConcurrentMap<String, Token> nmTokens) {
+    this (name, new NMClientImpl(nmTokens), callbackHandler);
   }
 
   @Private
@@ -135,10 +139,10 @@ public abstract class NMClientAsync extends AbstractService {
       Container container, ContainerLaunchContext containerLaunchContext);
 
   public abstract void stopContainerAsync(
-      ContainerId containerId, NodeId nodeId, Token containerToken);
+      ContainerId containerId, NodeId nodeId);
 
   public abstract void getContainerStatusAsync(
-      ContainerId containerId, NodeId nodeId, Token containerToken);
+      ContainerId containerId, NodeId nodeId);
   
   public NMClient getClient() {
     return client;

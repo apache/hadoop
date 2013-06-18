@@ -232,10 +232,10 @@ public class TestNMClientAsync {
         actualStartSuccessArray.set(containerId.getId(), 1);
 
         // move on to the following success tests
-        asyncClient.getContainerStatusAsync(containerId, nodeId, containerToken);
+        asyncClient.getContainerStatusAsync(containerId, nodeId);
       } else {
         // move on to the following failure tests
-        asyncClient.stopContainerAsync(containerId, nodeId, containerToken);
+        asyncClient.stopContainerAsync(containerId, nodeId);
       }
 
       // Shouldn't crash the test thread
@@ -253,7 +253,7 @@ public class TestNMClientAsync {
       actualQuerySuccess.addAndGet(1);
       actualQuerySuccessArray.set(containerId.getId(), 1);
       // move on to the following success tests
-      asyncClient.stopContainerAsync(containerId, nodeId, containerToken);
+      asyncClient.stopContainerAsync(containerId, nodeId);
 
       // Shouldn't crash the test thread
       throw new RuntimeException("Ignorable Exception");
@@ -290,7 +290,7 @@ public class TestNMClientAsync {
       actualStartFailure.addAndGet(1);
       actualStartFailureArray.set(containerId.getId() - expectedSuccess, 1);
       // move on to the following failure tests
-      asyncClient.getContainerStatusAsync(containerId, nodeId, containerToken);
+      asyncClient.getContainerStatusAsync(containerId, nodeId);
 
       // Shouldn't crash the test thread
       throw new RuntimeException("Ignorable Exception");
@@ -383,33 +383,30 @@ public class TestNMClientAsync {
         when(client.startContainer(any(Container.class),
             any(ContainerLaunchContext.class))).thenReturn(
                 Collections.<String, ByteBuffer>emptyMap());
-        when(client.getContainerStatus(any(ContainerId.class), any(NodeId.class),
-            any(Token.class))).thenReturn(
+        when(client.getContainerStatus(any(ContainerId.class),
+            any(NodeId.class))).thenReturn(
                 recordFactory.newRecordInstance(ContainerStatus.class));
         doNothing().when(client).stopContainer(any(ContainerId.class),
-            any(NodeId.class), any(Token.class));
+            any(NodeId.class));
         break;
       case 1:
         doThrow(RPCUtil.getRemoteException("Start Exception")).when(client)
             .startContainer(any(Container.class),
                 any(ContainerLaunchContext.class));
         doThrow(RPCUtil.getRemoteException("Query Exception")).when(client)
-            .getContainerStatus(any(ContainerId.class), any(NodeId.class),
-                any(Token.class));
+            .getContainerStatus(any(ContainerId.class), any(NodeId.class));
         doThrow(RPCUtil.getRemoteException("Stop Exception")).when(client)
-            .stopContainer(any(ContainerId.class), any(NodeId.class),
-                any(Token.class));
+            .stopContainer(any(ContainerId.class), any(NodeId.class));
         break;
       case 2:
         when(client.startContainer(any(Container.class),
             any(ContainerLaunchContext.class))).thenReturn(
                 Collections.<String, ByteBuffer>emptyMap());
-        when(client.getContainerStatus(any(ContainerId.class), any(NodeId.class),
-            any(Token.class))).thenReturn(
+        when(client.getContainerStatus(any(ContainerId.class),
+            any(NodeId.class))).thenReturn(
                 recordFactory.newRecordInstance(ContainerStatus.class));
         doThrow(RPCUtil.getRemoteException("Stop Exception")).when(client)
-            .stopContainer(any(ContainerId.class), any(NodeId.class),
-                any(Token.class));
+            .stopContainer(any(ContainerId.class), any(NodeId.class));
     }
     return client;
   }
@@ -437,8 +434,7 @@ public class TestNMClientAsync {
     t.start();
 
     barrierA.await();
-    asyncClient.stopContainerAsync(container.getId(), container.getNodeId(),
-        container.getContainerToken());
+    asyncClient.stopContainerAsync(container.getId(), container.getNodeId());
     barrierC.await();
 
     Assert.assertFalse("Starting and stopping should be out of order",
