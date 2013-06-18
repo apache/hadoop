@@ -643,6 +643,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-795. Fair scheduler queue metrics should subtract allocated vCores from 
     available vCores. (ywskycn via tucu) 
 
+    YARN-799. Fix CgroupsLCEResourcesHandler to use /tasks instead of
+    /cgroup.procs. (Chris Riccomini via acmurthy) 
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
