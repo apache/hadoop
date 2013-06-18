@@ -203,8 +203,8 @@ extends AMRMClientAsync<T> {
    * A valid value is available after a call to allocate has been made
    * @return Currently available resources
    */
-  public Resource getClusterAvailableResources() {
-    return client.getClusterAvailableResources();
+  public Resource getAvailableResources() {
+    return client.getAvailableResources();
   }
 
   /**

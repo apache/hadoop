@@ -196,6 +196,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-841. Move Auxiliary service to yarn-api, annotate and document it.
     (vinodkv)
 
+    YARN-850. Rename getClusterAvailableResources to getAvailableResources in
+    AMRMClients (Jian He via bikas)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

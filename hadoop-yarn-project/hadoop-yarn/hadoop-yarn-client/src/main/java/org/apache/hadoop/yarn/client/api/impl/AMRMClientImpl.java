@@ -380,7 +380,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   }
   
   @Override
-  public synchronized Resource getClusterAvailableResources() {
+  public synchronized Resource getAvailableResources() {
     return clusterAvailableResources;
   }
   
