@@ -223,7 +223,12 @@ public class CLI extends Configured implements Tool {
       taskState = argv[3];
       displayTasks = true;
       if (!taskTypes.contains(taskType.toUpperCase())) {
-        System.out.println("Error: Invalid task-type: "+taskType);
+        System.out.println("Error: Invalid task-type: " + taskType);
+        displayUsage(cmd);
+        return exitCode;
+      }
+      if (!taskStates.contains(taskState.toLowerCase())) {
+        System.out.println("Error: Invalid task-state: " + taskState);
         displayUsage(cmd);
         return exitCode;
       }
@@ -572,19 +577,15 @@ public class CLI extends Configured implements Tool {
   protected void displayTasks(Job job, String type, String state) 
   throws IOException, InterruptedException {
 	  
-    if (!taskStates.contains(state)) {
-      throw new java.lang.IllegalArgumentException("Invalid state: " + state + 
-          ". Valid states for task are: pending, running, completed, failed, killed.");
-    }
     TaskReport[] reports=null;
     reports = job.getTaskReports(TaskType.valueOf(type.toUpperCase()));
     for (TaskReport report : reports) {
       TIPStatus status = report.getCurrentStatus();
-      if ((state.equals("pending") && status ==TIPStatus.PENDING) ||
-          (state.equals("running") && status ==TIPStatus.RUNNING) ||
-          (state.equals("completed") && status == TIPStatus.COMPLETE) ||
-          (state.equals("failed") && status == TIPStatus.FAILED) ||
-          (state.equals("killed") && status == TIPStatus.KILLED)) {
+      if ((state.equalsIgnoreCase("pending") && status ==TIPStatus.PENDING) ||
+          (state.equalsIgnoreCase("running") && status ==TIPStatus.RUNNING) ||
+          (state.equalsIgnoreCase("completed") && status == TIPStatus.COMPLETE) ||
+          (state.equalsIgnoreCase("failed") && status == TIPStatus.FAILED) ||
+          (state.equalsIgnoreCase("killed") && status == TIPStatus.KILLED)) {
         printTaskAttempts(report);
       }
     }

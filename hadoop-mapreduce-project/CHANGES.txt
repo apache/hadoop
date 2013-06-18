@@ -137,6 +137,33 @@ Trunk (Unreleased)
     MAPREDUCE-5191. TestQueue#testQueue fails with timeout on Windows. (Ivan
     Mitic via hitesh)
 
+Release 2.3.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
+    task-state (Ashwin Shankar via jlowe)
+
+Release 2.2.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.1.0-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1148,6 +1175,9 @@ Release 0.23.9 - UNRELEASED
 
     MAPREDUCE-4019. -list-attempt-ids is not working (Ashwin Shankar,
     Devaraj K, and B Anil Kumar via jlowe)
+
+    MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
+    task-state (Ashwin Shankar via jlowe)
 
 Release 0.23.8 - 2013-06-05
 
