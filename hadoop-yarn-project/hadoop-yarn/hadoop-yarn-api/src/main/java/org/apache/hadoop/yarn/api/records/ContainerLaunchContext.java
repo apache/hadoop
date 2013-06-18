@@ -25,6 +25,8 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
+import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -109,7 +111,19 @@ public abstract class ContainerLaunchContext {
   public abstract void setLocalResources(Map<String, LocalResource> localResources);
 
   /**
-   * Get application-specific binary <em>service data</em>.
+   * <p>
+   * Get application-specific binary <em>service data</em>. This is a map keyed
+   * by the name of each {@link AuxiliaryService} that is configured on a
+   * NodeManager and value correspond to the application specific data targeted
+   * for the keyed {@link AuxiliaryService}.
+   * </p>
+   * 
+   * <p>
+   * This will be used to initialize this application on the specific
+   * {@link AuxiliaryService} running on the NodeManager by calling
+   * {@link AuxiliaryService#initializeApplication(ApplicationInitializationContext)}
+   * </p>
+   * 
    * @return application-specific binary <em>service data</em>
    */
   @Public
@@ -117,9 +131,16 @@ public abstract class ContainerLaunchContext {
   public abstract Map<String, ByteBuffer> getServiceData();
   
   /**
-   * Set application-specific binary <em>service data</em>. All pre-existing Map
-   * entries are preserved.
-   * @param serviceData application-specific binary <em>service data</em>
+   * <p>
+   * Get application-specific binary <em>service data</em>. This is a map keyed
+   * by the name of each {@link AuxiliaryService} that is configured on a
+   * NodeManager and value correspond to the application specific data targeted
+   * for the keyed {@link AuxiliaryService}. All pre-existing Map entries are
+   * preserved.
+   * </p>
+   * 
+   * @param serviceData
+   *          application-specific binary <em>service data</em>
    */
   @Public
   @Stable

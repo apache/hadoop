@@ -491,8 +491,7 @@ public class ContainerManagerImpl extends CompositeService implements
         applicationID, containerID);
 
     StartContainerResponse response =
-        recordFactory.newRecordInstance(StartContainerResponse.class);
-    response.setAllServiceResponse(auxiliaryServices.getMeta());
+        StartContainerResponse.newInstance(auxiliaryServices.getMetaData());
     // TODO launchedContainer misplaced -> doesn't necessarily mean a container
     // launch. A finished Application will not launch containers.
     metrics.launchedContainer();

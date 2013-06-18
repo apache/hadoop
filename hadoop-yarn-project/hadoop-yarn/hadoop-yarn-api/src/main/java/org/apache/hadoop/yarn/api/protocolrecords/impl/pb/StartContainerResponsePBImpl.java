@@ -42,7 +42,7 @@ public class StartContainerResponsePBImpl extends StartContainerResponse {
   StartContainerResponseProto.Builder builder = null;
   boolean viaProto = false;
  
-  private Map<String, ByteBuffer> serviceResponse = null;
+  private Map<String, ByteBuffer> servicesMetaData = null;
 
   public StartContainerResponsePBImpl() {
     builder = StartContainerResponseProto.newBuilder();
@@ -81,8 +81,8 @@ public class StartContainerResponsePBImpl extends StartContainerResponse {
   }
 
   private synchronized void mergeLocalToBuilder() {
-    if (this.serviceResponse != null) {
-      addServiceResponseToProto();
+    if (this.servicesMetaData != null) {
+      addServicesMetaDataToProto();
     }
   }
   
@@ -112,38 +112,38 @@ public class StartContainerResponsePBImpl extends StartContainerResponse {
    
 
   @Override
-  public synchronized Map<String, ByteBuffer> getAllServiceResponse() {
-    initServiceResponse();
-    return this.serviceResponse;
+  public synchronized Map<String, ByteBuffer> getAllServicesMetaData() {
+    initServicesMetaData();
+    return this.servicesMetaData;
   }
   @Override
-  public synchronized void setAllServiceResponse(
-      Map<String, ByteBuffer> serviceResponses) {
-    if(serviceResponses == null) {
+  public synchronized void setAllServicesMetaData(
+      Map<String, ByteBuffer> servicesMetaData) {
+    if(servicesMetaData == null) {
       return;
     }
-    initServiceResponse();
-    this.serviceResponse.clear();
-    this.serviceResponse.putAll(serviceResponses);
+    initServicesMetaData();
+    this.servicesMetaData.clear();
+    this.servicesMetaData.putAll(servicesMetaData);
   }
   
-  private synchronized void initServiceResponse() {
-    if (this.serviceResponse != null) {
+  private synchronized void initServicesMetaData() {
+    if (this.servicesMetaData != null) {
       return;
     }
     StartContainerResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<StringBytesMapProto> list = p.getServiceResponseList();
-    this.serviceResponse = new HashMap<String, ByteBuffer>();
+    List<StringBytesMapProto> list = p.getServicesMetaDataList();
+    this.servicesMetaData = new HashMap<String, ByteBuffer>();
 
     for (StringBytesMapProto c : list) {
-      this.serviceResponse.put(c.getKey(), convertFromProtoFormat(c.getValue()));
+      this.servicesMetaData.put(c.getKey(), convertFromProtoFormat(c.getValue()));
     }
   }
   
-  private synchronized void addServiceResponseToProto() {
+  private synchronized void addServicesMetaDataToProto() {
     maybeInitBuilder();
-    builder.clearServiceResponse();
-    if (serviceResponse == null)
+    builder.clearServicesMetaData();
+    if (servicesMetaData == null)
       return;
     Iterable<StringBytesMapProto> iterable = new Iterable<StringBytesMapProto>() {
       
@@ -151,7 +151,7 @@ public class StartContainerResponsePBImpl extends StartContainerResponse {
       public synchronized Iterator<StringBytesMapProto> iterator() {
         return new Iterator<StringBytesMapProto>() {
           
-          Iterator<String> keyIter = serviceResponse.keySet().iterator();
+          Iterator<String> keyIter = servicesMetaData.keySet().iterator();
           
           @Override
           public synchronized void remove() {
@@ -161,7 +161,7 @@ public class StartContainerResponsePBImpl extends StartContainerResponse {
           @Override
           public synchronized StringBytesMapProto next() {
             String key = keyIter.next();
-            return StringBytesMapProto.newBuilder().setKey(key).setValue(convertToProtoFormat(serviceResponse.get(key))).build();
+            return StringBytesMapProto.newBuilder().setKey(key).setValue(convertToProtoFormat(servicesMetaData.get(key))).build();
           }
           
           @Override
@@ -171,6 +171,6 @@ public class StartContainerResponsePBImpl extends StartContainerResponse {
         };
       }
     };
-    builder.addAllServiceResponse(iterable);
+    builder.addAllServicesMetaData(iterable);
   }
 }  

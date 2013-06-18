@@ -242,7 +242,7 @@ public class NMClientImpl extends NMClient {
         LOG.warn("Container " + containerId + " failed to start", e);
         throw e;
       }
-      return startResponse.getAllServiceResponse();
+      return startResponse.getAllServicesMetaData();
     }
 
     public synchronized void stopContainer() throws YarnException,
