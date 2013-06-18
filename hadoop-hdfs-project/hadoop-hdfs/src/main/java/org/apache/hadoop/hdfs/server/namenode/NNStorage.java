@@ -842,8 +842,8 @@ public class NNStorage extends Storage implements Closeable,
     String absPath = f.getAbsolutePath();
     for (StorageDirectory sd : storageDirs) {
       String dirPath = sd.getRoot().getAbsolutePath();
-      if (!dirPath.endsWith("/")) {
-        dirPath += "/";
+      if (!dirPath.endsWith(File.separator)) {
+        dirPath += File.separator;
       }
       if (absPath.startsWith(dirPath)) {
         reportErrorsOnDirectory(sd);
