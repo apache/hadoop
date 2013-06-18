@@ -1844,7 +1844,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         URL url = (URL)resource;
         if (url != null) {
           if (!quiet) {
-            LOG.info("parsing " + url);
+            LOG.debug("parsing " + url);
           }
           doc = builder.parse(url.toString());
         }
@@ -1852,7 +1852,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         URL url = getResource((String)resource);
         if (url != null) {
           if (!quiet) {
-            LOG.info("parsing " + url);
+            LOG.debug("parsing " + url);
           }
           doc = builder.parse(url.toString());
         }
@@ -1863,7 +1863,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           .getAbsoluteFile();
         if (file.exists()) {
           if (!quiet) {
-            LOG.info("parsing " + file);
+            LOG.debug("parsing " + file);
           }
           InputStream in = new BufferedInputStream(new FileInputStream(file));
           try {
