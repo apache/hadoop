@@ -413,3 +413,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-8981. TestMetricsSystemImpl fails on Windows. (Xuan Gong, backported
     by Chris Nauroth via suresh)
+
+    HADOOP-9624. TestFSMainOperationsLocalFileSystem failed when the Hadoop test
+    root path has "X" in its name. (Xi Fang via cnauroth)
