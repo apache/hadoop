@@ -55,6 +55,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5250. Searching for ';' in JobTracker History throws 
     ArrayOutOfBoundException. (kkambatl via tucu)
 
+    HADOOP-9624. TestFSMainOperationsLocalFileSystem failed when the Hadoop test
+    root path has "X" in its name. (Xi Fang via cnauroth)
+
 Release 1.2.1 - Unreleased 
 
   INCOMPATIBLE CHANGES

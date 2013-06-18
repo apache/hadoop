@@ -66,10 +66,10 @@ public abstract class FSMainOperationsBaseTest  {
     }
   };
 
-  //A test filter with returns any path containing a "b" 
+  //A test filter with returns any path containing an "x" or "X"
   final private static PathFilter TEST_X_FILTER = new PathFilter() {
     public boolean accept(Path file) {
-      if(file.getName().contains("x") || file.toString().contains("X"))
+      if(file.getName().contains("x") || file.getName().contains("X"))
         return true;
       else
         return false;
