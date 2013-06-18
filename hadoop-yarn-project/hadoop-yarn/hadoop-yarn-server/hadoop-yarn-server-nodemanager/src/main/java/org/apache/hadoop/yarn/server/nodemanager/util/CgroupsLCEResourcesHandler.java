@@ -222,7 +222,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     StringBuilder sb = new StringBuilder("cgroups=");
 
     if (isCpuWeightEnabled()) {
-      sb.append(pathForCgroup(CONTROLLER_CPU, containerName) + "/cgroup.procs");
+      sb.append(pathForCgroup(CONTROLLER_CPU, containerName) + "/tasks");
       sb.append(",");
     }
 
