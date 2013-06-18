@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.fs;
 
+import static org.junit.Assert.fail;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -31,6 +36,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -121,5 +127,49 @@ public class TestResolveHdfsSymlink {
         .get(0));
     ((Hdfs) afs).cancelDelegationToken(
         (Token<? extends AbstractDelegationTokenIdentifier>) tokenList.get(0));
+  }
+
+  /**
+   * Verifies that attempting to resolve a non-symlink results in client
+   * exception
+   */
+  @Test
+  public void testLinkTargetNonSymlink() throws UnsupportedFileSystemException,
+      IOException {
+    FileContext fc = null;
+    Path notSymlink = new Path("/notasymlink");
+    try {
+      fc = FileContext.getFileContext(cluster.getFileSystem().getUri());
+      fc.create(notSymlink, EnumSet.of(CreateFlag.CREATE));
+      DFSClient client = new DFSClient(cluster.getFileSystem().getUri(),
+          cluster.getConfiguration(0));
+      try {
+        client.getLinkTarget(notSymlink.toString());
+        fail("Expected exception for resolving non-symlink");
+      } catch (IOException e) {
+        GenericTestUtils.assertExceptionContains("is not a symbolic link", e);
+      }
+    } finally {
+      if (fc != null) {
+        fc.delete(notSymlink, false);
+      }
+    }
+  }
+
+  /**
+   * Tests that attempting to resolve a non-existent-file
+   */
+  @Test
+  public void testLinkTargetNonExistent() throws IOException {
+    Path doesNotExist = new Path("/filethatdoesnotexist");
+    DFSClient client = new DFSClient(cluster.getFileSystem().getUri(),
+        cluster.getConfiguration(0));
+    try {
+      client.getLinkTarget(doesNotExist.toString());
+      fail("Expected exception for resolving non-existent file");
+    } catch (FileNotFoundException e) {
+      GenericTestUtils.assertExceptionContains("File does not exist: "
+          + doesNotExist.toString(), e);
+    }
   }
 }

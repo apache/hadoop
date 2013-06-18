@@ -382,6 +382,9 @@ Release 2.1.0-beta - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-4626. ClientProtocol#getLinkTarget should throw an exception for
+    non-symlink and non-existent paths.  (Andrew Wang via cmccabe)
     
     HDFS-4470. Several HDFS tests attempt file operations on invalid HDFS
     paths when running on Windows. (Chris Nauroth via suresh)
