@@ -1874,7 +1874,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private Document parse(DocumentBuilder builder, URL url)
       throws IOException, SAXException {
     if (!quietmode) {
-      LOG.info("parsing URL " + url);
+      LOG.debug("parsing URL " + url);
     }
     if (url == null) {
       return null;
@@ -1885,7 +1885,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private Document parse(DocumentBuilder builder, InputStream is,
       String systemId) throws IOException, SAXException {
     if (!quietmode) {
-      LOG.info("parsing input stream " + is);
+      LOG.debug("parsing input stream " + is);
     }
     if (is == null) {
       return null;
@@ -1958,7 +1958,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           .getAbsoluteFile();
         if (file.exists()) {
           if (!quiet) {
-            LOG.info("parsing File " + file);
+            LOG.debug("parsing File " + file);
           }
           doc = parse(builder, new BufferedInputStream(
               new FileInputStream(file)), ((Path)resource).toString());

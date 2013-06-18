@@ -300,6 +300,9 @@ public class FsShell extends Configured implements Tool {
    */
   public static void main(String argv[]) throws Exception {
     FsShell shell = newShellInstance();
+    Configuration conf = new Configuration();
+    conf.setQuietMode(false);
+    shell.setConf(conf);
     int res;
     try {
       res = ToolRunner.run(shell, argv);

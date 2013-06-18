@@ -12,6 +12,9 @@ Release 2.3.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
+    (Ashwin Shankar via jlowe)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1503,6 +1506,12 @@ Release 0.23.9 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9581. hadoop --config non-existent directory should result in error
+    (Ashwin Shankar via jlowe)
+
+    HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
+    (Ashwin Shankar via jlowe)
 
 Release 0.23.8 - 2013-06-05
 
