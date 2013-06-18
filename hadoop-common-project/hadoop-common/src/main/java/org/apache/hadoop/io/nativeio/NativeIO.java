@@ -247,7 +247,21 @@ public class NativeIO {
         this.groupId = groupId;
         this.mode = mode;
       }
-
+      
+      Stat(String owner, String group, int mode) {
+        if (!Shell.WINDOWS) {
+          this.owner = owner;
+        } else {
+          this.owner = stripDomain(owner);
+        }
+        if (!Shell.WINDOWS) {
+          this.group = group;
+        } else {
+          this.group = stripDomain(group);
+        }
+        this.mode = mode;
+      }
+      
       @Override
       public String toString() {
         return "Stat(owner='" + owner + "', group='" + group + "'" +
@@ -273,9 +287,25 @@ public class NativeIO {
      * @throws IOException thrown if there was an IO error while obtaining the file stat.
      */
     public static Stat getFstat(FileDescriptor fd) throws IOException {
-      Stat stat = fstat(fd);
-      stat.owner = getName(IdCache.USER, stat.ownerId);
-      stat.group = getName(IdCache.GROUP, stat.groupId);
+      Stat stat = null;
+      if (!Shell.WINDOWS) {
+        stat = fstat(fd); 
+        stat.owner = getName(IdCache.USER, stat.ownerId);
+        stat.group = getName(IdCache.GROUP, stat.groupId);
+      } else {
+        try {
+          stat = fstat(fd);
+        } catch (NativeIOException nioe) {
+          if (nioe.getErrorCode() == 6) {
+            throw new NativeIOException("The handle is invalid.",
+                Errno.EBADF);
+          } else {
+            LOG.warn(String.format("NativeIO.getFstat error (%d): %s",
+                nioe.getErrorCode(), nioe.getMessage()));
+            throw new NativeIOException("Unknown error", Errno.UNKNOWN);
+          }
+        }
+      }
       return stat;
     }
 
@@ -448,14 +478,27 @@ public class NativeIO {
       new ConcurrentHashMap<Long, CachedUid>();
   private static long cacheTimeout;
   private static boolean initialized = false;
+  
+  /**
+   * The Windows logon name has two part, NetBIOS domain name and
+   * user account name, of the format DOMAIN\UserName. This method
+   * will remove the domain part of the full logon name.
+   *
+   * @param the full principal name containing the domain
+   * @return name with domain removed
+   */
+  private static String stripDomain(String name) {
+    int i = name.indexOf('\\');
+    if (i != -1)
+      name = name.substring(i + 1);
+    return name;
+  }
 
   public static String getOwner(FileDescriptor fd) throws IOException {
     ensureInitialized();
     if (Shell.WINDOWS) {
       String owner = Windows.getOwner(fd);
-      int i = owner.indexOf('\\');
-      if (i != -1)
-        owner = owner.substring(i + 1);
+      owner = stripDomain(owner);
       return owner;
     } else {
       long uid = POSIX.getUIDforFDOwnerforOwner(fd);

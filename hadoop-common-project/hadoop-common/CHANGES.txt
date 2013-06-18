@@ -463,6 +463,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9599. hadoop-config.cmd doesn't set JAVA_LIBRARY_PATH correctly.
     (Mostafa Elhemali via ivanmi)
 
+    HADOOP-9637. Adding Native Fstat for Windows as needed by YARN. (Chuan Liu
+    via cnauroth)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES

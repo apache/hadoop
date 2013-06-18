@@ -253,8 +253,6 @@ int Ls(__in int argc, __in_ecount(argc) wchar_t *argv[])
 
   LARGE_INTEGER fileSize;
 
-  BOOL isSymlink = FALSE;
-
   int ret = EXIT_FAILURE;
   int optionsMask = 0;
 
@@ -290,19 +288,8 @@ int Ls(__in int argc, __in_ecount(argc) wchar_t *argv[])
     goto LsEnd;
   }
 
-  dwErrorCode = SymbolicLinkCheck(longPathName, &isSymlink);
-  if (dwErrorCode != ERROR_SUCCESS)
-  {
-     ReportErrorCode(L"IsSymbolicLink", dwErrorCode);
-     goto LsEnd;
-  }
-
-  if (isSymlink)
-    unixAccessMode |= UX_SYMLINK;
-  else if (IsDirFileInfo(&fileInformation))
-    unixAccessMode |= UX_DIRECTORY;
-
   dwErrorCode = FindFileOwnerAndPermission(longPathName,
+    optionsMask & CmdLineOptionFollowSymlink,
     &ownerName, &groupName, &unixAccessMode);
   if (dwErrorCode != ERROR_SUCCESS)
   {
