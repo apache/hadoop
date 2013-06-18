@@ -164,7 +164,7 @@ public class TestContainerLauncherImpl {
       String cmAddress = "127.0.0.1:8000";
       StartContainerResponse startResp = 
         recordFactory.newRecordInstance(StartContainerResponse.class);
-      startResp.setAllServiceResponse(serviceResponse);
+      startResp.setAllServicesMetaData(serviceResponse);
       
 
       LOG.info("inserting launch event");
@@ -230,7 +230,7 @@ public class TestContainerLauncherImpl {
       String cmAddress = "127.0.0.1:8000";
       StartContainerResponse startResp = 
         recordFactory.newRecordInstance(StartContainerResponse.class);
-      startResp.setAllServiceResponse(serviceResponse);
+      startResp.setAllServicesMetaData(serviceResponse);
 
       LOG.info("inserting cleanup event");
       ContainerLauncherEvent mockCleanupEvent = 
@@ -296,7 +296,7 @@ public class TestContainerLauncherImpl {
       String cmAddress = "127.0.0.1:8000";
       StartContainerResponse startResp =
         recordFactory.newRecordInstance(StartContainerResponse.class);
-      startResp.setAllServiceResponse(serviceResponse);
+      startResp.setAllServicesMetaData(serviceResponse);
 
       LOG.info("inserting launch event");
       ContainerRemoteLaunchEvent mockLaunchEvent =
@@ -355,7 +355,7 @@ public class TestContainerLauncherImpl {
       String cmAddress = "127.0.0.1:8000";
       StartContainerResponse startResp = 
         recordFactory.newRecordInstance(StartContainerResponse.class);
-      startResp.setAllServiceResponse(serviceResponse);
+      startResp.setAllServicesMetaData(serviceResponse);
       
      
       LOG.info("inserting launch event");
