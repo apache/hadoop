@@ -155,6 +155,9 @@ Release 2.1.0-beta - UNRELEASED
 
   BUG FIXES
 
+    HDFS-4626. ClientProtocol#getLinkTarget should throw an exception for
+    non-symlink and non-existent paths.  (Andrew Wang via cmccabe)
+
     HDFS-3934. duplicative dfs_hosts entries handled wrong. (Colin Patrick
     McCabe)
     
