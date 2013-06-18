@@ -375,6 +375,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-805. Fix javadoc and annotations on classes in the yarn-api
     package. (Jian He via sseth)
 
+    YARN-846.  Move pb Impl classes from yarn-api to yarn-common. (Jian He via
+    vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
