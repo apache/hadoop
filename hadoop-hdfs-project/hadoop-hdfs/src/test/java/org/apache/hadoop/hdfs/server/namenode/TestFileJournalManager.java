@@ -241,8 +241,8 @@ public class TestFileJournalManager {
     try {
       jm.finalizeLogSegment(0, 1);
     } finally {
-      assertTrue(storage.getRemovedStorageDirs().contains(sd));
       FileUtil.chmod(sdRootPath, "+w", true);
+      assertTrue(storage.getRemovedStorageDirs().contains(sd));
     }
   }
 
@@ -439,8 +439,12 @@ public class TestFileJournalManager {
     FileJournalManager jm = new FileJournalManager(conf, sd, storage);
     
     EditLogInputStream elis = getJournalInputStream(jm, 5, true);
-    FSEditLogOp op = elis.readOp();
-    assertEquals("read unexpected op", op.getTransactionId(), 5);
+    try {
+      FSEditLogOp op = elis.readOp();
+      assertEquals("read unexpected op", op.getTransactionId(), 5);
+    } finally {
+      IOUtils.cleanup(LOG, elis);
+    }
   }
 
   /**
@@ -463,9 +467,13 @@ public class TestFileJournalManager {
     assertEquals(100, getNumberOfTransactions(jm, 1, false, false));
     
     EditLogInputStream elis = getJournalInputStream(jm, 90, false);
-    FSEditLogOp lastReadOp = null;
-    while ((lastReadOp = elis.readOp()) != null) {
-      assertTrue(lastReadOp.getTransactionId() <= 100);
+    try {
+      FSEditLogOp lastReadOp = null;
+      while ((lastReadOp = elis.readOp()) != null) {
+        assertTrue(lastReadOp.getTransactionId() <= 100);
+      }
+    } finally {
+      IOUtils.cleanup(LOG, elis);
     }
   }
 
