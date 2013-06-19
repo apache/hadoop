@@ -39,11 +39,13 @@ import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
   private static final Log LOG = LogFactory.getLog(OnDiskMapOutput.class);
-  private final FileSystem localFS;
+  private final FileSystem fs;
   private final Path tmpOutputPath;
   private final Path outputPath;
   private final MergeManagerImpl<K, V> merger;
@@ -51,20 +53,34 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
   private long compressedSize;
 
   public OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
-                         MergeManagerImpl<K, V> merger, long size,
+                         MergeManagerImpl<K,V> merger, long size,
                          JobConf conf,
                          MapOutputFile mapOutputFile,
                          int fetcher, boolean primaryMapOutput)
-    throws IOException {
-    super(mapId, size, primaryMapOutput);
-    this.merger = merger;
-    this.localFS = FileSystem.getLocal(conf);
-    outputPath =
-        mapOutputFile.getInputFileForWrite(mapId.getTaskID(),size);
-    tmpOutputPath = outputPath.suffix(String.valueOf(fetcher));
-    
-    disk = localFS.create(tmpOutputPath);
+      throws IOException {
+    this(mapId, reduceId, merger, size, conf, mapOutputFile, fetcher,
+        primaryMapOutput, FileSystem.getLocal(conf),
+        mapOutputFile.getInputFileForWrite(mapId.getTaskID(), size));
+  }
 
+  @VisibleForTesting
+  OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
+                         MergeManagerImpl<K,V> merger, long size,
+                         JobConf conf,
+                         MapOutputFile mapOutputFile,
+                         int fetcher, boolean primaryMapOutput,
+                         FileSystem fs, Path outputPath) throws IOException {
+    super(mapId, size, primaryMapOutput);
+    this.fs = fs;
+    this.merger = merger;
+    this.outputPath = outputPath;
+    tmpOutputPath = getTempPath(outputPath, fetcher);
+    disk = fs.create(tmpOutputPath);
+  }
+
+  @VisibleForTesting
+  static Path getTempPath(Path outPath, int fetcher) {
+    return outPath.suffix(String.valueOf(fetcher));
   }
 
   @Override
@@ -114,7 +130,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
 
   @Override
   public void commit() throws IOException {
-    localFS.rename(tmpOutputPath, outputPath);
+    fs.rename(tmpOutputPath, outputPath);
     CompressAwarePath compressAwarePath = new CompressAwarePath(outputPath,
         getSize(), this.compressedSize);
     merger.closeOnDiskFile(compressAwarePath);
@@ -123,7 +139,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
   @Override
   public void abort() {
     try {
-      localFS.delete(tmpOutputPath, false);
+      fs.delete(tmpOutputPath, false);
     } catch (IOException ie) {
       LOG.info("failure to clean up " + tmpOutputPath, ie);
     }
@@ -133,4 +149,5 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
   public String getDescription() {
     return "DISK";
   }
+
 }
