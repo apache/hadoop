@@ -256,7 +256,7 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9593. stack trace printed at ERROR for all yarn clients without
     hadoop.home set (stevel)
 
-    HADOOP-8957 AbstractFileSystem#IsValidName should be overridden for
+    HADOOP-8957. AbstractFileSystem#IsValidName should be overridden for
     embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
 
     HADOOP-9607. Fixes in Javadoc build (Timothy St. Clair via cos)
@@ -268,9 +268,6 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-9638. Parallel test changes caused invalid test path for several HDFS
     tests on Windows (Andrey Klochkov via cnauroth)
-    
-    HADOOP-9532. HADOOP_CLIENT_OPTS is appended twice by Windows cmd scripts.
-    (Chris Nauroth via suresh)
 
     HADOOP-9632. TestShellCommandFencer will fail if there is a 'host' machine in
     the network. (Chuan Liu via cnauroth)
@@ -430,8 +427,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-9413. Add common utils for File#setReadable/Writable/Executable &
     File#canRead/Write/Execute that work cross-platform. (Ivan Mitic via suresh)
-    
-Release 2.0.5-beta - UNRELEASED
+
+    HADOOP-9532. HADOOP_CLIENT_OPTS is appended twice by Windows cmd scripts.
+    (Chris Nauroth via suresh)
 
     HADOOP-9043. Disallow in winutils creating symlinks with forwards slashes.
     (Chris Nauroth and Arpit Agarwal via suresh)
@@ -551,7 +549,9 @@ Release 2.0.3-alpha - 2013-02-06
 
     HADOOP-8812. ExitUtil#terminate should print Exception#toString. (eli)
 
-    HADOOP-3957. Change MutableQuantiles to use a shared thread for rolling
+    HADOOP-8736. Add Builder for building RPC server. (Brandon Li via Suresh)
+
+    HDFS-3957. Change MutableQuantiles to use a shared thread for rolling
     over metrics. (Andrew Wang via todd)
 
     HADOOP-8851. Use -XX:+HeapDumpOnOutOfMemoryError JVM option in the forked
@@ -603,6 +603,9 @@ Release 2.0.3-alpha - 2013-02-06
 
     HADOOP-9015. Standardize creation of SaslRpcServers (daryn via bobby)
 
+    HADOOP-8860. Split MapReduce and YARN sections in documentation navigation.
+    (tomwhite via tucu)
+
     HADOOP-9021. Enforce configured SASL method on the server (daryn via
     bobby)
 
@@ -612,6 +615,9 @@ Release 2.0.3-alpha - 2013-02-06
 
     HADOOP-9093. Move all the Exception in PathExceptions to o.a.h.fs package.
     (suresh)
+
+    HADOOP-9042. Add a test for umask in FileSystemContractBaseTest.
+    (Colin McCabe via eli)
 
     HADOOP-9127. Update documentation for ZooKeeper Failover Controller.
     (Daisuke Kobayashi via atm)
@@ -648,9 +654,6 @@ Release 2.0.3-alpha - 2013-02-06
     HADOOP-9231. Parametrize staging URL for the uniformity of
     distributionManagement. (Konstantin Boudnik via suresh)
 
-    HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
-    re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
-
     HADOOP-9276. Allow BoundedByteArrayOutputStream to be resettable.
     (Arun Murthy via hitesh)
 
@@ -661,9 +664,6 @@ Release 2.0.3-alpha - 2013-02-06
 
     HADOOP-8926. hadoop.util.PureJavaCrc32 cache hit-ratio is low for static
     data (Gopal V via bobby)
-
-    HADOOP-9042. Add a test for umask in FileSystemContractBaseTest.
-    (Colin McCabe via eli)
 
   BUG FIXES
 
@@ -694,7 +694,8 @@ Release 2.0.3-alpha - 2013-02-06
     HADOOP-8756. Fix SEGV when libsnappy is in java.library.path but
     not LD_LIBRARY_PATH. (Colin Patrick McCabe via eli)
 
-    HADOOP-8881. FileBasedKeyStoresFactory initialization logging should be debug not info. (tucu)
+    HADOOP-8881. FileBasedKeyStoresFactory initialization logging should
+    be debug not info. (tucu)
 
     HADOOP-8913. hadoop-metrics2.properties should give units in comment 
     for sampling period. (Sandy Ryza via suresh)
@@ -807,9 +808,6 @@ Release 2.0.3-alpha - 2013-02-06
 
     HADOOP-9289. FsShell rm -f fails for non-matching globs. (Daryn Sharp via
     suresh)
-
-    HADOOP-8958. ViewFs:Non absolute mount name failures when running 
-    multiple tests on Windows. (Chris Nauroth via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -942,8 +940,6 @@ Release 2.0.2-alpha - 2012-09-07
 
     HADOOP-8819. Incorrectly & is used instead of && in some file system 
     implementations. (Brandon Li via suresh)
-
-    HADOOP-8736. Add Builder for building RPC server. (Brandon Li via Suresh)
 
   BUG FIXES
 
@@ -1600,6 +1596,10 @@ Release 0.23.6 - 2013-02-06
   IMPROVEMENTS
     HADOOP-9217. Print thread dumps when hadoop-common tests fail.
     (Andrey Klochkov via suresh)
+
+    HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
+    re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
+
 
   OPTIMIZATIONS
 
