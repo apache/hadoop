@@ -108,6 +108,8 @@ public class Client {
   private int refCount = 1;
 
   private final int connectionTimeout;
+
+  private final boolean fallbackAllowed;
   
   final static int PING_CALL_ID = -1;
   
@@ -454,7 +456,8 @@ public class Client {
     private synchronized boolean setupSaslConnection(final InputStream in2, 
         final OutputStream out2) 
         throws IOException {
-      saslRpcClient = new SaslRpcClient(authMethod, token, serverPrincipal);
+      saslRpcClient = new SaslRpcClient(authMethod, token, serverPrincipal,
+          fallbackAllowed);
       return saslRpcClient.saslConnect(in2, out2);
     }
 
@@ -1076,6 +1079,8 @@ public class Client {
     this.socketFactory = factory;
     this.connectionTimeout = conf.getInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY,
         CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
+    this.fallbackAllowed = conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
+        CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
   }
 
   /**
