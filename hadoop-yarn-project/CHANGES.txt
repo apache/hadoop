@@ -636,6 +636,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-597. TestFSDownload fails on Windows due to dependencies on
     tar/gzip/jar tools. (Ivan Mitic via acmurthy) 
 
+    YARN-852. TestAggregatedLogFormat.testContainerLogsFileAccess fails on
+    Windows. (Chuan Liu via cnauroth)
+
     YARN-795. Fair scheduler queue metrics should subtract allocated vCores from 
     available vCores. (ywskycn via tucu) 
 
