@@ -154,6 +154,8 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5184. Document compatibility for MapReduce applications in
     hadoop-2 vis-a-vis hadoop-1. (Zhijie Shen via acmurthy)
 
+    MAPREDUCE-5194. Heed interrupts during Fetcher shutdown. (cdouglas)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
