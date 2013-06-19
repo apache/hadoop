@@ -55,6 +55,9 @@ Release 2.1.0-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-4461. DirectoryScanner: volume path prefix takes up memory for every
+    block that is scanned (Colin Patrick McCabe)
+
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
     configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
 

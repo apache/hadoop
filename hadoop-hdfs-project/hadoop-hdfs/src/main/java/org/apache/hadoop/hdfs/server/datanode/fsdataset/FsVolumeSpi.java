@@ -30,6 +30,9 @@ public interface FsVolumeSpi {
   /** @return the available storage space in bytes. */
   public long getAvailable() throws IOException;
 
+  /** @return the base path to the volume */
+  public String getBasePath();
+
   /** @return the path to the volume */
   public String getPath(String bpid) throws IOException;
 
