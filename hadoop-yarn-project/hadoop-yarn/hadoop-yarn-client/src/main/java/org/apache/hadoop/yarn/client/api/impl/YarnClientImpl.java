@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -125,12 +126,22 @@ public class YarnClientImpl extends YarnClient {
     super.serviceStop();
   }
 
-  @Override
-  public GetNewApplicationResponse getNewApplication()
+  private GetNewApplicationResponse getNewApplication()
       throws YarnException, IOException {
     GetNewApplicationRequest request =
         Records.newRecord(GetNewApplicationRequest.class);
     return rmClient.getNewApplication(request);
+  }
+
+  @Override
+  public YarnClientApplication createApplication()
+      throws YarnException, IOException {
+    ApplicationSubmissionContext context = Records.newRecord
+        (ApplicationSubmissionContext.class);
+    GetNewApplicationResponse newApp = getNewApplication();
+    ApplicationId appId = newApp.getApplicationId();
+    context.setApplicationId(appId);
+    return new YarnClientApplication(newApp, context);
   }
 
   @Override

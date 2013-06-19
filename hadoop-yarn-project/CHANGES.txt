@@ -158,6 +158,11 @@ Release 2.1.0-beta - UNRELEASED
     YARN-694. Starting to use NMTokens to authenticate all communication with
     NodeManagers. (Omkar Vinit Joshi via vinodkv) 
 
+    YARN-553. Replaced YarnClient.getNewApplication with
+    YarnClient.createApplication which provides a directly usable
+    ApplicationSubmissionContext to simplify the api. (Karthik Kambatla via
+    acmurthy) 
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
