@@ -125,6 +125,11 @@ class FsVolumeImpl implements FsVolumeSpi {
   }
 
   @Override
+  public String getBasePath() {
+    return currentDir.getParent();
+  }
+  
+  @Override
   public String getPath(String bpid) throws IOException {
     return getBlockPoolSlice(bpid).getDirectory().getAbsolutePath();
   }
