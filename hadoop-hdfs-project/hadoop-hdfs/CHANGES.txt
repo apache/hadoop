@@ -588,6 +588,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4906. HDFS Output streams should not accept writes after being
     closed. (atm)
 
+    HDFS-4917. Start-dfs.sh cannot pass the parameters correctly.
+    (Fengdong Yu via suresh)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
