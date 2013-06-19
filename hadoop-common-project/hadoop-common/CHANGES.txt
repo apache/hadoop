@@ -467,6 +467,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9637. Adding Native Fstat for Windows as needed by YARN. (Chuan Liu
     via cnauroth)
 
+    HADOOP-9264. Port change to use Java untar API on Windows from 
+    branch-1-win to trunk. (Chris Nauroth via suresh)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES

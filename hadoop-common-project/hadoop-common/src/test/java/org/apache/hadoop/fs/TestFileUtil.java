@@ -564,6 +564,176 @@ public class TestFileUtil {
   }
 
   @Test (timeout = 30000)
+  public void testSymlink() throws Exception {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    byte[] data = "testSymLink".getBytes();
+
+    File file = new File(del, FILE);
+    File link = new File(del, "_link");
+
+    //write some data to the file
+    FileOutputStream os = new FileOutputStream(file);
+    os.write(data);
+    os.close();
+
+    //create the symlink
+    FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    //ensure that symlink length is correctly reported by Java
+    Assert.assertEquals(data.length, file.length());
+    Assert.assertEquals(data.length, link.length());
+
+    //ensure that we can read from link.
+    FileInputStream in = new FileInputStream(link);
+    long len = 0;
+    while (in.read() > 0) {
+      len++;
+    }
+    in.close();
+    Assert.assertEquals(data.length, len);
+  }
+  
+  /**
+   * Test that rename on a symlink works as expected.
+   */
+  @Test (timeout = 30000)
+  public void testSymlinkRenameTo() throws Exception {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    File file = new File(del, FILE);
+    file.createNewFile();
+    File link = new File(del, "_link");
+
+    // create the symlink
+    FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    Assert.assertTrue(file.exists());
+    Assert.assertTrue(link.exists());
+
+    File link2 = new File(del, "_link2");
+
+    // Rename the symlink
+    Assert.assertTrue(link.renameTo(link2));
+
+    // Make sure the file still exists
+    // (NOTE: this would fail on Java6 on Windows if we didn't
+    // copy the file in FileUtil#symlink)
+    Assert.assertTrue(file.exists());
+
+    Assert.assertTrue(link2.exists());
+    Assert.assertFalse(link.exists());
+  }
+
+  /**
+   * Test that deletion of a symlink works as expected.
+   */
+  @Test (timeout = 30000)
+  public void testSymlinkDelete() throws Exception {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    File file = new File(del, FILE);
+    file.createNewFile();
+    File link = new File(del, "_link");
+
+    // create the symlink
+    FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    Assert.assertTrue(file.exists());
+    Assert.assertTrue(link.exists());
+
+    // make sure that deleting a symlink works properly
+    Assert.assertTrue(link.delete());
+    Assert.assertFalse(link.exists());
+    Assert.assertTrue(file.exists());
+  }
+
+  /**
+   * Test that length on a symlink works as expected.
+   */
+  @Test (timeout = 30000)
+  public void testSymlinkLength() throws Exception {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    byte[] data = "testSymLinkData".getBytes();
+
+    File file = new File(del, FILE);
+    File link = new File(del, "_link");
+
+    // write some data to the file
+    FileOutputStream os = new FileOutputStream(file);
+    os.write(data);
+    os.close();
+
+    Assert.assertEquals(0, link.length());
+
+    // create the symlink
+    FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    // ensure that File#length returns the target file and link size
+    Assert.assertEquals(data.length, file.length());
+    Assert.assertEquals(data.length, link.length());
+
+    file.delete();
+    Assert.assertFalse(file.exists());
+
+    if (Shell.WINDOWS && !Shell.isJava7OrAbove()) {
+      // On Java6 on Windows, we copied the file
+      Assert.assertEquals(data.length, link.length());
+    } else {
+      // Otherwise, the target file size is zero
+      Assert.assertEquals(0, link.length());
+    }
+
+    link.delete();
+    Assert.assertFalse(link.exists());
+  }
+
+  private void doUntarAndVerify(File tarFile, File untarDir) 
+                                 throws IOException {
+    if (untarDir.exists() && !FileUtil.fullyDelete(untarDir)) {
+      throw new IOException("Could not delete directory '" + untarDir + "'");
+    }
+    FileUtil.unTar(tarFile, untarDir);
+
+    String parentDir = untarDir.getCanonicalPath() + Path.SEPARATOR + "name";
+    File testFile = new File(parentDir + Path.SEPARATOR + "version");
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(testFile.length() == 0);
+    String imageDir = parentDir + Path.SEPARATOR + "image";
+    testFile = new File(imageDir + Path.SEPARATOR + "fsimage");
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(testFile.length() == 157);
+    String currentDir = parentDir + Path.SEPARATOR + "current";
+    testFile = new File(currentDir + Path.SEPARATOR + "fsimage");
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(testFile.length() == 4331);
+    testFile = new File(currentDir + Path.SEPARATOR + "edits");
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(testFile.length() == 1033);
+    testFile = new File(currentDir + Path.SEPARATOR + "fstime");
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(testFile.length() == 8);
+  }
+
+  @Test (timeout = 30000)
+  public void testUntar() throws IOException {
+    String tarGzFileName = System.getProperty("test.cache.data",
+        "build/test/cache") + "/test-untar.tgz";
+    String tarFileName = System.getProperty("test.cache.data",
+        "build/test/cache") + "/test-untar.tar";
+    String dataDir = System.getProperty("test.build.data", "build/test/data");
+    File untarDir = new File(dataDir, "untarDir");
+
+    doUntarAndVerify(new File(tarGzFileName), untarDir);
+    doUntarAndVerify(new File(tarFileName), untarDir);
+  }
+
+  @Test (timeout = 30000)
   public void testCreateJarWithClassPath() throws Exception {
     // setup test directory for files
     Assert.assertFalse(tmp.exists());
