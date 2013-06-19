@@ -1034,6 +1034,9 @@ Release 0.23.9 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5084. fix coverage org.apache.hadoop.mapreduce.v2.app.webapp and
+    org.apache.hadoop.mapreduce.v2.hs.webapp (Aleksey Gorshkov via jeagles)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5268. Improve history server startup performance (Karthik
