@@ -41,7 +41,6 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -49,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -59,7 +59,7 @@ public class ResourceMgrDelegate extends YarnClient {
   private static final Log LOG = LogFactory.getLog(ResourceMgrDelegate.class);
       
   private YarnConfiguration conf;
-  private GetNewApplicationResponse application;
+  private ApplicationSubmissionContext application;
   private ApplicationId applicationId;
   @Private
   @VisibleForTesting
@@ -178,7 +178,7 @@ public class ResourceMgrDelegate extends YarnClient {
 
   public JobID getNewJobID() throws IOException, InterruptedException {
     try {
-      this.application = client.getNewApplication();
+      this.application = client.createApplication().getApplicationSubmissionContext();
       this.applicationId = this.application.getApplicationId();
       return TypeConverter.fromYarn(applicationId);
     } catch (YarnException e) {
@@ -272,9 +272,9 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
-  public GetNewApplicationResponse getNewApplication() throws YarnException,
-      IOException {
-    return client.getNewApplication();
+  public YarnClientApplication createApplication() throws
+      YarnException, IOException {
+    return client.createApplication();
   }
 
   @Override
