@@ -86,6 +86,8 @@ public class Client {
 
   private SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
+
+  private final boolean fallbackAllowed;
   
   final static int PING_CALL_ID = -1;
   
@@ -402,7 +404,8 @@ public class Client {
     private synchronized boolean setupSaslConnection(final InputStream in2, 
         final OutputStream out2) 
         throws IOException {
-      saslRpcClient = new SaslRpcClient(authMethod, token, serverPrincipal);
+      saslRpcClient = new SaslRpcClient(authMethod, token, serverPrincipal,
+          fallbackAllowed);
       return saslRpcClient.saslConnect(in2, out2);
     }
 
@@ -950,6 +953,9 @@ public class Client {
     this.valueClass = valueClass;
     this.conf = conf;
     this.socketFactory = factory;
+    this.fallbackAllowed = conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
+        CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
+
   }
 
   /**
