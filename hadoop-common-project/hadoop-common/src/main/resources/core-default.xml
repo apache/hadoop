@@ -1196,4 +1196,17 @@
   </description>
 </property>
 
+<property>
+  <name>ipc.client.fallback-to-simple-auth-allowed</name>
+  <value>false</value>
+  <description>
+    When a client is configured to attempt a secure connection, but attempts to
+    connect to an insecure server, that server may instruct the client to
+    switch to SASL SIMPLE (unsecure) authentication. This setting controls
+    whether or not the client will accept this instruction from the server.
+    When false (the default), the client will not allow the fallback to SIMPLE
+    authentication, and will abort the connection.
+  </description>
+</property>
+
 </configuration>
