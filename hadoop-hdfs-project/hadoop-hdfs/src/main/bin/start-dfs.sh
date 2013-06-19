@@ -47,7 +47,7 @@ if [ $# -ge 1 ]; then
 fi
 
 #Add other possible options
-nameStartOpt="$nameStartOpts $@"
+nameStartOpt="$nameStartOpt $@"
 
 #---------------------------------------------------------
 # namenodes
