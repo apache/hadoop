@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -217,7 +218,6 @@ public class Client {
 
   /**
    * Helper function to print out usage
-   * @param opts Parsed command line options 
    */
   private void printUsage() {
     new HelpFormatter().printHelp("Client", opts);
@@ -351,16 +351,15 @@ public class Client {
       }
     }		
 
-    // Get a new application id 
-    GetNewApplicationResponse newApp = yarnClient.getNewApplication();
-    ApplicationId appId = newApp.getApplicationId();
-
+    // Get a new application id
+    YarnClientApplication app = yarnClient.createApplication();
+    GetNewApplicationResponse appResponse = app.getNewApplicationResponse();
     // TODO get min/max resource capabilities from RM and change memory ask if needed
     // If we do not have min/max, we may not be able to correctly request 
     // the required resources from the RM for the app master
     // Memory ask has to be a multiple of min and less than max. 
     // Dump out information about cluster capability as seen by the resource manager
-    int maxMem = newApp.getMaximumResourceCapability().getMemory();
+    int maxMem = appResponse.getMaximumResourceCapability().getMemory();
     LOG.info("Max mem capabililty of resources in this cluster " + maxMem);
 
     // A resource ask cannot exceed the max. 
@@ -371,13 +370,9 @@ public class Client {
       amMemory = maxMem;
     }				
 
-    // Create launch context for app master
-    LOG.info("Setting up application submission context for ASM");
-    ApplicationSubmissionContext appContext = Records.newRecord(ApplicationSubmissionContext.class);
-
-    // set the application id 
-    appContext.setApplicationId(appId);
     // set the application name
+    ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
+    ApplicationId appId = appContext.getApplicationId();
     appContext.setApplicationName(appName);
 
     // Set up the container launch context for the application master

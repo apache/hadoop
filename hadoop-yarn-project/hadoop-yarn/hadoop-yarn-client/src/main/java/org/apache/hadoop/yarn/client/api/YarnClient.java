@@ -28,7 +28,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -79,27 +78,18 @@ public abstract class YarnClient extends AbstractService {
 
   /**
    * <p>
-   * Obtain a new {@link ApplicationId} for submitting new applications.
+   * Obtain a {@link YarnClientApplication} for a new application,
+   * which in turn contains the {@link ApplicationSubmissionContext} and
+   * {@link org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse}
+   * objects.
    * </p>
-   * 
-   * <p>
-   * Returns a response which contains {@link ApplicationId} that can be used to
-   * submit a new application. See
-   * {@link #submitApplication(ApplicationSubmissionContext)}.
-   * </p>
-   * 
-   * <p>
-   * See {@link GetNewApplicationResponse} for other information that is
-   * returned.
-   * </p>
-   * 
-   * @return response containing the new <code>ApplicationId</code> to be used
-   *         to submit an application
+   *
+   * @return {@link YarnClientApplication} built for a new application
    * @throws YarnException
    * @throws IOException
    */
-  public abstract GetNewApplicationResponse getNewApplication() throws YarnException,
-      IOException;
+  public abstract YarnClientApplication createApplication()
+      throws YarnException, IOException;
 
   /**
    * <p>
@@ -114,7 +104,7 @@ public abstract class YarnClient extends AbstractService {
    * @return {@link ApplicationId} of the accepted application
    * @throws YarnException
    * @throws IOException
-   * @see #getNewApplication()
+   * @see #createApplication()
    */
   public abstract ApplicationId submitApplication(ApplicationSubmissionContext appContext)
       throws YarnException, IOException;

@@ -274,17 +274,12 @@ public class UnmanagedAMLauncher {
     // Connect to ResourceManager
     rmClient.start();
     try {  
-      // Get a new application id
-      GetNewApplicationResponse newApp = rmClient.getNewApplication();
-      ApplicationId appId = newApp.getApplicationId();
-  
       // Create launch context for app master
       LOG.info("Setting up application submission context for ASM");
-      ApplicationSubmissionContext appContext = Records
-          .newRecord(ApplicationSubmissionContext.class);
-  
-      // set the application id
-      appContext.setApplicationId(appId);
+      ApplicationSubmissionContext appContext = rmClient.createApplication()
+          .getApplicationSubmissionContext();
+      ApplicationId appId = appContext.getApplicationId();
+
       // set the application name
       appContext.setApplicationName(appName);
   
