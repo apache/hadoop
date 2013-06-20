@@ -150,7 +150,7 @@ public abstract class BaseContainerManagerTest {
     LOG.info("Created localDir in " + localDir.getAbsolutePath());
     LOG.info("Created tmpDir in " + tmpDir.getAbsolutePath());
 
-    String bindAddress = "127.0.0.1:12345";
+    String bindAddress = "0.0.0.0:12345";
     conf.set(YarnConfiguration.NM_ADDRESS, bindAddress);
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
