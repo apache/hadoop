@@ -211,6 +211,7 @@ public class RegisterApplicationMasterResponsePBImpl extends
   @Override
   public void setClientToAMTokenMasterKey(ByteBuffer key) {
     if (key == null) {
+      builder.clearClientToAmTokenMasterKey();
       return;
     }
     maybeInitBuilder();
@@ -219,6 +220,7 @@ public class RegisterApplicationMasterResponsePBImpl extends
   
   @Override
   public ByteBuffer getClientToAMTokenMasterKey() {
+    maybeInitBuilder();
     ByteBuffer key =
         ByteBuffer.wrap(builder.getClientToAmTokenMasterKey().toByteArray());
     return key;
