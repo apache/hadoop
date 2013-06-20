@@ -150,7 +150,7 @@ public class BlockReaderTestUtil {
     sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
 
     return BlockReaderFactory.newBlockReader(
-      conf,
+      new DFSClient.Conf(conf),
       targetAddr.toString()+ ":" + block.getBlockId(), block,
       testBlock.getBlockToken(), 
       offset, lenToRead,

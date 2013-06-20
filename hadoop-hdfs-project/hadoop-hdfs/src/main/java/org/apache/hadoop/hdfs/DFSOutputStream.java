@@ -1288,7 +1288,8 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
    */
   static Socket createSocketForPipeline(final DatanodeInfo first,
       final int length, final DFSClient client) throws IOException {
-    final String dnAddr = first.getXferAddr(client.connectToDnViaHostname());
+    final String dnAddr = first.getXferAddr(
+        client.getConf().connectToDnViaHostname);
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("Connecting to datanode " + dnAddr);
     }
@@ -1813,8 +1814,8 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     if (closed) {
       return;
     }
-    streamer.setLastException(new IOException("Lease timeout of " +
-                             (dfsClient.hdfsTimeout/1000) + " seconds expired."));
+    streamer.setLastException(new IOException("Lease timeout of "
+        + (dfsClient.getHdfsTimeout()/1000) + " seconds expired."));
     closeThreads(true);
     dfsClient.endFileLease(src);
   }
@@ -1884,13 +1885,13 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     while (!fileComplete) {
       fileComplete = dfsClient.namenode.complete(src, dfsClient.clientName, last);
       if (!fileComplete) {
+        final int hdfsTimeout = dfsClient.getHdfsTimeout();
         if (!dfsClient.clientRunning ||
-              (dfsClient.hdfsTimeout > 0 &&
-               localstart + dfsClient.hdfsTimeout < Time.now())) {
+              (hdfsTimeout > 0 && localstart + hdfsTimeout < Time.now())) {
             String msg = "Unable to close file because dfsclient " +
                           " was unable to contact the HDFS servers." +
                           " clientRunning " + dfsClient.clientRunning +
-                          " hdfsTimeout " + dfsClient.hdfsTimeout;
+                          " hdfsTimeout " + hdfsTimeout;
             DFSClient.LOG.info(msg);
             throw new IOException(msg);
         }
