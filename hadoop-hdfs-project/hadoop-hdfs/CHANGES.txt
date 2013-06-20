@@ -20,6 +20,8 @@ Release 2.2.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-4908. Reduce snapshot inode memory usage.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

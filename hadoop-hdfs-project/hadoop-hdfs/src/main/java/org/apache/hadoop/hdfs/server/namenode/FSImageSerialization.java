@@ -84,7 +84,7 @@ public class FSImageSerialization {
     final FsPermission FILE_PERM = new FsPermission((short) 0);
   }
 
-  private static void writePermissionStatus(INodeWithAdditionalFields inode,
+  private static void writePermissionStatus(INodeAttributes inode,
       DataOutput out) throws IOException {
     final FsPermission p = TL_DATA.get().FILE_PERM;
     p.fromShort(inode.getFsPermissionShort());
@@ -205,6 +205,18 @@ public class FSImageSerialization {
     writePermissionStatus(file, out);
   }
 
+  /** Serialize an {@link INodeFileAttributes}. */
+  public static void writeINodeFileAttributes(INodeFileAttributes file,
+      DataOutput out) throws IOException {
+    writeLocalName(file, out);
+    writePermissionStatus(file, out);
+    out.writeLong(file.getModificationTime());
+    out.writeLong(file.getAccessTime());
+
+    out.writeShort(file.getFileReplication());
+    out.writeLong(file.getPreferredBlockSize());
+  }
+
   /**
    * Serialize a {@link INodeDirectory}
    * @param node The node to write
@@ -232,6 +244,21 @@ public class FSImageSerialization {
     writePermissionStatus(node, out);
   }
   
+  /**
+   * Serialize a {@link INodeDirectory}
+   * @param a The node to write
+   * @param out The {@link DataOutput} where the fields are written 
+   */
+  public static void writeINodeDirectoryAttributes(
+      INodeDirectoryAttributes a, DataOutput out) throws IOException {
+    writeLocalName(a, out);
+    writePermissionStatus(a, out);
+    out.writeLong(a.getModificationTime());
+
+    out.writeLong(a.getNsQuota());
+    out.writeLong(a.getDsQuota());
+  }
+
   /**
    * Serialize a {@link INodeSymlink} node
    * @param node The node to write
@@ -384,7 +411,7 @@ public class FSImageSerialization {
     return createdNodeName;
   }
 
-  private static void writeLocalName(INode inode, DataOutput out)
+  private static void writeLocalName(INodeAttributes inode, DataOutput out)
       throws IOException {
     final byte[] name = inode.getLocalNameBytes();
     out.writeShort(name.length);

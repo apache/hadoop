@@ -694,6 +694,50 @@ public class FSImageFormat {
     throw new IOException("Unknown inode type: numBlocks=" + numBlocks);
   }
 
+    /** Load {@link INodeFileAttributes}. */
+    public INodeFileAttributes loadINodeFileAttributes(DataInput in)
+        throws IOException {
+      final int layoutVersion = getLayoutVersion();
+      
+      if (!LayoutVersion.supports(Feature.OPTIMIZE_SNAPSHOT_INODES, layoutVersion)) {
+        return loadINodeWithLocalName(true, in, false).asFile();
+      }
+  
+      final byte[] name = FSImageSerialization.readLocalName(in);
+      final PermissionStatus permissions = PermissionStatus.read(in);
+      final long modificationTime = in.readLong();
+      final long accessTime = in.readLong();
+  
+      final short replication = namesystem.getBlockManager().adjustReplication(
+          in.readShort());
+      final long preferredBlockSize = in.readLong();
+      
+      return new INodeFileAttributes.SnapshotCopy(name, permissions, modificationTime,
+          accessTime, replication, preferredBlockSize);
+    }
+
+    public INodeDirectoryAttributes loadINodeDirectoryAttributes(DataInput in)
+        throws IOException {
+      final int layoutVersion = getLayoutVersion();
+      
+      if (!LayoutVersion.supports(Feature.OPTIMIZE_SNAPSHOT_INODES, layoutVersion)) {
+        return loadINodeWithLocalName(true, in, false).asDirectory();
+      }
+  
+      final byte[] name = FSImageSerialization.readLocalName(in);
+      final PermissionStatus permissions = PermissionStatus.read(in);
+      final long modificationTime = in.readLong();
+      
+      //read quotas
+      final long nsQuota = in.readLong();
+      final long dsQuota = in.readLong();
+  
+      return nsQuota == -1L && dsQuota == -1L?
+          new INodeDirectoryAttributes.SnapshotCopy(name, permissions, modificationTime)
+        : new INodeDirectoryAttributes.CopyWithQuota(name, permissions,
+            modificationTime, nsQuota, dsQuota);
+    }
+  
     private void loadFilesUnderConstruction(DataInput in,
         boolean supportSnapshot) throws IOException {
       FSDirectory fsDir = namesystem.dir;
