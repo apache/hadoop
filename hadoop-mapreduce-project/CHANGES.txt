@@ -388,6 +388,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-4019. -list-attempt-ids is not working (Ashwin Shankar,
     Devaraj K, and B Anil Kumar via jlowe)
 
+    MAPREDUCE-5334. Fix failing unit tests - TestContainerLauncher,
+    TestContainerLauncherImpl. (Vinod Kumar Vavilapalli via sseth)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
