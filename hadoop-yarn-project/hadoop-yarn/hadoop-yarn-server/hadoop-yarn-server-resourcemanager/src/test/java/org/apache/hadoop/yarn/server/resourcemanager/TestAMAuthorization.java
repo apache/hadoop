@@ -168,6 +168,9 @@ public class TestAMAuthorization {
     request.setApplicationAttemptId(applicationAttemptId);
     RegisterApplicationMasterResponse response =
         client.registerApplicationMaster(request);
+    Assert.assertNotNull(response.getClientToAMTokenMasterKey());
+    Assert
+        .assertTrue(response.getClientToAMTokenMasterKey().array().length > 0);
     Assert.assertEquals("Register response has bad ACLs", "*",
         response.getApplicationACLs().get(ApplicationAccessType.VIEW_APP));
 
@@ -216,6 +219,7 @@ public class TestAMAuthorization {
                 serviceAddr, conf);
           }
         });
+    
     RegisterApplicationMasterRequest request = Records
         .newRecord(RegisterApplicationMasterRequest.class);
     request.setApplicationAttemptId(applicationAttemptId);

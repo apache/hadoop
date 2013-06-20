@@ -64,7 +64,6 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHe
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceStatusType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
@@ -141,12 +140,7 @@ public class ContainerLocalizer {
     // create localizer context
     UserGroupInformation remoteUser =
       UserGroupInformation.createRemoteUser(user);
-    LocalizerTokenSecretManager secretManager =
-      new LocalizerTokenSecretManager();
-    LocalizerTokenIdentifier id = secretManager.createIdentifier();
-    Token<LocalizerTokenIdentifier> localizerToken =
-      new Token<LocalizerTokenIdentifier>(id, secretManager);
-    remoteUser.addToken(localizerToken);
+    remoteUser.addToken(creds.getToken(LocalizerTokenIdentifier.KIND));
     final LocalizationProtocol nodeManager =
         remoteUser.doAs(new PrivilegedAction<LocalizationProtocol>() {
           @Override
