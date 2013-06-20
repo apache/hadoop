@@ -154,6 +154,8 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-3009. Remove duplicate code in DFSClient#isLocalAddress by using 
     NetUtils. (Hari Mankude via suresh)
 
+    HDFS-4914. Use DFSClient.Conf instead of Configuration.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
