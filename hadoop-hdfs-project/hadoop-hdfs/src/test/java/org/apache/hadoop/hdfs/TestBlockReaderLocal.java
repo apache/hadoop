@@ -130,7 +130,7 @@ public class TestBlockReaderLocal {
       test.setup(dataFile, checksum);
       dataIn = new FileInputStream(dataFile);
       checkIn = new FileInputStream(metaFile);
-      blockReaderLocal = new BlockReaderLocal(conf,
+      blockReaderLocal = new BlockReaderLocal(new DFSClient.Conf(conf),
           TEST_PATH.getName(), block, 0, -1,
           dataIn, checkIn, datanodeID, checksum, null);
       dataIn = null;

@@ -44,6 +44,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -198,7 +199,8 @@ public class JspHelper {
   public static void streamBlockInAscii(InetSocketAddress addr, String poolId,
       long blockId, Token<BlockTokenIdentifier> blockToken, long genStamp,
       long blockSize, long offsetIntoBlock, long chunkSizeToView,
-      JspWriter out, Configuration conf, DataEncryptionKey encryptionKey)
+      JspWriter out, Configuration conf, DFSClient.Conf dfsConf,
+      DataEncryptionKey encryptionKey)
           throws IOException {
     if (chunkSizeToView == 0) return;
     Socket s = NetUtils.getDefaultSocketFactory(conf).createSocket();
@@ -209,8 +211,7 @@ public class JspHelper {
       
       // Use the block name for file name. 
     String file = BlockReaderFactory.getFileName(addr, poolId, blockId);
-    BlockReader blockReader = BlockReaderFactory.newBlockReader(
-        conf, file,
+    BlockReader blockReader = BlockReaderFactory.newBlockReader(dfsConf, file,
         new ExtendedBlock(poolId, blockId, 0, genStamp), blockToken,
         offsetIntoBlock, amtToRead,  true,
         "JspHelper", TcpPeerServer.peerFromSocketAndKey(s, encryptionKey),
@@ -218,7 +219,7 @@ public class JspHelper {
             addr.getHostName(), poolId, addr.getPort(), 0, 0), null,
             null, null, false);
         
-    byte[] buf = new byte[(int)amtToRead];
+    final byte[] buf = new byte[amtToRead];
     int readOffset = 0;
     int retries = 2;
     while ( amtToRead > 0 ) {

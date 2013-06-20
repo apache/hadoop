@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -40,7 +39,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 
@@ -75,9 +73,7 @@ public class BlockReaderFactory {
    *                                     should be allowed.
    * @return New BlockReader instance
    */
-  @SuppressWarnings("deprecation")
-  public static BlockReader newBlockReader(
-                                     Configuration conf,
+  public static BlockReader newBlockReader(DFSClient.Conf conf,
                                      String file,
                                      ExtendedBlock block, 
                                      Token<BlockTokenIdentifier> blockToken,
@@ -91,14 +87,11 @@ public class BlockReaderFactory {
                                      FileInputStreamCache fisCache,
                                      boolean allowShortCircuitLocalReads)
   throws IOException {
-    peer.setReadTimeout(conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
-        HdfsServerConstants.READ_TIMEOUT));
+    peer.setReadTimeout(conf.socketTimeout);
     peer.setWriteTimeout(HdfsServerConstants.WRITE_TIMEOUT);
 
     if (peer.getDomainSocket() != null) {
-      if (allowShortCircuitLocalReads &&
-         (!conf.getBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL,
-            DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT))) {
+      if (allowShortCircuitLocalReads && !conf.useLegacyBlockReaderLocal) {
         // If this is a domain socket, and short-circuit local reads are 
         // enabled, try to set up a BlockReaderLocal.
         BlockReader reader = newShortCircuitBlockReader(conf, file,
@@ -118,21 +111,19 @@ public class BlockReaderFactory {
       // If this is a domain socket and we couldn't (or didn't want to) set
       // up a BlockReaderLocal, check that we are allowed to pass data traffic
       // over the socket before proceeding.
-      if (!conf.getBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
-            DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT)) {
+      if (!conf.domainSocketDataTraffic) {
         throw new IOException("Because we can't do short-circuit access, " +
           "and data traffic over domain sockets is disabled, " +
           "we cannot use this socket to talk to " + datanodeID);
       }
     }
 
-    if (conf.getBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER,
-        DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT)) {
-      return RemoteBlockReader.newBlockReader(file,
-          block, blockToken, startOffset, len,
-          conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
-              DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT),
+    if (conf.useLegacyBlockReader) {
+      @SuppressWarnings("deprecation")
+      RemoteBlockReader reader = RemoteBlockReader.newBlockReader(file,
+          block, blockToken, startOffset, len, conf.ioBufferSize,
           verifyChecksum, clientName, peer, datanodeID, peerCache);
+      return reader;
     } else {
       return RemoteBlockReader2.newBlockReader(
           file, block, blockToken, startOffset, len,
@@ -173,7 +164,7 @@ public class BlockReaderFactory {
    * @throws IOException       If there was a communication error.
    */
   private static BlockReaderLocal newShortCircuitBlockReader(
-      Configuration conf, String file, ExtendedBlock block,
+      DFSClient.Conf conf, String file, ExtendedBlock block,
       Token<BlockTokenIdentifier> blockToken, long startOffset,
       long len, Peer peer, DatanodeID datanodeID,
       DomainSocketFactory domSockFactory, boolean verifyChecksum,
@@ -245,15 +236,14 @@ public class BlockReaderFactory {
    * This block reader implements the path-based style of local reads
    * first introduced in HDFS-2246.
    */
-  static BlockReader getLegacyBlockReaderLocal(UserGroupInformation ugi,
-      Configuration conf, String src, ExtendedBlock blk,
+  static BlockReader getLegacyBlockReaderLocal(DFSClient dfsClient,
+      String src, ExtendedBlock blk,
       Token<BlockTokenIdentifier> accessToken, DatanodeInfo chosenNode,
-      int socketTimeout, long offsetIntoBlock,
-      boolean connectToDnViaHostname) throws InvalidToken, IOException {
+      long offsetIntoBlock) throws InvalidToken, IOException {
     try {
-      return BlockReaderLocalLegacy.newBlockReader(ugi, conf, src,
-          blk, accessToken, chosenNode, socketTimeout, offsetIntoBlock,
-          blk.getNumBytes() - offsetIntoBlock, connectToDnViaHostname);
+      final long length = blk.getNumBytes() - offsetIntoBlock;
+      return BlockReaderLocalLegacy.newBlockReader(dfsClient, src, blk,
+          accessToken, chosenNode, offsetIntoBlock, length);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
           AccessControlException.class);
