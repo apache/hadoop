@@ -138,6 +138,8 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9517. Documented various aspects of compatibility for Apache
     Hadoop. (Karthik Kambatla via acmurthy)
 
+    HADOOP-8608. Add Configuration API for parsing time durations. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
