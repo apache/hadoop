@@ -30,8 +30,11 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat.Loader;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiffList;
@@ -70,8 +73,8 @@ public class SnapshotFSImageFormat {
    * @param sNode The directory that the SnapshotDiff list belongs to.
    * @param out The {@link DataOutput} to write.
    */
-  private static <N extends INode, D extends AbstractINodeDiff<N, D>>
-      void saveINodeDiffs(final AbstractINodeDiffList<N, D> diffs,
+  private static <N extends INode, A extends INodeAttributes, D extends AbstractINodeDiff<N, A, D>>
+      void saveINodeDiffs(final AbstractINodeDiffList<N, A, D> diffs,
       final DataOutput out, ReferenceMap referenceMap) throws IOException {
     // Record the diffs in reversed order, so that we can find the correct
     // reference for INodes in the created list when loading the FSImage
@@ -126,8 +129,8 @@ public class SnapshotFSImageFormat {
     final long fileSize = in.readLong();
     
     // 3. Load snapshotINode 
-    final INodeFile snapshotINode = in.readBoolean()?
-        loader.loadINodeWithLocalName(true, in, false).asFile(): null;
+    final INodeFileAttributes snapshotINode = in.readBoolean()?
+        loader.loadINodeFileAttributes(in): null;
     
     return new FileDiff(snapshot, snapshotINode, posterior, fileSize);
   }
@@ -253,7 +256,7 @@ public class SnapshotFSImageFormat {
    *               using.
    * @return The snapshotINode.
    */
-  private static INodeDirectory loadSnapshotINodeInDirectoryDiff(
+  private static INodeDirectoryAttributes loadSnapshotINodeInDirectoryDiff(
       Snapshot snapshot, DataInput in, FSImageFormat.Loader loader)
       throws IOException {
     // read the boolean indicating whether snapshotINode == Snapshot.Root
@@ -262,8 +265,7 @@ public class SnapshotFSImageFormat {
       return snapshot.getRoot();
     } else {
       // another boolean is used to indicate whether snapshotINode is non-null
-      return in.readBoolean()?
-          loader.loadINodeWithLocalName(true, in, false).asDirectory(): null;
+      return in.readBoolean()? loader.loadINodeDirectoryAttributes(in): null;
     }
   }
    
@@ -285,8 +287,8 @@ public class SnapshotFSImageFormat {
     int childrenSize = in.readInt();
     
     // 3. Load DirectoryDiff#snapshotINode 
-    INodeDirectory snapshotINode = loadSnapshotINodeInDirectoryDiff(snapshot,
-        in, loader);
+    INodeDirectoryAttributes snapshotINode = loadSnapshotINodeInDirectoryDiff(
+        snapshot, in, loader);
     
     // 4. Load the created list in SnapshotDiff#Diff
     List<INode> createdList = loadCreatedList(parent, in);

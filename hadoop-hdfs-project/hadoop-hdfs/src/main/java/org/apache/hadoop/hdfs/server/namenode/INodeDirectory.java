@@ -45,7 +45,8 @@ import com.google.common.base.Preconditions;
 /**
  * Directory INode class.
  */
-public class INodeDirectory extends INodeWithAdditionalFields {
+public class INodeDirectory extends INodeWithAdditionalFields
+    implements INodeDirectoryAttributes {
   /** Cast INode to INodeDirectory. */
   public static INodeDirectory valueOf(INode inode, Object path
       ) throws FileNotFoundException, PathIsNotDirectoryException {
@@ -558,12 +559,12 @@ public class INodeDirectory extends INodeWithAdditionalFields {
   /**
    * Compare the metadata with another INodeDirectory
    */
-  public boolean metadataEquals(INodeDirectory other) {
-    return other != null && getNsQuota() == other.getNsQuota()
+  @Override
+  public boolean metadataEquals(INodeDirectoryAttributes other) {
+    return other != null
+        && getNsQuota() == other.getNsQuota()
         && getDsQuota() == other.getDsQuota()
-        && getUserName().equals(other.getUserName())
-        && getGroupName().equals(other.getGroupName())
-        && getFsPermission().equals(other.getFsPermission());
+        && getPermissionLong() == other.getPermissionLong();
   }
   
   /*

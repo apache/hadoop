@@ -41,7 +41,8 @@ import com.google.common.base.Preconditions;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
-public class INodeFile extends INodeWithAdditionalFields implements BlockCollection {
+public class INodeFile extends INodeWithAdditionalFields
+    implements INodeFileAttributes, BlockCollection {
   /** The same as valueOf(inode, path, false). */
   public static INodeFile valueOf(INode inode, String path
       ) throws FileNotFoundException {
@@ -65,7 +66,7 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
   }
 
   /** Format: [16 bits for replication][48 bits for PreferredBlockSize] */
-  private static class HeaderFormat {
+  static class HeaderFormat {
     /** Number of bits for Block size */
     static final int BLOCKBITS = 48;
     /** Header mask 64-bit representation */
@@ -146,7 +147,7 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
   }
 
   @Override
-  public INodeFile getSnapshotINode(final Snapshot snapshot) {
+  public INodeFileAttributes getSnapshotINode(final Snapshot snapshot) {
     return this;
   }
 
@@ -173,6 +174,7 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
   }
 
   /** The same as getFileReplication(null). */
+  @Override
   public final short getFileReplication() {
     return getFileReplication(null);
   }
@@ -201,6 +203,11 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
   @Override
   public long getPreferredBlockSize() {
     return HeaderFormat.getPreferredBlockSize(header);
+  }
+
+  @Override
+  public long getHeaderLong() {
+    return header;
   }
 
   /** @return the diskspace required for a full block. */

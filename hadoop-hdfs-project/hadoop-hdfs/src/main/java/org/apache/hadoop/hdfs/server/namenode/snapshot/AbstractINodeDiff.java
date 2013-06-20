@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
@@ -47,13 +48,14 @@ import com.google.common.base.Preconditions;
  * </pre>
  */
 abstract class AbstractINodeDiff<N extends INode,
-                                 D extends AbstractINodeDiff<N, D>>
+                                 A extends INodeAttributes,
+                                 D extends AbstractINodeDiff<N, A, D>>
     implements Comparable<Integer> {
 
   /** The snapshot will be obtained after this diff is applied. */
   Snapshot snapshot;
   /** The snapshot inode data.  It is null when there is no change. */
-  N snapshotINode;
+  A snapshotINode;
   /**
    * Posterior diff is the diff happened after this diff.
    * The posterior diff should be first applied to obtain the posterior
@@ -62,7 +64,7 @@ abstract class AbstractINodeDiff<N extends INode,
    */
   private D posteriorDiff;
 
-  AbstractINodeDiff(Snapshot snapshot, N snapshotINode, D posteriorDiff) {
+  AbstractINodeDiff(Snapshot snapshot, A snapshotINode, D posteriorDiff) {
     Preconditions.checkNotNull(snapshot, "snapshot is null");
 
     this.snapshot = snapshot;
@@ -96,16 +98,16 @@ abstract class AbstractINodeDiff<N extends INode,
   }
 
   /** Save the INode state to the snapshot if it is not done already. */
-  void saveSnapshotCopy(N snapshotCopy, N currentINode) {
+  void saveSnapshotCopy(A snapshotCopy, N currentINode) {
     Preconditions.checkState(snapshotINode == null, "Expected snapshotINode to be null");
     snapshotINode = snapshotCopy;
   }
 
   /** @return the inode corresponding to the snapshot. */
-  N getSnapshotINode() {
+  A getSnapshotINode() {
     // get from this diff, then the posterior diff
     // and then null for the current inode
-    for(AbstractINodeDiff<N, D> d = this; ; d = d.posteriorDiff) {
+    for(AbstractINodeDiff<N, A, D> d = this; ; d = d.posteriorDiff) {
       if (d.snapshotINode != null) {
         return d.snapshotINode;
       } else if (d.posteriorDiff == null) {
