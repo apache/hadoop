@@ -158,6 +158,8 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4883. complete() should verify fileId. (Tao Luo via shv)
 
+    HDFS-4772. Add number of children in HdfsFileStatus. (brandonli)
+
   OPTIMIZATIONS
 
   BUG FIXES

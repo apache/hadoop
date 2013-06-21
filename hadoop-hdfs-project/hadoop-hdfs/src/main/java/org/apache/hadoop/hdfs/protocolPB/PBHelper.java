@@ -1055,7 +1055,8 @@ public class PBHelper {
             fs.getSymlink().toByteArray() : null,
         fs.getPath().toByteArray(),
         fs.hasFileId()? fs.getFileId(): INodeId.GRANDFATHER_INODE_ID,
-        fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null);
+        fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null,
+        fs.hasChildrenNum() ? fs.getChildrenNum() : 0);
   }
 
   public static SnapshottableDirectoryStatus convert(
@@ -1072,6 +1073,7 @@ public class PBHelper {
         status.getGroup(),
         status.getPath().toByteArray(),
         status.getFileId(),
+        status.getChildrenNum(),
         sdirStatusProto.getSnapshotNumber(),
         sdirStatusProto.getSnapshotQuota(),
         sdirStatusProto.getParentFullpath().toByteArray());
@@ -1099,6 +1101,7 @@ public class PBHelper {
       setOwner(fs.getOwner()).
       setGroup(fs.getGroup()).
       setFileId(fs.getFileId()).
+      setChildrenNum(fs.getChildrenNum()).
       setPath(ByteString.copyFrom(fs.getLocalNameInBytes()));
     if (fs.isSymlink())  {
       builder.setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes()));

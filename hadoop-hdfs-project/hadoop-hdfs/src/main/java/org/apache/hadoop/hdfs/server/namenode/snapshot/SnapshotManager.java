@@ -325,7 +325,8 @@ public class SnapshotManager implements SnapshotStats {
         SnapshottableDirectoryStatus status = new SnapshottableDirectoryStatus(
             dir.getModificationTime(), dir.getAccessTime(),
             dir.getFsPermission(), dir.getUserName(), dir.getGroupName(),
-            dir.getLocalNameBytes(), dir.getId(), dir.getNumSnapshots(),
+            dir.getLocalNameBytes(), dir.getId(), dir.getChildrenNum(null),
+            dir.getNumSnapshots(),
             dir.getSnapshotQuota(), dir.getParent() == null ? 
                 DFSUtil.EMPTY_BYTES : 
                 DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
