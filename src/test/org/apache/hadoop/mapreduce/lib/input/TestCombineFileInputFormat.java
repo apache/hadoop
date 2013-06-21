@@ -1130,7 +1130,7 @@ public class TestCombineFileInputFormat extends TestCase {
     dos.writeChars("Local file for CFIF");
     dos.close();
 
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     FileInputFormat.setInputPaths(job, lfs.makeQualified(localPath));
     DummyInputFormat inFormat = new DummyInputFormat();
     List<InputSplit> splits = inFormat.getSplits(job);

@@ -444,18 +444,13 @@ public class JsonUtil {
     final byte[] bytes = StringUtils.hexStringToByte((String)m.get("bytes"));
 
     final DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
-    final int bytesPerCRC = in.readInt();
-    final long crcPerBlock = in.readLong();
-    final MD5Hash md5 = MD5Hash.read(in);
-    final MD5MD5CRC32FileChecksum checksum = new MD5MD5CRC32FileChecksum(
-        bytesPerCRC, crcPerBlock, md5);
-
-    //check algorithm name
-    final String alg = "MD5-of-" + crcPerBlock + "MD5-of-" + bytesPerCRC + "CRC32";
-    if (!alg.equals(algorithm)) {
-      throw new IOException("Algorithm not matched: algorithm=" + algorithm
-          + ", crcPerBlock=" + crcPerBlock
-          + ", bytesPerCRC=" + bytesPerCRC);
+    final MD5MD5CRC32FileChecksum checksum = new MD5MD5CRC32FileChecksum();
+    checksum.readFields(in);
+ 
+     //check algorithm name
+    if (!checksum.getAlgorithmName().equals(algorithm)) {
+      throw new IOException("Algorithm not matched. Expected " + algorithm
+          + ", Received " + checksum.getAlgorithmName());
     }
     //check length
     if (length != checksum.getLength()) {

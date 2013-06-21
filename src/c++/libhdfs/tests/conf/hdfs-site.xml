@@ -15,13 +15,6 @@
 </property>
 
 <property>
-  <name>dfs.support.append</name>
-  <value>true</value>
-  <description>Allow appends to files.
-  </description>
-</property>
-
-<property>
   <name>dfs.datanode.address</name>
   <value>0.0.0.0:50012</value>
   <description>

@@ -45,6 +45,15 @@
 </property>
 
 <property>
+  <name>hadoop.security.instrumentation.requires.admin</name>
+  <value>false</value>
+  <description>
+    Indicates if administrator ACLs are required to access
+    instrumentation servlets (JMX, METRICS, CONF, STACKS).
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.authentication</name>
   <value>simple</value>
   <description>Possible values are simple (no authentication), and kerberos
@@ -60,6 +69,17 @@
   will connect to the host's new IP but fail to locate a token.  Disabling
   this option will allow existing and new clients to detect an IP change and
   continue to locate the new host's token.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.use-weak-http-crypto</name>
+  <value>false</value>
+  <description>If enabled, use KSSL to authenticate HTTP connections to the
+  NameNode. Due to a bug in JDK6, using KSSL requires one to configure
+  Kerberos tickets to use encryption types that are known to be
+  cryptographically weak. If disabled, SPNEGO will be used for HTTP
+  authentication, which supports stronger encryption types.
   </description>
 </property>
 
@@ -559,5 +579,42 @@
     Referring to the same keytab file Oozie uses for its Kerberos credentials for Hadoop.
   </description>
 </property>
+
+<property>
+  <name>hadoop.relaxed.worker.version.check</name>
+  <value>false</value>
+  <description>
+    By default datanodes refuse to connect to namenodes if their build
+    revision (svn revision) do not match, and tasktrackers refuse to
+    connect to jobtrackers if their build version (version, revision,
+    user, and source checksum) do not match. This option changes the
+    behavior of hadoop workers to only check for a version match (eg
+    "1.0.2") but ignore the other build fields (revision, user, and
+    source checksum).
+  </description>
+</property>
+
+<property>
+  <name>hadoop.skip.worker.version.check</name>
+  <value>false</value>
+  <description>
+    By default datanodes refuse to connect to namenodes if their build
+    revision (svn revision) do not match, and tasktrackers refuse to
+    connect to jobtrackers if their build version (version, revision,
+    user, and source checksum) do not match. This option changes the
+    behavior of hadoop workers to skip doing a version check at all.
+    This option supersedes the 'hadoop.relaxed.worker.version.check'
+    option.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.jetty.logs.serve.aliases</name>
+  <value>true</value>
+  <description>
+    Enable/Disable aliases serving from jetty
+  </description>
+</property>
+
 
 </configuration>

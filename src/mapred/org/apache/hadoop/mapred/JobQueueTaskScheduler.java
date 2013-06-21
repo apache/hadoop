@@ -80,6 +80,12 @@ class JobQueueTaskScheduler extends TaskScheduler {
   @Override
   public synchronized List<Task> assignTasks(TaskTracker taskTracker)
       throws IOException {
+    // Check for JT safe-mode
+    if (taskTrackerManager.isInSafeMode()) {
+      LOG.info("JobTracker is in safe-mode, not scheduling any tasks.");
+      return null;
+    } 
+
     TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus(); 
     ClusterStatus clusterStatus = taskTrackerManager.getClusterStatus();
     final int numTaskTrackers = clusterStatus.getTaskTrackers();
@@ -166,7 +172,8 @@ class JobQueueTaskScheduler extends TaskScheduler {
 
           Task t = null;
           
-          // Try to schedule a node-local or rack-local Map task
+          // Try to schedule a Map task with locality between node-local 
+          // and rack-local
           t = 
             job.obtainNewNodeOrRackLocalMapTask(taskTrackerStatus, 
                 numTaskTrackers, taskTrackerManager.getNumberOfUniqueHosts());

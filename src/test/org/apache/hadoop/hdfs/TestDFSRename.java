@@ -30,7 +30,7 @@ public class TestDFSRename extends junit.framework.TestCase {
   static Configuration CONF = new Configuration();
   static MiniDFSCluster cluster = null;
   static int countLease(MiniDFSCluster cluster) {
-    return cluster.getNameNode().namesystem.leaseManager.countLease();
+    return cluster.getNameNode().getNamesystem().leaseManager.countLease();
   }
   
   final Path dir = new Path("/test/rename/");

@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.junit.Test;
 
 public class TestByteRangeInputStream {
@@ -75,6 +76,11 @@ public static class MockHttpURLConnection extends HttpURLConnection {
 
   public void setResponseCode(int resCode) {
     responseCode = resCode;
+  }
+  
+  @Override
+  public String getHeaderField(String field) {
+      return (field.equalsIgnoreCase(StreamFile.CONTENT_LENGTH)) ? "65535" : null;
   }
 }
 

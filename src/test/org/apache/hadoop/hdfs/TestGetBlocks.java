@@ -19,29 +19,114 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-
-import junit.framework.TestCase;
 /**
  * This class tests if block replacement request to data nodes work correctly.
  */
 public class TestGetBlocks extends TestCase {
+  
+  private static final int blockSize = 8192;
+  private static final String racks[] = new String[] { "/d1/r1", "/d1/r1",
+      "/d1/r2", "/d1/r2", "/d1/r2", "/d2/r3", "/d2/r3" };
+  private static final int numDatanodes = racks.length;
+
+  /**
+   * Test if the datanodes returned by
+   * {@link ClientProtocol#getBlockLocations(String, long, long)} is correct
+   * when 1) stale nodes checking is enabled, 2) a writing is going on, 
+   * and 3) a datanode becomes stale happen simultaneously
+   * 
+   * @throws Exception
+   */
+  public void testReadSelectNonStaleDatanode() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
+    // DataNode will send out heartbeat every 15 minutes
+    // In this way, when we have set a datanode as stale,
+    // its heartbeat will not come to refresh its state
+    long heartbeatInterval = 15 * 60;
+    long staleInterval = 3 * heartbeatInterval * 1000;
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
+        staleInterval);
+    conf.setLong("dfs.heartbeat.interval", heartbeatInterval);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true,
+        racks);
+
+    cluster.waitActive();
+    InetSocketAddress addr = new InetSocketAddress("localhost",
+        cluster.getNameNodePort());
+    DFSClient client = new DFSClient(addr, conf);
+    List<DatanodeDescriptor> nodeInfoList = cluster.getNameNode()
+        .getNamesystem().getDatanodeListForReport(DatanodeReportType.LIVE);
+    assertEquals("Unexpected number of datanodes", numDatanodes,
+        nodeInfoList.size());
+    FileSystem fileSys = cluster.getFileSystem();
+    FSDataOutputStream stm = null;
+    try {
+      // do the writing but do not close the FSDataOutputStream
+      // in order to mimic the ongoing writing
+      final Path fileName = new Path("/file1");
+      stm = fileSys.create(fileName, true,
+          fileSys.getConf().getInt("io.file.buffer.size", 4096), (short) 3,
+          blockSize);
+      stm.write(new byte[(blockSize * 3) / 2]);
+      // We do not close the stream so that
+      // the writing seems to be still ongoing
+      stm.sync();
+
+      LocatedBlocks blocks = cluster.getNameNode().getBlockLocations(
+          fileName.toString(), 0, blockSize);
+      DatanodeInfo[] nodes = blocks.get(0).getLocations();
+      assertEquals(nodes.length, 3);
+      for (DataNode dn : cluster.getDataNodes()) {
+        if (dn.getHostName().equals(nodes[0].getHostName())) {
+          // set the first node as stale
+          DatanodeDescriptor staleNodeInfo = cluster.getNameNode()
+              .getNamesystem().getDatanode(dn.dnRegistration);
+          staleNodeInfo.setLastUpdate(System.currentTimeMillis()
+              - staleInterval - 1);
+        }
+      }
+
+      LocatedBlocks blocksAfterStale = cluster.getNameNode().getBlockLocations(
+          fileName.toString(), 0, blockSize);
+      DatanodeInfo[] nodesAfterStale = blocksAfterStale.get(0).getLocations();
+      assertEquals(nodesAfterStale.length, 3);
+      assertEquals(nodesAfterStale[2].getHostName(), nodes[0].getHostName());
+    } finally {
+      if (stm != null) {
+        stm.close();
+      }
+      cluster.shutdown();
+    }
+  }
+  
   /** test getBlocks */
   public void testGetBlocks() throws Exception {
     final Configuration CONF = new Configuration();

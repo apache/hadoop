@@ -18,31 +18,38 @@
 
 package org.apache.hadoop.ipc;
 
-import org.apache.hadoop.metrics2.MetricsSource;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
+import java.lang.reflect.Method;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.lang.reflect.Method;
+import java.util.Arrays;
 
 import junit.framework.TestCase;
 
-import java.util.Arrays;
-
-import org.apache.commons.logging.*;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.metrics.RpcInstrumentation;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
-import org.apache.hadoop.security.AccessControlException;
-import static org.apache.hadoop.test.MetricsAsserts.*;
 
 /** Unit tests for RPC. */
 public class TestRPC extends TestCase {
@@ -130,6 +137,14 @@ public class TestRPC extends TestCase {
         values[i] = i;
       }
       return values;
+    }
+  }
+
+  public static class TestVersionMismatchImpl extends TestImpl {
+    /** @return a different version. */
+    @Override
+    public long getProtocolVersion(String protocol, long clientVersion) {
+      return super.getProtocolVersion(protocol, clientVersion) + 1;
     }
   }
 
@@ -398,6 +413,50 @@ public class TestRPC extends TestCase {
       assertCounter("rpcAuthenticationSuccesses", 0, rb);
     }
   }
+
+  /**
+   * Count the number of threads that have a stack frame containing
+   * the given string
+   */
+  private static int countThreads(String search) {
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+
+    int count = 0;
+    ThreadInfo[] infos = threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
+    for (ThreadInfo info : infos) {
+      if (info == null) continue;
+      for (StackTraceElement elem : info.getStackTrace()) {
+        if (elem.getClassName().contains(search)) {
+          count++;
+          break;
+        }
+      }
+    }
+    return count;
+  }
+
+
+  /**
+   * Test that server.stop() properly stops all threads
+   */
+  public void testStopsAllThreads() throws Exception {
+    int threadsBefore = countThreads("Server$Listener$Reader");
+    assertEquals("Expect no Reader threads running before test",
+      0, threadsBefore);
+
+    final Server server = RPC.getServer(new TestImpl(), ADDRESS,
+        0, 5, true, conf);
+    server.start();
+    try {
+      int threadsRunning = countThreads("Server$Listener$Reader");
+      assertTrue(threadsRunning > 0);
+    } finally {
+      server.stop();
+    }
+    int threadsAfter = countThreads("Server$Listener$Reader");
+    assertEquals("Expect no Reader threads left running after test",
+      0, threadsAfter);
+  }
   
   public void testAuthorization() throws Exception {
     Configuration conf = new Configuration();
@@ -479,6 +538,35 @@ public class TestRPC extends TestCase {
       }
     }
     assertTrue(succeeded);
+  }
+
+  /** Test RPC.checkVersion method. */
+  public void testCheckVersion() throws Exception {
+    Server server = RPC.getServer(new TestVersionMismatchImpl(), ADDRESS, 0, conf);
+    TestProtocol proxy = null;
+    try {
+      server.start();
+    
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      
+      // get proxy should succeed
+      proxy = (TestProtocol)RPC.getProxy(
+          TestProtocol.class, TestProtocol.versionID, addr, ugi, conf,
+          NetUtils.getSocketFactory(conf, TestProtocol.class), 0, null, false);  
+
+      try {
+        RPC.checkVersion(TestProtocol.class, TestProtocol.versionID, proxy);
+        fail("Check version should throw VersionMismatch");
+      } catch(VersionMismatch vm) {
+        LOG.info("The VersionMismatch is expected", vm);
+      }
+    } finally {
+      server.stop();
+      if (proxy!=null) {
+        RPC.stopProxy(proxy);
+      }
+    }
   }
  
   public static void main(String[] args) throws Exception {

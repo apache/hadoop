@@ -141,7 +141,7 @@ public class FSImage extends Storage {
 
   /** Flag to restore removed storage directories at checkpointing */
   private boolean restoreRemovedDirs = DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_DEFAULT;
-  
+
   private int editsTolerationLength = DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_DEFAULT;
 
   /**
@@ -375,14 +375,15 @@ public class FSImage extends Storage {
     case REGULAR:
       // just load the image
     }
-    return loadFSImage();
+    return loadFSImage(startOpt.createRecoveryContext());
   }
 
   private void doUpgrade() throws IOException {
+    MetaRecoveryContext recovery = null;
     if(getDistributedUpgradeState()) {
       // only distributed upgrade need to continue
       // don't do version upgrade
-      this.loadFSImage();
+      this.loadFSImage(recovery);
       initializeDistributedUpgrade();
       return;
     }
@@ -398,7 +399,7 @@ public class FSImage extends Storage {
     }
 
     // load the latest image
-    this.loadFSImage();
+    this.loadFSImage(recovery);
 
     // Do upgrade for each directory
     long oldCTime = this.getCTime();
@@ -742,7 +743,7 @@ public class FSImage extends Storage {
    * @return whether the image should be saved
    * @throws IOException
    */
-  boolean loadFSImage() throws IOException {
+  boolean loadFSImage(MetaRecoveryContext recovery) throws IOException {
     // Now check all curFiles and see which is the newest
     long latestNameCheckpointTime = Long.MIN_VALUE;
     long latestEditsCheckpointTime = Long.MIN_VALUE;
@@ -822,22 +823,27 @@ public class FSImage extends Storage {
     needToSave |= recoverInterruptedCheckpoint(latestNameSD, latestEditsSD);
 
     long startTime = FSNamesystem.now();
-    long imageSize = getImageFile(latestNameSD, NameNodeFile.IMAGE).length();
+    File imageFile = getImageFile(latestNameSD, NameNodeFile.IMAGE);
+    long imageSize = imageFile.length();
 
     //
     // Load in bits
     //
     latestNameSD.read();
-    needToSave |= loadFSImage(getImageFile(latestNameSD, NameNodeFile.IMAGE));
-    LOG.info("Image file of size " + imageSize + " loaded in " 
+    LOG.info("Start loading image file " + imageFile.getPath().toString());
+    needToSave |= loadFSImage(imageFile);
+    LOG.info("Image file " + imageFile.getPath().toString() +
+        " of size " + imageSize + " bytes loaded in "
         + (FSNamesystem.now() - startTime)/1000 + " seconds.");
     
     // Load latest edits
-    if (latestNameCheckpointTime > latestEditsCheckpointTime)
+    if (latestNameCheckpointTime > latestEditsCheckpointTime) {
       // the image is already current, discard edits
       needToSave |= true;
-    else // latestNameCheckpointTime == latestEditsCheckpointTime
-      needToSave |= (loadFSEdits(latestEditsSD) > 0);
+      FSNamesystem.getFSNamesystem().dir.updateCountForINodeWithQuota();
+    } else { // latestNameCheckpointTime == latestEditsCheckpointTime
+      needToSave |= (loadFSEdits(latestEditsSD, recovery) > 0);
+    }
     
     return needToSave;
   }
@@ -1015,16 +1021,17 @@ public class FSImage extends Storage {
    * @return number of edits loaded
    * @throws IOException
    */
-  int loadFSEdits(StorageDirectory sd) throws IOException {
+  int loadFSEdits(StorageDirectory sd, MetaRecoveryContext recovery)
+      throws IOException {
     int numEdits = 0;
     EditLogFileInputStream edits = 
       new EditLogFileInputStream(getImageFile(sd, NameNodeFile.EDITS));
-    numEdits = FSEditLog.loadFSEdits(edits, editsTolerationLength);
+    numEdits = FSEditLog.loadFSEdits(edits, editsTolerationLength, recovery);
     edits.close();
     File editsNew = getImageFile(sd, NameNodeFile.EDITS_NEW);
     if (editsNew.exists() && editsNew.length() > 0) {
       edits = new EditLogFileInputStream(editsNew);
-      numEdits += FSEditLog.loadFSEdits(edits, editsTolerationLength);
+      numEdits += FSEditLog.loadFSEdits(edits, editsTolerationLength, recovery);
       edits.close();
     }
     // update the counts.
@@ -1063,8 +1070,9 @@ public class FSImage extends Storage {
       out.close();
     }
 
-    LOG.info("Image file of size " + newFile.length() + " saved in " 
-        + (FSNamesystem.now() - startTime)/1000 + " seconds.");
+    LOG.info("Image file " + newFile + " of size " + newFile.length() +
+        " bytes saved in " + (FSNamesystem.now() - startTime)/1000 +
+        " seconds.");
   }
 
   /**
@@ -1237,7 +1245,7 @@ public class FSImage extends Storage {
     FSEditLog.LOG.info(DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY
         + " = " + editsTolerationLength);
   }  
-
+  
   /** restore a metadata file */
   private static void restoreFile(File src, File dstdir, String dstfile)
       throws IOException {
@@ -1816,9 +1824,9 @@ public class FSImage extends Storage {
   }
 
   static private final UTF8 U_STR = new UTF8();
-  static String readString(DataInputStream in) throws IOException {
+  public static String readString(DataInputStream in) throws IOException {
     U_STR.readFields(in);
-    return U_STR.toString();
+    return U_STR.toStringChecked();
   }
 
   static String readString_EmptyAsNull(DataInputStream in) throws IOException {
@@ -1826,7 +1834,7 @@ public class FSImage extends Storage {
     return s.isEmpty()? null: s;
   }
 
-  static byte[] readBytes(DataInputStream in) throws IOException {
+  public static byte[] readBytes(DataInputStream in) throws IOException {
     U_STR.readFields(in);
     int len = U_STR.getLength();
     byte[] bytes = new byte[len];

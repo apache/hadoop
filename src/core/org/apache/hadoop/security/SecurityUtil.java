@@ -19,16 +19,17 @@ package org.apache.hadoop.security;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import javax.security.auth.Subject;
@@ -40,6 +41,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 
@@ -55,12 +59,19 @@ public class SecurityUtil {
   // by the user; visible for testing
   static boolean useIpForTokenService;
   static HostResolver hostResolver;
+
+  private static final boolean useKsslAuth;
   
   static {
-    boolean useIp = new Configuration().getBoolean(
+    Configuration conf = new Configuration();
+    boolean useIp = conf.getBoolean(
       CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
       CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
     setTokenServiceUseIp(useIp);
+
+    useKsslAuth = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_USE_WEAK_HTTP_CRYPTO_KEY,
+        CommonConfigurationKeys.HADOOP_SECURITY_USE_WEAK_HTTP_CRYPTO_DEFAULT);
   }
   
   /**
@@ -126,7 +137,8 @@ public class SecurityUtil {
     if(!UserGroupInformation.isSecurityEnabled())
       return;
     
-    String serviceName = "host/" + remoteHost.getHost();
+    String serviceName = KerberosUtil.getServicePrincipal("host",
+        remoteHost.getHost());
     if (LOG.isDebugEnabled())
       LOG.debug("Fetching service ticket for host at: " + serviceName);
     Object serviceCred = null;
@@ -245,10 +257,17 @@ public class SecurityUtil {
     if (fqdn == null || fqdn.equals("") || fqdn.equals("0.0.0.0")) {
       fqdn = getLocalHostName();
     }
-    return components[0] + "/" + fqdn.toLowerCase() + "@" + components[2];
+    return components[0] + "/" + fqdn.toLowerCase(Locale.US) + "@" + components[2];
   }
   
-  static String getLocalHostName() throws UnknownHostException {
+  /**
+   * Get the fqdn for the current host.
+   * 
+   * @return fqdn of the current host.
+   * @throws UnknownHostException
+   *           if no IP address for the local host could be found.
+   */
+  public static String getLocalHostName() throws UnknownHostException {
     return InetAddress.getLocalHost().getCanonicalHostName();
   }
 
@@ -381,7 +400,44 @@ public class SecurityUtil {
   public static String getHostFromPrincipal(String principalName) {
     return new KerberosName(principalName).getHostName();
   }
+
+  /**
+   * @return true if we should use KSSL to authenticate NN HTTP endpoints,
+   *         false to use SPNEGO or if security is disabled.
+   */
+  public static boolean useKsslAuth() {
+    return UserGroupInformation.isSecurityEnabled() && useKsslAuth;
+  }
   
+  /**
+   * Open a (if need be) secure connection to a URL in a secure environment
+   * that is using SPNEGO or KSSL to authenticate its URLs. All Namenode and
+   * Secondary Namenode URLs that are protected via SPNEGO or KSSL should be
+   * accessed via this method.
+   *
+   * @param url to authenticate via SPNEGO.
+   * @return A connection that has been authenticated via SPNEGO
+   * @throws IOException If unable to authenticate via SPNEGO
+   */
+  public static URLConnection openSecureHttpConnection(URL url)
+      throws IOException {
+    if (useKsslAuth) {
+      // Avoid Krb bug with cross-realm hosts
+      fetchServiceTicket(url);
+    }
+    if (!UserGroupInformation.isSecurityEnabled() || useKsslAuth) {
+      return url.openConnection();
+    } else {
+      AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+      try {
+        return new AuthenticatedURL().openConnection(url, token);
+      } catch (AuthenticationException e) {
+        throw new IOException("Exception trying to open authenticated connection to "
+            + url, e);
+      }
+    }
+  }
+
   /**
    * Resolves a host subject to the security requirements determined by
    * hadoop.security.token.service.use_ip.

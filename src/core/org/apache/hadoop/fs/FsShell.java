@@ -22,10 +22,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.TimeZone;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.hadoop.conf.Configuration;
@@ -41,14 +42,14 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.util.StringUtils;
 
 /** Provide command line access to a FileSystem. */
 public class FsShell extends Configured implements Tool {
 
-  protected FileSystem fs;
+  private FileSystem fs;
   private Trash trash;
   public static final SimpleDateFormat dateForm = 
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -78,15 +79,22 @@ public class FsShell extends Configured implements Tool {
   
   protected void init() throws IOException {
     getConf().setQuietMode(true);
-    if (this.fs == null) {
-     this.fs = FileSystem.get(getConf());
+  }
+  
+  protected FileSystem getFS() throws IOException {
+    if (fs == null) {
+      fs = FileSystem.get(getConf());
     }
-    if (this.trash == null) {
-      this.trash = new Trash(getConf());
+    return fs;
+  }
+  
+  protected Trash getTrash() throws IOException {
+    if (trash == null) {
+      trash = new Trash(getConf());
     }
+    return trash;
   }
 
-  
   /**
    * Copies from stdin to the indicated file.
    */
@@ -360,7 +368,9 @@ public class FsShell extends Configured implements Tool {
     DataOutputBuffer outbuf;
 
     public TextRecordInputStream(FileStatus f) throws IOException {
-      r = new SequenceFile.Reader(fs, f.getPath(), getConf());
+      FileSystem pFS = f == null ? getFS() : f.getPath().getFileSystem(
+          getConf());
+      r = new SequenceFile.Reader(pFS, f.getPath(), getConf());
       key = ReflectionUtils.newInstance(r.getKeyClass().asSubclass(WritableComparable.class),
                                         getConf());
       val = ReflectionUtils.newInstance(r.getValueClass().asSubclass(Writable.class),
@@ -468,11 +478,12 @@ public class FsShell extends Configured implements Tool {
       System.out.flush();
 
       boolean printWarning = false;
-      FileStatus status = fs.getFileStatus(f);
+      FileSystem pFS = f.getFileSystem(getConf());
+      FileStatus status = pFS.getFileStatus(f);
       long len = status.getLen();
 
       for(boolean done = false; !done; ) {
-        BlockLocation[] locations = fs.getFileBlockLocations(status, 0, len);
+        BlockLocation[] locations = pFS.getFileBlockLocations(status, 0, len);
         int i = 0;
         for(; i < locations.length && 
           locations[i].getHosts().length == rep; i++)
@@ -973,9 +984,10 @@ public class FsShell extends Configured implements Tool {
     //
     if (argv.length > 3) {
       Path dst = new Path(dest);
-      if (!fs.isDirectory(dst)) {
-        throw new IOException("When copying multiple files, " 
-                              + "destination " + dest + " should be a directory.");
+      FileSystem pFS = dst.getFileSystem(conf);
+      if (!pFS.isDirectory(dst)) {
+        throw new IOException("When copying multiple files, " + "destination "
+            + dest + " should be a directory.");
       }
     }
     //
@@ -1081,15 +1093,15 @@ public class FsShell extends Configured implements Tool {
     }
   }
   private void expunge() throws IOException {
-    trash.expunge();
-    trash.checkpoint();
+    getTrash().expunge();
+    getTrash().checkpoint();
   }
 
   /**
    * Returns the Trash object associated with this shell.
    */
-  public Path getCurrentTrashDir() {
-    return trash.getCurrentTrashDir();
+  public Path getCurrentTrashDir() throws IOException {
+    return getTrash().getCurrentTrashDir();
   }
 
   /**
@@ -1223,8 +1235,9 @@ public class FsShell extends Configured implements Tool {
         errors++;
       }
       for(Path path : paths) {
+        FileStatus file = null;
         try {
-          FileStatus file = srcFs.getFileStatus(path);
+          file = srcFs.getFileStatus(path);
           if (file == null) {
             System.err.println(handler.getName() + 
                                ": could not get status for '" + path + "'");
@@ -1236,8 +1249,15 @@ public class FsShell extends Configured implements Tool {
           String msg = (e.getMessage() != null ? e.getLocalizedMessage() :
             (e.getCause().getMessage() != null ? 
                 e.getCause().getLocalizedMessage() : "null"));
-          System.err.println(handler.getName() + ": could not get status for '"
-                                        + path + "': " + msg.split("\n")[0]);
+          msg = msg.split("\n")[0];
+          if (file == null) {
+            //getFileStatus fails
+            msg = ": could not get status for '" + path + "': " + msg;
+          } else {
+            //other failure
+            msg = ": failed on '" + path + "': " + msg;
+          }
+          System.err.println(handler.getName() + msg);
           errors++;
         }
       }
@@ -1783,6 +1803,7 @@ public class FsShell extends Configured implements Tool {
       } else if ("-chmod".equals(cmd) || 
                  "-chown".equals(cmd) ||
                  "-chgrp".equals(cmd)) {
+        // Here fs is not used
         exitCode = FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
       } else if ("-ls".equals(cmd)) {
         if (i < argv.length) {

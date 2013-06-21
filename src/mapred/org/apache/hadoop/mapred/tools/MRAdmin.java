@@ -19,10 +19,10 @@ package org.apache.hadoop.mapred.tools;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.AdminOperationsProtocol;
@@ -42,6 +42,7 @@ import org.apache.hadoop.util.ToolRunner;
  * and 1) refresh the service-level authorization policy, 2) refresh queue acl
  * properties.
  */
+@Private
 public class MRAdmin extends Configured implements Tool {
 
   public MRAdmin() {
@@ -57,7 +58,9 @@ public class MRAdmin extends Configured implements Tool {
     "The full syntax is: \n\n" +
     "hadoop mradmin [-refreshServiceAcl] [-refreshQueues] " +
     "[-refreshNodes] [-refreshUserToGroupsMappings] " +
-    "[-refreshSuperUserGroupsConfiguration] [-help [cmd]]\n";
+    "[-refreshSuperUserGroupsConfiguration] " +
+    "[-safemode <enter | leave | wait | get> " +
+    "[-help [cmd]]\n";
 
   String refreshServiceAcl = "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
     "\t\tJobtracker will reload the authorization policy file.\n";
@@ -74,6 +77,14 @@ public class MRAdmin extends Configured implements Tool {
   String refreshNodes =
     "-refreshNodes: Refresh the hosts information at the jobtracker.\n";
   
+  String safemode = "-safemode <enter|leave|get|wait>:  Safe mode maintenance command.\n" + 
+      "\t\tSafe mode is a JobTracker state in which it\n" +
+      "\t\t\t1.  does not accept new job submissions\n" +
+      "\t\t\t2.  does not schedule any new tasks\n" +
+      "\t\t\t3.  does not fail any tasks due to any error\n" +
+      "\t\tSafe mode can be entered manually, but then\n" +
+      "\t\tit can only be turned off manually as well.\n";
+      
   String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
     "\t\tis specified.\n";
 
@@ -87,6 +98,8 @@ public class MRAdmin extends Configured implements Tool {
     System.out.println(refreshSuperUserGroupsConfiguration);
   }  else if ("refreshNodes".equals(cmd)) {
     System.out.println(refreshNodes);
+  }  else if ("safemode".equals(cmd)) {
+    System.out.println(safemode);
   } else if ("help".equals(cmd)) {
     System.out.println(help);
   } else {
@@ -125,7 +138,8 @@ public class MRAdmin extends Configured implements Tool {
       System.err.println("           [-refreshQueues]");
       System.err.println("           [-refreshUserToGroupsMappings]");
       System.err.println("           [-refreshSuperUserGroupsConfiguration]");
-      System.err.println("           [-refreshNodes]");
+      System.err.println("           [-refreshNodes]");      
+      System.err.println("           [-safemode <enter | leave | get | wait>]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -208,6 +222,58 @@ public class MRAdmin extends Configured implements Tool {
     return 0;
   }
 
+  private int setSafeMode(String actionString) throws IOException {
+    JobTracker.SafeModeAction action;
+    Boolean waitExitSafe = false;
+
+    if ("leave".equalsIgnoreCase(actionString)) {
+      action = JobTracker.SafeModeAction.SAFEMODE_LEAVE;
+    } else if ("enter".equalsIgnoreCase(actionString)) {
+      action = JobTracker.SafeModeAction.SAFEMODE_ENTER;
+    } else if ("get".equalsIgnoreCase(actionString)) {
+      action = JobTracker.SafeModeAction.SAFEMODE_GET;
+    } else if ("wait".equalsIgnoreCase(actionString)) {
+      action = JobTracker.SafeModeAction.SAFEMODE_GET;
+      waitExitSafe = true;
+    } else {
+      printUsage("-safemode");
+      return -1;
+    }
+
+    // Get the current configuration
+    Configuration conf = getConf();
+    
+    // Create the client
+    AdminOperationsProtocol adminOperationsProtocol = 
+      (AdminOperationsProtocol) 
+      RPC.getProxy(AdminOperationsProtocol.class, 
+                   AdminOperationsProtocol.versionID, 
+                   JobTracker.getAddress(conf), getUGI(conf), conf,
+                   NetUtils.getSocketFactory(conf, 
+                                             AdminOperationsProtocol.class));
+    
+
+    boolean inSafeMode = adminOperationsProtocol.setSafeMode(action);
+
+    //
+    // If we are waiting for safemode to exit, then poll and
+    // sleep till we are out of safemode.
+    //
+    if (waitExitSafe) {
+      while (inSafeMode) {
+        try {
+          Thread.sleep(3000);
+        } catch (java.lang.InterruptedException e) {
+          throw new IOException("Wait Interrupted");
+        }
+        inSafeMode = adminOperationsProtocol.setSafeMode(action);
+      }
+    }
+
+    System.out.println("Safe mode is " + (inSafeMode ? "ON" : "OFF"));
+
+    return 0;
+  }
   
   /**
    * refreshSuperUserGroupsConfiguration {@link JobTracker}.
@@ -297,6 +363,12 @@ public class MRAdmin extends Configured implements Tool {
         return exitCode;
       }
     }
+    if ("-safemode".equals(cmd)) {
+      if (args.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    }
     
     exitCode = 0;
     try {
@@ -310,6 +382,8 @@ public class MRAdmin extends Configured implements Tool {
         exitCode = refreshSuperUserGroupsConfiguration();
       } else if ("-refreshNodes".equals(cmd)) {
         exitCode = refreshNodes();
+      } else if ("-safemode".equals(cmd)) {
+        exitCode = setSafeMode(args[i++]);
       } else if ("-help".equals(cmd)) {
         if (i < args.length) {
           printUsage(args[i]);

@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.io;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -65,6 +69,43 @@ public class TestBloomMapFile extends TestCase {
     assertEquals(0, falseNeg);
     System.out.println("False positives: " + falsePos);
     assertTrue(falsePos < 2);
+  }
+
+  private void checkMembershipVaryingSizedKeys(String name, List<Text> keys) throws Exception {
+    Path dirName = new Path(System.getProperty("test.build.data",".") +
+        name + ".bloommapfile"); 
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path qualifiedDirName = fs.makeQualified(dirName);
+    BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, fs,
+      qualifiedDirName.toString(), Text.class, NullWritable.class);
+    for (Text key : keys) {
+      writer.append(key, NullWritable.get());
+    }
+    writer.close();
+
+    // will check for membership in the opposite order of how keys were inserted
+    BloomMapFile.Reader reader = new BloomMapFile.Reader(fs,
+        qualifiedDirName.toString(), conf);
+    Collections.reverse(keys);
+    for (Text key : keys) {
+      assertTrue("False negative for existing key " + key, reader.probablyHasKey(key));
+    }
+    reader.close();
+    fs.delete(qualifiedDirName, true);
+  }
+
+  public void testMembershipVaryingSizedKeysTest1() throws Exception {
+    ArrayList<Text> list = new ArrayList<Text>();
+    list.add(new Text("A"));
+    list.add(new Text("BB"));
+    checkMembershipVaryingSizedKeys(getName(), list);
+  }
+
+  public void testMembershipVaryingSizedKeysTest2() throws Exception {
+    ArrayList<Text> list = new ArrayList<Text>();
+    list.add(new Text("AA"));
+    list.add(new Text("B"));
+    checkMembershipVaryingSizedKeys(getName(), list);
   }
 
 }

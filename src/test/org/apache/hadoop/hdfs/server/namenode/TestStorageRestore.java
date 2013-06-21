@@ -167,7 +167,7 @@ public class TestStorageRestore extends TestCase {
   /**
    * get the total number of healthy storage directories
    */
-  public int numStorageDirs(FSImage fi) {
+  private static int numStorageDirs(FSImage fi) {
     int sum = 0;
     for (Iterator<StorageDirectory> it = fi.dirIterator(); it.hasNext();) {
       sum++;

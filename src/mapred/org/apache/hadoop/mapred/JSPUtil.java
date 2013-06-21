@@ -101,36 +101,43 @@ class JSPUtil {
     final JobInProgress job = jt.getJob(jobid);
     JobWithViewAccessCheck myJob = new JobWithViewAccessCheck(job);
 
+    if (!jt.areACLsEnabled() || job == null) {
+      return myJob;
+    }
+    
     String user = request.getRemoteUser();
-    if (user != null && job != null && jt.areACLsEnabled()) {
-      final UserGroupInformation ugi =
-        UserGroupInformation.createRemoteUser(user);
-      try {
-        ugi.doAs(new PrivilegedExceptionAction<Void>() {
-          public Void run() throws IOException, ServletException {
-
-            // checks job view permission
-            jt.getACLsManager().checkAccess(job, ugi,
-                Operation.VIEW_JOB_DETAILS);
-            return null;
-          }
-        });
-      } catch (AccessControlException e) {
-        String errMsg = "User " + ugi.getShortUserName() +
-            " failed to view " + jobid + "!<br><br>" + e.getMessage() +
-            "<hr><a href=\"jobtracker.jsp\">Go back to JobTracker</a><br>";
-        JSPUtil.setErrorAndForward(errMsg, request, response);
-        myJob.setViewAccess(false);
-      } catch (InterruptedException e) {
-        String errMsg = " Interrupted while trying to access " + jobid +
-        "<hr><a href=\"jobtracker.jsp\">Go back to JobTracker</a><br>";
-        JSPUtil.setErrorAndForward(errMsg, request, response);
-        myJob.setViewAccess(false);
-      }
+    if (user == null) {
+      JSPUtil.setErrorAndForward("Null user", request, response);
+      myJob.setViewAccess(false);
+      return myJob;
+    }
+    
+    final UserGroupInformation ugi = 
+      UserGroupInformation.createRemoteUser(user);
+    try {
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+        public Void run() throws IOException, ServletException {
+          // checks job view permission
+          jt.getACLsManager().checkAccess(job, ugi,
+              Operation.VIEW_JOB_DETAILS);
+          return null;
+        }
+      });
+    } catch (AccessControlException e) {
+      String errMsg = "User " + ugi.getShortUserName() +
+          " failed to view " + jobid + "!<br><br>" + e.getMessage() +
+          "<hr><a href=\"jobtracker.jsp\">Go back to JobTracker</a><br>";
+      JSPUtil.setErrorAndForward(errMsg, request, response);
+      myJob.setViewAccess(false);
+    } catch (InterruptedException e) {
+      String errMsg = " Interrupted while trying to access " + jobid +
+      "<hr><a href=\"jobtracker.jsp\">Go back to JobTracker</a><br>";
+      JSPUtil.setErrorAndForward(errMsg, request, response);
+      myJob.setViewAccess(false);
     }
     return myJob;
   }
-
+  
   /**
    * Sets error code SC_UNAUTHORIZED in response and forwards to
    * error page which contains error message and a back link.

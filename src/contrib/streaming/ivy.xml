@@ -90,10 +90,6 @@
       name="jets3t"
       rev="${jets3t.version}"
       conf="common->master"/>  -->
-<!--    <dependency org="commons-net"
-      name="commons-net"
-      rev="${commons-net.version}"
-      conf="common->master"/>  -->
     <dependency org="commons-codec"
       name="commons-codec"
       rev="${commons-codec.version}"

@@ -231,7 +231,7 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
     Configuration conf
   ) throws IOException {
     try {
-      conf.setBoolean("dfs.support.append", syncType == SyncType.APPEND);
+      conf.setBoolean("dfs.support.broken.append", syncType == SyncType.APPEND);
       conf.setBoolean("dfs.datanode.transferTo.allowed", transferToAllowed);
       init(conf);
 

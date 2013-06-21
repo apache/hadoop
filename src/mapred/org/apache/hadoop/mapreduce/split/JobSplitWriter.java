@@ -116,15 +116,15 @@ public class JobSplitWriter {
     if (array.length != 0) {
       SerializationFactory factory = new SerializationFactory(conf);
       int i = 0;
-      long offset = out.size();
+      long offset = out.getPos();
       for(T split: array) {
-        int prevCount = out.size();
+        long prevCount = out.getPos();
         Text.writeString(out, split.getClass().getName());
         Serializer<T> serializer = 
           factory.getSerializer((Class<T>) split.getClass());
         serializer.open(out);
         serializer.serialize(split);
-        int currCount = out.size();
+        long currCount = out.getPos();
         String[] locations = split.getLocations();
         final int max_loc = conf.getInt(MAX_SPLIT_LOCATIONS, 10);
         if (locations.length > max_loc) {
@@ -149,12 +149,12 @@ public class JobSplitWriter {
     SplitMetaInfo[] info = new SplitMetaInfo[splits.length];
     if (splits.length != 0) {
       int i = 0;
-      long offset = out.size();
+      long offset = out.getPos();
       for(org.apache.hadoop.mapred.InputSplit split: splits) {
-        int prevLen = out.size();
+        long prevLen = out.getPos();
         Text.writeString(out, split.getClass().getName());
         split.write(out);
-        int currLen = out.size();
+        long currLen = out.getPos();
         String[] locations = split.getLocations();
         final int max_loc = conf.getInt(MAX_SPLIT_LOCATIONS, 10);
         if (locations.length > max_loc) {

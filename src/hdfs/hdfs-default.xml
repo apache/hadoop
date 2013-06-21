@@ -38,7 +38,7 @@ creations/deletions), or "all".</description>
   <name>dfs.datanode.address</name>
   <value>0.0.0.0:50010</value>
   <description>
-    The address where the datanode server will listen to.
+    The datanode server address and port for data transfer.
     If the port is 0 then the server will start on a free port.
   </description>
 </property>
@@ -333,8 +333,23 @@ creations/deletions), or "all".</description>
   <description>
     Specifies the percentage of blocks that should satisfy 
     the minimal replication requirement defined by dfs.replication.min.
-    Values less than or equal to 0 mean not to start in safe mode.
+    Values less than or equal to 0 mean not to wait for any particular
+    percentage of blocks before exiting safemode.
     Values greater than 1 will make safe mode permanent.
+  </description>
+ </property>
+ 
+<property>
+  <name>dfs.namenode.safemode.min.datanodes</name>
+  <value>0</value>
+  <description>
+    Specifies the number of datanodes that must be considered alive
+    before the name node exits safemode.
+    Values less than or equal to 0 mean not to take the number of live
+    datanodes into account when deciding whether to remain in safe mode
+    during startup.
+    Values greater than the number of datanodes in the cluster
+    will make safe mode permanent.
   </description>
 </property>
 
@@ -416,10 +431,10 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.support.append</name>
-  <value>false</value>
-  <description>Does HDFS allow appends to files?
-               This is currently set to false because there are bugs in the
-               "append code" and is not supported in any prodction cluster.
+  <description>
+    This option is no longer supported. HBase no longer requires that
+    this option be enabled as sync is now enabled by default. See
+    HADOOP-8230 for additional information.
   </description>
 </property>
 
@@ -460,6 +475,234 @@ creations/deletions), or "all".</description>
   <value>4096</value>
   <description>Specifies the maximum number of threads to use for transferring data
   in and out of the DN.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.readahead.bytes</name>
+  <value>4193404</value>
+  <description>
+        While reading block files, if the Hadoop native libraries are available,
+        the datanode can use the posix_fadvise system call to explicitly
+        page data into the operating system buffer cache ahead of the current
+        reader's position. This can improve performance especially when
+        disks are highly contended.
+
+        This configuration specifies the number of bytes ahead of the current
+        read position which the datanode will attempt to read ahead. This
+        feature may be disabled by configuring this property to 0.
+
+        If the native libraries are not available, this configuration has no
+        effect.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.drop.cache.behind.reads</name>
+  <value>false</value>
+  <description>
+        In some workloads, the data read from HDFS is known to be significantly
+        large enough that it is unlikely to be useful to cache it in the
+        operating system buffer cache. In this case, the DataNode may be
+        configured to automatically purge all data from the buffer cache
+        after it is delivered to the client. This behavior is automatically
+        disabled for workloads which read only short sections of a block
+        (e.g HBase random-IO workloads).
+
+        This may improve performance for some workloads by freeing buffer
+        cache spage usage for more cacheable data.
+
+        If the Hadoop native libraries are not available, this configuration
+        has no effect.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.drop.cache.behind.writes</name>
+  <value>false</value>
+  <description>
+        In some workloads, the data written to HDFS is known to be significantly
+        large enough that it is unlikely to be useful to cache it in the
+        operating system buffer cache. In this case, the DataNode may be
+        configured to automatically purge all data from the buffer cache
+        after it is written to disk.
+
+        This may improve performance for some workloads by freeing buffer
+        cache spage usage for more cacheable data.
+
+        If the Hadoop native libraries are not available, this configuration
+        has no effect.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.sync.behind.writes</name>
+  <value>false</value>
+  <description>
+        If this configuration is enabled, the datanode will instruct the
+        operating system to enqueue all written data to the disk immediately
+        after it is written. This differs from the usual OS policy which
+        may wait for up to 30 seconds before triggering writeback.
+
+        This may improve performance for some workloads by smoothing the
+        IO profile for data written to disk.
+
+        If the Hadoop native libraries are not available, this configuration
+        has no effect.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.use.datanode.hostname</name>
+  <value>false</value>
+  <description>Whether clients should use datanode hostnames when
+    connecting to datanodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.use.datanode.hostname</name>
+  <value>false</value>
+  <description>Whether datanodes should use datanode hostnames when
+    connecting to other datanodes for data transfer.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.local.interfaces</name>
+  <value></value>
+  <description>A comma separated list of network interface names to use
+    for data transfer between the client and datanodes. When creating
+    a connection to read from or write to a datanode, the client
+    chooses one of the specified interfaces at random and binds its
+    socket to the IP of that interface. Individual names may be
+    specified as either an interface name (eg "eth0"), a subinterface
+    name (eg "eth0:0"), or an IP address (which may be specified using
+    CIDR notation to match a range of IPs).
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.transfer.bandwidthPerSec</name>
+  <value>0</value>
+  <description>
+    Specifies the maximum amount of bandwidth that can be utilized
+    for image transfer in term of the number of bytes per second.
+    A default value of 0 indicates that throttling is disabled.
+  </description>
+</property>
+
+<property>
+  <name>dfs.webhdfs.enabled</name>
+  <value>false</value>
+  <description>
+    Enable WebHDFS (REST API) in Namenodes and Datanodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.kerberos.internal.spnego.principal</name>
+  <value>${dfs.web.authentication.kerberos.principal}</value>
+</property>
+
+<property>
+  <name>dfs.secondary.namenode.kerberos.internal.spnego.principal</name>
+  <value>${dfs.web.authentication.kerberos.principal}</value>
+</property>
+
+<property>
+  <name>dfs.namenode.invalidate.work.pct.per.iteration</name>
+  <value>0.32f</value>
+  <description>
+    *Note*: Advanced property. Change with caution.
+    This determines the percentage amount of block
+    invalidations (deletes) to do over a single DN heartbeat
+    deletion command. The final deletion count is determined by applying this
+    percentage to the number of live nodes in the system.
+    The resultant number is the number of blocks from the deletion list
+    chosen for proper invalidation over a single heartbeat of a single DN.
+    Value should be a positive, non-zero percentage in float notation (X.Yf),
+    with 1.0f meaning 100%.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.replication.work.multiplier.per.iteration</name>
+  <value>2</value>
+  <description>
+    *Note*: Advanced property. Change with caution.
+    This determines the total amount of block transfers to begin in
+    parallel at a DN, for replication, when such a command list is being
+    sent over a DN heartbeat by the NN. The actual number is obtained by
+    multiplying this multiplier with the total number of live nodes in the
+    cluster. The result number is the number of blocks to begin transfers
+    immediately for, per DN heartbeat. This number can be any positive,
+    non-zero integer.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.avoid.read.stale.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to avoid reading from &quot;stale&quot; datanodes whose
+    heartbeat messages have not been received by the namenode 
+    for more than a specified time interval. Stale datanodes will be
+    moved to the end of the node list returned for reading. See
+    dfs.namenode.avoid.write.stale.datanode for a similar setting for writes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.avoid.write.stale.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to avoid writing to &quot;stale&quot; datanodes whose 
+    heartbeat messages have not been received by the namenode 
+    for more than a specified time interval. Writes will avoid using 
+    stale datanodes unless more than a configured ratio 
+    (dfs.namenode.write.stale.datanode.ratio) of datanodes are marked as 
+    stale. See dfs.namenode.avoid.read.stale.datanode for a similar setting
+    for reads.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.stale.datanode.interval</name>
+  <value>30000</value>
+  <description>
+    Default time interval for marking a datanode as "stale", i.e., if 
+    the namenode has not received heartbeat msg from a datanode for 
+    more than this time interval, the datanode will be marked and treated 
+    as "stale" by default. The stale interval cannot be too small since 
+    otherwise this may cause too frequent change of stale states. 
+    We thus set a minimum stale interval value (the default value is 3 times 
+    of heartbeat interval) and guarantee that the stale interval cannot be less
+    than the minimum value.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.write.stale.datanode.ratio</name>
+  <value>0.5f</value>
+  <description>
+    When the ratio of number stale datanodes to total datanodes marked
+    is greater than this ratio, stop avoiding writing to stale nodes so
+   as to prevent causing hotspots.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.plugins</name>
+  <value></value>
+  <description>Comma-separated list of datanode plug-ins to be activated.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.plugins</name>
+  <value></value>
+  <description>Comma-separated list of namenode plug-ins to be activated.
   </description>
 </property>
 

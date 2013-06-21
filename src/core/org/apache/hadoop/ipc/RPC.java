@@ -18,31 +18,35 @@
 
 package org.apache.hadoop.ipc;
 
-import java.lang.reflect.Proxy;
-import java.lang.reflect.Method;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
-
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
-import java.io.*;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.io.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.ObjectWritable;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.conf.*;
-
-import org.apache.hadoop.net.NetUtils;
 
 /** A simple RPC mechanism.
  *
@@ -205,12 +209,12 @@ public class RPC {
     private Client client;
     private boolean isClosed = false;
 
-    public Invoker(Class<? extends VersionedProtocol> protocol,
+    private Invoker(Class<? extends VersionedProtocol> protocol,
         InetSocketAddress address, UserGroupInformation ticket,
         Configuration conf, SocketFactory factory,
-        int rpcTimeout) throws IOException {
+        int rpcTimeout, RetryPolicy connectionRetryPolicy) throws IOException {
       this.remoteId = Client.ConnectionId.getConnectionId(address, protocol,
-          ticket, rpcTimeout, conf);
+          ticket, rpcTimeout, connectionRetryPolicy, conf);
       this.client = CLIENTS.getClient(conf, factory);
     }
 
@@ -385,19 +389,39 @@ public class RPC {
       Class<? extends VersionedProtocol> protocol,
       long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
       Configuration conf, SocketFactory factory, int rpcTimeout) throws IOException {
+    return getProxy(protocol, clientVersion, addr, ticket, conf, factory,
+        rpcTimeout, null, true);
+  }
+
+  /** Construct a client-side proxy object that implements the named protocol,
+   * talking to a server at the named address. */
+  public static VersionedProtocol getProxy(
+      Class<? extends VersionedProtocol> protocol,
+      long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
+      Configuration conf, SocketFactory factory, int rpcTimeout,
+      RetryPolicy connectionRetryPolicy,
+      boolean checkVersion) throws IOException {
 
     if (UserGroupInformation.isSecurityEnabled()) {
       SaslRpcServer.init(conf);
     }
-    VersionedProtocol proxy =
-        (VersionedProtocol) Proxy.newProxyInstance(
-            protocol.getClassLoader(), new Class[] { protocol },
-            new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
+    final Invoker invoker = new Invoker(protocol, addr, ticket, conf, factory,
+        rpcTimeout, connectionRetryPolicy);
+    VersionedProtocol proxy = (VersionedProtocol)Proxy.newProxyInstance(
+        protocol.getClassLoader(), new Class[]{protocol}, invoker);
+    
+    if (checkVersion) {
+      checkVersion(protocol, clientVersion, proxy);
+    }
+    return proxy;
+  }
+
+  /** Get server version and then compare it with client version. */
+  public static void checkVersion(Class<? extends VersionedProtocol> protocol,
+      long clientVersion, VersionedProtocol proxy)  throws IOException {
     long serverVersion = proxy.getProtocolVersion(protocol.getName(), 
                                                   clientVersion);
-    if (serverVersion == clientVersion) {
-      return proxy;
-    } else {
+    if (serverVersion != clientVersion) {
       throw new VersionMismatch(protocol.getName(), clientVersion, 
                                 serverVersion);
     }

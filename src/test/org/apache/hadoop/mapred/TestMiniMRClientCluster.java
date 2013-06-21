@@ -99,6 +99,29 @@ public class TestMiniMRClientCluster {
     validateCounters(job.getCounters(), 5, 25, 5, 5);
   }
 
+  @Test
+  public void testRestart() throws Exception {
+
+    String jobTrackerAddr1 = mrCluster.getConfig().get("mapred.job.tracker");
+    String taskTrackerAddr1 = mrCluster.getConfig().get(
+        "mapred.task.tracker.report.address");
+
+    mrCluster.restart();
+
+    String jobTrackerAddr2 = mrCluster.getConfig().get("mapred.job.tracker");
+    String taskTrackerAddr2 = mrCluster.getConfig().get(
+        "mapred.task.tracker.report.address");
+
+    assertEquals("Address before restart: " + jobTrackerAddr1
+        + " is different from new address: " + jobTrackerAddr2,
+        jobTrackerAddr1, jobTrackerAddr2);
+
+    assertEquals("Address before restart: " + taskTrackerAddr1
+        + " is different from new address: " + taskTrackerAddr2,
+        taskTrackerAddr1, taskTrackerAddr2);
+
+  }
+
   private void validateCounters(Counters counters, long mapInputRecords,
       long mapOutputRecords, long reduceInputGroups, long reduceOutputRecords) {
     assertEquals("MapInputRecords", mapInputRecords, counters.findCounter(

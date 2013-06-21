@@ -40,6 +40,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -59,6 +60,10 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.Counters.Counter;
@@ -426,9 +431,17 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       ensureFreshStatus();
       return status.getFailureInfo();
     }
+
+    @Override
+    public JobStatus getJobStatus() throws IOException {
+      updateStatus();
+      return status;
+    }
   }
 
+  private JobSubmissionProtocol rpcJobSubmitClient;
   private JobSubmissionProtocol jobSubmitClient;
+  
   private Path sysDir = null;
   private Path stagingAreaDir = null;
   
@@ -439,6 +452,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private static final int DEFAULT_TASKLOG_TIMEOUT = 60000;
   static int tasklogtimeout;
 
+  public static final String MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_KEY =
+      "mapreduce.jobclient.retry.policy.enabled";
+  public static final boolean MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_DEFAULT = 
+      false;
+  public static final String MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_KEY =
+      "mapreduce.jobclient.retry.policy.spec";
+  public static final String MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_DEFAULT =
+      "10000,6,60000,10"; //t1,n1,t2,n2,...
+  
   /**
    * Create a job client.
    */
@@ -471,16 +493,72 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       conf.setNumMapTasks(1);
       this.jobSubmitClient = new LocalJobRunner(conf);
     } else {
-      this.jobSubmitClient = createRPCProxy(JobTracker.getAddress(conf), conf);
+      this.rpcJobSubmitClient = 
+          createRPCProxy(JobTracker.getAddress(conf), conf);
+      this.jobSubmitClient = createProxy(this.rpcJobSubmitClient, conf);
     }        
   }
 
   private static JobSubmissionProtocol createRPCProxy(InetSocketAddress addr,
       Configuration conf) throws IOException {
-    return (JobSubmissionProtocol) RPC.getProxy(JobSubmissionProtocol.class,
-        JobSubmissionProtocol.versionID, addr, 
-        UserGroupInformation.getCurrentUser(), conf,
-        NetUtils.getSocketFactory(conf, JobSubmissionProtocol.class));
+    
+    JobSubmissionProtocol rpcJobSubmitClient = 
+        (JobSubmissionProtocol)RPC.getProxy(
+            JobSubmissionProtocol.class,
+            JobSubmissionProtocol.versionID, addr, 
+            UserGroupInformation.getCurrentUser(), conf,
+            NetUtils.getSocketFactory(conf, JobSubmissionProtocol.class), 
+            0,
+            RetryUtils.getMultipleLinearRandomRetry(
+                conf,
+                MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_KEY,
+                MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_DEFAULT,
+                MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_KEY,
+                MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_DEFAULT
+                ),
+            false);
+    
+    return rpcJobSubmitClient;
+  }
+
+  private static JobSubmissionProtocol createProxy(
+      JobSubmissionProtocol rpcJobSubmitClient,
+      Configuration conf) throws IOException {
+
+    /*
+     * Default is to retry on JobTrackerNotYetInitializedException
+     * i.e. wait for JobTracker to get to RUNNING state and for
+     * SafeModeException
+     */
+    @SuppressWarnings("unchecked")
+    RetryPolicy defaultPolicy = 
+        RetryUtils.getDefaultRetryPolicy(
+            conf,
+            MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_KEY,
+            MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_DEFAULT,
+            MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_KEY,
+            MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_DEFAULT,
+            JobTrackerNotYetInitializedException.class,
+            SafeModeException.class
+            ); 
+
+    /*
+     * Method specific retry policies for killJob and killTask...
+     *
+     * No retries on any exception including
+     * ConnectionException and SafeModeException
+     */
+    Map<String,RetryPolicy> methodNameToPolicyMap = 
+        new HashMap<String,RetryPolicy>();
+    methodNameToPolicyMap.put("killJob", RetryPolicies.TRY_ONCE_THEN_FAIL);
+    methodNameToPolicyMap.put("killTask", RetryPolicies.TRY_ONCE_THEN_FAIL);
+    
+    final JobSubmissionProtocol jsp = (JobSubmissionProtocol) RetryProxy.create(
+        JobSubmissionProtocol.class,
+        rpcJobSubmitClient, defaultPolicy, methodNameToPolicyMap);
+    RPC.checkVersion(JobSubmissionProtocol.class,
+        JobSubmissionProtocol.versionID, jsp);
+    return jsp;
   }
 
   @InterfaceAudience.Private
@@ -496,7 +574,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     public long renew(Token<?> token, Configuration conf
                       ) throws IOException, InterruptedException {
       InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
-      JobSubmissionProtocol jt = createRPCProxy(addr, conf);
+      JobSubmissionProtocol jt = createProxy(createRPCProxy(addr, conf), conf);
       return jt.renewDelegationToken((Token<DelegationTokenIdentifier>) token);
     }
 
@@ -505,7 +583,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     public void cancel(Token<?> token, Configuration conf
                        ) throws IOException, InterruptedException {
       InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
-      JobSubmissionProtocol jt = createRPCProxy(addr, conf);
+      JobSubmissionProtocol jt = createProxy(createRPCProxy(addr, conf), conf);
       jt.cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
     }
 
@@ -531,15 +609,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   public JobClient(InetSocketAddress jobTrackAddr, 
                    Configuration conf) throws IOException {
     this.ugi = UserGroupInformation.getCurrentUser();
-    jobSubmitClient = createRPCProxy(jobTrackAddr, conf);
+    rpcJobSubmitClient = createRPCProxy(jobTrackAddr, conf); 
+    jobSubmitClient = createProxy(rpcJobSubmitClient, conf);
   }
 
   /**
    * Close the <code>JobClient</code>.
    */
   public synchronized void close() throws IOException {
-    if (!(jobSubmitClient instanceof LocalJobRunner)) {
-      RPC.stopProxy(jobSubmitClient);
+    if (!(rpcJobSubmitClient instanceof LocalJobRunner)) {
+      RPC.stopProxy(rpcJobSubmitClient);
     }
   }
 
@@ -759,10 +838,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     
     // First we check whether the cached archives and files are legal.
     TrackerDistributedCacheManager.validate(job);
-    //  set the timestamps of the archives and files
-    TrackerDistributedCacheManager.determineTimestamps(job);
-    //  set the public/private visibility of the archives and files
-    TrackerDistributedCacheManager.determineCacheVisibilities(job);
+    //  set the timestamps of the archives and files and set the
+    //  public/private visibility of the archives and files
+    TrackerDistributedCacheManager.determineTimestampsAndCacheVisibilities(job);
     // get DelegationTokens for cache files
     TrackerDistributedCacheManager.getDelegationTokens(job, 
                                                        job.getCredentials());
@@ -774,12 +852,20 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       if ("".equals(job.getJobName())){
         job.setJobName(new Path(originalJarPath).getName());
       }
-      Path submitJarFile = JobSubmissionFiles.getJobJar(submitJobDir);
-      job.setJar(submitJarFile.toString());
-      fs.copyFromLocalFile(new Path(originalJarPath), submitJarFile);
-      fs.setReplication(submitJarFile, replication);
-      fs.setPermission(submitJarFile, 
-          new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));
+      Path originalJarFile = new Path(originalJarPath);
+      URI jobJarURI = originalJarFile.toUri();
+      // If the job jar is already in fs, we don't need to copy it from local fs
+      if (jobJarURI.getScheme() == null || jobJarURI.getAuthority() == null
+              || !(jobJarURI.getScheme().equals(fs.getUri().getScheme())
+                  && jobJarURI.getAuthority().equals(
+                                            fs.getUri().getAuthority()))) {
+        Path submitJarFile = JobSubmissionFiles.getJobJar(submitJobDir);
+        job.setJar(submitJarFile.toString());
+        fs.copyFromLocalFile(originalJarFile, submitJarFile);
+        fs.setReplication(submitJarFile, replication);
+        fs.setPermission(submitJarFile, 
+            new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));
+      }
     } else {
       LOG.warn("No job jar file set.  User classes may not be found. "+
                "See JobConf(Class) or JobConf#setJar(String).");
@@ -908,6 +994,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           FSDataOutputStream out = 
             FileSystem.create(fs, submitJobFile,
                 new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));
+
+          // removing jobtoken referrals before copying the jobconf to HDFS
+          // as the tasks don't need this setting, actually they may break
+          // because of it if present as the referral will point to a
+          // different job.
+          TokenCache.cleanUpTokenReferral(jobCopy);
 
           try {
             jobCopy.writeXml(out);

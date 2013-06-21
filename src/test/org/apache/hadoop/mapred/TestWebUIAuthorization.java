@@ -20,13 +20,20 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URL;
 import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
+import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -35,19 +42,12 @@ import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.TaskAttempt;
 import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.HadoopPolicyProvider;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.junit.Test;
-
-import java.security.PrivilegedExceptionAction;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 
 public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
 
@@ -87,7 +87,13 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
   static int getHttpStatusCode(String urlstring, String userName,
       String method) throws IOException {
     LOG.info("Accessing " + urlstring + " as user " + userName);
-    URL url = new URL(urlstring + "&user.name=" + userName);
+    URL url = null;
+    if (userName == null) {
+      url = new URL(urlstring);
+    } else {
+      url = new URL(urlstring + "&user.name=" + userName);
+    }
+
     HttpURLConnection connection = (HttpURLConnection)url.openConnection();
     connection.setRequestMethod(method);
     if (method.equals("POST")) {
@@ -776,7 +782,13 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     Properties props = new Properties();
     props.setProperty("hadoop.http.filter.initializers",
         DummyFilterInitializer.class.getName());
-    props.setProperty(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, "true");
+    props.setProperty(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
+        "true");
+    props.setProperty(PolicyProvider.POLICY_PROVIDER_CONFIG, 
+        HadoopPolicyProvider.class.getName());
+    props.setProperty(
+        CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, 
+        "true");
     props.setProperty(JobConf.MR_ADMINS, mrAdminUser + " " + mrAdminGroup);
 
     startCluster(true, props);
@@ -908,9 +920,16 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     String taskGraphServlet = jtURL + "/taskgraph?type=map&jobid="
         + jobid.toString();
     validateViewJob(taskGraphServlet, "GET");
+    assertEquals("Incorrect return code for null user",
+        HttpURLConnection.HTTP_UNAUTHORIZED,
+        getHttpStatusCode(taskGraphServlet, null, "GET"));
+    
     taskGraphServlet = jtURL + "/taskgraph?type=reduce&jobid="
         + jobid.toString();
     validateViewJob(taskGraphServlet, "GET");
+    assertEquals("Incorrect return code for null user",
+        HttpURLConnection.HTTP_UNAUTHORIZED,
+        getHttpStatusCode(taskGraphServlet, null, "GET"));
   }
 
   // validate access of jobdetails.jsp

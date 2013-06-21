@@ -76,7 +76,8 @@ fi
 if [ "$command" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
   export HADOOP_PID_DIR=$HADOOP_SECURE_DN_PID_DIR
   export HADOOP_LOG_DIR=$HADOOP_SECURE_DN_LOG_DIR
-  export HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER   
+  export HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER  
+  starting_secure_dn="true"
 fi
 
 if [ "$HADOOP_IDENT_STRING" = "" ]; then
@@ -105,6 +106,7 @@ export HADOOP_LOGFILE=hadoop-$HADOOP_IDENT_STRING-$command-$HOSTNAME.log
 export HADOOP_ROOT_LOGGER="INFO,DRFA"
 log=$HADOOP_LOG_DIR/hadoop-$HADOOP_IDENT_STRING-$command-$HOSTNAME.out
 pid=$HADOOP_PID_DIR/hadoop-$HADOOP_IDENT_STRING-$command.pid
+HADOOP_STOP_TIMEOUT=${HADOOP_STOP_TIMEOUT:-5}
 
 # Set default scheduling priority
 if [ "$HADOOP_NICENESS" = "" ]; then
@@ -134,15 +136,31 @@ case $startStop in
     cd "$HADOOP_PREFIX"
     nohup nice -n $HADOOP_NICENESS "$HADOOP_PREFIX"/bin/hadoop --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
-    sleep 1; head "$log"
+    sleep 1
+    head "$log"
+    # capture the ulimit output
+    if [ "true" = "$starting_secure_dn" ]; then
+      echo "ulimit -a for secure datanode user $HADOOP_SECURE_DN_USER" >> $log
+      # capture the ulimit info for the appropriate user
+      su --shell=/bin/bash $HADOOP_SECURE_DN_USER -c 'ulimit -a' >> $log 2>&1
+    else
+      echo "ulimit -a for user $USER" >> $log
+      ulimit -a >> $log 2>&1
+    fi
     ;;
           
   (stop)
 
     if [ -f $pid ]; then
-      if kill -0 `cat $pid` > /dev/null 2>&1; then
+      TARGET_PID=`cat $pid`
+      if kill -0 $TARGET_PID > /dev/null 2>&1; then
         echo stopping $command
-        kill `cat $pid`
+        kill $TARGET_PID
+        sleep $HADOOP_STOP_TIMEOUT
+        if kill -0 $TARGET_PID > /dev/null 2>&1; then
+          echo "$command did not stop gracefully after $HADOOP_STOP_TIMEOUT seconds: killing with kill -9"
+          kill -9 $TARGET_PID
+        fi
       else
         echo no $command to stop
       fi

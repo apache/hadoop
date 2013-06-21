@@ -18,29 +18,40 @@
 
 package org.apache.hadoop.hdfs;
 
-import java.io.*;
-import java.net.*;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 
@@ -156,6 +167,18 @@ public class DistributedFileSystem extends FileSystem {
           dfs.open(getPathName(f), bufferSize, verifyChecksum, statistics));
   }
 
+  /**
+   * Get the close status of a file
+   * @param src The path to the file
+   *
+   * @return return true if file is closed
+   * @throws FileNotFoundException if the file does not exist.
+   * @throws IOException If an I/O error occurred
+   */
+  public boolean isFileClosed(Path src) throws IOException {
+    return dfs.isFileClosed(getPathName(src));
+  }
+
   /** 
    * Start the lease recovery of a file
    *
@@ -207,6 +230,24 @@ public class DistributedFileSystem extends FileSystem {
                                ) throws IOException {
     statistics.incrementWriteOps(1);
     return dfs.setReplication(getPathName(src), replication);
+  }
+
+  /**
+   * Move blocks from srcs to trg and delete srcs afterwards.
+   * The file block sizes must be the same.
+   *
+   * @param trg existing file to append to
+   * @param psrcs list of files (same block size, same replication)
+   * @throws IOException
+   */
+  @Override
+  public void concat(Path trg, Path [] psrcs) throws IOException {
+    String [] srcs = new String [psrcs.length];
+    for(int i=0; i<psrcs.length; i++) {
+      srcs[i] = getPathName(psrcs[i]);
+    }
+    statistics.incrementWriteOps(1);
+    dfs.concat(getPathName(trg), srcs);
   }
 
   /**
@@ -626,5 +667,47 @@ public class DistributedFileSystem extends FileSystem {
    */
   public void setBalancerBandwidth(long bandwidth) throws IOException {
     dfs.setBalancerBandwidth(bandwidth);
+  }
+
+  /**
+   * Is the HDFS healthy?
+   * HDFS is considered as healthy if it is up and not in safemode.
+   *
+   * @param uri the HDFS URI.  Note that the URI path is ignored.
+   * @return true if HDFS is healthy; false, otherwise.
+   */
+  public static boolean isHealthy(URI uri) {
+    //check scheme
+    final String scheme = uri.getScheme();
+    if (!"hdfs".equalsIgnoreCase(scheme)) {
+      throw new IllegalArgumentException("This scheme is not hdfs, uri=" + uri);
+    }
+    
+    final Configuration conf = new Configuration();
+    //disable FileSystem cache
+    conf.setBoolean(String.format("fs.%s.impl.disable.cache", scheme), true);
+    //disable client retry for rpc connection and rpc calls
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_ENABLED_KEY, false);
+    conf.setInt(Client.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
+
+    DistributedFileSystem fs = null;
+    try {
+      fs = (DistributedFileSystem)FileSystem.get(uri, conf);
+      final boolean safemode = fs.setSafeMode(SafeModeAction.SAFEMODE_GET);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Is namenode in safemode? " + safemode + "; uri=" + uri);
+      }
+
+      fs.close();
+      fs = null;
+      return !safemode;
+    } catch(IOException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Got an exception for uri=" + uri, e);
+      }
+      return false;
+    } finally {
+      IOUtils.cleanup(LOG, fs);
+    }
   }
 }

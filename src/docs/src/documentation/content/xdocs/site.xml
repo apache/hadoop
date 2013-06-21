@@ -35,6 +35,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <overview label="Overview"  href="index.html" />  
     <single   label="Single Node Setup"  href="single_node_setup.html" />
     <cluster  label="Cluster Setup"  href="cluster_setup.html" />
+    <cluster  label="CLI MiniCluster"  href="cli_minicluster.html" />
   </docs>  
 
    <docs label="Guides">
@@ -46,6 +47,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <streaming  label="Hadoop Streaming"  href="streaming.html" />
     <commands label="Hadoop Commands"  href="commands_manual.html" />
     <distcp         label="DistCp"  href="distcp.html" />
+    <distcp2        label="DistCp Version 2"  href="distcp2.html" />
     <vaidya         label="Vaidya"  href="vaidya.html"/>
     <archives     label="Hadoop Archives" href="hadoop_archives.html"/>
     <gridmix       label="Gridmix"  href="gridmix.html"/>
@@ -61,6 +63,8 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <hdfs_perm        label="Permissions" href="hdfs_permissions_guide.html" />
     <hdfs_quotas      label="Quotas" href="hdfs_quota_admin_guide.html" />
     <hdfs_SLG         label="Synthetic Load Generator"  href="SLG_user_guide.html" />
+    <hdfs_imageviewer	label="Offline Image Viewer"	href="hdfs_imageviewer.html" />
+    <hftp label="HFTP" href="hftp.html"/>
     <webhdfs label="WebHDFS REST API" href="webhdfs.html" />
     <hdfs_libhdfs       label="C API libhdfs" href="libhdfs.html" />
   </docs>
@@ -164,6 +168,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setTimes href="#setTimes(org.apache.hadoop.fs.Path,%20long,%20long)" />
 
                 <append href="#append(org.apache.hadoop.fs.Path,%20int,%20org.apache.hadoop.util.Progressable)" />
+                <concat href="#concat(org.apache.hadoop.fs.Path,%20org.apache.hadoop.fs.Path[])" />
                 <delete href="#delete(org.apache.hadoop.fs.Path,%20boolean)" />
               </filesystem>
             </fs>

@@ -21,6 +21,8 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -36,7 +38,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.PureJavaCrc32;
@@ -51,11 +55,15 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   public static final Log LOG = DataNode.LOG;
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
+  private static final long CACHE_DROP_LAG_BYTES = 8 * 1024 * 1024;
+  
   private Block block; // the block to receive
   protected boolean finalized;
   private DataInputStream in = null; // from where data are read
   private DataChecksum checksum; // from where chunks of a block can be read
   private OutputStream out = null; // to block file at local disk
+  private OutputStream cout = null; // output stream for cehcksum file
+  private FileDescriptor outFd;
   private DataOutputStream checksumOut = null; // to crc file at local disk
   private int bytesPerChecksum;
   private int checksumSize;
@@ -68,7 +76,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   private String mirrorAddr;
   private DataOutputStream mirrorOut;
   private Daemon responder = null;
-  private BlockTransferThrottler throttler;
+  private DataTransferThrottler throttler;
   private FSDataset.BlockWriteStreams streams;
   private boolean isRecovery = false;
   private String clientName;
@@ -77,6 +85,11 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   private DataNode datanode = null;
   volatile private boolean mirrorError;
 
+  // Cache management state
+  private boolean dropCacheBehindWrites;
+  private boolean syncBehindWrites;
+  private long lastCacheDropOffset = 0;
+  
   BlockReceiver(Block block, DataInputStream in, String inAddr,
                 String myAddr, boolean isRecovery, String clientName, 
                 DatanodeInfo srcDataNode, DataNode datanode) throws IOException {
@@ -93,6 +106,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       this.checksum = DataChecksum.newDataChecksum(in);
       this.bytesPerChecksum = checksum.getBytesPerChecksum();
       this.checksumSize = checksum.getChecksumSize();
+      this.dropCacheBehindWrites = datanode.shouldDropCacheBehindWrites();
+      this.syncBehindWrites = datanode.shouldSyncBehindWrites();
       //
       // Open local disk out
       //
@@ -101,8 +116,15 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       this.finalized = false;
       if (streams != null) {
         this.out = streams.dataOut;
+        this.cout = streams.checksumOut;
+        if (out instanceof FileOutputStream) {
+          this.outFd = ((FileOutputStream) out).getFD();
+        } else {
+          LOG.warn("Could not get file descriptor for outputstream of class "
+              + out.getClass());
+        }
         this.checksumOut = new DataOutputStream(new BufferedOutputStream(
-                                                  streams.checksumOut, 
+                                                  streams.checksumOut,
                                                   SMALL_BUFFER_SIZE));
         // If this block is for appends, then remove it from periodic
         // validation.
@@ -140,6 +162,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     try {
       if (checksumOut != null) {
         checksumOut.flush();
+        if (datanode.syncOnClose && (cout instanceof FileOutputStream)) {
+          ((FileOutputStream)cout).getChannel().force(true);
+        }
         checksumOut.close();
         checksumOut = null;
       }
@@ -150,6 +175,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     try {
       if (out != null) {
         out.flush();
+        if (datanode.syncOnClose && (out instanceof FileOutputStream)) {
+          ((FileOutputStream)out).getChannel().force(true);
+        }
         out.close();
         out = null;
       }
@@ -181,7 +209,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
    * affect this datanode.
    */
   private void handleMirrorOutError(IOException ioe) throws IOException {
-    LOG.info(datanode.dnRegistration + ": Exception writing block " +
+    LOG.info(datanode.dnRegistration + ": Exception writing " +
              block + " to mirror " + mirrorAddr + "\n" +
              StringUtils.stringifyException(ioe));
     if (Thread.interrupted()) { // shut down if the thread is interrupted
@@ -208,13 +236,13 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       if (!checksum.compare(checksumBuf, checksumOff)) {
         if (srcDataNode != null) {
           try {
-            LOG.info("report corrupt block " + block + " from datanode " +
+            LOG.info("report corrupt " + block + " from datanode " +
                       srcDataNode + " to namenode");
             LocatedBlock lb = new LocatedBlock(block, 
                                             new DatanodeInfo[] {srcDataNode});
             datanode.namenode.reportBadBlocks(new LocatedBlock[] {lb});
           } catch (IOException e) {
-            LOG.warn("Failed to report bad block " + block + 
+            LOG.warn("Failed to report bad " + block + 
                       " from datanode " + srcDataNode + " to namenode");
           }
         }
@@ -390,7 +418,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     buf.reset();
     
     if (LOG.isDebugEnabled()){
-      LOG.debug("Receiving one packet for block " + block +
+      LOG.debug("Receiving one packet for " + block +
                 " of length " + payloadLen +
                 " seqno " + seqno +
                 " offsetInBlock " + offsetInBlock +
@@ -419,7 +447,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     } 
 
     if (len == 0) {
-      LOG.debug("Receiving empty packet for block " + block);
+      LOG.debug("Receiving empty packet for " + block);
     } else {
       offsetInBlock += len;
 
@@ -471,12 +499,12 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             checksumOut.write(pktBuf, checksumOff, checksumLen);
           }
           datanode.myMetrics.incrBytesWritten(len);
-
           /// flush entire packet before sending ack
           flush();
           
           // update length only after flush to disk
           datanode.data.setVisibleLength(block, offsetInBlock);
+          dropOsCacheBehindWriter(offsetInBlock);
         }
       } catch (IOException iex) {
         datanode.checkDiskError(iex);
@@ -497,6 +525,28 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     return payloadLen;
   }
 
+  private void dropOsCacheBehindWriter(long offsetInBlock) throws IOException {
+    try {
+      if (outFd != null
+          && offsetInBlock > lastCacheDropOffset + CACHE_DROP_LAG_BYTES) {
+        long twoWindowsAgo = lastCacheDropOffset - CACHE_DROP_LAG_BYTES;
+        if (twoWindowsAgo > 0 && dropCacheBehindWrites) {
+          NativeIO.posixFadviseIfPossible(outFd, 0, lastCacheDropOffset,
+              NativeIO.POSIX_FADV_DONTNEED);
+        }
+
+        if (syncBehindWrites) {
+          NativeIO.syncFileRangeIfPossible(outFd, lastCacheDropOffset,
+              CACHE_DROP_LAG_BYTES, NativeIO.SYNC_FILE_RANGE_WRITE);
+        }
+
+        lastCacheDropOffset += CACHE_DROP_LAG_BYTES;
+      }
+    } catch (Throwable t) {
+      LOG.warn("Couldn't drop os cache behind writer for " + block, t);
+    }
+  }
+
   void writeChecksumHeader(DataOutputStream mirrorOut) throws IOException {
     checksum.writeHeader(mirrorOut);
   }
@@ -506,7 +556,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       DataOutputStream mirrOut, // output to next datanode
       DataInputStream mirrIn,   // input from next datanode
       DataOutputStream replyOut,  // output to previous datanode
-      String mirrAddr, BlockTransferThrottler throttlerArg,
+      String mirrAddr, DataTransferThrottler throttlerArg,
       int numTargets) throws IOException {
 
       mirrorOut = mirrOut;
@@ -561,8 +611,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
 
     } catch (IOException ioe) {
-      LOG.info("Exception in receiveBlock for block " + block + 
-               " " + ioe);
+      LOG.info("Exception in receiveBlock for " + block + " " + ioe);
       IOUtils.closeStream(this);
       if (responder != null) {
         responder.interrupt();
@@ -624,8 +673,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     // If this is a partial chunk, then read in pre-existing checksum
     if (offsetInBlock % bytesPerChecksum != 0) {
       LOG.info("setBlockPosition trying to set position to " +
-               offsetInBlock +
-               " for block " + block +
+               offsetInBlock + " for " + block +
                " which is not a multiple of bytesPerChecksum " +
                bytesPerChecksum);
       computePartialChunkCrc(offsetInBlock, offsetInChecksum, bytesPerChecksum);
@@ -655,8 +703,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     int checksumSize = checksum.getChecksumSize();
     blkoff = blkoff - sizePartialChunk;
     LOG.info("computePartialChunkCrc sizePartialChunk " + 
-              sizePartialChunk +
-              " block " + block +
+              sizePartialChunk + " " + block +
               " offset in block " + blkoff +
               " offset in metafile " + ckoff);
 
@@ -679,7 +726,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     // compute crc of partial chunk from data read in the block file.
     partialCrc = new PureJavaCrc32();
     partialCrc.update(buf, 0, sizePartialChunk);
-    LOG.info("Read in partial CRC chunk from disk for block " + block);
+    LOG.info("Read in partial CRC chunk from disk for " + block);
 
     // paranoia! verify that the pre-computed crc matches what we
     // recalculated just now
@@ -712,7 +759,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     private Thread receiverThread; // the thread that spawns this responder
 
     public String toString() {
-      return "PacketResponder " + numTargets + " for Block " + this.block;
+      return "PacketResponder " + numTargets + " for " + this.block;
     }
 
     PacketResponder(BlockReceiver receiver, Block b, DataInputStream in, 
@@ -864,8 +911,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                       "HDFS_WRITE", receiver.clientName, offset, 
                       datanode.dnRegistration.getStorageID(), block, endTime-startTime));
               } else {
-                LOG.info("Received block " + block + 
-                         " of size " + block.getNumBytes() + 
+                LOG.info("Received " + block + " of size " + block.getNumBytes() +
                          " from " + receiver.inAddr);
               }
             }
@@ -906,8 +952,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
           }
         }
       }
-      LOG.info("PacketResponder " + numTargets + 
-               " for block " + block + " terminating");
+      LOG.info("PacketResponder " + numTargets + " for " + block +
+          " terminating");
     }
   }
   

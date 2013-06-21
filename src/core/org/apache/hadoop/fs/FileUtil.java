@@ -193,7 +193,7 @@ public class FileUtil {
     // Check if dest is directory
     if (!dstFS.exists(dst)) {
       throw new IOException("`" + dst +"': specified destination directory " +
-                            "doest not exist");
+                            "does not exist");
     } else {
       FileStatus sdst = dstFS.getFileStatus(dst);
       if (!sdst.isDir()) 
@@ -377,6 +377,8 @@ public class FileUtil {
       } else if (!overwrite) {
         throw new IOException("Target " + dst + " already exists");
       }
+    } else if (dst.toString().isEmpty()) {
+      return checkDest(null, dstFS, new Path(srcName), overwrite);
     }
     return dst;
   }

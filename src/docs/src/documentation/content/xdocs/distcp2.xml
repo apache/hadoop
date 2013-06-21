@@ -1,0 +1,673 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+
+  <header>
+    <title>DistCp Version 2 Guide</title>
+  </header>
+
+  <body>
+
+    <section id="Overview">
+      <title>Overview</title>
+
+      <p>DistCp Version 2 (distributed copy) is a tool used for large inter/intra-cluster
+      copying. It uses MapReduce to effect its distribution, error
+      handling and recovery, and reporting. It expands a list of files and
+      directories into input to map tasks, each of which will copy a partition
+      of the files specified in the source list.
+      </p>
+      <p>
+       The erstwhile implementation of DistCp has its share of quirks and
+       drawbacks, both in its usage, as well as its extensibility and
+       performance. The purpose of the DistCp refactor was to fix these shortcomings,
+       enabling it to be used and extended programmatically. New paradigms have
+       been introduced to improve runtime and setup performance, while simultaneously
+       retaining the legacy behaviour as default.
+      </p>
+      <p>
+       This document aims to describe the design of the new DistCp, its spanking
+       new features, their optimal use, and any deviance from the legacy
+       implementation.
+      </p>
+    </section>
+
+    <section id="Usage">
+      <title>Usage</title>
+      <section id="BasicUsage">
+        <title>Basic Usage</title>
+        <p>The most common invocation of DistCp is an inter-cluster copy:</p>
+        <p><code>bash$ hadoop distcp2 hdfs://nn1:8020/foo/bar \</code><br/>
+           <code>                    hdfs://nn2:8020/bar/foo</code></p>
+
+        <p>This will expand the namespace under <code>/foo/bar</code> on nn1
+        into a temporary file, partition its contents among a set of map
+        tasks, and start a copy on each TaskTracker from nn1 to nn2.</p>
+
+        <p>One can also specify multiple source directories on the command
+        line:</p>
+        <p><code>bash$ hadoop distcp2 hdfs://nn1:8020/foo/a \</code><br/>
+           <code> hdfs://nn1:8020/foo/b \</code><br/>
+           <code> hdfs://nn2:8020/bar/foo</code></p>
+
+        <p>Or, equivalently, from a file using the <code>-f</code> option:<br/>
+        <code>bash$ hadoop distcp2 -f hdfs://nn1:8020/srclist \</code><br/>
+        <code> hdfs://nn2:8020/bar/foo</code><br/></p>
+
+        <p>Where <code>srclist</code> contains<br/>
+        <code>hdfs://nn1:8020/foo/a</code><br/>
+        <code>hdfs://nn1:8020/foo/b</code></p>
+
+        <p>When copying from multiple sources, DistCp will abort the copy with
+        an error message if two sources collide, but collisions at the
+        destination are resolved per the <a href="#CommandLineOptions">options</a>
+        specified. By default, files already existing at the destination are
+        skipped (i.e. not replaced by the source file). A count of skipped
+        files is reported at the end of each job, but it may be inaccurate if a
+        copier failed for some subset of its files, but succeeded on a later
+        attempt.</p>
+
+        <p>It is important that each TaskTracker can reach and communicate with
+        both the source and destination file systems. For HDFS, both the source
+        and destination must be running the same version of the protocol or use
+        a backwards-compatible protocol; 
+        see <a href="#CopyingBetweenVersionsOfHDFS">Copying Between Versions</a>.
+        </p>
+
+        <p>After a copy, it is recommended that one generates and cross-checks
+        a listing of the source and destination to verify that the copy was
+        truly successful. Since DistCp employs both Map/Reduce and the
+        FileSystem API, issues in or between any of the three could adversely
+        and silently affect the copy. Some have had success running with
+        <code>-update</code> enabled to perform a second pass, but users should
+        be acquainted with its semantics before attempting this.</p>
+
+        <p>It's also worth noting that if another client is still writing to a
+        source file, the copy will likely fail. Attempting to overwrite a file
+        being written at the destination should also fail on HDFS. If a source
+        file is (re)moved before it is copied, the copy will fail with a
+        FileNotFoundException.</p>
+
+        <p>Please refer to the detailed Command Line Reference for information
+        on all the options available in DistCp.</p>
+      </section>
+        
+      <section id="UpdateAndOverwrite">
+        <title>Update and Overwrite</title>
+        <p><code>-update</code> is used to copy files from source that don't
+        exist at the target, or have different contents. <code>-overwrite</code>
+        overwrites target-files even if they exist at the source, or have the
+        same contents.</p>
+
+        <p><br/>Update and Overwrite options warrant special attention, since their
+        handling of source-paths varies from the defaults in a very subtle manner.
+        Consider a copy from <code>/source/first/</code> and
+        <code>/source/second/</code> to <code>/target/</code>, where the source
+        paths have the following contents:</p>
+
+        <p><code>hdfs://nn1:8020/source/first/1</code><br/>
+           <code>hdfs://nn1:8020/source/first/2</code><br/>
+           <code>hdfs://nn1:8020/source/second/10</code><br/>
+           <code>hdfs://nn1:8020/source/second/20</code><br/></p>
+
+        <p><br/>When DistCp is invoked without <code>-update</code> or
+        <code>-overwrite</code>, the DistCp defaults would create directories
+        <code>first/</code> and <code>second/</code>, under <code>/target</code>.
+        Thus:<br/></p>
+
+        <p><code>distcp2 hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target</code></p>
+        <p><br/>would yield the following contents in <code>/target</code>: </p>
+
+        <p><code>hdfs://nn2:8020/target/first/1</code><br/>
+           <code>hdfs://nn2:8020/target/first/2</code><br/>
+           <code>hdfs://nn2:8020/target/second/10</code><br/>
+           <code>hdfs://nn2:8020/target/second/20</code><br/></p>
+
+        <p><br/>When either <code>-update</code> or <code>-overwrite</code> is
+            specified, the <strong>contents</strong> of the source-directories
+            are copied to target, and not the source directories themselves. Thus: </p>
+
+        <p><code>distcp2 -update hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target</code></p>
+
+        <p><br/>would yield the following contents in <code>/target</code>: </p>
+
+        <p><code>hdfs://nn2:8020/target/1</code><br/>
+           <code>hdfs://nn2:8020/target/2</code><br/>
+           <code>hdfs://nn2:8020/target/10</code><br/>
+           <code>hdfs://nn2:8020/target/20</code><br/></p>
+
+        <p><br/>By extension, if both source folders contained a file with the same
+        name (say, <code>0</code>), then both sources would map an entry to
+        <code>/target/0</code> at the destination. Rather than to permit this
+        conflict, DistCp will abort.</p>
+
+        <p><br/>Now, consider the following copy operation:</p>
+
+        <p><code>distcp2 hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target</code></p>
+
+        <p><br/>With sources/sizes:</p>
+
+        <p><code>hdfs://nn1:8020/source/first/1     32</code><br/>
+           <code>hdfs://nn1:8020/source/first/2     32</code><br/>
+           <code>hdfs://nn1:8020/source/second/10   64</code><br/>
+           <code>hdfs://nn1:8020/source/second/20   32</code><br/></p>
+
+        <p><br/>And destination/sizes:</p>
+
+        <p><code>hdfs://nn2:8020/target/1   32</code><br/>
+           <code>hdfs://nn2:8020/target/10  32</code><br/>
+           <code>hdfs://nn2:8020/target/20  64</code><br/></p>
+
+        <p><br/>Will effect: </p>
+
+        <p><code>hdfs://nn2:8020/target/1   32</code><br/>
+           <code>hdfs://nn2:8020/target/2   32</code><br/>
+           <code>hdfs://nn2:8020/target/10  64</code><br/>
+           <code>hdfs://nn2:8020/target/20  32</code><br/></p>
+
+        <p><br/><code>1</code> is skipped because the file-length and contents match.
+        <code>2</code> is copied because it doesn't exist at the target.
+        <code>10</code> and <code>20</code> are overwritten since the contents
+        don't match the source. </p>
+
+        <p>If <code>-update</code> is used, <code>1</code> is overwritten as well.</p>
+      </section>
+    </section>
+
+    <section id="CommandLineOptions">
+      <title>Command Line Options</title>
+      <table>
+        <tr><th> Flag </th><th> Description </th><th> Notes </th></tr>
+
+        <tr><td><code>-p[rbugp]</code></td>
+            <td>Preserve<br/>
+                r: replication number<br/>
+                b: block size<br/>
+                u: user<br/>
+                g: group<br/>
+                p: permission<br/></td>
+            <td>Modification times are not preserved. Also, when
+            <code>-update</code> is specified, status updates will
+            <strong>not</strong> be synchronized unless the file sizes
+            also differ (i.e. unless the file is re-created).
+            </td></tr>
+        <tr><td><code>-i</code></td>
+            <td>Ignore failures</td>
+            <td>As explained in the Appendix, this option
+            will keep more accurate statistics about the copy than the
+            default case. It also preserves logs from failed copies, which
+            can be valuable for debugging. Finally, a failing map will not
+            cause the job to fail before all splits are attempted.
+            </td></tr>
+        <tr><td><code>-log &lt;logdir&gt;</code></td>
+            <td>Write logs to &lt;logdir&gt;</td>
+            <td>DistCp keeps logs of each file it attempts to copy as map
+            output. If a map fails, the log output will not be retained if
+            it is re-executed.
+            </td></tr>
+        <tr><td><code>-m &lt;num_maps&gt;</code></td>
+            <td>Maximum number of simultaneous copies</td>
+            <td>Specify the number of maps to copy data. Note that more maps
+            may not necessarily improve throughput.
+            </td></tr>
+        <tr><td><code>-overwrite</code></td>
+            <td>Overwrite destination</td>
+            <td>If a map fails and <code>-i</code> is not specified, all the
+            files in the split, not only those that failed, will be recopied.
+            As discussed in the Usage documentation, it also changes
+            the semantics for generating destination paths, so users should
+            use this carefully.
+            </td></tr>
+        <tr><td><code>-update</code></td>
+            <td>Overwrite if src size different from dst size</td>
+            <td>As noted in the preceding, this is not a &quot;sync&quot;
+            operation. The only criterion examined is the source and
+            destination file sizes; if they differ, the source file
+            replaces the destination file. As discussed in the
+            Usage documentation, it also changes the semantics for
+            generating destination paths, so users should use this carefully.
+            </td></tr>
+        <tr><td><code>-f &lt;urilist_uri&gt;</code></td>
+            <td>Use list at &lt;urilist_uri&gt; as src list</td>
+            <td>This is equivalent to listing each source on the command
+            line. The <code>urilist_uri</code> list should be a fully
+            qualified URI.
+            </td></tr>
+        <tr><td><code>-filelimit &lt;n&gt;</code></td>
+            <td>Limit the total number of files to be &lt;= n</td>
+            <td><strong>Deprecated!</strong> Ignored in the new DistCp.
+            </td></tr>
+        <tr><td><code>-sizelimit &lt;n&gt;</code></td>
+            <td>Limit the total size to be &lt;= n bytes</td>
+            <td><strong>Deprecated!</strong> Ignored in the new DistCp.
+            </td></tr>
+        <tr><td><code>-delete</code></td>
+            <td>Delete the files existing in the dst but not in src</td>
+            <td>The deletion is done by FS Shell.  So the trash will be used,
+                if it is enable.
+            </td></tr>
+        <tr><td><code>-strategy {dynamic|uniformsize}</code></td>
+            <td>Choose the copy-strategy to be used in DistCp.</td>
+            <td>By default, uniformsize is used. (i.e. Maps are balanced on the
+                total size of files copied by each map. Similar to legacy.)
+                If "dynamic" is specified, <code>DynamicInputFormat</code> is
+                used instead. (This is described in the Architecture section,
+                under InputFormats.)
+            </td></tr>
+        <tr><td><code>-bandwidth</code></td>
+              <td>Specify bandwidth per map, in MB/second.</td>
+              <td>Each map will be restricted to consume only the specified
+                  bandwidth. This is not always exact. The map throttles back
+                  its bandwidth consumption during a copy, such that the
+                  <strong>net</strong> bandwidth used tends towards the
+                  specified value.
+              </td></tr>
+        <tr><td><code>-atomic {-tmp &lt;tmp_dir&gt;}</code></td>
+              <td>Specify atomic commit, with optional tmp directory.</td>
+              <td><code>-atomic</code> instructs DistCp to copy the source
+                  data to a temporary target location, and then move the
+                  temporary target to the final-location atomically. Data will
+                  either be available at final target in a complete and consistent
+                  form, or not at all.
+                  Optionally, <code>-tmp</code> may be used to specify the
+                  location of the tmp-target. If not specified, a default is
+                  chosen. <strong>Note:</strong> tmp_dir must be on the final
+                  target cluster.
+              </td></tr>
+        <tr><td><code>-mapredSslConf &lt;ssl_conf_file&gt;</code></td>
+              <td>Specify SSL Config file, to be used with HSFTP source</td>
+              <td>When using the hsftp protocol with a source, the security-
+                  related properties may be specified in a config-file and
+                  passed to DistCp. &lt;ssl_conf_file&gt; needs to be in
+                  the classpath.
+              </td></tr>
+        <tr><td><code>-async</code></td>
+              <td>Run DistCp asynchronously. Quits as soon as the Hadoop
+              Job is launched.</td>
+              <td>The Hadoop Job-id is logged, for tracking.
+              </td></tr>
+      </table>
+    </section>
+
+    <section id="ArchitectureOfDistCp">
+      <title>Architecture of DistCp</title>
+      <p>The components of the new DistCp may be classified into the following
+         categories: </p>
+
+      <ul>
+        <li>DistCp Driver</li>
+        <li>Copy-listing generator</li>
+        <li>Input-formats and Map-Reduce components</li>
+      </ul>
+
+      <section id="DistCpDriver">
+        <title>DistCp Driver</title>
+
+        <p>The DistCp Driver components are responsible for:</p>
+
+        <ul>
+          <li>Parsing the arguments passed to the DistCp command on the
+              command-line, via:
+            <ul>
+              <li>OptionsParser, and</li>
+              <li>DistCpOptionsSwitch</li>
+            </ul>
+          </li>
+          <li>Assembling the command arguments into an appropriate
+              DistCpOptions object, and initializing DistCp. These arguments
+              include:
+            <ul>
+              <li>Source-paths</li>
+              <li>Target location</li>
+              <li>Copy options (e.g. whether to update-copy, overwrite, which
+                  file-attributes to preserve, etc.)</li>
+            </ul>
+          </li>
+          <li>Orchestrating the copy operation by:
+            <ul>
+              <li>Invoking the copy-listing-generator to create the list of
+                  files to be copied.</li>
+              <li>Setting up and launching the Hadoop Map-Reduce Job to carry
+                  out the copy.</li>
+              <li>Based on the options, either returning a handle to the
+                  Hadoop MR Job immediately, or waiting till completion.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <p>The parser-elements are exercised only from the command-line (or if
+           DistCp::run() is invoked). The DistCp class may also be used
+           programmatically, by constructing the DistCpOptions object, and
+           initializing a DistCp object appropriately.</p>
+      </section>
+
+      <section id="Copy-listingGenerator">
+        <title>Copy-listing Generator</title>
+
+        <p>The copy-listing-generator classes are responsible for creating the
+           list of files/directories to be copied from source. They examine
+           the contents of the source-paths (files/directories, including
+           wild-cards), and record all paths that need copy into a sequence-
+           file, for consumption by the DistCp Hadoop Job. The main classes in
+           this module include:</p>
+
+        <ol>
+          <li>CopyListing: The interface that should be implemented by any 
+              copy-listing-generator implementation. Also provides the factory
+              method by which the concrete CopyListing implementation is
+              chosen.</li>
+
+          <li>SimpleCopyListing: An implementation of CopyListing that accepts
+              multiple source paths (files/directories), and recursively lists
+              all the individual files and directories under each, for
+              copy.</li>
+
+          <li>GlobbedCopyListing: Another implementation of CopyListing that
+              expands wild-cards in the source paths.</li>
+
+          <li>FileBasedCopyListing: An implementation of CopyListing that
+              reads the source-path list from a specified file.</li>
+        </ol>
+
+        <p>Based on whether a source-file-list is specified in the
+           DistCpOptions, the source-listing is generated in one of the
+           following ways:</p>
+
+        <ol>
+          <li>If there's no source-file-list, the GlobbedCopyListing is used.
+              All wild-cards are expanded, and all the expansions are
+              forwarded to the SimpleCopyListing, which in turn constructs the
+              listing (via recursive descent of each path). </li>
+
+          <li>If a source-file-list is specified, the FileBasedCopyListing is
+              used. Source-paths are read from the specified file, and then
+              forwarded to the GlobbedCopyListing. The listing is then
+              constructed as described above.</li>
+        </ol>
+
+        <p>One may customize the method by which the copy-listing is
+           constructed by providing a custom implementation of the CopyListing
+           interface. The behaviour of DistCp differs here from the legacy
+           DistCp, in how paths are considered for copy. </p>
+
+        <p>The legacy implementation only lists those paths that must
+           definitely be copied on to target.
+           E.g. if a file already exists at the target (and -overwrite isn't
+           specified), the file isn't even considered in the Map-Reduce Copy
+           Job. Determining this during setup (i.e. before the Map-Reduce Job)
+           involves file-size and checksum-comparisons that are potentially
+           time-consuming.</p>
+
+        <p>The new DistCp postpones such checks until the Map-Reduce Job, thus
+           reducing setup time. Performance is enhanced further since these
+           checks are parallelized across multiple maps.</p>
+      </section>
+
+      <section id="Input-formatsAndMap-ReduceComponents">
+        <title>Input-formats and Map-Reduce Components</title>
+
+        <p> The Input-formats and Map-Reduce components are responsible for
+            the actual copy of files and directories from the source to the
+            destination path. The listing-file created during copy-listing
+            generation is consumed at this point, when the copy is carried
+            out. The classes of interest here include:</p>
+
+        <ul>
+          <li><strong>UniformSizeInputFormat:</strong> This implementation of
+              org.apache.hadoop.mapreduce.InputFormat provides equivalence
+              with Legacy DistCp in balancing load across maps.
+              The aim of the UniformSizeInputFormat is to make each map copy
+              roughly the same number of bytes. Apropos, the listing file is
+              split into groups of paths, such that the sum of file-sizes in
+              each InputSplit is nearly equal to every other map. The splitting
+              isn't always perfect, but its trivial implementation keeps the
+              setup-time low.</li>
+
+          <li><strong>DynamicInputFormat and DynamicRecordReader:</strong>
+              <p> The DynamicInputFormat implements org.apache.hadoop.mapreduce.InputFormat,
+              and is new to DistCp. The listing-file is split into several
+              "chunk-files", the exact number of chunk-files being a multiple
+              of the number of maps requested for in the Hadoop Job. Each map
+              task is "assigned" one of the chunk-files (by renaming the chunk
+              to the task's id), before the Job is launched.</p>
+
+              <p>Paths are read from each chunk using the DynamicRecordReader,
+              and processed in the CopyMapper. After all the paths in a chunk
+              are processed, the current chunk is deleted and a new chunk is
+              acquired. The process continues until no more chunks are
+              available.</p>
+              <p>This "dynamic" approach allows faster map-tasks to consume
+              more paths than slower ones, thus speeding up the DistCp job
+              overall. </p>
+          </li>
+
+          <li><strong>CopyMapper:</strong> This class implements the physical
+              file-copy. The input-paths are checked against the input-options
+              (specified in the Job's Configuration), to determine whether a
+              file needs copy. A file will be copied only if at least one of
+              the following is true:
+            <ul>
+              <li>A file with the same name doesn't exist at target.</li>
+              <li>A file with the same name exists at target, but has a
+                  different file size.</li>
+              <li>A file with the same name exists at target, but has a
+                  different checksum, and -skipcrccheck isn't mentioned.</li>
+              <li>A file with the same name exists at target, but -overwrite
+                  is specified.</li>
+              <li>A file with the same name exists at target, but differs in
+                  block-size (and block-size needs to be preserved.</li>
+            </ul>
+          </li>
+
+          <li><strong>CopyCommitter:</strong>
+              This class is responsible for the commit-phase of the DistCp
+              job, including:
+            <ul>
+              <li>Preservation of directory-permissions (if specified in the
+                  options)</li>
+              <li>Clean-up of temporary-files, work-directories, etc.</li>
+            </ul>
+          </li>
+        </ul>
+      </section>
+    </section>
+
+    <section id="Appendix">
+    <title>Appendix</title>
+
+      <section id="MapSizing">
+        <title>Map sizing</title>
+ 
+        <p> By default, DistCp makes an attempt to size each map comparably so
+        that each copies roughly the same number of bytes. Note that files are the
+        finest level of granularity, so increasing the number of simultaneous
+        copiers (i.e. maps) may not always increase the number of
+        simultaneous copies nor the overall throughput.</p>
+
+        <p> The new DistCp also provides a strategy to "dynamically" size maps,
+        allowing faster data-nodes to copy more bytes than slower nodes. Using
+        <code>-strategy dynamic</code> (explained in the Architecture), rather
+        than to assign a fixed set of source-files to each map-task, files are
+        instead split into several sets. The number of sets exceeds the number of
+        maps, usually by a factor of 2-3. Each map picks up and copies all files
+        listed in a chunk. When a chunk is exhausted, a new chunk is acquired and
+        processed, until no more chunks remain.</p>
+
+        <p> By not assigning a source-path to a fixed map, faster map-tasks (i.e.
+        data-nodes) are able to consume more chunks, and thus copy more data,
+        than slower nodes. While this distribution isn't uniform, it is
+        <strong>fair</strong> with regard to each mapper's capacity.</p>
+
+        <p>The dynamic-strategy is implemented by the DynamicInputFormat. It
+        provides superior performance under most conditions. </p>
+
+        <p>Tuning the number of maps to the size of the source and
+        destination clusters, the size of the copy, and the available
+        bandwidth is recommended for long-running and regularly run jobs.</p>
+      </section>
+
+      <section id="CopyingBetweenVersionsOfHDFS">
+        <title>Copying Between Versions of HDFS</title>
+
+        <p>For copying between two different versions of Hadoop, one will
+        usually use HftpFileSystem. This is a read-only FileSystem, so DistCp
+        must be run on the destination cluster (more specifically, on
+        TaskTrackers that can write to the destination cluster). Each source is
+        specified as <code>hftp://&lt;dfs.http.address&gt;/&lt;path&gt;</code>
+        (the default <code>dfs.http.address</code> is
+        &lt;namenode&gt;:50070).</p>
+      </section>
+ 
+      <section id="MapReduceAndOtherSide-effects">
+        <title>Map/Reduce and other side-effects</title>
+
+        <p>As has been mentioned in the preceding, should a map fail to copy
+        one of its inputs, there will be several side-effects.</p>
+
+        <ul>
+          <li>Unless <code>-overwrite</code> is specified, files successfully
+          copied by a previous map on a re-execution will be marked as
+          &quot;skipped&quot;.</li>
+
+          <li>If a map fails <code>mapred.map.max.attempts</code> times, the
+          remaining map tasks will be killed (unless <code>-i</code> is
+          set).</li>
+
+          <li>If <code>mapred.speculative.execution</code> is set set
+          <code>final</code> and <code>true</code>, the result of the copy is
+          undefined.</li>
+        </ul>
+      </section>
+
+      <section id="SSLConfigurationsForHSFTPSources">
+        <title>SSL Configurations for HSFTP sources</title>
+
+        <p>To use an HSFTP source (i.e. using the hsftp protocol), a Map-Red SSL
+        configuration file needs to be specified (via the <code>-mapredSslConf</code>
+        option). This must specify 3 parameters:</p>
+
+        <ul>
+          <li><code>ssl.client.truststore.location</code>: The local-filesystem
+           location of the trust-store file, containing the certificate for
+           the namenode.</li>
+
+          <li><code>ssl.client.truststore.type</code>: (Optional) The format of
+          the trust-store file.</li>
+
+          <li><code>ssl.client.truststore.password</code>: (Optional) Password
+          for the trust-store file.</li>
+        </ul>
+
+        <p>The following is an example of the contents of the contents of
+        a Map-Red SSL Configuration file:</p>
+
+        <p> <br/> <code> &lt;configuration&gt; </code> </p>
+
+        <p> <br/> <code>&lt;property&gt; </code> </p>
+        <p> <code>&lt;name&gt;ssl.client.truststore.location&lt;/name&gt; </code> </p>
+        <p> <code>&lt;value&gt;/work/keystore.jks&lt;/value&gt; </code> </p>
+        <p> <code>&lt;description&gt;Truststore to be used by clients like distcp. Must be specified. &lt;/description&gt;</code> </p>
+        <p> <br/> <code>&lt;/property&gt; </code> </p>
+
+        <p><code> &lt;property&gt; </code> </p>
+        <p> <code>&lt;name&gt;ssl.client.truststore.password&lt;/name&gt; </code> </p>
+        <p> <code>&lt;value&gt;changeme&lt;/value&gt; </code> </p>
+        <p> <code>&lt;description&gt;Optional. Default value is "". &lt;/description&gt;  </code> </p>
+        <p> <code>&lt;/property&gt; </code>  </p>
+
+        <p> <br/> <code> &lt;property&gt; </code> </p>
+        <p> <code> &lt;name&gt;ssl.client.truststore.type&lt;/name&gt;</code>  </p>
+        <p> <code> &lt;value&gt;jks&lt;/value&gt;</code>  </p>
+        <p> <code> &lt;description&gt;Optional. Default value is "jks". &lt;/description&gt;</code>  </p>
+        <p> <code> &lt;/property&gt; </code> </p>
+
+        <p> <code> &lt;/configuration&gt; </code> </p>
+
+        <p><br/>The SSL configuration file must be in the class-path of the 
+        DistCp program.</p>
+      </section>
+    </section>
+
+    <section id="FrequentlyAskedQuestions">
+    <title>Frequently Asked Questions</title>
+  
+    <ol>
+      <li><strong>Why does -update not create the parent source-directory under
+          a pre-existing target directory?</strong>
+
+        <p>The behaviour of <code>-update</code> and <code>-overwrite</code>
+        is described in detail in the Usage section of this document. In short,
+        if either option is used with a pre-existing destination directory, the
+        <strong>contents</strong> of each source directory is copied over, rather
+        than the source-directory itself.
+        This behaviour is consistent with the legacy DistCp implementation as well.
+        </p>
+      </li>
+
+      <li><strong>How does the new DistCp differ in semantics from the Legacy
+      DistCp?</strong>
+
+        <ul>
+          <li>Files that are skipped during copy used to also have their
+          file-attributes (permissions, owner/group info, etc.) unchanged,
+          when copied with Legacy DistCp. These are now updated, even if
+          the file-copy is skipped.</li>
+          <li>Empty root directories among the source-path inputs were not
+          created at the target, in Legacy DistCp. These are now created.</li>
+        </ul>
+      </li>
+
+      <li><strong>Why does the new DistCp use more maps than legacy DistCp?</strong>
+        <p>Legacy DistCp works by figuring out what files need to be actually
+        copied to target <strong>before</strong> the copy-job is launched, and then
+        launching as many maps as required for copy. So if a majority of the files
+        need to be skipped (because they already exist, for example), fewer maps
+        will be needed. As a consequence, the time spent in setup (i.e. before the
+        M/R job) is higher.</p>
+        <p>The new DistCp calculates only the contents of the source-paths. It
+        doesn't try to filter out what files can be skipped. That decision is put-
+        off till the M/R job runs. This is much faster (vis-a-vis execution-time),
+        but the number of maps launched will be as specified in the <code>-m</code>
+        option, or 20 (default) if unspecified.</p>
+      </li>
+
+      <li><strong>Why does DistCp not run faster when more maps are specified?</strong>
+        <p>At present, the smallest unit of work for DistCp is a file. i.e.,
+        a file is processed by only one map. Increasing the number of maps to
+        a value exceeding the number of files would yield no performance
+        benefit. The number of maps lauched would equal the number of files.</p>
+      </li>
+
+      <li><strong>Why does DistCp run out of memory?</strong>
+        <p>If the number of individual files/directories being copied from
+        the source path(s) is extremely large (e.g. 1,000,000 paths), DistCp might
+        run out of memory while determining the list of paths for copy. This is
+        not unique to the new DistCp implementation.</p>
+        <p>To get around this, consider changing the <code>-Xmx</code> JVM
+        heap-size parameters, as follows:</p>
+        <p><code>bash$ export HADOOP_CLIENT_OPTS="-Xms64m -Xmx1024m"</code></p>
+        <p><code>bash$ hadoop distcp2 /source /target</code></p>
+      </li>
+    </ol>
+    </section>
+
+  </body>
+
+</document>

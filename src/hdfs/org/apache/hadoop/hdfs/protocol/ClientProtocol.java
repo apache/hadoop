@@ -54,6 +54,9 @@ public interface ClientProtocol extends VersionedProtocol {
    *     multiple blocks within a single BlockTokenIdentifier 
    *     
    *     (bumped to 61 to bring in line with trunk)
+   * Added concat() and isFileClosed()
+   * - since this is addition of methods, it does not break
+   * compatibility and version number does not need to be changed.
    */
   public static final long versionID = 61L;
   
@@ -143,7 +146,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * denied by the system. As usually on the client side the exception will 
    * be wrapped into {@link org.apache.hadoop.ipc.RemoteException}.
    * Allows appending to an existing file if the server is
-   * configured with the parameter dfs.support.append set to true, otherwise
+   * configured with the parameter dfs.support.broken.append set to true, otherwise
    * throws an IOException.
    * @throws IOException if other errors occur.
    */
@@ -158,6 +161,18 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public boolean recoverLease(String src, String clientName) throws IOException;
+
+  /**
+   * Get the close status of a file
+   * @param src The string representation of the path to the file
+   *
+   * @return return true if file is closed
+   * @throws AccessControlException permission denied
+   * @throws FileNotFoundException file <code>src</code> is not found
+   * @throws IOException If an I/O error occurred
+   */
+  public boolean isFileClosed(String src) throws AccessControlException,
+      FileNotFoundException, IOException;
 
   /**
    * Set replication for an existing file.
@@ -266,6 +281,16 @@ public interface ClientProtocol extends VersionedProtocol {
    *                                any quota restriction
    */
   public boolean rename(String src, String dst) throws IOException;
+  
+  /**
+   * Moves blocks from srcs to trg and delete srcs
+   * 
+   * @param trg existing file
+   * @param srcs - list of existing files (same block size, same replication)
+   * @throws IOException if some arguments are invalid
+   */
+  public void concat(String trg, String[] srcs) 
+      throws IOException;
 
   /**
    * Delete the given file or directory from the file system.

@@ -27,7 +27,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,10 +35,7 @@ import java.util.TreeMap;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.FairScheduler.JobInfo;
-import org.apache.hadoop.mapred.MRConstants;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapred.JobInProgress.KillInterruptedException;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -51,7 +47,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.apache.hadoop.net.Node;
-import org.mortbay.log.Log;
+import org.mockito.Mockito;
 
 public class TestFairScheduler extends TestCase {
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
@@ -513,6 +509,12 @@ public class TestFairScheduler extends TestCase {
       trackerForTip.get(attemptIdStr).getTaskReports().remove(status);
       return true;
     }
+
+    @Override
+    public boolean isInSafeMode() {
+      // TODO Auto-generated method stub
+      return false;
+    }
   }
   
   protected JobConf conf;
@@ -557,6 +559,10 @@ public class TestFairScheduler extends TestCase {
     clock = new FakeClock();
     try {
       jobTracker = new JobTracker(conf, clock);
+      jobTracker.setSafeModeInternal(JobTracker.SafeModeAction.SAFEMODE_ENTER);
+      jobTracker.initializeFilesystem();
+      jobTracker.setSafeModeInternal(JobTracker.SafeModeAction.SAFEMODE_LEAVE);
+      jobTracker.initialize();
     } catch (Exception e) {
       throw new RuntimeException("Could not start JT", e);
     }
@@ -2845,6 +2851,35 @@ public class TestFairScheduler extends TestCase {
     assertEquals(0,    poolA.getReduceSchedulable().getDemand());
   }
   
+  public void testMaxTasksToAssign() {
+    TaskTrackerStatus mockTTS = Mockito.mock(TaskTrackerStatus.class);
+    TaskType type = TaskType.MAP;
+    Mockito.when(mockTTS.getAvailableMapSlots()).thenReturn(5);
+    
+    FairScheduler fs = new FairScheduler(null, false);
+
+    // Case 1: assignMultiple is false
+    fs.assignMultiple = false;
+    assertEquals("Number of tasks to assign", 1,
+        fs.maxTasksToAssign(type, mockTTS));
+
+    // Case 2: assignMultiple is true, cap = -1
+    fs.assignMultiple = true;
+    fs.mapAssignCap = -1;
+    assertEquals("Number of tasks to assign", 5,
+        fs.maxTasksToAssign(type, mockTTS));
+
+    // Case 3: cap = 10
+    fs.mapAssignCap = 10;
+    assertEquals("Number of tasks to assign", 5,
+        fs.maxTasksToAssign(type, mockTTS));
+
+    // Case 4: cap = 2
+    fs.mapAssignCap = 2;
+    assertEquals("Number of tasks to assign", 2,
+        fs.maxTasksToAssign(type, mockTTS));
+  }
+
   private void advanceTime(long time) {
     clock.advance(time);
     scheduler.update();

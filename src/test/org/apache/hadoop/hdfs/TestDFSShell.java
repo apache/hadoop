@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.shell.Count;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
@@ -1298,6 +1299,108 @@ public class TestDFSShell extends TestCase {
       cluster.shutdown();
     }
   }
+  
+  /**
+   * run copyFromLocal when home dir does not exist and use . as the destination
+   */
+  public void testCopyFromLocal1() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    try {
+      String fname = "testCopyFromLocal1.txt";
+      File f = createLocalFile(new File(TEST_ROOT_DIR, fname));
+
+      // copy the file to hdfs when home dir does not exist
+      int exitCode = runCmd(shell, "-copyFromLocal", f.getAbsolutePath(), ".");
+
+      assertEquals("cmd exit code is not 0", 0, exitCode);
+
+      // make sure the file exists on hdfs
+      assertTrue("File " + fname + " does not exist on hdfs.",
+          dfs.exists(new Path(fname)));
+
+      // copy the file to hdfs again and it should fail
+      exitCode = runCmd(shell, "-copyFromLocal", f.getAbsolutePath(), ".");
+      assertTrue("cmd exit code is 0 when it should not be -> " + exitCode,
+          exitCode != 0);
+
+      // copy another file onto hdfs when the home dir exists and make sure it
+      // works
+      String fname2 = "testCopyFromLocal1.2.txt";
+      File f2 = createLocalFile(new File(TEST_ROOT_DIR, fname2));
+
+      // copy the file to hdfs
+      exitCode = runCmd(shell, "-copyFromLocal", f2.getAbsolutePath(), ".");
+
+      assertEquals("cmd exit code is not 0", 0, exitCode);
+
+      // make sure the file exists on hdfs
+      assertTrue("File " + fname2 + " does not exist on hdfs.",
+          dfs.exists(new Path(fname2)));
+
+      // copy another file onto hdfs when the home dir exists and make sure it
+      // works when we use file name as the destination
+      String fname3 = "testCopyFromLocal1.3.txt";
+      File f3 = createLocalFile(new File(TEST_ROOT_DIR, fname3));
+
+      // copy the file to hdfs
+      exitCode = runCmd(shell, "-copyFromLocal", f3.getAbsolutePath(), fname3);
+
+      assertEquals("cmd exit code is not 0", 0, exitCode);
+
+      // make sure the file exists on hdfs
+      assertTrue("File " + fname3 + " does not exist on hdfs.",
+          dfs.exists(new Path(fname3)));
+    } finally {
+      try {
+        dfs.close();
+      } catch (Exception e) {
+      }
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * run copyFromLocal when home dir does not exist and use the file name as the
+   * destination
+   */
+  public void testCopyFromLocal2() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    try {
+      String fname = "testCopyFromLocal2.txt";
+      File f = createLocalFile(new File(TEST_ROOT_DIR, fname));
+
+      // copy the file to hdfs
+      int exitCode = runCmd(shell, "-copyFromLocal", f.getAbsolutePath(), fname);
+
+      assertEquals("cmd exit code is not 0", 0, exitCode);
+
+      // make sure the file exists on hdfs
+      assertTrue("File " + fname + " does not exist on hdfs.",
+          dfs.exists(new Path(fname)));
+
+      // copy the file to hdfs again and make sure it fails.
+      exitCode = runCmd(shell, "-copyFromLocal", f.getAbsolutePath(), fname);
+
+      assertTrue("cmd exit code is 0 when it should not be -> " + exitCode,
+          exitCode != 0);
+
+    } finally {
+      try {
+        dfs.close();
+      } catch (Exception e) {
+      }
+      cluster.shutdown();
+    }
+  }
+  
   private static String runLsr(final FsShell shell, String root, int returnvalue
       ) throws Exception {
     System.out.println("root=" + root + ", returnvalue=" + returnvalue);
@@ -1318,5 +1421,20 @@ public class TestDFSShell extends TestCase {
     }
     System.out.println("results:\n" + results);
     return results;
+  }
+  
+    
+  /**
+   * default setting is file:// which is not a DFS so DFSAdmin should throw and
+   * catch InvalidArgumentException and return -1 exit code.
+   * 
+   * @throws Exception
+   */
+  public void testInvalidShell() throws Exception {
+    Configuration conf = new Configuration(); // default FS (non-DFS)
+    DFSAdmin admin = new DFSAdmin();
+    admin.setConf(conf);
+    int res = admin.run(new String[] { "-refreshNodes" });
+    assertEquals("expected to fail -1", res, -1);
   }
 }

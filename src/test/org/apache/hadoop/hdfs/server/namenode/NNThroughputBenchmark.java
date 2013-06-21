@@ -1049,9 +1049,9 @@ public class NNThroughputBenchmark {
       // start data-nodes; create a bunch of files; generate block reports.
       blockReportObject.generateInputs(ignore);
       // stop replication monitor
-      nameNode.namesystem.replthread.interrupt();
+      nameNode.getNamesystem().replthread.interrupt();
       try {
-        nameNode.namesystem.replthread.join();
+        nameNode.getNamesystem().replthread.join();
       } catch(InterruptedException ei) {
         return;
       }
@@ -1063,7 +1063,7 @@ public class NNThroughputBenchmark {
       // decommission data-nodes
       decommissionNodes();
       // set node replication limit
-      nameNode.namesystem.setNodeReplicationLimit(nodeReplicationLimit);
+      nameNode.getNamesystem().setNodeReplicationLimit(nodeReplicationLimit);
     }
 
     private void decommissionNodes() throws IOException {
@@ -1094,7 +1094,7 @@ public class NNThroughputBenchmark {
       assert daemonId < numThreads : "Wrong daemonId.";
       long start = System.currentTimeMillis();
       // compute data-node work
-      int work = nameNode.namesystem.computeDatanodeWork();
+      int work = nameNode.getNamesystem().computeDatanodeWork();
       long end = System.currentTimeMillis();
       numPendingBlocks += work;
       if(work == 0)

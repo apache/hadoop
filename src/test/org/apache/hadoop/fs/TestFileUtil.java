@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -28,6 +30,9 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -499,5 +504,52 @@ public class TestFileUtil {
 
     doUntarAndVerify(new File(tarGzFileName), untarDir);
     doUntarAndVerify(new File(tarFileName), untarDir);
+  }
+  
+  /**
+   * Test that copies file from local filesystem to hdfs. It tests the overwrite
+   * flag is respected when copying files over.
+   */
+  @Test
+  public void testCopy() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+    // local file system
+    LocalFileSystem lfs = FileSystem.getLocal(conf);
+    try {
+      String fname = "testCopyFromLocal1.txt";
+      File f = new File(TEST_DIR, fname);
+      f.createNewFile();
+      // copy the file to hdfs with overwrite = false
+      boolean status = FileUtil.copy(lfs, new Path(f.getAbsolutePath()), dfs,
+          new Path("."), false, true, conf);
+      assertTrue(status);
+      // make sure the file exists on hdfs
+      assertTrue("File " + fname + " does not exist on hdfs.",
+          dfs.exists(new Path(fname)));
+      // copy the same file to hdfs with overwrite and it should pass
+      status = FileUtil.copy(lfs, new Path(f.getAbsolutePath()), dfs, new Path(
+          "."), false, true, conf);
+      assertTrue(status);
+
+      try {
+        // copy the same file to hdfs with overwrite as false and it should
+        // thrown an exception, catch it and make sure the file name is part of
+        // the message
+        status = FileUtil.copy(lfs, new Path(f.getAbsolutePath()), dfs,
+            new Path("."), false, false, conf);
+      } catch (IOException expected) {
+        assertTrue("Exception message doesn't contain filename " + fname,
+            expected.getMessage().indexOf(fname) >= 0);
+      }
+    } finally {
+      try {
+        dfs.close();
+        lfs.close();
+      } catch (Exception e) {
+      }
+      cluster.shutdown();
+    }
   }
 }

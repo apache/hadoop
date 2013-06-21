@@ -106,7 +106,7 @@ public class TestDelegationTokenForProxyUser {
   public void setUp() throws Exception {
     config = new Configuration();
     config.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
-    config.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
+    config.setBoolean("dfs.support.broken.append", true);
     config.setLong(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
     config.setLong(
@@ -206,7 +206,7 @@ public class TestDelegationTokenForProxyUser {
       final URL url = WebHdfsTestUtil.toUrl(webhdfs, op,  f, new DoAsParam(PROXY_USER));
       WebHdfsTestUtil.LOG.info("url=" + url);
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      conn = WebHdfsTestUtil.twoStepWrite(conn, op);
+      conn = WebHdfsTestUtil.twoStepWrite(webhdfs, op, conn);
       final FSDataOutputStream out = WebHdfsTestUtil.write(webhdfs, op, conn, 4096);
       out.write("Hello, webhdfs user!".getBytes());
       out.close();
@@ -221,7 +221,7 @@ public class TestDelegationTokenForProxyUser {
       final PostOpParam.Op op = PostOpParam.Op.APPEND;
       final URL url = WebHdfsTestUtil.toUrl(webhdfs, op,  f, new DoAsParam(PROXY_USER));
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      conn = WebHdfsTestUtil.twoStepWrite(conn, op);
+      conn = WebHdfsTestUtil.twoStepWrite(webhdfs, op, conn);
       final FSDataOutputStream out = WebHdfsTestUtil.write(webhdfs, op, conn, 4096);
       out.write("\nHello again!".getBytes());
       out.close();

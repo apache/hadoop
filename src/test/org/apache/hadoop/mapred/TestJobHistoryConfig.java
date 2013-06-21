@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.util.Date;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
@@ -115,7 +117,8 @@ public class TestJobHistoryConfig extends TestCase {
       conf.setQueueName("default");
       String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
           "/tmp")).toString().replace(' ', '+');
-      JobTracker jt = JobTracker.startTracker(conf);
+      String uniqid = new SimpleDateFormat("yyyyMMddHHmm").format(new Date());
+      JobTracker jt = JobTracker.startTracker(conf, uniqid, true);
       assertTrue(jt != null);
       JobInProgress jip = new JobInProgress(new JobID("jt", 1),
           new JobConf(conf), jt);
@@ -140,8 +143,9 @@ public class TestJobHistoryConfig extends TestCase {
   private boolean canStartJobTracker(JobConf conf) throws InterruptedException,
       IOException {
     JobTracker jt = null;
+    String uniqid = new SimpleDateFormat("yyyyMMddHHmm").format(new Date());
     try {
-      jt = JobTracker.startTracker(conf);
+      jt = JobTracker.startTracker(conf, uniqid, true);
       Log.info("Started JobTracker");
     } catch (IOException e) {
       Log.info("Can not Start JobTracker", e.getLocalizedMessage());

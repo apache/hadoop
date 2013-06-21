@@ -183,6 +183,12 @@ public class TestParallelInitialization extends TestCase {
         listener.jobAdded(job);
       }
     }
+
+    @Override
+    public boolean isInSafeMode() {
+      // TODO Auto-generated method stub
+      return false;
+    }
   }
   
   protected JobConf jobConf;

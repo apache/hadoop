@@ -103,7 +103,7 @@ class S3InputStream extends FSInputStream {
         pos++;
       }
     }
-    if (stats != null & result >= 0) {
+    if (stats != null && result >= 0) {
       stats.incrementBytesRead(1);
     }
     return result;

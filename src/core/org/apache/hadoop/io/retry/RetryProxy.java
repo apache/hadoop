@@ -65,4 +65,13 @@ public class RetryProxy {
                                   new RetryInvocationHandler(implementation, methodNameToPolicyMap)
                                   );
   }
+
+  public static Object create(Class<?> iface, Object implementation,
+      RetryPolicy defaultPolicy, Map<String,RetryPolicy> methodNameToPolicyMap) {
+    return Proxy.newProxyInstance(
+        implementation.getClass().getClassLoader(),
+        new Class<?>[] { iface },
+        new RetryInvocationHandler(implementation, defaultPolicy, methodNameToPolicyMap)
+        );
+  }
 }

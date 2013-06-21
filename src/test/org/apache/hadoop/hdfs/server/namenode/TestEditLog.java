@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
+import org.apache.hadoop.io.BytesWritable;
 
 /**
  * This class tests the creation and validation of a checkpoint.
@@ -172,7 +173,8 @@ public class TestEditLog extends TestCase {
             fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
       File editFile = FSImage.getImageFile(it.next(), NameNodeFile.EDITS);
       System.out.println("Verifying file: " + editFile);
-      int numEdits = FSEditLog.loadFSEdits(new EditLogFileInputStream(editFile), -1);
+      int numEdits = FSEditLog.loadFSEdits(
+          new EditLogFileInputStream(editFile), -1, null);
       int numLeases = FSNamesystem.getFSNamesystem().leaseManager.countLease();
       System.out.println("Number of outstanding leases " + numLeases);
       assertEquals(0, numLeases);

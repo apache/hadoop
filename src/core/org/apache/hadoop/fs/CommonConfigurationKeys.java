@@ -40,6 +40,9 @@ public class CommonConfigurationKeys {
   public static final String HADOOP_SECURITY_AUTHORIZATION =
     "hadoop.security.authorization";
   /** See src/core/core-default.xml */
+  public static final String HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN = 
+      "hadoop.security.instrumentation.requires.admin";
+  /** See src/core/core-default.xml */
   public static final String  HADOOP_SECURITY_SERVICE_USER_NAME_KEY = 
     "hadoop.security.service.user.name.key";
   /** See src/core/core-default.xml */
@@ -47,6 +50,10 @@ public class CommonConfigurationKeys {
     "hadoop.security.token.service.use_ip";
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
       true;
+  public static final String HADOOP_SECURITY_USE_WEAK_HTTP_CRYPTO_KEY =
+      "hadoop.security.use-weak-http-crypto";
+  public static final boolean HADOOP_SECURITY_USE_WEAK_HTTP_CRYPTO_DEFAULT =
+      false;
   
   public static final String IPC_SERVER_RPC_READ_THREADS_KEY =
                                         "ipc.server.read.threadpool.size";
@@ -64,5 +71,21 @@ public class CommonConfigurationKeys {
   /** Default value for IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY */
   public static final int IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT =
       256 * 1024;
+
+  /** See src/core/core-default.xml */
+  public static final String HADOOP_RELAXED_VERSION_CHECK_KEY =
+      "hadoop.relaxed.worker.version.check";
+  public static final boolean HADOOP_RELAXED_VERSION_CHECK_DEFAULT = false;
+
+  /** See src/core/core-default.xml */
+  public static final String HADOOP_SKIP_VERSION_CHECK_KEY =
+      "hadoop.skip.worker.version.check";
+  public static final boolean HADOOP_SKIP_VERSION_CHECK_DEFAULT = false;
+
+  /** Enable/Disable aliases serving from jetty */
+  public static final String HADOOP_JETTY_LOGS_SERVE_ALIASES =
+    "hadoop.jetty.logs.serve.aliases";
+  public static final boolean DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES =
+    true;
 }
 

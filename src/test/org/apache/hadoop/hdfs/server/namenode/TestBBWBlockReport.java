@@ -48,10 +48,9 @@ public class TestBBWBlockReport {
 
   @Test(timeout = 60000)
   // timeout is mainly for safe mode
-  public void testDNShouldSendBBWReportIfAppendOn() throws Exception {
+  public void testDNShouldSendBBWReport() throws Exception {
     FileSystem fileSystem = null;
     FSDataOutputStream outStream = null;
-    conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     cluster.waitActive();
     try {
@@ -64,35 +63,6 @@ public class TestBBWBlockReport {
           "Not able to read the synced block content after NameNode restart (with append support)",
           fileContent, getFileContentFromDFS(fileSystem));
     } finally {
-      if (null != fileSystem)
-        fileSystem.close();
-      if (null != outStream)
-        outStream.close();
-      cluster.shutdown();
-    }
-  }
-
-  @Test
-  public void testDNShouldNotSendBBWReportIfAppendOff() throws Exception {
-    FileSystem fileSystem = null;
-    FSDataOutputStream outStream = null;
-    // disable the append support
-    conf.setBoolean("dfs.support.append", false);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
-    cluster.waitActive();
-    try {
-      fileSystem = cluster.getFileSystem();
-      // Keep open stream
-      outStream = writeFileAndSync(fileSystem, src, fileContent);
-      cluster.restartNameNode(false);
-      Thread.sleep(2000);
-      assertEquals(
-          "Able to read the synced block content after NameNode restart (without append support",
-          0, getFileContentFromDFS(fileSystem).length());
-    } finally {
-      // NN will not come out of safe mode. So exited the safemode forcibly to
-      // clean the resources.
-      cluster.getNameNode().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       if (null != fileSystem)
         fileSystem.close();
       if (null != outStream)

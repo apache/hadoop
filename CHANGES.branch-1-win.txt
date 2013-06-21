@@ -416,3 +416,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-9624. TestFSMainOperationsLocalFileSystem failed when the Hadoop test
     root path has "X" in its name. (Xi Fang via cnauroth)
+
+    HDFS-4261. Fix bugs in Balaner causing infinite loop and
+    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)

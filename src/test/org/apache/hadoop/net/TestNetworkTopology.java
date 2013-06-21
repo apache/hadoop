@@ -58,6 +58,25 @@ public class TestNetworkTopology extends TestCase {
     assertEquals(cluster.getNumOfLeaves(), dataNodes.length);
   }
 
+  public void testCreateInvalidTopology() throws Exception {
+    NetworkTopology invalCluster = new NetworkTopology();
+    DatanodeDescriptor invalDataNodes[] = new DatanodeDescriptor[] {
+      new DatanodeDescriptor(new DatanodeID("h1:5020"), "/d1/r1"),
+      new DatanodeDescriptor(new DatanodeID("h2:5020"), "/d1/r1"),
+      new DatanodeDescriptor(new DatanodeID("h3:5020"), "/d1")
+    };
+    invalCluster.add(invalDataNodes[0]);
+    invalCluster.add(invalDataNodes[1]);
+    try {
+      invalCluster.add(invalDataNodes[2]);
+      fail("expected InvalidTopologyException");
+    } catch (NetworkTopology.InvalidTopologyException e) {
+      assertEquals(e.getMessage(), "Invalid network topology. " +
+          "You cannot have a rack and a non-rack node at the same " +
+          "level of the network topology.");
+    }
+  }
+
   public void testRacks() throws Exception {
     assertEquals(cluster.getNumOfRacks(), 3);
     assertTrue(cluster.isOnSameRack(dataNodes[0], dataNodes[1]));

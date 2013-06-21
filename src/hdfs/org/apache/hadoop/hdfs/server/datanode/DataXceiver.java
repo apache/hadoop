@@ -28,6 +28,7 @@ import java.net.Socket;
 import java.net.SocketException;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -58,6 +59,7 @@ class DataXceiver implements Runnable, FSConstants {
   final String localAddress;  // local address of this daemon
   DataNode datanode;
   DataXceiverServer dataXceiverServer;
+  private boolean connectToDnViaHostname;
   
   public DataXceiver(Socket s, DataNode datanode, 
       DataXceiverServer dataXceiverServer) {
@@ -69,6 +71,9 @@ class DataXceiver implements Runnable, FSConstants {
     remoteAddress = s.getRemoteSocketAddress().toString();
     localAddress = s.getLocalSocketAddress().toString();
     LOG.debug("Number of active connections is: " + datanode.getXceiverCount());
+    this.connectToDnViaHostname = datanode.getConf().getBoolean(
+        DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
+        DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
   }
 
   /**
@@ -169,7 +174,7 @@ class DataXceiver implements Runnable, FSConstants {
           out.writeShort(DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN);
           out.flush();
           throw new IOException("Access token verification failed, for client "
-              + remoteAddress + " for OP_READ_BLOCK for block " + block);
+              + remoteAddress + " for OP_READ_BLOCK for " + block);
         } finally {
           IOUtils.closeStream(out);
         }
@@ -182,7 +187,7 @@ class DataXceiver implements Runnable, FSConstants {
         ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
             "%d", "HDFS_READ", clientName, "%d", 
             datanode.dnRegistration.getStorageID(), block, "%d")
-        : datanode.dnRegistration + " Served block " + block + " to " +
+        : datanode.dnRegistration + " Served " + block + " to " +
             s.getInetAddress();
     try {
       try {
@@ -217,9 +222,8 @@ class DataXceiver implements Runnable, FSConstants {
        * Earlier version shutdown() datanode if there is disk error.
        */
       LOG.warn(datanode.dnRegistration +  ":Got exception while serving " + 
-          block + " to " +
-                s.getInetAddress() + ":\n" + 
-                StringUtils.stringifyException(ioe) );
+          block + " to " + s.getInetAddress() + ":\n" + 
+          StringUtils.stringifyException(ioe) );
       throw ioe;
     } finally {
       IOUtils.closeStream(out);
@@ -242,9 +246,8 @@ class DataXceiver implements Runnable, FSConstants {
     //
     Block block = new Block(in.readLong(), 
         dataXceiverServer.estimateBlockSize, in.readLong());
-    LOG.info("Receiving block " + block + 
-             " src: " + remoteAddress +
-             " dest: " + localAddress);
+    LOG.info("Receiving " + block + " src: " + remoteAddress + " dest: "
+        + localAddress);
     int pipelineSize = in.readInt(); // num of datanodes in entire pipeline
     boolean isRecovery = in.readBoolean(); // is this part of recovery?
     String client = Text.readString(in); // working on behalf of this client
@@ -280,7 +283,7 @@ class DataXceiver implements Runnable, FSConstants {
             replyOut.flush();
           }
           throw new IOException("Access token verification failed, for client "
-              + remoteAddress + " for OP_WRITE_BLOCK for block " + block);
+              + remoteAddress + " for OP_WRITE_BLOCK for " + block);
         } finally {
           IOUtils.closeStream(replyOut);
         }
@@ -308,14 +311,17 @@ class DataXceiver implements Runnable, FSConstants {
       if (targets.length > 0) {
         InetSocketAddress mirrorTarget = null;
         // Connect to backup machine
+        final String mirrorAddrString = 
+          targets[0].getName(connectToDnViaHostname);
         mirrorNode = targets[0].getName();
-        mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
+        mirrorTarget = NetUtils.createSocketAddr(mirrorAddrString);
         mirrorSock = datanode.newSocket();
         try {
           int timeoutValue = datanode.socketTimeout +
                              (HdfsConstants.READ_TIMEOUT_EXTENSION * numTargets);
           int writeTimeout = datanode.socketWriteTimeout + 
                              (HdfsConstants.WRITE_TIMEOUT_EXTENSION * numTargets);
+          LOG.debug("Connecting to " + mirrorAddrString);
           NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
           mirrorSock.setSoTimeout(timeoutValue);
           mirrorSock.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
@@ -373,9 +379,9 @@ class DataXceiver implements Runnable, FSConstants {
           if (client.length() > 0) {
             throw e;
           } else {
-            LOG.info(datanode.dnRegistration + ":Exception transfering block " +
+            LOG.info(datanode.dnRegistration + ":Exception transfering " +
                      block + " to mirror " + mirrorNode +
-                     ". continuing without the mirror.\n" +
+                     "- continuing without the mirror\n" +
                      StringUtils.stringifyException(e));
           }
         }
@@ -403,10 +409,8 @@ class DataXceiver implements Runnable, FSConstants {
       // the block is finalized in the PacketResponder.
       if (client.length() == 0) {
         datanode.notifyNamenodeReceivedBlock(block, DataNode.EMPTY_DEL_HINT);
-        LOG.info("Received block " + block + 
-                 " src: " + remoteAddress +
-                 " dest: " + localAddress +
-                 " of size " + block.getNumBytes());
+        LOG.info("Received " + block + " src: " + remoteAddress + " dest: "
+            + localAddress + " size " + block.getNumBytes());
       }
 
       if (datanode.blockScanner != null) {
@@ -446,7 +450,7 @@ class DataXceiver implements Runnable, FSConstants {
           out.flush();
           throw new IOException(
               "Access token verification failed, for client " + remoteAddress
-                  + " for OP_BLOCK_CHECKSUM for block " + block);
+                  + " for OP_BLOCK_CHECKSUM for " + block);
         } finally {
           IOUtils.closeStream(out);
         }
@@ -504,7 +508,7 @@ class DataXceiver implements Runnable, FSConstants {
             BlockTokenSecretManager.AccessMode.COPY);
       } catch (InvalidToken e) {
         LOG.warn("Invalid access token in request from "
-            + remoteAddress + " for OP_COPY_BLOCK for block " + block);
+            + remoteAddress + " for OP_COPY_BLOCK for " + block);
         sendResponse(s,
             (short) DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN,
             datanode.socketWriteTimeout);
@@ -514,7 +518,7 @@ class DataXceiver implements Runnable, FSConstants {
 
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
       LOG.info("Not able to copy block " + blockId + " to " 
-          + s.getRemoteSocketAddress() + " because threads quota is exceeded.");
+          + s.getRemoteSocketAddress() + " because threads quota is exceeded");
       sendResponse(s, (short)DataTransferProtocol.OP_STATUS_ERROR, 
           datanode.socketWriteTimeout);
       return;
@@ -544,7 +548,7 @@ class DataXceiver implements Runnable, FSConstants {
       datanode.myMetrics.incrBytesRead((int) read);
       datanode.myMetrics.incrBlocksRead();
       
-      LOG.info("Copied block " + block + " to " + s.getRemoteSocketAddress());
+      LOG.info("Copied " + block + " to " + s.getRemoteSocketAddress());
     } catch (IOException ioe) {
       isOpSuccess = false;
       throw ioe;
@@ -608,9 +612,11 @@ class DataXceiver implements Runnable, FSConstants {
     
     try {
       // get the output stream to the proxy
-      InetSocketAddress proxyAddr = NetUtils.createSocketAddr(
-          proxySource.getName());
+      final String proxyAddrString = 
+        proxySource.getName(connectToDnViaHostname);
+      InetSocketAddress proxyAddr = NetUtils.createSocketAddr(proxyAddrString);
       proxySock = datanode.newSocket();
+      LOG.debug("Connecting to " + proxyAddrString);
       NetUtils.connect(proxySock, proxyAddr, datanode.socketTimeout);
       proxySock.setSoTimeout(datanode.socketTimeout);
 
@@ -633,11 +639,11 @@ class DataXceiver implements Runnable, FSConstants {
       short status = proxyReply.readShort();
       if (status != DataTransferProtocol.OP_STATUS_SUCCESS) {
         if (status == DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN) {
-          throw new IOException("Copy block " + block + " from "
+          throw new IOException("Copy " + block + " from "
               + proxySock.getRemoteSocketAddress()
               + " failed due to access token error");
         }
-        throw new IOException("Copy block " + block + " from "
+        throw new IOException("Copy " + block + " from "
             + proxySock.getRemoteSocketAddress() + " failed");
       }
       // open a block receiver and check if the block does not exist
@@ -653,7 +659,7 @@ class DataXceiver implements Runnable, FSConstants {
       // notify name node
       datanode.notifyNamenodeReceivedBlock(block, sourceID);
 
-      LOG.info("Moved block " + block + 
+      LOG.info("Moved " + block + 
           " from " + s.getRemoteSocketAddress());
       
     } catch (IOException ioe) {

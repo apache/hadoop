@@ -42,6 +42,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.jmx.JMXJsonServlet;
@@ -86,11 +87,13 @@ public class HttpServer implements FilterContainer {
 
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
-
+ 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
-  static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
+  public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
   static final String ADMINS_ACL = "admins.acl";
+  public static final String SPNEGO_FILTER = "SpnegoFilter";
+  public static final String KRB5_FILTER = "krb5Filter";
 
   private AccessControlList adminsAcl;
 
@@ -174,7 +177,7 @@ public class HttpServer implements FilterContainer {
 
     addDefaultApps(contexts, appDir);
     
-    defineFilter(webAppContext, "krb5Filter", 
+    defineFilter(webAppContext, KRB5_FILTER, 
         Krb5AndCertsSslSocketConnector.Krb5SslFilter.class.getName(), 
         null, null);
     
@@ -247,6 +250,12 @@ public class HttpServer implements FilterContainer {
       Context logContext = new Context(parent, "/logs");
       logContext.setResourceBase(logDir);
       logContext.addServlet(AdminAuthorizedServlet.class, "/");
+      if (conf.getBoolean(
+          CommonConfigurationKeys.HADOOP_JETTY_LOGS_SERVE_ALIASES,
+          CommonConfigurationKeys.DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES)) {
+        logContext.getInitParams().put(
+            "org.mortbay.jetty.servlet.Default.aliases", "true");
+      }
       logContext.setDisplayName("logs");
       setContextAttributes(logContext);
       defaultContexts.put(logContext, true);
@@ -273,6 +282,7 @@ public class HttpServer implements FilterContainer {
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
     addServlet("jmx", "/jmx", JMXJsonServlet.class);
+    addServlet("conf", "/conf", ConfServlet.class);
   }
 
   public void addContext(Context ctxt, boolean isFiltered)
@@ -343,7 +353,7 @@ public class HttpServer implements FilterContainer {
    */
   public void addServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
-    addInternalServlet(name, pathSpec, clazz, false);
+    addInternalServlet(name, pathSpec, clazz, false, false);
     addFilterPathMapping(pathSpec, webAppContext);
   }
 
@@ -357,7 +367,7 @@ public class HttpServer implements FilterContainer {
   @Deprecated
   public void addInternalServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
-    addInternalServlet(name, pathSpec, clazz, false);
+    addInternalServlet(name, pathSpec, clazz, false, false);
   }
 
   /**
@@ -365,15 +375,18 @@ public class HttpServer implements FilterContainer {
    * protect with Kerberos authentication. 
    * Note: This method is to be used for adding servlets that facilitate
    * internal communication and not for user facing functionality. For
-   * servlets added using this method, filters (except internal Kerberized
+   * servlets added using this method, filters (except internal Kerberos
    * filters) are not enabled. 
    * 
    * @param name The name of the servlet (can be passed as null)
    * @param pathSpec The path spec for the servlet
    * @param clazz The servlet class
+   * @param requireAuth Require Kerberos authenticate to access servlet
+   * @param useKsslForAuth true to use KSSL for auth, false to use SPNEGO
    */
   public void addInternalServlet(String name, String pathSpec, 
-      Class<? extends HttpServlet> clazz, boolean requireAuth) {
+      Class<? extends HttpServlet> clazz, boolean requireAuth,
+      boolean useKsslForAuth) {
     ServletHolder holder = new ServletHolder(clazz);
     if (name != null) {
       holder.setName(name);
@@ -381,11 +394,16 @@ public class HttpServer implements FilterContainer {
     webAppContext.addServlet(holder, pathSpec);
     
     if(requireAuth && UserGroupInformation.isSecurityEnabled()) {
-       LOG.info("Adding Kerberos filter to " + name);
        ServletHandler handler = webAppContext.getServletHandler();
        FilterMapping fmap = new FilterMapping();
        fmap.setPathSpec(pathSpec);
-       fmap.setFilterName("krb5Filter");
+       if (useKsslForAuth) {
+         LOG.info("Adding Kerberos (KSSL) filter to " + name);
+         fmap.setFilterName(KRB5_FILTER);
+       } else {
+         LOG.info("Adding Kerberos (SPNEGO) filter to " + name);
+         fmap.setFilterName(SPNEGO_FILTER);
+       }
        fmap.setDispatches(Handler.ALL);
        handler.addFilterMapping(fmap);
     }
@@ -645,6 +663,24 @@ public class HttpServer implements FilterContainer {
           listener.setPort((oriPort += 1));
         }
       }
+      // Make sure there is no handler failures.
+      Handler[] handlers = webServer.getHandlers();
+      for (int i = 0; i < handlers.length; i++) {
+        if (handlers[i].isFailed()) {
+          throw new IOException(
+              "Problem in starting http server. Server handlers failed");
+        }
+      }
+      
+      // Make sure there are no errors initializing the context.
+      Throwable unavailableException = webAppContext.getUnavailableException();
+      if (unavailableException != null) {
+        // Have to stop the webserver, or else its non-daemon threads
+        // will hang forever.
+        webServer.stop();
+        throw new IOException("Unable to initialize WebAppContext",
+            unavailableException);
+      }
     } catch (IOException e) {
       throw e;
     } catch (Exception e) {
@@ -664,6 +700,37 @@ public class HttpServer implements FilterContainer {
     webServer.join();
   }
 
+  /**
+   * Checks the user has privileges to access to instrumentation servlets.
+   * <p/>
+   * If <code>hadoop.security.instrumentation.requires.admin</code> is set to 
+   * FALSE (default value) it returns always returns TRUE.
+   * <p/>
+   * If <code>hadoop.security.instrumentation.requires.admin</code> is set to 
+   * TRUE it will check that if the current user is in the admin ACLS. If the 
+   * user is in the admin ACLs it returns TRUE, otherwise it returns FALSE.
+   *
+   * @param servletContext the servlet context.
+   * @param request the servlet request.
+   * @param response the servlet response.
+   * @return TRUE/FALSE based on the logic decribed above.
+   */
+  public static boolean isInstrumentationAccessAllowed(
+      ServletContext servletContext, HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
+    Configuration conf = (Configuration) servletContext
+        .getAttribute(CONF_CONTEXT_ATTRIBUTE);
+
+    boolean access = true;
+    boolean adminAccess = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN,
+        false);
+    if (adminAccess) {
+      access = hasAdministratorAccess(servletContext, request, response);
+    }
+    return access;
+  }
+  
   /**
    * Does the user sending the HttpServletRequest has the administrator ACLs? If
    * it isn't the case, response will be modified to send an error to the user.
@@ -688,7 +755,10 @@ public class HttpServer implements FilterContainer {
 
     String remoteUser = request.getRemoteUser();
     if (remoteUser == null) {
-      return true;
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                         "Unauthenticated users are not " +
+                         "authorized to access this page.");
+      return false;
     }
     AccessControlList adminsAcl = (AccessControlList) servletContext
         .getAttribute(ADMINS_ACL);
@@ -697,9 +767,7 @@ public class HttpServer implements FilterContainer {
     if (adminsAcl != null) {
       if (!adminsAcl.isUserAllowed(remoteUserUGI)) {
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
-            + remoteUser + " is unauthorized to access this page. "
-            + "AccessControlList for accessing this page : "
-            + adminsAcl.toString());
+            + remoteUser + " is unauthorized to access this page.");
         return false;
       }
     }
@@ -720,8 +788,8 @@ public class HttpServer implements FilterContainer {
       throws ServletException, IOException {
 
       // Do the authorization
-      if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
-          response)) {
+      if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
+          request, response)) {
         return;
       }
 

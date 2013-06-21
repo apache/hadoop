@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,9 +30,9 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.junit.Ignore;
+import org.junit.Test;
 
-@Ignore
-public class TestJvmReuse extends TestCase {
+public class TestJvmReuse {
   private static Path rootDir = new Path(System.getProperty("test.build.data",
       "/tmp"), TestJvmReuse.class.getName());
   private int numMappers = 5;
@@ -141,6 +142,8 @@ public class TestJvmReuse extends TestCase {
     }
   }
 
+  @Ignore
+  @Test
   public void testTaskLogs() throws IOException {
     MiniMRCluster mr = null;
     try {

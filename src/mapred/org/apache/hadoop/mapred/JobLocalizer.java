@@ -82,7 +82,7 @@ public class JobLocalizer {
   private final FileSystem lfs;
   private final List<Path> localDirs;
   private final LocalDirAllocator lDirAlloc;
-  private final JobConf ttConf;
+  protected final JobConf ttConf;
 
   private final String JOBDIR;
   private final String DISTDIR;
@@ -90,7 +90,7 @@ public class JobLocalizer {
   private final String JARDST;
   private final String JOBCONF;
   private final String JOBTOKEN;
-  private static final String JOB_LOCAL_CTXT = "mapred.job.local.dir";
+  protected static final String JOB_LOCAL_CTXT = "mapred.job.local.dir";
 
   public JobLocalizer(JobConf ttConf, String user, String jobid)
       throws IOException {
@@ -108,10 +108,10 @@ public class JobLocalizer {
       throw new IOException("Cannot initialize for null jobid");
     }
     this.jobid = jobid;
-    this.ttConf = ttConf;
-    lfs = FileSystem.getLocal(ttConf).getRaw();
+    this.ttConf = new JobConf(ttConf);
+    lfs = FileSystem.getLocal(this.ttConf).getRaw();
     this.localDirs = createPaths(user, localDirs);
-    ttConf.setStrings(JOB_LOCAL_CTXT, localDirs);
+    this.ttConf.setStrings(JOB_LOCAL_CTXT, localDirs);
     Collections.shuffle(this.localDirs);
     lDirAlloc = new LocalDirAllocator(JOB_LOCAL_CTXT);
     JOBDIR = TaskTracker.JOBCACHE + Path.SEPARATOR + jobid;

@@ -154,7 +154,8 @@ class CapacityTaskScheduler extends TaskScheduler {
     protected TaskType type = null;
 
     abstract TaskLookupResult obtainNewTask(TaskTrackerStatus taskTracker, 
-        JobInProgress job, boolean assignOffSwitch) throws IOException;
+        JobInProgress job, boolean assignOffSwitch,
+        ClusterStatus clusterStatus) throws IOException;
 
     int getSlotsOccupied(JobInProgress job) {
       return (getNumReservedTaskTrackers(job) + getRunningTasks(job)) * 
@@ -293,7 +294,8 @@ class CapacityTaskScheduler extends TaskScheduler {
     private TaskLookupResult getTaskFromQueue(TaskTracker taskTracker,
                                               int availableSlots,
                                               CapacitySchedulerQueue queue,
-                                              boolean assignOffSwitch)
+                                              boolean assignOffSwitch,
+                                              ClusterStatus clusterStatus)
     throws IOException {
       TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus();
       // we only look at jobs in the running queues, as these are the ones
@@ -320,7 +322,8 @@ class CapacityTaskScheduler extends TaskScheduler {
                                                               availableSlots)) {
           // We found a suitable job. Get task from it.
           TaskLookupResult tlr = 
-            obtainNewTask(taskTrackerStatus, j, assignOffSwitch);
+            obtainNewTask(taskTrackerStatus, j, assignOffSwitch,
+                          clusterStatus);
           //if there is a task return it immediately.
           if (tlr.getLookUpStatus() == 
                   TaskLookupResult.LookUpStatus.LOCAL_TASK_FOUND || 
@@ -344,7 +347,7 @@ class CapacityTaskScheduler extends TaskScheduler {
           // starved
           if ((getPendingTasks(j) != 0 &&
               !hasSufficientReservedTaskTrackers(j)) &&
-                (taskTracker.getAvailableSlots(type) !=
+                !(j.getNumSlotsPerTask(type) >
                  getTTMaxSlotsForType(taskTrackerStatus, type))) {
             // Reserve all available slots on this tasktracker
             LOG.info(j.getJobID() + ": Reserving "
@@ -379,6 +382,11 @@ class CapacityTaskScheduler extends TaskScheduler {
 
       printQueues();
 
+      //MAPREDUCE-1684: somehow getClusterStatus seems to be expensive. Caching
+      //here to reuse during the scheduling
+      ClusterStatus clusterStatus =
+        scheduler.taskTrackerManager.getClusterStatus();
+
       // Check if this tasktracker has been reserved for a job...
       JobInProgress job = taskTracker.getJobForFallowSlot(type);
       if (job != null) {
@@ -397,7 +405,7 @@ class CapacityTaskScheduler extends TaskScheduler {
             // Don't care about locality!
             job.overrideSchedulingOpportunities();
           }
-          return obtainNewTask(taskTrackerStatus, job, true);
+          return obtainNewTask(taskTrackerStatus, job, true, clusterStatus);
         } else {
           // Re-reserve the current tasktracker
           taskTracker.reserveSlots(type, job, availableSlots);
@@ -420,7 +428,8 @@ class CapacityTaskScheduler extends TaskScheduler {
         }
         
         TaskLookupResult tlr = 
-          getTaskFromQueue(taskTracker, availableSlots, queue, assignOffSwitch);
+          getTaskFromQueue(taskTracker, availableSlots, queue, assignOffSwitch,
+                          clusterStatus);
         TaskLookupResult.LookUpStatus lookUpStatus = tlr.getLookUpStatus();
 
         if (lookUpStatus == TaskLookupResult.LookUpStatus.NO_TASK_FOUND) {
@@ -501,10 +510,10 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     @Override
     TaskLookupResult obtainNewTask(TaskTrackerStatus taskTracker, 
-                                   JobInProgress job, boolean assignOffSwitch) 
+                                   JobInProgress job, boolean assignOffSwitch,
+                                   ClusterStatus clusterStatus)
     throws IOException {
-      ClusterStatus clusterStatus = 
-        scheduler.taskTrackerManager.getClusterStatus();
+
       int numTaskTrackers = clusterStatus.getTaskTrackers();
       int numUniqueHosts = scheduler.taskTrackerManager.getNumberOfUniqueHosts();
       
@@ -581,10 +590,9 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     @Override
     TaskLookupResult obtainNewTask(TaskTrackerStatus taskTracker, 
-                                   JobInProgress job, boolean unused) 
+                                   JobInProgress job, boolean unused,
+                                   ClusterStatus clusterStatus)
     throws IOException {
-      ClusterStatus clusterStatus = 
-        scheduler.taskTrackerManager.getClusterStatus();
       int numTaskTrackers = clusterStatus.getTaskTrackers();
       Task t = job.obtainNewReduceTask(taskTracker, numTaskTrackers, 
           scheduler.taskTrackerManager.getNumberOfUniqueHosts());
@@ -1042,10 +1050,20 @@ class CapacityTaskScheduler extends TaskScheduler {
      */ 
     updateAllQueues(mapClusterCapacity, reduceClusterCapacity);
     
-    // schedule tasks
+    /*
+     * Schedule tasks
+     */
+    
     List<Task> result = new ArrayList<Task>();
-    addMapTasks(taskTracker, result, maxMapSlots, currentMapSlots);
-    addReduceTask(taskTracker, result, maxReduceSlots, currentReduceSlots);
+    
+    // Check for JT safe-mode
+    if (taskTrackerManager.isInSafeMode()) {
+      LOG.info("JobTracker is in safe-mode, not scheduling any tasks.");
+    } else {
+      addMapTasks(taskTracker, result, maxMapSlots, currentMapSlots);
+      addReduceTask(taskTracker, result, maxReduceSlots, currentReduceSlots);
+    }
+    
     return result;
   }
 

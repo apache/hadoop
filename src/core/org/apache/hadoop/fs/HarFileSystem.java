@@ -24,11 +24,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -52,7 +52,8 @@ import org.apache.hadoop.util.Progressable;
 public class HarFileSystem extends FilterFileSystem {
   public static final int VERSION = 3;
 
-  private static final Map<URI, HarMetaData> harMetaCache = new HashMap<URI, HarMetaData>();
+  private static final Map<URI, HarMetaData> harMetaCache
+    = new ConcurrentHashMap<URI, HarMetaData>();
 
   // uri representation of this Har filesystem
   private URI uri;
@@ -1050,7 +1051,7 @@ public class HarFileSystem extends FilterFileSystem {
       FileStatus archiveStat = fs.getFileStatus(archiveIndexPath);
       archiveIndexTimestamp = archiveStat.getModificationTime();
       LineReader aLin;
-      String retStr = null;
+
       // now start reading the real index file
       for (Store s: stores) {
         read = 0;

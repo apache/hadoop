@@ -23,13 +23,14 @@ package org.apache.hadoop.mapred;
  * is allowed to launch tasks. By default, jobs are not allowed to launch
  * non-data-local tasks until they have waited a small number of seconds to
  * find a slot on a node that they have data on. If a job has waited this
- * long, it is allowed to launch rack-local tasks as well (on nodes that may
- * not have the task's input data, but share a rack with a node that does).
- * Finally, after a further wait, jobs are allowed to launch tasks anywhere
- * in the cluster.
+ * long, it is allowed to launch other locality tasks as well, such as: 
+ * nodegroup-local if the topology support nodegroup layer, rack-local (on 
+ * nodes that may not have the task's input data, but share a rack with a node
+ * that does). Finally, after a further wait, jobs are allowed to launch tasks
+ * anywhere in the cluster.
  * 
- * This enum defines three levels - NODE, RACK and ANY (for allowing tasks
- * to be launched on any node). A map task's level can be obtained from
+ * This enum defines four levels - NODE, NODEGROUP, RACK and ANY (for allowing
+ * tasks to be launched on any node). A map task's level can be obtained from
  * its job through {@link #fromTask(JobInProgress, Task, TaskTrackerStatus)}. In
  * addition, for any locality level, it is possible to get a "level cap" to pass
  * to {@link JobInProgress#obtainNewMapTask(TaskTrackerStatus, int, int, int)}
@@ -37,16 +38,25 @@ package org.apache.hadoop.mapred;
  * the {@link #toCacheLevelCap()} method.
  */
 public enum LocalityLevel {
-  NODE, RACK, ANY;
+  NODE, NODEGROUP, RACK, ANY;
   
   public static LocalityLevel fromTask(JobInProgress job, Task mapTask,
-      TaskTrackerStatus tracker) {
+      TaskTrackerStatus tracker, boolean isNodeGroupAware) {
     TaskID tipID = mapTask.getTaskID().getTaskID();
     TaskInProgress tip = job.getTaskInProgress(tipID);
-    switch (job.getLocalityLevel(tip, tracker)) {
-    case 0: return LocalityLevel.NODE;
-    case 1: return LocalityLevel.RACK;
-    default: return LocalityLevel.ANY;
+    if (isNodeGroupAware) {
+      switch (job.getLocalityLevel(tip, tracker)) {
+        case 0: return LocalityLevel.NODE;
+        case 1: return LocalityLevel.NODEGROUP;
+        case 2: return LocalityLevel.RACK;
+        default: return LocalityLevel.ANY;
+      }
+    } else {
+      switch (job.getLocalityLevel(tip, tracker)) {
+        case 0: return LocalityLevel.NODE;
+        case 1: return LocalityLevel.RACK;
+        default: return LocalityLevel.ANY;
+      }
     }
   }
   
@@ -55,11 +65,20 @@ public enum LocalityLevel {
    * {@link JobInProgress#obtainNewMapTask(TaskTrackerStatus, int, int, int)}
    * to ensure that only tasks of this locality level and lower are launched.
    */
-  public int toCacheLevelCap() {
-    switch(this) {
-    case NODE: return 1;
-    case RACK: return 2;
-    default: return Integer.MAX_VALUE;
+  public int toCacheLevelCap(boolean isNodeGroupAware) {
+    if (isNodeGroupAware) {
+      switch(this) {
+        case NODE: return 1;
+        case NODEGROUP: return 2;
+        case RACK: return 3;
+        default: return Integer.MAX_VALUE;
+      }
+    } else {
+      switch(this) {
+        case NODE: return 1;
+        case RACK: return 2;
+        default: return Integer.MAX_VALUE;
+      }
     }
   }
 }

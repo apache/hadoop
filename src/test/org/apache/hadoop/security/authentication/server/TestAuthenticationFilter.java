@@ -349,7 +349,7 @@ public class TestAuthenticationFilter extends TestCase {
     }
   }
 
-  private void _testDoFilterAuthentication(boolean withDomainPath) throws Exception {
+  private void _testDoFilterAuthentication(boolean withDomainPath, boolean invalidToken) throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
       FilterConfig config = Mockito.mock(FilterConfig.class);
@@ -379,6 +379,12 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(request.getParameter("authenticated")).thenReturn("true");
       Mockito.when(request.getRequestURL()).thenReturn(new StringBuffer("http://foo:8080/bar"));
       Mockito.when(request.getQueryString()).thenReturn("authenticated=true");
+
+      if (invalidToken) {
+        Mockito.when(request.getCookies()).thenReturn(
+          new Cookie[] { new Cookie(AuthenticatedURL.AUTH_COOKIE, "foo")}
+        );
+      }
 
       HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
@@ -437,11 +443,15 @@ public class TestAuthenticationFilter extends TestCase {
   }
 
   public void testDoFilterAuthentication() throws Exception {
-    _testDoFilterAuthentication(false);
+    _testDoFilterAuthentication(false, false);
+  }
+
+  public void testDoFilterAuthenticationWithInvalidToken() throws Exception {
+    _testDoFilterAuthentication(false, true);
   }
 
   public void testDoFilterAuthenticationWithDomainPath() throws Exception {
-    _testDoFilterAuthentication(true);
+    _testDoFilterAuthentication(true, false);
   }
 
   public void testDoFilterAuthenticated() throws Exception {

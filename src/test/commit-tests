@@ -118,6 +118,7 @@
 **/TestGetBlocks.java
 **/TestHDFSServerPorts.java
 **/TestHDFSTrash.java
+**/TestHDFSConcat.java
 **/TestHeartbeatHandling.java
 **/TestHost2NodesMap.java
 **/TestInterDatanodeProtocol.java

@@ -63,4 +63,10 @@ public interface DataNodeMXBean {
    * @return the volume info
    */
   public String getVolumeInfo();
+
+  /**
+  * Returns an estimate of the number of Datanode threads
+  * actively transferring blocks.
+  */
+  public int getXceiverCount();
 }

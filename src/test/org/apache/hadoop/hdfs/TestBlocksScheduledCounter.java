@@ -52,7 +52,7 @@ public class TestBlocksScheduledCounter extends TestCase {
     ((DFSOutputStream)(out.getWrappedStream())).sync();
     
     ArrayList<DatanodeDescriptor> dnList = new ArrayList<DatanodeDescriptor>();
-    cluster.getNameNode().namesystem.DFSNodesStatus(dnList, dnList);
+    cluster.getNameNode().getNamesystem().DFSNodesStatus(dnList, dnList);
     DatanodeDescriptor dn = dnList.get(0);
     
     assertEquals(1, dn.getBlocksScheduled());

@@ -181,7 +181,20 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public void setHostName(String host) {
     hostName = host;
   }
-  
+
+  /** Return hostname:port if requested, ip:port otherwise */
+  public String getName(boolean useHostname) {
+    return useHostname ? getHostName() + ":" + getPort() : getName();
+  }
+
+  /** Return hostname:ipcPort if requested, ip:ipcPort otherwise */
+  public String getNameWithIpcPort(boolean useHostname) {
+    // NB: DatanodeID#getHost returns the IP, ie the name without
+    // the port, not the hostname as the name implies
+    return useHostname ? getHostName() + ":" + getIpcPort()
+                       : getHost() + ":" + getIpcPort();
+  }
+
   /** A formatted string for reporting the status of the DataNode. */
   public String getDatanodeReport() {
     StringBuffer buffer = new StringBuffer();
@@ -282,6 +295,23 @@ public class DatanodeInfo extends DatanodeID implements Node {
     adminState = AdminStates.DECOMMISSIONED;
   }
 
+  /**
+   * Check if the datanode is in stale state. Here if the namenode has not
+   * received heartbeat msg from a datanode for more than staleInterval (default
+   * value is
+   * {@link DFSConfigKeys#DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT}),
+   * the datanode will be treated as stale node.
+   * 
+   * @param staleInterval
+   *          the time interval for marking the node as stale. If the last
+   *          update time is beyond the given time interval, the node will be
+   *          marked as stale.
+   * @return true if the node is stale
+   */
+  public boolean isStale(long staleInterval) {
+    return (System.currentTimeMillis() - lastUpdate) >= staleInterval;
+  }
+  
   /**
    * Retrieves the admin state of this node.
    */

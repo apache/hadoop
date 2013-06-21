@@ -122,6 +122,7 @@ public class TestGetFileBlockLocations extends TestCase {
     oneTest(0, (int) status.getLen() * 2, status);
     oneTest((int) status.getLen() * 2, (int) status.getLen() * 4, status);
     oneTest((int) status.getLen() / 2, (int) status.getLen() * 3, status);
+    oneTest((int) status.getLen(), (int) status.getLen() * 2, status);
     for (int i = 0; i < 10; ++i) {
       oneTest((int) status.getLen() * i / 10, (int) status.getLen() * (i + 1)
           / 10, status);

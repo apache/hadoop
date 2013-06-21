@@ -43,11 +43,13 @@ import java.nio.channels.WritableByteChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -95,7 +97,44 @@ import org.apache.hadoop.util.StringUtils;
 public abstract class Server {
   private final boolean authorize;
   private boolean isSecurityEnabled;
-  
+  private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
+
+  public void addTerseExceptions(Class<?>... exceptionClass) {
+    exceptionsHandler.addTerseExceptions(exceptionClass);
+  }
+
+  /**
+   * ExceptionsHandler manages Exception groups for special handling e.g., terse
+   * exception group for concise logging messages
+   */
+  static class ExceptionsHandler {
+    private volatile Set<String> terseExceptions = new HashSet<String>();
+
+    /**
+     * Add exception class so server won't log its stack trace. Modifying the
+     * terseException through this method is thread safe.
+     * 
+     * @param exceptionClass
+     *          exception classes
+     */
+    void addTerseExceptions(Class<?>... exceptionClass) {
+
+      // Make a copy of terseException for performing modification
+      final HashSet<String> newSet = new HashSet<String>(terseExceptions);
+
+      // Add all class names into the HashSet
+      for (Class<?> name : exceptionClass) {
+        newSet.add(name.toString());
+      }
+      // Replace terseException set
+      terseExceptions = Collections.unmodifiableSet(newSet);
+    }
+
+    boolean isTerse(Class<?> t) {
+      return terseExceptions.contains(t.toString());
+    }
+  }
+
   /**
    * The first four bytes of Hadoop RPC connections
    */
@@ -290,7 +329,6 @@ public abstract class Server {
     private long cleanupInterval = 10000; //the minimum interval between 
                                           //two cleanup runs
     private int backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
-    private ExecutorService readPool; 
    
     public Listener() throws IOException {
       address = new InetSocketAddress(bindAddress, port);
@@ -304,12 +342,12 @@ public abstract class Server {
       // create a selector;
       selector= Selector.open();
       readers = new Reader[readThreads];
-      readPool = Executors.newFixedThreadPool(readThreads);
       for (int i = 0; i < readThreads; i++) {
         Selector readSelector = Selector.open();
-        Reader reader = new Reader(readSelector);
+        Reader reader = new Reader("Socket Reader #" + (i + 1) + " for port " + port,
+                                   readSelector);
         readers[i] = reader;
-        readPool.execute(reader);
+        reader.start();
       }
 
       // Register accepts on the server socket with the selector.
@@ -318,15 +356,16 @@ public abstract class Server {
       this.setDaemon(true);
     }
     
-    private class Reader implements Runnable {
+    private class Reader extends Thread {
       private volatile boolean adding = false;
       private Selector readSelector = null;
 
-      Reader(Selector readSelector) {
+      Reader(String name, Selector readSelector) {
+        super(name);
         this.readSelector = readSelector;
       }
       public void run() {
-        LOG.info("Starting SocketReader");
+        LOG.info("Starting " + getName());
         synchronized (this) {
           while (running) {
             SelectionKey key = null;
@@ -379,6 +418,16 @@ public abstract class Server {
       public synchronized void finishAdd() {
         adding = false;
         this.notify();        
+      }
+
+      void shutdown() {
+        assert !running;
+        readSelector.wakeup();
+        try {
+          join();
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
       }
     }
 
@@ -568,7 +617,9 @@ public abstract class Server {
           LOG.info(getName() + ":Exception in closing listener socket. " + e);
         }
       }
-      readPool.shutdown();
+      for (Reader r : readers) {
+        r.shutdown();
+      }
     }
 
     // The method that will return the next reader to work with
@@ -1398,7 +1449,19 @@ public abstract class Server {
                   );
             }
           } catch (Throwable e) {
-            LOG.info(getName()+", call "+call+": error: " + e, e);
+            String logMsg = getName() + ", call " + call + ": error: " + e;
+            if (e instanceof RuntimeException || e instanceof Error) {
+              // These exception types indicate something is probably wrong
+              // on the server side, as opposed to just a normal exceptional
+              // result.
+              LOG.warn(logMsg, e);
+            } else if (exceptionsHandler.isTerse(e.getClass())) {
+              // Don't log the whole stack trace of these exceptions.
+              // Way too noisy!
+              LOG.info(logMsg);
+            } else {
+              LOG.info(logMsg, e);
+            }
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }

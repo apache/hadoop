@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
@@ -25,6 +26,7 @@ import org.apache.hadoop.security.authorize.Service;
 /**
  * {@link PolicyProvider} for Map-Reduce protocols.
  */
+@Private
 public class MapReducePolicyProvider extends PolicyProvider {
   private static final Service[] mapReduceServices = 
     new Service[] {

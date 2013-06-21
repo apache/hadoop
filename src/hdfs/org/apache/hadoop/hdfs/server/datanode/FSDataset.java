@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -356,7 +357,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
       this.dataDir = new FSDir(currentDir);
       this.currentDir = currentDir;
-      boolean supportAppends = conf.getBoolean("dfs.support.append", false);
+      boolean durableSync = conf.getBoolean("dfs.durable.sync", true);
       File parent = currentDir.getParentFile();
 
       this.detachDir = new File(parent, "detach");
@@ -376,7 +377,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       // should not be deleted.
       blocksBeingWritten = new File(parent, "blocksBeingWritten");
       if (blocksBeingWritten.exists()) {
-        if (supportAppends) {  
+        if (durableSync) {  
           recoverBlocksBeingWritten(blocksBeingWritten);
         } else {
           FileUtil.fullyDelete(blocksBeingWritten);
@@ -573,7 +574,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
             // add this block to block set
             blockSet.add(block);
             if (DataNode.LOG.isDebugEnabled()) {
-              DataNode.LOG.debug("recoverBlocksBeingWritten for block " + block);
+              DataNode.LOG.debug("recoverBlocksBeingWritten for " + block);
             }
           }
         }
@@ -774,7 +775,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         volumes = fsvs; // replace array of volumes
       }
       Log.info("Completed FSVolumeSet.checkDirs. Removed=" + removed_size + 
-          "volumes. List of current volumes: " +   toString());
+          " volumes. Current volumes: " +   toString());
       
       return removed_vols;
     }
@@ -1077,7 +1078,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   /**
    * Get File name for a given block.
    */
-  public synchronized File getBlockFile(Block b) throws IOException {
+  public File getBlockFile(Block b) throws IOException {
     File f = validateBlockFile(b);
     if(f == null) {
       if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
@@ -1098,26 +1099,59 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     return info;
   }
   
-  public synchronized InputStream getBlockInputStream(Block b) throws IOException {
-    if (isNativeIOAvailable) {
-      return NativeIO.getShareDeleteFileInputStream(getBlockFile(b));
-    } else {
-      return new FileInputStream(getBlockFile(b));
+  public InputStream getBlockInputStream(Block b) throws IOException {
+    File f = getBlockFileNoExistsCheck(b);
+    try {
+      if (isNativeIOAvailable) {
+        return NativeIO.getShareDeleteFileInputStream(f);
+      } else {
+        return new FileInputStream(f);
+      }
+    } catch (FileNotFoundException fnfe) {
+      throw new IOException("Block " + b + " is not valid. "
+          + "Expected block file at " + f + " does not exist.");
     }
   }
 
-  public synchronized InputStream getBlockInputStream(Block b, long seekOffset) throws IOException {
-    File blockFile = getBlockFile(b);
-    if (isNativeIOAvailable) {
-      return NativeIO.getShareDeleteFileInputStream(blockFile, seekOffset);
-    } else {
-      RandomAccessFile blockInFile = new RandomAccessFile(blockFile, "r");
-      if (seekOffset > 0) {
-        blockInFile.seek(seekOffset);
+  /**
+   * Return the File associated with a block, without first checking that it
+   * exists. This should be used when the next operation is going to open the
+   * file for read anyway, and thus the exists check is redundant.
+   */
+  private File getBlockFileNoExistsCheck(Block b) throws IOException {
+    File f = getFile(b);
+    if (f == null) {
+      throw new IOException("Block " + b + " is not valid");
+    }
+    return f;
+  }
+
+  public InputStream getBlockInputStream(Block b, long seekOffset)
+      throws IOException {
+    File blockFile = getBlockFileNoExistsCheck(b);
+    try {
+      if (isNativeIOAvailable) {
+        return NativeIO.getShareDeleteFileInputStream(blockFile, seekOffset);
+      } else {
+        RandomAccessFile blockInFile;
+        try {
+          blockInFile = new RandomAccessFile(blockFile, "r");
+        } catch (FileNotFoundException fnfe) {
+          throw new IOException("Block " + b + " is not valid. "
+              + "Expected block file at " + blockFile + " does not exist.");
+        }
+
+        if (seekOffset > 0) {
+          blockInFile.seek(seekOffset);
+        }
+        return new FileInputStream(blockInFile.getFD());
       }
-      return new FileInputStream(blockInFile.getFD());
+    } catch (FileNotFoundException fnfe) {
+      throw new IOException("Block " + b + " is not valid. "
+          + "Expected block file at " + blockFile + " does not exist.");
     }
   }
+
 
   /**
    * Returns handles to the block file and its metadata file
@@ -1467,7 +1501,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         volumeMap.put(b, new DatanodeBlockInfo(v, f));
       } else {
         // reopening block for appending to it.
-        DataNode.LOG.info("Reopen Block for append " + b);
+        DataNode.LOG.info("Reopen for append " + b);
         v = volumeMap.get(b).getVolume();
         f = createTmpFile(v, b, replicationRequest);
         File blkfile = getBlockFile(b);
@@ -1486,19 +1520,18 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         DataNode.LOG.debug("Renaming " + blkfile + " to " + f);
         if (!blkfile.renameTo(f)) {
           if (!f.delete()) {
-            throw new IOException("Block " + b + " reopen failed. " +
+            throw new IOException(b + " reopen failed. " +
                                   " Unable to remove file " + f);
           }
           if (!blkfile.renameTo(f)) {
-            throw new IOException("Block " + b + " reopen failed. " +
+            throw new IOException(b + " reopen failed. " +
                                   " Unable to move block file " + blkfile +
                                   " to tmp dir " + f);
           }
         }
       }
       if (f == null) {
-        DataNode.LOG.warn("Block " + b + " reopen failed " +
-                          " Unable to locate tmp file.");
+        DataNode.LOG.warn(b + " reopen failed. Unable to locate tmp file");
         throw new IOException("Block " + b + " reopen failed " +
                               " Unable to locate tmp file.");
       }
@@ -1739,9 +1772,10 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       long st = System.currentTimeMillis();
       // broken out to a static method to simplify testing
       reconcileRoughBlockScan(seenOnDisk, volumeMap, ongoingCreates);
-      DataNode.LOG.info(
-          "Reconciled asynchronous block report against current state in " +
-          (System.currentTimeMillis() - st) + " ms");
+      if (DataNode.LOG.isDebugEnabled()) {
+        DataNode.LOG.debug("Reconciled block report with current state in "
+                + (System.currentTimeMillis() - st) + "ms");
+      }
       
       blockReport = seenOnDisk.keySet();
     }
@@ -2245,7 +2279,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           waitForReportRequest();
           assert requested && scan == null;
           
-          DataNode.LOG.info("Starting asynchronous block report scan");
           long st = System.currentTimeMillis();
           HashMap<Block, File> result = fsd.roughBlockScan();
           DataNode.LOG.info("Finished asynchronous block report scan in "

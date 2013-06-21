@@ -96,8 +96,8 @@ public class TestDiskError extends TestCase {
       DFSTestUtil.waitReplication(fs, fileName, (short)1);
 
       // get the block belonged to the created file
-      LocatedBlocks blocks = cluster.getNameNode().namesystem.getBlockLocations(
-          fileName.toString(), 0, (long)fileLen);
+      LocatedBlocks blocks = cluster.getNameNode().getNamesystem()
+          .getBlockLocations(fileName.toString(), 0, (long) fileLen);
       assertEquals(blocks.locatedBlockCount(), 1);
       LocatedBlock block = blocks.get(0);
       

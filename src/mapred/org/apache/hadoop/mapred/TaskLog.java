@@ -109,7 +109,7 @@ public class TaskLog {
     String strAttemptLogDir = getTaskAttemptLogDir(taskID, 
         cleanupSuffix, localDirs);
     File attemptLogDir = new File(strAttemptLogDir);
-    if (!attemptLogDir.mkdirs()) {
+    if (!attemptLogDir.exists() && !attemptLogDir.mkdirs()) {
       throw new IOException("Creation of " + attemptLogDir + " failed.");
     }
     String strLinkAttemptLogDir = 

@@ -17,9 +17,20 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
+
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 
 public abstract class NameNodeAdapter {
+  /**
+   * Get block locations within the specified range.
+   */
+  public static LocatedBlocks getBlockLocations(NameNode namenode,
+      String src, long offset, long length) throws IOException {
+    return namenode.getNamesystem().getBlockLocations(
+        src, offset, length, false, true, true);
+  }
+
   public static boolean checkFileProgress(FSNamesystem fsn, String path, boolean checkall) throws IOException {
     INodeFile f = fsn.dir.getFileINode(path);
     return fsn.checkFileProgress(f, checkall);

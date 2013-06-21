@@ -27,12 +27,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.mapred.SortedRanges.Range;
-import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
+import org.apache.hadoop.mapred.TaskStatus.State;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.net.Node;
 
 
@@ -50,6 +53,7 @@ import org.apache.hadoop.net.Node;
  * ever have to handle.  Once those are up, the TIP is dead.
  * **************************************************************
  */
+@Private
 class TaskInProgress {
   static final int MAX_TASK_EXECS = 1;
   int maxTaskAttempts = 4;    
@@ -127,7 +131,11 @@ class TaskInProgress {
   private Counters counters = new Counters();
   
   private String user;
-  
+
+  private Map<TaskAttemptID, Locality> taskLocality = 
+      new ConcurrentHashMap<TaskAttemptID, Locality>();
+  private Map<TaskAttemptID, Avataar> taskAvataar = 
+      new ConcurrentHashMap<TaskAttemptID, Avataar>();
 
   /**
    * Constructor for MapTask
@@ -271,7 +279,23 @@ class TaskInProgress {
     execFinishTime = finishTime;
     JobHistory.Task.logUpdates(id, execFinishTime); // log the update
   }
+
+  public void setTaskAttemptLocality(TaskAttemptID taskAttemptID, Locality locality) {
+    taskLocality.put(taskAttemptID, locality);
+  }
   
+  public Locality getTaskAttemptLocality(TaskAttemptID taskAttemptId) {
+    return taskLocality.get(taskAttemptId);
+  }
+  
+  public void setTaskAttemptAvataar(TaskAttemptID taskAttemptId, Avataar avataar) {
+    taskAvataar.put(taskAttemptId, avataar);
+  }
+  
+  public Avataar getTaskAttemptAvataar(TaskAttemptID taskAttemptID) {
+    return taskAvataar.get(taskAttemptID);
+  }
+ 
   /**
    * Return the parent job
    */
@@ -604,10 +628,18 @@ class TaskInProgress {
           
       changed = oldState != newState;
     }
+    
     // if task is a cleanup attempt, do not replace the complete status,
     // update only specific fields.
     // For example, startTime should not be updated, 
     // but finishTime has to be updated.
+    
+    // Don't fail tasks when JobTracker is in safe-mode
+    if (status.getRunState() == State.FAILED && jobtracker.isInSafeMode()) {
+      LOG.info("JT is in safe-mode; marking " + taskid + " as KILLED");
+      status.setRunState(State.KILLED);
+    }
+
     if (!isCleanupAttempt(taskid)) {
       taskStatuses.put(taskid, status);
     } else {

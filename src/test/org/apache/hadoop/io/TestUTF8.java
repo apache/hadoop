@@ -19,16 +19,22 @@
 package org.apache.hadoop.io;
 
 import junit.framework.TestCase;
+import java.io.IOException;
+import java.io.UTFDataFormatException;
 import java.util.Random;
 
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
+
 /** Unit tests for UTF8. */
+@SuppressWarnings("deprecation")
 public class TestUTF8 extends TestCase {
   public TestUTF8(String name) { super(name); }
 
   private static final Random RANDOM = new Random();
 
   public static String getTestString() throws Exception {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     int length = RANDOM.nextInt(100);
     for (int i = 0; i < length; i++) {
       buffer.append((char)(RANDOM.nextInt(Character.MAX_VALUE)));
@@ -37,13 +43,13 @@ public class TestUTF8 extends TestCase {
   }
 
   public void testWritable() throws Exception {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10000; i++) {
       TestWritable.testWritable(new UTF8(getTestString()));
     }
   }
 
   public void testGetBytes() throws Exception {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10000; i++) {
 
       // generate a random string
       String before = getTestString();
@@ -57,7 +63,7 @@ public class TestUTF8 extends TestCase {
     DataOutputBuffer out = new DataOutputBuffer();
     DataInputBuffer in = new DataInputBuffer();
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10000; i++) {
       // generate a random string
       String before = getTestString();
 
@@ -68,19 +74,96 @@ public class TestUTF8 extends TestCase {
       // test that it reads correctly
       in.reset(out.getData(), out.getLength());
       String after = UTF8.readString(in);
-      assertTrue(before.equals(after));
+      assertEquals(before, after);
 
       // test that it reads correctly with DataInput
       in.reset(out.getData(), out.getLength());
       String after2 = in.readUTF();
-      assertTrue(before.equals(after2));
+      assertEquals(before, after2);
 
       // test that it is compatible with Java's other decoder
       String after3 = new String(out.getData(), 2, out.getLength()-2, "UTF-8");
-      assertTrue(before.equals(after3));
+      assertEquals(before, after3);
 
     }
 
   }
-	
+
+  public void testNullEncoding() throws Exception {
+    String s = new String(new char[] { 0 });
+
+    DataOutputBuffer dob = new DataOutputBuffer();
+    new UTF8(s).write(dob);
+
+    assertEquals(s, new String(dob.getData(), 2, dob.getLength()-2, "UTF-8"));
+  }
+
+  /**
+   * Test encoding and decoding of UTF8 outside the basic multilingual plane.
+   *
+   * This is a regression test for HADOOP-9103.
+   */
+  public void testNonBasicMultilingualPlane() throws Exception {
+    // Test using the "CAT FACE" character (U+1F431)
+    // See http://www.fileformat.info/info/unicode/char/1f431/index.htm
+    String catFace = "\uD83D\uDC31";
+
+    // This encodes to 4 bytes in UTF-8:
+    byte[] encoded = catFace.getBytes("UTF-8");
+    assertEquals(4, encoded.length);
+    assertEquals("f09f90b1", StringUtils.byteToHexString(encoded));
+
+    // Decode back to String using our own decoder
+    String roundTrip = UTF8.fromBytes(encoded);
+    assertEquals(catFace, roundTrip);
+  }
+
+  /**
+   * Test that decoding invalid UTF8 throws an appropriate error message.
+   */
+  public void testInvalidUTF8() throws Exception {
+    byte[] invalid = new byte[] {
+        0x01, 0x02, (byte)0xff, (byte)0xff, 0x01, 0x02, 0x03, 0x04, 0x05 };
+    try {
+      UTF8.fromBytes(invalid);
+      fail("did not throw an exception");
+    } catch (UTFDataFormatException utfde) {
+      GenericTestUtils.assertExceptionContains(
+          "Invalid UTF8 at ffff01020304", utfde);
+    }
+  }
+
+  /**
+   * Test for a 5-byte UTF8 sequence, which is now considered illegal.
+   */
+  public void test5ByteUtf8Sequence() throws Exception {
+    byte[] invalid = new byte[] {
+        0x01, 0x02, (byte)0xf8, (byte)0x88, (byte)0x80,
+        (byte)0x80, (byte)0x80, 0x04, 0x05 };
+    try {
+      UTF8.fromBytes(invalid);
+      fail("did not throw an exception");
+    } catch (UTFDataFormatException utfde) {
+      GenericTestUtils.assertExceptionContains(
+          "Invalid UTF8 at f88880808004", utfde);
+    }
+  }
+  
+  /**
+   * Test that decoding invalid UTF8 due to truncation yields the correct
+   * exception type.
+   */
+  public void testInvalidUTF8Truncated() throws Exception {
+    // Truncated CAT FACE character -- this is a 4-byte sequence, but we
+    // only have the first three bytes.
+    byte[] truncated = new byte[] {
+        (byte)0xF0, (byte)0x9F, (byte)0x90 };
+    try {
+      UTF8.fromBytes(truncated);
+      fail("did not throw an exception");
+    } catch (UTFDataFormatException utfde) {
+      GenericTestUtils.assertExceptionContains(
+          "Truncated UTF8 at f09f90", utfde);
+    }
+  }
 }

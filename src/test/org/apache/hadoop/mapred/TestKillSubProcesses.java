@@ -359,6 +359,7 @@ public class TestKillSubProcesses extends TestCase {
     try {
       JobConf conf = new JobConf();
       conf.setLong(JvmManager.JvmManagerForType.DELAY_BEFORE_KILL_KEY, 0L);
+      conf.setFloat(JobTracker.JT_HEARTBEATS_SCALING_FACTOR, 500);
       mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
 
       // run the TCs

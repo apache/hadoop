@@ -157,7 +157,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
     stm.sync();
     if (triggerSoftLease) {
       AppendTestUtil.LOG.info("leasechecker.interruptAndJoin()");
-      dfs.dfs.leasechecker.interruptAndJoin();
+      dfs.dfs.getLeaseRenewer().interruptAndJoin();
     }
     return filepath;
   }

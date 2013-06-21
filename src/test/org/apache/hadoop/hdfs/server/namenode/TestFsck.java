@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -76,6 +77,9 @@ public class TestFsck extends TestCase {
     PrintStream newOut = new PrintStream(bStream, true);
     System.setOut(newOut);
     ((Log4JLogger)FSPermissionChecker.LOG).getLogger().setLevel(Level.ALL);
+    NameNode.LOG.debug("runFsck(expectedErrCode=" + expectedErrCode +
+        " ,checkErrorCode=" + checkErrorCode + ", path='" +
+        StringUtils.join(",", path) + "'");
     int errCode = ToolRunner.run(new DFSck(conf), path);
     if (checkErrorCode)
       assertEquals(expectedErrCode, errCode);
@@ -228,7 +232,8 @@ public class TestFsck extends TestCase {
     }
   }
 
-  public void testFsckMove() throws Exception {
+  public void testFsckMoveAndDelete() throws Exception {
+    final int NUM_MOVE_TRIES = 3;
     DFSTestUtil util = new DFSTestUtil("TestFsck", 5, 3, 8*1024);
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
@@ -248,6 +253,7 @@ public class TestFsck extends TestCase {
       String[] fileNames = util.getFileNames(topDir);
       DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                           cluster.getNameNodePort()), conf);
+      String corruptFileName = fileNames[0];
       String block = dfsClient.namenode.
                       getBlockLocations(fileNames[0], 0, Long.MAX_VALUE).
                       get(0).getBlock().getBlockName();
@@ -270,8 +276,23 @@ public class TestFsck extends TestCase {
         outStr = runFsck(conf, 1, false, "/");
       } 
       
-      // Fix the filesystem by moving corrupted files to lost+found
-      outStr = runFsck(conf, 1, true, "/", "-move");
+      // After a fsck -move, the corrupted file should still exist.
+      for (int retry = 0; retry < NUM_MOVE_TRIES; retry++) {
+        outStr = runFsck(conf, 1, true, "/", "-move" );
+        assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
+        String[] newFileNames = util.getFileNames(topDir);
+        boolean found = false;
+        for (String f : newFileNames) {
+          if (f.equals(corruptFileName)) {
+            found = true;
+            break;
+          }
+        }
+        assertTrue(found);
+      }
+
+      // Fix the filesystem by deleting corrupted files
+      outStr = runFsck(conf, 1, true, "/", "-delete");
       assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
       
       // Check to make sure we have healthy filesystem
@@ -431,7 +452,7 @@ public class TestFsck extends TestCase {
       DFSTestUtil.waitReplication(fs, filePath, (short)1);
       
       // intentionally corrupt NN data structure
-      INodeFile node = (INodeFile)cluster.getNameNode().namesystem.dir.rootDir.getNode(fileName);
+      INodeFile node = (INodeFile)cluster.getNameNode().getNamesystem().dir.rootDir.getNode(fileName);
       assertEquals(node.blocks.length, 1);
       node.blocks[0].setNumBytes(-1L);  // set the block length to be negative
       

@@ -21,17 +21,27 @@ package org.apache.hadoop.io;
 import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.UTFDataFormatException;
 
+import org.apache.hadoop.util.StringUtils;
 
 import org.apache.commons.logging.*;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /** A WritableComparable for strings that uses the UTF8 encoding.
  * 
  * <p>Also includes utilities for efficiently reading and writing UTF-8.
  *
+ * Note that this decodes UTF-8 but actually encodes CESU-8, a variant of
+ * UTF-8: see http://en.wikipedia.org/wiki/CESU-8
+ *
  * @deprecated replaced by Text
  */
-public class UTF8 implements WritableComparable {
+@Deprecated
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Stable
+public class UTF8 implements WritableComparable<UTF8> {
   private static final Log LOG= LogFactory.getLog(UTF8.class);
   private static final DataInputBuffer IBUF = new DataInputBuffer();
 
@@ -105,6 +115,7 @@ public class UTF8 implements WritableComparable {
     System.arraycopy(other.bytes, 0, bytes, 0, length);
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     length = in.readUnsignedShort();
     if (bytes == null || bytes.length < length)
@@ -118,21 +129,23 @@ public class UTF8 implements WritableComparable {
     WritableUtils.skipFully(in, length);
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeShort(length);
     out.write(bytes, 0, length);
   }
 
   /** Compare two UTF8s. */
-  public int compareTo(Object o) {
-    UTF8 that = (UTF8)o;
+  @Override
+  public int compareTo(UTF8 o) {
     return WritableComparator.compareBytes(bytes, 0, length,
-                                           that.bytes, 0, that.length);
+                                           o.bytes, 0, o.length);
   }
 
   /** Convert to a String. */
+  @Override
   public String toString() {
-    StringBuffer buffer = new StringBuffer(length);
+    StringBuilder buffer = new StringBuilder(length);
     try {
       synchronized (IBUF) {
         IBUF.reset(bytes, length);
@@ -143,8 +156,24 @@ public class UTF8 implements WritableComparable {
     }
     return buffer.toString();
   }
+  
+  /**
+   * Convert to a string, checking for valid UTF8.
+   * @return the converted string
+   * @throws UTFDataFormatException if the underlying bytes contain invalid
+   * UTF8 data.
+   */
+  public String toStringChecked() throws IOException {
+    StringBuilder buffer = new StringBuilder(length);
+    synchronized (IBUF) {
+      IBUF.reset(bytes, length);
+      readChars(IBUF, buffer, length);
+    }
+    return buffer.toString();
+  }
 
   /** Returns true iff <code>o</code> is a UTF8 with the same contents.  */
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof UTF8))
       return false;
@@ -156,6 +185,7 @@ public class UTF8 implements WritableComparable {
                                              that.bytes, 0, that.length) == 0;
   }
 
+  @Override
   public int hashCode() {
     return WritableComparator.hashBytes(bytes, length);
   }
@@ -166,6 +196,7 @@ public class UTF8 implements WritableComparable {
       super(UTF8.class);
     }
 
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       int n1 = readUnsignedShort(b1, s1);
@@ -198,19 +229,32 @@ public class UTF8 implements WritableComparable {
     return result;
   }
 
+  /**
+   * Convert a UTF-8 encoded byte array back into a string.
+   *
+   * @throws IOException if the byte array is invalid UTF8
+   */
+  public static String fromBytes(byte[] bytes) throws IOException {
+    DataInputBuffer dbuf = new DataInputBuffer();
+    dbuf.reset(bytes, 0, bytes.length);
+    StringBuilder buf = new StringBuilder(bytes.length);
+    readChars(dbuf, buf, bytes.length);
+    return buf.toString();
+  }
+
   /** Read a UTF-8 encoded string.
    *
    * @see DataInput#readUTF()
    */
   public static String readString(DataInput in) throws IOException {
     int bytes = in.readUnsignedShort();
-    StringBuffer buffer = new StringBuffer(bytes);
+    StringBuilder buffer = new StringBuilder(bytes);
     readChars(in, buffer, bytes);
     return buffer.toString();
   }
 
-  private static void readChars(DataInput in, StringBuffer buffer, int nBytes)
-    throws IOException {
+  private static void readChars(DataInput in, StringBuilder buffer, int nBytes)
+    throws UTFDataFormatException, IOException {
     DataOutputBuffer obuf = OBUF_FACTORY.get();
     obuf.reset();
     obuf.write(in, nBytes);
@@ -219,16 +263,58 @@ public class UTF8 implements WritableComparable {
     while (i < nBytes) {
       byte b = bytes[i++];
       if ((b & 0x80) == 0) {
+        // 0b0xxxxxxx: 1-byte sequence
         buffer.append((char)(b & 0x7F));
-      } else if ((b & 0xE0) != 0xE0) {
+      } else if ((b & 0xE0) == 0xC0) {
+        if (i >= nBytes) {
+          throw new UTFDataFormatException("Truncated UTF8 at " +
+              StringUtils.byteToHexString(bytes, i - 1, 1));
+        }
+        // 0b110xxxxx: 2-byte sequence
         buffer.append((char)(((b & 0x1F) << 6)
             | (bytes[i++] & 0x3F)));
-      } else {
+      } else if ((b & 0xF0) == 0xE0) {
+        // 0b1110xxxx: 3-byte sequence
+        if (i + 1 >= nBytes) {
+          throw new UTFDataFormatException("Truncated UTF8 at " +
+              StringUtils.byteToHexString(bytes, i - 1, 2));
+        }
         buffer.append((char)(((b & 0x0F) << 12)
             | ((bytes[i++] & 0x3F) << 6)
             |  (bytes[i++] & 0x3F)));
+      } else if ((b & 0xF8) == 0xF0) {
+        if (i + 2 >= nBytes) {
+          throw new UTFDataFormatException("Truncated UTF8 at " +
+              StringUtils.byteToHexString(bytes, i - 1, 3));
+        }
+        // 0b11110xxx: 4-byte sequence
+        int codepoint =
+            ((b & 0x07) << 18)
+          | ((bytes[i++] & 0x3F) <<  12)
+          | ((bytes[i++] & 0x3F) <<  6)
+          | ((bytes[i++] & 0x3F));
+        buffer.append(highSurrogate(codepoint))
+              .append(lowSurrogate(codepoint));
+      } else {
+        // The UTF8 standard describes 5-byte and 6-byte sequences, but
+        // these are no longer allowed as of 2003 (see RFC 3629)
+
+        // Only show the next 6 bytes max in the error code - in case the
+        // buffer is large, this will prevent an exceedingly large message.
+        int endForError = Math.min(i + 5, nBytes);
+        throw new UTFDataFormatException("Invalid UTF8 at " +
+            StringUtils.byteToHexString(bytes, i - 1, endForError));
       }
     }
+  }
+
+  private static char highSurrogate(int codePoint) {
+    return (char) ((codePoint >>> 10)
+        + (Character.MIN_HIGH_SURROGATE - (Character.MIN_SUPPLEMENTARY_CODE_POINT >>> 10)));
+  }
+
+  private static char lowSurrogate(int codePoint) {
+    return (char) ((codePoint & 0x3ff) + Character.MIN_LOW_SURROGATE);
   }
 
   /** Write a UTF-8 encoded string.
@@ -257,7 +343,7 @@ public class UTF8 implements WritableComparable {
     int utf8Length = 0;
     for (int i = 0; i < stringLength; i++) {
       int c = string.charAt(i);
-      if ((c >= 0x0001) && (c <= 0x007F)) {
+      if (c <= 0x007F) {
         utf8Length++;
       } else if (c > 0x07FF) {
         utf8Length += 3;
@@ -274,7 +360,7 @@ public class UTF8 implements WritableComparable {
     final int end = start + length;
     for (int i = start; i < end; i++) {
       int code = s.charAt(i);
-      if (code >= 0x01 && code <= 0x7F) {
+      if (code <= 0x7F) {
         out.writeByte((byte)code);
       } else if (code <= 0x07FF) {
         out.writeByte((byte)(0xC0 | ((code >> 6) & 0x1F)));

@@ -23,7 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.fs.Path;
@@ -34,14 +33,13 @@ import org.junit.Assert;
 import junit.framework.TestCase;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.MalformedURLException;
 
 public class TestJobHistoryServer extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestJobHistoryServer.class);
-
+  private String inputPath = System.getProperty("test.build.data",
+      "build/test/data") + "/TestJobHistoryServer";
+  
   public void testHistoryServerEmbedded() {
 
     MiniMRCluster mrCluster = null;
@@ -61,7 +59,7 @@ public class TestJobHistoryServer extends TestCase {
       LOG.info("******** History Address: " + historyAddress);
 
       conf = mrCluster.createJobConf();
-      createInputFile(conf, "/tmp/input");
+      createInputFile(conf, inputPath);
 
       RunningJob job = runJob(conf);
       LOG.info("Job details: " + job);
@@ -71,6 +69,9 @@ public class TestJobHistoryServer extends TestCase {
 
     } catch (IOException e) {
       LOG.error("Failure running test", e);
+      Assert.fail(e.getMessage());
+    } catch (InterruptedException e) {
+      LOG.error("Exit due to being interrupted");
       Assert.fail(e.getMessage());
     } finally {
       if (mrCluster != null) mrCluster.shutdown();
@@ -100,7 +101,7 @@ public class TestJobHistoryServer extends TestCase {
       LOG.info("******** History Address: " + historyAddress);
 
       conf = mrCluster.createJobConf();
-      createInputFile(conf, "/tmp/input");
+      createInputFile(conf, inputPath);
 
       RunningJob job = runJob(conf);
       LOG.info("Job details: " + job);
@@ -110,6 +111,9 @@ public class TestJobHistoryServer extends TestCase {
 
     } catch (IOException e) {
       LOG.error("Failure running test", e);
+      Assert.fail(e.getMessage());
+    } catch (InterruptedException e) {
+      LOG.error("Exit due to being interrupted");
       Assert.fail(e.getMessage());
     } finally {
       if (mrCluster != null) mrCluster.shutdown();
@@ -145,17 +149,33 @@ public class TestJobHistoryServer extends TestCase {
     conf.setMapperClass(org.apache.hadoop.mapred.lib.IdentityMapper.class);
     conf.setReducerClass(org.apache.hadoop.mapred.lib.IdentityReducer.class);
 
-    FileInputFormat.setInputPaths(conf, "/tmp/input");
+    FileInputFormat.setInputPaths(conf, inputPath);
 
     return JobClient.runJob(conf);
   }
 
-  private String getRedirectUrl(String jobUrl) throws IOException {
+  private String getRedirectUrl(String jobUrl) throws IOException, InterruptedException {
     HttpClient client = new HttpClient();
     GetMethod method = new GetMethod(jobUrl);
     method.setFollowRedirects(false);
     try {
       int status = client.executeMethod(method);
+      if(status!=HttpURLConnection.HTTP_MOVED_TEMP) {
+        int retryTimes = 4;
+        for(int i = 1; i < retryTimes + 1; i++) {
+          try {
+            // Wait i sec
+            Thread.sleep(i * 1000);
+          } catch (InterruptedException e) {
+            throw new InterruptedException("Exit due to being interrupted");
+          }
+          // Get the latest status
+          status = client.executeMethod(method);
+          if(status == HttpURLConnection.HTTP_MOVED_TEMP)
+            break;
+        }
+      }
+
       Assert.assertEquals(status, HttpURLConnection.HTTP_MOVED_TEMP);
 
       LOG.info("Location: " + method.getResponseHeader("Location"));

@@ -35,6 +35,8 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
   private TaskType taskType;
   private String trackerName;
   private int httpPort;
+  private String locality;
+  private String avataar;
 
   /**
    * Create an event to record the start of an attempt
@@ -43,16 +45,20 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
    * @param startTime Start time of the attempt
    * @param trackerName Name of the Task Tracker where attempt is running
    * @param httpPort The port number of the tracker
+   * @param locality the locality of the task attempt
+   * @param avataar the avataar of the task attempt
    */
   public TaskAttemptStartedEvent( TaskAttemptID attemptId,  
       TaskType taskType, long startTime, String trackerName,
-      int httpPort) {
+      int httpPort, String locality, String avataar) {
     this.taskId = attemptId.getTaskID();
     this.attemptId = attemptId;
     this.startTime = startTime;
     this.taskType = taskType;
     this.trackerName = trackerName;
     this.httpPort = httpPort;
+    this.locality = locality;
+    this.avataar = avataar;
   }
 
   /** Get the task id */
@@ -71,9 +77,23 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
   public TaskAttemptID getTaskAttemptId() {
     return attemptId;
   }
+  /** Get the locality of the task attempt */
+  public String getLocality() {
+    return locality;
+  }
+  /** Get the avataar of the task attempt */
+  public String getAvataar() {
+    return avataar;
+  }
   /** Get the event type */
   public EventType getEventType() {
-    return EventType.MAP_ATTEMPT_STARTED;
+    if (taskType == TaskType.JOB_SETUP) {
+      return EventType.SETUP_ATTEMPT_STARTED;
+    } else if (taskType == TaskType.JOB_CLEANUP) {
+      return EventType.CLEANUP_ATTEMPT_STARTED;
+    }
+    return attemptId.isMap() ? 
+        EventType.MAP_ATTEMPT_STARTED : EventType.REDUCE_ATTEMPT_STARTED;
   }
 
 }

@@ -550,7 +550,8 @@ public class StringUtils {
             "  build = " + VersionInfo.getUrl() + " -r "
                          + VersionInfo.getRevision()  
                          + "; compiled by '" + VersionInfo.getUser()
-                         + "' on " + VersionInfo.getDate()}
+                         + "' on " + VersionInfo.getDate(),
+            "  java = " + System.getProperty("java.version") }
         )
       );
 
@@ -729,6 +730,27 @@ public class StringUtils {
         sb.append(separator);
       }
       sb.append(s);
+    }
+    return sb.toString();
+  }
+
+  /**
+   * Concatenates objects, using a separator.
+   *
+   * @param separator to join with
+   * @param objects to join
+   * @return the joined string
+   */
+  public static String join(CharSequence separator, Object[] objects) {
+    StringBuilder sb = new StringBuilder();
+    boolean first = true;
+    for (Object obj : objects) {
+      if (first) {
+        first = false;
+      } else {
+        sb.append(separator);
+      }
+      sb.append(obj);
     }
     return sb.toString();
   }

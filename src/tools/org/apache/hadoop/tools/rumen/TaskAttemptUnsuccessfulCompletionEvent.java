@@ -77,7 +77,23 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   public String getTaskStatus() { return status; }
   /** Get the event type */
   public EventType getEventType() {
-    return EventType.MAP_ATTEMPT_KILLED;
+    if (status.equals("FAILED")) {
+      if (taskType == TaskType.JOB_SETUP) {
+        return EventType.SETUP_ATTEMPT_FAILED;
+      } else if (taskType == TaskType.JOB_CLEANUP) {
+        return EventType.CLEANUP_ATTEMPT_FAILED;
+      }
+      return attemptId.isMap() ? 
+          EventType.MAP_ATTEMPT_FAILED : EventType.REDUCE_ATTEMPT_FAILED;
+    } else {
+      if (taskType == TaskType.JOB_SETUP) {
+        return EventType.SETUP_ATTEMPT_KILLED;
+      } else if (taskType == TaskType.JOB_CLEANUP) {
+        return EventType.CLEANUP_ATTEMPT_KILLED;
+      }
+      return attemptId.isMap() ? 
+          EventType.MAP_ATTEMPT_KILLED : EventType.REDUCE_ATTEMPT_KILLED;
+    }
   }
 
 }

@@ -56,17 +56,8 @@ import org.apache.hadoop.security.UserGroupInformation;
  *  root path. The following abnormal conditions are detected and handled:</p>
  * <ul>
  * <li>files with blocks that are completely missing from all datanodes.<br/>
- * In this case the tool can perform one of the following actions:
- *  <ul>
- *      <li>none ({@link #FIXING_NONE})</li>
- *      <li>move corrupted files to /lost+found directory on DFS
- *      ({@link #FIXING_MOVE}). Remaining data blocks are saved as a
- *      block chains, representing longest consecutive series of valid blocks.</li>
- *      <li>delete corrupted files ({@link #FIXING_DELETE})</li>
- *  </ul>
- *  </li>
- *  <li>detect files with under-replicated or over-replicated blocks</li>
- *  </ul>
+ * <li>files with under-replicated or over-replicated blocks</li>
+ * </ul>
  *  Additionally, the tool collects a detailed overall DFS statistics, and
  *  optionally can print detailed statistics on block locations and replication
  *  factors of each file.
@@ -79,13 +70,6 @@ public class NamenodeFsck {
   public static final String HEALTHY_STATUS = "is HEALTHY";
   public static final String NONEXISTENT_STATUS = "does not exist";
   public static final String FAILURE_STATUS = "FAILED";
-  
-  /** Don't attempt any fixing . */
-  public static final int FIXING_NONE = 0;
-  /** Move corrupted files to /lost+found . */
-  public static final int FIXING_MOVE = 1;
-  /** Delete corrupted files. */
-  public static final int FIXING_DELETE = 2;
   
   private final NameNode namenode;
   private final NetworkTopology networktopology;
@@ -101,7 +85,21 @@ public class NamenodeFsck {
   private boolean showBlocks = false;
   private boolean showLocations = false;
   private boolean showRacks = false;
-  private int fixing = FIXING_NONE;
+
+  /** 
+   * True if the user specified the -move option.
+   *
+   * Whe this option is in effect, we will copy salvaged blocks into the lost
+   * and found. */
+  private boolean doMove = false;
+
+  /** 
+   * True if the user specified the -delete option.
+   *
+   * Whe this option is in effect, we will delete corrupted files.
+   */
+  private boolean doDelete = false;
+
   private String path = "/";
   
   private final Configuration conf;
@@ -133,8 +131,8 @@ public class NamenodeFsck {
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
       if (key.equals("path")) { this.path = pmap.get("path")[0]; }
-      else if (key.equals("move")) { this.fixing = FIXING_MOVE; }
-      else if (key.equals("delete")) { this.fixing = FIXING_DELETE; }
+      else if (key.equals("move")) { this.doMove = true; }
+      else if (key.equals("delete")) { this.doDelete = true; }
       else if (key.equals("files")) { this.showFiles = true; }
       else if (key.equals("blocks")) { this.showBlocks = true; }
       else if (key.equals("locations")) { this.showLocations = true; }
@@ -219,7 +217,7 @@ public class NamenodeFsck {
     // Get block locations without updating the file access time 
     // and without block access tokens
     LocatedBlocks blocks = namenode.getNamesystem().getBlockLocations(path, 0,
-        fileLen, false, false);
+        fileLen, false, false, false);
     if (blocks == null) { // the file is deleted
       return;
     }
@@ -284,7 +282,7 @@ public class NamenodeFsck {
       }
       // verify block placement policy
       int missingRacks = BlockPlacementPolicy.getInstance(conf, null, networktopology).
-                          verifyBlockPlacement(path, lBlk, targetFileReplication);
+                          verifyBlockPlacement(path, lBlk, (short)Math.min(2,targetFileReplication));
       if (missingRacks > 0) {
         res.numMisReplicatedBlocks++;
         misReplicatedPerFile++;
@@ -328,16 +326,20 @@ public class NamenodeFsck {
             + " blocks of total size " + missize + " B.");
       }
       res.corruptFiles++;
-      switch(fixing) {
-      case FIXING_NONE:
-        break;
-      case FIXING_MOVE:
-        if (!isOpen)
-          lostFoundMove(parent, file, blocks);
-        break;
-      case FIXING_DELETE:
-        if (!isOpen)
-          namenode.delete(path, true);
+      try {
+        if (doMove) {
+          if (!isOpen) {
+            copyBlocksToLostFound(parent, file, blocks);
+          }
+        }
+        if (doDelete) {
+          if (!isOpen) {
+            LOG.warn("\n - deleting corrupted file " + path);
+            namenode.delete(path, true);
+          }
+        }
+      } catch (IOException e) {
+        LOG.error("error processing " + path + ": " + e.toString());
       }
     }
     if (showFiles) {
@@ -352,8 +354,8 @@ public class NamenodeFsck {
     }
   }
   
-  private void lostFoundMove(String parent, HdfsFileStatus file, LocatedBlocks blocks)
-    throws IOException {
+  private void copyBlocksToLostFound(String parent, HdfsFileStatus file,
+        LocatedBlocks blocks) throws IOException {
     final DFSClient dfs = new DFSClient(NameNode.getAddress(conf), conf);
     try {
     if (!lfInited) {
@@ -386,12 +388,10 @@ public class NamenodeFsck {
         }
         if (fos == null) {
           fos = dfs.create(target + "/" + chain, true);
-          if (fos != null) chain++;
+          if (fos != null)
+            chain++;
           else {
-            LOG.warn(errmsg + ": could not store chain " + chain);
-            // perhaps we should bail out here...
-            // return;
-            continue;
+            throw new IOException(errmsg + ": could not store chain " + chain);
           }
         }
         
@@ -408,8 +408,7 @@ public class NamenodeFsck {
         }
       }
       if (fos != null) fos.close();
-      LOG.warn("\n - moved corrupted file " + fullName + " to /lost+found");
-      dfs.delete(fullName, true);
+      LOG.warn("\n - copied corrupted file " + fullName + " to /lost+found");
     }  catch (Exception e) {
       e.printStackTrace();
       LOG.warn(errmsg + ": " + e.getMessage());

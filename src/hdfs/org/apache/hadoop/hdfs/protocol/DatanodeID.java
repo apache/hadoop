@@ -34,10 +34,10 @@ import org.apache.hadoop.io.WritableComparable;
 public class DatanodeID implements WritableComparable<DatanodeID> {
   public static final DatanodeID[] EMPTY_ARRAY = {}; 
 
-  public String name;      /// hostname:portNumber
-  public String storageID; /// unique per cluster storageID
-  protected int infoPort;     /// the port where the infoserver is running
-  public int ipcPort;     /// the port where the ipc server is running
+  public String name;       // hostname:port (data transfer port)
+  public String storageID;  // unique per cluster storageID
+  protected int infoPort;   // info server port
+  public int ipcPort;       // ipc server port
 
   /** Equivalent to DatanodeID(""). */
   public DatanodeID() {this("");}

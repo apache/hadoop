@@ -65,6 +65,12 @@ public class TestDelegationTokenRenewal {
     private static Token<?> lastRenewed = null;
     private static Token<?> tokenToRenewIn2Sec = null;
 
+    private static void reset() {
+      counter = 0;
+      lastRenewed = null;
+      tokenToRenewIn2Sec = null;
+    }
+    
     @Override
     public boolean handleKind(Text kind) {
       return KIND.equals(kind);
@@ -109,6 +115,7 @@ public class TestDelegationTokenRenewal {
  
   @BeforeClass
   public static void setUp() throws Exception {
+    Renewer.reset();
     conf = new Configuration();
     conf.set("mapred.job.tracker", trackerService);
     
@@ -353,5 +360,20 @@ public class TestDelegationTokenRenewal {
     } catch (InvalidToken ite) {
       //expected
     }
+  }
+
+  /**
+   * Run the testDTRenewal(), close the DelegationTokenRenewal, and run the
+   * testDTRenewal() test again to make sure that DelegationTokenRenewal can be
+   * re-used after its been closed
+   * @throws Exception
+   */
+  @Test
+  public void testDTRenewalAfterClose() throws Exception {
+      Renewer.counter = 0;
+      testDTRenewal();
+      DelegationTokenRenewal.close();
+      Renewer.counter = 0;
+      testDTRenewal();
   }
 }

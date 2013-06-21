@@ -30,7 +30,7 @@
  
   <property name="Name" value="Hadoop"/>
   <property name="name" value="hadoop"/>
-  <property name="version" value="1.1.0-SNAPSHOT"/>
+  <property name="version" value="1.3.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="year" value="2009"/>
@@ -180,19 +180,24 @@
 
   <property name="jdiff.build.dir" value="${build.docs}/jdiff"/>
   <property name="jdiff.xml.dir" value="${lib.dir}/jdiff"/>
-  <property name="jdiff.stable" value="1.0.2"/>
+  <property name="jdiff.stable" value="1.2.0"/>
   <property name="jdiff.stable.javadoc" 
             value="http://hadoop.apache.org/core/docs/r${jdiff.stable}/api/"/>
 
-  <property name="scratch.dir" value="${user.home}/tmp"/>
-  <property name="svn.cmd" value="svn"/>
-  <property name="grep.cmd" value="grep"/>
-  <property name="patch.cmd" value="patch"/>
   <property name="make.cmd" value="make"/>
   <property name="msbuild.cmd" value="msbuild"/>
-
+  <property name="jiranum" value=""/>
+  <property name="attachid" value=""/>
+  <property name="patch.dir" value="/tmp/${Name}${jiranum}"/>
   <property name="jsvc.build.dir" value="${build.dir}/jsvc.${os.arch}" />
   <property name="jsvc.install.dir" value="${dist.dir}/libexec" /> 
+  <exec executable="sh" outputproperty="os-name">
+    <arg value="-c" />
+    <arg value="uname -s | tr '[:upper:]' '[:lower:]'" />
+  </exec>
+  <condition property="os-arch" value="universal">
+    <equals arg1="darwin" arg2="${os-name}" />
+  </condition>
   <condition property="os-arch" value="x86_64">
     <and>
       <os arch="amd64" />
@@ -213,7 +218,7 @@
   </condition>
 
 
-  <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-${os-arch}.tar.gz" />
+  <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/${os-name}/commons-daemon-1.0.2-bin-${os-name}-${os-arch}.tar.gz" />
   <property name="jsvc.dest.name" value="jsvc.${os.arch}.tar.gz" />
 
   <!-- task-controller properties set here -->
@@ -602,6 +607,13 @@
      webxml="${build.webapps}/datanode/WEB-INF/web.xml">
     </jsp-compile>
 
+    <jsp-compile
+     uriroot="${src.webapps}/secondary"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.hdfs.server.namenode"
+     webxml="${build.webapps}/secondary/WEB-INF/web.xml">
+    </jsp-compile>
+
     <!-- Compile Java files (excluding JSPs) checking warnings -->
     <javac 
      encoding="${build.encoding}" 
@@ -795,8 +807,8 @@
   	  <env key="HADOOP_NATIVE_SRCDIR" value="${native.src.dir}"/>
     </exec>
 
-	<exec dir="${build.native}" executable="sh" failonerror="true">
-	  <arg line="${build.native}/libtool --mode=install cp ${build.native}/libhadoop.la ${build.native}/lib"/>
+	<exec dir="${build.native}" executable="${build.native}/libtool" failonerror="true">
+	  <arg line="--mode=install cp ${build.native}/libhadoop.la ${build.native}/lib"/>
     </exec>
 
   </target>
@@ -848,7 +860,7 @@
       <tarfileset dir="bin" mode="755"/>
     </tar>
     <property name="jar.properties.list"
-      value="commons-logging.properties, log4j.properties, hadoop-metrics.properties"/>
+      value="commons-logging.properties, log4j.properties, hadoop-metrics.properties, task-log4j.properties"/>
     <jar jarfile="${build.dir}/${core.final.name}.jar"
          basedir="${build.classes}">
       <manifest>
@@ -864,6 +876,7 @@
         <provider classname="org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier$Renewer"/>
         <provider classname="org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier$Renewer"/>
         <provider classname="org.apache.hadoop.hdfs.HftpFileSystem$TokenManager"/>
+        <provider classname="org.apache.hadoop.hdfs.HsftpFileSystem$TokenManager"/>
         <provider classname="org.apache.hadoop.hdfs.web.WebHdfsFileSystem$DtRenewer"/>
       </service>
       <fileset dir="${conf.dir}" includes="${jar.properties.list}" />
@@ -1029,12 +1042,15 @@
     <copy file="${test.src.dir}/org/apache/hadoop/fs/test-untar.tgz" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/fs/test-untar.tar" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/hdfs/hadoop-14-dfs-dir.tgz" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/hdfs/hadoop-1.0-multiblock-file.tgz" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/hdfs/hadoop-dfs-dir.txt" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/cli/testConf.xml" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/cli/clitest_data/data15bytes" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/cli/clitest_data/data30bytes" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/cli/clitest_data/data60bytes" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/cli/clitest_data/data120bytes" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV18" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV19" todir="${test.cache.data}"/>
   </target>
 
   <!-- ================================================================== -->
@@ -1153,7 +1169,7 @@
       <delete file="${test.build.dir}/testsfailed"/>
       <delete dir="@{test.dir}/data" />
       <mkdir dir="@{test.dir}/data" />
-      <delete dir="@{test.dir}/logs" />
+      <delete dir="@{test.dir}/logs" followSymlinks="false"/>
       <mkdir dir="@{test.dir}/logs" />
       <copy file="${test.src.dir}/hadoop-policy.xml"
             todir="@{test.dir}/extraconf" />
@@ -1484,7 +1500,6 @@
     <fail message="'forrest.home' is not defined. Please pass -Dforrest.home=&lt;base of Apache Forrest installation&gt; to Ant on the command-line." />
   </target>
 
-	
   <target name="javadoc-dev" description="Generate javadoc for hadoop developers">
     <mkdir dir="${build.javadoc.dev}"/>
     <javadoc
@@ -2206,7 +2221,7 @@
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
   <target name="clean" depends="clean-contrib, clean-sign, clean-fi, clean-ms-winutils" description="Clean.  Delete the build files, and their directories">
-    <delete dir="${build.dir}"/>
+    <delete dir="${build.dir}" followSymlinks="false"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
     <delete dir="${package.buildroot}"/>
@@ -2534,39 +2549,23 @@
 <target name="test-patch" depends="patch.check,findbugs.check,forrest.check">
   <exec executable="bash" failonerror="true">
     <arg value="${basedir}/src/test/bin/test-patch.sh"/>
-    <arg value="DEVELOPER"/>
-    <arg value="${patch.file}"/>
-    <arg value="${scratch.dir}"/>
-    <arg value="${svn.cmd}"/>
-    <arg value="${grep.cmd}"/>
-    <arg value="${patch.cmd}"/>
-    <arg value="${findbugs.home}"/>
-    <arg value="${forrest.home}"/>
-    <arg value="${basedir}"/>
-  </exec>
+    <arg line="${basedir}/src/test/bin/test-test-patch.sh"/>
+    <arg line="--patch-dir=${patch.dir} --patch-file=${patch.file}"/>
+    <arg line="--findbugs-home ${findbugs.home} --forrest-home ${forrest.home}"/>
+    <arg line="--eclipse-home ${eclipse.home}"/>
+ </exec>
 </target>
 
-<target name="hudson-test-patch" depends="findbugs.check,forrest.check">
+<target name="jenkins-test-patch" depends="findbugs.check,forrest.check">
   <exec executable="bash" failonerror="true">
-    <arg value="${basedir}/src/test/bin/test-patch.sh"/>
-    <arg value="HUDSON"/>
-    <arg value="${scratch.dir}"/>
-    <arg value="${support.dir}"/>
-    <arg value="${ps.cmd}"/>
-    <arg value="${wget.cmd}"/>
-    <arg value="${jiracli.cmd}"/>
-    <arg value="${svn.cmd}"/>
-    <arg value="${grep.cmd}"/>
-    <arg value="${patch.cmd}"/>
-    <arg value="${findbugs.home}"/>
-    <arg value="${forrest.home}"/>
-    <arg value="${eclipse.home}"/>
-    <arg value="${python.home}"/>
-    <arg value="${basedir}"/>
-    <arg value="${trigger.url}"/>
-    <arg value="${jira.passwd}"/>
+    <arg line="${basedir}/src/test/bin/test-patch.sh"/>
+    <arg line="--patch-dir ${patch.dir} --jira-cli ${jiracli.cmd}"/>
+    <arg line="--findbugs-home ${findbugs.home} --forrest-home ${forrest.home}"/>
+    <arg line="--eclipse-home ${eclipse.home} --jira-password ${jira.passwd}"/>
+    <arg line="--issue-num ${jiranum} --attach-id ${attachid} --jenkins true"/>
   </exec>
 </target>
+ 
 	
   <condition property="ant-eclipse.jar.exists">
     <available file="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar"/>

@@ -631,14 +631,16 @@
 					<a href="hdfs_user_guide.html#Upgrade+and+Rollback">Upgrade Rollback</a>
 				</p>
 				<p>
-					<code>Usage: hadoop namenode [-format] | [-upgrade] | [-rollback] | [-finalize] | [-importCheckpoint]</code>
+					<code>Usage: hadoop namenode [-format [-force] [-nonInteractive]] | [-upgrade] | [-rollback] | [-finalize] | [-importCheckpoint]</code>
 				</p>
 				<table>
 			          <tr><th> COMMAND_OPTION </th><th> Description </th></tr>
 			
 			           <tr>
-			          	<td><code>-format</code></td>
-			            <td>Formats the namenode. It starts the namenode, formats it and then shut it down.</td>
+			          	<td><code>-format [-force] [-nonInteractive]</code></td>
+			            <td>Formats the namenode. It starts the namenode, formats it and then shuts it down. User will be prompted for input if the name directories exist on the local filesystem.<br/>
+                                    -nonInteractive: User will not be prompted for input if the name directories exist in the local filesystem and the format will fail.<br/>
+                                    -force: formats the namenode and the user will NOT be prompted to confirm formatting of name directories in the local filesystem. If -nonInteractive option is specified it will be ignored.</td>
 			           </tr>
 			           <tr>
 			          	<td><code>-upgrade</code></td>

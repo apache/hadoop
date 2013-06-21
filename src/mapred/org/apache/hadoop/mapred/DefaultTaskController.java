@@ -185,8 +185,23 @@ public class DefaultTaskController extends TaskController {
 
       String commandFile = writeCommand(cmdLine, rawFs, p).getAbsolutePath();
       rawFs.setPermission(p, TaskController.TASK_LAUNCH_SCRIPT_PERMISSION);
-      String[] commandArray = Shell.getRunCommand(commandFile, attemptId);
-      shExec = new ShellCommandExecutor(commandArray, currentWorkDirectory);
+      if (Shell.WINDOWS) {
+        String[] commandArray = Shell.getRunCommand(commandFile, attemptId);
+        shExec = new ShellCommandExecutor(commandArray, currentWorkDirectory);
+      } else {
+        /*
+         * MAPREDUCE-2374: if another thread fork(2)ed a child process during the
+         * window when writeCommand (above) had taskjvm.sh open for write, that
+         * child process might still have a writeable fd open to the script.
+         *
+         * If we run the script with "bash -c /path/to/taskjvm.sh", then bash
+         * would try to execve(2) the script and get ETXTBSY.  Instead, just have
+         * bash interpret the script with "bash /path/to/taskjvm.sh".
+         */
+        shExec = new ShellCommandExecutor(new String[]{
+            "bash", commandFile},
+            currentWorkDirectory);
+      }
       shExec.execute();
     } catch (Exception e) {
       if (shExec == null) {

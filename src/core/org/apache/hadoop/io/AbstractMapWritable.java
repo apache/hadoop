@@ -43,10 +43,10 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   private AtomicReference<Configuration> conf;
   
   /* Class to id mappings */
-  private Map<Class, Byte> classToIdMap = new ConcurrentHashMap<Class, Byte>();
+  Map<Class, Byte> classToIdMap = new ConcurrentHashMap<Class, Byte>();
   
   /* Id to Class mappings */
-  private Map<Byte, Class> idToClassMap = new ConcurrentHashMap<Byte, Class>();
+  Map<Byte, Class> idToClassMap = new ConcurrentHashMap<Byte, Class>();
   
   /* The number of new classes (those not established by the constructor) */
   private volatile byte newClasses = 0;

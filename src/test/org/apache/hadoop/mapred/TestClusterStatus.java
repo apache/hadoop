@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,14 +26,11 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.mapreduce.ClusterMetrics;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
-
-import junit.extensions.TestSetup;
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Class to test that ClusterMetrics are being created with the right
@@ -39,41 +38,44 @@ import junit.framework.TestSuite;
  * 
  * The tests exercise code paths where the counts of slots are updated.
  */
-public class TestClusterStatus extends TestCase {
+public class TestClusterStatus {
 
   private static String[] trackers = new String[] { "tracker_tracker1:1000",
       "tracker_tracker2:1000", "tracker_tracker3:1000" };
-  private static JobTracker jobTracker;
-  private static int mapSlotsPerTracker = 4;
-  private static int reduceSlotsPerTracker = 2;
-  private static MiniMRCluster mr;
-  private static JobClient client;
+  private JobTracker jobTracker;
+  private final static int mapSlotsPerTracker = 4;
+  private final static int reduceSlotsPerTracker = 2;
+  private MiniMRCluster mr;
+  private JobClient client;
   // heartbeat responseId. increment this after sending a heartbeat
-  private static short responseId = 1;
+  private short responseId;
   private static FakeJobInProgress fakeJob;
   private static FakeTaskScheduler scheduler;
   
-  public static Test suite() {
-    TestSetup setup = new TestSetup(new TestSuite(TestClusterStatus.class)) {
-      protected void setUp() throws Exception {
-        JobConf conf = new JobConf();
-        conf.setClass("mapred.jobtracker.taskScheduler", 
-            TestClusterStatus.FakeTaskScheduler.class,
-                  TaskScheduler.class);
-        mr = new MiniMRCluster(0, 0, 0, "file:///", 1, null, null, null, conf);
-        jobTracker = mr.getJobTrackerRunner().getJobTracker();
-        for (String tracker : trackers) {
-          establishFirstContact(jobTracker, tracker);
-        }
-        client = new JobClient(mr.createJobConf());
-      }
-
-      protected void tearDown() throws Exception {
-        client.close();
-        mr.shutdown();
-      }
-    };
-    return setup;
+  @Before
+  public void setUp() throws Exception {
+    responseId = 1;
+    JobConf conf = new JobConf();
+    conf.setClass("mapred.jobtracker.taskScheduler", 
+        TestClusterStatus.FakeTaskScheduler.class,
+        TaskScheduler.class);
+    mr = new MiniMRCluster(0, 0, 0, "file:///", 1, null, null, null, conf);
+    jobTracker = mr.getJobTrackerRunner().getJobTracker();
+    for (String tracker : trackers) {
+      establishFirstContact(jobTracker, tracker);
+    }
+    client = new JobClient(mr.createJobConf());
+  }
+  
+  @After
+  public void tearDown() throws Exception {
+    client.close();
+    mr.shutdown();
+    fakeJob = null;
+    scheduler = null;
+    client = null;
+    mr = null;
+    jobTracker = null;
   }
 
   /**
@@ -157,6 +159,7 @@ public class TestClusterStatus extends TestCase {
       taskStatuses, 0, 0, mapSlotsPerTracker, reduceSlotsPerTracker);
   }
   
+  @Test
   public void testClusterMetrics() throws IOException, InterruptedException {
     assertEquals("tasktracker count doesn't match", trackers.length,
       client.getClusterStatus().getTaskTrackers());
@@ -256,6 +259,7 @@ public class TestClusterStatus extends TestCase {
     list.add(ts);
   }
 
+  @Test
   public void testReservedSlots() throws IOException {
     JobConf conf = mr.createJobConf();
 
@@ -308,6 +312,7 @@ public class TestClusterStatus extends TestCase {
         0, metrics.getReservedReduceSlots());
   }
   
+  @Test
   public void testClusterStatus() throws Exception {
     ClusterStatus clusterStatus = client.getClusterStatus();
     assertEquals("JobTracker used-memory is " + clusterStatus.getUsedMemory() + 

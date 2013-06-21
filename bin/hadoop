@@ -46,9 +46,16 @@
 #
 #   HADOOP_ROOT_LOGGER The root appender. Default is INFO,console
 #
+#   JSVC_HOME  home directory of jsvc binary.  Defaults to jsvc binary packaged
+#              within the Hadoop distro.
+#
+#   JSVC_OUTFILE  path to jsvc output file.  Defaults to
+#                 $HADOOP_LOG_DIR/jsvc.out.
+#
+#   JSVC_ERRFILE  path to jsvc error file.  Defaults to $HADOOP_LOG_DIR/jsvc.err.
 
 bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
+bin=`cd "$bin" > /dev/null; pwd`
 
 if [ -e "$bin"/../libexec/hadoop-config.sh ]; then
   . "$bin"/../libexec/hadoop-config.sh
@@ -61,8 +68,8 @@ case "`uname`" in
 CYGWIN*) cygwin=true;;
 esac
 
-# if no args specified, show usage
-if [ $# = 0 ]; then
+print_usage()
+{
   echo "Usage: hadoop [--config confdir] COMMAND"
   echo "where COMMAND is one of:"
   echo "  namenode -format     format the DFS filesystem"
@@ -74,6 +81,7 @@ if [ $# = 0 ]; then
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  fs                   run a generic filesystem user client"
   echo "  balancer             run a cluster balancing utility"
+  echo "  oiv                  apply the offline fsimage viewer to an fsimage"
   echo "  fetchdt              fetch a delegation token from the NameNode"
   echo "  jobtracker           run the MapReduce job Tracker node" 
   echo "  pipes                run a Pipes job"
@@ -84,6 +92,7 @@ if [ $# = 0 ]; then
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
+  echo "  distcp2 <srcurl> <desturl> DistCp version 2"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
   echo "  classpath            prints the class path needed to get the"
   echo "                       Hadoop jar and the required libraries"
@@ -91,12 +100,26 @@ if [ $# = 0 ]; then
   echo " or"
   echo "  CLASSNAME            run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
+}
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  print_usage
   exit 1
 fi
 
 # get arguments
 COMMAND=$1
 shift
+
+# support help commands
+case $COMMAND in
+  # usage flags
+  --help|-help|-h|help)
+    print_usage
+    exit 0
+    ;;
+esac
 
 # Determine if we're starting a secure datanode, and if so, redefine appropriate variables
 if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
@@ -246,8 +269,9 @@ elif [ "$COMMAND" = "secondarynamenode" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_SECONDARYNAMENODE_OPTS"
 elif [ "$COMMAND" = "datanode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
+  HADOOP_OPTS=${HADOOP_OPTS/-server/}
   if [ "$starting_secure_dn" = "true" ]; then
-    HADOOP_OPTS="$HADOOP_OPTS -jvm server $HADOOP_DATANODE_OPTS"
+    HADOOP_OPTS="-jvm server $HADOOP_OPTS  $HADOOP_DATANODE_OPTS"  
   else
     HADOOP_OPTS="$HADOOP_OPTS -server $HADOOP_DATANODE_OPTS"
   fi
@@ -269,6 +293,8 @@ elif [ "$COMMAND" = "fsck" ] ; then
 elif [ "$COMMAND" = "balancer" ] ; then
   CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_BALANCER_OPTS"
+elif [ "$COMMAND" = "oiv" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
 elif [ "$COMMAND" = "fetchdt" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
 elif [ "$COMMAND" = "jobtracker" ] ; then
@@ -299,6 +325,10 @@ elif [ "$COMMAND" = "distcp" ] ; then
   CLASS=org.apache.hadoop.tools.DistCp
   CLASSPATH=${CLASSPATH}:${TOOL_PATH}
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "distcp2" ] ; then
+  CLASS=org.apache.hadoop.tools.distcp2.DistCp
+  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "daemonlog" ] ; then
   CLASS=org.apache.hadoop.log.LogLevel
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
@@ -324,12 +354,6 @@ fi
 #Determine the JAVA_PLATFORM
 JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m ${HADOOP_JAVA_PLATFORM_OPTS} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
   
-if [ "$JAVA_PLATFORM" = "Linux-amd64-64" ]; then
-  JSVC_ARCH="amd64"
-else
-  JSVC_ARCH="i386"
-fi
-
 # setup 'java.library.path' for native-hadoop code if necessary
 JAVA_LIBRARY_PATH=''
 if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" -o -e "${HADOOP_PREFIX}/lib/libhadoop.a" ]; then
@@ -371,6 +395,7 @@ fi
 
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$JAVA_LIBRARY_PATH
 fi  
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.policy.file=$HADOOP_POLICYFILE"
 
@@ -382,14 +407,33 @@ if [ "$starting_secure_dn" = "true" ]; then
     HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
   fi
 
-  exec "$HADOOP_HOME/libexec/jsvc.${JSVC_ARCH}" -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
-                                                -errfile "$HADOOP_LOG_DIR/jsvc.err" \
-                                                -pidfile "$HADOOP_SECURE_DN_PID" \
-                                                -nodetach \
-                                                -user "$HADOOP_SECURE_DN_USER" \
-                                                -cp "$CLASSPATH" \
-                                                $JAVA_HEAP_MAX $HADOOP_OPTS \
-                                                org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
+  if [[ $JSVC_HOME ]]; then
+    JSVC="$JSVC_HOME/jsvc"
+  else
+    if [ "$JAVA_PLATFORM" = "Linux-amd64-64" ]; then
+      JSVC_ARCH="amd64"
+    else
+      JSVC_ARCH="i386"
+    fi
+    JSVC="$HADOOP_HOME/libexec/jsvc.${JSVC_ARCH}"
+  fi
+
+  if [[ ! $JSVC_OUTFILE ]]; then
+    JSVC_OUTFILE="$HADOOP_LOG_DIR/jsvc.out"
+  fi
+
+  if [[ ! $JSVC_ERRFILE ]]; then
+    JSVC_ERRFILE="$HADOOP_LOG_DIR/jsvc.err"
+  fi
+
+  exec "$JSVC" -Dproc_$COMMAND -outfile "$JSVC_OUTFILE" \
+               -errfile "$JSVC_ERRFILE" \
+               -pidfile "$HADOOP_SECURE_DN_PID" \
+               -nodetach \
+               -user "$HADOOP_SECURE_DN_USER" \
+               -cp "$CLASSPATH" \
+               $JAVA_HEAP_MAX $HADOOP_OPTS \
+               org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
 else
   # run it
   exec "$JAVA" -Dproc_$COMMAND $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"

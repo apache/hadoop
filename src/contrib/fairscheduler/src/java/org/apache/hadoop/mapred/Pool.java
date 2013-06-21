@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.metrics.MetricsContext;
 
 /**
  * A schedulable pool of jobs.
@@ -44,6 +43,9 @@ public class Pool {
   private PoolSchedulable reduceSchedulable;
 
   public Pool(FairScheduler scheduler, String name) {
+    if (name == null) {
+      throw new IllegalArgumentException("Passed pool name was null.");
+    }
     this.name = name;
     mapSchedulable = new PoolSchedulable(scheduler, this, TaskType.MAP);
     reduceSchedulable = new PoolSchedulable(scheduler, this, TaskType.REDUCE);

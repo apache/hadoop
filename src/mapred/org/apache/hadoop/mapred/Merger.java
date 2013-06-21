@@ -174,10 +174,17 @@ class Merger {
     CompressionCodec codec = null;
     long segmentOffset = 0;
     long segmentLength = -1;
+    long rawDataLength = -1;
     
     public Segment(Configuration conf, FileSystem fs, Path file,
                    CompressionCodec codec, boolean preserve) throws IOException {
       this(conf, fs, file, 0, fs.getFileStatus(file).getLen(), codec, preserve);
+    }
+
+    public Segment(Configuration conf, FileSystem fs, Path file,
+            CompressionCodec codec, boolean preserve, long rawDataLength) throws IOException {
+      this(conf, fs, file, 0, fs.getFileStatus(file).getLen(), codec, preserve);
+      this.rawDataLength = rawDataLength;
     }
 
     public Segment(Configuration conf, FileSystem fs, Path file,
@@ -200,6 +207,14 @@ class Merger {
       this.segmentLength = reader.getLength();
     }
 
+    public Segment(Reader<K, V> reader, boolean preserve, long rawDataLength) {
+      this.reader = reader;
+      this.preserve = preserve;
+
+      this.segmentLength = reader.getLength();
+      this.rawDataLength = rawDataLength;
+    }
+
     private void init(Counters.Counter readsCounter) throws IOException {
       if (reader == null) {
         FSDataInputStream in = fs.open(file);
@@ -216,6 +231,9 @@ class Merger {
         segmentLength : reader.getLength();
     }
     
+    long getRawDataLength() {
+      return (rawDataLength > 0) ? rawDataLength : getLength();
+    }
     boolean next() throws IOException {
       return reader.next(key, value);
     }
@@ -460,7 +478,7 @@ class Merger {
           //calculating the merge progress
           long totalBytes = 0;
           for (int i = 0; i < segmentsToMerge.size(); i++) {
-            totalBytes += segmentsToMerge.get(i).getLength();
+            totalBytes += segmentsToMerge.get(i).getRawDataLength();
           }
           if (totalBytes != 0) //being paranoid
             progPerByte = 1.0f / (float)totalBytes;

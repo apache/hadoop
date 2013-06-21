@@ -366,7 +366,10 @@ public class TestSaslRPC {
     server.start();
 
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();
-    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    // don't use what the rpc server claims it's bound to since it's the
+    // client's responsibility to set the service
+    final InetSocketAddress addr = NetUtils.createSocketAddr(
+        ADDRESS, server.getListenerAddress().getPort());
     TestTokenIdentifier tokenId = new TestTokenIdentifier(new Text(current
         .getUserName()));
     Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(tokenId,

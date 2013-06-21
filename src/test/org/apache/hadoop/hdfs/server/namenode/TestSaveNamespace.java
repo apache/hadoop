@@ -22,8 +22,14 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import junit.framework.TestCase;
 
@@ -31,10 +37,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.io.IOUtils;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -192,6 +202,35 @@ public class TestSaveNamespace extends TestCase {
     } finally {
       if (nn != null) {
         nn.stop();
+      }
+    }
+  }
+
+  /**
+   * Test for save namespace should succeed when parent directory renamed with
+   * open lease and destination directory exist. 
+   * This test is a regression for HDFS-2827
+   */
+  // @Test
+  public void testSaveNamespaceWithRenamedLease() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster(
+        new Configuration(), 1, true, null);
+    cluster.waitActive();
+
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    OutputStream out = null;
+    try {
+      fs.mkdirs(new Path("/test-target"));
+      out = fs.create(new Path("/test-source/foo")); // don't close
+      fs.rename(new Path("/test-source/"), new Path("/test-target/"));
+
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNode().saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    } finally {
+      IOUtils.cleanup(LOG, out, fs);
+      if (cluster != null) {
+        cluster.shutdown();
       }
     }
   }

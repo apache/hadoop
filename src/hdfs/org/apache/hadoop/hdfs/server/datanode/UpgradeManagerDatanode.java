@@ -54,7 +54,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
         + dataNode.dnRegistration.getName() 
         + " version " + getUpgradeVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " is initialized.");
+        + FSConstants.LAYOUT_VERSION + " is initialized");
     UpgradeObjectDatanode curUO = (UpgradeObjectDatanode)currentUpgrades.first();
     curUO.setDatanode(dataNode);
     upgradeState = curUO.preUpgradeAction(nsInfo);
@@ -99,7 +99,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
       DataNode.LOG.info("\n   Distributed upgrade for DataNode version " 
           + getUpgradeVersion() + " to current LV " 
           + FSConstants.LAYOUT_VERSION + " cannot be started. "
-          + "The upgrade object is not defined.");
+          + "The upgrade object is not defined");
       return false;
     }
     upgradeState = true;
@@ -111,7 +111,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
         + dataNode.dnRegistration.getName() 
         + " version " + getUpgradeVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " is started.");
+        + FSConstants.LAYOUT_VERSION + " is started");
     return true;
   }
 
@@ -141,7 +141,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
         + dataNode.dnRegistration.getName() 
         + " version " + getUpgradeVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " is complete.");
+        + FSConstants.LAYOUT_VERSION + " is complete");
   }
 
   synchronized void shutdownUpgrade() {

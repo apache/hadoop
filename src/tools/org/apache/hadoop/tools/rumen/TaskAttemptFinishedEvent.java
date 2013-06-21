@@ -84,7 +84,13 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
   public JhCounters getCounters() { return counters; }
   /** Get the event type */
   public EventType getEventType() {
-    return EventType.MAP_ATTEMPT_FINISHED;
+    if (taskType == TaskType.JOB_SETUP) {
+      return EventType.SETUP_ATTEMPT_FINISHED;
+    } else if (taskType == TaskType.JOB_CLEANUP) {
+      return EventType.CLEANUP_ATTEMPT_FINISHED;
+    }
+    return attemptId.isMap() ? 
+        EventType.MAP_ATTEMPT_FINISHED : EventType.REDUCE_ATTEMPT_FINISHED;
   }
 
 }

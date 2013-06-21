@@ -65,6 +65,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 
 public class JspHelper {
   public static final String CURRENT_CONF = "current.conf";
@@ -506,7 +507,6 @@ public class JspHelper {
           ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
         }
         ugi.addToken(token);
-        ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
       } else {
         if(remoteUser == null) {
           throw new IOException("Security enabled but user not " +
@@ -625,5 +625,24 @@ public class JspHelper {
    */
   public static int getDefaultChunkSize(Configuration conf) {
     return conf.getInt("dfs.default.chunk.view.size", 32 * 1024);
+  }
+  
+  /** Return a table containing version information. */
+  static String getVersionTable(FSNamesystem fsn) {
+    return "<div class='dfstable'><table>"
+        + "\n  <tr><td class='col1'>Started:</td><td>" + fsn.getStartTime()
+        + "</td></tr>\n" + "\n  <tr><td class='col1'>Version:</td><td>"
+        + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
+        + "</td></tr>\n" + "\n  <tr><td class='col1'>Compiled:</td><td>"
+        + VersionInfo.getDate() + " by " + VersionInfo.getUser()
+        + "</td></tr>\n</table></div>";
+  }
+
+  /** Return a table containing version information. */
+  public static String getVersionTable() {
+    return "<div id='dfstable'><table>"       
+        + "\n  <tr><td id='col1'>Version:</td><td>" + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
+        + "\n  <tr><td id='col1'>Compiled:</td><td>" + VersionInfo.getDate() + " by " + VersionInfo.getUser()
+        + "\n</table></div>";
   }
 }

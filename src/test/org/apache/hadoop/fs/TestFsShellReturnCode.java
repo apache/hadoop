@@ -18,15 +18,14 @@
 
 package org.apache.hadoop.fs;
 
+import static org.junit.Assert.assertTrue;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-
-import org.apache.hadoop.fs.FileSystem;
-
-import org.junit.Test;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
 
 /**
  * This test validates that chmod, chown, chgrp returning correct exit codes
@@ -152,7 +151,8 @@ public class TestFsShellReturnCode {
     assertTrue(fileSys.exists(p1));
 
     // Test 1: exit code for chown on existing file is 0
-    String argv[] = { "-chown", "admin", f1 };
+    final String username = UserGroupInformation.getCurrentUser().getShortUserName();
+    String argv[] = { "-chown", username, f1 };
     verify(fs, "-chown", argv, 1, fsShell, 0);
 
     // Test 2: exit code for chown on non-existing path is 1
@@ -172,7 +172,7 @@ public class TestFsShellReturnCode {
     assertTrue(fileSys.exists(p6));
 
     // Test 4: exit code for chown on existing path with globbed input is 0
-    String argv4[] = { "-chown", "admin", f7 };
+    String argv4[] = { "-chown", username, f7 };
     verify(fs, "-chown", argv4, 1, fsShell, 0);
 
   }
@@ -235,6 +235,24 @@ public class TestFsShellReturnCode {
     // Test 4: exit code for chgrp on existing path with globbed input is 0
     String argv4[] = { "-chgrp", "admin", f7 };
     verify(fs, "-chgrp", argv4, 1, fsShell, 0);
-
+  }
+  
+  @Test
+  public void testInvalidDefautlFS() throws Exception {
+    // if default fs doesn't exist or is invalid, but the path provided in
+    // arguments is valid - fsshell should work
+    FsShell shell = new FsShell();
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
+        "hhhh://doesnotexist/");
+    shell.setConf(conf);
+    String[] args = new String[2];
+    args[0] = "-ls";
+    args[1] = "file:///"; // this is valid, so command should run
+    int res = shell.run(args);
+    System.out.println("res =" + res);
+    shell.setConf(conf);
+    int run = shell.run(args);
+    assertTrue("Return code should be 0", run == 0);
   }
 }

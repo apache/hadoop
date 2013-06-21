@@ -253,7 +253,8 @@ public class MiniDFSCluster {
     
     int replication = conf.getInt("dfs.replication", 3);
     conf.setInt("dfs.replication", Math.min(replication, numDataNodes));
-    conf.setInt("dfs.safemode.extension", 0);
+    int safemodeExtension = conf.getInt("dfs.safemode.extension.testing", 0);
+    conf.setInt("dfs.safemode.extension", safemodeExtension);
     conf.setInt("dfs.namenode.decommission.interval", 3); // 3 second
 
     // Set a small delay on blockReceived in the minicluster to approximate
@@ -277,6 +278,9 @@ public class MiniDFSCluster {
                    StaticMapping.class, DNSToSwitchMapping.class);
     nameNode = NameNode.createNameNode(args, conf);
     
+    if (operation == StartupOption.RECOVER) {
+      return;
+    }
     // Start the DataNodes
     startDataNodes(conf, numDataNodes, manageDataDfsDirs, 
                     operation, racks, hosts, simulatedCapacities);
@@ -589,27 +593,35 @@ public class MiniDFSCluster {
     }
   }
 
-  /**
-   * Restart namenode. Waits for exit from safemode.
-   */
-  public synchronized void restartNameNode()
-      throws IOException {
-    restartNameNode(true);
+  /** Same as restartNameNode(true, true). */
+  public synchronized void restartNameNode() throws IOException {
+    restartNameNode(true, true);
   }
   
+  /** Same as restartNameNode(waitSafemodeExit, true). */
+  public synchronized void restartNameNode(boolean waitSafemodeExit
+      ) throws IOException {
+    restartNameNode(waitSafemodeExit, true);
+  }
+
   /**
    * Restart namenode.
+   * 
+   * @param waitSafemodeExit Should it wait for safe mode to turn off?
+   * @param waitClusterActive Should it wait for cluster to be active?
+   * @throws IOException
    */
-  public synchronized void restartNameNode(boolean waitSafemodeExit)
-      throws IOException {
+  public synchronized void restartNameNode(boolean waitSafemodeExit,
+      boolean waitClusterActive) throws IOException {
     shutdownNameNode();
     nameNode = NameNode.createNameNode(new String[] {}, conf);
     if (waitSafemodeExit) {
       waitClusterUp();
     }
     System.out.println("Restarted the namenode");
+
     int failedCount = 0;
-    while (true) {
+    while(waitClusterActive) {
       try {
         waitActive();
         break;
@@ -624,7 +636,6 @@ public class MiniDFSCluster {
         }
       }
     }
-    System.out.println("Cluster is active");
   }
 
   /*
@@ -866,6 +877,7 @@ public class MiniDFSCluster {
     }
 
     client.close();
+    System.out.println("Cluster is active");
   }
 
   private synchronized boolean shouldWait(DatanodeInfo[] dnInfo) {
@@ -988,8 +1000,8 @@ public class MiniDFSCluster {
    * Set the softLimit and hardLimit of client lease periods
    */
   void setLeasePeriod(long soft, long hard) {
-    nameNode.namesystem.leaseManager.setLeasePeriod(soft, hard);
-    nameNode.namesystem.lmthread.interrupt();
+    nameNode.getNamesystem().leaseManager.setLeasePeriod(soft, hard);
+    nameNode.getNamesystem().lmthread.interrupt();
   }
 
   /**
@@ -1009,5 +1021,10 @@ public class MiniDFSCluster {
    */
   public String getDataDirectory() {
     return data_dir.getAbsolutePath();
+  }
+
+  public static File getBaseDir() {
+    return new File(System.getProperty(
+      "test.build.data", "build/test/data"), "dfs/");
   }
 }

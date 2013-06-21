@@ -134,7 +134,7 @@ public class TestFileCorruption extends TestCase {
       DataNode dataNode = datanodes.get(2);
       
       // report corrupted block by the third datanode
-      cluster.getNameNode().namesystem.markBlockAsCorrupt(blk, 
+      cluster.getNameNode().getNamesystem().markBlockAsCorrupt(blk, 
           new DatanodeInfo(dataNode.dnRegistration ));
       
       // open the file

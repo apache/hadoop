@@ -130,7 +130,7 @@
       The HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint.
 
       The HTTP Kerberos principal MUST start with 'HTTP/' per Kerberos
-      HTTP SPENGO specification.
+      HTTP SPNEGO specification.
     </description>
   </property>
 

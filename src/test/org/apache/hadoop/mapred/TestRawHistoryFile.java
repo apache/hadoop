@@ -35,14 +35,15 @@ import org.junit.Assert;
 import java.io.IOException;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
 
 import junit.framework.TestCase;
 
 public class TestRawHistoryFile extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestRawHistoryFile.class);
-
+  private String inputPath = System.getProperty("test.build.data",
+      "build/test/data") + "/TestRawHistoryFile";
+  
   public void testRetrieveHistoryFile() {
 
     MiniMRCluster mrCluster = null;
@@ -58,7 +59,7 @@ public class TestRawHistoryFile extends TestCase {
           null, null, conf);
 
       conf = mrCluster.createJobConf();
-      createInputFile(conf, "/tmp/input");
+      createInputFile(conf, inputPath);
 
       RunningJob job = runJob(conf);
       LOG.info("Job details: " + job);
@@ -98,7 +99,7 @@ public class TestRawHistoryFile extends TestCase {
           null, null, conf);
 
       conf = mrCluster.createJobConf();
-      createInputFile(conf, "/tmp/input");
+      createInputFile(conf, inputPath);
 
       RunningJob job = submitJob(conf);
       LOG.info("Job details: " + job);
@@ -190,7 +191,7 @@ public class TestRawHistoryFile extends TestCase {
     conf.setMapperClass(org.apache.hadoop.mapred.lib.IdentityMapper.class);
     conf.setReducerClass(org.apache.hadoop.mapred.lib.IdentityReducer.class);
 
-    FileInputFormat.setInputPaths(conf, "/tmp/input");
+    FileInputFormat.setInputPaths(conf, inputPath);
   }
 
   private String saveHistoryFile(String url) throws IOException {

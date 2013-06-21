@@ -44,6 +44,7 @@ import java.util.TreeMap;
 import java.util.Vector;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
@@ -62,6 +63,7 @@ import org.apache.hadoop.filecache.TaskDistributedCacheManager;
 import org.apache.hadoop.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.mapreduce.server.tasktracker.*;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.*;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -72,7 +74,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.ReadaheadPool;
+import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.io.SecureIOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
@@ -343,6 +348,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     "mapreduce.tasktracker.outofband.heartbeat.damper";
   static private final int DEFAULT_OOB_HEARTBEAT_DAMPER = 1000000;
   private volatile int oobHeartbeatDamper;
+  private boolean manageOsCacheInShuffle = false;
+  private int readaheadLength;
+  private ReadaheadPool readaheadPool = ReadaheadPool.getInstance();
   
   // Track number of completed tasks to send an out-of-band heartbeat
   private AtomicInteger finishedCount = new AtomicInteger(0);
@@ -409,6 +417,16 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    */
   private long diskHealthCheckInterval;
 
+  /**
+   * Whether the TT performs a full or relaxed version check with the JT.
+   */
+  private boolean relaxedVersionCheck;
+
+  /**
+   * Whether the TT completely skips version check with the JT.
+   */
+  private boolean skipVersionCheck;
+
   /*
    * A list of commitTaskActions for whom commit response has been received 
    */
@@ -426,36 +444,105 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   }
   
   /**
-   * A list of tips that should be cleaned up.
+   * A list of clean-up actions
    */
-  private BlockingQueue<TaskTrackerAction> tasksToCleanup = 
-    new LinkedBlockingQueue<TaskTrackerAction>();
-    
+  // No ConcurrentHashSet :(
+  ConcurrentHashMap<String, String> allCleanupActions = 
+      new ConcurrentHashMap<String, String>();
+  BlockingQueue<TaskTrackerAction> activeCleanupActions = 
+      new LinkedBlockingQueue<TaskTrackerAction>();
+  List<TaskTrackerAction> inactiveCleanupActions = 
+      new ArrayList<TaskTrackerAction>();
+
+  /*
+   * Add action to clean up queue. Check to make sure action is not already
+   * present before adding it to the queue.
+   */
+  void addActionToCleanup(TaskTrackerAction action) throws InterruptedException {
+
+    String actionId = getIdForCleanUpAction(action);
+
+    // add the action to the queue only if its not added in the first place
+    String previousActionId = allCleanupActions.putIfAbsent(actionId, actionId);
+    if (previousActionId != null) {
+      return;
+    } else {
+      activeCleanupActions.put(action);
+    }
+  }
+
+  /*
+   * Get the id for a given clean up action. It is expected to be either a
+   * KillJobAction or KillTaskAction
+   */
+  private String getIdForCleanUpAction(TaskTrackerAction action) {
+    String actionId = null;
+    // get the id of the action
+    if (action instanceof KillJobAction) {
+      actionId = ((KillJobAction) action).getJobID().toString();
+    } else if (action instanceof KillTaskAction) {
+      actionId = ((KillTaskAction) action).getTaskID().toString();
+    }
+    // Assuming actionId is not null as all clean-up actions are either KillJob
+    // or KillTask
+    return actionId;
+  }
+
   /**
    * A daemon-thread that pulls tips off the list of things to cleanup.
    */
-  private Thread taskCleanupThread = 
-    new Thread(new Runnable() {
-        public void run() {
-          while (true) {
-            try {
-              TaskTrackerAction action = tasksToCleanup.take();
-              checkJobStatusAndWait(action);
-              if (action instanceof KillJobAction) {
-                purgeJob((KillJobAction) action);
-              } else if (action instanceof KillTaskAction) {
-                processKillTaskAction((KillTaskAction) action);
-              } else {
-                LOG.error("Non-delete action given to cleanup thread: "
-                          + action);
-              }
-            } catch (Throwable except) {
-              LOG.warn(StringUtils.stringifyException(except));
-            }
-          }
+  private Thread taskCleanupThread = new Thread(new Runnable() {
+    public void run() {
+      while (true) {
+        try {
+          taskCleanUp();
+        } catch (Throwable except) {
+          LOG.warn(StringUtils.stringifyException(except));
         }
-      }, "taskCleanup");
+      }
+    }
+  }, "taskCleanup");
 
+  void taskCleanUp() throws InterruptedException, IOException {
+    // process all the localizing tasks and move to the clean up queue
+    // if the job is not localizing.
+    Iterator<TaskTrackerAction> itr = inactiveCleanupActions.iterator();
+    while (itr.hasNext()) {
+      TaskTrackerAction action = itr.next();
+      if (!isJobLocalizing(action)) {
+        activeCleanupActions.put(action);
+        itr.remove();
+      }
+    }
+
+    // if the tasks to clean is empty better sleep for 2 seconds and
+    // re process
+    if (activeCleanupActions.isEmpty()) {
+      Thread.sleep(2000);
+      return;
+    }
+
+    TaskTrackerAction action = activeCleanupActions.take();
+    String actionId = getIdForCleanUpAction(action);
+    if (isJobLocalizing(action)) {
+      // If job is still localizing, put it back into the queue and
+      // pick another one in the next iteration
+      LOG.info("Cleanup for id " + actionId + " skipped as its localizing.");
+      inactiveCleanupActions.add(action);
+      return;
+    } else {
+      // remove the action from the hash as its being processed.
+      allCleanupActions.remove(actionId);
+    }
+    if (action instanceof KillJobAction) {
+      purgeJob((KillJobAction) action);
+    } else if (action instanceof KillTaskAction) {
+      processKillTaskAction((KillTaskAction) action);
+    } else {
+      LOG.error("Non-delete action given to cleanup thread: " + action);
+    }
+  }
+  
   void processKillTaskAction(KillTaskAction killAction) throws IOException {
     TaskInProgress tip;
     synchronized (TaskTracker.this) {
@@ -464,16 +551,21 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     LOG.info("Received KillTaskAction for task: " + killAction.getTaskID());
     purgeTask(tip, false);
   }
-  
-  private void checkJobStatusAndWait(TaskTrackerAction action) 
-  throws InterruptedException {
+
+  /**
+   * Check if the job for the given action is localizing or not.
+   * @param action The command received from the JobTracker
+   * @return true if job is localizing and false otherwise.
+   */
+  private boolean isJobLocalizing(TaskTrackerAction action)
+  {
     JobID jobId = null;
     if (action instanceof KillJobAction) {
       jobId = ((KillJobAction)action).getJobID();
     } else if (action instanceof KillTaskAction) {
       jobId = ((KillTaskAction)action).getTaskID().getJobID();
     } else {
-      return;
+      return false;
     }
     RunningJob rjob = null;
     synchronized (runningJobs) {
@@ -481,11 +573,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     }
     if (rjob != null) {
       synchronized (rjob) {
-        while (rjob.localizing) {
-          rjob.wait();
-        }
+        return rjob.localizing;
       }
     }
+    return false;
   }
 
   public TaskController getTaskController() {
@@ -522,7 +613,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         LOG.warn("Unknown job " + jobId + " being deleted.");
       } else {
         synchronized (rjob) {
-          rjob.tasks.remove(tip);
+          // Only remove the TIP if it is identical to the one that is finished
+          // Job recovery means that it is possible to have two task attempts
+          // with the same ID, which is used for TIP equals/hashcode.
+          for (TaskInProgress t : rjob.tasks) {
+            if (tip == t) {
+              rjob.tasks.remove(tip);
+              break;
+            }
+          }
         }
       }
     }
@@ -862,6 +961,12 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     oobHeartbeatDamper = 
       fConf.getInt(TT_OUTOFBAND_HEARTBEAT_DAMPER, 
           DEFAULT_OOB_HEARTBEAT_DAMPER);
+    manageOsCacheInShuffle = fConf.getBoolean(
+      "mapreduce.shuffle.manage.os.cache",
+      true);
+    readaheadLength = fConf.getInt(
+      "mapreduce.shuffle.readahead.bytes",
+      4 * 1024 * 1024);
   }
 
   private void startJettyBugMonitor() {
@@ -1361,7 +1466,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       new TreeMap<TaskAttemptID, TaskInProgress>();
     tasksToClose.putAll(tasks);
     for (TaskInProgress tip : tasksToClose.values()) {
-      tip.jobHasFinished(false);
+      tip.jobHasFinished(true, false);
     }
     
     this.running = false;
@@ -1425,6 +1530,12 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    */
   public TaskTracker(JobConf conf) throws IOException, InterruptedException {
     originalConf = conf;
+    relaxedVersionCheck = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY,
+        CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_DEFAULT);
+    skipVersionCheck = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY,
+        CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_DEFAULT);
     FILE_CACHE_SIZE = conf.getInt("mapred.tasktracker.file.cache.size", 2000);
     maxMapSlots = conf.getInt(
                   "mapred.tasktracker.map.tasks.maximum", 2);
@@ -1589,7 +1700,43 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   private long getHeartbeatInterval(int numFinishedTasks) {
     return (heartbeatInterval / (numFinishedTasks * oobHeartbeatDamper + 1));
   }
-  
+
+  /**
+   * @return true if this tasktracker is permitted to connect to
+   *    the given jobtracker version
+   */
+  boolean isPermittedVersion(String jtBuildVersion, String jtVersion) {
+    boolean buildVersionMatch =
+      jtBuildVersion.equals(VersionInfo.getBuildVersion());
+    boolean versionMatch = jtVersion.equals(VersionInfo.getVersion());
+    if (buildVersionMatch && !versionMatch) {
+      throw new AssertionError("Invalid build. The build versions match" +
+          " but the JT version is " + jtVersion +
+          " and the TT version is " + VersionInfo.getVersion());
+    }
+    if (skipVersionCheck) {
+      LOG.info("Permitting tasktracker version '" + VersionInfo.getVersion() +
+          "' and build '" + VersionInfo.getBuildVersion() +
+          "' to connect to jobtracker version '" + jtVersion +
+          "' and build '" + jtBuildVersion + "' because " +
+          CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY +
+          " is enabled");
+      return true;
+    } else {
+      if (relaxedVersionCheck) {
+        if (!buildVersionMatch && versionMatch) {
+          LOG.info("Permitting tasktracker build " + VersionInfo.getBuildVersion() +
+              " to connect to jobtracker build " + jtBuildVersion + " because " +
+              CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
+              " is enabled");
+        }
+        return versionMatch;
+      } else {
+        return buildVersionMatch;
+      }
+    }
+  }
+
   /**
    * Main service loop.  Will stay in this loop forever.
    */
@@ -1603,6 +1750,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         // accelerate to account for multiple finished tasks up-front
         long remaining = 
           (lastHeartbeat + getHeartbeatInterval(finishedCount.get())) - now;
+        
+        if (remaining <= 0) {
+          finishedCount.set(0);
+        }
+          
         while (remaining > 0) {
           // sleeps for the wait time or 
           // until there are *enough* empty slots to schedule tasks
@@ -1623,15 +1775,22 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         }
 
         // If the TaskTracker is just starting up:
-        // 1. Verify the buildVersion
+        // 1. Verify the versions matches with the JobTracker
         // 2. Get the system directory & filesystem
         if(justInited) {
-          String jobTrackerBV = jobClient.getBuildVersion();
-          if(!VersionInfo.getBuildVersion().equals(jobTrackerBV)) {
-            String msg = "Shutting down. Incompatible buildVersion." +
-            "\nJobTracker's: " + jobTrackerBV + 
-            "\nTaskTracker's: "+ VersionInfo.getBuildVersion();
-            LOG.error(msg);
+          String jtBuildVersion = jobClient.getBuildVersion();
+          String jtVersion = jobClient.getVIVersion();
+          if (!isPermittedVersion(jtBuildVersion, jtVersion)) {
+            String msg = "Shutting down. Incompatible version or build version." +
+              "TaskTracker version '" + VersionInfo.getVersion() +
+              "' and build '" + VersionInfo.getBuildVersion() +
+              "' and JobTracker version '" + jtVersion +
+              "' and build '" + jtBuildVersion +
+              " and " + CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
+              " is " + (relaxedVersionCheck ? "enabled" : "not enabled") +
+              " and " + CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY +
+              " is " + (skipVersionCheck ? "enabled" : "not enabled");
+            LOG.fatal(msg);
             try {
               jobClient.reportTaskTrackerError(taskTrackerName, null, msg);
             } catch(Exception e ) {
@@ -1641,8 +1800,17 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           }
           
           String dir = jobClient.getSystemDir();
-          if (dir == null) {
-            throw new IOException("Failed to get system directory");
+          while (dir == null) {
+            LOG.info("Failed to get system directory...");
+            
+            // Re-try
+            try {
+              // Sleep interval: 1000 ms - 5000 ms
+              int sleepInterval = 1000 + r.nextInt(4000);
+              Thread.sleep(sleepInterval);
+            } catch (InterruptedException ie) 
+            {}
+            dir = jobClient.getSystemDir();
           }
           systemDirectory = new Path(dir);
           systemFS = systemDirectory.getFileSystem(fConf);
@@ -1725,7 +1893,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
                 commitResponses.add(commitAction.getTaskID());
               }
             } else {
-              tasksToCleanup.put(action);
+              addActionToCleanup(action);
             }
           }
         }
@@ -2079,7 +2247,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         rjob.distCacheMgr.release();
         // Add this tips of this job to queue of tasks to be purged 
         for (TaskInProgress tip : rjob.tasks) {
-          tip.jobHasFinished(false);
+          tip.jobHasFinished(false, false);
           Task t = tip.getTask();
           if (t.isMapTask()) {
             indexCache.removeMap(tip.getTask().getTaskID().toString());
@@ -2153,7 +2321,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       // Remove the task from running jobs, 
       // removing the job if it's the last task
       removeTaskFromJob(tip.getTask().getJobID(), tip);
-      tip.jobHasFinished(wasFailure);
+      tip.jobHasFinished(false, wasFailure);
       if (tip.getTask().isMapTask()) {
         indexCache.removeMap(tip.getTask().getTaskID().toString());
       }
@@ -2451,7 +2619,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           tip.reportDiagnosticInfo(msg);
           try {
             tip.kill(true);
-            tip.cleanup(true);
+            tip.cleanup(false, true);
           } catch (IOException ie2) {
             LOG.info("Error cleaning up " + tip.getTask().getTaskID(), ie2);
           } catch (InterruptedException ie2) {
@@ -2645,7 +2813,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       this.localJobConf = lconf;
       keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
       taskTimeout = localJobConf.getLong("mapred.task.timeout", 
-                                         10 * 60 * 1000);
+                                         Integer.MIN_VALUE);
+      if (taskTimeout == Integer.MIN_VALUE) {
+        taskTimeout = localJobConf.getLong("mapreduce.task.timeout", 
+            10 * 60 * 1000);
+      }
       if (task.isMapTask()) {
         debugCommand = localJobConf.getMapDebugScript();
       } else {
@@ -3018,7 +3190,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         removeTaskFromJob(task.getJobID(), this);
       }
       try {
-        cleanup(needCleanup);
+        cleanup(false, needCleanup);
       } catch (IOException ie) {
       }
 
@@ -3106,11 +3278,13 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     /**
      * We no longer need anything from this task, as the job has
      * finished.  If the task is still running, kill it and clean up.
-     * 
+     *
+     * @param ttReInit is the TaskTracker executing re-initialization sequence?
      * @param wasFailure did the task fail, as opposed to was it killed by
      *                   the framework
      */
-    public void jobHasFinished(boolean wasFailure) throws IOException {
+    public void jobHasFinished(boolean ttReInit, boolean wasFailure) 
+        throws IOException {
       // Kill the task if it is still running
       synchronized(this){
         if (getRunState() == TaskStatus.State.RUNNING ||
@@ -3127,7 +3301,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       }
       
       // Cleanup on the finished task
-      cleanup(true);
+      cleanup(ttReInit, true);
     }
 
     /**
@@ -3209,7 +3383,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
      * otherwise the current working directory of the task 
      * i.e. &lt;taskid&gt;/work is cleaned up.
      */
-    void cleanup(boolean needCleanup) throws IOException {
+    void cleanup(boolean ttReInit, boolean needCleanup) throws IOException {
       TaskAttemptID taskId = task.getTaskID();
       LOG.debug("Cleaning up " + taskId);
 
@@ -3238,7 +3412,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           return;
         }
         try {
-          removeTaskFiles(needCleanup);
+          // TT re-initialization sequence: no need to cleanup, TT will cleanup
+          if (!ttReInit) {
+            removeTaskFiles(needCleanup);
+          }
         } catch (Throwable ie) {
           LOG.info("Error cleaning up task runner: "
               + StringUtils.stringifyException(ie));
@@ -3733,15 +3910,23 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   JobConf getJobConf() {
     return fConf;
   }
-    
+
   /**
    * Is this task tracker idle?
-   * @return has this task tracker finished and cleaned up all of its tasks?
+   * @return has this task tracker finished all its assigned tasks?
    */
   public synchronized boolean isIdle() {
-    return tasks.isEmpty() && tasksToCleanup.isEmpty();
+    return tasks.isEmpty();
   }
-    
+
+  /**
+   * Is this task tracker idle and clean?
+   * @return has this task tracker finished and cleaned up all of its tasks?
+   */
+  public synchronized boolean isIdleAndClean() {
+    return tasks.isEmpty() && allCleanupActions.isEmpty();
+  }
+
   /**
    * Start the TaskTracker, point toward the indicated JobTracker
    */
@@ -3919,16 +4104,30 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
          * send it to the reducer.
          */
         //open the map-output file
+        String filePath = mapOutputFileName.toUri().getPath();
         mapOutputIn = SecureIOUtils.openForRead(
-            new File(mapOutputFileName.toUri().getPath()), runAsUserName);
+            new File(filePath), runAsUserName);
+            //new File(mapOutputFileName.toUri().getPath()), runAsUserName);
 
+        ReadaheadRequest curReadahead = null;
+        
         //seek to the correct offset for the reduce
         mapOutputIn.skip(info.startOffset);
         long rem = info.partLength;
-        int len =
-          mapOutputIn.read(buffer, 0, (int)Math.min(rem, MAX_BYTES_TO_READ));
-        while (rem > 0 && len >= 0) {
+        long offset = info.startOffset;
+        while (rem > 0) {
+          if (tracker.manageOsCacheInShuffle && tracker.readaheadPool != null) {
+            curReadahead = tracker.readaheadPool.readaheadStream(filePath,
+                mapOutputIn.getFD(), offset, tracker.readaheadLength,
+                info.startOffset + info.partLength, curReadahead);
+          }
+          int len = mapOutputIn.read(buffer, 0,
+              (int) Math.min(rem, MAX_BYTES_TO_READ));
+          if (len < 0) {
+            break;
+          }
           rem -= len;
+          offset += len;
           try {
             shuffleMetrics.outputBytes(len);
             outStream.write(buffer, 0, len);
@@ -3938,10 +4137,18 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             throw ie;
           }
           totalRead += len;
-          len =
-            mapOutputIn.read(buffer, 0, (int)Math.min(rem, MAX_BYTES_TO_READ));
         }
         
+        if (curReadahead != null) {
+          curReadahead.cancel();
+        }
+
+        // drop cache if possible
+        if (tracker.manageOsCacheInShuffle && info.partLength > 0) {
+          NativeIO.posixFadviseIfPossible(mapOutputIn.getFD(),
+              info.startOffset, info.partLength, NativeIO.POSIX_FADV_DONTNEED);
+        }
+
         if (LOG.isDebugEnabled()) {
           LOG.info("Sent out " + totalRead + " bytes for reduce: " + reduce + 
                  " from map: " + mapId + " given " + info.partLength + "/" + 

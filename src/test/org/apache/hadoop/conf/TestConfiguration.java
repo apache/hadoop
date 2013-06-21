@@ -625,5 +625,14 @@ public class TestConfiguration extends TestCase {
     assertTrue("Picked out wrong key " + key3, !res.containsKey(key3));
     assertTrue("Picked out wrong key " + key4, !res.containsKey(key4));
   }
+
+  public void testUnset() {
+    Configuration conf = new Configuration();
+    conf.set("foo", "bar");
+    assertNotNull(conf.get("foo"));
+    conf.unset("foo");
+    assertNull(conf.get("foo"));
+  }
+
 }
 

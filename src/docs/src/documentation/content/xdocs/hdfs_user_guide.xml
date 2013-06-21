@@ -403,8 +403,32 @@
       the delegation token file. 
       For command usage, see <a href="commands_manual.html#fetchdt"><code>fetchdt</code> command</a>. 
      </p>
-     
-   </section> <section> <title> Upgrade and Rollback </title>
+     </section>
+     <section> <title>Recovery Mode</title>
+       <p>Typically, you will configure multiple metadata storage locations.
+       Then, if one storage location is corrupt, you can read the
+       metadata from one of the other storage locations.</p>
+
+       <p>However, what can you do if the only storage locations available are
+       corrupt?  In this case, there is a special NameNode startup mode called
+       Recovery mode that may allow you to recover most of your data.</p>
+
+       <p>You can start the NameNode in recovery mode like so:
+        <code>namenode -recover</code></p>
+
+        <p>When in recovery mode, the NameNode will interactively prompt you at
+       the command line about possible courses of action you can take to
+       recover your data.</p>
+
+       <p>If you don't want to be prompted, you can give the
+       <code>-force</code> option.  This option will force
+       recovery mode to always select the first choice.  Normally, this
+       will be the most reasonable choice.</p>
+
+       <p>Because Recovery mode can cause you to lose data, you should always
+       back up your edit log and fsimage before using it.</p>
+     </section>
+     <section> <title> Upgrade and Rollback </title>
      <p>
       When Hadoop is upgraded on an existing cluster, as with any
       software upgrade, it is possible there are new bugs or

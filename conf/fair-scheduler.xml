@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+
+<!--
+  This file contains pool and user allocations for the Fair Scheduler.
+  Its format is explained in the Fair Scheduler documentation at
+  http://hadoop.apache.org/common/docs/r0.20.205.0/fair_scheduler.html.
+  The documentation also includes a sample config file.
+-->
+
+<allocations>
+
+</allocations>

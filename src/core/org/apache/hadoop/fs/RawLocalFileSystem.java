@@ -99,7 +99,7 @@ public class RawLocalFileSystem extends FileSystem {
   /*******************************************************
    * For open()'s FSInputStream
    *******************************************************/
-  class LocalFSFileInputStream extends FSInputStream {
+  class LocalFSFileInputStream extends FSInputStream implements HasFileDescriptor {
     FileInputStream fis;
     private long position;
 
@@ -167,6 +167,11 @@ public class RawLocalFileSystem extends FileSystem {
         this.position += value;
       }
       return value;
+    }
+
+    @Override
+    public FileDescriptor getFileDescriptor() throws IOException {
+      return fis.getFD();
     }
   }
   

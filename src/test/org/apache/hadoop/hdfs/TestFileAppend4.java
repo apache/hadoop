@@ -97,7 +97,7 @@ public class TestFileAppend4 extends TestCase {
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean("dfs.support.broken.append", true);
 
     // lower heartbeat interval for fast recognition of DN death
     conf.setInt("heartbeat.recheck.interval", 1000);
@@ -656,7 +656,7 @@ public class TestFileAppend4 extends TestCase {
       // has not been completed in the NN.
       // Lose the leases
       LOG.info("Killing lease checker");
-      client.leasechecker.interruptAndJoin();
+      client.getLeaseRenewer().interruptAndJoin();
 
       FileSystem fs1 = cluster.getFileSystem();
       FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(
@@ -726,7 +726,7 @@ public class TestFileAppend4 extends TestCase {
       // has not been completed in the NN.
       // Lose the leases
       LOG.info("Killing lease checker");
-      client.leasechecker.interruptAndJoin();
+      client.getLeaseRenewer().interruptAndJoin();
 
       FileSystem fs1 = cluster.getFileSystem();
       FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(
@@ -780,9 +780,9 @@ public class TestFileAppend4 extends TestCase {
 
       // Make the NN fail to commitBlockSynchronization one time
       NameNode nn = cluster.getNameNode();
-      nn.namesystem = spy(nn.namesystem);
+      nn.setNamesystem(spy(nn.getNamesystem()));
       doAnswer(new ThrowNTimesAnswer(IOException.class, 1)).
-        when(nn.namesystem).
+        when(nn.getNamesystem()).
         commitBlockSynchronization((Block)anyObject(), anyInt(), anyInt(),
                                    anyBoolean(), anyBoolean(),
                                    (DatanodeID[])anyObject());
@@ -890,9 +890,9 @@ public class TestFileAppend4 extends TestCase {
     // Allow us to delay commitBlockSynchronization
     DelayAnswer delayer = new DelayAnswer();
     NameNode nn = cluster.getNameNode();
-    nn.namesystem = spy(nn.namesystem);
+    nn.setNamesystem(spy(nn.getNamesystem()));
     doAnswer(delayer).
-      when(nn.namesystem).
+      when(nn.getNamesystem()).
       commitBlockSynchronization((Block) anyObject(), anyInt(), anyInt(),
         anyBoolean(), anyBoolean(),
         (DatanodeID[]) anyObject());
@@ -1235,7 +1235,7 @@ public class TestFileAppend4 extends TestCase {
       LOG.info("======== Writing");
       AppendTestUtil.write(stm, 0, halfBlock/2);
       LOG.info("======== Checking progress");
-      assertFalse(NameNodeAdapter.checkFileProgress(nn.namesystem, "/delayedReceiveBlock", true));
+      assertFalse(NameNodeAdapter.checkFileProgress(nn.getNamesystem(), "/delayedReceiveBlock", true));
       LOG.info("======== Closing");
       stm.close();
 
@@ -1286,7 +1286,8 @@ public class TestFileAppend4 extends TestCase {
       AppendTestUtil.write(stm, 0, halfBlock/4);
 
       LOG.info("======== Checking progress");
-      assertFalse(NameNodeAdapter.checkFileProgress(nn.namesystem, "/delayedReceiveBlock", true));
+      assertFalse(NameNodeAdapter.checkFileProgress(nn.getNamesystem(),
+          "/delayedReceiveBlock", true));
       LOG.info("======== Closing");
       stm.close();
 
@@ -1320,7 +1321,8 @@ public class TestFileAppend4 extends TestCase {
       waitForBlockReplication(fs1, "/delayedReceiveBlock", 0, 3000);
 
       LOG.info("======== Checking not complete");
-      assertFalse(NameNodeAdapter.checkFileProgress(nn.namesystem, "/delayedReceiveBlock", true));
+      assertFalse(NameNodeAdapter.checkFileProgress(nn.getNamesystem(),
+          "/delayedReceiveBlock", true));
 
       // Stop one of the DNs, don't restart
       MiniDFSCluster.DataNodeProperties dnprops = cluster.stopDataNode(0);
@@ -1330,7 +1332,8 @@ public class TestFileAppend4 extends TestCase {
 
       // Make sure we don't see the file as complete
       LOG.info("======== Checking progress");
-      assertFalse(NameNodeAdapter.checkFileProgress(nn.namesystem, "/delayedReceiveBlock", true));
+      assertFalse(NameNodeAdapter.checkFileProgress(nn.getNamesystem(),
+          "/delayedReceiveBlock", true));
       LOG.info("======== Closing");
       stm.close();
 
@@ -1361,9 +1364,9 @@ public class TestFileAppend4 extends TestCase {
       DelayAnswer delayer = new DelayAnswer(false);
 
       NameNode nn = cluster.getNameNode();
-      nn.namesystem = spy(nn.namesystem);
+      nn.setNamesystem(spy(nn.getNamesystem()));
       NameNodeAdapter.callNextGenerationStampForBlock(
-        doAnswer(delayer).when(nn.namesystem),
+        doAnswer(delayer).when(nn.getNamesystem()),
         (Block)anyObject(), anyBoolean());
 
       final AtomicReference<Throwable> err = new AtomicReference<Throwable>();

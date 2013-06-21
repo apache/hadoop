@@ -136,7 +136,7 @@ public class TestInputSampler {
     for (int i = 0; i < TOT_SPLITS; ++i) {
       inits[i] = i;
     }
-    Job ignored = new Job();
+    Job ignored = Job.getInstance();
     Object[] samples = sampler.getSample(new TestInputSamplerIF(
           NUM_SAMPLES, TOT_SPLITS, inits), ignored);
     assertEquals(NUM_SAMPLES, samples.length);

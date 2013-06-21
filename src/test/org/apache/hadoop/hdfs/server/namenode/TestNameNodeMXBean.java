@@ -75,7 +75,7 @@ public class TestNameNodeMXBean {
       cluster = new MiniDFSCluster(conf, 1, true, null);
       cluster.waitActive();
 
-      FSNamesystem fsn = cluster.getNameNode().namesystem;
+      FSNamesystem fsn = cluster.getNameNode().getNamesystem();
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanName = new ObjectName(

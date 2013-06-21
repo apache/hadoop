@@ -56,7 +56,7 @@ public class MiniMRCluster {
     
   private String namenode;
   private UserGroupInformation ugi = null;
-  private JobConf conf;
+  protected JobConf conf;
   private int numTrackerToExclude;
     
   private JobConf job;
@@ -100,8 +100,10 @@ public class MiniMRCluster {
     public void run() {
       try {
         jc = (jc == null) ? createJobConf() : createJobConf(jc);
-        File f = new File("build/test/mapred/local").getAbsoluteFile();
-        jc.set("mapred.local.dir",f.getAbsolutePath());
+        String localPath = System.getProperty("test.build.data",
+            "build/test/mapred/local");
+        File f = new File(localPath).getAbsoluteFile();
+        jc.set("mapred.local.dir", f.getAbsolutePath());
         jc.setClass("topology.node.switch.mapping.impl", 
             StaticMapping.class, DNSToSwitchMapping.class);
         final String id =
@@ -333,7 +335,8 @@ public class MiniMRCluster {
   private void waitTaskTrackers() {
     for(Iterator<TaskTrackerRunner> itr= taskTrackerList.iterator(); itr.hasNext();) {
       TaskTrackerRunner runner = itr.next();
-      while (!runner.isDead && (!runner.isInitialized || !runner.tt.isIdle())) {
+      while (!runner.isDead && (!runner.isInitialized
+        ||  !runner.tt.isIdleAndClean())) {
         if (!runner.isInitialized) {
           LOG.info("Waiting for task tracker to start.");
         } else {

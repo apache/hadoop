@@ -234,11 +234,11 @@ public abstract class FileSystem extends Configured implements Closeable {
     String scheme = uri.getScheme();
     String authority = uri.getAuthority();
 
-    if (scheme == null) {                       // no scheme: use default FS
+    if (scheme == null && authority == null) {     // use default FS
       return get(conf);
     }
 
-    if (authority == null) {                       // no authority
+    if (scheme != null && authority == null) {     // no authority
       URI defaultUri = getDefaultUri(conf);
       if (scheme.equals(defaultUri.getScheme())    // if scheme matches default
           && defaultUri.getAuthority() != null) {  // & default has authority
@@ -402,7 +402,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       throw new IllegalArgumentException("Invalid start or len parameter");
     }
 
-    if (file.getLen() < start) {
+    if (file.getLen() <= start) {
       return new BlockLocation[0];
 
     }
@@ -669,6 +669,17 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public abstract FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException;
+
+  /**
+   * Concat existing files together.
+   * @param trg the path to the target destination.
+   * @param psrcs the paths to the sources to use for the concatenation.
+   * @throws IOException
+   */
+  public void concat(final Path trg, final Path [] srcs) throws IOException {
+    throw new UnsupportedOperationException("Not implemented by the " + 
+        getClass().getSimpleName() + " FileSystem implementation");
+  }
   
   /**
    * Get replication.
@@ -1032,11 +1043,12 @@ public abstract class FileSystem extends Configured implements Closeable {
         results = listStatus(parentPaths, fp);
         hasGlob[0] = true;
       } else { // last component does not have a pattern
+        // remove the quoting of metachars in a non-regexp expansion
+        String name = unquotePathComponent(components[components.length - 1]);
         // get all the path names
         ArrayList<Path> filteredPaths = new ArrayList<Path>(parentPaths.length);
         for (int i = 0; i < parentPaths.length; i++) {
-          parentPaths[i] = new Path(parentPaths[i],
-            components[components.length - 1]);
+          parentPaths[i] = new Path(parentPaths[i], name);
           if (fp.accept(parentPaths[i])) {
             filteredPaths.add(parentPaths[i]);
           }
@@ -1079,12 +1091,26 @@ public abstract class FileSystem extends Configured implements Closeable {
     if (fp.hasPattern()) {
       parents = FileUtil.stat2Paths(listStatus(parents, fp));
       hasGlob[0] = true;
-    } else {
+    } else { // the component does not have a pattern
+      // remove the quoting of metachars in a non-regexp expansion
+      String name = unquotePathComponent(filePattern[level]);
       for (int i = 0; i < parents.length; i++) {
-        parents[i] = new Path(parents[i], filePattern[level]);
+        parents[i] = new Path(parents[i], name);
       }
     }
     return globPathsLevel(parents, filePattern, level + 1, hasGlob);
+  }
+  
+  /**
+   * The glob filter builds a regexp per path component.  If the component
+   * does not contain a shell metachar, then it falls back to appending the
+   * raw string to the list of built up paths.  This raw path needs to have
+   * the quoting removed.  Ie. convert all occurances of "\X" to "X"
+   * @param name of the path component
+   * @return the unquoted path component
+   */
+  private String unquotePathComponent(String name) {
+    return name.replaceAll("\\\\(.)", "$1");
   }
     
   /** Return the current user's home directory in this filesystem.
@@ -1275,17 +1301,42 @@ public abstract class FileSystem extends Configured implements Closeable {
     return getFileStatus(f).getBlockSize();
   }
     
-  /** Return the number of bytes that large input files should be optimally
-   * be split into to minimize i/o time. */
+  /**
+   * Return the number of bytes that large input files should be optimally
+   * be split into to minimize i/o time.
+   * @deprecated use {@link #getDefaultBlockSize(Path)} instead
+   */
+  @Deprecated
   public long getDefaultBlockSize() {
     // default to 32MB: large enough to minimize the impact of seeks
     return getConf().getLong("fs.local.block.size", 32 * 1024 * 1024);
   }
+
+  /**
+   * Return the number of bytes that large input files should be optimally
+   * be split into to minimize i/o time.
+   * @param f path of file
+   * @return the default block size for the path's filesystem
+   */
+  public long getDefaultBlockSize(Path f) {
+    return getDefaultBlockSize();
+  }
     
   /**
    * Get the default replication.
+   * @deprecated use {@link #getDefaultReplication(Path)} instead
    */
+  @Deprecated
   public short getDefaultReplication() { return 1; }
+
+  /**
+   * Get the default replication.
+   * @param path of the file
+   * @return default replication for the path's filesystem 
+   */
+  public short getDefaultReplication(Path path) {
+    return getDefaultReplication();
+  }
 
   /**
    * Return a file status object that represents the path.

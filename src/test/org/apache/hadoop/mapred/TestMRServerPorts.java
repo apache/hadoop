@@ -18,6 +18,8 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.TestHDFSServerPorts;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -62,7 +64,8 @@ public class TestMRServerPorts extends TestCase {
     conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
     JobTracker jt = null;
     try {
-      jt = JobTracker.startTracker(conf);
+      String uniqid = new SimpleDateFormat("yyyyMMddHHmm").format(new Date());
+      jt = JobTracker.startTracker(conf, uniqid, true);
       runner.setJobTracker(jt);
       runner.start();
       conf.set("mapred.job.tracker", "localhost:" + jt.getTrackerPort());
@@ -90,7 +93,8 @@ public class TestMRServerPorts extends TestCase {
   throws IOException, InterruptedException {
     JobTracker jt = null;
     try {
-      jt = JobTracker.startTracker(conf);
+      String uniqid = new SimpleDateFormat("yyyyMMddHHmm").format(new Date());
+      jt = JobTracker.startTracker(conf, uniqid, true);
     } catch(IOException e) {
       if (e instanceof java.net.BindException)
         return false;

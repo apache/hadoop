@@ -10,9 +10,12 @@
 <property>
   <name>hadoop.job.history.location</name>
   <value></value>
-  <description> If job tracker is static the history files are stored 
-  in this single well known place. If No value is set here, by default,
-  it is in the local file system at ${hadoop.log.dir}/history.
+  <description> The location where jobtracker history files are stored.
+  The value for this key is treated as a URI, meaning that the files 
+  can be stored either on HDFS or the local file system.  If no value is 
+  set here, the location defaults to the local file system, at 
+  file:///${hadoop.log.dir}/history.  If the URI is missing a scheme,
+  fs.default.name is used for the file system.
   </description>
 </property>
 
@@ -32,6 +35,24 @@
   <description> The completed job history files are stored at this single well 
   known location. If nothing is specified, the files are stored at 
   ${hadoop.job.history.location}/done.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.max-age-ms</name>
+  <value>2592000000</value>
+  <description> Job history files older than this many milliseconds will
+  be deleted when the history cleaner runs. Defaults to 2592000000 (30
+  days).
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.cleaner.interval-ms</name>
+  <value>86400000</value>
+  <description> How often the job history cleaner checks for files to delete, 
+  in milliseconds. Defaults to 86400000 (one day). Files are only deleted if
+  they are older than mapreduce.jobhistory.max-age-ms.
   </description>
 </property>
 
@@ -268,6 +289,17 @@
 </property>
 
 <property>
+  <name>mapreduce.job.restart.recover</name>
+  <value>true</value>
+  <description>A per-job override for job recovery. If set to false for a
+      job then job recovery will not be attempted for that job upon restart
+      even if mapred.jobtracker.restart.recover is enabled. Defaults to true
+      so that jobs are recovered by default if
+      mapred.jobtracker.restart.recover is enabled.
+  </description>
+</property>
+
+<property>
   <name>mapred.jobtracker.job.history.block.size</name>
   <value>3145728</value>
   <description>The block size of the job history file. Since the job recovery
@@ -291,6 +323,20 @@
   <name>mapred.jobtracker.taskScheduler</name>
   <value>org.apache.hadoop.mapred.JobQueueTaskScheduler</value>
   <description>The class responsible for scheduling the tasks.</description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.nodegroup.aware</name>
+  <value>false</value>
+  <description>Identify if jobtracker is aware of nodegroup layer.</description>
+</property>
+
+<property>
+  <name>mapred.jobtracker.jobSchedulable</name>
+  <value>org.apache.hadoop.mapred.JobSchedulable</value>
+  <description>The class responsible for an entity in FairScheduler that can
+  launch tasks.
+  </description>
 </property>
 
 <property>
@@ -981,7 +1027,21 @@
     acceptable.
     </description>
   </property>
-  
+
+  <property>
+    <name>mapreduce.ifile.readahead</name>
+    <value>true</value>
+    <description>Configuration key to enable/disable IFile readahead.
+    </description>
+  </property>
+
+  <property>
+    <name>mapreduce.ifile.readahead.bytes</name>
+    <value>4194304</value>
+    <description>Configuration key to set the IFile readahead length in bytes.
+    </description>
+  </property>
+
 <!-- Job Notification Configuration -->
 
 <!--
@@ -1242,13 +1302,36 @@
   </description>
 </property>
 
+<!--  end of node health script variables -->
+
 <property>
-  <name>mapreduce.job.counters.limit</name>
+  <name>mapreduce.job.counters.max</name>
   <value>120</value>
   <description>Limit on the number of counters allowed per job.
   </description>
 </property>
 
-<!--  end of node health script variables -->
+<property>
+  <name>mapreduce.job.counters.groups.max</name>
+  <value>50</value>
+  <description>Limit on the number of counter groups allowed per job.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.counters.counter.name.max</name>
+  <value>64</value>
+  <description>Limit on the length of counter names in jobs. Names
+  exceeding this limit will be truncated.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.counters.group.name.max</name>
+  <value>128</value>
+  <description>Limit on the length of counter group names in jobs. Names
+  exceeding this limit will be truncated.
+  </description>
+</property>
 
 </configuration>

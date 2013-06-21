@@ -211,7 +211,7 @@ public class TestKeyValueTextInputFormat extends TestCase {
    * Test using the gzip codec for reading
    */
   public static void testGzip() throws Exception {
-    Job job = new Job();
+    Job job = Job.getInstance();
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, job.getConfiguration());
     localFs.delete(workDir, true);

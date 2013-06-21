@@ -185,4 +185,14 @@ class Host2NodesMap {
       hostmapLock.readLock().unlock();
     }
   }
+  
+  @Override
+  public String toString() {
+    final StringBuilder b = new StringBuilder(getClass().getSimpleName())
+        .append("[");
+    for(Map.Entry<String, DatanodeDescriptor[]> e : map.entrySet()) {
+      b.append("\n  " + e.getKey() + " => " + Arrays.asList(e.getValue()));
+    }
+    return b.append("\n]").toString();
+  }
 }

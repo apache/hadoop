@@ -176,16 +176,13 @@ class FSDirectory implements FSConstants, Closeable {
       newNode = addNode(path, newNode, -1, false);
     }
     if (newNode == null) {
-      NameNode.stateChangeLog.info("DIR* FSDirectory.addFile: "
-                                   +"failed to add "+path
-                                   +" to the file system");
+      NameNode.stateChangeLog.info("DIR* addFile: " + "failed to add " + path);
       return null;
     }
     // add create file record to log, record new generation stamp
     fsImage.getEditLog().logOpenFile(path, newNode);
 
-    NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
-                                  +path+" is added to the file system");
+    NameNode.stateChangeLog.debug("DIR* addFile: " + path + " is added");
     return newNode;
   }
 
@@ -291,7 +288,7 @@ class FSDirectory implements FSConstants, Closeable {
 
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
                                     + path + " with " + block
-                                    + " block is added to the in-memory "
+                                    + " is added to the in-memory "
                                     + "file system");
     }
     return block;
@@ -308,7 +305,7 @@ class FSDirectory implements FSConstants, Closeable {
       fsImage.getEditLog().logOpenFile(path, file);
       NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
                                     +path+" with "+ file.getBlocks().length 
-                                    +" blocks is persisted to the file system");
+                                    +" blocks is persisted");
     }
   }
 
@@ -323,7 +320,7 @@ class FSDirectory implements FSConstants, Closeable {
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
                                     +path+" with "+ file.getBlocks().length 
-                                    +" blocks is persisted to the file system");
+                                    +" blocks is persisted");
       }
     }
   }
@@ -345,8 +342,7 @@ class FSDirectory implements FSConstants, Closeable {
       // write modified block locations to log
       fsImage.getEditLog().logOpenFile(path, fileNode);
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
-                                    +path+" with "+block
-                                    +" block is added to the file system");
+          + path + " with "+ block +" is added to the");
       // update space consumed
       INode[] pathINodes = getExistingPathINodes(path);
       updateCount(pathINodes, pathINodes.length-1, 0,
@@ -589,21 +585,90 @@ class FSDirectory implements FSConstants, Closeable {
       }
     }
   }
-    
+
   /**
-   * Remove the file from management, return blocks
+   * Concat - see {@link #unprotectedConcat(String, String[], long)}
    */
-  boolean delete(String src) {
+  public void concat(String target, String [] srcs) throws IOException{
+    synchronized(rootDir) {
+      // actual move
+      waitForReady();
+      long timestamp = FSNamesystem.now();
+      unprotectedConcat(target, srcs, timestamp);
+      // do the commit
+      fsImage.getEditLog().logConcat(target, srcs, timestamp);
+    }
+  }
+  
+
+  
+  /**
+   * Moves all the blocks from {@code srcs} in the order of {@code srcs} array
+   * and appends them to {@code target}.
+   * The {@code srcs} files are deleted.
+   * @param target file to move the blocks to
+   * @param srcs list of file to move the blocks from
+   * Must be public because also called from EditLogs
+   * NOTE: - it does not update quota since concat is restricted to same dir.
+   */
+  public void unprotectedConcat(String target, String [] srcs, long timestamp) {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: "+src);
+      NameNode.stateChangeLog.debug("DIR* FSNamesystem.concat to "+target);
+    }
+    // do the move
+    
+    final INode[] trgINodes =  getExistingPathINodes(target);
+    INodeFile trgInode = (INodeFile) trgINodes[trgINodes.length-1];
+    INodeDirectory trgParent = (INodeDirectory)trgINodes[trgINodes.length-2];
+    
+    INodeFile [] allSrcInodes = new INodeFile[srcs.length];
+    int i = 0;
+    int totalBlocks = 0;
+    for(String src : srcs) {
+      INodeFile srcInode = getFileINode(src);
+      allSrcInodes[i++] = srcInode;
+      totalBlocks += srcInode.blocks.length;  
+    }
+    trgInode.appendBlocks(allSrcInodes, totalBlocks); // copy the blocks
+    
+    // since we are in the same dir - we can use same parent to remove files
+    int count = 0;
+    for(INodeFile nodeToRemove: allSrcInodes) {
+      if(nodeToRemove == null) continue;
+      
+      nodeToRemove.blocks = null;
+      trgParent.removeChild(nodeToRemove);
+      count++;
+    }
+
+    trgInode.setModificationTime(timestamp);
+    trgParent.setModificationTime(timestamp);
+    // update quota on the parent directory ('count' files removed, 0 space)
+    unprotectedUpdateCount(trgINodes, trgINodes.length-1, -count, 0);
+  }
+
+  /**
+   * Delete the target directory and collect the blocks under it
+   * 
+   * @param src
+   *          Path of a directory to delete
+   * @param collectedBlocks
+   *          Blocks under the deleted directory
+   * @return true on successful deletion; else false
+   */
+  boolean delete(String src, List<Block>collectedBlocks) {
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
     }
     waitForReady();
     long now = FSNamesystem.now();
-    int filesRemoved = unprotectedDelete(src, now);
+    int filesRemoved = unprotectedDelete(src, collectedBlocks, now);
     if (filesRemoved <= 0) {
       return false;
     }
     incrDeletedFileCount(filesRemoved);
+    // Blocks will be deleted later by the caller of this method
+    FSNamesystem.getFSNamesystem().removePathAndBlocks(src, null);
     fsImage.getEditLog().logDelete(src, now);
     return true;
   }
@@ -625,14 +690,36 @@ class FSDirectory implements FSConstants, Closeable {
   }
   
   /**
-   * Delete a path from the name space
-   * Update the count at each ancestor directory with quota
-   * @param src a string representation of a path to an inode
-   * @param modificationTime the time the inode is removed
-   * @param deletedBlocks the place holder for the blocks to be removed
+   * Delete a path from the name space Update the count at each ancestor
+   * directory with quota
+   * 
+   * @param src
+   *          a string representation of a path to an inode
+   * 
+   * @param mTime
+   *          the time the inode is removed
+   */
+  void unprotectedDelete(String src, long mTime) {
+    List<Block> collectedBlocks = new ArrayList<Block>();
+    int filesRemoved = unprotectedDelete(src, collectedBlocks, mTime);
+    if (filesRemoved > 0) {
+      namesystem.removePathAndBlocks(src, collectedBlocks);
+    }
+  }
+  
+  /**
+   * Delete a path from the name space Update the count at each ancestor
+   * directory with quota
+   * 
+   * @param src
+   *          a string representation of a path to an inode
+   * @param collectedBlocks
+   *          blocks collected from the deleted path
+   * @param mtime
+   *          the time the inode is removed
    * @return the number of inodes deleted; 0 if no inodes are deleted.
-   */ 
-  int unprotectedDelete(String src, long modificationTime) {
+   */
+  int unprotectedDelete(String src, List<Block> collectedBlocks, long mtime) {
     src = normalizePath(src);
 
     synchronized (rootDir) {
@@ -643,32 +730,27 @@ class FSDirectory implements FSConstants, Closeable {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
             +"failed to remove "+src+" because it does not exist");
         return 0;
-      } else if (inodes.length == 1) { // src is the root
+      } 
+      if (inodes.length == 1) { // src is the root
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +
             "failed to remove " + src +
             " because the root is not allowed to be deleted");
         return 0;
-      } else {
-        try {
-          // Remove the node from the namespace
-          removeChild(inodes, inodes.length-1);
-          // set the parent's modification time
-          inodes[inodes.length-2].setModificationTime(modificationTime);
-          // GC all the blocks underneath the node.
-          ArrayList<Block> v = new ArrayList<Block>();
-          int filesRemoved = targetNode.collectSubtreeBlocksAndClear(v);
-          namesystem.removePathAndBlocks(src, v);
-          if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
-              +src+" is removed");
-          }
-          return filesRemoved;
-        } catch (IOException e) {
-          NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +
-              "failed to remove " + src + " because " + e.getMessage());
-          return 0;
-        }
+      } 
+      int pos = inodes.length - 1;
+      targetNode = removeChild(inodes, pos);
+      if (targetNode == null) {
+        return 0;
       }
+      // set the parent's modification time
+      inodes[pos - 1].setModificationTime(mtime);
+      int filesRemoved = targetNode
+          .collectSubtreeBlocksAndClear(collectedBlocks);
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
+            + src + " is removed");
+      }
+      return filesRemoved;
     }
   }
 
@@ -891,6 +973,25 @@ class FSDirectory implements FSConstants, Closeable {
       NameNode.LOG.warn("FSDirectory.updateCountNoQuotaCheck - unexpected ", e);
     }
   }
+  
+  /**
+   * updates quota without verification
+   * callers responsibility is to make sure quota is not exceeded
+   * @param inodes
+   * @param numOfINodes
+   * @param nsDelta
+   * @param dsDelta
+   */
+   void unprotectedUpdateCount(INode[] inodes, int numOfINodes, 
+                                      long nsDelta, long dsDelta) {
+    for(int i=0; i < numOfINodes; i++) {
+      if (inodes[i].isQuotaSet()) { // a directory with quota
+        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
+        node.addSpaceConsumed(nsDelta, dsDelta);
+      }
+    }
+  }
+   
   
   /** Return the name of the path represented by inodes at [0, pos] */
   private static String getFullPathName(INode[] inodes, int pos) {
@@ -1398,5 +1499,9 @@ class FSDirectory implements FSConstants, Closeable {
     if (name != null) {
       inode.setLocalName(name.getBytes());
     }
+  }
+  
+  void shutdown() {
+    nameCache.reset();
   }
 }

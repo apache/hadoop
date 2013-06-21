@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Pool;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -175,4 +176,18 @@ public class TestFairSchedulerPoolNames {
         "Add pool name to the fair scheduler allocation file"));
   }
 
+  /**
+   * Tests that no Pool object can be created with a null string.
+   */
+  @Test
+  public void testPoolNameNotNull() {
+    try {
+      Pool pool = new Pool(null, null);
+      fail("Pool object got created with a null name somehow.");
+    } catch (IllegalArgumentException e) {
+      // Pass
+    } catch (Exception e) {
+      fail("Pool object got created with a null name and failed only later.");
+    }
+  }
 }

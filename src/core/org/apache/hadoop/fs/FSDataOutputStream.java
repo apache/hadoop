@@ -95,6 +95,8 @@ public class FSDataOutputStream extends DataOutputStream implements Syncable {
   public void sync() throws IOException {
     if (wrappedStream instanceof Syncable) {
       ((Syncable)wrappedStream).sync();
+    } else {
+      wrappedStream.flush();
     }
   }
 }

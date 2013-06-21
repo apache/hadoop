@@ -1,22 +1,1076 @@
 Hadoop Change Log
 
-Release 1.1.0 - (partial upto at r1293509 as of 2012-02-24 17:46:42)
+Release 1.3.0 - unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-9450. HADOOP_USER_CLASSPATH_FIRST is not honored; CLASSPATH
+    is PREpended instead of APpended. (Chris Nauroth and harsh via harsh)
+
+    HADOOP-9573. Fix test-patch script to work with the enhanced
+    PreCommit-Admin script.(Giridharan Kesavan)
+
+    MAPREDUCE-2351. mapred.job.tracker.history.completed.location should
+    support an arbitrary filesystem URI. (Tom White, backported by
+    Chelsey Chang via ivanmi)
+
+  BUG FIXES
+
+    MAPREDUCE-5047. keep.failed.task.files=true causes job failure on 
+    secure clusters. (sandyr via tucu)
+
+    MAPREDUCE-5070. TestClusterStatus.testClusterMetrics fails on JDK7. 
+    (sandyr via tucu)
+
+    MAPREDUCE-5072. TestDelegationTokenRenewal.testDTRenewal fails in MR1 
+    on jdk7. (sandyr via tucu)
+
+    MAPREDUCE-5073. TestJobStatusPersistency.testPersistency fails on 
+    JDK7. (sandyr via tucu)
+
+    MAPREDUCE-5038. old API CombineFileInputFormat missing fixes that are
+    in new API. (sandyr via tucu)
+
+    HDFS-4622. Remove redundant synchronized from 
+    FSNamesystem#rollEditLog in branch-1. (Jing Zhao via suresh)
+
+    MAPREDUCE-2817. MiniRMCluster hardcodes 'mapred.local.dir' configuration 
+    to 'build/test/mapred/local'. (rkanter via tucu)
+
+    MAPREDUCE-5133. TestSubmitJob.testSecureJobExecution is flaky due to job 
+    dir deletion race. (sandyr via tucu)
+
+    MAPREDUCE-5218. Annotate (comment) internal classes as Private. 
+    (kkambatl via tucu)
+
+    MAPREDUCE-5217. Fix DistCP to work when launched by Oozie on a secure
+    cluster. (Venkat Ranganathan via sseth)
+
+    MAPREDUCE-5095. TestShuffleExceptionCount#testCheckException fails
+    occasionally with JDK7 (Arpit Agarwal via hitesh)
+
+    HADOOP-8981. TestMetricsSystemImpl fails on Windows. (Xuan Gong, backported
+    by Chris Nauroth via suresh)
+
+    MAPREDUCE-5250. Searching for ';' in JobTracker History throws 
+    ArrayOutOfBoundException. (kkambatl via tucu)
+
+    HADOOP-9624. TestFSMainOperationsLocalFileSystem failed when the Hadoop test
+    root path has "X" in its name. (Xi Fang via cnauroth)
+
+    HADOOP-7140. IPC Reader threads do not stop when server stops
+    (Todd Lipcon, backported by ivanmi)
+
+Release 1.2.1 - Unreleased 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HDFS-4880. Print the image and edits file loaded by the namenode in the
+    logs. (Arpit Agarwal via suresh)
+
+  BUG FIXES
+
+    MAPREDUCE-5206. Ensure that a job doesn't get added to RetiredJobs
+    multiple times in JobTracker. (acmurthy)
+
+    MAPREDUCE-5148. Fix MAPREDUCE-4970 to ensure task-log4j.properties is
+    available for previous installs by putting it in hadoop-core.jar.
+    (acmurthy)
+
+    MAPREDUCE-3859. Fix CapacityScheduler to correctly compute runtime queue
+    limits for high-ram jobs. (Sergey Tryuber via acmurthy)
+
+    HDFS-4581. DataNode.checkDiskError should not be called on network errors.
+    (Rohit Kochar via kihwal)
+
+    HDFS-4699. Additional conditions for avoiding unnecessary 
+    DataNode.checkDiskError calls. (Chris Nauroth via kihwal)
+
+    HDFS-4261. Fix bugs in Balaner causing infinite loop and
+    TestBalancerWithNodeGroup timing out.  (Junping Du via szetszwo)
+
+Release 1.2.0 - 2013.05.05
+
+  INCOMPATIBLE CHANGES
+
+    HDFS-4350. Make enabling of stale marking on read and write paths
+    independent. (Andrew Wang via suresh)
+
+  NEW FEATURES
+
+    HADOOP-8817. Backport Network Topology Extension for Virtualization 
+    (from HADOOP-8468) to branch-1
+
+    MAPREDUCE-4660. Update task placement policy for network topology
+    with node group. (Junping Du via llu)
+
+    HADOOP-8023. Add unset() method to Configuration (tucu)
+
+    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+
+    MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process 
+    command-line (philip and ahmed via tucu)
+
+    HDFS-385. Backport: Add support for an experimental API that allows a
+    module external to HDFS to specify how HDFS blocks should be placed.
+    (Sumadhur Reddy Bolli via szetszwo)
+
+    HADOOP-7754. Expose file descriptors from Hadoop-wrapped local 
+    FileSystems (todd and ahmed via tucu)
+
+    MAPREDUCE-461. Enable service-plugins for JobTracker. (Fredrik Hedberg and
+    Brandon Li via vinodkv)
+
+    HDFS-3912. Detect and avoid stale datanodes for writes.
+    (Jing Zhao via suresh)
+
+    HADOOP-8988. Allow configuration of authorization for JmxJsonServlet and 
+    MetricsServlet. (tucu, Jing Zhao via suresh)
+
+    HADOOP-8820. Backport HADOOP-8469 and HADOOP-8470: Make NetworkTopology
+    class pluggable and add NetworkTopologyWithNodeGroup, a 4-layer
+    implementation of NetworkTopology.  (Junping Du and Jing Zhao via szetszwo)
+
+    HDFS-3941. Backport HDFS-3498 and HDFS-3601: Support replica removal in
+    BlockPlacementPolicy and make BlockPlacementPolicyDefault extensible for
+    reusing code in subclasses, and add BlockPlacementPolicyWithNodeGroup to
+    support block placement with 4-layer network topology.  (Junping Du and
+    Jing Zhao via szetszwo)
+
+    HDFS-4219. Backport slive to branch-1. (Backported by Arpit Gupta via
+    suresh)
+
+    HADOOP-9090. Support on-demand publish of metrics. (Mostafa Elhemali via
+    suresh)
+
+    HADOOP-7096. Allow setting of end-of-record delimiter for TextInputFormat
+    (Ahmed Radwan, backported by suresh)
+
+    HDFS-3942. Backport HDFS-3495 and HDFS-4234: Update Balancer to support new
+    NetworkTopology with NodeGroup and use generic code for choosing datanode
+    in Balancer.  (Junping Du via szetszwo)
+
+    HDFS-4256 Backport concatenation of files into a single file to branch-1
+    (sanjay Radia)
+
+    HDFS-4597. Backport WebHDFS concat.  (szetszwo)
+
+    MAPREDUCE-5081. Backport DistCpV2.  (szetszwo)
+
+    HDFS-4651. Offline Image Viewer backport to branch-1.
+    (Chris Nauroth via suresh)
+
+    MAPREDUCE-4824. Provide a mechanism for jobs to indicate they should not
+    be recovered on JobTracker restart. (tomwhite & acmurthy via acmurthy) 
+
+    HDFS-4776. Backport SecondaryNameNode web ui.  (szetszwo)
+
+    HDFS-4774. Backport HDFS-4525: Provide an API for knowing whether a file is
+    closed.  (Ted Yu via szetszwo)
+
+  IMPROVEMENTS
+
+    HADOOP-9434. Backport HADOOP-9267: hadoop -h|-{0,2}help should print usage.
+    (Yu Li via llu)
+
+    HDFS-3515. Port HDFS-1457 to branch-1. (eli)
+
+    HDFS-3479. Port HDFS-3335 to branch-1. (Colin Patrick McCabe via eli)
+
+    HDFS-3521. Check every byte at the end of edit log and allow namenode to
+    tolerate corruption.  (szetszwo)
+
+    HDFS-3604. Add dfs.webhdfs.enabled to hdfs-default.xml. (eli)
+
+    HDFS-3596. Improve FSEditLog pre-allocation in branch-1
+    (Colin Patrick McCabe via mattf)
+
+    HADOOP-8586. Fixup a bunch of SPNEGO misspellings. (eli)
+
+    HDFS-1957. Documentation for HFTP. (Ari Rabkin via eli)
+
+    HDFS-3647. Backport HDFS-2868 (Add number of active transfer
+    threads to the DataNode status) to branch-1 (harsh)
+
+    MAPREDUCE-4415. Backport the Job.getInstance methods from
+    MAPREDUCE-1505 to branch-1. (harsh)
+
+    HDFS-3697. Enable fadvise readahead by default. (todd via eli)
+
+    MAPREDUCE-4565. Backport MR-2855 to branch-1: ResourceBundle lookup during
+    counter name resolution takes a lot of time. (Karthik Kambatla via sseth)
+
+    HDFS-3819. Should check whether invalidate work percentage default value is 
+    not greater than 1.0f. (Jing Zhao via jitendra)
+
+    HDFS-3838. Fix the typo in FSEditLog.java: isToterationEnabled should be 
+    isTolerationEnabled. (Brandon Li via jitendra)
+
+    MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached 
+    (rkanter via tucu)
+
+    MAPREDUCE-4499. Looking for speculative tasks is very expensive in 1.x
+    (Koji Noguchi via tgraves)
+
+    HADOOP-8832. Port generic service plugin mechanism from HADOOP-5257
+    to branch-1. (backported by Brandon Li via suresh) 
+
+    HDFS-3963. Backport namenode/datanode serviceplugin from HADOOP-5257
+    to branch-1. (backported by Brandon Li via suresh)
+
+    MAPREDUCE-2770. Improve hadoop.job.history.location doc in
+    mapred-default.xml. (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4464. Reduce tasks failing with NullPointerException in
+    ConcurrentHashMap.get(). (Clint Heath via harsh)
+
+    MAPREDUCE-4556. FairScheduler: PoolSchedulable#updateDemand() has potential 
+    redundant computation (kkambatl via tucu)
+
+    MAPREDUCE-3678. The Map tasks logs should have the value of input
+    split it processed. (harsh)
+
+    HADOOP-8931. Add Java version to startup message. (eli)
+
+    HDFS-4071. Add number of stale datanodes to metrics (port of HDFS-4059).
+    (Jing Zhao via suresh)
+
+    HDFS-4057. NameNode.namesystem should be private. (Brandon Li via suresh)
+
+    HDFS-3540. Change the default value of dfs.namenode.edits.toleration.length
+    from -1 to 0, i.e. enable the end of edit log check but do not tolerate
+    any corruption.  (szetszwo)
+
+    HDFS-4062. Print logs outside the namesystem lock invalidateWorkForOneNode
+    and computeReplicationWorkForBlock. (Jing Zhao via suresh)
+
+    HADOOP-8968. Add a flag to completely disable the worker version check.
+    (tucu via eli)
+
+    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
+
+    HADOOP-9098. Add missing license headers. (Arpit Agarwal via suresh)
+
+    MAPREDUCE-4703. Add the ability to start the MiniMRClientCluster using the 
+    configurations used before it is being stopped. (ahmed.radwan via tucu)
+
+    MAPREDUCE-4845. ClusterStatus.getMaxMemory() and getUsedMemory() exist in
+    MR1 but not MR2. (Sandy Ryza via tomwhite)
+
+    HDFS-4320. Add a separate configuration for namenode rpc address instead
+    of using fs.default.name. (Mostafa Elhemali via suresh)
+
+    MAPREDUCE-4907. TrackerDistributedCacheManager issues too many 
+    getFileStatus calls. (sandyr via tucu)
+    
+    MAPREDUCE-2931. LocalJobRunner should support parallel mapper execution.
+    (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4837. Add webservices for Jobtracker. (Arun C Murthy via hitesh)
+
+    MAPREDUCE-4838. Add additional fields like Locality, Avataar to the 
+    JobHistory logs. (Arun C Murthy and Zhijie Shen via sseth)
+
+    HADOOP-9253. Capture ulimit info in the logs at service start time.
+    (Arpit Gupta via suresh)
+
+    HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
+    configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
+
+    HDFS-4518. Finer grained metrics for HDFS capacity.
+    (Arpit Agarwal via suresh)
+
+    HDFS-4519. Support overriding jsvc binary and log file locations when
+    launching secure datanode. (Chris Nauroth via suresh)
+
+    HDFS-4551. When copying bytes in DatanodeWebHdfsMethods OPEN, use 4096
+    buffer size to improve performance.  (Mark Wagner via szetszwo)
+
+    HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
+    methods.  (Brandon Li via szetszwo)
+
+    HADOOP-8971. PureJavaCrc32 cache hit-ratio is low for static data
+    (Backport of HADOOP-8926) (Gopal V via suresh)
+
+    HADOOP-9071. Configure ivy log levels for resolve/retrieve.
+    (Giridharan Kesavan via suresh)
+
+    MAPREDUCE-5129. Allow tags to JobHistory for deeper analytics. (billie via
+    acmurthy)
+
+    HDFS-4635. Move BlockManager#computeCapacity to LightWeightGSet.
+    (suresh)
+
+    HDFS-3940. Add Gset#clear method and clear the block map when 
+    namenode is shutdown. (suresh)
+
+  BUG FIXES
+
+    MAPREDUCE-5202. Revert MAPREDUCE-4397 to improve LinuxTaskController security. (omalley)
+
+    HADOOP-9467. Metrics2 record filter should check name as well as tags.
+    (Chris Nauroth and Ganeshan Iyler via llu)
+
+    HADOOP-9451. Fault single-layer config if node group topology is enabled.
+    (Junping Du via llu)
+
+    MAPREDUCE-4904. OTHER_LOCAL_MAPS counter is not correct.
+    (Junping Du via llu)
+
+    HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
+    HADOOP_SECURE_DN_PID_DIR (bobby)
+
+    MAPREDUCE-4195. With invalid queueName request param, jobqueue_details.jsp 
+    shows NPE (jira.shegalov via tucu)
+
+    MAPREDUCE-3727. jobtoken location property in jobconf refers to wrong 
+    jobtoken file (tucu)
+
+    HADOOP-8512. AuthenticatedURL should reset the Token when the server 
+    returns other than OK on authentication (tucu)
+
+    HADOOP-7868. Hadoop native fails to compile when default linker
+    option is -Wl,--as-needed. (Trevor Robinson via eli)
+
+    MAPREDUCE-2289. Permissions race can make getStagingDir fail on local filesystem 
+    (ahmed via tucu)
+
+    HADOOP-8249. invalid hadoop-auth cookies should trigger authentication if info 
+    is avail before returning HTTP 401 (tucu)
+
+    HDFS-3595. Update the regular expression in TestEditLogLoading for the
+    error message change by HDFS-3521.  (Colin Patrick McCabe via szetszwo)
+
+    MAPREDUCE-4317. Job view ACL checks are too permissive (kkambatl via tucu)
+
+    MAPREDUCE-4385. FairScheduler.maxTasksToAssign() should check for 
+    fairscheduler.assignmultiple.maps < TaskTracker.availableSlots (kkambatl via tucu)
+
+    MAPREDUCE-4359. Potential deadlock in Counters. (tomwhite)
+
+    MAPREDUCE-3993. Graceful handling of codec errors during decompression 
+    (kkambatl via tucu)
+
+    HDFS-2827. Cannot save namespace after renaming a directory above
+    a file with an open lease. (Uma Maheswara Rao G via eli)
+
+    HDFS-3628. The dfsadmin -setBalancerBandwidth command on branch-1
+    does not check for superuser privileges. (harsh)
+
+    HADOOP-8355. SPNEGO filter throws/logs exception when authentication fails (tucu)
+
+    HADOOP-8587. HarFileSystem access of harMetaCache isn't threadsafe. (eli)
+
+    HADOOP-7836. TestSaslRPC#testDigestAuthMethodHostBasedToken fails
+    with hostname localhost.localdomain. (daryn via eli)
+ 
+    HADOOP-8423. MapFile.Reader.get() crashes jvm or throws EOFException on
+    Snappy or LZO block-compressed data (todd and harsh)
+
+    HDFS-3698. TestHftpFileSystem is failing in branch-1 due to changed
+    default secure port. (atm)
+
+    HADOOP-8612. Backport HADOOP-8599 to branch-1 (Non empty response
+    when read beyond eof). (Andrey Klochkov, eli via eli)
+
+    HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp 
+    via bobby)
+
+    HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
+    auth type. (daryn)
+
+    HDFS-3679. fuse_dfs notrash option sets usetrash. (Conrad Meyer via suresh)
+
+    HDFS-3163. TestHDFSCLI.testAll fails if user name is not all lowercase.
+    (Brandon Li via suresh)
+
+    MAPREDUCE-4036. Streaming TestUlimit fails on CentOS 6. (tucu)
+
+    HDFS-3754. BlockSender doesn't shutdown ReadaheadPool threads. (eli)
+
+    HADOOP-8611. Allow fall-back to the shell-based implementation when
+    JNI-based users-group mapping fails (Robert Parker via bobby)
+
+    MAPREDUCE-4572. Can not access user logs - Jetty is not configured by default 
+    to serve aliases/symlinks (ahmed via tucu)
+
+    MAPREDUCE-4595. TestLostTracker failing - possibly due to a race in 
+    JobHistory.JobHistoryFilesManager#run() (kkambatl via tucu)
+
+    MAPREDUCE-1684. ClusterStatus can be cached in 
+    CapacityTaskScheduler.assignTasks() (Koji Noguchi via tgraves)
+
+    MAPREDUCE-4629. Remove JobHistory.DEBUG_MODE (Karthik Kambatla via bobby)
+
+    HDFS-2757. Cannot read a local block that's being written to when
+    using the local read short circuit. (Jean-Daniel Cryans via eli)
+
+    HADOOP-8781. hadoop-config.sh should add JAVA_LIBRARY_PATH to LD_LIBRARY_PATH. (tucu)
+
+    MAPREDUCE-4576. Large dist cache can block tasktracker heartbeat
+    (Robert Evans via tgraves)
+
+    HADOOP-8767. Secondary namenode is started on slave nodes instead of
+    master nodes. (Giovanni Delussu via suresh)
+
+    HADOOP-8819. Incorrectly & is used instead of && in some file system 
+    implementations. (Brandon Li via suresh)
+
+    HADOOP-7688. When a servlet filter throws an exception in init(..), 
+    the Jetty server failed silently.(umamahesh)
+
+    HADOOP-8786. HttpServer continues to start even if AuthenticationFilter 
+    fails to init. (Todd Lipcon via umamahesh)
+
+    HDFS-3961. FSEditLog preallocate() preallocated more than 1MB. (Jing Zhoa
+    via suresh)
+
+    HADOOP-7698. jsvc target fails on x86_64. (daryn via harsh)
+
+    MAPREDUCE-4652. ValueAggregatorJob sets the wrong job jar.
+    (Ahmed Radwan via tomwhite)
+
+    MAPREDUCE-4662.  JobHistoryFilesManager thread pool never expands 
+    (Kihwal Lee via tgraves)
+
+    HADOOP-8791. Fix rm command documentation to indicte it deletes
+    files and not directories. (Jing Zhao via suresh)
+
+    HADOOP-8386. hadoop script doesn't work if 'cd' prints to stdout
+    (default behavior in Ubuntu).
+    (Christopher Berner and Andy Isaacson via harsh)
+
+    MAPREDUCE-4706. FairScheduler#dump(): Computing of # running maps and
+    reduces is commented out. (Karthik Kambatla via tomwhite)
+
+    MAPREDUCE-4451. fairscheduler fail to init job with kerberos authentication 
+    configured. (erik.fang via tucu)
+
+    HADOOP-6496. HttpServer sends wrong content-type for CSS files.
+    (Todd Lipcon, Backport by Ivan Mitic via suresh).
+
+    HADOOP-7827. jsp pages missing DOCTYPE tags. (Dave Vronay, Backport by
+    Ivan Mitic via suresh)
+
+    HADOOP-8861. FSDataOutputStream.sync should call flush() if the underlying 
+    wrapped stream is not Syncable. (Amareshwari via umamahesh)
+
+    HDFS-3402. Fix failure to start secure datanodes. (Benoy Antony via suresh)
+
+    HDFS-4072. On file deletion remove corresponding blocks pending
+    replications. (Jing Zhao via suresh)
+
+    HADOOP-8951. RunJar to fail with user-comprehensible error 
+    message if jar missing. (stevel via suresh)
+
+    HADOOP-8900. BuiltInGzipDecompressor throws IOException - stored gzip size
+    doesn't match decompressed size. (Andy Isaacson via suresh)
+
+    MAPREDUCE-1806. CombineFileInputFormat does not work with paths not on 
+    default FS. (Gera Shegalov via tucu)
+
+    MAPREDUCE-4765. Restarting the JobTracker programmatically can cause
+    DelegationTokenRenewal to throw an exception. (rkanter via tucu)
+
+    HDFS-4168. Fix a NullPointerException in FSNamesystem.removeBlocks(..).
+    (Jing Zhao via szetszwo)
+
+    HADOOP-8963. CopyFromLocal doesn't always create user directory.
+    (Arpit Gupta via suresh)
+
+    HDFS-4180. Update TestFileCreation for HDFS-4122.  (Jing Zhao via szetszwo)
+
+    HADOOP-9036. Fix racy test case TestSinkQueue (Backport HADOOP-7292).
+    (Luke Lu backport by suresh)
+
+    HDFS-4207. All hadoop fs operations fail if the default fs is down even if 
+    a different fs is specified in the command. (Jing Zhao via suresh)
+
+    HADOOP-9095. Backport HADOOP-8372: NetUtils.normalizeHostName() incorrectly
+    handles hostname starting with a numeric character.  (Jing Zhao via
+    szetszwo)
+
+    HADOOP-9099. TestNetUtils fails if "UnknownHost" is resolved as a valid
+    hostname.  (Ivan Mitic via szetszwo)
+
+    MAPREDUCE-4778. Fair scheduler event log is only written if directory
+    exists on HDFS. (Sandy Ryza via tomwhite)
+
+    HADOOP-8164. Handle paths using back slash as path separator for windows
+    only. (Daryn Sharp, backported by Jing Zhao via suresh)
+
+    MAPREDUCE-4860. DelegationTokenRenewal attempts to renew token even after
+    a job is removed. (kkambatl via tucu)
+
+    MAPREDUCE-4806. Some private methods in JobTracker.RecoveryManager are not
+    used anymore after MAPREDUCE-3837. (Karthik Kambatla via tomwhite)
+
+    HDFS-4337. Backport HDFS-4240: For nodegroup-aware block placement, when a
+    node is excluded, the nodes in the same nodegroup should also be excluded.
+    (Meng Gong via szetszwo)
+
+    HADOOP-9174. TestSecurityUtil fails with Open JDK 7. (Arpit Agarwal via
+    suresh)
+
+    HADOOP-9175. TestWritableName fails with Open JDK 7. (Arpit Agarwal via
+    suresh)
+
+    MAPREDUCE-2217. The expire launching task should cover the UNASSIGNED task. 
+    (schen and kkambatl via tucu)
+
+    MAPREDUCE-4909. TestKeyValueTextInputFormat fails with Open JDK 7 on
+    Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4355. TestNameNodeMetrics.testCorruptBlock fails with open JDK7.
+    (Brandon Li via suresh)
+
+    HDFS-4358. TestCheckpoint failure with JDK7. (Arpit Agarwal via suresh)
+
+    HADOOP-9179. TestFileSystem fails with open JDK7. (Brandon Li via suresh)
+
+    MAPREDUCE-4916. Fix flaxy test TestTrackerDistributedCacheManager. (Xuan
+    Gong via acmurthy) 
+
+    MAPREDUCE-4914. TestMiniMRDFSSort fails with openJDK7. (Brandon Li via
+    suresh)
+
+    MAPREDUCE-4915. TestShuffleExceptionCount fails with open JDK7.
+    (Brandon Li via suresh)
+
+    HDFS-4351.  In BlockPlacementPolicyDefault.chooseTarget(..), numOfReplicas
+    needs to be updated when avoiding stale nodes.  (Andrew Wang via szetszwo)
+
+    MAPREDUCE-4278. Cannot run two local jobs in parallel from the same
+    gateway. (Sandy Ryza via tomwhite)
+
+    HADOOP-9191. TestAccessControlList and TestJobHistoryConfig fail with
+    JDK7. (Arpit Agarwal via suresh)
+
+    MAPREDUCE-4850. Job recovery may fail if staging directory has been
+    deleted. (tomwhite)
+
+    MAPREDUCE-4933. MR1 final merge asks for length of file it just wrote
+    before flushing it. (Sandy Ryza via bobby)
+
+    MAPREDUCE-4930. Backport MAPREDUCE-4678 and MAPREDUCE-4925 to branch-1.
+    (Karthik Kambatla and Chris McConnell via harsh)
+
+    MAPREDUCE-4924. flakey test: org.apache.hadoop.mapred.TestClusterMRNotification.testMR. 
+    (rkanter via tucu)
+
+    MAPREDUCE-4315. jobhistory.jsp throws 500 when a .txt file is found in /done. 
+    (sandyr via tucu)
+
+    MAPREDUCE-4923. Add toString method to TaggedInputSplit. (sandyr via tucu)
+
+    HADOOP-8580. ant compile-native fails with automake version 1.11.3.
+    (Gera Shegalov via suresh)
+    
+    MAPREDUCE-4929. mapreduce.task.timeout is ignored.
+    (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-2264. Job status exceeds 100% in some cases. 
+    (devaraj.k & sandyr via tucu)
+
+    MAPREDUCE-4963. StatisticsCollector improperly keeps track of "Last Day" 
+    and "Last Hour" statistics for new TaskTrackers. (rkanter via tucu)
+
+    MAPREDUCE-4962. jobdetails.jsp uses display name instead of real name 
+    to get counters. (sandyr via tucu)
+
+    HDFS-4444. Add space between total transaction time and number of
+    transactions in FSEditLog#printStatistics. (Stephen Chu via suresh)
+
+    MAPREDUCE-4969. TestKeyValueTextInputFormat test fails with Open JDK 7.
+    (Arpit Agarwal via suresh)
+
+    MAPREDUCE-4843. When using DefaultTaskController, JobLocalizer not thread 
+    safe. (kkambatl via tucu)
+
+    MAPREDUCE-4967. TestJvmReuse fails on assertion. (kkambatl via tucu)
+
+    MAPREDUCE-4434. Backport MR-2779 (JobSplitWriter.java can't handle large 
+    job.split file) to branch-1. (kkambatl via tucu)
+
+    MAPREDUCE-4970. Child tasks (try to) create security audit log files.
+    (sandyr via tucu)
+
+    HADOOP-9124. SortedMapWritable violates contract of Map interface for
+    equals() and hashCode(). (Surenkumar Nihalani via tomwhite)
+
+    MAPREDUCE-4643. Make job-history cleanup-period configurable. 
+    (sandyr via tucu)
+
+    HDFS-4466. Remove the deadlock from AbstractDelegationTokenSecretManager.
+    (Brandon Li via suresh)
+
+    HADOOP-9154. SortedMapWritable#putAll() doesn't add key/value classes to
+    the map. (Karthik Kambatla via tomwhite)
+
+    HDFS-4479. logSync() with the FSNamesystem lock held in
+    commitBlockSynchronization. (Jing Zhao via suresh)
+
+    HADOOP-8917. add LOCALE.US to toLowerCase in SecurityUtil.replacePattern.
+    (Arpit Gupta via suresh)
+
+    MAPREDUCE-5008. Merger progress miscounts with respect to EOF_MARKER.
+    (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-5035. Update MR1 memory configuration docs. (tomwhite)
+
+    HADOOP-9349. Confusing output when running hadoop version from one hadoop 
+    installation when HADOOP_HOME points to another. (sandyr via tucu)
+
+    MAPREDUCE-5028. Maps fail when io.sort.mb is set to high value.
+    (kkambatl via tucu)
+
+    HDFS-4544. Error in deleting blocks should not do check disk, for
+    all types of errors. (Arpit Agarwal via suresh)
+
+    HADOOP-9375. Port HADOOP-7290 to branch-1 to fix TestUserGroupInformation
+    failure. (Xiaobo Peng via suresh)
+
+    MAPREDUCE-5049. CombineFileInputFormat counts all compressed files 
+    non-splitable. (sandyr via tucu)
+
+    HADOOP-9369. DNS#reverseDns() can return hostname with . appended at the
+    end. (Karthik Kambatla via atm)
+
+    HDFS-4558. Fix the NPE thrown when starting balancer.  (Junping Du via szetszwo)
+
+    HADOOP-9379. capture the ulimit info after printing the log to the console.
+    (Arpit Gupta via suresh)
+
+    HADOOP-7101. UserGroupInformation.getCurrentUser() fails when called from
+    non-Hadoop JAAS context. (todd, backported by suresh)
+
+    MAPREDUCE-4463. Fix job recovery failures which were caused by HDFS
+    permission issues since the token file was being read as the user who
+    submitted the job rather than JobTracker user. (tomwhite, acmurthy via
+    acmurthy) 
+
+    MAPREDUCE-5131. Fix handling of job monitoring APIs during JobTracker
+    restart. (acmurthy) 
+
+    HDFS-4413. Secondary namenode won't start if HDFS isn't the default
+    file system. (Mostafa Elhemali via suresh)
+
+    HADOOP-9473. Typo in FileUtil copy() method. (Glen Mazza via suresh)
+
+    MAPREDUCE-5066. Added a timeout for the job.end.notification.url. (Ivan
+    Mitic via acmurthy)
+
+    HDFS-4715. Backport HDFS-3577, HDFS-3318 and HDFS-3788: fix some WebHDFS
+    performance issues.  (Mark Wagner via szetszwo)
+
+    HADOOP-9492. Update testConf.xml for HADOOP-9473.  (Jing Zhao via szetszwo)
+
+    MAPREDUCE-4737. Ensure that mapreduce APIs are semantically consistent
+    with mapred API w.r.t Mapper.cleanup and Reducer.cleanup; in the sense
+    that cleanup is now called even if there is an error. The old mapred API
+    already ensures that Mapper.close and Reducer.close are invoked during
+    error handling. Note that it is an incompatible change, however end-users
+    can override Mapper.run and Reducer.run to get the old (inconsistent)
+    behaviour. (acmurthy) 
+
+    MAPREDUCE-5169. Fixed JobTracker recovery to ensure both job-info and
+    jobToken file are saved correctly to prevent race-condition between job
+    submission and initialization. (acmurthy)
+
+    MAPREDUCE-5166. Fix ConcurrentModificationException due to insufficient
+    synchronization on updates to task Counters. (Sandy Ryza via acmurthy)
+
+    HADOOP-9458. Fix RPC.getProxy to ensure it uses retries for
+    getProtocolVersion too. (szetszwo via acmurthy)
+
+    HADOOP-9502. chmod/chown do not return error exit codes for some exceptions.
+    (szetszwo)
+
+    MAPREDUCE-5158. Cleanup job-submission related files on HDFS during
+    JobTracker restart for jobs which set mapreduce.job.restart.recover to
+    false to indicate they don't want to be recovered. (Mayank Bansal via
+    acmurthy) 
+
+    MAPREDUCE-5198. Fix a race condition during TaskTracker re-init which was
+    causing failures since task directories were being cleaned up in multiple
+    threads. (arpit via acmurthy)
+
+    MAPREDUCE-5154. Ensure job delegation token renewal is cancelled after job
+    staging directory is deleted. (Sandy Ryza & Arun C. Murthy via acmurthy)
+
+    HADOOP-9537. Backport changes to add support running Hadoop client on AIX.
+    (Aaron T. Myers, backported by Arpit Agarwal via suresh)
+
+    HADOOP-8711. Provide an option for IPC server users to avoid printing stack
+    information for certain exceptions. (Brandon Li via suresh)
+
+    HDFS-3817. Avoid printing stack information for SafeModeException.
+    (Brandon Li via suresh)
+
+    HADOOP-9543. TestFsShellReturnCode may fail if the hardcoded user "admin"
+    is not a valid user in the loacl OS.  (szetszwo)
+
+    HADOOP-9544. Backport UTF8 encoding fixes.  (Chris Nauroth via szetszwo)
+
+Release 1.1.2 - 2013.01.30
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    MAPREDUCE-4397. Introduce HADOOP_SECURITY_CONF_DIR for task-controller.
+    (Yu Gao via llu)
+
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
+    hadoop client processes. (Yu Gao via llu)
+
+  IMPROVEMENTS
+
+    HDFS-4252. Improve confusing log message that prints exception when editlog 
+    read is completed. (Jing Zhao via suresh)
+
+    HADOOP-8567. Port conf servlet to dump running configuration to branch 1.x.
+    (Jing Zhao via suresh)
+
+  BUG FIXES
+
+    HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
+
+    MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
+    (Yu Gao via llu)
+
+    HADOOP-9051 Fix ant clean/test with circular symlinks in build dir. (llu)
+
+    MAPREDUCE-4396. Port support private distributed cache to
+    LocalJobRunner from branch-1-win. (Yu Gao via eyang)
+
+    HADOOP-8418. Update UGI Principal classes name for running with
+    IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
+
+    MAPREDUCE-4798. Updated TestJobHistoryServer test case for startup
+    race conditions.  (Sam Liu via eyang)
+
+    HDFS-3727. When using SPNEGO, NN should not try to log in using KSSL
+    principal. (atm)
+
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
+
+    HDFS-4208. NameNode could be stuck in SafeMode due to never-created
+    blocks. (Brandon Li via suresh)
+
+    HADOOP-9111. Change some JUnit 3 tests to JUnit 4 so that @Ignore tests can
+    be run with ant 1.8.x.  (Jing Zhao via szetszwo)
+
+    HADOOP-9115. Backport HADOOP-7082 and HDFS-1542: Configuration.writeXML
+    should not hold lock while outputting and add a test for a deadlock writing
+    Configuration to HDFS.  (Jing Zhao via szetszwo)
+
+    HADOOP-8880. Missing jersey jars as dependency in the pom causes hive tests 
+    to fail.  (gkesavan via mattf)
+
+    MAPREDUCE-4478. Fixed a bug in TaskTracker's heartbeat to keep it under
+    control. (Liyin Liang via vinodkv)
+
+    MAPREDUCE-4696. Fixed a failing unit test - TestMRServerPorts
+    (Gopal V via sseth)
+
+    MAPREDUCE-4697. Fixed a failing unit test - TestMapredHeartbeat.
+    (Gopal V via sseth)
+
+    MAPREDUCE-4699. Fixed unit test failures - TestFairScheduler and 
+    TestCapacityScheduler. (Gopal V via sseth)
+
+    MAPREDUCE-4858. Fixed TestWebUIAuthorization. (acmurthy) 
+
+    MAPREDUCE-4859. Fixed TestRecoveryManager. (acmurthy) 
+
+    MAPREDUCE-4888. Fixed NLineInputFormat one-off error which dropped data.
+    (vinodkv via acmurthy) 
+
+    HDFS-4423. Checkpoint exception may cause fatal damage to fsimage.
+    (Chris Nauroth via szetszwo)
+
+Release 1.1.1 - 2012.11.18
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    HDFS-528. Backport: Add ability for safemode to wait for a minimum number
+    of live datanodes.  (szetszwo)
+
+  IMPROVEMENTS
+
+    HDFS-1108 Log newly allocated blocks (hdfs-1108-hadoop-1-v5.patch) (sanjay) 
+
+    HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
+
+    HADOOP-8995. Remove unnecessary bogus exception from Configuration.java.
+    (Jing Zhao via suresh)
+
+    HDFS-4161. Backport HDFS-1865 "Share LeaseChecker thread among DFSClients"
+    and the related JIRAs: HDFS-278, HDFS-1840, HDFS-1870, HDFS-1890, HDFS-2810,
+    HDFS-3646 and HDFS-2240. (szetszwo)
+
+    HDFS-1539. A config option for the datanode to fsycn a block file
+    when block is completely written. (dhruba via szetszwo)
+
+    HDFS-4174. Add ability to list the corrupted files in WebUI (backport of
+    HDFS-1031). (Jing Zhao via suresh)
+
+  BUG FIXES
+
+    HADOOP-8878. Uppercase namenode hostname causes hadoop dfs calls with
+    webhdfs filesystem and fsck to fail when security is on.
+    (Arpit Gupta via suresh)
+
+    HADOOP-8882. Uppercase namenode host name causes fsck to fail when 
+    useKsslAuth is on. (Arpit Gupta via suresh)
+
+    HDFS-3791. HDFS-173 Backport - Namenode will not block until a large 
+    directory deletion completes. It allows other operations when the 
+    deletion is in progress. (umamahesh via suresh)
+
+    HDFS-2815. Namenode is not coming out of safemode when we perform
+    (NN crash + restart). Also FSCK report shows blocks missed. (umamahesh)
+
+    HDFS-4134. hadoop namenode and datanode entry points should return 
+    negative exit code on bad arguments. (Steve Loughran via suresh)
+
+    MAPREDUCE-4782. NLineInputFormat skips first line of last InputSplit
+    (Mark Fuhs via bobby)
+
+    MAPREDUCE-4749. Fixed a bug in TaskTracker because of which kill-actions get
+    delayed progressively. (Arpit Gupta via vinodkv)
+
+    HADOOP-9017. Fix hadoop-client-pom-template.xml and
+    hadoop-client-pom-template.xml for version token ( gkesavan )
+
+    HDFS-4105. the SPNEGO user for secondary namenode should use the web 
+    keytab. (Arpit Gupta via jitendra)
+
+    MAPREDUCE-4792. Unit Test TestJobTrackerRestartWithLostTracker fails 
+    with ant-1.8.4. (Amir Sanjar via mattf)
+
+    HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.  (szetszwo)
+
+    HDFS-3846. Namenode deadlock in branch-1. (Brandon Li via jitendra)
+
+    HADOOP-8745. Incorrect version numbers in hadoop-core POM.
+    (Matthias Friedrich via eli)
+
+Release 1.1.0 - 2012.09.28
+
+  INCOMPATIBLE CHANGES
+
+    HDFS-2617. Replaced Kerberized SSL for image transfer and fsck with
+    SPNEGO-based solution. (Jakob Homan, Owen O'Malley, Alejandro Abdelnur and
+    Aaron T. Myers via atm)
+
+    HDFS-3044. fsck move should be non-destructive by default.
+    (Colin Patrick McCabe via eli)
+
+    HADOOP-8230. Enable sync by default and disable append. (eli)
+
+    HADOOP-8365. Provide ability to disable working sync. (eli)
+
+    HADOOP-8552. Conflict: Same security.log.file for multiple users. 
+    (kkambatl via tucu)
+    
+  NEW FEATURES
+
+    MAPREDUCE-3118. Backport Gridmix and Rumen features to
+    branch-0.20-security (Ravi Gummadi via amarrk)
+
+    HADOOP-7806. Support binding to sub-interfaces. (harsh, eli via eli)
+
+    HDFS-3150. Add option for clients to contact DNs via hostname. (eli)
+
+    HDFS-3148. The client should be able to use multiple local interfaces
+    for data transfer. (eli)
+
+    HDFS-3055. Implement recovery mode (Colin Patrick McCabe via todd)
+
+    HADOOP-8209. Add option to relax build-version check for branch-1. (eli)
+
+    HDFS-3518. Add a utility method DistributedFileSystem.isHealthy(uri) for
+    checking if the given HDFS is healthy. (szetszwo)
+
+    HADOOP-7823. Port HADOOP-4012 providing split support for bzip2 compressed
+    files to branch-1. (Andrew Purtell via cdouglas)
+
+    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
+    configured timeout and are selected as the last location to read from.
+    (Jing Zhao via szetszwo)
+
+    MAPREDUCE-4328. Add a JobTracker safemode to allow it to be resilient to
+    NameNode failures. The safemode can be entered either automatically via
+    the configurable background thread to monitor the NameNode or by the
+    admin. In the safemode the JobTracker doesn't schedule new tasks, marks
+    all failed tasks as KILLED for future retries and doesn't accept new job
+    submissions. (acmurthy)
+
+  IMPROVEMENTS
+
+    HADOOP-8656. Backport forced daemon shutdown of HADOOP-8353 into branch-1
+    (Roman Shaposhnik via stevel)
+
+    MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
+    from Rumen tool. (ravigummadi)
+
+    MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
+
+    MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for
+    short running tasks. (amarrk)
+
+    MAPREDUCE-2836. Provide option to fail jobs when submitted to
+    non-existent fair scheduler pools. (Ahmed Radwan via todd)
+
+    HDFS-2332. Add test for HADOOP-7629 (using an immutable FsPermission
+    object as an RPC parameter fails). (todd)
+
+    HADOOP-7509. Improve exception message thrown when Authentication is
+    required. (Ravi Prakash via suresh)
+
+    HADOOP-7745. Fix wrong variable name in exception message introduced
+    in HADOOP-7509. (Ravi Prakash via suresh)
+
+    MAPREDUCE-2957. The TT should not re-init if it has no good local dirs. 
+    (eli)
+
+    MAPREDUCE-2850. Add test for MAPREDUCE-2413. (ravigummadi)
+
+    MAPREDUCE-3278. Fix a busy loop in ReduceTask that would cause 100%
+    cpu utilization during the fetch phase. (todd)
+
+    MAPREDUCE-3365. Expose the event-logging debug feature of
+    FairScheduler. (Sho Shimauchi via harsh)
+
+    MAPREDUCE-3395. Add mapred.disk.healthChecker.interval to
+    mapred-default.xml. (eli via harsh)
+
+    MAPREDUCE-3015. Add local dir failure info to metrics and the web UI. (eli)
+
+    MAPREDUCE-3394. Add log guard for a debug message in ReduceTask (todd)
+
+    MAPREDUCE-3419. Don't mark exited TT threads as dead in MiniMRCluster (eli)
+
+    MAPREDUCE-3424. Some LinuxTaskController cleanup (eli)
+
+    MAPREDUCE-2103. task-controller shouldn't require o-r permissions. (eli)
+
+    HDFS-2638. Improve a block recovery log. (eli)
+
+    HDFS-2654. Make BlockReaderLocal not extend RemoteBlockReader2. (eli)
+
+    HDFS-2547. Fix inaccuracy in ReplicationTargetChooser comments. (harsh)
+
+    MAPREDUCE-2919. The JT web UI should show job start times. (harsh)
+
+    HDFS-2741. Document the max transfer threads property for
+    branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
+
+    HDFS-2872. Add sanity checks during edits loading that generation
+    stamps are non-decreasing. (Colin Patrick McCabe via eli)
+
+    MAPREDUCE-4001. Improve MAPREDUCE-3789's fix logic by looking at
+    job's slot demands instead. (harsh)
+
+    MAPREDUCE-2835. Make per-job counter limits configurable. (tomwhite)
+
+    HDFS-3131. Improve TestStorageRestore. (Brandon Li via atm)
+
+    HDFS-1378. Edit log replay should track and report file offsets in case of
+    errors. (atm and todd, backport by Colin Patrick McCabe via todd)
+
+    HDFS-3094. add -nonInteractive and -force option to namenode -format
+    command. (Arpit Gupta via todd)
+
+    HADOOP-6995. Allow wildcards to be used in ProxyUsers configurations 
+    (todd via tucu)
+
+    HADOOP-8430. Backport new FileSystem methods introduced by HADOOP-8014. (eli)
+
+    HDFS-3504. Support configurable retry policy in DFSClient for RPC
+    connections and RPC calls, and add MultipleLinearRandomRetry, a new retry
+    policy.  (szetszwo)
+
+    HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
+
+    HADOOP-7753. Support fadvise and sync_file_range in NativeIO. Add
+    ReadaheadPool infrastructure for use in HDFS and MR.
+    (Brandon Li and todd via suresh)
+
+    HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
+    (todd, backported by Brandon Li via suresh)
+
+    MAPREDUCE-4400. Avoid task finish sleep to improve small job/workflow
+    latency. (llu)
+
+    HDFS-3814. Make the replication monitor multipliers configurable in 1.x.
+    (Jing Zhao via suresh)
+
+    HDFS-3617. Port HDFS-96 to branch-1 (support blocks greater than 2GB).
+    (Patrick Kling and harsh via eli)
+
+    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
+    (Todd Lipcon and Brandon Li via sseth)
+
+    MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
+
+    MAPREDUCE-1906. Lower minimum heartbeat interval between tasktracker and 
+    JobTracker for smaller clusters. (Todd Lipcon, backport by 
+    Brandon Li via sseth)
+
+    HADOOP-8617. Backport HADOOP-6148, HADOOP-6166 and HADOOP-7333 for a pure
+    Java CRC32 calculator implementation.  (Brandon Li via szetszwo)
 
     HDFS-496. Backport: Use PureJavaCrc32 in HDFS.  (Brandon Li via szetszwo)
 
-    MAPREDUCE-782. Use PureJavaCrc32 in mapreduce spills. (Todd Lipcon, backport by Brandon Li via sseth)
+    MAPREDUCE-782. Use PureJavaCrc32 in mapreduce spills. 
+    (Todd Lipcon, backport by Brandon Li via sseth)
+
+    HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
+
+    HADOOP-8748. Refactor DFSClient retry utility methods to a new class in
+    org.apache.hadoop.io.retry.  Contributed by Arun C Murthy.
+
+    HDFS-3871. Change DFSClient to use RetryUtils.  (Arun C Murthy
+    via szetszwo)
+
+    MAPREDUCE-4603. Add support for JobClient to retry job-submission when
+    JobTracker is in SafeMode. (acmurthy)
 
   BUG FIXES
+
+    HDFS-2751. Backport: Datanode may incorrectly drop OS cache behind reads
+    even for short reads.  (Brandon Li via szetszwo)
+
+    HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
+    to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
+
+    MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
+    become slow in some cases (ravigummadi)
 
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
 
     HADOOP-7634. Docs specify wrong owner for task-controller.cfg (eli)
 
     HADOOP-7665. branch-0.20-security doesn't include SPNEGO settings in
-                 core-default.xml (atm)
+    core-default.xml (atm)
 
     HADOOP-7666. branch-0.20-security doesn't include
-                 o.a.h.security.TestAuthenticationFilter (atm)
+    o.a.h.security.TestAuthenticationFilter (atm)
 
     HADOOP-7621. alfredo config should be in a file not readable by users (atm)
 
@@ -65,15 +1119,11 @@ Release 1.1.0 - (partial upto at r1293509 as of 2012-02-24 17:46:42)
     HDFS-2653. DFSClient should cache whether addrs are non-local when
     short-circuiting is enabled. (eli)
 
-    HDFS-2703. removedStorageDirs is not updated everywhere we remove
-    a storage dir. (eli)
-
-    HDFS-2702. A single failed name dir can cause the NN to exit. (eli)
-
     HADOOP-7942. enabling clover coverage reports fails hadoop unit test 
     compilation. (jitendra)
 
-    HDFS-2728. Remove dfsadmin -printTopology from branch-1 docs since it does not exist. (harsh)
+    HDFS-2728. Remove dfsadmin -printTopology from branch-1 docs since it does 
+    not exist. (harsh)
 
     HDFS-1910. NameNode should not save fsimage twice. (shv)
 
@@ -83,84 +1133,145 @@ Release 1.1.0 - (partial upto at r1293509 as of 2012-02-24 17:46:42)
     HADOOP-7982. UserGroupInformation fails to login if thread's context
     classloader can't load HadoopLoginModule. (todd)
 
-    HADOOP-7988. Upper case in hostname part of the principals doesn't work with 
-    kerberos. (jitendra)
+    HADOOP-7988. Upper case in hostname part of the principals doesn't
+    work with kerberos. (jitendra)
 
     HDFS-2877. If locking of a storage dir fails, it will remove the other
     NN's lock file on exit. (todd)
 
-    MAPREDUCE-3789. CapacityTaskScheduler shouldn't perform unnecessary reservations, when used in heterogenous environments. (harsh)
+    MAPREDUCE-3789. CapacityTaskScheduler shouldn't perform
+    unnecessary reservations, when used in heterogenous
+    environments. (harsh)
 
     HDFS-2869. Fix an error in the webhdfs docs for the mkdir op (harsh)
 
     HDFS-3008. Negative caching of local addrs doesn't work. (eli)
 
-    HDFS-4261. Fix bugs in Balaner causing infinite loop and
-    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
+    HDFS-3078. 2NN https port setting is broken (eli)
 
-  IMPROVEMENTS
+    HADOOP-5836. Bug in S3N handling of directory markers using an object with
+    a trailing "/" causes jobs to fail. (Jagane Sundar, Ian Nowland via suresh)
 
-    MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
-                    from Rumen tool. (ravigummadi)
+    MAPREDUCE-1740. NPE in getMatchingLevelForNodes when node locations are 
+    variable depth (ahmed via tucu)
 
-    MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
+    HADOOP-8154. DNS#getIPs shouldn't silently return the local host
+    IP for bogus interface names. (eli)
 
-    MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for
-                    short running tasks. (amarrk)
-
-    MAPREDUCE-2836. Provide option to fail jobs when submitted to
-    non-existent fair scheduler pools. (Ahmed Radwan via todd)
-
-    HDFS-2332. Add test for HADOOP-7629 (using an immutable FsPermission
-    object as an RPC parameter fails). (todd)
-
-    HADOOP-7509. Improve exception message thrown when Authentication is
-    required. (Ravi Prakash via suresh)
-
-    HADOOP-7745. Fix wrong variable name in exception message introduced
-    in HADOOP-7509. (Ravi Prakash via suresh)
-
-    MAPREDUCE-2957. The TT should not re-init if it has no good local dirs. (eli)
-
-    MAPREDUCE-2850. Add test for MAPREDUCE-2413. (ravigummadi)
-
-    HDFS-2379. Allow block reports to proceed without holding FSDataset lock.
+    MAPREDUCE-3992. Reduce fetcher doesn't verify HTTP status code of response
     (todd)
 
-    MAPREDUCE-3278. Fix a busy loop in ReduceTask that would cause 100%
-    cpu utilization during the fetch phase. (todd)
+    HADOOP-8159. NetworkTopology: getLeaf should check for invalid topologies.
+    (Colin Patrick McCabe via eli)    
 
-    MAPREDUCE-3365. Expose the event-logging debug feature of FairScheduler. (Sho Shimauchi via harsh)
+    HDFS-3129. NetworkTopology: add test that getLeaf should check for
+    invalid topologies. (Colin Patrick McCabe via eli)
 
-    MAPREDUCE-3395. Add mapred.disk.healthChecker.interval to mapred-default.xml. (eli via harsh)
+    MAPREDUCE-4095. TestJobInProgress#testLocality uses a bogus topology.
+    (Colin Patrick McCabe via eli)
 
-    MAPREDUCE-3015. Add local dir failure info to metrics and the web UI. (eli)
+    HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
+    Lee via szetszwo)
 
-    MAPREDUCE-3394. Add log guard for a debug message in ReduceTask (todd)
+    HADOOP-8269. Fix some javadoc warnings on branch-1. (eli)
 
-    MAPREDUCE-3419. Don't mark exited TT threads as dead in MiniMRCluster (eli)
+    MAPREDUCE-3674. Invoked with no queueName request param, the
+    jobqueue_details.jsp injects a null queue name into schedulers. (harsh)
 
-    MAPREDUCE-3424. Some LinuxTaskController cleanup (eli)
+    HADOOP-8314. HttpServer#hasAdminAccess should return false if authorization 
+    is enabled but user is not authenticated. (tucu)
 
-    MAPREDUCE-2103. task-controller shouldn't require o-r permissions. (eli)
+    MAPREDUCE-4088. Task stuck in JobLocalizer prevented other tasks on the
+    same node from (Ravi Prakash via bobby)
 
-    HDFS-2638. Improve a block recovery log. (eli)
+    HADOOP-6546. BloomMapFile can return false negatives. (Clark Jefcoat
+    via suresh)
 
-    HDFS-2654. Make BlockReaderLocal not extend RemoteBlockReader2. (eli)
+    MAPREDUCE-4241. Pipes examples do not compile on Ubuntu 12.04.
+    (Andrew Bayer via eli)
 
-    HDFS-2701. Cleanup FS* processIOError methods. (eli)
+    HDFS-3330. If GetImageServlet throws an Error or RTE, response should not
+    have HTTP "OK" status. (todd via eli)
 
     HADOOP-8329. Build fails with Java 7. (eli)
 
-    HDFS-2547. Fix inaccuracy in ReplicationTargetChooser comments. (harsh)
+    HDFS-3453. HDFS 1.x client is not interoperable with pre 1.x server.
+    (Kihwal Lee via suresh)
 
-    MAPREDUCE-2919. The JT web UI should show job start times. (harsh)
+    HADOOP-5464. DFSClient did not treat write timeout of 0 properly.
+    (Raghu Angadi and Brandon Li via szetszwo)
 
-    HDFS-2741. Document the max transfer threads property for branch-1.
-    Backport of HDFS-1866. (Markus Jelsma via harsh)
+    HADOOP-6947.  Kerberos relogin should set refreshKrb5Config to true.
+    (Todd Lipcon via ddas)
+    
+    HDFS-3522. If a namenode is in safemode, it should throw SafeModeException
+    when getBlockLocations has zero locations.  (Brandon Li via szetszwo)
 
-    HDFS-3163. TestHDFSCLI.testAll fails if user name is not all lowercase.
-    (Brandon Li via suresh)
+    HDFS-3551. WebHDFS CREATE should use client location for HTTP redirection.
+    (szetszwo)
+
+    HADOOP-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
+    subsequent tests to fail.  (Ivan Mitic via szetszwo)
+
+    HADOOP-8417. HADOOP-6963 didn't update hadoop-core-pom-template.xml
+    (Zhihong Ted Yu via cos)
+
+    HADOOP-8399. Remove JDK5 dependency from Hadoop 1.0+ line 
+    (Konstantin Boudnik via mattf)
+
+    HADOOP-8445. Token should not print the password in toString
+    (Ravi Prakash via tgraves)
+
+    MAPREDUCE-2903. Map Tasks graph is throwing XML Parse error when Job is 
+    executed with 0 maps. (Devaraj K via mattf)
+
+    MAPREDUCE-2129. Job may hang if 
+    mapreduce.job.committer.setup.cleanup.needed=false and
+    mapreduce.map/reduce.failures.maxpercent>0 (Subroto Sanyal via tgraves)
+
+    HDFS-3466. Get HTTP kerberos principal from the web authentication keytab.
+    (omalley)
+
+    HDFS-3966. TestFileCreation should use JUnit4 to make assumeTrue work.
+    (Jing Zhao via suresh)
+
+    MAPREDUCE-4673. Fix TestRawHistoryFile and TestJobHistoryServer to not write
+    to /tmp. (Arpit Gupta via vinodkv)
+
+    MAPREDUCE-4675. Fixed a race condition caused in TestKillSubProcesses caused
+    due to a recent commit. (Bikas Saha via vinodkv)
+
+    HDFS-3701. HDFS may miss the final block when reading a file opened for writing
+    if one of the datanode is dead. (umamahesh and nkeywal via umamahesh)
+
+    MAPREDUCE-3837. Job tracker is not able to recover job in case of crash
+    and after that no user can submit job. (Mayank Bansal via tomwhite)
+
+    MAPREDUCE-4558. Disable TestJobTrackerSafeMode (sseth)
+
+    HDFS-3461. Make HFTP and HSFTP use http and https respectively for 
+    getting, renewing, and cancelling the underlying token. Systems with
+    weak crypto (kssl) configured will continue to use https. (omalley)
+
+    MAPREDUCE-4698. Fix failing unit test - TestJobHistoryConfig. Optionally
+    initialize the jobtracker on a JobTracker.startTracker. (Gopal V via sseth)
+
+Release 1.0.4 - 2012.10.02
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-7154. Should set MALLOC_ARENA_MAX in hadoop-env.sh
+    (todd via mattf)
+
+    MAPREDUCE-4399. Change the Jetty response buffer size to improve 
+    shuffle performance. (Luke Lu via suresh)
+
+  BUG FIXES
+
+    HDFS-3652. FSEditLog failure removes the wrong edit stream when storage
+    dirs have same name. (todd)
 
 Release 1.0.3 - 2012.05.07
 
@@ -251,7 +1362,7 @@ Release 1.0.3 - 2012.05.07
     MAPREDUCE-4003. log.index (No such file or directory) AND Task process 
     exit with nonzero status of 126. (Koji Noguchi via tgraves)
 
-    MAPREDUCE-4012. Hadoop Job setup error leaves no useful info to users
+    MAPREDUCE-4012. Hadoop Job setup error leaves no useful info to users 
     (when LinuxTaskController is used) (tgraves)
 
     HADOOP-8027. Visiting /jmx on the daemon web interfaces may print unnecessary
@@ -334,10 +1445,13 @@ Release 1.0.1 - 2012.02.14
     HADOOP-7988. Upper case in hostname part of the principals doesn't
     work with kerberos. (jitendra)
 
-    HADOOP-7470. Move up to Jackson 1.8.8.  (Enis Soztutar via szetszwo)
-
     HDFS-2814. NamenodeMXBean does not account for svn revision in the version 
     information. (Hitesh Shah via jitendra)
+
+    HADOOP-7470. Move up to Jackson 1.8.8.  (Enis Soztutar via szetszwo)
+
+    HDFS-2379. Allow block reports to proceed without holding FSDataset lock.
+    (todd via suresh)
 
     HADOOP-8009. Create hadoop-client and hadoop-minicluster artifacts for
     downstream projects. (Alejandro Abdelnur via mattf)
@@ -731,12 +1845,6 @@ Release 0.20.205.0 - 2011.10.06
     HDFS-2328. HFTP throws NPE if security is enabled locally, but not
     remotely. (omalley)
 
-    HDFS-2331. Fix WebHdfsFileSystem compilation problems for a bug in JDK
-    version < 1.6.0_26.  (Abhijit Suresh Shingate via szetszwo)
-
-    HDFS-2333. Change DFSOutputStream back to package private, otherwise,
-    there are two SC_START_IN_CTOR findbugs warnings.  (szetszwo)
-
     HADOOP-7602. wordcount, sort etc on har files fails with NPE.
     (John George via jitendra)
 
@@ -767,25 +1875,33 @@ Release 0.20.205.0 - 2011.10.06
     HADOOP-7649. TestMapredGroupMappingServiceRefresh and
     TestRefreshUserMappings fail after HADOOP-7625. (jitendra)
 
+    HADOOP-7658. Fix hadoop config template for secured and unsecured
+    installation (Eric Yang via gkesavan)
+
     MAPREDUCE-3076. Annotate o.a.h.mapreduce.TestSleepJob with @Ignore since it
     is not a junit test.  (acmurthy via szetszwo)
 
-    HADOOP-7658. Fix hadoop config template for secured and unsecured
-    installation (Eric Yang via gkesavan)
+    HDFS-2331. Fix WebHdfsFileSystem compilation problems for a bug in JDK
+    version < 1.6.0_26.  (Abhijit Suresh Shingate via szetszwo)
 
     HADOOP-7645. HTTP auth tests requiring Kerberos infrastructure are not
     disabled on branch-0.20-security. (jitendra)
 
     HADOOP-7674. TestKerberosName fails in 20 branch. (jitendra)
 
+    HDFS-2333. Change DFSOutputStream back to package private, otherwise,
+    there are two SC_START_IN_CTOR findbugs warnings.  (szetszwo)
+
+    HADOOP-7676. Enable hbase to run as hdfs user (gkesavan)
+
     HDFS-2359. Fix NullPointerException in DataBlockScanner.
     (Jonthan Eagles via suresh)
 
-    HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
-    (szetszwo)
-
     MAPREDUCE-3081. Fix for vaidya.sh to work with the new layout
     (Suhas via gkesavan)
+
+    HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
+    (szetszwo)
 
     HDFS-2361. hftp is broken. Fixed username checks in JspHelper. (jitendra)
 
@@ -817,8 +1933,6 @@ Release 0.20.205.0 - 2011.10.06
 
     HDFS-2411. With WebHDFS enabled in secure mode the auth to local mappings
     are not being respected. (jitendra)
-
-    HADOOP-7676. Enable hbase to run as hdfs user (gkesavan)
 
   IMPROVEMENTS
 

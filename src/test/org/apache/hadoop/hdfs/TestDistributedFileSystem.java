@@ -46,6 +46,10 @@ import org.junit.Test;
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
 
+  {
+    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+  }
+
   private boolean dualPortTesting = false;
   
   private Configuration getTestConfiguration() {
@@ -102,40 +106,108 @@ public class TestDistributedFileSystem {
   @Test
   public void testDFSClient() throws Exception {
     Configuration conf = getTestConfiguration();
+    final long grace = 1000L;
     MiniDFSCluster cluster = null;
 
     try {
       cluster = new MiniDFSCluster(conf, 2, true, null);
-      final Path filepath = new Path("/test/LeaseChecker/foo");
+      final String filepathstring = "/test/LeaseChecker/foo";
+      final Path[] filepaths = new Path[4];
+      for(int i = 0; i < filepaths.length; i++) {
+        filepaths[i] = new Path(filepathstring + i);
+      }
       final long millis = System.currentTimeMillis();
 
       {
         DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
-        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        dfs.dfs.getLeaseRenewer().setGraceSleepPeriod(grace);
+        assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
   
-        //create a file
-        FSDataOutputStream out = dfs.create(filepath);
-        assertTrue(dfs.dfs.isLeaseCheckerStarted());
-  
-        //write something and close
-        out.writeLong(millis);
-        assertTrue(dfs.dfs.isLeaseCheckerStarted());
-        out.close();
-        assertTrue(dfs.dfs.isLeaseCheckerStarted());
+        {
+          //create a file
+          final FSDataOutputStream out = dfs.create(filepaths[0]);
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          //write something
+          out.writeLong(millis);
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          //close
+          out.close();
+          Thread.sleep(grace/4*3);
+          //within grace period
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          for(int i = 0; i < 3; i++) {
+            if (dfs.dfs.getLeaseRenewer().isRunning()) {
+              Thread.sleep(grace/2);
+            }
+          }
+          //passed grace period
+          assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
+        }
+
+        {
+          //create file1
+          final FSDataOutputStream out1 = dfs.create(filepaths[1]);
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          //create file2
+          final FSDataOutputStream out2 = dfs.create(filepaths[2]);
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+
+          //write something to file1
+          out1.writeLong(millis);
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          //close file1
+          out1.close();
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+
+          //write something to file2
+          out2.writeLong(millis);
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          //close file2
+          out2.close();
+          Thread.sleep(grace/4*3);
+          //within grace period
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+        }
+
+        {
+          //create file3
+          final FSDataOutputStream out3 = dfs.create(filepaths[3]);
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          Thread.sleep(grace/4*3);
+          //passed previous grace period, should still running
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          //write something to file3
+          out3.writeLong(millis);
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          //close file3
+          out3.close();
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          Thread.sleep(grace/4*3);
+          //within grace period
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
+          for(int i = 0; i < 3; i++) {
+            if (dfs.dfs.getLeaseRenewer().isRunning()) {
+              Thread.sleep(grace/2);
+            }
+          }
+          //passed grace period
+          assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
+        }
+
         dfs.close();
       }
 
       {
         DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
-        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
 
         //open and check the file
-        FSDataInputStream in = dfs.open(filepath);
-        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        FSDataInputStream in = dfs.open(filepaths[0]);
+        assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
         assertEquals(millis, in.readLong());
-        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
         in.close();
-        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
         dfs.close();
       }
     }
@@ -399,5 +471,27 @@ public class TestDistributedFileSystem {
     testDFSClose();
     testDFSClient();
     testFileChecksum();
+  }
+
+  @Test(timeout=60000)
+  public void testFileCloseStatus() throws IOException {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    try {
+      // create a new file.
+      Path file = new Path("/simpleFlush.dat");
+      FSDataOutputStream output = fs.create(file);
+      // write to file
+      output.writeBytes("Some test data");
+      output.flush();
+      assertFalse("File status should be open", fs.isFileClosed(file));
+      output.close();
+      assertTrue("File status should be closed", fs.isFileClosed(file));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }

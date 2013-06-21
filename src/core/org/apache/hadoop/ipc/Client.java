@@ -18,40 +18,41 @@
 
 package org.apache.hadoop.ipc;
 
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
-import java.net.ConnectException;
-
-import java.io.IOException;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.FilterInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
+import java.net.ConnectException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
-import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.*;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslRpcClient;
@@ -60,8 +61,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
@@ -71,7 +72,9 @@ import org.apache.hadoop.util.ReflectionUtils;
  * @see Server
  */
 public class Client {
-  
+  public static final String IPC_CLIENT_CONNECT_MAX_RETRIES_KEY = "ipc.client.connect.max.retries";
+  public static final int    IPC_CLIENT_CONNECT_MAX_RETRIES_DEFAULT = 10;
+
   public static final Log LOG =
     LogFactory.getLog(Client.class);
   private Hashtable<ConnectionId, Connection> connections =
@@ -108,6 +111,21 @@ public class Client {
    */
   final static int getPingInterval(Configuration conf) {
     return conf.getInt(PING_INTERVAL_NAME, DEFAULT_PING_INTERVAL);
+  }
+  
+  /**
+   * The time after which a RPC will timeout. If ping is not enabled (via
+   * ipc.client.ping), then the timeout value is the same as the pingInterval.
+   * If ping is enabled, then there is no timeout value.
+   * 
+   * @param conf Configuration
+   * @return the timeout period in milliseconds. -1 if no timeout value is set
+   */
+  final public static int getTimeout(Configuration conf) {
+    if (!conf.getBoolean("ipc.client.ping", true)) {
+      return getPingInterval(conf);
+    }
+    return -1;
   }
   
   /**
@@ -197,9 +215,10 @@ public class Client {
     private int rpcTimeout;
     private int maxIdleTime; //connections will be culled if it was idle for
          //maxIdleTime msecs
-    private int maxRetries; //the max. no. of retries for socket connections
+    private final RetryPolicy connectionRetryPolicy;
     private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
     private int pingInterval; // how often sends ping to the server in msecs
+
     
     // currently active calls
     private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
@@ -215,7 +234,7 @@ public class Client {
                                        remoteId.getAddress().getHostName());
       }
       this.maxIdleTime = remoteId.getMaxIdleTime();
-      this.maxRetries = remoteId.getMaxRetries();
+      this.connectionRetryPolicy = remoteId.connectionRetryPolicy;
       this.tcpNoDelay = remoteId.getTcpNoDelay();
       this.pingInterval = remoteId.getPingInterval();
       if (LOG.isDebugEnabled()) {
@@ -453,7 +472,7 @@ public class Client {
           if (updateAddress()) {
             timeoutFailures = ioFailures = 0;
           }
-          handleConnectionFailure(ioFailures++, maxRetries, ie);
+          handleConnectionFailure(ioFailures++, ie);
         }
       }
     }
@@ -663,8 +682,26 @@ public class Client {
         Thread.sleep(1000);
       } catch (InterruptedException ignored) {}
       
-      LOG.info("Retrying connect to server: " + server + 
-          ". Already tried " + curRetries + " time(s).");
+      LOG.info("Retrying connect to server: " + server + ". Already tried "
+          + curRetries + " time(s); maxRetries=" + maxRetries);
+    }
+
+    private void handleConnectionFailure(int curRetries, IOException ioe
+        ) throws IOException {
+      closeConnection();
+
+      final boolean retry;
+      try {
+        retry = connectionRetryPolicy.shouldRetry(ioe, curRetries);
+      } catch(Exception e) {
+        throw e instanceof IOException? (IOException)e: new IOException(e);
+      }
+      if (!retry) {
+        throw ioe;
+      }
+
+      LOG.info("Retrying connect to server: " + server + ". Already tried "
+          + curRetries + " time(s); retry policy is " + connectionRetryPolicy);
     }
 
     /* Write the RPC header */
@@ -1220,14 +1257,15 @@ public class Client {
      private String serverPrincipal;
      private int maxIdleTime; //connections will be culled if it was idle for 
      //maxIdleTime msecs
-     private int maxRetries; //the max. no. of retries for socket connections
+     private final RetryPolicy connectionRetryPolicy;
      private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
      private int pingInterval; // how often sends ping to the server in msecs
+
      
      ConnectionId(InetSocketAddress address, Class<?> protocol, 
                   UserGroupInformation ticket, int rpcTimeout,
                   String serverPrincipal, int maxIdleTime, 
-                  int maxRetries, boolean tcpNoDelay,
+                  RetryPolicy connectionRetryPolicy, boolean tcpNoDelay,
                   int pingInterval) {
        this.protocol = protocol;
        this.address = address;
@@ -1235,7 +1273,7 @@ public class Client {
        this.rpcTimeout = rpcTimeout;
        this.serverPrincipal = serverPrincipal;
        this.maxIdleTime = maxIdleTime;
-       this.maxRetries = maxRetries;
+       this.connectionRetryPolicy = connectionRetryPolicy;
        this.tcpNoDelay = tcpNoDelay;
        this.pingInterval = pingInterval;
      }
@@ -1264,10 +1302,6 @@ public class Client {
        return maxIdleTime;
      }
      
-     int getMaxRetries() {
-       return maxRetries;
-     }
-     
      boolean getTcpNoDelay() {
        return tcpNoDelay;
      }
@@ -1285,11 +1319,26 @@ public class Client {
      static ConnectionId getConnectionId(InetSocketAddress addr,
          Class<?> protocol, UserGroupInformation ticket, int rpcTimeout,
          Configuration conf) throws IOException {
+       return getConnectionId(addr, protocol, ticket, rpcTimeout, null, conf);
+     }
+
+     static ConnectionId getConnectionId(InetSocketAddress addr,
+         Class<?> protocol, UserGroupInformation ticket, int rpcTimeout,
+         RetryPolicy connectionRetryPolicy, Configuration conf) throws IOException {
+
+       if (connectionRetryPolicy == null) {
+         final int max = conf.getInt(
+             IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
+             IPC_CLIENT_CONNECT_MAX_RETRIES_DEFAULT);
+         connectionRetryPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
+             max, 1, TimeUnit.SECONDS);
+       }
+
        String remotePrincipal = getRemotePrincipal(conf, addr, protocol);
        return new ConnectionId(addr, protocol, ticket,
            rpcTimeout, remotePrincipal,
            conf.getInt("ipc.client.connection.maxidletime", 10000), // 10s
-           conf.getInt("ipc.client.connect.max.retries", 10),
+           connectionRetryPolicy,
            conf.getBoolean("ipc.client.tcpnodelay", false),
            Client.getPingInterval(conf));
      }
@@ -1326,7 +1375,7 @@ public class Client {
          ConnectionId that = (ConnectionId) obj;
          return isEqual(this.address, that.address)
              && this.maxIdleTime == that.maxIdleTime
-             && this.maxRetries == that.maxRetries
+             && isEqual(this.connectionRetryPolicy, that.connectionRetryPolicy)
              && this.pingInterval == that.pingInterval
              && isEqual(this.protocol, that.protocol)
              && this.rpcTimeout == that.rpcTimeout
@@ -1339,10 +1388,9 @@ public class Client {
      
      @Override
      public int hashCode() {
-       int result = 1;
+       int result = connectionRetryPolicy.hashCode();
        result = PRIME * result + ((address == null) ? 0 : address.hashCode());
        result = PRIME * result + maxIdleTime;
-       result = PRIME * result + maxRetries;
        result = PRIME * result + pingInterval;
        result = PRIME * result + ((protocol == null) ? 0 : protocol.hashCode());
        result = PRIME * rpcTimeout;

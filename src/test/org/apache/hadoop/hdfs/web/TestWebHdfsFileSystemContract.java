@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
+import java.util.Random;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
@@ -212,15 +213,20 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       assertEquals(0, count);
     }
 
+    final byte[] mydata = new byte[1 << 20];
+    new Random().nextBytes(mydata);
+    
     final Path p = new Path(dir, "file");
-    createFile(p);
+    FSDataOutputStream out = fs.create(p, false, 4096, (short)3, 1L << 17);
+    out.write(mydata);
+    out.close();
 
-    final int one_third = data.length/3;
+    final int one_third = mydata.length/3;
     final int two_third = one_third*2;
 
     { //test seek
       final int offset = one_third; 
-      final int len = data.length - offset;
+      final int len = mydata.length - offset;
       final byte[] buf = new byte[len];
 
       final FSDataInputStream in = fs.open(p);
@@ -232,13 +238,13 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   
       for (int i = 0; i < buf.length; i++) {
         assertEquals("Position " + i + ", offset=" + offset + ", length=" + len,
-            data[i + offset], buf[i]);
+            mydata[i + offset], buf[i]);
       }
     }
 
     { //test position read (read the data after the two_third location)
       final int offset = two_third; 
-      final int len = data.length - offset;
+      final int len = mydata.length - offset;
       final byte[] buf = new byte[len];
 
       final FSDataInputStream in = fs.open(p);
@@ -247,7 +253,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   
       for (int i = 0; i < buf.length; i++) {
         assertEquals("Position " + i + ", offset=" + offset + ", length=" + len,
-            data[i + offset], buf[i]);
+            mydata[i + offset], buf[i]);
       }
     }
   }
@@ -293,6 +299,10 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     final Path root = new Path("/");
     final Path dir = new Path("/test/testUrl");
     assertTrue(webhdfs.mkdirs(dir));
+    final Path file = new Path("/test/file");
+    final FSDataOutputStream out = webhdfs.create(file);
+    out.write(1);
+    out.close();
 
     {//test GETHOMEDIRECTORY
       final URL url = webhdfs.toUrl(GetOpParam.Op.GETHOMEDIRECTORY, root);
@@ -352,6 +362,22 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       assertEquals(0, conn.getContentLength());
       assertEquals(MediaType.APPLICATION_OCTET_STREAM, conn.getContentType());
       assertEquals((short)0755, webhdfs.getFileStatus(dir).getPermission().toShort());
+      conn.disconnect();
+    }
+
+    {//test jsonParse with non-json type.
+      final HttpOpParam.Op op = GetOpParam.Op.OPEN;
+      final URL url = webhdfs.toUrl(op, file);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.connect();
+
+      try {
+        WebHdfsFileSystem.jsonParse(conn, false);
+        fail();
+      } catch(IOException ioe) {
+        WebHdfsFileSystem.LOG.info("GOOD", ioe);
+      }
       conn.disconnect();
     }
   }

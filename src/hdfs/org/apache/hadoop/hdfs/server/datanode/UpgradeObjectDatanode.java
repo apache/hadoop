@@ -109,7 +109,7 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
     if(getUpgradeStatus() < 100) {
       DataNode.LOG.info("\n   Distributed upgrade for DataNode version " 
           + getVersion() + " to current LV " 
-          + FSConstants.LAYOUT_VERSION + " cannot be completed.");
+          + FSConstants.LAYOUT_VERSION + " cannot be completed");
     }
 
     // Complete the upgrade by calling the manager method

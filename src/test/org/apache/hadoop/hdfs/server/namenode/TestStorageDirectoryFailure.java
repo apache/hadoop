@@ -143,7 +143,6 @@ public class TestStorageDirectoryFailure {
   /** Remove storage dirs and checkpoint to trigger detection */
   public void testCheckpointAfterFailingFirstNamedir() throws IOException {
     assertEquals(0, numRemovedDirs());
-
     checkFileCreation("file0");
 
     // Remove the 1st storage dir

@@ -46,6 +46,13 @@ public class NetworkTopology {
   public static final Log LOG = 
     LogFactory.getLog(NetworkTopology.class);
     
+  public static class InvalidTopologyException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+    public InvalidTopologyException(String msg) {
+      super(msg);
+    }
+  }
+
   /* Inner Node represent a switch/router of a data center or rack.
    * Different from a leave node, it has non-null children.
    */
@@ -330,6 +337,8 @@ public class NetworkTopology {
   } // end of InnerNode
     
   InnerNode clusterMap;
+  /** Depth of all leaf nodes */
+  private int depthOfAllLeaves = -1;
   protected int numOfRacks = 0;  // rack counter
   protected ReadWriteLock netlock = new ReentrantReadWriteLock();
     
@@ -359,6 +368,7 @@ public class NetworkTopology {
    */
   public void add(Node node) {
     if (node==null) return;
+    String oldTopoStr = this.toString();
     if( node instanceof InnerNode ) {
       throw new IllegalArgumentException(
         "Not allow to add an inner node: "+NodeBase.getPath(node));
@@ -375,6 +385,19 @@ public class NetworkTopology {
         LOG.info("Adding a new node: "+NodeBase.getPath(node));
         if (rack == null) {
           numOfRacks++;
+        }
+        if (!(node instanceof InnerNode)) {
+          if (depthOfAllLeaves == -1) {
+            depthOfAllLeaves = node.getLevel();
+          } else {
+            if (depthOfAllLeaves != node.getLevel()) {
+              LOG.error("Error: can't add leaf node at depth " +
+                  node.getLevel() + " to topology:\n" + oldTopoStr);
+              throw new InvalidTopologyException("Invalid network topology. " +
+                  "You cannot have a rack and a non-rack node at the same " +
+                  "level of the network topology.");
+            }
+          }
         }
       }
       LOG.debug("NetworkTopology became:\n" + this.toString());

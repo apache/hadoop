@@ -119,8 +119,6 @@ public class JobHistory {
   
   public static final int JOB_NAME_TRIM_LENGTH = 50;
   private static String JOBTRACKER_UNIQUE_STRING = null;
-  private static final String JOBHISTORY_DEBUG_MODE =
-    "mapreduce.jobhistory.debug.mode";
   private static String LOG_DIR = null;
   private static final String SECONDARY_FILE_SUFFIX = ".recover";
   private static long jobHistoryBlockSize = 0;
@@ -131,17 +129,15 @@ public class JobHistory {
   final static FsPermission HISTORY_FILE_PERMISSION =
     FsPermission.createImmutable((short) 0744); // rwxr--r--
   private static FileSystem LOGDIR_FS; // log dir filesystem
-  private static FileSystem DONEDIR_FS; // Done dir filesystem
+  protected static FileSystem DONEDIR_FS; // Done dir filesystem
   private static JobConf jtConf;
-  private static Path DONE = null; // folder for completed jobs
+  protected static Path DONE = null; // folder for completed jobs
   private static String DONE_BEFORE_SERIAL_TAIL = doneSubdirsBeforeSerialTail();
   private static String DONE_LEAF_FILES = DONE_BEFORE_SERIAL_TAIL + "/*";
   private static boolean aclsEnabled = false;
 
   static final String CONF_FILE_NAME_SUFFIX = "_conf.xml";
 
-  // XXXXX debug mode -- set this to false for production
-  private static boolean DEBUG_MODE;
   private static final int SERIAL_NUMBER_DIRECTORY_DIGITS = 6;
   private static int SERIAL_NUMBER_LOW_DIGITS;
 
@@ -225,8 +221,11 @@ public class JobHistory {
 
 
     void start() {
-      executor = new ThreadPoolExecutor(1, 3, 1, 
+      executor = new ThreadPoolExecutor(5, 5, 1, 
           TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>());
+      // make core threads to terminate if there has been no work
+      // for the keppalive period.
+      executor.allowCoreThreadTimeOut(true);
     }
 
     private FilesHolder getFileHolder(JobID id) {
@@ -368,8 +367,8 @@ public class JobHistory {
            timestamp.get(Calendar.YEAR),
            // months are 0-based in Calendar, but people will expect January
            // to be month #1.
-           timestamp.get(DEBUG_MODE ? Calendar.HOUR : Calendar.MONTH) + 1,
-           timestamp.get(DEBUG_MODE ? Calendar.MINUTE : Calendar.DAY_OF_MONTH));
+            timestamp.get(Calendar.MONTH) + 1,
+            timestamp.get(Calendar.DAY_OF_MONTH));
 
         dateString = dateString.intern();
 
@@ -391,9 +390,9 @@ public class JobHistory {
 
     synchronized (existingDoneSubdirs) {
       if (existingDoneSubdirs.contains(dir)) {
-        if (DEBUG_MODE && !DONEDIR_FS.exists(dir)) {
-          System.err.println("JobHistory.maybeMakeSubdirectory -- We believed "
-                             + dir + " already existed, but it didn't.");
+        if (LOG.isDebugEnabled() && !DONEDIR_FS.exists(dir)) {
+          LOG.error("JobHistory.maybeMakeSubdirectory -- We believed " + dir
+              + " already existed, but it didn't.");
         }
           
         return true;
@@ -411,9 +410,9 @@ public class JobHistory {
 
         return false;
       } else {
-        if (DEBUG_MODE) {
-          System.err.println("JobHistory.maybeMakeSubdirectory -- We believed "
-                             + dir + " didn't already exist, but it did.");
+        if (LOG.isDebugEnabled()) {
+          LOG.error("JobHistory.maybeMakeSubdirectory -- We believed " + dir
+              + " didn't already exist, but it did.");
         }
 
         return false;
@@ -476,7 +475,9 @@ public class JobHistory {
     ERROR, TASK_ATTEMPT_ID, TASK_STATUS, COPY_PHASE, SORT_PHASE, REDUCE_PHASE, 
     SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS, SPLITS, JOB_PRIORITY, HTTP_PORT, 
     TRACKER_NAME, STATE_STRING, VERSION, MAP_COUNTERS, REDUCE_COUNTERS,
-    VIEW_JOB, MODIFY_JOB, JOB_QUEUE, FAIL_REASON
+    VIEW_JOB, MODIFY_JOB, JOB_QUEUE, FAIL_REASON, LOCALITY, AVATAAR,
+    WORKFLOW_ID, WORKFLOW_NAME, WORKFLOW_NODE_NAME, WORKFLOW_ADJACENCIES,
+    WORKFLOW_TAGS
   }
 
   /**
@@ -497,8 +498,7 @@ public class JobHistory {
   public static void init(JobTracker jobTracker, JobConf conf,
              String hostname, long jobTrackerStartTime) throws IOException {
     initLogDir(conf);
-    DEBUG_MODE = conf.getBoolean(JOBHISTORY_DEBUG_MODE, false);
-    SERIAL_NUMBER_LOW_DIGITS = DEBUG_MODE ? 1 : 3;
+    SERIAL_NUMBER_LOW_DIGITS = 3;
     SERIAL_NUMBER_FORMAT = ("%0"
        + (SERIAL_NUMBER_DIRECTORY_DIGITS + SERIAL_NUMBER_LOW_DIGITS)
        + "d");
@@ -547,8 +547,9 @@ public class JobHistory {
     String doneLocation = conf.
                      get("mapred.job.tracker.history.completed.location");
     if (doneLocation != null) {
-      DONE = fs.makeQualified(new Path(doneLocation));
-      DONEDIR_FS = fs;
+      Path donePath = new Path(doneLocation);
+      DONEDIR_FS = donePath.getFileSystem(conf);
+      DONE = DONEDIR_FS.makeQualified(donePath);
     } else {
       if (!setup) {
         initLogDir(conf);
@@ -586,6 +587,19 @@ public class JobHistory {
     }
 
     fileManager.start();
+    
+    HistoryCleaner.cleanupFrequency =
+    	      conf.getLong("mapreduce.jobhistory.cleaner.interval-ms",
+    	      HistoryCleaner.DEFAULT_CLEANUP_FREQUENCY);
+    HistoryCleaner.maxAgeOfHistoryFiles =
+    	      conf.getLong("mapreduce.jobhistory.max-age-ms",
+    	      HistoryCleaner.DEFAULT_HISTORY_MAX_AGE);
+    LOG.info(String.format("Job History MaxAge is %d ms (%.2f days), " +
+    	      "Cleanup Frequency is %d ms (%.2f days)",
+    	      HistoryCleaner.maxAgeOfHistoryFiles,
+    	      ((float) HistoryCleaner.maxAgeOfHistoryFiles)/HistoryCleaner.ONE_DAY_IN_MS,
+    	      HistoryCleaner.cleanupFrequency,
+    	      ((float) HistoryCleaner.cleanupFrequency)/HistoryCleaner.ONE_DAY_IN_MS));
   }
 
   /**
@@ -789,6 +803,10 @@ public class JobHistory {
                   Keys[] keys, String[] values) {
     log(writers, recordType, keys, values, null);
   }
+
+  static class JobHistoryLogger {
+    static final Log LOG = LogFactory.getLog(JobHistoryLogger.class);
+  }
   
   /**
    * Log a number of keys and values with record. the array length of keys and values
@@ -822,14 +840,18 @@ public class JobHistory {
       builder.append(DELIMITER); 
     }
     builder.append(LINE_DELIMITER_CHAR);
-    
+
+    String logLine = builder.toString();
     for (Iterator<PrintWriter> iter = writers.iterator(); iter.hasNext();) {
       PrintWriter out = iter.next();
-      out.println(builder.toString());
+      out.println(logLine);
       if (out.checkError() && id != null) {
         LOG.info("Logging failed for job " + id + "removing PrintWriter from FileManager");
         iter.remove();
       }
+    }
+    if (recordType != RecordTypes.Meta) {
+      JobHistoryLogger.LOG.debug(logLine);
     }
   }
   
@@ -1269,6 +1291,34 @@ public class JobHistory {
     }
     
     /**
+     * Get the workflow adjacencies from the job conf
+     * The string returned is of the form "key"="value" "key"="value" ...
+     */
+    public static String getWorkflowAdjacencies(Configuration conf) {
+      int prefixLen = JobConf.WORKFLOW_ADJACENCY_PREFIX_STRING.length();
+      Map<String,String> adjacencies = 
+          conf.getValByRegex(JobConf.WORKFLOW_ADJACENCY_PREFIX_PATTERN);
+      if (adjacencies.isEmpty())
+        return "";
+      int size = 0;
+      for (Entry<String,String> entry : adjacencies.entrySet()) {
+        int keyLen = entry.getKey().length();
+        size += keyLen - prefixLen;
+        size += entry.getValue().length() + 6;
+      }
+      StringBuilder sb = new StringBuilder(size);
+      for (Entry<String,String> entry : adjacencies.entrySet()) {
+        int keyLen = entry.getKey().length();
+        sb.append("\"");
+        sb.append(escapeString(entry.getKey().substring(prefixLen, keyLen)));
+        sb.append("\"=\"");
+        sb.append(escapeString(entry.getValue()));
+        sb.append("\" ");
+      }
+      return sb.toString();
+    }
+    
+    /**
      * Get the job history file path given the history filename
      */
     public static Path getJobHistoryLogLocation(String logFileName)
@@ -1390,17 +1440,16 @@ public class JobHistory {
       FileStatus[] statuses = null;
 
       if (dir == DONE) {
-        final String snDirectoryComponent
-          = serialNumberDirectoryComponent(id);
-
         final String scanTail
           = (DONE_BEFORE_SERIAL_TAIL
              + "/" + serialNumberDirectoryComponent(id));
 
-        if (DEBUG_MODE) {
-          System.err.println("JobHistory.getJobHistoryFileName DONE dir: scanning " + scanTail);
-
-          (new IOException("debug exception")).printStackTrace(System.err);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("JobHistory.getJobHistoryFileName DONE dir: scanning "
+              + scanTail);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(Thread.currentThread().getStackTrace());
+          }
         }
 
         statuses = localGlobber(fs, DONE, scanTail, filter);
@@ -1410,9 +1459,6 @@ public class JobHistory {
       
       String filename = null;
       if (statuses == null || statuses.length == 0) {
-        if (DEBUG_MODE) {
-          System.err.println("Nothing to recover for job " + id);
-        }
         LOG.info("Nothing to recover for job " + id);
       } else {
         // return filename considering that fact the name can be a 
@@ -1735,11 +1781,21 @@ public class JobHistory {
                        new Keys[]{Keys.JOBID, Keys.JOBNAME, Keys.USER,
                                   Keys.SUBMIT_TIME, Keys.JOBCONF,
                                   Keys.VIEW_JOB, Keys.MODIFY_JOB,
-                                  Keys.JOB_QUEUE}, 
+                                  Keys.JOB_QUEUE, Keys.WORKFLOW_ID,
+                                  Keys.WORKFLOW_NAME, Keys.WORKFLOW_NODE_NAME,
+                                  Keys.WORKFLOW_ADJACENCIES,
+                                  Keys.WORKFLOW_TAGS}, 
                        new String[]{jobId.toString(), jobName, user, 
                                     String.valueOf(submitTime) , jobConfPath,
                                     viewJobACL, modifyJobACL,
-                                    jobConf.getQueueName()}, jobId
+                                    jobConf.getQueueName(),
+                                    jobConf.get(JobConf.WORKFLOW_ID, ""),
+                                    jobConf.get(JobConf.WORKFLOW_NAME, ""),
+                                    jobConf.get(JobConf.WORKFLOW_NODE_NAME, ""),
+                                    getWorkflowAdjacencies(jobConf),
+                                    jobConf.get(JobConf.WORKFLOW_TAGS, ""),
+                                    }, 
+                                    jobId
                       ); 
            
       }catch(IOException e){
@@ -2140,7 +2196,14 @@ public class JobHistory {
     public static void logStarted(TaskAttemptID taskAttemptId, long startTime, String hostName){
       logStarted(taskAttemptId, startTime, hostName, -1, Values.MAP.name());
     }
-    
+
+    @Deprecated
+    public static void logStarted(TaskAttemptID taskAttemptId, long startTime,
+        String trackerName, int httpPort, String taskType) {
+      logStarted(taskAttemptId, startTime, trackerName, httpPort, taskType, 
+          Locality.OFF_SWITCH, Avataar.VIRGIN);
+    }
+
     /**
      * Log start time of this map task attempt.
      *  
@@ -2148,25 +2211,31 @@ public class JobHistory {
      * @param startTime start time of task attempt as reported by task tracker. 
      * @param trackerName name of the tracker executing the task attempt.
      * @param httpPort http port of the task tracker executing the task attempt
-     * @param taskType Whether the attempt is cleanup or setup or map 
+     * @param taskType Whether the attempt is cleanup or setup or map
+     * @param locality the data locality of the task attempt
+     * @param Avataar the avataar of the task attempt
      */
     public static void logStarted(TaskAttemptID taskAttemptId, long startTime,
                                   String trackerName, int httpPort, 
-                                  String taskType) {
+                                  String taskType,
+                                  Locality locality, Avataar avataar) {
       JobID id = taskAttemptId.getJobID();
       ArrayList<PrintWriter> writer = fileManager.getWriters(id); 
 
       if (null != writer){
         JobHistory.log(writer, RecordTypes.MapAttempt, 
                        new Keys[]{ Keys.TASK_TYPE, Keys.TASKID, 
-                                   Keys.TASK_ATTEMPT_ID, Keys.START_TIME, 
-                                   Keys.TRACKER_NAME, Keys.HTTP_PORT},
+                                   Keys.TASK_ATTEMPT_ID, Keys.START_TIME,
+                                   Keys.TRACKER_NAME, Keys.HTTP_PORT,
+                                   Keys.LOCALITY, Keys.AVATAAR},
                        new String[]{taskType,
                                     taskAttemptId.getTaskID().toString(), 
                                     taskAttemptId.toString(), 
                                     String.valueOf(startTime), trackerName,
-                                    httpPort == -1 ? "" : 
-                                      String.valueOf(httpPort)}, id); 
+                                    httpPort == -1 ? "" : String.valueOf(httpPort),
+                                    locality.toString(), avataar.toString()},
+                       id
+                       ); 
       }
     }
     
@@ -2328,7 +2397,15 @@ public class JobHistory {
                                   long startTime, String hostName){
       logStarted(taskAttemptId, startTime, hostName, -1, Values.REDUCE.name());
     }
-    
+
+    @Deprecated
+    public static void logStarted(TaskAttemptID taskAttemptId, 
+        long startTime, String trackerName, 
+        int httpPort, 
+        String taskType) {
+      logStarted(taskAttemptId, startTime, trackerName, httpPort, taskType, 
+          Locality.OFF_SWITCH, Avataar.VIRGIN);
+    }
     /**
      * Log start time of  Reduce task attempt. 
      * 
@@ -2336,27 +2413,33 @@ public class JobHistory {
      * @param startTime start time
      * @param trackerName tracker name 
      * @param httpPort the http port of the tracker executing the task attempt
-     * @param taskType Whether the attempt is cleanup or setup or reduce 
+     * @param taskType Whether the attempt is cleanup or setup or reduce
+     * @param locality the data locality of the task attempt
+     * @param Avataar the avataar of the task attempt
      */
     public static void logStarted(TaskAttemptID taskAttemptId, 
                                   long startTime, String trackerName, 
                                   int httpPort, 
-                                  String taskType) {
-              JobID id = taskAttemptId.getJobID();
-	      ArrayList<PrintWriter> writer = fileManager.getWriters(id); 
+                                  String taskType,
+                                  Locality locality, Avataar avataar) {
+      JobID id = taskAttemptId.getJobID();
+	    ArrayList<PrintWriter> writer = fileManager.getWriters(id); 
 
-              if (null != writer){
-		  JobHistory.log(writer, RecordTypes.ReduceAttempt, 
-				 new Keys[]{  Keys.TASK_TYPE, Keys.TASKID, 
-					      Keys.TASK_ATTEMPT_ID, Keys.START_TIME,
-					      Keys.TRACKER_NAME, Keys.HTTP_PORT},
-				 new String[]{taskType,
-					      taskAttemptId.getTaskID().toString(), 
-					      taskAttemptId.toString(), 
-					      String.valueOf(startTime), trackerName,
-					      httpPort == -1 ? "" : 
-						String.valueOf(httpPort)}, id); 
-              }
+      if (null != writer){
+        JobHistory.log(writer, RecordTypes.ReduceAttempt,
+            new Keys[] {Keys.TASK_TYPE, Keys.TASKID,
+                Keys.TASK_ATTEMPT_ID, Keys.START_TIME,
+                Keys.TRACKER_NAME, Keys.HTTP_PORT,
+                Keys.LOCALITY, Keys.AVATAAR},
+            new String[]{taskType,
+                taskAttemptId.getTaskID().toString(), 
+                taskAttemptId.toString(), 
+                String.valueOf(startTime), trackerName,
+                httpPort == -1 ? "" : 
+                String.valueOf(httpPort),
+                locality.toString(), avataar.toString()}, 
+            id); 
+        }
 	    }
 	    
 	    /**
@@ -2521,26 +2604,26 @@ public class JobHistory {
      */
     public void handle(RecordTypes recType, Map<Keys, String> values) throws IOException; 
   }
-
-  static long directoryTime(String year, String seg2, String seg3) {
-    // set to current time.  In debug mode, this is where the month
-    // and day get set.
+  
+  /**
+   * Returns the time in milliseconds, truncated to the day.
+   */
+  static long directoryTime(String year, String month, String day) {
     Calendar result = Calendar.getInstance();
-    // canonicalize by filling in unset fields
-    result.setTimeInMillis(System.currentTimeMillis());
+    result.clear();
 
     result.set(Calendar.YEAR, Integer.parseInt(year));
 
     // months are 0-based in Calendar, but people will expect January
     // to be month #1 .  Therefore the number is bumped before we make the 
     // directory name and must be debumped to seek the time.
-    result.set(DEBUG_MODE ? Calendar.HOUR : Calendar.MONTH,
-               Integer.parseInt(seg2) - 1);
+    result.set(Calendar.MONTH, Integer.parseInt(month) - 1);
 
-    result.set(DEBUG_MODE ? Calendar.MINUTE : Calendar.DAY_OF_MONTH,
-               Integer.parseInt(seg3));
-
-    return result.getTimeInMillis();
+    result.set(Calendar.DAY_OF_MONTH, Integer.parseInt(day));
+    
+    // truncate to day granularity
+    long timeInMillis = result.getTimeInMillis();
+    return timeInMillis;
   }
   
   /**
@@ -2551,10 +2634,10 @@ public class JobHistory {
    */
   public static class HistoryCleaner implements Runnable {
     static final long ONE_DAY_IN_MS = 24 * 60 * 60 * 1000L;
-    static final long DIRECTORY_LIFE_IN_MS
-      = DEBUG_MODE ? 20 * 60 * 1000L : 30 * ONE_DAY_IN_MS;
-    static final long RUN_INTERVAL
-      = DEBUG_MODE ? 10L * 60L * 1000L : ONE_DAY_IN_MS;
+    static final long DEFAULT_HISTORY_MAX_AGE = 30 * ONE_DAY_IN_MS;
+    static final long DEFAULT_CLEANUP_FREQUENCY = ONE_DAY_IN_MS;
+    static long cleanupFrequency = DEFAULT_CLEANUP_FREQUENCY;
+    static long maxAgeOfHistoryFiles = DEFAULT_HISTORY_MAX_AGE;
     private long now; 
     private static final AtomicBoolean isRunning = new AtomicBoolean(false); 
     private static long lastRan = 0; 
@@ -2571,12 +2654,15 @@ public class JobHistory {
       }
       now = System.currentTimeMillis();
       // clean history only once a day at max
-      if (lastRan != 0 && (now - lastRan) < RUN_INTERVAL) {
+      if (lastRan != 0 && (now - lastRan) < cleanupFrequency) {
         isRunning.set(false);
         return; 
       }
       lastRan = now;
-
+      clean(now);
+    }
+    
+    public void clean(long now) {
       Set<String> deletedPathnames = new HashSet<String>();
 
       // XXXXX debug code
@@ -2587,62 +2673,73 @@ public class JobHistory {
         Path[] datedDirectories
           = FileUtil.stat2Paths(localGlobber(DONEDIR_FS, DONE,
                                              DONE_BEFORE_SERIAL_TAIL, null));
-        // find directories older than 30 days
+
+        // any file with a timestamp earlier than cutoff should be deleted
+        long cutoff = now - maxAgeOfHistoryFiles;
+        Calendar cutoffDay = Calendar.getInstance();
+        cutoffDay.setTimeInMillis(cutoff);
+        cutoffDay.set(Calendar.HOUR_OF_DAY, 0);
+        cutoffDay.set(Calendar.MINUTE, 0);
+        cutoffDay.set(Calendar.SECOND, 0);
+        cutoffDay.set(Calendar.MILLISECOND, 0);
+        
+        // find directories older than the maximum age
         for (int i = 0; i < datedDirectories.length; ++i) {
           String thisDir = datedDirectories[i].toString();
           Matcher pathMatcher = parseDirectory.matcher(thisDir);
 
           if (pathMatcher.matches()) {
-            long dirTime = directoryTime(pathMatcher.group(1),
+            long dirDay = directoryTime(pathMatcher.group(1),
                                          pathMatcher.group(2),
                                          pathMatcher.group(3));
 
-            if (DEBUG_MODE) {
-              System.err.println("HistoryCleaner.run just parsed " + thisDir
-                                 + " as year/month/day = " + pathMatcher.group(1)
-                                 + "/" + pathMatcher.group(2) + "/"
-                                 + pathMatcher.group(3));
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("HistoryCleaner.run just parsed " + thisDir
+                  + " as year/month/day = " + pathMatcher.group(1) + "/"
+                  + pathMatcher.group(2) + "/" + pathMatcher.group(3));
             }
-
-            if (dirTime < now - DIRECTORY_LIFE_IN_MS) {
-
-              if (DEBUG_MODE) {
-                Calendar then = Calendar.getInstance();
-                then.setTimeInMillis(dirTime);
+            
+            if (dirDay <= cutoffDay.getTimeInMillis()) {
+              if (LOG.isDebugEnabled()) {
                 Calendar nnow = Calendar.getInstance();
                 nnow.setTimeInMillis(now);
+                Calendar then = Calendar.getInstance();
+                then.setTimeInMillis(dirDay);
                 
-                System.err.println("HistoryCleaner.run directory: " + thisDir
-                                   + " because its time is " + then
-                                   + " but it's now " + nnow);
-                System.err.println("then = " + dirTime);
-                System.err.println("now  = " + now);
+                LOG.debug("HistoryCleaner.run directory: " + thisDir
+                    + " because its time is " + then + " but it's now " + nnow);
               }
-
-              // remove every file in the directory and save the name
-              // so we can remove it from jobHistoryFileMap
-              Path[] deletees
-                = FileUtil.stat2Paths(localGlobber(DONEDIR_FS,
-                                                   datedDirectories[i],
-                                                   "/*/*", // sn + individual files
-                                                   null));
-
-              for (int j = 0; j < deletees.length; ++j) {
-
-                if (DEBUG_MODE && !printedOneDeletee) {
-                  System.err.println("HistoryCleaner.run deletee: " + deletees[j].toString());
-                  printedOneDeletee = true;
-                }
-
-                DONEDIR_FS.delete(deletees[j]);
-                deletedPathnames.add(deletees[j].toString());
-              }
-              synchronized (existingDoneSubdirs) {
-                if (!existingDoneSubdirs.contains(datedDirectories[i]))
-                  {
-                    LOG.warn("JobHistory: existingDoneSubdirs doesn't contain "
-                             + datedDirectories[i] + ", but should.");
+            }
+            
+            // if dirDay is cutoffDay, some files may be old enough and others not
+            if (dirDay == cutoffDay.getTimeInMillis()) {
+              // remove old enough files in the directory
+              FileStatus[] possibleDeletees = DONEDIR_FS.listStatus(datedDirectories[i]);
+              
+              for (int j = 0; j < possibleDeletees.length; ++j) {
+            	  if (possibleDeletees[j].getModificationTime() < now - 
+            	      maxAgeOfHistoryFiles) {
+            	    Path deletee = possibleDeletees[j].getPath();
+                  if (LOG.isDebugEnabled() && !printedOneDeletee) {
+                    LOG.debug("HistoryCleaner.run deletee: "
+                        + deletee.toString());
+                    printedOneDeletee = true;
                   }
+
+                  DONEDIR_FS.delete(deletee);
+                  deletedPathnames.add(deletee.toString());
+            	  }
+              }
+            }
+
+            // if the directory is older than cutoffDay, we can flat out
+            // delete it because all the files in it are old enough
+            if (dirDay < cutoffDay.getTimeInMillis()) {
+              synchronized (existingDoneSubdirs) {
+                if (!existingDoneSubdirs.contains(datedDirectories[i])) {
+                  LOG.warn("JobHistory: existingDoneSubdirs doesn't contain "
+                      + datedDirectories[i] + ", but should.");
+                }
                 DONEDIR_FS.delete(datedDirectories[i], true);
                 existingDoneSubdirs.remove(datedDirectories[i]);
               }
@@ -2657,8 +2754,8 @@ public class JobHistory {
           while (it.hasNext()) {
             MovedFileInfo info = it.next().getValue();
 
-            if (DEBUG_MODE && !printedOneMovedFile) {
-              System.err.println("HistoryCleaner.run a moved file: " + info.historyFile);
+            if (LOG.isDebugEnabled() && !printedOneMovedFile) {
+              LOG.debug("HistoryCleaner.run a moved file: " + info.historyFile);
               printedOneMovedFile = true;
             }            
 

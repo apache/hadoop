@@ -16,22 +16,18 @@
  */
 package org.apache.hadoop.security;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
+import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
 
 import junit.framework.Assert;
@@ -130,7 +126,7 @@ public class TestUserGroupInformation {
 
     System.out.println(userName + ":" + line);
    
-    List<String> groups = new ArrayList<String> ();
+    Set<String> groups = new LinkedHashSet<String> ();    
     String[] tokens = line.split(Shell.TOKEN_SEPARATOR_REGEX);
     for(String s: tokens) {
       groups.add(s);
@@ -147,7 +143,7 @@ public class TestUserGroupInformation {
     String[] gi = login.getGroupNames();
     assertEquals(groups.size(), gi.length);
     for(int i=0; i < gi.length; i++) {
-    	assertEquals(groups.get(i), gi[i]);
+      assertTrue(groups.contains(gi[i]));
     }
     
     final UserGroupInformation fakeUser = 
@@ -358,5 +354,23 @@ public class TestUserGroupInformation {
       assertEquals("loginFailure_num_ops", failure, rb);
       assertGaugeGt("loginFailure_avg_time", 0, rb);
     }
+  }
+
+  /**
+   * Test for the case that UserGroupInformation.getCurrentUser()
+   * is called when the AccessControlContext has a Subject associated
+   * with it, but that Subject was not created by Hadoop (ie it has no
+   * associated User principal)
+   */
+  @Test
+  public void testUGIUnderNonHadoopContext() throws Exception {
+    Subject nonHadoopSubject = new Subject();
+    Subject.doAs(nonHadoopSubject, new PrivilegedExceptionAction<Void>() {
+        public Void run() throws IOException {
+          UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+          assertNotNull(ugi);
+          return null;
+        }
+      });
   }
 }

@@ -89,7 +89,7 @@ public class DelegationTokenRenewal {
   }
   
   // global single timer (daemon)
-  private static Timer renewalTimer = new Timer(true);
+  private static Timer renewalTimer = null;
   
   //delegation token canceler thread
   private static DelegationTokenCancelThread dtCancelThread =
@@ -200,11 +200,16 @@ public class DelegationTokenRenewal {
    */
   private static class RenewalTimerTask extends TimerTask {
     private DelegationTokenToRenew dttr;
+    private boolean cancelled = false;
     
     RenewalTimerTask(DelegationTokenToRenew t) {  dttr = t;  }
     
     @Override
-    public void run() {
+    public synchronized void run() {
+      if (cancelled) {
+        return;
+      }
+
       Token<?> token = dttr.token;
       try {
         // need to use doAs so that http can find the kerberos tgt
@@ -227,12 +232,18 @@ public class DelegationTokenRenewal {
         removeFailedDelegationToken(dttr);
       }
     }
+
+    @Override
+    public synchronized boolean cancel() {
+      cancelled = true;
+      return super.cancel();
+    }
   }
   
   /**
    * set task to renew the token
    */
-  private static 
+  private static synchronized
   void setTimerForTokenRenewal(DelegationTokenToRenew token, 
                                boolean firstTime) throws IOException {
       
@@ -250,14 +261,20 @@ public class DelegationTokenRenewal {
     TimerTask tTask = new RenewalTimerTask(token);
     token.setTimerTask(tTask); // keep reference to the timer
 
+    if (renewalTimer == null) {
+        renewalTimer = new Timer(true);
+    }
     renewalTimer.schedule(token.timerTask, new Date(renewIn));
   }
 
   /**
    * removing all tokens renewals
    */
-  static public void close() {
-    renewalTimer.cancel();
+  public static synchronized void close() {
+    if (renewalTimer != null) {
+        renewalTimer.cancel();
+    }
+    renewalTimer = null;
     delegationTokens.clear();
   }
   

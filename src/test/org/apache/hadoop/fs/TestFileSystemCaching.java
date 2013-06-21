@@ -29,6 +29,64 @@ import junit.framework.TestCase;
 
 public class TestFileSystemCaching extends TestCase {
 
+  static class DefaultFs extends LocalFileSystem {
+    URI uri;
+    @Override
+    public void initialize(URI uri, Configuration conf) {
+      this.uri = uri;
+    }
+    @Override
+    public URI getUri() {
+      return uri;
+    }
+  }
+  
+  public void testDefaultFsUris() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("fs.defaultfs.impl", DefaultFs.class.getName());
+    final URI defaultUri = URI.create("defaultfs://host");
+    FileSystem.setDefaultUri(conf, defaultUri);
+    FileSystem fs = null;
+    
+    // sanity check default fs
+    final FileSystem defaultFs = FileSystem.get(conf);
+    assertEquals(defaultUri, defaultFs.getUri());
+    
+    // has scheme, no auth
+    fs = FileSystem.get(URI.create("defaultfs:/"), conf);
+    assertSame(defaultFs, fs);
+    fs = FileSystem.get(URI.create("defaultfs:///"), conf);
+    assertSame(defaultFs, fs);
+    
+    // has scheme, same auth
+    fs = FileSystem.get(URI.create("defaultfs://host"), conf);
+    assertSame(defaultFs, fs);
+    
+    // has scheme, different auth
+    fs = FileSystem.get(URI.create("defaultfs://host2"), conf);
+    assertNotSame(defaultFs, fs);
+    
+    // no scheme, no auth
+    fs = FileSystem.get(URI.create("/"), conf);
+    assertSame(defaultFs, fs);
+    
+    // no scheme, same auth
+    try {
+      fs = FileSystem.get(URI.create("//host"), conf);
+      fail("got fs with auth but no scheme");
+    } catch (Exception e) {
+      assertEquals("No FileSystem for scheme: null", e.getMessage());
+    }
+    
+    // no scheme, different auth
+    try {
+      fs = FileSystem.get(URI.create("//host2"), conf);
+      fail("got fs with auth but no scheme");
+    } catch (Exception e) {
+      assertEquals("No FileSystem for scheme: null", e.getMessage());
+    }
+  }
+  
   public static class InitializeForeverFileSystem extends LocalFileSystem {
     final static Semaphore sem = new Semaphore(0);
     public void initialize(URI uri, Configuration conf) throws IOException {

@@ -39,6 +39,13 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
   protected void setUp() throws Exception {
     // Don't start anything by default
   }
+  
+  @Override
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    FileSystem fs = FileSystem.getLocal(new JobConf());
+    fs.delete(TEST_DIR, true);
+  }
 
   private JobID runJob() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(), "text.txt"));
@@ -88,7 +95,7 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
     Properties config = new Properties();
     config.setProperty("mapred.job.tracker.persist.jobstatus.active", "true");
     config.setProperty("mapred.job.tracker.persist.jobstatus.hours", "1");
-    startCluster(false, config);
+    startCluster(true, config);
     JobID jobId = runJob();
     JobClient jc = new JobClient(createJobConf());
     RunningJob rj0 = jc.getJob(jobId);
@@ -119,11 +126,8 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
   /**
    * Test if the completed job status is persisted to localfs.
    */
-  public void testLocalPersistency() throws Exception {
+  public void testLocalPersistency() throws Exception {    
     FileSystem fs = FileSystem.getLocal(new JobConf());
-    
-    fs.delete(TEST_DIR, true);
-    
     Properties config = new Properties();
     config.setProperty("mapred.job.tracker.persist.jobstatus.active", "true");
     config.setProperty("mapred.job.tracker.persist.jobstatus.hours", "1");
@@ -138,7 +142,6 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
     // check if the local fs has the data
     Path jobInfo = new Path(TEST_DIR, rj.getID() + ".info");
     assertTrue("Missing job info from the local fs", fs.exists(jobInfo));
-    fs.delete(TEST_DIR, true);
   }
 
   /**
@@ -152,10 +155,6 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
     Path parent = new Path(TEST_DIR, "parent");
     try {
       FileSystem fs = FileSystem.getLocal(new JobConf());
-
-      if (fs.exists(TEST_DIR) && !fs.delete(TEST_DIR, true)) {
-        fail("Cannot delete TEST_DIR!");
-      }
 
       if (fs.mkdirs(new Path(TEST_DIR, parent))) {
         if (FileUtil.chmod(parent.toUri().getPath(), "-w") != 0) {

@@ -26,14 +26,19 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.conf.Configuration;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * A utility to manage job submission files.<br/>
  * <b><i>Note that this class is for framework internal usage only and is
  * not to be used by users directly.</i></b>
  */
 public class JobSubmissionFiles {
+
+  private final static Log LOG = LogFactory.getLog(JobSubmissionFiles.class);
 
   // job submission directory is private!
   final public static FsPermission JOB_DIR_PERMISSION =
@@ -105,17 +110,22 @@ public class JobSubmissionFiles {
     if (fs.exists(stagingArea)) {
       FileStatus fsStatus = fs.getFileStatus(stagingArea);
       if (!(fsStatus.isOwnedByUser(currentUser, currentUgi.getGroupNames())
-            || fsStatus.isOwnedByUser(realUser, ugi.getGroupNames()))
-          || !fsStatus.getPermission().equals(JOB_DIR_PERMISSION)) {
-         throw new IOException("The ownership/permissions on the staging " +
-                      "directory " + stagingArea + " is not as expected. " + 
-                      "It is owned by " + fsStatus.getOwner() + " and permissions are "+ 
-                      fsStatus.getPermission() + ". The directory must " +
+            || fsStatus.isOwnedByUser(realUser, ugi.getGroupNames()))) {
+         throw new IOException("The ownership on the staging directory " +
+                      stagingArea + " is not as expected. " +
+                      "It is owned by " + fsStatus.getOwner() + ". The directory must " +
                       "be owned by the submitter " + currentUser + " or " +
-                      "by " + realUser + " and permissions must be rwx------");
+                      "by " + realUser);
+      }
+      if (!fsStatus.getPermission().equals(JOB_DIR_PERMISSION)) {
+        LOG.info("Permissions on staging directory " + stagingArea + " are " +
+          "incorrect: " + fsStatus.getPermission() + ". Fixing permissions " +
+          "to correct value " + JOB_DIR_PERMISSION);
+        fs.setPermission(stagingArea, JOB_DIR_PERMISSION);
       }
     } else {
-      fs.mkdirs(stagingArea, new FsPermission(JOB_DIR_PERMISSION));
+      fs.mkdirs(stagingArea, 
+          new FsPermission(JOB_DIR_PERMISSION));
     }
     return stagingArea;
   }

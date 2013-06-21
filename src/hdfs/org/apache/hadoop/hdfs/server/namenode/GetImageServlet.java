@@ -38,6 +38,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
@@ -66,12 +67,13 @@ public class GetImageServlet extends HttpServlet {
       final FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
       final TransferFsImage ff = new TransferFsImage(pmap, request, response);
       final Configuration conf = (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
+
       if(UserGroupInformation.isSecurityEnabled() && 
-          !isValidRequestor(request.getRemoteUser(), conf)) {
+          !isValidRequestor(request.getUserPrincipal().getName(), conf)) {
         response.sendError(HttpServletResponse.SC_FORBIDDEN, 
             "Only Namenode and Secondary Namenode may access this servlet");
         LOG.warn("Received non-NN/SNN request for image or edits from " 
-            + request.getRemoteHost());
+            + request.getUserPrincipal().getName() + " at " + request.getRemoteHost());
         return;
       }
       
@@ -82,11 +84,11 @@ public class GetImageServlet extends HttpServlet {
           if (ff.getImage()) {
             // send fsImage
             TransferFsImage.getFileServer(response.getOutputStream(),
-                                          nnImage.getFsImageName()); 
+                nnImage.getFsImageName(), getThrottler(conf)); 
           } else if (ff.getEdit()) {
             // send edits
             TransferFsImage.getFileServer(response.getOutputStream(),
-                                          nnImage.getFsEditName());
+                nnImage.getFsEditName(), getThrottler(conf));
           } else if (ff.putImage()) {
             synchronized (fsImageTransferLock) {
               final MD5Hash expectedChecksum = ff.getNewChecksum();
@@ -120,19 +122,35 @@ public class GetImageServlet extends HttpServlet {
           return UserGroupInformation
           .loginUserFromKeytabAndReturnUGI(
                   SecurityUtil.getServerPrincipal(conf
-                      .get(DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), NameNode
+                      .get(DFS_NAMENODE_USER_NAME_KEY), NameNode
                       .getAddress(conf).getHostName()),
               conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
         }
       });
 
-    } catch (Exception ie) {
-      String errMsg = "GetImage failed. " + StringUtils.stringifyException(ie);
+    } catch (Throwable t) {
+      String errMsg = "GetImage failed. " + StringUtils.stringifyException(t);
       response.sendError(HttpServletResponse.SC_GONE, errMsg);
       throw new IOException(errMsg);
     } finally {
       response.getOutputStream().close();
     }
+  }
+
+  /**
+   * Construct a throttler from conf
+   * @param conf configuration
+   * @return a data transfer throttler
+   */
+  private final DataTransferThrottler getThrottler(Configuration conf) {
+    long transferBandwidth = 
+      conf.getLong(DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY,
+                   DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_DEFAULT);
+    DataTransferThrottler throttler = null;
+    if (transferBandwidth > 0) {
+      throttler = new DataTransferThrottler(transferBandwidth);
+    }
+    return throttler;
   }
   
   private boolean isValidRequestor(String remoteUser, Configuration conf)
@@ -143,25 +161,19 @@ public class GetImageServlet extends HttpServlet {
     }
     
     String[] validRequestors = {
-        SecurityUtil.getServerPrincipal(conf
-            .get(DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), NameNode.getAddress(
-            conf).getHostName()),
         SecurityUtil.getServerPrincipal(conf.get(DFS_NAMENODE_USER_NAME_KEY),
             NameNode.getAddress(conf).getHostName()),
-        SecurityUtil.getServerPrincipal(conf
-            .get(DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
-            SecondaryNameNode.getHttpAddress(conf).getHostName()),
         SecurityUtil.getServerPrincipal(conf
             .get(DFS_SECONDARY_NAMENODE_USER_NAME_KEY), SecondaryNameNode
             .getHttpAddress(conf).getHostName()) };
     
     for(String v : validRequestors) {
       if(v != null && v.equals(remoteUser)) {
-        if(LOG.isDebugEnabled()) LOG.debug("isValidRequestor is allowing: " + remoteUser);
+        LOG.info("GetImageServlet allowing: " + remoteUser);
         return true;
       }
     }
-    if(LOG.isDebugEnabled()) LOG.debug("isValidRequestor is rejecting: " + remoteUser);
+    LOG.info("GetImageServlet rejecting: " + remoteUser);
     return false;
   }
 }

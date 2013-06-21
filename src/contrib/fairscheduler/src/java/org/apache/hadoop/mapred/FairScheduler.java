@@ -28,8 +28,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -41,6 +41,7 @@ import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -275,12 +276,19 @@ public class FairScheduler extends TaskScheduler {
 
   private class JobInitializer {
     private final int DEFAULT_NUM_THREADS = 1;
-    private ExecutorService threadPool;
+    private ThreadPoolExecutor threadPool;
     private TaskTrackerManager ttm;
     public JobInitializer(Configuration conf, TaskTrackerManager ttm) {
       int numThreads = conf.getInt("mapred.jobinit.threads",
           DEFAULT_NUM_THREADS);
-      threadPool = Executors.newFixedThreadPool(numThreads);
+      threadPool = new ThreadPoolExecutor(numThreads, numThreads, 0L,
+					TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+      // Pre-starting all threads to ensure the threads are executed as JobTracker
+      // instead of the user submitted the job, otherwise job initialization fails
+      // when security is enabled
+      if (threadPool.prestartAllCoreThreads() != numThreads) {
+          throw new RuntimeException("Failed to pre-start threads in JobInitializer");
+      }
       this.ttm = ttm;
     }
     public void initJob(JobInfo jobInfo, JobInProgress job) {
@@ -320,8 +328,17 @@ public class FairScheduler extends TaskScheduler {
     public void jobAdded(JobInProgress job) {
       synchronized (FairScheduler.this) {
         eventLog.log("JOB_ADDED", job.getJobID());
-        JobInfo info = new JobInfo(new JobSchedulable(FairScheduler.this, job, TaskType.MAP),
-            new JobSchedulable(FairScheduler.this, job, TaskType.REDUCE));
+        JobSchedulable mapSched = ReflectionUtils.newInstance(
+            conf.getClass("mapred.jobtracker.jobSchedulable", JobSchedulable.class,
+                JobSchedulable.class), conf);
+        mapSched.init(FairScheduler.this, job, TaskType.MAP);
+
+        JobSchedulable redSched = ReflectionUtils.newInstance(
+            conf.getClass("mapred.jobtracker.jobSchedulable", JobSchedulable.class,
+                JobSchedulable.class), conf);
+        redSched.init(FairScheduler.this, job, TaskType.REDUCE);
+
+        JobInfo info = new JobInfo(mapSched, redSched);
         infos.put(job, info);
         poolMgr.addJob(job); // Also adds job into the right PoolScheduable
         update();
@@ -412,7 +429,13 @@ public class FairScheduler extends TaskScheduler {
 
     // Update time waited for local maps for jobs skipped on last heartbeat
     updateLocalityWaitTimes(currentTime);
-    
+
+    // Check for JT safe-mode
+    if (taskTrackerManager.isInSafeMode()) {
+      LOG.info("JobTracker is in safe-mode, not scheduling any tasks.");
+      return null;
+    } 
+
     TaskTrackerStatus tts = tracker.getStatus();
 
     int mapsAssigned = 0; // loop counter for map in the below while loop
@@ -538,15 +561,16 @@ public class FairScheduler extends TaskScheduler {
    * The scheduler may launch fewer than this many tasks if the LoadManager
    * says not to launch more, but it will never launch more than this number.
    */
-  private int maxTasksToAssign(TaskType type, TaskTrackerStatus tts) {
+  protected int maxTasksToAssign(TaskType type, TaskTrackerStatus tts) {
     if (!assignMultiple)
       return 1;
     int cap = (type == TaskType.MAP) ? mapAssignCap : reduceAssignCap;
+    int availableSlots = (type == TaskType.MAP) ?
+        tts.getAvailableMapSlots(): tts.getAvailableReduceSlots();
     if (cap == -1) // Infinite cap; use the TaskTracker's slot count
-      return (type == TaskType.MAP) ?
-          tts.getAvailableMapSlots(): tts.getAvailableReduceSlots();
+      return availableSlots;
     else
-      return cap;
+      return Math.min(cap, availableSlots);
   }
 
   /**
@@ -571,8 +595,10 @@ public class FairScheduler extends TaskScheduler {
   private void updateLastMapLocalityLevel(JobInProgress job,
       Task mapTaskLaunched, TaskTrackerStatus tracker) {
     JobInfo info = infos.get(job);
+    boolean isNodeGroupAware = conf.getBoolean(
+        "net.topology.nodegroup.aware", false);
     LocalityLevel localityLevel = LocalityLevel.fromTask(
-        job, mapTaskLaunched, tracker);
+        job, mapTaskLaunched, tracker, isNodeGroupAware);
     info.lastMapLocalityLevel = localityLevel;
     info.timeWaitedForLocalMap = 0;
     eventLog.log("ASSIGNED_LOC_LEVEL", job.getJobID(), localityLevel);
@@ -1020,6 +1046,9 @@ public class FairScheduler extends TaskScheduler {
 
   @Override
   public synchronized Collection<JobInProgress> getJobs(String queueName) {
+    if (queueName == null) {
+      return null;
+    }
     Pool myJobPool = poolMgr.getPool(queueName);
     return myJobPool.getJobs();
   }
@@ -1072,16 +1101,8 @@ public class FairScheduler extends TaskScheduler {
           else return p1.getName().compareTo(p2.getName());
         }});
       for (Pool pool: pools) {
-        int runningMaps = 0;
-        int runningReduces = 0;
-        for (JobInProgress job: pool.getJobs()) {
-          JobInfo info = infos.get(job);
-          if (info != null) {
-            // TODO: Fix
-            //runningMaps += info.runningMaps;
-            //runningReduces += info.runningReduces;
-          }
-        }
+        int runningMaps = pool.getMapSchedulable().getRunningTasks();
+        int runningReduces = pool.getReduceSchedulable().getRunningTasks();
         String name = pool.getName();
         eventLog.log("POOL",
             name, poolMgr.getPoolWeight(name), pool.getJobs().size(),
