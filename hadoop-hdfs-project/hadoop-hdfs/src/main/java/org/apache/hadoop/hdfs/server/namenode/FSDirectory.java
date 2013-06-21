@@ -1582,6 +1582,13 @@ public class FSDirectory implements Closeable {
     }
   }
   
+  /**
+   * Currently we only support "ls /xxx/.snapshot" which will return all the
+   * snapshots of a directory. The FSCommand Ls will first call getFileInfo to
+   * make sure the file/directory exists (before the real getListing call).
+   * Since we do not have a real INode for ".snapshot", we return an empty
+   * non-null HdfsFileStatus here.
+   */
   private HdfsFileStatus getFileInfo4DotSnapshot(String src)
       throws UnresolvedLinkException {
     Preconditions.checkArgument(
@@ -1596,7 +1603,7 @@ public class FSDirectory implements Closeable {
         && node.isDirectory()
         && node.asDirectory() instanceof INodeDirectorySnapshottable) {
       return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
-          HdfsFileStatus.EMPTY_NAME, -1L);
+          HdfsFileStatus.EMPTY_NAME, -1L, 0);
     }
     return null;
   }
@@ -2521,6 +2528,9 @@ public class FSDirectory implements Closeable {
        replication = fileNode.getFileReplication(snapshot);
        blocksize = fileNode.getPreferredBlockSize();
      }
+     int childrenNum = node.isDirectory() ? 
+         node.asDirectory().getChildrenNum(snapshot) : 0;
+         
      return new HdfsFileStatus(
         size, 
         node.isDirectory(), 
@@ -2533,7 +2543,8 @@ public class FSDirectory implements Closeable {
         node.getGroupName(snapshot),
         node.isSymlink() ? node.asSymlink().getSymlink() : null,
         path,
-        node.getId());
+        node.getId(),
+        childrenNum);
   }
 
   /**
@@ -2563,12 +2574,15 @@ public class FSDirectory implements Closeable {
         loc = new LocatedBlocks();
       }
     }
+    int childrenNum = node.isDirectory() ? 
+        node.asDirectory().getChildrenNum(snapshot) : 0;
+        
     return new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
         blocksize, node.getModificationTime(snapshot),
         node.getAccessTime(snapshot), node.getFsPermission(snapshot),
         node.getUserName(snapshot), node.getGroupName(snapshot),
         node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
-        node.getId(), loc);
+        node.getId(), loc, childrenNum);
   }
 
     

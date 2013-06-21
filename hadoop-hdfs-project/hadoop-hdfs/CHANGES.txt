@@ -122,6 +122,8 @@ Trunk (Unreleased)
 
     HDFS-4904. Remove JournalService. (Arpit Agarwal via cnauroth)
 
+    HDFS-4772. Add number of children in HdfsFileStatus. (brandonli)
+
   OPTIMIZATIONS
 
   BUG FIXES

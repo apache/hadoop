@@ -24,7 +24,6 @@ import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.LogFactory;
@@ -37,7 +36,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -105,6 +103,16 @@ public class TestFileStatus {
     // Make sure getFileInfo returns null for files which do not exist
     HdfsFileStatus fileInfo = dfsClient.getFileInfo("/noSuchFile");
     assertEquals("Non-existant file should result in null", null, fileInfo);
+    
+    Path path1 = new Path("/name1");
+    Path path2 = new Path("/name1/name2");
+    assertTrue(fs.mkdirs(path1));
+    FSDataOutputStream out = fs.create(path2, false);
+    out.close();
+    fileInfo = dfsClient.getFileInfo(path1.toString());
+    assertEquals(1, fileInfo.getChildrenNum());
+    fileInfo = dfsClient.getFileInfo(path2.toString());
+    assertEquals(0, fileInfo.getChildrenNum());
 
     // Test getFileInfo throws the right exception given a non-absolute path.
     try {

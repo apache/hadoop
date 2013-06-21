@@ -655,4 +655,8 @@ public class INodeDirectory extends INodeWithAdditionalFields
       this(snapshot, snapshot.getRoot());
     }
   }
+
+  public final int getChildrenNum(final Snapshot snapshot) {
+    return getChildrenList(snapshot).size();
+  }
 }
