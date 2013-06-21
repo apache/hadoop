@@ -23,11 +23,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class FairSchedulerQueueInfo {  
   private int fairShare;
