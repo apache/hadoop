@@ -127,3 +127,26 @@ message RpcResponseHeaderProto {
   optional string errorMsg = 5;  // if request fails, often contains strack trace
   optional RpcErrorCodeProto errorDetail = 6; // in case of error
 }
+
+message RpcSaslProto {
+  enum SaslState {
+    SUCCESS   = 0;
+    NEGOTIATE = 1;
+    INITIATE  = 2;
+    CHALLENGE = 3;
+    RESPONSE  = 4;
+  }
+  
+  message SaslAuth {
+    required string method    = 1;
+    required string mechanism = 2;
+    optional string protocol  = 3;
+    optional string serverId  = 4;
+    optional bytes  challenge = 5;
+  }
+
+  optional uint32 version  = 1;  
+  required SaslState state = 2;
+  optional bytes token     = 3;
+  repeated SaslAuth auths  = 4;
+}

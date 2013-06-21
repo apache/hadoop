@@ -62,6 +62,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.ipc.Server.AuthProtocol;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
@@ -751,7 +752,7 @@ public class Client {
      * +----------------------------------+
      * |  Service Class (1 byte)          |
      * +----------------------------------+
-     * |  Authmethod (1 byte)             |      
+     * |  AuthProtocol (1 byte)           |      
      * +----------------------------------+
      */
     private void writeConnectionHeader(OutputStream outStream)
@@ -761,7 +762,15 @@ public class Client {
       out.write(Server.HEADER.array());
       out.write(Server.CURRENT_VERSION);
       out.write(serviceClass);
-      authMethod.write(out);
+      final AuthProtocol authProtocol;
+      switch (authMethod) {
+        case SIMPLE:
+          authProtocol = AuthProtocol.NONE;
+          break;
+        default:
+          authProtocol = AuthProtocol.SASL;
+      }
+      out.write(authProtocol.callId);
       out.flush();
     }
     
