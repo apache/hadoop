@@ -862,11 +862,5 @@ public class TestRuntimeEstimators {
     public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
       return null;
     }
-    
-    @Override
-    public Map<String, Token> getNMTokens() {
-      // Not Implemented
-      return null;
-    }
   }
 }

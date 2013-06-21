@@ -82,14 +82,12 @@ public class NMClientAsyncImpl extends NMClientAsync {
   protected ConcurrentMap<ContainerId, StatefulContainer> containers =
       new ConcurrentHashMap<ContainerId, StatefulContainer>();
 
-  public NMClientAsyncImpl(CallbackHandler callbackHandler,
-      ConcurrentMap<String, Token> nmTokens) {
-    this(NMClientAsync.class.getName(), callbackHandler, nmTokens);
+  public NMClientAsyncImpl(CallbackHandler callbackHandler) {
+    this(NMClientAsync.class.getName(), callbackHandler);
   }
 
-  public NMClientAsyncImpl(String name, CallbackHandler callbackHandler,
-      ConcurrentMap<String, Token> nmTokens) {
-    this(name, new NMClientImpl(nmTokens), callbackHandler);
+  public NMClientAsyncImpl(String name, CallbackHandler callbackHandler) {
+    this(name, new NMClientImpl(), callbackHandler);
   }
 
   @Private

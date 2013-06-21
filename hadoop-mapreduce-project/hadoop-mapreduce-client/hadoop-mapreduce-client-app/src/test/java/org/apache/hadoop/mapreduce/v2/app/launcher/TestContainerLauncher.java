@@ -376,7 +376,7 @@ public class TestContainerLauncher {
                 containerId.getApplicationAttemptId(),
                 NodeId.newInstance(addr.getHostName(), addr.getPort()), "user");
           ContainerManagementProtocolProxy cmProxy =
-              new ContainerManagementProtocolProxy(conf, context.getNMTokens());
+              new ContainerManagementProtocolProxy(conf);
           ContainerManagementProtocolProxyData proxy =
               cmProxy.new ContainerManagementProtocolProxyData(
                 YarnRPC.create(conf), containerManagerBindAddr, containerId,
