@@ -1163,4 +1163,37 @@ public class TestFileCreation {
     }
   }
 
+  /**
+   * Test complete(..) - verifies that the fileId in the request
+   * matches that of the Inode.
+   * This test checks that FileNotFoundException exception is thrown in case
+   * the fileId does not match.
+   */
+  @Test
+  public void testFileIdMismatch() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    DistributedFileSystem dfs = null;
+    try {
+      cluster.waitActive();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      DFSClient client = dfs.dfs;
+
+      final Path f = new Path("/testFileIdMismatch.txt");
+      createFile(dfs, f, 3);
+      long someOtherFileId = -1;
+      try {
+        cluster.getNameNodeRpc()
+            .complete(f.toString(), client.clientName, null, someOtherFileId);
+        fail();
+      } catch(FileNotFoundException fnf) {
+        FileSystem.LOG.info("Caught Expected FileNotFoundException: ", fnf);
+      }
+    } finally {
+      IOUtils.closeStream(dfs);
+      cluster.shutdown();
+    }
+  }
+
 }

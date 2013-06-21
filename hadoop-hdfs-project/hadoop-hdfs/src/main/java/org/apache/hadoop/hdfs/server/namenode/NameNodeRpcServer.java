@@ -560,13 +560,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public boolean complete(String src, String clientName, ExtendedBlock last)
+  public boolean complete(String src, String clientName,
+                          ExtendedBlock last,  long fileId)
       throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.complete: "
-          + src + " for " + clientName);
+          + src + " fileId=" + fileId +" for " + clientName);
     }
-    return namesystem.completeFile(src, clientName, last);
+    return namesystem.completeFile(src, clientName, last, fileId);
   }
 
   /**
