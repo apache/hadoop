@@ -35,6 +35,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -47,6 +48,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.Shell;
 
 /**
  * Tests the JobHistory files - to catch any changes to JobHistory that can
@@ -855,8 +857,19 @@ public class TestJobHistory extends TestCase {
         conf.get(JobConf.WORKFLOW_TAGS, "")));
   }
 
-  public void testDoneFolderOnHDFS() throws IOException {
+  public void testDoneFolderOnHDFS() throws IOException, InterruptedException {
+    runDoneFolderTest("history_done");
+  }
+
+  public void testDoneFolderNotOnDefaultFileSystem() throws IOException,
+      InterruptedException {
+    runDoneFolderTest("file:///" + System.getProperty("test.build.data", "tmp")
+        + "/history_done");
+  }
+
+  private void runDoneFolderTest(String doneFolder) throws IOException, InterruptedException {
     MiniMRCluster mr = null;
+    MiniDFSCluster dfsCluster = null;
     try {
       JobConf conf = new JobConf();
       // keep for less time
@@ -864,10 +877,9 @@ public class TestJobHistory extends TestCase {
       conf.setLong("mapred.jobtracker.retirejob.interval", 100000);
 
       //set the done folder location
-      String doneFolder = "history_done";
       conf.set("mapred.job.tracker.history.completed.location", doneFolder);
 
-      MiniDFSCluster dfsCluster = new MiniDFSCluster(conf, 2, true, null);
+      dfsCluster = new MiniDFSCluster(conf, 2, true, null);
       mr = new MiniMRCluster(2, dfsCluster.getFileSystem().getUri().toString(),
           3, null, null, conf);
 
@@ -893,7 +905,7 @@ public class TestJobHistory extends TestCase {
       
       Path doneDir = JobHistory.getCompletedJobHistoryLocation();
       assertEquals("History DONE folder not correct", 
-          doneFolder, doneDir.getName());
+          new Path(doneFolder).getName(), doneDir.getName());
       JobID id = job.getID();
       String logFileName = getDoneFile(conf, id, doneDir);
       assertNotNull(logFileName);
@@ -924,28 +936,33 @@ public class TestJobHistory extends TestCase {
       // Test that all of the ancestors of the log file have the same
       //   permissions as the done directory
       
-      Path cursor = logFile.getParent();
+      // The folders between the done folder and the folder containing the
+      // log file are created automatically. Since the default permission
+      // on Windows may not be the same as JobHistory.HISTORY_DIR_PERMISSION
+      // so we skip this check if the file system is local file system
+      // and is windows
+      if (!(fileSys instanceof LocalFileSystem && Shell.WINDOWS)) {
+        Path cursor = logFile.getParent();
 
-      Path doneParent = doneDir.getParent();
+        Path doneParent = doneDir.getParent();
 
-      FsPermission donePermission = getStatus(fileSys, doneDir).getPermission();
+        FsPermission donePermission = getStatus(fileSys, doneDir)
+            .getPermission();
 
-      System.err.println("testDoneFolderOnHDFS: done dir permission = "
-                         + donePermission);
+        System.err.println("testDoneFolderOnHDFS: done dir permission = "
+            + donePermission);
 
-      while (!cursor.equals(doneParent)) {
-        FileStatus cursorStatus = getStatus(fileSys, cursor);
-        FsPermission cursorPermission = cursorStatus.getPermission();
+        while (!cursor.equals(doneParent)) {
+          FileStatus cursorStatus = getStatus(fileSys, cursor);
+          FsPermission cursorPermission = cursorStatus.getPermission();
 
-        assertEquals("testDoneFolderOnHDFS: A done directory descendant, "
-                     + cursor
-                     + " does not have the same permisison as the done directory, "
-                     + doneDir,
-                     donePermission,
-                     cursorPermission);
+          assertEquals("testDoneFolder: A done directory descendant, " + cursor
+              + " does not have the same permisison as the done directory, "
+              + doneDir, donePermission, cursorPermission);
 
-        cursor = cursor.getParent();
-      }      
+          cursor = cursor.getParent();
+        }
+      }
 
       // check if the job file is removed from the history location 
       Path runningJobsHistoryFolder = logFile.getParent().getParent();
@@ -966,6 +983,10 @@ public class TestJobHistory extends TestCase {
       if (mr != null) {
         cleanupLocalFiles(mr);
         mr.shutdown();
+      }
+
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
       }
     }
   }
