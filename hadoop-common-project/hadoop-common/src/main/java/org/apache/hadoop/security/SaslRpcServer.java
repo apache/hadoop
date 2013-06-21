@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.security.Security;
 import java.util.Map;
 import java.util.TreeMap;
@@ -35,6 +36,8 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
@@ -43,6 +46,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ipc.Server.Connection;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -57,8 +62,6 @@ public class SaslRpcServer {
   public static final String SASL_DEFAULT_REALM = "default";
   public static final Map<String, String> SASL_PROPS = 
       new TreeMap<String, String>();
-
-  public static final int SWITCH_TO_SIMPLE_AUTH = -88;
 
   public static enum QualityOfProtection {
     AUTHENTICATION("auth"),
@@ -75,7 +78,93 @@ public class SaslRpcServer {
       return saslQop;
     }
   }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public AuthMethod authMethod;
+  public String mechanism;
+  public String protocol;
+  public String serverId;
   
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public SaslRpcServer(AuthMethod authMethod) throws IOException {
+    this.authMethod = authMethod;
+    mechanism = authMethod.getMechanismName();    
+    switch (authMethod) {
+      case SIMPLE: {
+        return; // no sasl for simple
+      }
+      case TOKEN: {
+        protocol = "";
+        serverId = SaslRpcServer.SASL_DEFAULT_REALM;
+        break;
+      }
+      case KERBEROS: {
+        String fullName = UserGroupInformation.getCurrentUser().getUserName();
+        if (LOG.isDebugEnabled())
+          LOG.debug("Kerberos principal name is " + fullName);
+        KerberosName krbName = new KerberosName(fullName);
+        serverId = krbName.getHostName();
+        if (serverId == null) {
+          serverId = "";
+        }
+        protocol = krbName.getServiceName();
+        break;
+      }
+      default:
+        // we should never be able to get here
+        throw new AccessControlException(
+            "Server does not support SASL " + authMethod);
+    }
+  }
+  
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public SaslServer create(Connection connection,
+                           SecretManager<TokenIdentifier> secretManager
+      ) throws IOException, InterruptedException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    final CallbackHandler callback;
+    switch (authMethod) {
+      case TOKEN: {
+        secretManager.checkAvailableForRead();
+        callback = new SaslDigestCallbackHandler(secretManager, connection);
+        break;
+      }
+      case KERBEROS: {
+        if (serverId.isEmpty()) {
+          throw new AccessControlException(
+              "Kerberos principal name does NOT have the expected "
+                  + "hostname part: " + ugi.getUserName());
+        }
+        callback = new SaslGssCallbackHandler();
+        break;
+      }
+      default:
+        // we should never be able to get here
+        throw new AccessControlException(
+            "Server does not support SASL " + authMethod);
+    }
+    
+    SaslServer saslServer = ugi.doAs(
+        new PrivilegedExceptionAction<SaslServer>() {
+          @Override
+          public SaslServer run() throws SaslException  {
+            return Sasl.createSaslServer(mechanism, protocol, serverId,
+                SaslRpcServer.SASL_PROPS, callback);
+          }
+        });
+    if (saslServer == null) {
+      throw new AccessControlException(
+          "Unable to find SASL server implementation for " + mechanism);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Created SASL server with mechanism = " + mechanism);
+    }
+    return saslServer;
+  }
+
   public static void init(Configuration conf) {
     QualityOfProtection saslQOP = QualityOfProtection.AUTHENTICATION;
     String rpcProtection = conf.get("hadoop.rpc.protection",
@@ -124,23 +213,14 @@ public class SaslRpcServer {
     return fullName.split("[/@]");
   }
 
-  @InterfaceStability.Evolving
-  public enum SaslStatus {
-    SUCCESS (0),
-    ERROR (1);
-    
-    public final int state;
-    private SaslStatus(int state) {
-      this.state = state;
-    }
-  }
-  
   /** Authentication method */
   @InterfaceStability.Evolving
   public static enum AuthMethod {
     SIMPLE((byte) 80, ""),
     KERBEROS((byte) 81, "GSSAPI"),
+    @Deprecated
     DIGEST((byte) 82, "DIGEST-MD5"),
+    TOKEN((byte) 82, "DIGEST-MD5"),
     PLAIN((byte) 83, "PLAIN");
 
     /** The code for this method. */

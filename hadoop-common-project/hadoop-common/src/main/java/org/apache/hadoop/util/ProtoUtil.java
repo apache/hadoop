@@ -94,7 +94,7 @@ public abstract class ProtoUtil {
         // Real user was established as part of the connection.
         // Send effective user only.
         ugiProto.setEffectiveUser(ugi.getUserName());
-      } else if (authMethod == AuthMethod.DIGEST) {
+      } else if (authMethod == AuthMethod.TOKEN) {
         // With token, the connection itself establishes 
         // both real and effective user. Hence send none in header.
       } else {  // Simple authentication
