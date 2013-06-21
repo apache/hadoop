@@ -36,8 +36,9 @@ import org.apache.hadoop.yarn.util.Records;
  * 
  * <p>The response contains critical details such as:
  * <ul>
- *   <li>Minimum capability for allocated resources in the cluster.</li>
  *   <li>Maximum capability for allocated resources in the cluster.</li>
+ *   <li><code>ApplicationACL</code>s for the application.</li>
+ *   <li>ClientToAMToken master key.</li>
  * </ul>
  * </p>
  * 
@@ -50,11 +51,12 @@ public abstract class RegisterApplicationMasterResponse {
   @Unstable
   public static RegisterApplicationMasterResponse newInstance(
       Resource minCapability, Resource maxCapability,
-      Map<ApplicationAccessType, String> acls) {
+      Map<ApplicationAccessType, String> acls, ByteBuffer key) {
     RegisterApplicationMasterResponse response =
         Records.newRecord(RegisterApplicationMasterResponse.class);
     response.setMaximumResourceCapability(maxCapability);
     response.setApplicationACLs(acls);
+    response.setClientToAMTokenMasterKey(key);
     return response;
   }
 

@@ -44,12 +44,10 @@ import org.apache.hadoop.yarn.util.Records;
  *     <li>HTTP uri of the node.</li>
  *     <li>{@link Resource} allocated to the container.</li>
  *     <li>{@link Priority} at which the container was allocated.</li>
- *     <li>{@link ContainerState} of the container.</li>
  *     <li>
  *       Container {@link Token} of the container, used to securely verify
  *       authenticity of the allocation. 
  *     </li>
- *     <li>{@link ContainerStatus} of the container.</li>
  *   </ul>
  * </p>
  * 

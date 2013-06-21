@@ -204,6 +204,10 @@ Release 2.1.0-beta - UNRELEASED
     ApplicationSubmissionContext to simplify the api. (Karthik Kambatla via
     acmurthy) 
 
+    YARN-851. Share NMTokens using NMTokenCache (api-based) between AMRMClient
+    and NMClient instead of memory based approach which is used currently. (Omkar
+    Vinit Joshi via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

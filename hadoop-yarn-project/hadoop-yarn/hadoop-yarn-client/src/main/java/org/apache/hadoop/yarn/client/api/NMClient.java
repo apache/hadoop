@@ -22,21 +22,17 @@ package org.apache.hadoop.yarn.client.api;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.api.impl.NMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
@@ -46,30 +42,19 @@ public abstract class NMClient extends AbstractService {
 
   /**
    * Create a new instance of NMClient.
-   * @param nmTokens need to pass map of NMTokens which are received on
-   * {@link AMRMClient#allocate(float)} call as a part of
-   * {@link AllocateResponse}. 
-   * key :- NodeAddr (host:port)
-   * Value :- Token {@link NMToken#getToken()}
    */
   @Public
-  public static NMClient createNMClient(ConcurrentMap<String, Token> nmTokens) {
-    NMClient client = new NMClientImpl(nmTokens);
+  public static NMClient createNMClient() {
+    NMClient client = new NMClientImpl();
     return client;
   }
 
   /**
    * Create a new instance of NMClient.
-   * @param nmTokens need to pass map of NMTokens which are received on
-   * {@link AMRMClient#allocate(float)} call as a part of
-   * {@link AllocateResponse}. 
-   * key :- NodeAddr (host:port)
-   * Value :- Token {@link NMToken#getToken()}
    */
   @Public
-  public static NMClient createNMClient(String name,
-      ConcurrentMap<String, Token> nmTokens) {
-    NMClient client = new NMClientImpl(name, nmTokens);
+  public static NMClient createNMClient(String name) {
+    NMClient client = new NMClientImpl(name);
     return client;
   }
 

@@ -81,18 +81,15 @@ public class NMClientImpl extends NMClient {
       new ConcurrentHashMap<ContainerId, StartedContainer>();
 
   //enabled by default
- private final AtomicBoolean cleanupRunningContainers = new AtomicBoolean(true);
- private ContainerManagementProtocolProxy cmProxy;
-  private ConcurrentMap<String, Token> nmTokens;
+  private final AtomicBoolean cleanupRunningContainers = new AtomicBoolean(true);
+  private ContainerManagementProtocolProxy cmProxy;
 
-  public NMClientImpl(ConcurrentMap<String, Token> nmTokens) {
+  public NMClientImpl() {
     super(NMClientImpl.class.getName());
-    this.nmTokens = nmTokens;
   }
 
-  public NMClientImpl(String name, ConcurrentMap<String, Token> nmTokens) {
+  public NMClientImpl(String name) {
     super(name);
-    this.nmTokens = nmTokens;
   }
 
   @Override
@@ -126,8 +123,7 @@ public class NMClientImpl extends NMClient {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
-    cmProxy =
-        new ContainerManagementProtocolProxy(conf, nmTokens);
+    cmProxy = new ContainerManagementProtocolProxy(conf);
   }
   
   @Override

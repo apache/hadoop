@@ -112,18 +112,16 @@ public abstract class NMClientAsync extends AbstractService {
   protected CallbackHandler callbackHandler;
 
   public static NMClientAsync createNMClientAsync(
-      CallbackHandler callbackHandler, ConcurrentMap<String, Token> nmTokens) {
-    return new NMClientAsyncImpl(callbackHandler, nmTokens);
+      CallbackHandler callbackHandler) {
+    return new NMClientAsyncImpl(callbackHandler);
   }
   
-  protected NMClientAsync(CallbackHandler callbackHandler,
-      ConcurrentMap<String, Token> nmTokens) {
-    this (NMClientAsync.class.getName(), callbackHandler, nmTokens);
+  protected NMClientAsync(CallbackHandler callbackHandler) {
+    this (NMClientAsync.class.getName(), callbackHandler);
   }
 
-  protected NMClientAsync(String name, CallbackHandler callbackHandler,
-      ConcurrentMap<String, Token> nmTokens) {
-    this (name, new NMClientImpl(nmTokens), callbackHandler);
+  protected NMClientAsync(String name, CallbackHandler callbackHandler) {
+    this (name, new NMClientImpl(), callbackHandler);
   }
 
   @Private

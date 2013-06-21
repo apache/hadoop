@@ -23,7 +23,6 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,6 +35,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -54,13 +54,10 @@ public class ContainerManagementProtocolProxy {
 
   private final int maxConnectedNMs;
   private final LinkedHashMap<String, ContainerManagementProtocolProxyData> cmProxy;
-  private Map<String, Token> nmTokens;
   private final Configuration conf;
   private final YarnRPC rpc;
   
-  public ContainerManagementProtocolProxy(Configuration conf,
-      Map<String, Token> nmTokens) {
-    this.nmTokens = nmTokens;
+  public ContainerManagementProtocolProxy(Configuration conf) {
     this.conf = conf;
 
     maxConnectedNMs =
@@ -86,10 +83,10 @@ public class ContainerManagementProtocolProxy {
     // This get call will update the map which is working as LRU cache.
     ContainerManagementProtocolProxyData proxy =
         cmProxy.get(containerManagerBindAddr);
-    
+
     while (proxy != null
         && !proxy.token.getIdentifier().equals(
-            nmTokens.get(containerManagerBindAddr).getIdentifier())) {
+            NMTokenCache.getNMToken(containerManagerBindAddr).getIdentifier())) {
       LOG.info("Refreshing proxy as NMToken got updated for node : "
           + containerManagerBindAddr);
       // Token is updated. check if anyone has already tried closing it.
@@ -112,7 +109,7 @@ public class ContainerManagementProtocolProxy {
     if (proxy == null) {
       proxy =
           new ContainerManagementProtocolProxyData(rpc, containerManagerBindAddr,
-              containerId, nmTokens.get(containerManagerBindAddr));
+              containerId, NMTokenCache.getNMToken(containerManagerBindAddr));
       if (cmProxy.size() > maxConnectedNMs) {
         // Number of existing proxy exceed the limit.
         String cmAddr = cmProxy.keySet().iterator().next();
@@ -172,10 +169,6 @@ public class ContainerManagementProtocolProxy {
     cmProxy.clear();
   }
   
-  public synchronized void setNMTokens(Map<String, Token> nmTokens) {
-    this.nmTokens = nmTokens;
-  }
-  
   public class ContainerManagementProtocolProxyData {
     private final String containerManagerBindAddr;
     private final ContainerManagementProtocol proxy;
@@ -201,10 +194,12 @@ public class ContainerManagementProtocolProxy {
     protected ContainerManagementProtocol newProxy(final YarnRPC rpc,
         String containerManagerBindAddr, ContainerId containerId, Token token)
         throws InvalidToken {
+
       if (token == null) {
         throw new InvalidToken("No NMToken sent for "
             + containerManagerBindAddr);
       }
+      
       final InetSocketAddress cmAddr =
           NetUtils.createSocketAddr(containerManagerBindAddr);
       LOG.info("Opening proxy : " + containerManagerBindAddr);

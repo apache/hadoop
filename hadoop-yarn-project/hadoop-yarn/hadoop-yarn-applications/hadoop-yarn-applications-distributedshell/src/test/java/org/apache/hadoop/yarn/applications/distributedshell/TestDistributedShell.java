@@ -100,7 +100,7 @@ public class TestDistributedShell {
     }
   }
 
-  @Test(timeout=30000)
+  @Test(timeout=90000)
   public void testDSShell() throws Exception {
 
     String[] args = {
@@ -128,7 +128,7 @@ public class TestDistributedShell {
 
   }
 
-  @Test(timeout=30000)
+  @Test(timeout=90000)
   public void testDSShellWithInvalidArgs() throws Exception {
     Client client = new Client(new Configuration(yarnCluster.getConfig()));
 

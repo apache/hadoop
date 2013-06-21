@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.client.api;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -35,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
@@ -249,14 +247,4 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
                                            Priority priority, 
                                            String resourceName, 
                                            Resource capability);
-
-  /**
-   * It returns the NMToken received on allocate call. It will not communicate
-   * with RM to get NMTokens. On allocate call whenever we receive new token
-   * along with container AMRMClient will cache this NMToken per node manager.
-   * This map returned should be shared with any application which is
-   * communicating with NodeManager (ex. NMClient) using NMTokens. If a new
-   * NMToken is received for the same node manager then it will be replaced. 
-   */
-  public abstract ConcurrentMap<String, Token> getNMTokens();
 }

@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.RackResolver;
@@ -588,7 +589,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     // Setting NMTokens
     if (response.getNMTokens() != null) {
       for (NMToken nmToken : response.getNMTokens()) {
-        getContext().getNMTokens().put(nmToken.getNodeId().toString(),
+        NMTokenCache.setNMToken(nmToken.getNodeId().toString(),
             nmToken.getToken());
       }
     }

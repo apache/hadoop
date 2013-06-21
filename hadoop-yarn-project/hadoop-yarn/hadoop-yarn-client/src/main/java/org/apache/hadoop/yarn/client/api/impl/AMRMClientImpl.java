@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,8 +55,8 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -82,7 +81,6 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       RecordFactoryProvider.getRecordFactory(null);
   
   private int lastResponseId = 0;
-  private ConcurrentHashMap<String, Token> nmTokens;
 
   protected ApplicationMasterProtocol rmClient;
   protected final ApplicationAttemptId appAttemptId;  
@@ -158,7 +156,6 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   public AMRMClientImpl(ApplicationAttemptId appAttemptId) {
     super(AMRMClientImpl.class.getName());
     this.appAttemptId = appAttemptId;
-    this.nmTokens = new ConcurrentHashMap<String, Token>();
   }
 
   @Override
@@ -285,12 +282,12 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   protected void populateNMTokens(AllocateResponse allocateResponse) {
     for (NMToken token : allocateResponse.getNMTokens()) {
       String nodeId = token.getNodeId().toString();
-      if (nmTokens.containsKey(nodeId)) {
+      if (NMTokenCache.containsNMToken(nodeId)) {
         LOG.debug("Replacing token for : " + nodeId);
       } else {
         LOG.debug("Received new token for : " + nodeId);
       }
-      nmTokens.put(nodeId, token.getToken());
+      NMTokenCache.setNMToken(nodeId, token.getToken());
     }
   }
 
@@ -576,10 +573,5 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
           + resourceRequestInfo.remoteRequest.getNumContainers() 
           + " #asks=" + ask.size());
     }
-  }
-
-  @Override
-  public ConcurrentHashMap<String, Token> getNMTokens() {
-    return nmTokens;
   }
 }
