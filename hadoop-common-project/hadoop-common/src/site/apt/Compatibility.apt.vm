@@ -98,9 +98,8 @@ hand-in-hand to address this.
    Wire compatibility concerns data being transmitted over the wire
    between Hadoop processes. Hadoop uses Protocol Buffers for most RPC
    communication. Preserving compatibility requires prohibiting
-   modification to the required fields of the corresponding protocol
-   buffer. Optional fields may be added without breaking backwards
-   compatibility. Non-RPC communication should be considered as well,
+   modification as described below.
+   Non-RPC communication should be considered as well,
    for example using HTTP to transfer an HDFS image as part of
    snapshotting or transferring MapTask output. The potential
    communications can be categorized as follows:
@@ -131,7 +130,7 @@ hand-in-hand to address this.
 
     * Server-Server compatibility is required to allow mixed versions
     within an active cluster so the cluster may be upgraded without
-    downtime.
+    downtime in a rolling fashion.
 
 *** Policy
 
@@ -139,37 +138,56 @@ hand-in-hand to address this.
     major release. (Different policies for different categories are yet to be
     considered.)
 
-    * The source files generated from the proto files need to be
-    compatible within a major release to facilitate rolling
-    upgrades. The proto files are governed by the following:
+    * Compatibility can be broken only at a major release, though breaking compatibility
+    even at major releases has grave consequences and should be discussed in the Hadoop community.
 
-      * The following changes are NEVER allowed:
+    * Hadoop protocols are defined in .proto (ProtocolBuffers) files.
+    Client-Server protocols and Server-protocol .proto files are marked as stable. 
+    When a .proto file is marked as stable it means that changes should be made
+    in a compatible fashion as described below:
 
-        * Change a field id.
+      * The following changes are compatible and are allowed at any time:
 
-        * Reuse an old field that was previously deleted. Field numbers are 
-          cheap and changing and reusing is not a good idea.
+        * Add an optional field, with the expectation that the code deals with the field missing due to communication with an older version of the code.
 
-      * The following changes cannot be made to a stable .proto except at a 
-      major release:
+        * Add a new rpc/method to the service
+
+        * Add a new optional request to a Message
+
+        * Rename a field
+
+        * Rename a .proto file
+
+        * Change .proto annotations that effect code generation (e.g. name of java package)
+
+      * The following changes are incompatible but can be considered only at a major release 
+
+        * Change the rpc/method name
+
+        * Change the rpc/method parameter type or return type
+
+        * Remove an rpc/method
+
+        * Change the service name
+
+        * Change the name of a Message
 
         * Modify a field type in an incompatible way (as defined recursively)
 
-	      * Add or delete a required field
+        * Change an optional field to required
 
-	      * Delete an optional field
+        * Add or delete a required field
 
-      * The following changes are allowed at any time:
-      
-        * Add an optional field, but ensure the code allows communication with prior
-	version of the client code which did not have that field.
+        * Delete an optional field as long as the optional field has reasonable defaults to allow deletions
 
-	  * Rename a field
+      * The following changes are incompatible and hence never allowed
 
-	  * Rename a .proto file
+        * Change a field id
 
-	  * Change .proto annotations that effect code generation (e.g. name of
-	    java package)
+        * Reuse an old field that was previously deleted.
+
+        * Field numbers are cheap and changing and reusing is not a good idea.
+
 
 ** Java Binary compatibility for end-user applications i.e. Apache Hadoop ABI
 
