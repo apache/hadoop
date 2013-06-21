@@ -156,6 +156,8 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4914. Use DFSClient.Conf instead of Configuration.  (szetszwo)
 
+    HDFS-4883. complete() should verify fileId. (Tao Luo via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES

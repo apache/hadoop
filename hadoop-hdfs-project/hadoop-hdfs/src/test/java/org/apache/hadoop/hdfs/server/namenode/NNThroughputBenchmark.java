@@ -590,7 +590,7 @@ public class NNThroughputBenchmark {
       long end = Time.now();
       for(boolean written = !closeUponCreate; !written; 
         written = nameNodeProto.complete(fileNames[daemonId][inputIdx],
-                                    clientName, null));
+                                    clientName, null, INodeId.GRANDFATHER_INODE_ID));
       return end-start;
     }
 
@@ -1046,7 +1046,7 @@ public class NNThroughputBenchmark {
             new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
             BLOCK_SIZE);
         ExtendedBlock lastBlock = addBlocks(fileName, clientName);
-        nameNodeProto.complete(fileName, clientName, lastBlock);
+        nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
       }
       // prepare block reports
       for(int idx=0; idx < nrDatanodes; idx++) {
