@@ -37,6 +37,8 @@ Release 2.2.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-866. Add test for class ResourceWeights. (ywskycn via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
