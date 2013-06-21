@@ -235,8 +235,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT);
     LOG.info("Upper limit on the thread pool size is " + this.limitOnPoolSize);
     super.serviceInit(conf);
-    cmProxy =
-        new ContainerManagementProtocolProxy(conf, context.getNMTokens());
+    cmProxy = new ContainerManagementProtocolProxy(conf);
   }
 
   protected void serviceStart() throws Exception {

@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.NMClient;
+import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -74,7 +75,6 @@ public class TestNMClient {
   List<NodeReport> nodeReports = null;
   ApplicationAttemptId attemptId = null;
   int nodeCount = 3;
-  ConcurrentHashMap<String, Token> nmTokens;
   
   @Before
   public void setup() throws YarnException, IOException {
@@ -136,7 +136,6 @@ public class TestNMClient {
     if (iterationsLeft == 0) {
       fail("Application hasn't bee started");
     }
-    nmTokens = new ConcurrentHashMap<String, Token>();
 
     // start am rm client
     rmClient =
@@ -148,7 +147,7 @@ public class TestNMClient {
     assertEquals(STATE.STARTED, rmClient.getServiceState());
 
     // start am nm client
-    nmClient = (NMClientImpl) NMClient.createNMClient(nmTokens);
+    nmClient = (NMClientImpl) NMClient.createNMClient();
     nmClient.init(conf);
     nmClient.start();
     assertNotNull(nmClient);
@@ -173,7 +172,7 @@ public class TestNMClient {
     nmClient.stop();
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 180000)
   public void testNMClientNoCleanupOnStop()
       throws YarnException, IOException {
 
@@ -241,7 +240,8 @@ public class TestNMClient {
       }
       if (!allocResponse.getNMTokens().isEmpty()) {
         for (NMToken token : allocResponse.getNMTokens()) {
-          nmTokens.put(token.getNodeId().toString(), token.getToken());
+          NMTokenCache.setNMToken(token.getNodeId().toString(),
+              token.getToken());
         }
       }
       if(allocatedContainerCount < containersRequestedAny) {

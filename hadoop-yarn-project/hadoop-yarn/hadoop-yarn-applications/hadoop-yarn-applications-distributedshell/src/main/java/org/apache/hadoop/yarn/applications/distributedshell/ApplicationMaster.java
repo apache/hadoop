@@ -448,8 +448,7 @@ public class ApplicationMaster {
     resourceManager.start();
 
     containerListener = new NMCallbackHandler();
-    nmClientAsync =
-        new NMClientAsyncImpl(containerListener, resourceManager.getNMTokens());
+    nmClientAsync = new NMClientAsyncImpl(containerListener);
     nmClientAsync.init(conf);
     nmClientAsync.start();
 
