@@ -320,6 +320,15 @@
        <Field name="in" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+     <!-- 
+       The switch condition for INITIATE is expected to fallthru to RESPONSE
+       to process initial sasl response token included in the INITIATE
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.ipc.Server$Connection" />
+       <Method name="processSaslMessage" />
+       <Bug pattern="SF_SWITCH_FALLTHROUGH" />
+     </Match>
 
      <!-- Synchronization performed on util.concurrent instance. -->
      <Match>
