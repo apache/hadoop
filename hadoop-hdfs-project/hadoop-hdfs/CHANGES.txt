@@ -8,6 +8,8 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-4772. Add number of children in HdfsFileStatus. (brandonli)
+
   OPTIMIZATIONS
 
   BUG FIXES

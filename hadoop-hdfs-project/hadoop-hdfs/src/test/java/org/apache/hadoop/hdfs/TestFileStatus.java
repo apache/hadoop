@@ -116,6 +116,16 @@ public class TestFileStatus {
     // Make sure getFileInfo returns null for files which do not exist
     HdfsFileStatus fileInfo = dfsClient.getFileInfo("/noSuchFile");
     assertEquals("Non-existant file should result in null", null, fileInfo);
+    
+    Path path1 = new Path("/name1");
+    Path path2 = new Path("/name1/name2");
+    assertTrue(fs.mkdirs(path1));
+    FSDataOutputStream out = fs.create(path2, false);
+    out.close();
+    fileInfo = dfsClient.getFileInfo(path1.toString());
+    assertEquals(1, fileInfo.getChildrenNum());
+    fileInfo = dfsClient.getFileInfo(path2.toString());
+    assertEquals(0, fileInfo.getChildrenNum());
 
     // Test getFileInfo throws the right exception given a non-absolute path.
     try {

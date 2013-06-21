@@ -130,6 +130,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   /** Get inode id */
+  @Override
   public final long getId() {
     return this.id;
   }
@@ -226,6 +227,7 @@ public abstract class INodeWithAdditionalFields extends INode
 
 
   /** Update modification time if it is larger than the current value. */
+  @Override
   public final INode updateModificationTime(long mtime, Snapshot latest,
       final INodeMap inodeMap) throws QuotaExceededException {
     Preconditions.checkState(isDirectory());
@@ -256,6 +258,7 @@ public abstract class INodeWithAdditionalFields extends INode
   /**
    * Set last access time of inode.
    */
+  @Override
   public final void setAccessTime(long accessTime) {
     this.accessTime = accessTime;
   }
