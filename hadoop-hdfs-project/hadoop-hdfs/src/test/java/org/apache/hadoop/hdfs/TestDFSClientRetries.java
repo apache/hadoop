@@ -423,7 +423,7 @@ public class TestDFSClientRetries {
           }
         }
       }).when(spyNN).complete(Mockito.anyString(), Mockito.anyString(),
-          Mockito.<ExtendedBlock>any());
+          Mockito.<ExtendedBlock>any(), anyLong());
       
       OutputStream stm = client.create(file.toString(), true);
       try {
@@ -441,7 +441,7 @@ public class TestDFSClientRetries {
           Mockito.anyLong(), Mockito.<String[]> any());
       Mockito.verify(spyNN, Mockito.atLeastOnce()).complete(
           Mockito.anyString(), Mockito.anyString(),
-          Mockito.<ExtendedBlock>any());
+          Mockito.<ExtendedBlock>any(), anyLong());
       
       AppendTestUtil.check(fs, file, 10000);
     } finally {

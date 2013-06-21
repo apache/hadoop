@@ -369,6 +369,13 @@ public interface ClientProtocol {
    * DataNode failures may cause a client to call complete() several
    * times before succeeding.
    *
+   * @param src the file being created
+   * @param clientName the name of the client that adds the block
+   * @param last the last block info
+   * @param fileId the id uniquely identifying a file
+   *
+   * @return true if all file blocks are minimally replicated or false otherwise
+   *
    * @throws AccessControlException If access is denied
    * @throws FileNotFoundException If file <code>src</code> is not found
    * @throws SafeModeException create not allowed in safemode
@@ -376,7 +383,8 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  public boolean complete(String src, String clientName, ExtendedBlock last)
+  public boolean complete(String src, String clientName,
+                          ExtendedBlock last, long fileId)
       throws AccessControlException, FileNotFoundException, SafeModeException,
       UnresolvedLinkException, IOException;
 

@@ -124,6 +124,8 @@ Trunk (Unreleased)
 
     HDFS-4772. Add number of children in HdfsFileStatus. (brandonli)
 
+    HDFS-4883. complete() should verify fileId. (Tao Luo via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
