@@ -611,6 +611,8 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4917. Start-dfs.sh cannot pass the parameters correctly.
     (Fengdong Yu via suresh)
 
+    HDFS-4205. fsck fails with symlinks. (jlowe)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
@@ -3193,6 +3195,8 @@ Release 0.23.9 - UNRELEASED
 
     HDFS-4878. On Remove Block, block is not removed from neededReplications
     queue. (Tao Luo via shv)
+
+    HDFS-4205. fsck fails with symlinks. (jlowe)
 
 Release 0.23.8 - 2013-06-05
 
