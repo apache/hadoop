@@ -33,7 +33,7 @@
 
   <property>
     <name>yarn.scheduler.capacity.resource-calculator</name>
-    <value>org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator</value>
+    <value>org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator</value>
     <description>
       The ResourceCalculator implementation to be used to compare 
       Resources in the scheduler.
