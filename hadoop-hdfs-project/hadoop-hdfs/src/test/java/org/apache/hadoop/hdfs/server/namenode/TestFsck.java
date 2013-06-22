@@ -42,6 +42,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -631,6 +632,46 @@ public class TestFsck {
       if(cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  /** Test fsck with symlinks in the filesystem */
+  @Test
+  public void testFsckSymlink() throws Exception {
+    final DFSTestUtil util = new DFSTestUtil(getClass().getSimpleName(),
+        1, 3, 8*1024);
+    final Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
+
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+    try {
+      final long precision = 1L;
+      conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
+      conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
+      fs = cluster.getFileSystem();
+      final String fileName = "/srcdat";
+      util.createFiles(fs, fileName);
+      final FileContext fc = FileContext.getFileContext(
+          cluster.getConfiguration(0));
+      final Path file = new Path(fileName);
+      final Path symlink = new Path("/srcdat-symlink");
+      fc.createSymlink(file, symlink, false);
+      util.waitReplication(fs, fileName, (short)3);
+      long aTime = fc.getFileStatus(symlink).getAccessTime();
+      Thread.sleep(precision);
+      setupAuditLogs();
+      String outStr = runFsck(conf, 0, true, "/");
+      verifyAuditLogs();
+      assertEquals(aTime, fc.getFileStatus(symlink).getAccessTime());
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+      assertTrue(outStr.contains("Total symlinks:\t\t1\n"));
+      System.out.println(outStr);
+      util.cleanup(fs, fileName);
+    } finally {
+      if (fs != null) {try{fs.close();} catch(Exception e){}}
+      if (cluster != null) { cluster.shutdown(); }
     }
   }
 }

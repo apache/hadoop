@@ -27,6 +27,8 @@ Release 0.23.9 - UNRELEASED
     HDFS-4765. Permission check of symlink deletion incorrectly throws
     UnresolvedLinkException. (Andrew Wang via jlowe)
 
+    HDFS-4205. fsck fails with symlinks (jlowe)
+
 Release 0.23.8 - 2013-06-05
   
   INCOMPATIBLE CHANGES
