@@ -98,7 +98,7 @@ public class NativeIO {
 
     static final String WORKAROUND_NON_THREADSAFE_CALLS_KEY =
       "hadoop.workaround.non.threadsafe.getpwuid";
-    static final boolean WORKAROUND_NON_THREADSAFE_CALLS_DEFAULT = false;
+    static final boolean WORKAROUND_NON_THREADSAFE_CALLS_DEFAULT = true;
 
     private static long cacheTimeout = -1;
 

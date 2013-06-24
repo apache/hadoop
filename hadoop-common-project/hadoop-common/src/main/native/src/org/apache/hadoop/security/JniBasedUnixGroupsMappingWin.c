@@ -25,6 +25,13 @@
 
 static jobjectArray emptyGroups = NULL;
 
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_security_JniBasedUnixGroupsMapping_anchorNative(
+JNIEnv *env, jclass clazz)
+{
+  // no-op until full port of HADOOP-9439 to Windows is available
+}
+
 /*
  * Throw a java.IO.IOException, generating the message from errno.
  */
@@ -57,8 +64,8 @@ static void throw_ioexception(JNIEnv* env, DWORD errnum)
 }
 
 JNIEXPORT jobjectArray JNICALL 
-Java_org_apache_hadoop_security_JniBasedUnixGroupsMapping_getGroupForUser 
-(JNIEnv *env, jobject jobj, jstring juser) {
+Java_org_apache_hadoop_security_JniBasedUnixGroupsMapping_getGroupsForUser
+(JNIEnv *env, jclass clazz, jstring juser) {
   const WCHAR *user = NULL;
   jobjectArray jgroups = NULL;
   DWORD dwRtnCode = ERROR_SUCCESS;
