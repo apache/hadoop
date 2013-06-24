@@ -40,22 +40,44 @@ public class JniBasedUnixGroupsMapping implements GroupMappingServiceProvider {
   
   private static final Log LOG = 
     LogFactory.getLog(JniBasedUnixGroupsMapping.class);
-  
-  native String[] getGroupForUser(String user);
-  
+
   static {
     if (!NativeCodeLoader.isNativeCodeLoaded()) {
       throw new RuntimeException("Bailing out since native library couldn't " +
         "be loaded");
     }
+    anchorNative();
     LOG.debug("Using JniBasedUnixGroupsMapping for Group resolution");
+  }
+
+  /**
+   * Set up our JNI resources.
+   *
+   * @throws                 RuntimeException if setup fails.
+   */
+  native static void anchorNative();
+
+  /**
+   * Get the set of groups associated with a user.
+   *
+   * @param username           The user name
+   *
+   * @return                   The set of groups associated with a user.
+   */
+  native static String[] getGroupsForUser(String username);
+
+  /**
+   * Log an error message about a group.  Used from JNI.
+   */
+  static private void logError(int groupId, String error) {
+    LOG.error("error looking up the name of group " + groupId + ": " + error);
   }
 
   @Override
   public List<String> getGroups(String user) throws IOException {
     String[] groups = new String[0];
     try {
-      groups = getGroupForUser(user);
+      groups = getGroupsForUser(user);
     } catch (Exception e) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Error getting groups for " + user, e);

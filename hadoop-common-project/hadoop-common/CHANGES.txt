@@ -285,6 +285,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9624. TestFSMainOperationsLocalFileSystem failed when the Hadoop test
     root path has "X" in its name. (Xi Fang via cnauroth)
 
+    HADOOP-9439.  JniBasedUnixGroupsMapping: fix some crash bugs (Colin Patrick
+    McCabe)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on

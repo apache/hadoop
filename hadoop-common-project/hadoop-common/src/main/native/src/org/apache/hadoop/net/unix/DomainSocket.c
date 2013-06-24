@@ -107,14 +107,6 @@ static jthrowable newSocketException(JNIEnv *env, int errnum,
   return jthr;
 }
 
-static const char* terror(int errnum)
-{
-  if ((errnum < 0) || (errnum >= sys_nerr)) {
-    return "unknown error.";
-  }
-  return sys_errlist[errnum];
-}
-
 /**
  * Flexible buffer that will try to fit data on the stack, and fall back
  * to the heap if necessary.
