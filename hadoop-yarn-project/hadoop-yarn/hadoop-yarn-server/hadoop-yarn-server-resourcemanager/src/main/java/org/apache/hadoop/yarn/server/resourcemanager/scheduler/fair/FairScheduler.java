@@ -311,7 +311,7 @@ public class FairScheduler implements ResourceScheduler {
    * defined as being below half its fair share.
    */
   boolean isStarvedForFairShare(FSLeafQueue sched) {
-    Resource desiredFairShare = Resources.max(RESOURCE_CALCULATOR, clusterCapacity,
+    Resource desiredFairShare = Resources.min(RESOURCE_CALCULATOR, clusterCapacity,
         Resources.multiply(sched.getFairShare(), .5), sched.getDemand());
     return Resources.lessThan(RESOURCE_CALCULATOR, clusterCapacity,
         sched.getResourceUsage(), desiredFairShare);

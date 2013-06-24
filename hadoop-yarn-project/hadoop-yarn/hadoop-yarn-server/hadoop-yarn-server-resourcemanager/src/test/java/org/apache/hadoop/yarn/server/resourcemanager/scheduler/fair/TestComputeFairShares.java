@@ -23,8 +23,10 @@ import java.util.List;
 
 import junit.framework.Assert;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.ComputeFairShares;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,12 +35,10 @@ import org.junit.Test;
  */
 public class TestComputeFairShares {
   private List<Schedulable> scheds;
-  private SchedulingPolicy schedulingMode;
   
   @Before
   public void setUp() throws Exception {
     scheds = new ArrayList<Schedulable>();
-    schedulingMode = new FairSharePolicy();
   }
   
   /** 
@@ -47,13 +47,13 @@ public class TestComputeFairShares {
    */
   @Test
   public void testEqualSharing() {
-    scheds.add(new FakeSchedulable(100));
-    scheds.add(new FakeSchedulable(50));
-    scheds.add(new FakeSchedulable(30));
-    scheds.add(new FakeSchedulable(20));
-    schedulingMode.computeShares(scheds,
-        Resources.createResource(40));
-    verifyShares(10, 10, 10, 10);
+    scheds.add(new FakeSchedulable());
+    scheds.add(new FakeSchedulable());
+    scheds.add(new FakeSchedulable());
+    scheds.add(new FakeSchedulable());
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(40), ResourceType.MEMORY);
+    verifyMemoryShares(10, 10, 10, 10);
   }
   
   /**
@@ -64,16 +64,17 @@ public class TestComputeFairShares {
    * so it only gets 11 slots. Pools 1 and 2 split the rest and get 13 each. 
    */
   @Test
-  public void testLowDemands() {
-    scheds.add(new FakeSchedulable(100));
-    scheds.add(new FakeSchedulable(50));
-    scheds.add(new FakeSchedulable(11));
-    scheds.add(new FakeSchedulable(3));
-    schedulingMode.computeShares(scheds,
-        Resources.createResource(40));
-    verifyShares(13, 13, 11, 3);
+  public void testLowMaxShares() {
+    scheds.add(new FakeSchedulable(0, 100));
+    scheds.add(new FakeSchedulable(0, 50));
+    scheds.add(new FakeSchedulable(0, 11));
+    scheds.add(new FakeSchedulable(0, 3));
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(40), ResourceType.MEMORY);
+    verifyMemoryShares(13, 13, 11, 3);
   }
-  
+
+    
   /**
    * In this test, some pools have minimum shares set. Pool 1 has a min share
    * of 20 so it gets 20 slots. Pool 2 also has a min share of 20, but its
@@ -84,13 +85,13 @@ public class TestComputeFairShares {
    */
   @Test
   public void testMinShares() {
-    scheds.add(new FakeSchedulable(100, 20));
-    scheds.add(new FakeSchedulable(10, 20));
-    scheds.add(new FakeSchedulable(10, 0));
-    scheds.add(new FakeSchedulable(3, 2));
-    schedulingMode.computeShares(scheds,
-        Resources.createResource(40));
-    verifyShares(20, 10, 7, 3);
+    scheds.add(new FakeSchedulable(20));
+    scheds.add(new FakeSchedulable(18));
+    scheds.add(new FakeSchedulable(0));
+    scheds.add(new FakeSchedulable(2));
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(40), ResourceType.MEMORY);
+    verifyMemoryShares(20, 18, 0, 2);
   }
   
   /**
@@ -99,15 +100,15 @@ public class TestComputeFairShares {
    */
   @Test
   public void testWeightedSharing() {
-    scheds.add(new FakeSchedulable(100, 0, 2.0));
-    scheds.add(new FakeSchedulable(50,  0, 1.0));
-    scheds.add(new FakeSchedulable(30,  0, 1.0));
-    scheds.add(new FakeSchedulable(20,  0, 0.5));
-    schedulingMode.computeShares(scheds,
-        Resources.createResource(45));
-    verifyShares(20, 10, 10, 5);
+    scheds.add(new FakeSchedulable(0, 2.0));
+    scheds.add(new FakeSchedulable(0, 1.0));
+    scheds.add(new FakeSchedulable(0, 1.0));
+    scheds.add(new FakeSchedulable(0, 0.5));
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(45), ResourceType.MEMORY);
+    verifyMemoryShares(20, 10, 10, 5);
   }
-
+  
   /**
    * Weighted sharing test where pools 1 and 2 are now given lower demands than
    * above. Pool 1 stops at 10 slots, leaving 35. If the remaining pools split
@@ -116,15 +117,16 @@ public class TestComputeFairShares {
    * the 24 slots left into a 1:0.5 ratio, getting 16 and 8 slots respectively.
    */
   @Test
-  public void testWeightedSharingWithLowDemands() {
-    scheds.add(new FakeSchedulable(10, 0, 2.0));
-    scheds.add(new FakeSchedulable(11, 0, 1.0));
-    scheds.add(new FakeSchedulable(30, 0, 1.0));
-    scheds.add(new FakeSchedulable(20, 0, 0.5));
-    schedulingMode.computeShares(scheds,
-        Resources.createResource(45));
-    verifyShares(10, 11, 16, 8);
+  public void testWeightedSharingWithMaxShares() {
+    scheds.add(new FakeSchedulable(0, 10, 2.0));
+    scheds.add(new FakeSchedulable(0, 11, 1.0));
+    scheds.add(new FakeSchedulable(0, 30, 1.0));
+    scheds.add(new FakeSchedulable(0, 20, 0.5));
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(45), ResourceType.MEMORY);
+    verifyMemoryShares(10, 11, 16, 8);
   }
+
 
   /**
    * Weighted fair sharing test with min shares. As in the min share test above,
@@ -135,13 +137,13 @@ public class TestComputeFairShares {
    */
   @Test
   public void testWeightedSharingWithMinShares() {
-    scheds.add(new FakeSchedulable(10, 20, 2.0));
-    scheds.add(new FakeSchedulable(11, 0, 1.0));
-    scheds.add(new FakeSchedulable(30, 5, 1.0));
-    scheds.add(new FakeSchedulable(20, 15, 0.5));
-    schedulingMode.computeShares(scheds,
-        Resources.createResource(45));
-    verifyShares(10, 10, 10, 15);
+    scheds.add(new FakeSchedulable(20, 2.0));
+    scheds.add(new FakeSchedulable(0, 1.0));
+    scheds.add(new FakeSchedulable(5, 1.0));
+    scheds.add(new FakeSchedulable(15, 0.5));
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(45), ResourceType.MEMORY);
+    verifyMemoryShares(20, 5, 5, 15);
   }
 
   /**
@@ -151,28 +153,13 @@ public class TestComputeFairShares {
   @Test
   public void testLargeShares() {
     int million = 1000 * 1000;
-    scheds.add(new FakeSchedulable(100 * million));
-    scheds.add(new FakeSchedulable(50 * million));
-    scheds.add(new FakeSchedulable(30 * million));
-    scheds.add(new FakeSchedulable(20 * million));
-    schedulingMode
-        .computeShares(scheds,
-        Resources.createResource(40 * million));
-    verifyShares(10 * million, 10 * million, 10 * million, 10 * million);
-  }
-
-  /**
-   * Test that having a pool with 0 demand doesn't confuse the algorithm.
-   */
-  @Test
-  public void testZeroDemand() {
-    scheds.add(new FakeSchedulable(100));
-    scheds.add(new FakeSchedulable(50));
-    scheds.add(new FakeSchedulable(30));
-    scheds.add(new FakeSchedulable(0));
-    schedulingMode.computeShares(scheds,
-        Resources.createResource(30));
-    verifyShares(10, 10, 10, 0);
+    scheds.add(new FakeSchedulable());
+    scheds.add(new FakeSchedulable());
+    scheds.add(new FakeSchedulable());
+    scheds.add(new FakeSchedulable());
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(40 * million), ResourceType.MEMORY);
+    verifyMemoryShares(10 * million, 10 * million, 10 * million, 10 * million);
   }
   
   /**
@@ -180,18 +167,46 @@ public class TestComputeFairShares {
    */
   @Test
   public void testEmptyList() {
-    schedulingMode.computeShares(scheds,
-        Resources.createResource(40));
-    verifyShares();
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(40), ResourceType.MEMORY);
+    verifyMemoryShares();
+  }
+  
+  /**
+   * Test that CPU works as well as memory
+   */
+  @Test
+  public void testCPU() {
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 20),
+        new ResourceWeights(2.0f)));
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 0),
+        new ResourceWeights(1.0f)));
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 5),
+        new ResourceWeights(1.0f)));
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 15),
+        new ResourceWeights(0.5f)));
+    ComputeFairShares.computeShares(scheds,
+        Resources.createResource(0, 45), ResourceType.CPU);
+    verifyCPUShares(20, 5, 5, 15);
   }
   
   /**
    * Check that a given list of shares have been assigned to this.scheds.
    */
-  private void verifyShares(double... shares) {
+  private void verifyMemoryShares(int... shares) {
     Assert.assertEquals(scheds.size(), shares.length);
     for (int i = 0; i < shares.length; i++) {
-      Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getMemory(), 0.01);
+      Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getMemory());
+    }
+  }
+  
+  /**
+   * Check that a given list of shares have been assigned to this.scheds.
+   */
+  private void verifyCPUShares(int... shares) {
+    Assert.assertEquals(scheds.size(), shares.length);
+    for (int i = 0; i < shares.length; i++) {
+      Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getVirtualCores());
     }
   }
 }

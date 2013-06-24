@@ -374,11 +374,10 @@ public class TestFairScheduler {
 
     Collection<FSLeafQueue> queues = scheduler.getQueueManager().getLeafQueues();
     assertEquals(3, queues.size());
-
+    
+    // Divided three ways - betwen the two queues and the default queue
     for (FSLeafQueue p : queues) {
-      if (!p.getName().equals("root.default")) {
-        assertEquals(5120, p.getFairShare().getMemory());
-      }
+      assertEquals(3414, p.getFairShare().getMemory());
     }
   }
   
@@ -393,7 +392,7 @@ public class TestFairScheduler {
     scheduler.handle(nodeEvent1);
 
     // Have two queues which want entire cluster capacity
-    createSchedulingRequest(10 * 1024, "queue1", "user1");
+    createSchedulingRequest(10 * 1024, "default", "user1");
     createSchedulingRequest(10 * 1024, "parent.queue2", "user1");
     createSchedulingRequest(10 * 1024, "parent.queue3", "user1");
 
@@ -401,9 +400,9 @@ public class TestFairScheduler {
 
     QueueManager queueManager = scheduler.getQueueManager();
     Collection<FSLeafQueue> queues = queueManager.getLeafQueues();
-    assertEquals(4, queues.size());
+    assertEquals(3, queues.size());
     
-    FSLeafQueue queue1 = queueManager.getLeafQueue("queue1");
+    FSLeafQueue queue1 = queueManager.getLeafQueue("default");
     FSLeafQueue queue2 = queueManager.getLeafQueue("parent.queue2");
     FSLeafQueue queue3 = queueManager.getLeafQueue("parent.queue3");
     assertEquals(capacity / 2, queue1.getFairShare().getMemory());

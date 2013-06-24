@@ -39,6 +39,8 @@ Release 2.2.0 - UNRELEASED
 
     YARN-866. Add test for class ResourceWeights. (ywskycn via tucu)
 
+    YARN-736. Add a multi-resource fair sharing metric. (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
