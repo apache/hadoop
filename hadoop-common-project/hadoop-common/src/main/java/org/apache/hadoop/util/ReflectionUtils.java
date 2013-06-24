@@ -25,7 +25,10 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -301,5 +304,37 @@ public class ReflectionUtils {
     src.write(buffer.outBuffer);
     buffer.moveData();
     dst.readFields(buffer.inBuffer);
+  }
+  
+  /**
+   * Gets all the declared fields of a class including fields declared in
+   * superclasses.
+   */
+  public static List<Field> getDeclaredFieldsIncludingInherited(Class<?> clazz) {
+    List<Field> fields = new ArrayList<Field>();
+    while (clazz != null) {
+      for (Field field : clazz.getDeclaredFields()) {
+        fields.add(field);
+      }
+      clazz = clazz.getSuperclass();
+    }
+    
+    return fields;
+  }
+  
+  /**
+   * Gets all the declared methods of a class including methods declared in
+   * superclasses.
+   */
+  public static List<Method> getDeclaredMethodsIncludingInherited(Class<?> clazz) {
+    List<Method> methods = new ArrayList<Method>();
+    while (clazz != null) {
+      for (Method method : clazz.getDeclaredMethods()) {
+        methods.add(method);
+      }
+      clazz = clazz.getSuperclass();
+    }
+    
+    return methods;
   }
 }
