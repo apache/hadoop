@@ -79,4 +79,12 @@ jthrowable newRuntimeException(JNIEnv* env, const char *fmt, ...)
 jthrowable newIOException(JNIEnv* env, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
 
+/**
+ * Thread-safe strerror alternative.
+ *
+ * @param errnum        Error number.
+ * @return              Statically allocated error string.
+ */
+const char* terror(int errnum);
+
 #endif

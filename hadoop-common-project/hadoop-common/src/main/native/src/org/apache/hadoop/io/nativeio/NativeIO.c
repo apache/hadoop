@@ -59,7 +59,7 @@ static jmethodID nioe_ctor;
 // the monitor used for working around non-threadsafe implementations
 // of getpwuid_r, observed on platforms including RHEL 6.0.
 // Please see HADOOP-7156 for details.
-static jobject pw_lock_object;
+jobject pw_lock_object;
 
 // Internal functions
 static void throw_ioe(JNIEnv* env, int errnum);
