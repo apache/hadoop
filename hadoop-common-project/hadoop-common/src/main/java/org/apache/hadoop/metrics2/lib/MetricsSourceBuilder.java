@@ -33,6 +33,7 @@ import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Helper class to build {@link MetricsSource} object from annotations.
@@ -63,10 +64,10 @@ public class MetricsSourceBuilder {
     Class<?> cls = source.getClass();
     registry = initRegistry(source);
 
-    for (Field field : cls.getDeclaredFields()) {
+    for (Field field : ReflectionUtils.getDeclaredFieldsIncludingInherited(cls)) {
       add(source, field);
     }
-    for (Method method : cls.getDeclaredMethods()) {
+    for (Method method : ReflectionUtils.getDeclaredMethodsIncludingInherited(cls)) {
       add(source, method);
     }
   }
@@ -97,7 +98,7 @@ public class MetricsSourceBuilder {
     Class<?> cls = source.getClass();
     MetricsRegistry r = null;
     // Get the registry if it already exists.
-    for (Field field : cls.getDeclaredFields()) {
+    for (Field field : ReflectionUtils.getDeclaredFieldsIncludingInherited(cls)) {
       if (field.getType() != MetricsRegistry.class) continue;
       try {
         field.setAccessible(true);

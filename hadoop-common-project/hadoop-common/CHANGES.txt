@@ -295,6 +295,8 @@ Release 2.2.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9661. Allow metrics sources to be extended. (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.util;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashMap;
+import java.util.List;
 
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -108,6 +111,51 @@ public class TestReflectionUtils {
     }
     System.gc();
     assertTrue(cacheSize()+" too big", cacheSize()<iterations);
+  }
+  
+  @Test
+  public void testGetDeclaredFieldsIncludingInherited() {
+    Parent child = new Parent() {
+      private int childField;
+      @SuppressWarnings("unused")
+      public int getChildField() { return childField; }
+    };
+    
+    List<Field> fields = ReflectionUtils.getDeclaredFieldsIncludingInherited(
+        child.getClass());
+    boolean containsParentField = false;
+    boolean containsChildField = false;
+    for (Field field : fields) {
+      if (field.getName().equals("parentField")) {
+        containsParentField = true;
+      } else if (field.getName().equals("childField")) {
+        containsChildField = true;
+      }
+    }
+    
+    List<Method> methods = ReflectionUtils.getDeclaredMethodsIncludingInherited(
+        child.getClass());
+    boolean containsParentMethod = false;
+    boolean containsChildMethod = false;
+    for (Method method : methods) {
+      if (method.getName().equals("getParentField")) {
+        containsParentMethod = true;
+      } else if (method.getName().equals("getChildField")) {
+        containsChildMethod = true;
+      }
+    }
+    
+    assertTrue("Missing parent field", containsParentField);
+    assertTrue("Missing child field", containsChildField);
+    assertTrue("Missing parent method", containsParentMethod);
+    assertTrue("Missing child method", containsChildMethod);
+  }
+  
+  // Used for testGetDeclaredFieldsIncludingInherited
+  private class Parent {
+    private int parentField;
+    @SuppressWarnings("unused")
+    public int getParentField() { return parentField; }
   }
     
   private static class LoadedInChild {
