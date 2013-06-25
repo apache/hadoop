@@ -147,6 +147,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-9619 Mark stability of .proto files (sanjay Radia)
 
+    HADOOP-9370.  Write FSWrapper class to wrap FileSystem and FileContext for
+    better test coverage.  (Andrew Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
