@@ -327,7 +327,8 @@ public class CommonJobTest {
     final Path out = GridmixTestUtils.DEST.makeQualified(
             GridmixTestUtils.dfs.getUri(),
             GridmixTestUtils.dfs.getWorkingDirectory());
-    final Path root = new Path(workspace.getAbsolutePath());
+    final Path root = new Path(workspace.getName()).makeQualified(
+        GridmixTestUtils.dfs.getUri(), GridmixTestUtils.dfs.getWorkingDirectory());
     if (!workspace.exists()) {
       assertTrue(workspace.mkdirs());
     }

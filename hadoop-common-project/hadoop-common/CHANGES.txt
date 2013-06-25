@@ -559,6 +559,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9439.  JniBasedUnixGroupsMapping: fix some crash bugs (Colin Patrick
     McCabe)
 
+    HADOOP-9656. Gridmix unit tests fail on Windows and Linux. (Chuan Liu via
+    cnauroth)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
