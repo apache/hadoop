@@ -134,8 +134,8 @@ public class TestDistCacheEmulation {
 
       FsPermission perm = stat.getPermission();
       assertEquals("Wrong permissions for distributed cache file "
-          + stat.getPath().toUri().getPath(), new FsPermission((short) 0644),
-          perm);
+          + stat.getPath().toUri().getPath(), new FsPermission(
+          GenerateDistCacheData.GRIDMIX_DISTCACHE_FILE_PERM), perm);
     }
   }
 

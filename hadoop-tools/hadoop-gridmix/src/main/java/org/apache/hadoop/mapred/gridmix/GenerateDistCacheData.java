@@ -86,6 +86,15 @@ class GenerateDistCacheData extends GridmixJob {
       "gridmix.distcache.file.list";
   static final String JOB_NAME = "GRIDMIX_GENERATE_DISTCACHE_DATA";
 
+  /**
+   * Create distributed cache file with the permissions 0644.
+   * Since the private distributed cache directory doesn't have execute
+   * permission for others, it is OK to set read permission for others for
+   * the files under that directory and still they will become 'private'
+   * distributed cache files on the simulated cluster.
+   */
+  static final short GRIDMIX_DISTCACHE_FILE_PERM = 0644;
+
   public GenerateDistCacheData(Configuration conf) throws IOException {
     super(conf, 0L, JOB_NAME);
   }
@@ -146,15 +155,8 @@ class GenerateDistCacheData extends GridmixJob {
       String fileName = new String(value.getBytes(), 0, value.getLength());
       Path path = new Path(fileName);
 
-      /**
-       * Create distributed cache file with the permissions 0755.
-       * Since the private distributed cache directory doesn't have execute
-       * permission for others, it is OK to set read permission for others for
-       * the files under that directory and still they will become 'private'
-       * distributed cache files on the simulated cluster.
-       */
       FSDataOutputStream dos =
-          FileSystem.create(fs, path, new FsPermission((short)0755));
+          FileSystem.create(fs, path, new FsPermission(GRIDMIX_DISTCACHE_FILE_PERM));
 
       int size = 0;
       for (long bytes = key.get(); bytes > 0; bytes -= size) {
