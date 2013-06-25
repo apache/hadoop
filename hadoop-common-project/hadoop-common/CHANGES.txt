@@ -297,6 +297,9 @@ Release 2.2.0 - UNRELEASED
 
     HADOOP-9661. Allow metrics sources to be extended. (sandyr via tucu)
 
+    HADOOP-9370.  Write FSWrapper class to wrap FileSystem and FileContext for
+    better test coverage.  (Andrew Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
