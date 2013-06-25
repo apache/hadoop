@@ -613,6 +613,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4205. fsck fails with symlinks. (jlowe)
 
+    HDFS-4927. CreateEditsLog creates inodes with an invalid inode ID, which then
+    cannot be loaded by a namenode. (cnauroth)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
