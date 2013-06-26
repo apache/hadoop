@@ -116,6 +116,8 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-8608. Add Configuration API for parsing time durations. (cdouglas)
 
+    HADOOP-9619 Mark stability of .proto files (sanjay Radia)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
