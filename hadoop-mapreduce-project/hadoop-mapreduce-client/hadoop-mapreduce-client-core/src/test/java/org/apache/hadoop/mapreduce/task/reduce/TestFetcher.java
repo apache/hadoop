@@ -124,9 +124,8 @@ public class TestFetcher {
 
     underTest.copyFromHost(host);
     
-    verify(connection)
-      .addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH, 
-          encHash);
+    verify(connection).addRequestProperty(
+        SecureShuffleUtils.HTTP_HEADER_URL_HASH, encHash);
     
     verify(allErrs).increment(1);
     verify(ss).copyFailed(map1ID, host, false, false);
@@ -144,17 +143,20 @@ public class TestFetcher {
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
     
     when(connection.getResponseCode()).thenReturn(200);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
-      .thenReturn(replyHash);
+        .thenReturn(replyHash);
     ByteArrayInputStream in = new ByteArrayInputStream(
         "\u00010 BOGUS DATA\nBOGUS DATA\nBOGUS DATA\n".getBytes());
     when(connection.getInputStream()).thenReturn(in);
     
     underTest.copyFromHost(host);
     
-    verify(connection)
-      .addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH, 
-          encHash);
+    verify(connection).addRequestProperty(
+        SecureShuffleUtils.HTTP_HEADER_URL_HASH, encHash);
     
     verify(allErrs).increment(1);
     verify(ss).copyFailed(map1ID, host, true, false);
@@ -162,6 +164,37 @@ public class TestFetcher {
     
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
+  }
+
+  @Test
+  public void testCopyFromHostIncompatibleShuffleVersion() throws Exception {
+    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    
+    when(connection.getResponseCode()).thenReturn(200);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+        .thenReturn("mapreduce").thenReturn("other").thenReturn("other");
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+        .thenReturn("1.0.1").thenReturn("1.0.0").thenReturn("1.0.1");
+    when(connection.getHeaderField(
+        SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH)).thenReturn(replyHash);
+    ByteArrayInputStream in = new ByteArrayInputStream(new byte[0]);
+    when(connection.getInputStream()).thenReturn(in);
+
+    for (int i = 0; i < 3; ++i) {
+      Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
+          r, metrics, except, key, connection);
+      underTest.copyFromHost(host);
+    }
+    
+    verify(connection, times(3)).addRequestProperty(
+        SecureShuffleUtils.HTTP_HEADER_URL_HASH, encHash);
+    
+    verify(allErrs, times(3)).increment(1);
+    verify(ss, times(3)).copyFailed(map1ID, host, false, false);
+    verify(ss, times(3)).copyFailed(map2ID, host, false, false);
+    
+    verify(ss, times(3)).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
+    verify(ss, times(3)).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
   }
 
   @Test
@@ -173,20 +206,24 @@ public class TestFetcher {
     
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
-      .thenReturn(replyHash);
+        .thenReturn(replyHash);
     ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 10, 10, 1);
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     header.write(new DataOutputStream(bout));
     ByteArrayInputStream in = new ByteArrayInputStream(bout.toByteArray());
     when(connection.getInputStream()).thenReturn(in);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     //Defaults to null, which is what we want to test
     when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
-      .thenReturn(null);
+        .thenReturn(null);
     
     underTest.copyFromHost(host);
     
     verify(connection)
-      .addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH, 
+        .addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH, 
           encHash);
     verify(allErrs, never()).increment(1);
     verify(ss, never()).copyFailed(map1ID, host, true, false);
@@ -208,24 +245,27 @@ public class TestFetcher {
     
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
-      .thenReturn(replyHash);
+        .thenReturn(replyHash);
     ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 10, 10, 1);
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     header.write(new DataOutputStream(bout));
     ByteArrayInputStream in = new ByteArrayInputStream(bout.toByteArray());
     when(connection.getInputStream()).thenReturn(in);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
-      .thenReturn(immo);
+        .thenReturn(immo);
     
-    doThrow(new java.lang.InternalError())
-    .when(immo)
-      .shuffle(any(MapHost.class), any(InputStream.class), anyLong(), 
-               anyLong(), any(ShuffleClientMetrics.class), any(Reporter.class));
+    doThrow(new java.lang.InternalError()).when(immo)
+        .shuffle(any(MapHost.class), any(InputStream.class), anyLong(), 
+            anyLong(), any(ShuffleClientMetrics.class), any(Reporter.class));
 
     underTest.copyFromHost(host);
        
     verify(connection)
-      .addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH, 
+        .addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH, 
           encHash);
     verify(ss, times(1)).copyFailed(map1ID, host, true, false);
   }
@@ -236,19 +276,23 @@ public class TestFetcher {
     InMemoryMapOutput<Text,Text> immo = spy(new InMemoryMapOutput<Text,Text>(
           job, id, mm, 100, null, true));
     when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
-      .thenReturn(immo);
+        .thenReturn(immo);
     doNothing().when(mm).waitForResource();
     when(ss.getHost()).thenReturn(host);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
     when(connection.getResponseCode()).thenReturn(200);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
-      .thenReturn(replyHash);
+        .thenReturn(replyHash);
     ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 10, 10, 1);
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     header.write(new DataOutputStream(bout));
     final StuckInputStream in =
-      new StuckInputStream(new ByteArrayInputStream(bout.toByteArray()));
+        new StuckInputStream(new ByteArrayInputStream(bout.toByteArray()));
     when(connection.getInputStream()).thenReturn(in);
     doAnswer(new Answer<Void>() {
       public Void answer(InvocationOnMock ignore) throws IOException {
@@ -280,20 +324,24 @@ public class TestFetcher {
     OnDiskMapOutput<Text,Text> odmo = spy(new OnDiskMapOutput<Text,Text>(map1ID,
         id, mm, 100L, job, mof, FETCHER, true, mFs, p));
     when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
-      .thenReturn(odmo);
+        .thenReturn(odmo);
     doNothing().when(mm).waitForResource();
     when(ss.getHost()).thenReturn(host);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
     when(connection.getResponseCode()).thenReturn(200);
     when(connection.getHeaderField(
-          SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH)).thenReturn(replyHash);
+        SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH)).thenReturn(replyHash);
     ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 10, 10, 1);
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     header.write(new DataOutputStream(bout));
     final StuckInputStream in =
-      new StuckInputStream(new ByteArrayInputStream(bout.toByteArray()));
+        new StuckInputStream(new ByteArrayInputStream(bout.toByteArray()));
     when(connection.getInputStream()).thenReturn(in);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     doAnswer(new Answer<Void>() {
       public Void answer(InvocationOnMock ignore) throws IOException {
         in.close();
