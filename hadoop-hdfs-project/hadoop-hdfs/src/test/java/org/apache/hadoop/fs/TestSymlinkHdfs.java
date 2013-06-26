@@ -36,26 +36,25 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * Test symbolic links using FileContext and Hdfs.
+ * Test symbolic links in Hdfs.
  */
-public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
+abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
 
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
   }
 
-  private static FileContextTestHelper fileContextTestHelper =
-      new FileContextTestHelper("/tmp/TestFcHdfsSymlink");
-  private static MiniDFSCluster cluster;
-  private static WebHdfsFileSystem webhdfs;
-  private static DistributedFileSystem dfs;
-  
+  protected static MiniDFSCluster cluster;
+  protected static WebHdfsFileSystem webhdfs;
+  protected static DistributedFileSystem dfs;
+
   @Override
   protected String getScheme() {
     return "hdfs";
@@ -85,90 +84,82 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
   }
 
   @BeforeClass
-  public static void testSetUp() throws Exception {
+  public static void beforeClassSetup() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     conf.set(FsPermission.UMASK_LABEL, "000");
     cluster = new MiniDFSCluster.Builder(conf).build();
-    fc = FileContext.getFileContext(cluster.getURI(0));
     webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf);
     dfs = cluster.getFileSystem();
   }
-  
+
   @AfterClass
-  public static void testTearDown() throws Exception {
+  public static void afterClassTeardown() throws Exception {
     cluster.shutdown();
   }
-     
-  @Test
+
+  @Test(timeout=10000)
   /** Access a file using a link that spans Hdfs to LocalFs */
   public void testLinkAcrossFileSystems() throws IOException {
-    FileContext localFc = FileContext.getLocalFSFileContext();
-    Path localDir  = new Path("file://"+fileContextTestHelper.getAbsoluteTestRootDir(localFc)+"/test");
-    Path localFile = new Path("file://"+fileContextTestHelper.getAbsoluteTestRootDir(localFc)+"/test/file");
+    Path localDir = new Path("file://" + wrapper.getAbsoluteTestRootDir()
+        + "/test");
+    Path localFile = new Path("file://" + wrapper.getAbsoluteTestRootDir()
+        + "/test/file");
     Path link      = new Path(testBaseDir1(), "linkToFile");
-    localFc.delete(localDir, true);
-    localFc.mkdir(localDir, FileContext.DEFAULT_PERM, true);
-    localFc.setWorkingDirectory(localDir);
-    assertEquals(localDir, localFc.getWorkingDirectory());
-    createAndWriteFile(localFc, localFile);
-    fc.createSymlink(localFile, link, false);
+    FSTestWrapper localWrapper = wrapper.getLocalFSWrapper();
+    localWrapper.delete(localDir, true);
+    localWrapper.mkdir(localDir, FileContext.DEFAULT_PERM, true);
+    localWrapper.setWorkingDirectory(localDir);
+    assertEquals(localDir, localWrapper.getWorkingDirectory());
+    createAndWriteFile(localWrapper, localFile);
+    wrapper.createSymlink(localFile, link, false);
     readFile(link);
-    assertEquals(fileSize, fc.getFileStatus(link).getLen());
+    assertEquals(fileSize, wrapper.getFileStatus(link).getLen());
   }
 
-  @Test
+  @Test(timeout=10000)
   /** Test renaming a file across two file systems using a link */
   public void testRenameAcrossFileSystemsViaLink() throws IOException {
-    FileContext localFc = FileContext.getLocalFSFileContext();
-    Path localDir    = new Path("file://"+fileContextTestHelper.getAbsoluteTestRootDir(localFc)+"/test");
+    Path localDir = new Path("file://" + wrapper.getAbsoluteTestRootDir()
+        + "/test");
     Path hdfsFile    = new Path(testBaseDir1(), "file");
     Path link        = new Path(testBaseDir1(), "link");
     Path hdfsFileNew = new Path(testBaseDir1(), "fileNew");
     Path hdfsFileNewViaLink = new Path(link, "fileNew");
-    localFc.delete(localDir, true);
-    localFc.mkdir(localDir, FileContext.DEFAULT_PERM, true);
-    localFc.setWorkingDirectory(localDir);
-    createAndWriteFile(fc, hdfsFile);
-    fc.createSymlink(localDir, link, false);
+    FSTestWrapper localWrapper = wrapper.getLocalFSWrapper();
+    localWrapper.delete(localDir, true);
+    localWrapper.mkdir(localDir, FileContext.DEFAULT_PERM, true);
+    localWrapper.setWorkingDirectory(localDir);
+    createAndWriteFile(hdfsFile);
+    wrapper.createSymlink(localDir, link, false);
     // Rename hdfs://test1/file to hdfs://test1/link/fileNew
     // which renames to file://TEST_ROOT/test/fileNew which
     // spans AbstractFileSystems and therefore fails.
     try {
-      fc.rename(hdfsFile, hdfsFileNewViaLink);
+      wrapper.rename(hdfsFile, hdfsFileNewViaLink);
       fail("Renamed across file systems");
     } catch (InvalidPathException ipe) {
-      // Expected
+      // Expected from FileContext
+    } catch (IllegalArgumentException e) {
+      // Expected from Filesystem
+      GenericTestUtils.assertExceptionContains("Wrong FS: ", e);
     }
     // Now rename hdfs://test1/link/fileNew to hdfs://test1/fileNew
     // which renames file://TEST_ROOT/test/fileNew to hdfs://test1/fileNew
     // which spans AbstractFileSystems and therefore fails.
-    createAndWriteFile(fc, hdfsFileNewViaLink);
+    createAndWriteFile(hdfsFileNewViaLink);
     try {
-      fc.rename(hdfsFileNewViaLink, hdfsFileNew);
+      wrapper.rename(hdfsFileNewViaLink, hdfsFileNew);
       fail("Renamed across file systems");
     } catch (InvalidPathException ipe) {
-      // Expected
+      // Expected from FileContext
+    } catch (IllegalArgumentException e) {
+      // Expected from Filesystem
+      GenericTestUtils.assertExceptionContains("Wrong FS: ", e);
     }
   }
 
-  @Test
-  /** Test access a symlink using AbstractFileSystem */
-  public void testAccessLinkFromAbstractFileSystem() throws IOException {
-    Path file = new Path(testBaseDir1(), "file");
-    Path link = new Path(testBaseDir1(), "linkToFile");
-    createAndWriteFile(file);
-    fc.createSymlink(file, link, false);
-    try {
-      AbstractFileSystem afs = fc.getDefaultFileSystem();
-      afs.open(link);
-      fail("Opened a link using AFS");
-    } catch (UnresolvedLinkException x) {
-      // Expected
-    }
-  }
-
-  @Test
+  @Test(timeout=10000)
   /** Test create symlink to / */
   public void testCreateLinkToSlash() throws IOException {
     Path dir  = new Path(testBaseDir1());
@@ -177,59 +168,61 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     Path fileViaLink = new Path(testBaseDir1()+"/linkToSlash"+
                                 testBaseDir1()+"/file");
     createAndWriteFile(file);
-    fc.setWorkingDirectory(dir);
-    fc.createSymlink(new Path("/"), link, false);
+    wrapper.setWorkingDirectory(dir);
+    wrapper.createSymlink(new Path("/"), link, false);
     readFile(fileViaLink);
-    assertEquals(fileSize, fc.getFileStatus(fileViaLink).getLen());
+    assertEquals(fileSize, wrapper.getFileStatus(fileViaLink).getLen());
     // Ditto when using another file context since the file system
     // for the slash is resolved according to the link's parent.
-    FileContext localFc = FileContext.getLocalFSFileContext();
-    Path linkQual = new Path(cluster.getURI(0).toString(), fileViaLink); 
-    assertEquals(fileSize, localFc.getFileStatus(linkQual).getLen());    
+    if (wrapper instanceof FileContextTestWrapper) {
+      FSTestWrapper localWrapper = wrapper.getLocalFSWrapper();
+      Path linkQual = new Path(cluster.getURI(0).toString(), fileViaLink);
+      assertEquals(fileSize, localWrapper.getFileStatus(linkQual).getLen());
+    }
   }
   
   
-  @Test
+  @Test(timeout=10000)
   /** setPermission affects the target not the link */
-  public void testSetPermissionAffectsTarget() throws IOException {    
+  public void testSetPermissionAffectsTarget() throws IOException {
     Path file       = new Path(testBaseDir1(), "file");
     Path dir        = new Path(testBaseDir2());
     Path linkToFile = new Path(testBaseDir1(), "linkToFile");
     Path linkToDir  = new Path(testBaseDir1(), "linkToDir");
     createAndWriteFile(file);
-    fc.createSymlink(file, linkToFile, false);
-    fc.createSymlink(dir, linkToDir, false);
+    wrapper.createSymlink(file, linkToFile, false);
+    wrapper.createSymlink(dir, linkToDir, false);
     
     // Changing the permissions using the link does not modify
     // the permissions of the link..
-    FsPermission perms = fc.getFileLinkStatus(linkToFile).getPermission();
-    fc.setPermission(linkToFile, new FsPermission((short)0664));
-    fc.setOwner(linkToFile, "user", "group");
-    assertEquals(perms, fc.getFileLinkStatus(linkToFile).getPermission());
+    FsPermission perms = wrapper.getFileLinkStatus(linkToFile).getPermission();
+    wrapper.setPermission(linkToFile, new FsPermission((short)0664));
+    wrapper.setOwner(linkToFile, "user", "group");
+    assertEquals(perms, wrapper.getFileLinkStatus(linkToFile).getPermission());
     // but the file's permissions were adjusted appropriately
-    FileStatus stat = fc.getFileStatus(file);
-    assertEquals(0664, stat.getPermission().toShort()); 
+    FileStatus stat = wrapper.getFileStatus(file);
+    assertEquals(0664, stat.getPermission().toShort());
     assertEquals("user", stat.getOwner());
     assertEquals("group", stat.getGroup());
     // Getting the file's permissions via the link is the same
     // as getting the permissions directly.
     assertEquals(stat.getPermission(), 
-                 fc.getFileStatus(linkToFile).getPermission());
+                 wrapper.getFileStatus(linkToFile).getPermission());
 
     // Ditto for a link to a directory
-    perms = fc.getFileLinkStatus(linkToDir).getPermission();
-    fc.setPermission(linkToDir, new FsPermission((short)0664));
-    fc.setOwner(linkToDir, "user", "group");
-    assertEquals(perms, fc.getFileLinkStatus(linkToDir).getPermission());
-    stat = fc.getFileStatus(dir);
-    assertEquals(0664, stat.getPermission().toShort()); 
+    perms = wrapper.getFileLinkStatus(linkToDir).getPermission();
+    wrapper.setPermission(linkToDir, new FsPermission((short)0664));
+    wrapper.setOwner(linkToDir, "user", "group");
+    assertEquals(perms, wrapper.getFileLinkStatus(linkToDir).getPermission());
+    stat = wrapper.getFileStatus(dir);
+    assertEquals(0664, stat.getPermission().toShort());
     assertEquals("user", stat.getOwner());
     assertEquals("group", stat.getGroup());
     assertEquals(stat.getPermission(), 
-                 fc.getFileStatus(linkToDir).getPermission());
+                 wrapper.getFileStatus(linkToDir).getPermission());
   }  
 
-  @Test
+  @Test(timeout=10000)
   /** Create a symlink using a path with scheme but no authority */
   public void testCreateWithPartQualPathFails() throws IOException {
     Path fileWoAuth = new Path("hdfs:///test/file");
@@ -241,27 +234,27 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
       // Expected
     }
     try {
-      fc.createSymlink(new Path("foo"), linkWoAuth, false);
+      wrapper.createSymlink(new Path("foo"), linkWoAuth, false);
       fail("HDFS requires URIs with schemes have an authority");
     } catch (RuntimeException e) {
       // Expected
     }
   }
 
-  @Test
-  /** setReplication affects the target not the link */  
+  @Test(timeout=10000)
+  /** setReplication affects the target not the link */
   public void testSetReplication() throws IOException {
     Path file = new Path(testBaseDir1(), "file");
     Path link = new Path(testBaseDir1(), "linkToFile");
     createAndWriteFile(file);
-    fc.createSymlink(file, link, false);
-    fc.setReplication(link, (short)2);
-    assertEquals(0, fc.getFileLinkStatus(link).getReplication());
-    assertEquals(2, fc.getFileStatus(link).getReplication());      
-    assertEquals(2, fc.getFileStatus(file).getReplication());
+    wrapper.createSymlink(file, link, false);
+    wrapper.setReplication(link, (short)2);
+    assertEquals(0, wrapper.getFileLinkStatus(link).getReplication());
+    assertEquals(2, wrapper.getFileStatus(link).getReplication());
+    assertEquals(2, wrapper.getFileStatus(file).getReplication());
   }
   
-  @Test
+  @Test(timeout=10000)
   /** Test create symlink with a max len name */
   public void testCreateLinkMaxPathLink() throws IOException {
     Path dir  = new Path(testBaseDir1());
@@ -283,47 +276,47 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     
     // Check that it works
     createAndWriteFile(file);
-    fc.setWorkingDirectory(dir);
-    fc.createSymlink(file, link, false);
+    wrapper.setWorkingDirectory(dir);
+    wrapper.createSymlink(file, link, false);
     readFile(link);
     
     // Now modify the path so it's too large
     link = new Path(sb.toString()+"x");
     try {
-      fc.createSymlink(file, link, false);
+      wrapper.createSymlink(file, link, false);
       fail("Path name should be too long");
     } catch (IOException x) {
       // Expected
     }
   }
 
-  @Test
+  @Test(timeout=10000)
   /** Test symlink owner */
   public void testLinkOwner() throws IOException {
     Path file = new Path(testBaseDir1(), "file");
     Path link = new Path(testBaseDir1(), "symlinkToFile");
     createAndWriteFile(file);
-    fc.createSymlink(file, link, false);
-    FileStatus statFile = fc.getFileStatus(file);
-    FileStatus statLink = fc.getFileStatus(link);
+    wrapper.createSymlink(file, link, false);
+    FileStatus statFile = wrapper.getFileStatus(file);
+    FileStatus statLink = wrapper.getFileStatus(link);
     assertEquals(statLink.getOwner(), statFile.getOwner());
   }
 
-  @Test
-  /** Test WebHdfsFileSystem.craeteSymlink(..). */  
+  @Test(timeout=10000)
+  /** Test WebHdfsFileSystem.createSymlink(..). */
   public void testWebHDFS() throws IOException {
     Path file = new Path(testBaseDir1(), "file");
     Path link = new Path(testBaseDir1(), "linkToFile");
     createAndWriteFile(file);
     webhdfs.createSymlink(file, link, false);
-    fc.setReplication(link, (short)2);
-    assertEquals(0, fc.getFileLinkStatus(link).getReplication());
-    assertEquals(2, fc.getFileStatus(link).getReplication());      
-    assertEquals(2, fc.getFileStatus(file).getReplication());
+    wrapper.setReplication(link, (short)2);
+    assertEquals(0, wrapper.getFileLinkStatus(link).getReplication());
+    assertEquals(2, wrapper.getFileStatus(link).getReplication());
+    assertEquals(2, wrapper.getFileStatus(file).getReplication());
   }
 
-  @Test
-  /** Test craeteSymlink(..) with quota. */  
+  @Test(timeout=10000)
+  /** Test craeteSymlink(..) with quota. */
   public void testQuota() throws IOException {
     final Path dir = new Path(testBaseDir1());
     dfs.setQuota(dir, 3, HdfsConstants.QUOTA_DONT_SET);
@@ -333,12 +326,12 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
 
     //creating the first link should succeed
     final Path link1 = new Path(dir, "link1");
-    fc.createSymlink(file, link1, false);
+    wrapper.createSymlink(file, link1, false);
 
     try {
       //creating the second link should fail with QuotaExceededException.
       final Path link2 = new Path(dir, "link2");
-      fc.createSymlink(file, link2, false);
+      wrapper.createSymlink(file, link2, false);
       fail("Created symlink despite quota violation");
     } catch(QuotaExceededException qee) {
       //expected
