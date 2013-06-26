@@ -48,6 +48,7 @@
               <imports>
                 <param>${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
+                <param>${basedir}/src/main/proto/server</param>
               </imports>
               <source>
                 <directory>${basedir}/src/main/proto</directory>
@@ -57,8 +58,8 @@
                   <include>applicationmaster_protocol.proto</include>
                   <include>applicationclient_protocol.proto</include>
                   <include>containermanagement_protocol.proto</include>
-                  <include>yarn_server_resourcemanager_service_protos.proto</include>
-                  <include>resourcemanager_administration_protocol.proto</include>
+                  <include>server/yarn_server_resourcemanager_service_protos.proto</include>
+                  <include>server/resourcemanager_administration_protocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
