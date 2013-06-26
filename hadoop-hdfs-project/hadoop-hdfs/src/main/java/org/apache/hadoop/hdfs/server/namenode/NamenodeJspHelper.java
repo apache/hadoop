@@ -249,9 +249,30 @@ class NamenodeJspHelper {
               + "<thead><tr><td><b>Journal Manager</b></td><td><b>State</b></td></tr></thead>");
       for (JournalAndStream jas : log.getJournals()) {
         out.print("<tr>");
-        out.print("<td>" + jas.getManager());
-        if (jas.isRequired()) {
-          out.print(" [required]");
+        out.print("<td>");
+        
+        /**
+         * Insert a line break every 3 journal nodes to avoid a very wide line.
+         */  
+        JournalManager manager = jas.getManager();
+        if (null != manager) {
+          String[] managers = manager.toString().split(",");
+
+          for (int i = 0; i < managers.length; ++i) {
+            out.print(managers[i]);
+
+            if (i < managers.length - 1) {
+              out.print(",");
+            }
+
+            if ((i+1) % 3 == 0) {
+              out.print("<br/>");
+            }
+          }
+
+          if (jas.isRequired()) {
+            out.print(" [required]");
+          }
         }
         out.print("</td><td>");
         

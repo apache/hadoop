@@ -414,6 +414,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4772. Add number of children in HdfsFileStatus. (brandonli)
 
+    HDFS-4932. Avoid a wide line on the name node webUI if we have more Journal
+    nodes. (Fengdong Yu via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
