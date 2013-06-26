@@ -275,6 +275,11 @@ class Fetcher<K,V> extends Thread {
           SecureShuffleUtils.HTTP_HEADER_URL_HASH, encHash);
       // set the read timeout
       connection.setReadTimeout(readTimeout);
+      // put shuffle version into http header
+      connection.addRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
+          ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+      connection.addRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
+          ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
       connect(connection, connectionTimeout);
       // verify that the thread wasn't stopped during calls to connect
       if (stopped) {
@@ -290,7 +295,13 @@ class Fetcher<K,V> extends Thread {
             "Got invalid response code " + rc + " from " + url +
             ": " + connection.getResponseMessage());
       }
-      
+      // get the shuffle version
+      if (!ShuffleHeader.DEFAULT_HTTP_HEADER_NAME.equals(
+          connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+          || !ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION.equals(
+              connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))) {
+        throw new IOException("Incompatible shuffle response version");
+      }
       // get the replyHash which is HMac of the encHash we sent to the server
       String replyHash = connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH);
       if(replyHash==null) {

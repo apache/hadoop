@@ -183,6 +183,9 @@ Release 2.1.0-beta - UNRELEASED
 
     MAPREDUCE-5194. Heed interrupts during Fetcher shutdown. (cdouglas)
 
+    MAPREDUCE-5326. Added version to shuffle header. (Zhijie Shen via
+    acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
