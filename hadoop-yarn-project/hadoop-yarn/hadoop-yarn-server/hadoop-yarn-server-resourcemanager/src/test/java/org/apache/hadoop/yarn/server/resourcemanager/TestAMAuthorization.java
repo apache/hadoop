@@ -231,7 +231,7 @@ public class TestAMAuthorization {
       // server side will assume we are trying simple auth.
       Assert.assertTrue(e.getCause().getMessage().contains(
         "SIMPLE authentication is not enabled.  "
-            + "Available:[KERBEROS, DIGEST]"));
+            + "Available:[TOKEN, KERBEROS]"));
     }
 
     // Now try to validate invalid authorization.
