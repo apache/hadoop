@@ -18,8 +18,14 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.*;
-import static org.junit.Assert.*;
+import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
+import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.SIMPLE;
+import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.TOKEN;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -32,8 +38,17 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import javax.security.auth.callback.*;
-import javax.security.sasl.*;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.AuthorizeCallback;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslClient;
+import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
+
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
@@ -45,16 +60,23 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.*;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.SaslInputStream;
+import org.apache.hadoop.security.SaslPlainServer;
+import org.apache.hadoop.security.SaslRpcClient;
+import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
+import org.apache.hadoop.security.SecurityInfo;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.TestUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -73,7 +95,13 @@ public class TestSaslRPC {
   static final String SERVER_PRINCIPAL_1 = "p1/foo@BAR";
   static final String SERVER_PRINCIPAL_2 = "p2/foo@BAR";
   private static Configuration conf;
+  // If this is set to true AND the auth-method is not simple, secretManager
+  // will be enabled.
+  static Boolean enableSecretManager = null;
+  // If this is set to true, secretManager will be forecefully enabled
+  // irrespective of auth-method.
   static Boolean forceSecretManager = null;
+  static Boolean clientFallBackToSimpleAllowed = true;
   
   @BeforeClass
   public static void setupKerb() {
@@ -87,7 +115,7 @@ public class TestSaslRPC {
     conf = new Configuration();
     SecurityUtil.setAuthenticationMethod(KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
-    forceSecretManager = null;
+    enableSecretManager = null;
   }
 
   static {
@@ -590,21 +618,54 @@ public class TestSaslRPC {
   }
 
   @Test
-  public void testSimpleServerWithTokens() throws Exception {
-    // Tokens are ignored because client is reverted to simple
-    assertAuthEquals(SIMPLE, getAuthMethod(SIMPLE,   SIMPLE, true));
-    assertAuthEquals(SIMPLE, getAuthMethod(KERBEROS, SIMPLE, true));
+  public void testSimpleServerWithTokensWithNoClientFallbackToSimple()
+      throws Exception {
+
+    clientFallBackToSimpleAllowed = false;
+
+    try{
+      // Client has a token even though its configs says simple auth. Server
+      // is configured for simple auth, but as client sends the token, and
+      // server asks to switch to simple, this should fail.
+      getAuthMethod(SIMPLE,   SIMPLE, true);
+    } catch (IOException ioe) {
+      Assert
+        .assertTrue(ioe.getMessage().contains("Failed on local exception: " +
+        		"java.io.IOException: java.io.IOException: " +
+        		"Server asks us to fall back to SIMPLE auth, " +
+        		"but this client is configured to only allow secure connections"
+          ));
+    }
+
+    // Now set server to simple and also force the secret-manager. Now server
+    // should have both simple and token enabled.
     forceSecretManager = true;
+    assertAuthEquals(TOKEN, getAuthMethod(SIMPLE,   SIMPLE, true));
+    forceSecretManager = false;
+    clientFallBackToSimpleAllowed = true;
+  }
+
+  @Test
+  public void testSimpleServerWithTokens() throws Exception {
+    // Client not using tokens
+    assertAuthEquals(SIMPLE, getAuthMethod(SIMPLE,   SIMPLE));
+    // SASL methods are reverted to SIMPLE, but test setup fails
+    assertAuthEquals(KrbFailed, getAuthMethod(KERBEROS, SIMPLE));
+
+    // Use tokens. But tokens are ignored because client is reverted to simple
+    assertAuthEquals(SIMPLE, getAuthMethod(KERBEROS, SIMPLE, true));
+
+    enableSecretManager = true;
     assertAuthEquals(SIMPLE, getAuthMethod(SIMPLE,   SIMPLE, true));
     assertAuthEquals(SIMPLE, getAuthMethod(KERBEROS, SIMPLE, true));
   }
-    
+
   @Test
   public void testSimpleServerWithInvalidTokens() throws Exception {
     // Tokens are ignored because client is reverted to simple
     assertAuthEquals(SIMPLE, getAuthMethod(SIMPLE,   SIMPLE, false));
     assertAuthEquals(SIMPLE, getAuthMethod(KERBEROS, SIMPLE, false));
-    forceSecretManager = true;
+    enableSecretManager = true;
     assertAuthEquals(SIMPLE, getAuthMethod(SIMPLE,   SIMPLE, false));
     assertAuthEquals(SIMPLE, getAuthMethod(KERBEROS, SIMPLE, false));
   }
@@ -622,7 +683,7 @@ public class TestSaslRPC {
   public void testTokenOnlyServerWithTokens() throws Exception {
     assertAuthEquals(TOKEN, getAuthMethod(SIMPLE,   TOKEN, true));
     assertAuthEquals(TOKEN, getAuthMethod(KERBEROS, TOKEN, true));
-    forceSecretManager = false;
+    enableSecretManager = false;
     assertAuthEquals(NoTokenAuth, getAuthMethod(SIMPLE,   TOKEN, true));
     assertAuthEquals(NoTokenAuth, getAuthMethod(KERBEROS, TOKEN, true));
   }
@@ -631,7 +692,7 @@ public class TestSaslRPC {
   public void testTokenOnlyServerWithInvalidTokens() throws Exception {
     assertAuthEquals(BadToken, getAuthMethod(SIMPLE,   TOKEN, false));
     assertAuthEquals(BadToken, getAuthMethod(KERBEROS, TOKEN, false));
-    forceSecretManager = false;
+    enableSecretManager = false;
     assertAuthEquals(NoTokenAuth, getAuthMethod(SIMPLE,   TOKEN, false));
     assertAuthEquals(NoTokenAuth, getAuthMethod(KERBEROS, TOKEN, false));
   }
@@ -651,7 +712,7 @@ public class TestSaslRPC {
     assertAuthEquals(TOKEN, getAuthMethod(SIMPLE,   KERBEROS, true));
     assertAuthEquals(TOKEN, getAuthMethod(KERBEROS, KERBEROS, true));
     // can't fallback to simple when using kerberos w/o tokens
-    forceSecretManager = false;
+    enableSecretManager = false;
     assertAuthEquals(Denied(TOKEN), getAuthMethod(SIMPLE,   KERBEROS, true));
     assertAuthEquals(Denied(TOKEN), getAuthMethod(KERBEROS, KERBEROS, true));
   }
@@ -660,7 +721,7 @@ public class TestSaslRPC {
   public void testKerberosServerWithInvalidTokens() throws Exception {
     assertAuthEquals(BadToken, getAuthMethod(SIMPLE,   KERBEROS, false));
     assertAuthEquals(BadToken, getAuthMethod(KERBEROS, KERBEROS, false));
-    forceSecretManager = false;
+    enableSecretManager = false;
     assertAuthEquals(Denied(TOKEN), getAuthMethod(SIMPLE,   KERBEROS, false));
     assertAuthEquals(Denied(TOKEN), getAuthMethod(KERBEROS, KERBEROS, false));
   }
@@ -709,8 +770,11 @@ public class TestSaslRPC {
 
     final TestTokenSecretManager sm = new TestTokenSecretManager();
     boolean useSecretManager = (serverAuth != SIMPLE);
+    if (enableSecretManager != null) {
+      useSecretManager &= enableSecretManager.booleanValue();
+    }
     if (forceSecretManager != null) {
-      useSecretManager &= forceSecretManager.booleanValue();
+      useSecretManager |= forceSecretManager.booleanValue();
     }
     final SecretManager<?> serverSm = useSecretManager ? sm : null;
     
@@ -730,10 +794,10 @@ public class TestSaslRPC {
 
     final Configuration clientConf = new Configuration(conf);
     SecurityUtil.setAuthenticationMethod(clientAuth, clientConf);
-    UserGroupInformation.setConfiguration(clientConf);
     clientConf.setBoolean(
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
-        true);
+        clientFallBackToSimpleAllowed);
+    UserGroupInformation.setConfiguration(clientConf);
     
     final UserGroupInformation clientUgi =
         UserGroupInformation.createRemoteUser(currentUser + "-CLIENT");
