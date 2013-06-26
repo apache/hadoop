@@ -638,6 +638,10 @@ Release 2.1.0-beta - UNRELEASED
     YARN-861. TestContainerManager is failing. (Vinod Kumar Vavilapalli via
     hitesh)
 
+    YARN-874. Making common RPC to switch to not switch to simple when other
+    mechanisms are enabled and thus fix YARN/MR test failures after HADOOP-9421.
+    (Daryn Sharp and Vinod Kumar Vavilapalli via vinodkv)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
