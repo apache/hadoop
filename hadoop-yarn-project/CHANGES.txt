@@ -212,6 +212,9 @@ Release 2.1.0-beta - UNRELEASED
     and NMClient instead of memory based approach which is used currently. (Omkar
     Vinit Joshi via vinodkv)
 
+    YARN-869. Move ResourceManagerAdministrationProtocol out of main YARN api.
+    (vinodkv via acmurthy)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
