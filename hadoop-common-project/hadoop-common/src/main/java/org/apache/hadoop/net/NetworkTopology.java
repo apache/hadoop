@@ -396,10 +396,10 @@ public class NetworkTopology {
     netlock.writeLock().lock();
     try {
       if ((depthOfAllLeaves != -1) && (depthOfAllLeaves != newDepth)) {
-        LOG.error("Error: can't add leaf node at depth " +
-            newDepth + " to topology:\n" + oldTopoStr);
-        throw new InvalidTopologyException("Invalid network topology. " +
-            "You cannot have a rack and a non-rack node at the same " +
+        LOG.error("Error: can't add leaf node " + NodeBase.getPath(node) +
+            " at depth " + newDepth + " to topology:\n" + oldTopoStr);
+        throw new InvalidTopologyException("Failed to add " + NodeBase.getPath(node) +
+            ": You cannot have a rack and a non-rack node at the same " +
             "level of the network topology.");
       }
       Node rack = getNodeForNetworkLocation(node);
