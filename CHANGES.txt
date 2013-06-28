@@ -32,6 +32,9 @@ Release 1.2.1 - Unreleased
     HDFS-4261. Fix bugs in Balaner causing infinite loop and
     TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
 
+    MAPREDUCE-5260. Fix JvmManager to deal better with corner-cases in
+    shutting down. (zhaoyunjiong via acmurthy) 
+
 Release 1.2.0 - 2013.05.05
 
   INCOMPATIBLE CHANGES
