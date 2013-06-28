@@ -24,6 +24,9 @@ Release 2.2.0 - UNRELEASED
 
     YARN-736. Add a multi-resource fair sharing metric. (sandyr via tucu)
 
+    YARN-883. Expose Fair Scheduler-specific queue metrics. (sandyr via tucu)
+
+
   OPTIMIZATIONS
 
   BUG FIXES

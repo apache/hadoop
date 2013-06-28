@@ -390,6 +390,13 @@ public class QueueManager {
           queueMaxAppsDefault, defaultSchedPolicy, minSharePreemptionTimeouts,
           queueAcls, fairSharePreemptionTimeout, defaultMinSharePreemptionTimeout);
       
+      // Update metrics
+      for (FSQueue queue : queues.values()) {
+        FSQueueMetrics queueMetrics = queue.getMetrics();
+        queueMetrics.setMinShare(queue.getMinShare());
+        queueMetrics.setMaxShare(queue.getMaxShare());
+      }
+      
       // Root queue should have empty ACLs.  As a queue's ACL is the union of
       // its ACL and all its parents' ACLs, setting the roots' to empty will
       // neither allow nor prohibit more access to its children.

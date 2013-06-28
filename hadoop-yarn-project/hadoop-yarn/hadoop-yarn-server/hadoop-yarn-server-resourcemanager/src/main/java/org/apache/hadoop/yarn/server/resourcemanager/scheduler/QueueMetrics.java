@@ -80,7 +80,7 @@ public class QueueMetrics implements MetricsSource {
   static final Logger LOG = LoggerFactory.getLogger(QueueMetrics.class);
   static final MetricsInfo RECORD_INFO = info("QueueMetrics",
       "Metrics for the resource scheduler");
-  static final MetricsInfo QUEUE_INFO = info("Queue", "Metrics by queue");
+  protected static final MetricsInfo QUEUE_INFO = info("Queue", "Metrics by queue");
   static final MetricsInfo USER_INFO = info("User", "Metrics by user");
   static final Splitter Q_SPLITTER =
       Splitter.on('.').omitEmptyStrings().trimResults();
@@ -92,7 +92,7 @@ public class QueueMetrics implements MetricsSource {
   private final Map<String, QueueMetrics> users;
   private final Configuration conf;
 
-  QueueMetrics(MetricsSystem ms, String queueName, Queue parent, 
+  protected QueueMetrics(MetricsSystem ms, String queueName, Queue parent, 
 	       boolean enableUserMetrics, Configuration conf) {
     registry = new MetricsRegistry(RECORD_INFO);
     this.queueName = queueName;
@@ -104,12 +104,12 @@ public class QueueMetrics implements MetricsSource {
     runningTime = buildBuckets(conf);
   }
 
-  QueueMetrics tag(MetricsInfo info, String value) {
+  protected QueueMetrics tag(MetricsInfo info, String value) {
     registry.tag(info, value);
     return this;
   }
 
-  static StringBuilder sourceName(String queueName) {
+  protected static StringBuilder sourceName(String queueName) {
     StringBuilder sb = new StringBuilder(RECORD_INFO.name());
     int i = 0;
     for (String node : Q_SPLITTER.split(queueName)) {
@@ -128,7 +128,7 @@ public class QueueMetrics implements MetricsSource {
 
   // this method is here because we want to make sure these metrics show up on
   // queue registration.
-  private void initMetrics() {
+  public void initMetrics() {
     appsSubmitted.incr(0);
     appsRunning.incr(0);
     appsPending.incr(0);
@@ -149,7 +149,7 @@ public class QueueMetrics implements MetricsSource {
   /**
    * Simple metrics cache to help prevent re-registrations.
    */
-  private static Map<String, QueueMetrics> queueMetrics =
+  protected final static Map<String, QueueMetrics> queueMetrics =
       new HashMap<String, QueueMetrics>();
   
   public synchronized 

@@ -30,20 +30,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class FairSchedulerQueueInfo {  
-  private int fairShare;
-  private int minShare;
-  private int maxShare;
-  private int clusterMaxMem;
-  
   private int maxApps;
   
-  private float fractionUsed;
-  private float fractionFairShare;
-  private float fractionMinShare;
+  private float fractionMemUsed;
+  private float fractionMemFairShare;
+  private float fractionMemMinShare;
+  private float fractionMemMaxShare;
   
   private Resource minResources;
   private Resource maxResources;
   private Resource usedResources;
+  private Resource fairResources;
+  private Resource clusterResources;
   
   private String queueName;
   
@@ -54,23 +52,20 @@ public class FairSchedulerQueueInfo {
     
     queueName = queue.getName();
         
-    Resource clusterMax = scheduler.getClusterCapacity();
-    clusterMaxMem = clusterMax.getMemory();
+    clusterResources = scheduler.getClusterCapacity();
     
     usedResources = queue.getResourceUsage();
-    fractionUsed = (float)usedResources.getMemory() / clusterMaxMem;
+    fractionMemUsed = (float)usedResources.getMemory() /
+        clusterResources.getMemory();
     
-    fairShare = queue.getFairShare().getMemory();
+    fairResources = queue.getFairShare();
     minResources = queue.getMinShare();
-    minShare = minResources.getMemory();
-    maxResources = scheduler.getQueueManager().getMaxResources(queueName);
-    if (maxResources.getMemory() > clusterMaxMem) {
-      maxResources = Resources.createResource(clusterMaxMem);
-    }
-    maxShare = maxResources.getMemory();
+    maxResources = queue.getMaxShare();
+    maxResources = Resources.componentwiseMin(maxResources, clusterResources);
     
-    fractionFairShare = (float)fairShare / clusterMaxMem;
-    fractionMinShare = (float)minShare / clusterMaxMem;
+    fractionMemFairShare = (float)fairResources.getMemory() / clusterResources.getMemory();
+    fractionMemMinShare = (float)minResources.getMemory() / clusterResources.getMemory();
+    fractionMemMaxShare = (float)maxResources.getMemory() / clusterResources.getMemory();
     
     maxApps = manager.getQueueMaxApps(queueName);
     
@@ -88,15 +83,15 @@ public class FairSchedulerQueueInfo {
   /**
    * Returns the fair share as a fraction of the entire cluster capacity.
    */
-  public float getFairShareFraction() {
-    return fractionFairShare;
+  public float getFairShareMemoryFraction() {
+    return fractionMemFairShare;
   }
   
   /**
    * Returns the fair share of this queue in megabytes.
    */
-  public int getFairShare() {
-    return fairShare;
+  public Resource getFairShare() {
+    return fairResources;
   }
     
   public Resource getMinResources() {
@@ -123,16 +118,16 @@ public class FairSchedulerQueueInfo {
    * Returns the queue's min share in as a fraction of the entire
    * cluster capacity.
    */
-  public float getMinShareFraction() {
-    return fractionMinShare;
+  public float getMinShareMemoryFraction() {
+    return fractionMemMinShare;
   }
   
   /**
    * Returns the memory used by this queue as a fraction of the entire 
    * cluster capacity.
    */
-  public float getUsedFraction() {
-    return fractionUsed;
+  public float getUsedMemoryFraction() {
+    return fractionMemUsed;
   }
   
   /**
@@ -140,7 +135,7 @@ public class FairSchedulerQueueInfo {
    * capacity.
    */
   public float getMaxResourcesFraction() {
-    return (float)maxShare / clusterMaxMem;
+    return fractionMemMaxShare;
   }
   
   public Collection<FairSchedulerQueueInfo> getChildQueues() {

@@ -73,7 +73,7 @@ public class FairSchedulerPage extends RmView {
       if (maxApps < Integer.MAX_VALUE) {
           ri._("Max Running Applications:", qinfo.getMaxApplications());
       }
-      ri._("Fair Share:", qinfo.getFairShare());
+      ri._("Fair Share:", qinfo.getFairShare().toString());
 
       html._(InfoBlock.class);
 
@@ -95,8 +95,8 @@ public class FairSchedulerPage extends RmView {
       UL<Hamlet> ul = html.ul("#pq");
       for (FairSchedulerQueueInfo info : subQueues) {
         float capacity = info.getMaxResourcesFraction();
-        float fairShare = info.getFairShareFraction();
-        float used = info.getUsedFraction();
+        float fairShare = info.getFairShareMemoryFraction();
+        float used = info.getUsedMemoryFraction();
         LI<UL<Hamlet>> li = ul.
           li().
             a(_Q).$style(width(capacity * Q_MAX_WIDTH)).
@@ -150,7 +150,7 @@ public class FairSchedulerPage extends RmView {
       } else {
         FairSchedulerInfo sinfo = new FairSchedulerInfo(fs);
         fsqinfo.qinfo = sinfo.getRootQueueInfo();
-        float used = fsqinfo.qinfo.getUsedFraction();
+        float used = fsqinfo.qinfo.getUsedMemoryFraction();
 
         ul.
           li().$style("margin-bottom: 1em").
