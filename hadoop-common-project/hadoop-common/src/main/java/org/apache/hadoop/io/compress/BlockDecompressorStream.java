@@ -93,7 +93,13 @@ public class BlockDecompressorStream extends DecompressorStream {
         }
       }
       if (decompressor.needsInput()) {
-        int m = getCompressedData();
+        int m;
+        try {
+          m = getCompressedData();
+        } catch (EOFException e) {
+          eof = true;
+          return -1;
+        }
         // Send the read data to the decompressor
         decompressor.setInput(buffer, 0, m);
       }

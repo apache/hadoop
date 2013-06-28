@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.io.compress;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.conf.Configuration;
-
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 public class TestBlockDecompressorStream {
   
@@ -33,9 +35,23 @@ public class TestBlockDecompressorStream {
   private ByteArrayOutputStream bytesOut;
 
   @Test
-  public void testRead() throws IOException {
+  public void testRead1() throws IOException {
+    testRead(0);
+  }
+
+  @Test
+  public void testRead2() throws IOException {
+    // Test eof after getting non-zero block size info
+    testRead(4);
+  }
+
+  private void testRead(int bufLen) throws IOException {
     // compress empty stream
     bytesOut = new ByteArrayOutputStream();
+    if (bufLen > 0) {
+      bytesOut.write(ByteBuffer.allocate(bufLen).putInt(1024).array(), 0,
+          bufLen);
+    }
     BlockCompressorStream blockCompressorStream = 
       new BlockCompressorStream(bytesOut, 
           new FakeCompressor(), 1024, 0);
@@ -44,7 +60,8 @@ public class TestBlockDecompressorStream {
     
     // check compressed output 
     buf = bytesOut.toByteArray();
-    assertEquals("empty file compressed output size is not 4", 4, buf.length);
+    assertEquals("empty file compressed output size is not " + (bufLen + 4),
+        bufLen + 4, buf.length);
     
     // use compressed output as input for decompression
     bytesIn = new ByteArrayInputStream(buf);
@@ -57,6 +74,8 @@ public class TestBlockDecompressorStream {
           -1 , blockDecompressorStream.read());
     } catch (IOException e) {
       fail("unexpected IOException : " + e);
+    } finally {
+      blockDecompressorStream.close();
     }
   }
 }
