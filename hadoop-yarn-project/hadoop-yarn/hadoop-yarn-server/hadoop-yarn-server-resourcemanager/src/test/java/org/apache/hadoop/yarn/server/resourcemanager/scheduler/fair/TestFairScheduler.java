@@ -378,6 +378,7 @@ public class TestFairScheduler {
     // Divided three ways - betwen the two queues and the default queue
     for (FSLeafQueue p : queues) {
       assertEquals(3414, p.getFairShare().getMemory());
+      assertEquals(3414, p.getMetrics().getFairShareMB());
     }
   }
   
@@ -406,8 +407,11 @@ public class TestFairScheduler {
     FSLeafQueue queue2 = queueManager.getLeafQueue("parent.queue2");
     FSLeafQueue queue3 = queueManager.getLeafQueue("parent.queue3");
     assertEquals(capacity / 2, queue1.getFairShare().getMemory());
+    assertEquals(capacity / 2, queue1.getMetrics().getFairShareMB());
     assertEquals(capacity / 4, queue2.getFairShare().getMemory());
+    assertEquals(capacity / 4, queue2.getMetrics().getFairShareMB());
     assertEquals(capacity / 4, queue3.getFairShare().getMemory());
+    assertEquals(capacity / 4, queue3.getMetrics().getFairShareMB());
   }
 
   @Test
