@@ -344,7 +344,7 @@ class JSPUtil {
         }
 
         sb.append("<td id=\"job_" + rowId
-            + "\"><a href=\"jobdetails.jsp?jobid=" + jobid + "&refresh="
+            + "\"><a href=\"jobdetails.jsp?jobid=" + jobid + "&amp;refresh="
             + refresh + "\">" + jobid + "</a></td>"
             + "<td id=\"started_" + rowId + "\">" + time + "</td>"
             + "<td id=\"priority_" + rowId + "\">"
