@@ -100,6 +100,8 @@ Release 1.2.1 - Unreleased
     MAPREDUCE-5260. Fix JvmManager to deal better with corner-cases in
     shutting down. (zhaoyunjiong via acmurthy) 
 
+    MAPREDUCE-5318. Escape ampersand in JSPUtil. (Bohou Li via acmurthy)
+
 Release 1.2.0 - 2013.05.05
 
   INCOMPATIBLE CHANGES
