@@ -384,11 +384,16 @@ class JvmManager {
         return;
       }
       //*MUST* never reach this
-      LOG.fatal("Inconsistent state!!! " +
-      		"JVM Manager reached an unstable state " +
-            "while reaping a JVM for task: " + t.getTask().getTaskID()+
-            " " + getDetails() + ". Aborting. ");
-      System.exit(-1);
+      try {
+        LOG.fatal("Inconsistent state!!! " +
+        		"JVM Manager reached an unstable state " +
+              "while reaping a JVM for task: " + t.getTask().getTaskID()+
+              " " + getDetails() + ". Aborting. ");
+      } catch (Exception e) {
+        LOG.fatal(e);
+      } finally {
+        System.exit(-1);
+      }
     }
     
     private String getDetails() {
@@ -548,13 +553,17 @@ class JvmManager {
           if (pidStr != null) {
             String user = env.conf.getUser();
             int pid = Integer.parseInt(pidStr);
-            // start a thread that will kill the process dead
-            if (sleeptimeBeforeSigkill > 0) {
-              new DelayedProcessKiller(user, pid, sleeptimeBeforeSigkill, 
-                                       Signal.KILL).start();
-              controller.signalTask(user, pid, Signal.TERM);
-            } else {
-              controller.signalTask(user, pid, Signal.KILL);
+            try {
+              // start a thread that will kill the process dead
+              if (sleeptimeBeforeSigkill > 0) {
+                new DelayedProcessKiller(user, pid, sleeptimeBeforeSigkill, 
+                                         Signal.KILL).start();
+                controller.signalTask(user, pid, Signal.TERM);
+              } else {
+                controller.signalTask(user, pid, Signal.KILL);
+              }
+            } catch (IOException e) {
+              LOG.error("Catch Exception caused by lack of user information to prevent inconsistent state: ", e);
             }
           } else {
             LOG.info(String.format("JVM Not killed %s but just removed", jvmId
