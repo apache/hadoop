@@ -23,6 +23,9 @@ Release 2.2.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5333. Add test that verifies MRAM works correctly when sending 
+    requests with non-normalized capabilities. (ywskycn via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
