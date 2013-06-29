@@ -391,6 +391,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-750. Allow for black-listing resources in YARN API and Impl in CS
     (acmurthy via bikas)
 
+    YARN-877. Support resource blacklisting for FifoScheduler.
+    (Junping Du via llu)
+
     YARN-686. Flatten NodeReport. (sandyr via tucu)
 
     YARN-737. Throw some specific exceptions directly instead of wrapping them

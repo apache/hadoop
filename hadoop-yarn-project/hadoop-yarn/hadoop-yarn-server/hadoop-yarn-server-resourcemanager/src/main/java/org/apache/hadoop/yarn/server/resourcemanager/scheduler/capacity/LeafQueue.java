@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.Lock;
@@ -816,7 +817,7 @@ public class LeafQueue implements CSQueue {
 
       synchronized (application) {
         // Check if this resource is on the blacklist
-        if (isBlacklisted(application, node)) {
+        if (FiCaSchedulerUtils.isBlacklisted(application, node, LOG)) {
           continue;
         }
         
@@ -901,28 +902,6 @@ public class LeafQueue implements CSQueue {
   
     return NULL_ASSIGNMENT;
 
-  }
-  
-  boolean isBlacklisted(FiCaSchedulerApp application, FiCaSchedulerNode node) {
-    if (application.isBlacklisted(node.getHostName())) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Skipping 'host' " + node.getHostName() + 
-            " for " + application.getApplicationId() + 
-            " since it has been blacklisted");
-      }
-      return true;
-    }
-
-    if (application.isBlacklisted(node.getRackName())) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Skipping 'rack' " + node.getRackName() + 
-            " for " + application.getApplicationId() + 
-            " since it has been blacklisted");
-      }
-      return true;
-    }
-
-    return false;
   }
 
   private synchronized CSAssignment 
