@@ -105,7 +105,7 @@ Release 1.2.1 - Unreleased
     HADOOP-9665. Fixed BlockDecompressorStream#decompress to return -1 rather
     than throw EOF at end of file. (Zhijie Shen via acmurthy)
 
-    HADOOP-5351. Fixed a memory leak in JobTracker due to stable FS objects in
+    MAPREDUCE-5351. Fixed a memory leak in JobTracker due to stable FS objects in
     FSCache. (Sandy Ryza via acmurthy)
 
 Release 1.2.0 - 2013.05.05
