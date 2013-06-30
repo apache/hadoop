@@ -193,7 +193,8 @@ public class DatanodeWebHdfsMethods {
         IOUtils.cleanup(LOG, dfsclient);
       }
       final String nnAddr = NameNode.getInfoServer(conf);
-      final URI uri = new URI(WebHdfsFileSystem.SCHEME + "://" + nnAddr + fullpath);
+      final URI uri = new URI(WebHdfsFileSystem.SCHEME, nnAddr, fullpath, null,
+        null);
       return Response.created(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:

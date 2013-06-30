@@ -380,5 +380,34 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       }
       conn.disconnect();
     }
+
+    {//test create with path containing spaces
+      HttpOpParam.Op op = PutOpParam.Op.CREATE;
+      Path path = new Path("/test/path%20with%20spaces");
+      URL url = webhdfs.toUrl(op, path);
+      HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.setDoOutput(false);
+      conn.setInstanceFollowRedirects(false);
+      final String redirect;
+      try {
+        conn.connect();
+        assertEquals(HttpServletResponse.SC_TEMPORARY_REDIRECT,
+          conn.getResponseCode());
+        redirect = conn.getHeaderField("Location");
+      } finally {
+        conn.disconnect();
+      }
+
+      conn = (HttpURLConnection)new URL(redirect).openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.setDoOutput(op.getDoOutput());
+      try {
+        conn.connect();
+        assertEquals(HttpServletResponse.SC_CREATED, conn.getResponseCode());
+      } finally {
+        conn.disconnect();
+      }
+    }
   }
 }

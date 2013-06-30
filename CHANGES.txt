@@ -65,6 +65,9 @@ Release 1.3.0 - unreleased
     HADOOP-7140. IPC Reader threads do not stop when server stops
     (Todd Lipcon, backported by ivanmi)
 
+    HDFS-4944. WebHDFS cannot create a file path containing characters that must
+    be URI-encoded, such as space. (cnauroth)
+
 Release 1.2.1 - Unreleased 
 
   INCOMPATIBLE CHANGES
