@@ -178,7 +178,7 @@ public class MiniMRCluster {
       int numTrackerToExclude, Clock clock) throws IOException {
     if (conf == null) conf = new JobConf();
     FileSystem.setDefaultUri(conf, namenode);
-    String identifier = this.getClass().getName() + "_"
+    String identifier = this.getClass().getSimpleName() + "_"
         + Integer.toString(new Random().nextInt(Integer.MAX_VALUE));
     mrClientCluster = MiniMRClientClusterFactory.create(this.getClass(),
         identifier, numTaskTrackers, conf);
