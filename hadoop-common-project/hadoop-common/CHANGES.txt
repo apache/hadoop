@@ -440,6 +440,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9619 Mark stability of .proto files (sanjay Radia)
 
+    HADOOP-9676.  Make maximum RPC buffer size configurable (Colin Patrick
+    McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs

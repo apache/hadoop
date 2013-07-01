@@ -64,6 +64,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
     "ipc.server.read.threadpool.size";
   /** Default value for IPC_SERVER_RPC_READ_THREADS_KEY */
   public static final int     IPC_SERVER_RPC_READ_THREADS_DEFAULT = 1;
+  
+  public static final String IPC_MAXIMUM_DATA_LENGTH =
+      "ipc.maximum.data.length";
+  
+  public static final int IPC_MAXIMUM_DATA_LENGTH_DEFAULT = 64 * 1024 * 1024;
 
   /** How many calls per handler are allowed in the queue. */
   public static final String  IPC_SERVER_HANDLER_QUEUE_SIZE_KEY =

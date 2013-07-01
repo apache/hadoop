@@ -343,6 +343,7 @@ public abstract class Server {
   private int maxQueueSize;
   private final int maxRespSize;
   private int socketSendBufferSize;
+  private final int maxDataLength;
   private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
 
   volatile private boolean running = true;         // true while server runs
@@ -1380,7 +1381,22 @@ public abstract class Server {
         }
       }
     }
-    
+
+    private void checkDataLength(int dataLength) throws IOException {
+      if (dataLength < 0) {
+        String error = "Unexpected data length " + dataLength +
+                       "!! from " + getHostAddress();
+        LOG.warn(error);
+        throw new IOException(error);
+      } else if (dataLength > maxDataLength) {
+        String error = "Requested data length " + dataLength +
+              " is longer than maximum configured RPC length " + 
+            maxDataLength + ".  RPC came from " + getHostAddress();
+        LOG.warn(error);
+        throw new IOException(error);
+      }
+    }
+
     public int readAndProcess() throws IOException, InterruptedException {
       while (true) {
         /* Read at most one RPC. If the header is not read completely yet
@@ -1442,11 +1458,7 @@ public abstract class Server {
             dataLengthBuffer.clear();
             return 0; // ping message
           }
-          
-          if (dataLength < 0) {
-            LOG.warn("Unexpected data length " + dataLength + "!! from " + 
-                getHostAddress());
-          }
+          checkDataLength(dataLength);
           data = ByteBuffer.allocate(dataLength);
         }
         
@@ -1981,6 +1993,8 @@ public abstract class Server {
     this.rpcRequestClass = rpcRequestClass; 
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
+    this.maxDataLength = conf.getInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
+        CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
     if (queueSizePerHandler != -1) {
       this.maxQueueSize = queueSizePerHandler;
     } else {
