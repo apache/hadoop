@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -80,7 +81,7 @@ class BlockPoolSliceScanner {
   private final FsDatasetSpi<? extends FsVolumeSpi> dataset;
   
   private final SortedSet<BlockScanInfo> blockInfoSet
-      = new TreeSet<BlockScanInfo>();
+      = new TreeSet<BlockScanInfo>(BlockScanInfo.LAST_SCAN_TIME_COMPARATOR);
   private final Map<Block, BlockScanInfo> blockMap
       = new HashMap<Block, BlockScanInfo>();
   
@@ -107,8 +108,20 @@ class BlockPoolSliceScanner {
     NONE,
   }
   
-  static class BlockScanInfo implements Comparable<BlockScanInfo> {
-    Block block;
+  static class BlockScanInfo {
+    /** Compare the info by the last scan time. */
+    static final Comparator<BlockScanInfo> LAST_SCAN_TIME_COMPARATOR
+        = new Comparator<BlockPoolSliceScanner.BlockScanInfo>() {
+
+      @Override
+      public int compare(BlockScanInfo left, BlockScanInfo right) {
+        final long l = left.lastScanTime;
+        final long r = right.lastScanTime;
+        return l < r? -1: l > r? 1: 0; 
+      }
+    };
+
+    final Block block;
     long lastScanTime = 0;
     ScanType lastScanType = ScanType.NONE; 
     boolean lastScanOk = true;
@@ -123,21 +136,17 @@ class BlockPoolSliceScanner {
     }
     
     @Override
-    public boolean equals(Object other) {
-      return other instanceof BlockScanInfo &&
-             compareTo((BlockScanInfo)other) == 0;
+    public boolean equals(Object that) {
+      if (this == that) {
+        return true;
+      } else if (that == null || !(that instanceof BlockScanInfo)) {
+        return false;
+      }
+      return block.equals(((BlockScanInfo)that).block);
     }
     
     long getLastScanTime() {
       return (lastScanType == ScanType.NONE) ? 0 : lastScanTime;
-    }
-    
-    @Override
-    public int compareTo(BlockScanInfo other) {
-      long t1 = lastScanTime;
-      long t2 = other.lastScanTime;
-      return ( t1 < t2 ) ? -1 : 
-                          (( t1 > t2 ) ? 1 : block.compareTo(other.block)); 
     }
   }
   
