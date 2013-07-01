@@ -637,6 +637,9 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4944. WebHDFS cannot create a file path containing characters that must
     be URI-encoded, such as space. (cnauroth)
 
+    HDFS-4888. Refactor and fix FSNamesystem.getTurnOffTip. (Ravi Prakash via
+    kihwal)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
