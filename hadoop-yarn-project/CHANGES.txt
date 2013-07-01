@@ -1001,7 +1001,19 @@ Release 2.0.2-alpha - 2012-09-07
     YARN-138. Ensure default values for minimum/maximum container sizes is
     sane. (harsh & sseth via acmurthy)
 
-Release 0.23.9 - UNRELEASED
+Release 0.23.10 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
 
