@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto;
@@ -113,6 +115,7 @@ public class TestProtoBufRpc {
   @Before
   public  void setUp() throws IOException { // Setup server for both protocols
     conf = new Configuration();
+    conf.setInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH, 1024);
     // Set RPC engine to protobuf RPC engine
     RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine.class);
 
@@ -228,6 +231,26 @@ public class TestProtoBufRpc {
       Assert.assertTrue(re.getMessage().contains("testException"));
       Assert.assertTrue(
           re.getErrorCode().equals(RpcErrorCodeProto.ERROR_APPLICATION));
+    }
+  }
+  
+  @Test(timeout=6000)
+  public void testExtraLongRpc() throws Exception {
+    TestRpcService2 client = getClient2();
+    final String shortString = StringUtils.repeat("X", 4);
+    EchoRequestProto echoRequest = EchoRequestProto.newBuilder()
+        .setMessage(shortString).build();
+    // short message goes through
+    EchoResponseProto echoResponse = client.echo2(null, echoRequest);
+    
+    final String longString = StringUtils.repeat("X", 4096);
+    echoRequest = EchoRequestProto.newBuilder()
+        .setMessage(longString).build();
+    try {
+      echoResponse = client.echo2(null, echoRequest);
+      Assert.fail("expected extra-long RPC to fail");
+    } catch (ServiceException se) {
+      // expected
     }
   }
 }
