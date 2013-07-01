@@ -4016,9 +4016,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
     // internal fields
     /** Time when threshold was reached.
-     * 
-     * <br>-1 safe mode is off
-     * <br> 0 safe mode is on, but threshold is not reached yet 
+     * <br> -1 safe mode is off
+     * <br> 0 safe mode is on, and threshold is not reached yet
+     * <br> >0 safe mode is on, but we are in extension period 
      */
     private long reached = -1;  
     /** Total number of blocks. */
@@ -4142,7 +4142,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       NameNode.stateChangeLog.info("STATE* Leaving safe mode after " 
                                     + timeInSafemode/1000 + " secs");
       NameNode.getNameNodeMetrics().setSafeModeTime((int) timeInSafemode);
-      
+
+      //Log the following only once (when transitioning from ON -> OFF)
       if (reached >= 0) {
         NameNode.stateChangeLog.info("STATE* Safe mode is OFF"); 
       }
@@ -4323,62 +4324,56 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * A tip on how safe mode is to be turned off: manually or automatically.
      */
     String getTurnOffTip() {
-      if(reached < 0)
+      if(!isOn())
         return "Safe mode is OFF.";
-      String leaveMsg = "";
+
+      //Manual OR low-resource safemode. (Admin intervention required)
+      String leaveMsg = "It was turned on manually. ";
       if (areResourcesLow()) {
-        leaveMsg = "Resources are low on NN. " 
-        	+ "Please add or free up more resources then turn off safe mode manually.  "
-        	+ "NOTE:  If you turn off safe mode before adding resources, "
-        	+ "the NN will immediately return to safe mode.";
-      } else {
-        leaveMsg = "Safe mode will be turned off automatically";
+        leaveMsg = "Resources are low on NN. Please add or free up more "
+          + "resources then turn off safe mode manually. NOTE:  If you turn off"
+          + " safe mode before adding resources, "
+          + "the NN will immediately return to safe mode. ";
       }
-      if(isManual() && !areResourcesLow()) {
-        leaveMsg = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off";
+      if (isManual() || areResourcesLow()) {
+        return leaveMsg
+          + "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off.";
       }
 
-      if(blockTotal < 0)
-        return leaveMsg + ".";
-
+      //Automatic safemode. System will come out of safemode automatically.
+      leaveMsg = "Safe mode will be turned off automatically";
       int numLive = getNumLiveDataNodes();
       String msg = "";
       if (reached == 0) {
         if (blockSafe < blockThreshold) {
           msg += String.format(
             "The reported blocks %d needs additional %d"
-            + " blocks to reach the threshold %.4f of total blocks %d.",
+            + " blocks to reach the threshold %.4f of total blocks %d.\n",
             blockSafe, (blockThreshold - blockSafe) + 1, threshold, blockTotal);
         }
         if (numLive < datanodeThreshold) {
-          if (!"".equals(msg)) {
-            msg += "\n";
-          }
           msg += String.format(
             "The number of live datanodes %d needs an additional %d live "
-            + "datanodes to reach the minimum number %d.",
+            + "datanodes to reach the minimum number %d.\n",
             numLive, (datanodeThreshold - numLive), datanodeThreshold);
         }
-        msg += " " + leaveMsg;
       } else {
         msg = String.format("The reported blocks %d has reached the threshold"
-            + " %.4f of total blocks %d.", blockSafe, threshold, 
-            blockTotal);
+            + " %.4f of total blocks %d. ", blockSafe, threshold, blockTotal);
 
-        if (datanodeThreshold > 0) {
-          msg += String.format(" The number of live datanodes %d has reached "
-                               + "the minimum number %d.",
+        msg += String.format("The number of live datanodes %d has reached "
+                               + "the minimum number %d. ",
                                numLive, datanodeThreshold);
-        }
-        msg += " " + leaveMsg;
       }
+      msg += leaveMsg;
       // threshold is not reached or manual or resources low
       if(reached == 0 || (isManual() && !areResourcesLow())) {
-        return msg + ".";
+        return msg;
       }
       // extension period is in progress
-      return msg + " in " + Math.abs(reached + extension - now()) / 1000
-          + " seconds.";
+      return msg + (reached + extension - now() > 0 ?
+        " in " + (reached + extension - now()) / 1000 + " seconds."
+        : " soon.");
     }
 
     /**
@@ -5633,7 +5628,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public String getSafemode() {
     if (!this.isInSafeMode())
       return "";
-    return "Safe mode is ON." + this.getSafeModeTip();
+    return "Safe mode is ON. " + this.getSafeModeTip();
   }
 
   @Override // NameNodeMXBean
