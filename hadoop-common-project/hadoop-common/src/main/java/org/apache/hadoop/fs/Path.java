@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import org.apache.avro.reflect.Stringable;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +57,32 @@ public class Path implements Comparable {
       Pattern.compile("^/?[a-zA-Z]:");
 
   private URI uri;                                // a hierarchical uri
+
+  /**
+   * Pathnames with scheme and relative path are illegal.
+   * @param path to be checked
+   */
+  void checkNotSchemeWithRelative() {
+    if (toUri().isAbsolute() && !isUriPathAbsolute()) {
+      throw new HadoopIllegalArgumentException(
+          "Unsupported name: has scheme but relative path-part");
+    }
+  }
+
+  void checkNotRelative() {
+    if (!isAbsolute() && toUri().getScheme() == null) {
+      throw new HadoopIllegalArgumentException("Path is relative");
+    }
+  }
+
+  public static Path getPathWithoutSchemeAndAuthority(Path path) {
+    // This code depends on Path.toString() to remove the leading slash before
+    // the drive specification on Windows.
+    Path newPath = path.isUriPathAbsolute() ?
+      new Path(null, null, path.toUri().getPath()) :
+      path;
+    return newPath;
+  }
 
   /** Resolve a child path against a parent path. */
   public Path(String parent, String child) {
