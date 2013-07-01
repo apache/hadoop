@@ -26,6 +26,9 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-4797. BlockScanInfo does not override equals(..) and hashCode()
+    consistently.  (szetszwo)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
