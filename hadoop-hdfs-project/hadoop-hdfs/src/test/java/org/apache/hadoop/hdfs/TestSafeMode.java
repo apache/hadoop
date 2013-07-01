@@ -178,9 +178,9 @@ public class TestSafeMode {
     final NameNode nn = cluster.getNameNode();
     
     String status = nn.getNamesystem().getSafemode();
-    assertEquals("Safe mode is ON.The reported blocks 0 needs additional " +
-        "15 blocks to reach the threshold 0.9990 of total blocks 15. " +
-        "Safe mode will be turned off automatically.", status);
+    assertEquals("Safe mode is ON. The reported blocks 0 needs additional " +
+        "15 blocks to reach the threshold 0.9990 of total blocks 15.\n" +
+        "Safe mode will be turned off automatically", status);
     assertFalse("Mis-replicated block queues should not be initialized " +
         "until threshold is crossed",
         NameNodeAdapter.safeModeInitializedReplQueues(nn));
@@ -353,10 +353,10 @@ public class TestSafeMode {
     fs = cluster.getFileSystem();
 
     String tipMsg = cluster.getNamesystem().getSafemode();
-    assertTrue("Safemode tip message looks right: " + tipMsg,
+    assertTrue("Safemode tip message doesn't look right: " + tipMsg,
                tipMsg.contains("The number of live datanodes 0 needs an additional " +
-                               "1 live datanodes to reach the minimum number 1. " +
-                               "Safe mode will be turned off automatically."));
+                               "1 live datanodes to reach the minimum number 1.\n" +
+                               "Safe mode will be turned off automatically"));
 
     // Start a datanode
     cluster.startDataNodes(conf, 1, true, null, null);
