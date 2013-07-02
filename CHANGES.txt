@@ -68,6 +68,9 @@ Release 1.3.0 - unreleased
     HDFS-4944. WebHDFS cannot create a file path containing characters that must
     be URI-encoded, such as space. (cnauroth)
 
+    HADOOP-9678. TestRPC#testStopsAllThreads intermittently fails on Windows.
+    (Ivan Mitic via cnauroth)
+
 Release 1.2.1 - Unreleased 
 
   INCOMPATIBLE CHANGES
