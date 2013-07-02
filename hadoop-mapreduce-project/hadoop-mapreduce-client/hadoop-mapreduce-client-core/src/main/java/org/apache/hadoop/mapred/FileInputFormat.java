@@ -69,6 +69,10 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
   public static final String NUM_INPUT_FILES =
     org.apache.hadoop.mapreduce.lib.input.FileInputFormat.NUM_INPUT_FILES;
+  
+  public static final String INPUT_DIR_RECURSIVE = 
+    org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR_RECURSIVE;
+
 
   private static final double SPLIT_SLOP = 1.1;   // 10% slop
 
@@ -192,7 +196,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
     TokenCache.obtainTokensForNamenodes(job.getCredentials(), dirs, job);
     
     // Whether we need to recursive look into the directory structure
-    boolean recursive = job.getBoolean("mapred.input.dir.recursive", false);
+    boolean recursive = job.getBoolean(INPUT_DIR_RECURSIVE, false);
     
     List<FileStatus> result = new ArrayList<FileStatus>();
     List<IOException> errors = new ArrayList<IOException>();
