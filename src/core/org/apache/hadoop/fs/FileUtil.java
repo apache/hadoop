@@ -561,18 +561,23 @@ public class FileUtil {
   private static void unTarUsingJava(File inFile, File untarDir,
       boolean gzipped) throws IOException {
     InputStream inputStream = null;
-    if (gzipped) {
-      inputStream = new BufferedInputStream(new GZIPInputStream(
-          new FileInputStream(inFile)));
-    } else {
-      inputStream = new BufferedInputStream(new FileInputStream(inFile));
-    }
+    TarArchiveInputStream tis = null;
+    try {
+      if (gzipped) {
+        inputStream = new BufferedInputStream(new GZIPInputStream(
+            new FileInputStream(inFile)));
+      } else {
+        inputStream = new BufferedInputStream(new FileInputStream(inFile));
+      }
 
-    TarArchiveInputStream tis = new TarArchiveInputStream(inputStream);
+      tis = new TarArchiveInputStream(inputStream);
 
-    for (TarArchiveEntry entry = tis.getNextTarEntry(); entry != null;) {
-      unpackEntries(tis, entry, untarDir);
-      entry = tis.getNextTarEntry();
+      for (TarArchiveEntry entry = tis.getNextTarEntry(); entry != null;) {
+        unpackEntries(tis, entry, untarDir);
+        entry = tis.getNextTarEntry();
+      }
+    } finally {
+      IOUtils.cleanup(LOG, tis, inputStream);
     }
   }
   
