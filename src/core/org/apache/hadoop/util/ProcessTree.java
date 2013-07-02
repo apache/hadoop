@@ -170,6 +170,14 @@ public class ProcessTree {
       return;
     }
 
+    // If the OS is Windows and the signal is TERM
+    // then return immediately and let a delayed process killer actually
+    // kill this process group.
+    // This can give this process group a graceful time to clean up itself
+    if (Shell.WINDOWS && signal == Signal.TERM) {
+      return;
+    }
+
     String[] args =
       Shell.getSignalKillProcessGroupCommand(signal.getValue(), pgrpId);
     ShellCommandExecutor shexec = new ShellCommandExecutor(args);
