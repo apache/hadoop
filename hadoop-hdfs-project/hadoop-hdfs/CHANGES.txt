@@ -239,6 +239,8 @@ Trunk (Unreleased)
     HDFS-3934. duplicative dfs_hosts entries handled wrong. (Colin Patrick
     McCabe)
 
+    HDFS-4948. mvn site for hadoop-hdfs-nfs fails. (brandonli)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
