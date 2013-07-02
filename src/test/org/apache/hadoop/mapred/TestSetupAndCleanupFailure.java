@@ -260,9 +260,15 @@ public class TestSetupAndCleanupFailure extends TestCase {
     try {
       final int taskTrackers = 4;
       Configuration conf = new Configuration();
+      // On Windows, a delay kill is used (see JVMManager#kill()) for
+      // killing JVM and Signal.TERM is ignored. Setting
+      // "mapred.tasktracker.tasks.sleeptime-before-sigkill" to zero
+      // ensures that the kill will be executed with no delay so that the
+      // setup/cleanup attempts get killed immediately
+      conf.set("mapred.tasktracker.tasks.sleeptime-before-sigkill", "0");
       dfs = new MiniDFSCluster(conf, 4, true, null);
       fileSys = dfs.getFileSystem();
-      JobConf jtConf = new JobConf();
+      JobConf jtConf = new JobConf(conf);
       jtConf.setInt("mapred.tasktracker.map.tasks.maximum", 1);
       jtConf.setInt("mapred.tasktracker.reduce.tasks.maximum", 1);
       jtConf.setLong("mapred.tasktracker.expiry.interval", 10 * 1000);

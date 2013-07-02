@@ -282,6 +282,9 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     HADOOP-9681. FileUtil.unTarUsingJava() should close the InputStream upon
     finishing. (Chuan Liu via cnauroth)
 
+    HADOOP-9677. TestSetupAndCleanupFailure#testWithDFS fails on Windows.
+    (Xi Fang via cnauroth)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a
