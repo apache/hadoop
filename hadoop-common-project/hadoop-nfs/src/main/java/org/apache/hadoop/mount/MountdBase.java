@@ -50,7 +50,6 @@ abstract public class MountdBase {
 
   /* Start UDP server */
   private void startUDPServer() {
-    rpcProgram.register(PortmapMapping.TRANSPORT_UDP);
     SimpleUdpServer udpServer = new SimpleUdpServer(rpcProgram.getPort(),
         rpcProgram, 1);
     udpServer.run();
@@ -58,14 +57,17 @@ abstract public class MountdBase {
 
   /* Start TCP server */
   private void startTCPServer() {
-    rpcProgram.register(PortmapMapping.TRANSPORT_TCP);
     SimpleTcpServer tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
         rpcProgram, 1);
     tcpServer.run();
   }
 
-  public void start() {
+  public void start(boolean register) {
     startUDPServer();
     startTCPServer();
+    if (register) {
+      rpcProgram.register(PortmapMapping.TRANSPORT_UDP);
+      rpcProgram.register(PortmapMapping.TRANSPORT_TCP);
+    }
   }
 }

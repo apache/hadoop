@@ -96,6 +96,22 @@ public class Nfs3FileAttributes {
     this.ctime = this.mtime;
   }
   
+  public Nfs3FileAttributes(Nfs3FileAttributes other) {
+    this.type = other.getType();
+    this.mode = other.getMode();
+    this.nlink = other.getNlink();
+    this.uid = other.getUid();
+    this.gid = other.getGid();
+    this.size = other.getSize();
+    this.used = other.getUsed();
+    this.rdev = new Specdata3();
+    this.fsid = other.getFsid();
+    this.fileid = other.getFileid();
+    this.mtime = new NfsTime(other.getMtime());
+    this.atime = new NfsTime(other.getAtime());
+    this.ctime = new NfsTime(other.getCtime());
+  }
+
   public void serialize(XDR xdr) {
     xdr.writeInt(type);
     xdr.writeInt(mode);
