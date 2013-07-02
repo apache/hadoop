@@ -12,6 +12,8 @@ Trunk (Unreleased)
 
     HDFS-4659 Support setting execution bit for regular files (Brandon Li via sanjay)
 
+    HDFS-4762 Provide HDFS based NFSv3 and Mountd implementation (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
