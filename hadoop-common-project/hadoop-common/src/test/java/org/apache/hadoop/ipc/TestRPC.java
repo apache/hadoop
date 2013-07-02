@@ -781,7 +781,17 @@ public class TestRPC {
         .setNumHandlers(5).setVerbose(true).build();
     server.start();
     try {
-      int threadsRunning = countThreads("Server$Listener$Reader");
+      // Wait for at least one reader thread to start
+      int threadsRunning = 0;
+      long totalSleepTime = 0;
+      do {
+        totalSleepTime += 10;
+        Thread.sleep(10);
+        threadsRunning = countThreads("Server$Listener$Reader");
+      } while (threadsRunning == 0 && totalSleepTime < 5000);
+
+      // Validate that at least one thread started (we didn't timeout)
+      threadsRunning = countThreads("Server$Listener$Reader");
       assertTrue(threadsRunning > 0);
     } finally {
       server.stop();
