@@ -65,6 +65,9 @@ Release 1.3.0 - unreleased
     HADOOP-7140. IPC Reader threads do not stop when server stops
     (Todd Lipcon, backported by ivanmi)
 
+    HADOOP-9678. TestRPC#testStopsAllThreads intermittently fails on Windows.
+    (Ivan Mitic via cnauroth)
+
 Release 1.2.1 - Unreleased 
 
   INCOMPATIBLE CHANGES
