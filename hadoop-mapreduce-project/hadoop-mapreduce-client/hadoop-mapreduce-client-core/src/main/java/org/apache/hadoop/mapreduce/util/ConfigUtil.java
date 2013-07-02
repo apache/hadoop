@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
@@ -528,6 +529,8 @@ public class ConfigUtil {
       MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST);
     Configuration.addDeprecation(JTConfig.JT_MAX_JOB_SPLIT_METAINFO_SIZE,
         MRJobConfig.SPLIT_METAINFO_MAXSIZE);
+    Configuration.addDeprecation("mapred.input.dir.recursive",
+        FileInputFormat.INPUT_DIR_RECURSIVE);
   }
 
   public static void main(String[] args) {
