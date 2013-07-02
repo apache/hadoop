@@ -784,6 +784,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9678. TestRPC#testStopsAllThreads intermittently fails on Windows.
     (Ivan Mitic via cnauroth)
 
+    HADOOP-9681. FileUtil.unTarUsingJava() should close the InputStream upon
+    finishing. (Chuan Liu via cnauroth)
+
     HADOOP-9665. Fixed BlockDecompressorStream#decompress to return -1 rather
     than throw EOF at end of file. (Zhijie Shen via acmurthy)
 
