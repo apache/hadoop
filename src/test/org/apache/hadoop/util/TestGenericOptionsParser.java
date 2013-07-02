@@ -21,12 +21,17 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Map;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.junit.Assert;
+
+import com.google.common.collect.Maps;
 
 public class TestGenericOptionsParser extends TestCase {
   File testDir;
@@ -133,4 +138,89 @@ public class TestGenericOptionsParser extends TestCase {
     assertNull("files is not null", files);
   }
 
+  /** Test -D parsing */
+  public void testDOptionParsing() throws Exception {
+    String[] args;
+    Map<String,String> expectedMap;
+    String[] expectedRemainingArgs;
+
+    args = new String[]{};
+    expectedRemainingArgs = new String[]{};
+    expectedMap = Maps.newHashMap();
+    assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+
+    args = new String[]{"-Dkey1=value1"};
+    expectedRemainingArgs = new String[]{};
+    expectedMap = Maps.newHashMap();
+    expectedMap.put("key1", "value1");
+    assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+
+    args = new String[]{"-fs", "hdfs://somefs/", "-Dkey1=value1", "arg1"};
+    expectedRemainingArgs = new String[]{"arg1"};
+    assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+
+    args = new String[]{"-fs", "hdfs://somefs/", "-D", "key1=value1", "arg1"};
+    assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+
+    if (Shell.WINDOWS) {
+      args = new String[]{"-fs", "hdfs://somefs/", "-D", "key1",
+        "value1", "arg1"};
+      assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+
+      args = new String[]{"-fs", "hdfs://somefs/", "-Dkey1", "value1", "arg1"};
+      assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+
+      args = new String[]{"-fs", "hdfs://somefs/", "-D", "key1", "value1",
+        "-fs", "someother", "-D", "key2", "value2", "arg1", "arg2"};
+      expectedRemainingArgs = new String[]{"arg1", "arg2"};
+      expectedMap = Maps.newHashMap();
+      expectedMap.put("key1", "value1");
+      expectedMap.put("key2", "value2");
+      assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+
+      args = new String[]{"-fs", "hdfs://somefs/", "-D", "key1", "value1",
+        "-fs", "someother", "-D", "key2", "value2"};
+      expectedRemainingArgs = new String[]{};
+      assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+
+      args = new String[]{"-fs", "hdfs://somefs/", "-D", "key1", "value1",
+        "-fs", "someother", "-D", "key2"};
+      expectedMap = Maps.newHashMap();
+      expectedMap.put("key1", "value1");
+      expectedMap.put("key2", null); // we expect key2 not set
+      assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+    }
+
+    args = new String[]{"-fs", "hdfs://somefs/", "-D", "key1=value1",
+      "-fs", "someother", "-Dkey2"};
+    expectedRemainingArgs = new String[]{};
+    expectedMap = Maps.newHashMap();
+    expectedMap.put("key1", "value1");
+    expectedMap.put("key2", null); // we expect key2 not set
+    assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+
+    args = new String[]{"-fs", "hdfs://somefs/", "-D"};
+    expectedMap = Maps.newHashMap();
+    assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
+  }
+
+  private void assertDOptionParsing(String[] args,
+      Map<String,String> expectedMap, String[] expectedRemainingArgs)
+      throws Exception {
+    for (Map.Entry<String, String> entry : expectedMap.entrySet()) {
+      assertNull(conf.get(entry.getKey()));
+    }
+
+    Configuration conf = new Configuration();
+    GenericOptionsParser parser = new GenericOptionsParser(conf, args);
+    String[] remainingArgs = parser.getRemainingArgs();
+
+    for (Map.Entry<String, String> entry : expectedMap.entrySet()) {
+      assertEquals(entry.getValue(), conf.get(entry.getKey()));
+    }
+
+    Assert.assertArrayEquals(
+      Arrays.toString(remainingArgs) + Arrays.toString(expectedRemainingArgs),
+      expectedRemainingArgs, remainingArgs);
+  }
 }

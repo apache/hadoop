@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
@@ -395,7 +396,50 @@ public class GenericOptionsParser {
     }
     return StringUtils.arrayToString(finalArr);
   }
-  
+
+  /**
+   * Windows powershell and cmd can parse key=value themselves, because
+   * /pkey=value is same as /pkey value under windows. However this is not
+   * compatible with how we get arbitrary key values in -Dkey=value format.
+   * Under windows -D key=value or -Dkey=value might be passed as
+   * [-Dkey, value] or [-D key, value]. This method does undo these and
+   * return a modified args list by manually changing [-D, key, value]
+   * into [-D, key=value]
+   *
+   * @param args command line arguments
+   * @return fixed command line arguments that GnuParser can parse
+   */
+  private String[] preProcessForWindows(String[] args) {
+    if (!Shell.WINDOWS) {
+      return args;
+    }
+    List<String> newArgs = new ArrayList<String>(args.length);
+    for (int i=0; i < args.length; i++) {
+      String prop = null;
+      if (args[i].equals("-D")) {
+        newArgs.add(args[i]);
+        if (i < args.length - 1) {
+          prop = args[++i];
+        }
+      } else if (args[i].startsWith("-D")) {
+        prop = args[i];
+      } else {
+        newArgs.add(args[i]);
+      }
+      if (prop != null) {
+        if (prop.contains("=")) {
+          // everything good
+        } else {
+          if (i < args.length - 1) {
+            prop += "=" + args[++i];
+          }
+        }
+        newArgs.add(prop);
+      }
+    }
+
+    return newArgs.toArray(new String[newArgs.size()]);
+  }
 
   /**
    * Parse the user-specified options, get the generic options, and modify
@@ -409,7 +453,7 @@ public class GenericOptionsParser {
     opts = buildGeneralOptions(opts);
     CommandLineParser parser = new GnuParser();
     try {
-      commandLine = parser.parse(opts, args, true);
+      commandLine = parser.parse(opts, preProcessForWindows(args), true);
       processGeneralOptions(conf, commandLine);
       return commandLine.getArgs();
     } catch(ParseException e) {
