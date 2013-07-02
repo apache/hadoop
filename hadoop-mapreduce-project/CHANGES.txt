@@ -12,6 +12,9 @@ Release 0.23.10 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
+    input path dir (Devaraj K via jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
