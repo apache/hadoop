@@ -124,6 +124,7 @@ public class JobSubmissionFiles {
     } else {
       fs.mkdirs(stagingArea, 
           new FsPermission(JOB_DIR_PERMISSION));
+      fs.setOwner(stagingArea, currentUser, null);
     }
     return stagingArea;
   }
