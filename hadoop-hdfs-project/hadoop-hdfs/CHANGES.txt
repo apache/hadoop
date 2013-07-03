@@ -6,11 +6,15 @@ Release 2.3.0 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-4762 Provide HDFS based NFSv3 and Mountd implementation (brandonli)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-4948. mvn site for hadoop-hdfs-nfs fails. (brandonli)
 
 Release 2.2.0 - UNRELEASED
 
