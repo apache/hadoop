@@ -71,6 +71,9 @@ Release 1.3.0 - unreleased
     HADOOP-9678. TestRPC#testStopsAllThreads intermittently fails on Windows.
     (Ivan Mitic via cnauroth)
 
+    MAPREDUCE-5364. Deadlock between RenewalTimerTask methods cancel() and run(). 
+    (kkambatl via tucu)
+
 Release 1.2.1 - Unreleased 
 
   INCOMPATIBLE CHANGES
