@@ -52,10 +52,12 @@ public abstract class Nfs3Base {
     this.rpcProgram = program;
   }
 
-  public void start() {
-    mountd.start();     // Start mountd
-    rpcProgram.register(PortmapMapping.TRANSPORT_TCP);
-    startTCPServer();   // Start TCP server
+  public void start(boolean register) {
+    mountd.start(register); // Start mountd
+    startTCPServer(); // Start TCP server
+    if (register) {
+      rpcProgram.register(PortmapMapping.TRANSPORT_TCP);
+    }
   }
 
   private void startTCPServer() {
