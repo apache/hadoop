@@ -1128,7 +1128,8 @@ public final class FileContext {
         throws IOException, UnresolvedLinkException {
         FileStatus fi = fs.getFileLinkStatus(p);
         if (fi.isSymlink()) {
-          fi.setSymlink(qualifySymlinkTarget(fs, p, fi.getSymlink()));
+          fi.setSymlink(FSLinkResolver.qualifySymlinkTarget(fs.getUri(), p,
+              fi.getSymlink()));
         }
         return fi;
       }

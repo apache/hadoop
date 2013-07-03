@@ -20,30 +20,20 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 import java.net.URI;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
- * Class used to perform an operation on and resolve symlinks in a
- * path. The operation may potentially span multiple file systems.
+ * Used primarily by {@link FileContext} to operate on and resolve
+ * symlinks in a path. Operations can potentially span multiple
+ * {@link AbstractFileSystem}s.
+ * 
+ * @see FileSystemLinkResolver
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public abstract class FSLinkResolver<T> {
 
-  private static final int MAX_PATH_LINKS = 32;
-
-  /**
-   * See {@link #qualifySymlinkTarget(URI, Path, Path)}
-   */
-  public static Path qualifySymlinkTarget(final AbstractFileSystem pathFS,
-    Path pathWithLink, Path target) {
-    return qualifySymlinkTarget(pathFS.getUri(), pathWithLink, target);
-  }
-
-  /**
-   * See {@link #qualifySymlinkTarget(URI, Path, Path)}
-   */
-  public static Path qualifySymlinkTarget(final FileSystem pathFS,
-      Path pathWithLink, Path target) {
-    return qualifySymlinkTarget(pathFS.getUri(), pathWithLink, target);
-  }
-  
   /**
    * Return a fully-qualified version of the given symlink target if it
    * has no scheme and authority. Partially and fully-qualified paths
@@ -53,7 +43,7 @@ public abstract class FSLinkResolver<T> {
    * @param target The symlink's absolute target
    * @return Fully qualified version of the target.
    */
-  private static Path qualifySymlinkTarget(final URI pathURI,
+  public static Path qualifySymlinkTarget(final URI pathURI,
       Path pathWithLink, Path target) {
     // NB: makeQualified uses the target's scheme and authority, if
     // specified, and the scheme and authority of pathURI, if not.
@@ -63,8 +53,6 @@ public abstract class FSLinkResolver<T> {
     return (scheme == null && auth == null) ? target.makeQualified(pathURI,
         pathWithLink.getParent()) : target;
   }
-
-  // FileContext / AbstractFileSystem resolution methods
 
   /**
    * Generic helper function overridden on instantiation to perform a
@@ -77,10 +65,8 @@ public abstract class FSLinkResolver<T> {
    *           not be resolved
    * @throws IOException an I/O error occurred
    */
-  public T next(final AbstractFileSystem fs, final Path p)
-      throws IOException, UnresolvedLinkException {
-    throw new AssertionError("Should not be called without first overriding!");
-  }
+  abstract public T next(final AbstractFileSystem fs, final Path p)
+      throws IOException, UnresolvedLinkException;
 
   /**
    * Performs the operation specified by the next function, calling it
@@ -104,12 +90,12 @@ public abstract class FSLinkResolver<T> {
         in = next(fs, p);
         isLink = false;
       } catch (UnresolvedLinkException e) {
-        if (count++ > MAX_PATH_LINKS) {
+        if (count++ > FsConstants.MAX_PATH_LINKS) {
           throw new IOException("Possible cyclic loop while " +
                                 "following symbolic link " + path);
         }
         // Resolve the first unresolved path component
-        p = FSLinkResolver.qualifySymlinkTarget(fs, p, fs.getLinkTarget(p));
+        p = qualifySymlinkTarget(fs.getUri(), p, fs.getLinkTarget(p));
         fs = fc.getFSofPath(p);
       }
     }

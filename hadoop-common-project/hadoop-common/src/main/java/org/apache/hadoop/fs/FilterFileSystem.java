@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
@@ -395,6 +396,32 @@ public class FilterFileSystem extends FileSystem {
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
     return fs.getFileStatus(f);
+  }
+
+  public void createSymlink(final Path target, final Path link,
+      final boolean createParent) throws AccessControlException,
+      FileAlreadyExistsException, FileNotFoundException,
+      ParentNotDirectoryException, UnsupportedFileSystemException, 
+      IOException {
+    fs.createSymlink(target, link, createParent);
+  }
+
+  public FileStatus getFileLinkStatus(final Path f)
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, IOException {
+    return fs.getFileLinkStatus(f);
+  }
+
+  public boolean supportsSymlinks() {
+    return fs.supportsSymlinks();
+  }
+
+  public Path getLinkTarget(Path f) throws IOException {
+    return fs.getLinkTarget(f);
+  }
+
+  protected Path resolveLink(Path f) throws IOException {
+    return fs.resolveLink(f);
   }
 
   @Override
