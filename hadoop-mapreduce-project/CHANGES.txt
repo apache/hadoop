@@ -18,6 +18,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
     input path dir (Devaraj K via jlowe)
 
+    MAPREDUCE-5358. MRAppMaster throws invalid transitions for JobImpl
+    (Devaraj K via jlowe)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
