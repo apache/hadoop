@@ -6,6 +6,8 @@ Release 2.1.1-beta - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
