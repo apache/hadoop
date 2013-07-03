@@ -55,6 +55,8 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-8470. Add NetworkTopologyWithNodeGroup, a 4-layer implementation
     of NetworkTopology.  (Junping Du via szetszwo)
 
+    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
+
   IMPROVEMENTS
 
     HADOOP-9253. Capture ulimit info in the logs at service start time.
