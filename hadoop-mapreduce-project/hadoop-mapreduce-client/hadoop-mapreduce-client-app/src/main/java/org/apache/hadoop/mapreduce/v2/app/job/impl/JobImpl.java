@@ -420,7 +420,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               EnumSet.of(JobEventType.JOB_KILL, 
                   JobEventType.JOB_UPDATED_NODES,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
-                  JobEventType.JOB_AM_REBOOT))
+                  JobEventType.JOB_AM_REBOOT,
+                  JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
+                  JobEventType.JOB_MAP_TASK_RESCHEDULED))
 
           // Transitions from FAIL_ABORT state
           .addTransition(JobStateInternal.FAIL_ABORT,

@@ -195,6 +195,15 @@ public class TestJobImpl {
     // let the committer complete and verify the job succeeds
     syncBarrier.await();
     assertJobState(job, JobStateInternal.SUCCEEDED);
+    
+    job.handle(new JobEvent(job.getID(),
+        JobEventType.JOB_TASK_ATTEMPT_COMPLETED));
+    assertJobState(job, JobStateInternal.SUCCEEDED);
+
+    job.handle(new JobEvent(job.getID(), 
+        JobEventType.JOB_MAP_TASK_RESCHEDULED));
+    assertJobState(job, JobStateInternal.SUCCEEDED);
+    
     dispatcher.stop();
     commitHandler.stop();
   }
