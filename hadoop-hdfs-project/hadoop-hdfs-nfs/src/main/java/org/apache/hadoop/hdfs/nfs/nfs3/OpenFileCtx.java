@@ -178,7 +178,7 @@ class OpenFileCtx {
   }
   
   // Get flushed offset. Note that flushed data may not be persisted.
-  private long getFlushedOffset() {
+  private long getFlushedOffset() throws IOException {
     return fos.getPos();
   }
   
@@ -515,7 +515,13 @@ class OpenFileCtx {
       commitOffset = getNextOffsetUnprotected();
     }
 
-    long flushed = getFlushedOffset();
+    long flushed = 0;
+    try {
+      flushed = getFlushedOffset();
+    } catch (IOException e) {
+      LOG.error("Can't get flushed offset, error:" + e);
+      return COMMIT_ERROR;
+    }
     LOG.info("getFlushedOffset=" + flushed + " commitOffset=" + commitOffset);
     if (flushed < commitOffset) {
       // Keep stream active

@@ -412,6 +412,9 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4943. WebHdfsFileSystem does not work when original file path has
     encoded chars.  (Jerry He via szetszwo)
 
+    HDFS-4954. In nfs, OpenFileCtx.getFlushedOffset() should handle IOException.
+    (Brandon Li via szetszwo)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
