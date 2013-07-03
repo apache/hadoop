@@ -8,6 +8,8 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
 
+    HADOOP-9515. Add general interface for NFS and Mount. (brandonli)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
