@@ -6,6 +6,8 @@ Release 2.3.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
