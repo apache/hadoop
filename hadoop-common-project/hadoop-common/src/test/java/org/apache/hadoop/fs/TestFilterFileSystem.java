@@ -209,6 +209,7 @@ public class TestFilterFileSystem {
     public String getScheme() {
       return "dontcheck";
     }
+    public Path fixRelativePart(Path p) { return null; }
   }
   
   @Test

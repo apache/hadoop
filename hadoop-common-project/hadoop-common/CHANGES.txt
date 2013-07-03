@@ -41,6 +41,9 @@ Release 2.2.0 - UNRELEASED
     HADOOP-9414.  Refactor out FSLinkResolver and relevant helper methods.
     (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9416.  Add new symlink resolution methods in FileSystem and
+    FileSystemLinkResolver.  (Andrew Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
