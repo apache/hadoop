@@ -44,7 +44,7 @@ public class TestFileLengthOnClusterRestart {
     FSDataOutputStream out = null;
     DistributedFileSystem dfs = null;
     try {
-      Path path = new Path(MiniDFSCluster.getBaseDir().getPath(), "test");
+      Path path = new Path("/tmp/TestFileLengthOnClusterRestart");
       dfs = (DistributedFileSystem) cluster.getFileSystem();
       out = dfs.create(path);
       int fileLength = 1030;

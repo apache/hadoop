@@ -48,7 +48,7 @@ import org.junit.Test;
  */
 public class TestJobTrackerQuiescence {
   final Path testDir = 
-    new Path(System.getProperty("test.build.data", "/tmp"), "jt-safemode");
+    new Path("/tmp/jt-safemode");
   final Path inDir = new Path(testDir, "input");
   final Path shareDir = new Path(testDir, "share");
   final Path outputDir = new Path(testDir, "output");
