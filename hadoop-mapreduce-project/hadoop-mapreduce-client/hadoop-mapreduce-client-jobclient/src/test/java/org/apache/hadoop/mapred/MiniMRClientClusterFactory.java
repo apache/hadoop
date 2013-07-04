@@ -38,12 +38,11 @@ public class MiniMRClientClusterFactory {
 
   public static MiniMRClientCluster create(Class<?> caller, int noOfNMs,
       Configuration conf) throws IOException {
-    return create(caller, caller.getName(), noOfNMs, conf);
+    return create(caller, caller.getSimpleName(), noOfNMs, conf);
   }
-  
+
   public static MiniMRClientCluster create(Class<?> caller, String identifier,
-      int noOfNMs,
-      Configuration conf) throws IOException {
+      int noOfNMs, Configuration conf) throws IOException {
 
     if (conf == null) {
       conf = new Configuration();
@@ -71,8 +70,8 @@ public class MiniMRClientClusterFactory {
     fs.setPermission(remoteCallerJar, new FsPermission("744"));
     job.addFileToClassPath(remoteCallerJar);
 
-    MiniMRYarnCluster miniMRYarnCluster =
-        new MiniMRYarnCluster(identifier, noOfNMs);
+    MiniMRYarnCluster miniMRYarnCluster = new MiniMRYarnCluster(identifier,
+        noOfNMs);
     job.getConfiguration().set("minimrclientcluster.caller.name",
         identifier);
     job.getConfiguration().setInt("minimrclientcluster.nodemanagers.number",

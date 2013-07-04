@@ -433,6 +433,9 @@ Release 2.1.0-beta - 2013-07-02
     MAPREDUCE-5177. Use common utils FileUtil#setReadable/Writable/Executable & 
     FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
+    MAPREDUCE-5349. TestClusterMapReduceTestCase and TestJobName fail on Windows
+    in branch-2. (Chuan Liu via cnauroth)
+
     MAPREDUCE-5291. Change MR App to use updated property names in
     container-log4j.properties. (Zhijie Shen via sseth)
 
