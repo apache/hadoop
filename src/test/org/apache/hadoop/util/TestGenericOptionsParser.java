@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.HashMap;
 
 import junit.framework.TestCase;
 
@@ -31,7 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 
-import com.google.common.collect.Maps;
 
 public class TestGenericOptionsParser extends TestCase {
   File testDir;
@@ -146,12 +146,12 @@ public class TestGenericOptionsParser extends TestCase {
 
     args = new String[]{};
     expectedRemainingArgs = new String[]{};
-    expectedMap = Maps.newHashMap();
+    expectedMap = new HashMap<String,String>();
     assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
 
     args = new String[]{"-Dkey1=value1"};
     expectedRemainingArgs = new String[]{};
-    expectedMap = Maps.newHashMap();
+    expectedMap = new HashMap<String,String>();
     expectedMap.put("key1", "value1");
     assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
 
@@ -173,7 +173,7 @@ public class TestGenericOptionsParser extends TestCase {
       args = new String[]{"-fs", "hdfs://somefs/", "-D", "key1", "value1",
         "-fs", "someother", "-D", "key2", "value2", "arg1", "arg2"};
       expectedRemainingArgs = new String[]{"arg1", "arg2"};
-      expectedMap = Maps.newHashMap();
+      expectedMap = new HashMap<String,String>();
       expectedMap.put("key1", "value1");
       expectedMap.put("key2", "value2");
       assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
@@ -185,7 +185,7 @@ public class TestGenericOptionsParser extends TestCase {
 
       args = new String[]{"-fs", "hdfs://somefs/", "-D", "key1", "value1",
         "-fs", "someother", "-D", "key2"};
-      expectedMap = Maps.newHashMap();
+      expectedMap = new HashMap<String,String>();
       expectedMap.put("key1", "value1");
       expectedMap.put("key2", null); // we expect key2 not set
       assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
@@ -194,13 +194,13 @@ public class TestGenericOptionsParser extends TestCase {
     args = new String[]{"-fs", "hdfs://somefs/", "-D", "key1=value1",
       "-fs", "someother", "-Dkey2"};
     expectedRemainingArgs = new String[]{};
-    expectedMap = Maps.newHashMap();
+    expectedMap = new HashMap<String,String>();
     expectedMap.put("key1", "value1");
     expectedMap.put("key2", null); // we expect key2 not set
     assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
 
     args = new String[]{"-fs", "hdfs://somefs/", "-D"};
-    expectedMap = Maps.newHashMap();
+    expectedMap = new HashMap<String,String>();
     assertDOptionParsing(args, expectedMap, expectedRemainingArgs);
   }
 
