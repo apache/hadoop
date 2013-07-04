@@ -26,6 +26,7 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 
@@ -54,6 +55,22 @@ public class TestWebHdfsUrl {
     UserGroupInformation.setConfiguration(new Configuration());
   }
   
+  @Test(timeout=60000)
+  public void testEncodedPathUrl() throws IOException, URISyntaxException{
+    Configuration conf = new Configuration();
+
+    final WebHdfsFileSystem webhdfs = (WebHdfsFileSystem) FileSystem.get(
+        uri, conf);
+
+    // Construct a file path that contains percentage-encoded string
+    String pathName = "/hdtest010%2C60020%2C1371000602151.1371058984668";
+    Path fsPath = new Path(pathName);
+    URL encodedPathUrl = webhdfs.toUrl(PutOpParam.Op.CREATE, fsPath);
+    // We should get back the original file path after cycling back and decoding
+    Assert.assertEquals(WebHdfsFileSystem.PATH_PREFIX + pathName,
+        encodedPathUrl.toURI().getPath());
+  }
+
   @Test(timeout=60000)
   public void testSimpleAuthParamsInUrl() throws IOException {
     Configuration conf = new Configuration();
