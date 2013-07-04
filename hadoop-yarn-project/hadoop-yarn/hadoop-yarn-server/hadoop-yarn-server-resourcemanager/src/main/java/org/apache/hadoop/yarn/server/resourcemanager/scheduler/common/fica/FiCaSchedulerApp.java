@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
@@ -426,6 +427,16 @@ public class FiCaSchedulerApp extends SchedulerApplication {
       this.reservedContainers.remove(priority);
     }
     
+    // reservedContainer should not be null here
+    if (reservedContainer == null) {
+      String errorMesssage =
+          "Application " + getApplicationId() + " is trying to unreserve "
+              + " on node " + node + ", currently has "
+              + reservedContainers.size() + " at priority " + priority
+              + "; currentReservation " + currentReservation;
+      LOG.warn(errorMesssage);
+      throw new YarnRuntimeException(errorMesssage);
+    }
     // Reset the re-reservation count
     resetReReservations(priority);
 
