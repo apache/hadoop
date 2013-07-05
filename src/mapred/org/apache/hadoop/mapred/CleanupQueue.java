@@ -112,8 +112,10 @@ public class CleanupQueue {
                 return null;
               } finally {
                 // So that we don't leave an entry in the FileSystem cache for
-                // every job.
-                fs.close();
+                // every UGI that a job is submitted with.
+                if (ugi != null) {
+                  fs.close();
+                }
               }
             }
           });
