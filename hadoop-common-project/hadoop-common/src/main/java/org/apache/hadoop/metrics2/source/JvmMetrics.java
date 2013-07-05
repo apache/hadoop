@@ -101,8 +101,10 @@ public class JvmMetrics implements MetricsSource {
     Runtime runtime = Runtime.getRuntime();
     rb.addGauge(MemNonHeapUsedM, memNonHeap.getUsed() / M)
       .addGauge(MemNonHeapCommittedM, memNonHeap.getCommitted() / M)
+      .addGauge(MemNonHeapMaxM, memNonHeap.getMax() / M)
       .addGauge(MemHeapUsedM, memHeap.getUsed() / M)
       .addGauge(MemHeapCommittedM, memHeap.getCommitted() / M)
+      .addGauge(MemHeapMaxM, memHeap.getMax() / M)
       .addGauge(MemMaxM, runtime.maxMemory() / M);
   }
 

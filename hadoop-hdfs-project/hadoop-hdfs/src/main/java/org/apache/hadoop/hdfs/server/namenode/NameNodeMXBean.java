@@ -174,4 +174,32 @@ public interface NameNodeMXBean {
    * @return the name dir status information, as a JSON string.
    */
   public String getNameDirStatuses();
+
+  /**
+   * Get Max, Median, Min and Standard Deviation of DataNodes usage.
+   *
+   * @return the DataNode usage information, as a JSON string.
+   */
+  public String getNodeUsage();
+
+  /**
+   * Get status information about the journals of the NN.
+   *
+   * @return the name journal status information, as a JSON string.
+   */
+  public String getNameJournalStatus();
+
+  /**
+   * Gets the NN start time
+   *
+   * @return the NN start time
+   */
+  public String getNNStarted();
+
+  /**
+   * Get the compilation information which contains date, user and branch
+   *
+   * @return the compilation information, as a JSON string.
+   */
+  public String getCompileInfo();
 }
