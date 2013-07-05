@@ -33,20 +33,35 @@ public class TestCleanupQueue {
   @Test (timeout = 2000)
   public void testCleanupQueueClosesFilesystem() throws IOException,
       InterruptedException {
+    Configuration conf = new Configuration();
     File file = new File("afile.txt");
     file.createNewFile();
     Path path = new Path(file.getAbsoluteFile().toURI());
     
-    FileSystem.get(new Configuration());
+    FileSystem.get(conf);
     Assert.assertEquals(1, FileSystem.getCacheSize());
     
+    // With UGI, should close FileSystem
     CleanupQueue cleanupQueue = new CleanupQueue();
-    PathDeletionContext context = new PathDeletionContext(path,
-        new Configuration(), UserGroupInformation.getLoginUser());
+    PathDeletionContext context = new PathDeletionContext(path, conf,
+        UserGroupInformation.getLoginUser());
     cleanupQueue.addToQueue(context);
     
     while (FileSystem.getCacheSize() > 0) {
       Thread.sleep(100);
     }
+    
+    file.createNewFile();
+    FileSystem.get(conf);
+    Assert.assertEquals(1, FileSystem.getCacheSize());
+    
+    // Without UGI, should not close FileSystem
+    context = new PathDeletionContext(path, conf);
+    cleanupQueue.addToQueue(context);
+    
+    while (file.exists()) {
+      Thread.sleep(100);
+    }
+    Assert.assertEquals(1, FileSystem.getCacheSize());
   }
 }
