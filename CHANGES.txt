@@ -49,6 +49,10 @@ Release 1.2.1 - Unreleased
     MAPREDUCE-5375. Use short name for renewing delegation tokens. (Venkat
     Ranganathan via acmurthy)
 
+    MAPREDUCE-5368. Reduce memory footprint of JobTracker by using non-default
+    values for hash-tables to store Locality and Avataar for TaskAttempts.
+    (zhaoyunjiong via acmurthy)
+
 Release 1.2.0 - 2013.05.05
 
   INCOMPATIBLE CHANGES
