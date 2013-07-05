@@ -1,5 +1,8 @@
 Hadoop Change Log
 
+    MAPREDUCE-5364. Deadlock between RenewalTimerTask methods cancel() and run(). 
+    (kkambatl via tucu)
+
 Release 1.2.1 - Unreleased 
 
   INCOMPATIBLE CHANGES
