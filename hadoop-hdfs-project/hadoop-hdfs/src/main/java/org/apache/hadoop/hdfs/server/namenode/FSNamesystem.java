@@ -171,6 +171,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
@@ -210,6 +211,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
@@ -4993,6 +4995,28 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   @Override // FSNamesystemMBean
+  public int getNumDecomLiveDataNodes() {
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    int liveDecommissioned = 0;
+    for (DatanodeDescriptor node : live) {
+      liveDecommissioned += node.isDecommissioned() ? 1 : 0;
+    }
+    return liveDecommissioned;
+  }
+
+  @Override // FSNamesystemMBean
+  public int getNumDecomDeadDataNodes() {
+    final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+    getBlockManager().getDatanodeManager().fetchDatanodes(dead, null, true);
+    int deadDecommissioned = 0;
+    for (DatanodeDescriptor node : dead) {
+      deadDecommissioned += node.isDecommissioned() ? 1 : 0;
+    }
+    return deadDecommissioned;
+  }
+
+  @Override // FSNamesystemMBean
   @Metric({"StaleDataNodes", 
     "Number of datanodes marked stale due to delayed heartbeat"})
   public int getNumStaleDataNodes() {
@@ -5802,6 +5826,91 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     statusMap.put("failed", failedDirs);
     
     return JSON.toString(statusMap);
+  }
+
+  @Override // NameNodeMXBean
+  public String getNodeUsage() {
+    float median = 0;
+    float max = 0;
+    float min = 0;
+    float dev = 0;
+
+    final Map<String, Map<String,Object>> info =
+        new HashMap<String, Map<String,Object>>();
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    blockManager.getDatanodeManager().fetchDatanodes(live, null, true);
+
+    if (live.size() > 0) {
+      float totalDfsUsed = 0;
+      float[] usages = new float[live.size()];
+      int i = 0;
+      for (DatanodeDescriptor dn : live) {
+        usages[i++] = dn.getDfsUsedPercent();
+        totalDfsUsed += dn.getDfsUsedPercent();
+      }
+      totalDfsUsed /= live.size();
+      Arrays.sort(usages);
+      median = usages[usages.length / 2];
+      max = usages[usages.length - 1];
+      min = usages[0];
+
+      for (i = 0; i < usages.length; i++) {
+        dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
+      }
+      dev = (float) Math.sqrt(dev / usages.length);
+    }
+
+    final Map<String, Object> innerInfo = new HashMap<String, Object>();
+    innerInfo.put("min", StringUtils.format("%.2f%%", min));
+    innerInfo.put("median", StringUtils.format("%.2f%%", median));
+    innerInfo.put("max", StringUtils.format("%.2f%%", max));
+    innerInfo.put("stdDev", StringUtils.format("%.2f%%", dev));
+    info.put("nodeUsage", innerInfo);
+
+    return JSON.toString(info);
+  }
+
+  @Override  // NameNodeMXBean
+  public String getNameJournalStatus() {
+    List<Map<String, String>> jasList = new ArrayList<Map<String, String>>();
+    FSEditLog log = getFSImage().getEditLog();
+    if (log != null) {
+      boolean openForWrite = log.isOpenForWrite();
+      for (JournalAndStream jas : log.getJournals()) {
+        final Map<String, String> jasMap = new HashMap<String, String>();
+        String manager = jas.getManager().toString();
+
+        jasMap.put("required", String.valueOf(jas.isRequired()));
+        jasMap.put("disabled", String.valueOf(jas.isDisabled()));
+        jasMap.put("manager", manager);
+
+        if (jas.isDisabled()) {
+          jasMap.put("stream", "Failed");
+        } else if (openForWrite) {
+          EditLogOutputStream elos = jas.getCurrentStream();
+          if (elos != null) {
+            jasMap.put("stream", elos.generateHtmlReport());
+          } else {
+            jasMap.put("stream", "not currently writing");
+          }
+        } else {
+          jasMap.put("stream", "open for read");
+        }
+        jasList.add(jasMap);
+      }
+    }
+    return JSON.toString(jasList);
+  }
+
+  @Override  // NameNodeMXBean
+  public String getNNStarted() {
+    return getStartTime().toString();
+  }
+
+  @Override  // NameNodeMXBean
+  public String getCompileInfo() {
+    return VersionInfo.getDate() + " by " + VersionInfo.getUser() +
+        " from " + VersionInfo.getBranch();
   }
 
   /** @return the block manager. */

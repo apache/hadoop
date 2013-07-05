@@ -118,4 +118,16 @@ public interface FSNamesystemMBean {
    * @return number of stale data nodes
    */
   public int getNumStaleDataNodes();
+
+  /**
+   * Number of decommissioned Live data nodes
+   * @return number of decommissioned live data nodes
+   */
+  public int getNumDecomLiveDataNodes();
+
+  /**
+   * Number of decommissioned dead data nodes
+   * @return number of decommissioned dead data nodes
+   */
+  public int getNumDecomDeadDataNodes();
 }
