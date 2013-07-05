@@ -133,9 +133,9 @@ class TaskInProgress {
   private String user;
 
   private Map<TaskAttemptID, Locality> taskLocality = 
-      new ConcurrentHashMap<TaskAttemptID, Locality>();
+      new ConcurrentHashMap<TaskAttemptID, Locality>(4, 0.75f, 2);
   private Map<TaskAttemptID, Avataar> taskAvataar = 
-      new ConcurrentHashMap<TaskAttemptID, Avataar>();
+      new ConcurrentHashMap<TaskAttemptID, Avataar>(4, 0.75f, 2);
 
   /**
    * Constructor for MapTask
