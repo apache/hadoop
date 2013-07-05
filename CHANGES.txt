@@ -117,6 +117,9 @@ Release 1.2.1 - Unreleased
     MAPREDUCE-5364. Deadlock between RenewalTimerTask methods cancel() and run(). 
     (kkambatl via tucu)
 
+    MAPREDUCE-5375. Use short name for renewing delegation tokens. (Venkat
+    Ranganathan via acmurthy)
+
 Release 1.2.0 - 2013.05.05
 
   INCOMPATIBLE CHANGES
