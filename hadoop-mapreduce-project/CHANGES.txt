@@ -481,6 +481,9 @@ Release 2.1.0-beta - 2013-07-02
     MAPREDUCE-5357. Job staging directory owner checking could fail on Windows.
     (Chuan Liu via cnauroth)
 
+    MAPREDUCE-5360. TestMRJobClient fails on Windows due to path format.
+    (Chuan Liu via cnauroth)
+
     MAPREDUCE-5291. Change MR App to use updated property names in
     container-log4j.properties. (Zhijie Shen via sseth)
 
