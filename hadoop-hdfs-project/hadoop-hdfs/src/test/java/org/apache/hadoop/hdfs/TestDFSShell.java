@@ -676,6 +676,22 @@ public class TestDFSShell {
       assertTrue("Output doesn't match input",
           Arrays.equals(writebytes, out.toByteArray()));
       out.reset();
+      
+      // Test a plain text.
+      OutputStream pout = fs.create(new Path(root, "file.txt"));
+      writebytes = "bar".getBytes();
+      pout.write(writebytes);
+      pout.close();
+      out = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(out));
+      argv = new String[2];
+      argv[0] = "-text";
+      argv[1] = new Path(root, "file.txt").toString();
+      ret = ToolRunner.run(new FsShell(conf), argv);
+      assertEquals("'-text " + argv[1] + " returned " + ret, 0, ret);
+      assertTrue("Output doesn't match input",
+          Arrays.equals(writebytes, out.toByteArray()));
+      out.reset();
     } finally {
       if (null != bak) {
         System.setOut(bak);
