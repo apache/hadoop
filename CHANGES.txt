@@ -71,7 +71,7 @@ Release 1.3.0 - unreleased
     HADOOP-9678. TestRPC#testStopsAllThreads intermittently fails on Windows.
     (Ivan Mitic via cnauroth)
 
-Release 1.2.1 - Unreleased 
+Release 1.2.1 - 2013.07.06
 
   INCOMPATIBLE CHANGES
 
@@ -83,6 +83,9 @@ Release 1.2.1 - Unreleased
     logs. (Arpit Agarwal via suresh)
 
   BUG FIXES
+
+    MAPREDUCE-5256. CombineInputFormat isn't thread safe affecting HiveServer.
+    (Vinod Kumar Vavilapalli, via mattf)
 
     HADOOP-9504 MetricsDynamicMBeanBase has concurrency issues in createMBeanInfo. 
     (Liang Xie and Jason Lowe, via mattf)
