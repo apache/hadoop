@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 1.2.1 - Unreleased 
+Release 1.2.1 - 2013.07.06
 
   INCOMPATIBLE CHANGES
 
