@@ -211,6 +211,10 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     job.setPriority(JobPriority.NORMAL);
 
     File fcon = File.createTempFile("config", ".xml");
+    FileSystem localFs = FileSystem.getLocal(conf);
+    String fconUri = new Path(fcon.getAbsolutePath())
+        .makeQualified(localFs.getUri(), localFs.getWorkingDirectory()).toUri()
+        .toString();
 
     job.getConfiguration().writeXml(new FileOutputStream(fcon));
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -220,7 +224,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     
     
     exitCode = runTool(conf, jc,
-        new String[] { "-submit", "file://" + fcon.getAbsolutePath() }, out);
+        new String[] { "-submit", fconUri }, out);
     assertEquals("Exit code", 0, exitCode);
     String answer = new String(out.toByteArray());
     // in console was written
@@ -335,13 +339,18 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     CLI jc = createJobClient();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     File f = new File("src/test/resources/job_1329348432655_0001-10.jhist");
+    FileSystem localFs = FileSystem.getLocal(conf);
+    String historyFileUri = new Path(f.getAbsolutePath())
+        .makeQualified(localFs.getUri(), localFs.getWorkingDirectory()).toUri()
+        .toString();
+ 
     // bad command
-    int exitCode = runTool(conf, jc, new String[] { "-history", "pul",
-        "file://" + f.getAbsolutePath() }, out);
+    int exitCode = runTool(conf, jc, new String[] { "-history", "pul", 
+        historyFileUri }, out);
     assertEquals("Exit code", -1, exitCode);
 
     exitCode = runTool(conf, jc, new String[] { "-history", "all",
-        "file://" + f.getAbsolutePath() }, out);
+        historyFileUri }, out);
     assertEquals("Exit code", 0, exitCode);
     String line;
     BufferedReader br = new BufferedReader(new InputStreamReader(
