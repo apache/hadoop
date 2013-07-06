@@ -84,6 +84,9 @@ Release 1.2.1 - Unreleased
 
   BUG FIXES
 
+    HADOOP-9504 MetricsDynamicMBeanBase has concurrency issues in createMBeanInfo. 
+    (Liang Xie and Jason Lowe, via mattf)
+
     MAPREDUCE-5206. Ensure that a job doesn't get added to RetiredJobs
     multiple times in JobTracker. (acmurthy)
 
