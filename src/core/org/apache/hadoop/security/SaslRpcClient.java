@@ -53,6 +53,7 @@ public class SaslRpcClient {
   public static final Log LOG = LogFactory.getLog(SaslRpcClient.class);
 
   private final SaslClient saslClient;
+  private final boolean fallbackAllowed;
 
   /**
    * Create a SaslRpcClient for an authentication method
@@ -63,8 +64,10 @@ public class SaslRpcClient {
    *          token to use if needed by the authentication method
    */
   public SaslRpcClient(AuthMethod method,
-      Token<? extends TokenIdentifier> token, String serverPrincipal)
+      Token<? extends TokenIdentifier> token, String serverPrincipal,
+      boolean fallbackAllowed)
       throws IOException {
+    this.fallbackAllowed = fallbackAllowed;
     switch (method) {
     case DIGEST:
       if (LOG.isDebugEnabled())
@@ -144,6 +147,11 @@ public class SaslRpcClient {
         readStatus(inStream);
         int len = inStream.readInt();
         if (len == SaslRpcServer.SWITCH_TO_SIMPLE_AUTH) {
+          if (!fallbackAllowed) {
+            throw new IOException("Server asks us to fall back to SIMPLE " +
+                "auth, but this client is configured to only allow secure " +
+                "connections.");
+          }
           if (LOG.isDebugEnabled())
             LOG.debug("Server asks us to fall back to simple auth.");
           saslClient.dispose();
