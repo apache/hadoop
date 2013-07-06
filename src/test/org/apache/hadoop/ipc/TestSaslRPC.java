@@ -19,6 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY;
 import static org.junit.Assert.*;
 
 import java.io.DataInput;
@@ -74,6 +75,9 @@ public class TestSaslRPC {
   static {
     conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    conf.setBoolean(
+        IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
+        true);
     UserGroupInformation.setConfiguration(conf);
   }
 
