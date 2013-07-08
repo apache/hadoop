@@ -2397,7 +2397,8 @@ public abstract class FileSystem extends Configured implements Closeable {
         }
         
         // now insert the new file system into the map
-        if (map.isEmpty() ) {
+        if (map.isEmpty()
+                && !ShutdownHookManager.get().isShutdownInProgress()) {
           ShutdownHookManager.get().addShutdownHook(clientFinalizer, SHUTDOWN_HOOK_PRIORITY);
         }
         fs.key = key;
