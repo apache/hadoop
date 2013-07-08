@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -222,10 +224,15 @@ public class YarnClientImpl extends YarnClient {
   }
 
   @Override
-  public List<NodeReport> getNodeReports() throws YarnException,
+  public List<NodeReport> getNodeReports(NodeState... states) throws YarnException,
       IOException {
-    GetClusterNodesRequest request =
-        Records.newRecord(GetClusterNodesRequest.class);
+    EnumSet<NodeState> statesSet = (states.length == 0) ?
+        EnumSet.allOf(NodeState.class) : EnumSet.noneOf(NodeState.class);
+    for (NodeState state : states) {
+      statesSet.add(state);
+    }
+    GetClusterNodesRequest request = GetClusterNodesRequest
+        .newInstance(statesSet);
     GetClusterNodesResponse response = rmClient.getClusterNodes(request);
     return response.getNodeReports();
   }

@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -116,8 +117,16 @@ public class TestClientRMService {
     rm.start();
 
     // Add a healthy node
-    MockNM node = rm.registerNode("host:1234", 1024);
+    MockNM node = rm.registerNode("host1:1234", 1024);
+    rm.sendNodeStarted(node);
     node.nodeHeartbeat(true);
+    
+    // Add and lose a node
+    MockNM lostNode = rm.registerNode("host2:1235", 1024);
+    rm.sendNodeStarted(lostNode);
+    lostNode.nodeHeartbeat(true);
+    rm.NMwaitForState(lostNode.getNodeId(), NodeState.RUNNING);
+    rm.sendNodeLost(lostNode);
 
     // Create a client.
     Configuration conf = new Configuration();
@@ -130,7 +139,7 @@ public class TestClientRMService {
 
     // Make call
     GetClusterNodesRequest request =
-        Records.newRecord(GetClusterNodesRequest.class);
+        GetClusterNodesRequest.newInstance(EnumSet.of(NodeState.RUNNING));
     List<NodeReport> nodeReports =
         client.getClusterNodes(request).getNodeReports();
     Assert.assertEquals(1, nodeReports.size());
@@ -142,9 +151,21 @@ public class TestClientRMService {
 
     // Call again
     nodeReports = client.getClusterNodes(request).getNodeReports();
+    Assert.assertEquals("Unhealthy nodes should not show up by default", 0,
+        nodeReports.size());
+    
+    // Now query for UNHEALTHY nodes
+    request = GetClusterNodesRequest.newInstance(EnumSet.of(NodeState.UNHEALTHY));
+    nodeReports = client.getClusterNodes(request).getNodeReports();
     Assert.assertEquals(1, nodeReports.size());
     Assert.assertEquals("Node is expected to be unhealthy!", NodeState.UNHEALTHY,
         nodeReports.get(0).getNodeState());
+    
+    // Query all states should return all nodes
+    rm.registerNode("host3:1236", 1024);
+    request = GetClusterNodesRequest.newInstance(EnumSet.allOf(NodeState.class));
+    nodeReports = client.getClusterNodes(request).getNodeReports();
+    Assert.assertEquals(3, nodeReports.size());
   }
   
   @Test

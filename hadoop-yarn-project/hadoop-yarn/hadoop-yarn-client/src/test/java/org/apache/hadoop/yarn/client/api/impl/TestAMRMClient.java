@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -101,7 +102,7 @@ public class TestAMRMClient {
     yarnClient.start();
 
     // get node info
-    nodeReports = yarnClient.getNodeReports();
+    nodeReports = yarnClient.getNodeReports(NodeState.RUNNING);
     
     priority = Priority.newInstance(1);
     capability = Resource.newInstance(1024, 1);

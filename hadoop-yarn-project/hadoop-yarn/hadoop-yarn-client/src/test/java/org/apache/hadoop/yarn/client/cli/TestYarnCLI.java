@@ -152,12 +152,13 @@ public class TestYarnCLI {
   @Test
   public void testListClusterNodes() throws Exception {
     NodeCLI cli = new NodeCLI();
-    when(client.getNodeReports()).thenReturn(getNodeReports(3));
+    when(client.getNodeReports(NodeState.RUNNING)).thenReturn(
+        getNodeReports(3));
     cli.setClient(client);
     cli.setSysOutPrintStream(sysOut);
     int result = cli.run(new String[] { "-list" });
     assertEquals(0, result);
-    verify(client).getNodeReports();
+    verify(client).getNodeReports(NodeState.RUNNING);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
     pw.println("Total Nodes:3");

@@ -20,8 +20,15 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import java.util.EnumSet;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
+import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeStateProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 
 @Private
 @Unstable
@@ -31,6 +38,8 @@ public class GetClusterNodesRequestPBImpl extends GetClusterNodesRequest {
   GetClusterNodesRequestProto.Builder builder = null;
   boolean viaProto = false;
 
+  private EnumSet<NodeState> states = null;
+  
   public GetClusterNodesRequestPBImpl() {
     builder = GetClusterNodesRequestProto.newBuilder();
   }
@@ -41,11 +50,91 @@ public class GetClusterNodesRequestPBImpl extends GetClusterNodesRequest {
   }
   
   public GetClusterNodesRequestProto getProto() {
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
+  
+  @Override
+  public EnumSet<NodeState> getNodeStates() {
+    initNodeStates();
+    return this.states;
+  }
+  
+  @Override
+  public void setNodeStates(final EnumSet<NodeState> states) {
+    initNodeStates();
+    this.states.clear();
+    if (states == null) {
+      return;
+    }
+    this.states.addAll(states);
+  }
+  
+  private void mergeLocalToProto() {
+    if (viaProto) {
+      maybeInitBuilder();
+    }
+    mergeLocalToBuilder();
+    proto = builder.build();
+    viaProto = true;
+  }
 
+  private void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = GetClusterNodesRequestProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+  
+  private void mergeLocalToBuilder() {
+    if (this.states != null) {
+      maybeInitBuilder();
+      builder.clearNodeStates();
+      Iterable<NodeStateProto> iterable = new Iterable<NodeStateProto>() {
+        @Override
+        public Iterator<NodeStateProto> iterator() {
+          return new Iterator<NodeStateProto>() {
+
+            Iterator<NodeState> iter = states.iterator();
+
+            @Override
+            public boolean hasNext() {
+              return iter.hasNext();
+            }
+
+            @Override
+            public NodeStateProto next() {
+              return ProtoUtils.convertToProtoFormat(iter.next());
+            }
+
+            @Override
+            public void remove() {
+              throw new UnsupportedOperationException();
+
+            }
+          };
+
+        }
+      };
+      builder.addAllNodeStates(iterable);
+    }
+  }
+  
+  private void initNodeStates() {
+    if (this.states != null) {
+      return;
+    }
+    GetClusterNodesRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<NodeStateProto> list = p.getNodeStatesList();
+    this.states = EnumSet.noneOf(NodeState.class);
+
+    for (NodeStateProto c : list) {
+      this.states.add(ProtoUtils.convertFromProtoFormat(c));
+    }
+  }
+  
   @Override
   public int hashCode() {
     return getProto().hashCode();
