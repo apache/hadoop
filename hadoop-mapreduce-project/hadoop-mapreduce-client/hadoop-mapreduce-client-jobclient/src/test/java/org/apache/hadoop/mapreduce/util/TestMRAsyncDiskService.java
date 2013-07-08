@@ -59,8 +59,8 @@ public class TestMRAsyncDiskService extends TestCase {
     pathname = (new Path(pathname)).toUri().getPath();
     cwd = (new Path(cwd)).toUri().getPath();
 
-    String [] cwdParts = cwd.split(File.separator);
-    String [] pathParts = pathname.split(File.separator);
+    String [] cwdParts = cwd.split(Path.SEPARATOR);
+    String [] pathParts = pathname.split(Path.SEPARATOR);
 
     // There are three possible cases:
     // 1) pathname and cwd are equal. Return '.'
@@ -94,18 +94,18 @@ public class TestMRAsyncDiskService extends TestCase {
     int parentDirsRequired = cwdParts.length - common;
     for (int i = 0; i < parentDirsRequired; i++) {
       sb.append("..");
-      sb.append(File.separator);
+      sb.append(Path.SEPARATOR);
     }
 
     // Then append all non-common parts of 'pathname' itself.
     for (int i = common; i < pathParts.length; i++) {
       sb.append(pathParts[i]);
-      sb.append(File.separator);
+      sb.append(Path.SEPARATOR);
     }
 
     // Don't end with a '/'.
     String s = sb.toString();
-    if (s.endsWith(File.separator)) {
+    if (s.endsWith(Path.SEPARATOR)) {
       s = s.substring(0, s.length() - 1);
     }
 
