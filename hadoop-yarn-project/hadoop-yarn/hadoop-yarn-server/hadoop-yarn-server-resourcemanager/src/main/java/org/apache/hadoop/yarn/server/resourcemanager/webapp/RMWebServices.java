@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.http.HttpServletRequest;
@@ -39,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -149,57 +152,42 @@ public class RMWebServices {
   }
 
   /**
-   * If no params are given, returns all active nodes, which includes
-   * nodes in the NEW and RUNNING states. If state param is "all", returns all
-   * nodes in all states. Otherwise, if the state param is set to a state name,
-   * returns all nodes that are in that state.
+   * Returns all nodes in the cluster. If the states param is given, returns
+   * all nodes that are in the comma-separated list of states.
    */
   @GET
   @Path("/nodes")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public NodesInfo getNodes(@QueryParam("state") String state) {
+  public NodesInfo getNodes(@QueryParam("states") String states) {
     init();
     ResourceScheduler sched = this.rm.getResourceScheduler();
     if (sched == null) {
       throw new NotFoundException("Null ResourceScheduler instance");
     }
     
-    NodeState acceptedState = null;
-    boolean all = false;
-    
-    if (state != null && !state.isEmpty()) {
-      if (state.equalsIgnoreCase("all")) {
-        all = true;
-      } else {
-        acceptedState = NodeState.valueOf(state.toUpperCase());
+    EnumSet<NodeState> acceptedStates;
+    if (states == null) {
+      acceptedStates = EnumSet.allOf(NodeState.class);
+    } else {
+      acceptedStates = EnumSet.noneOf(NodeState.class);
+      for (String stateStr : states.split(",")) {
+        acceptedStates.add(NodeState.valueOf(stateStr.toUpperCase()));
       }
     }
     
-    // getRMNodes() contains nodes that are NEW, RUNNING OR UNHEALTHY
-    NodesInfo allNodes = new NodesInfo();
-    for (RMNode ni : this.rm.getRMContext().getRMNodes().values()) {
-      if (all || (acceptedState == null && ni.getState() != NodeState.UNHEALTHY)
-          || acceptedState == ni.getState()) {
-        NodeInfo nodeInfo = new NodeInfo(ni, sched);
-        allNodes.add(nodeInfo);
+    Collection<RMNode> rmNodes = RMServerUtils.queryRMNodes(this.rm.getRMContext(),
+        acceptedStates);
+    NodesInfo nodesInfo = new NodesInfo();
+    for (RMNode rmNode : rmNodes) {
+      NodeInfo nodeInfo = new NodeInfo(rmNode, sched);
+      if (EnumSet.of(NodeState.LOST, NodeState.DECOMMISSIONED, NodeState.REBOOTED)
+          .contains(rmNode.getState())) {
+        nodeInfo.setNodeHTTPAddress(EMPTY);
       }
+      nodesInfo.add(nodeInfo);
     }
     
-    // getInactiveNodes() contains nodes that are DECOMMISSIONED, LOST, OR REBOOTED
-    if (all || (acceptedState != null &&
-        (acceptedState == NodeState.DECOMMISSIONED ||
-         acceptedState == NodeState.LOST ||
-         acceptedState == NodeState.REBOOTED))) {
-      for (RMNode ni : this.rm.getRMContext().getInactiveRMNodes().values()) {
-        if (all || acceptedState == ni.getState()) {
-          NodeInfo nodeInfo = new NodeInfo(ni, sched);
-          nodeInfo.setNodeHTTPAddress(EMPTY);
-          allNodes.add(nodeInfo);
-        }
-      }
-    }
-    
-    return allNodes;
+    return nodesInfo;
   }
 
   @GET

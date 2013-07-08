@@ -230,6 +230,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-869. Move ResourceManagerAdministrationProtocol out of main YARN api.
     (vinodkv via acmurthy)
 
+    YARN-791. Changed RM APIs and web-services related to nodes to ensure that
+    both are consistent with each other. (Sandy Ryza via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

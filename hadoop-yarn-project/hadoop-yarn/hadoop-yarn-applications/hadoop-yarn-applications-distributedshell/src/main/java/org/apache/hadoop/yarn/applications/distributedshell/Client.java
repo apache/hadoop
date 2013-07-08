@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -324,7 +326,8 @@ public class Client {
     LOG.info("Got Cluster metric info from ASM" 
         + ", numNodeManagers=" + clusterMetrics.getNumNodeManagers());
 
-    List<NodeReport> clusterNodeReports = yarnClient.getNodeReports();
+    List<NodeReport> clusterNodeReports = yarnClient.getNodeReports(
+        NodeState.RUNNING);
     LOG.info("Got Cluster node info from ASM");
     for (NodeReport node : clusterNodeReports) {
       LOG.info("Got node report from ASM for"

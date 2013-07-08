@@ -131,6 +131,7 @@ message GetAllApplicationsResponseProto {
 }
 
 message GetClusterNodesRequestProto {
+  repeated NodeStateProto nodeStates = 1;
 }
 
 message GetClusterNodesResponseProto {

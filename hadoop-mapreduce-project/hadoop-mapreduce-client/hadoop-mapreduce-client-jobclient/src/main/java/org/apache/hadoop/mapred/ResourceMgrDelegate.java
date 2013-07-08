@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
@@ -121,7 +122,8 @@ public class ResourceMgrDelegate extends YarnClient {
   public TaskTrackerInfo[] getActiveTrackers() throws IOException,
       InterruptedException {
     try {
-      return TypeConverter.fromYarnNodes(client.getNodeReports());
+      return TypeConverter.fromYarnNodes(
+          client.getNodeReports(NodeState.RUNNING));
     } catch (YarnException e) {
       throw new IOException(e);
     }
@@ -309,8 +311,9 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
-  public List<NodeReport> getNodeReports() throws YarnException, IOException {
-    return client.getNodeReports();
+  public List<NodeReport> getNodeReports(NodeState... states)
+      throws YarnException, IOException {
+    return client.getNodeReports(states);
   }
 
   @Override

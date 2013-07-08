@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -95,7 +96,7 @@ public class TestNMClient {
     assertEquals(STATE.STARTED, yarnClient.getServiceState());
 
     // get node info
-    nodeReports = yarnClient.getNodeReports();
+    nodeReports = yarnClient.getNodeReports(NodeState.RUNNING);
 
     // submit new app
     ApplicationSubmissionContext appContext = 
