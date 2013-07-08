@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -419,7 +420,13 @@ public class ClientRMService extends AbstractService implements
       throws YarnException {
     GetClusterNodesResponse response = 
       recordFactory.newRecordInstance(GetClusterNodesResponse.class);
-    Collection<RMNode> nodes = this.rmContext.getRMNodes().values();
+    EnumSet<NodeState> nodeStates = request.getNodeStates();
+    if (nodeStates == null || nodeStates.isEmpty()) {
+      nodeStates = EnumSet.allOf(NodeState.class);
+    }
+    Collection<RMNode> nodes = RMServerUtils.queryRMNodes(rmContext,
+        nodeStates);
+    
     List<NodeReport> nodeReports = new ArrayList<NodeReport>(nodes.size());
     for (RMNode nodeInfo : nodes) {
       nodeReports.add(createNodeReports(nodeInfo));

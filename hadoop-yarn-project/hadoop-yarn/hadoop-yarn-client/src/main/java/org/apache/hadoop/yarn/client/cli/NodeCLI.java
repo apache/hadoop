@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
@@ -56,7 +57,7 @@ public class NodeCLI extends YarnCLI {
 
     Options opts = new Options();
     opts.addOption(STATUS_CMD, true, "Prints the status report of the node.");
-    opts.addOption(LIST_CMD, false, "Lists all the nodes.");
+    opts.addOption(LIST_CMD, false, "Lists all the nodes in the RUNNING state.");
     CommandLine cliParser = new GnuParser().parse(opts, args);
 
     int exitCode = -1;
@@ -92,7 +93,7 @@ public class NodeCLI extends YarnCLI {
    */
   private void listClusterNodes() throws YarnException, IOException {
     PrintWriter writer = new PrintWriter(sysout);
-    List<NodeReport> nodesReport = client.getNodeReports();
+    List<NodeReport> nodesReport = client.getNodeReports(NodeState.RUNNING);
     writer.println("Total Nodes:" + nodesReport.size());
     writer.printf(NODES_PATTERN, "Node-Id", "Node-State", "Node-Http-Address",
         "Running-Containers");

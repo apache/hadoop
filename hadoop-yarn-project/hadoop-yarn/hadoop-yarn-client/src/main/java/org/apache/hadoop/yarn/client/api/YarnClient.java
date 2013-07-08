@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -190,14 +191,17 @@ public abstract class YarnClient extends AbstractService {
 
   /**
    * <p>
-   * Get a report of all nodes ({@link NodeReport}) in the cluster.
+   * Get a report of nodes ({@link NodeReport}) in the cluster.
    * </p>
    * 
-   * @return A list of report of all nodes
+   * @param states The {@link NodeState}s to filter on. If no filter states are
+   *          given, nodes in all states will be returned.
+   * @return A list of node reports
    * @throws YarnException
    * @throws IOException
    */
-  public abstract List<NodeReport> getNodeReports() throws YarnException, IOException;
+  public abstract List<NodeReport> getNodeReports(NodeState... states)
+      throws YarnException, IOException;
 
   /**
    * <p>
