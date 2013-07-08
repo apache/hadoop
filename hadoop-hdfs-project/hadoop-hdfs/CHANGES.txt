@@ -1168,6 +1168,9 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4875. Add a test for testing snapshot file length. 
     (Arpit Agarwal via jing9)
 
+    HDFS-4841. FsShell commands using secure webhfds fail ClientFinalizer 
+    shutdown hook. (rkanter via tucu)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
