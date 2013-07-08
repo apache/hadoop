@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
@@ -110,6 +111,11 @@ public class NodeHealthScriptRunner extends AbstractService {
       } catch (ExitCodeException e) {
         // ignore the exit code of the script
         status = HealthCheckerExitStatus.FAILED_WITH_EXIT_CODE;
+        // On Windows, we will not hit the Stream closed IOException
+        // thrown by stdout buffered reader for timeout event.
+        if (Shell.WINDOWS && shexec.isTimedOut()) {
+          status = HealthCheckerExitStatus.TIMED_OUT;
+        }
       } catch (Exception e) {
         LOG.warn("Caught exception : " + e.getMessage());
         if (!shexec.isTimedOut()) {
