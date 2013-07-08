@@ -1169,7 +1169,8 @@ public class TestCheckpoint {
         throw new IOException(e);
       }
       
-      final int EXPECTED_TXNS_FIRST_SEG = 11;
+      // TODO: Fix the test to not require a hard-coded transaction count.
+      final int EXPECTED_TXNS_FIRST_SEG = 13;
       
       // the following steps should have happened:
       //   edits_inprogress_1 -> edits_1-12  (finalized)

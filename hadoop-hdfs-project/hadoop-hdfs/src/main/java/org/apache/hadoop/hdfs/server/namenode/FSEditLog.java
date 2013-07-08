@@ -61,7 +61,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
@@ -70,6 +69,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -799,12 +801,30 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
 
-  /** 
+  /**
+   * Add legacy block generation stamp record to edit log
+   */
+  void logGenerationStampV1(long genstamp) {
+    SetGenstampV1Op op = SetGenstampV1Op.getInstance(cache.get())
+        .setGenerationStamp(genstamp);
+    logEdit(op);
+  }
+
+  /**
    * Add generation stamp record to edit log
    */
-  void logGenerationStamp(long genstamp) {
-    SetGenstampOp op = SetGenstampOp.getInstance(cache.get())
-      .setGenerationStamp(genstamp);
+  void logGenerationStampV2(long genstamp) {
+    SetGenstampV2Op op = SetGenstampV2Op.getInstance(cache.get())
+        .setGenerationStamp(genstamp);
+    logEdit(op);
+  }
+
+  /**
+   * Record a newly allocated block ID in the edit log
+   */
+  void logAllocateBlockId(long blockId) {
+    AllocateBlockIdOp op = AllocateBlockIdOp.getInstance(cache.get())
+      .setBlockId(blockId);
     logEdit(op);
   }
 

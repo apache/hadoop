@@ -1726,7 +1726,7 @@ public class BlockManager {
       ReplicaState reportedState = itBR.getCurrentReplicaState();
       
       if (shouldPostponeBlocksFromFuture &&
-          namesystem.isGenStampInFuture(iblk.getGenerationStamp())) {
+          namesystem.isGenStampInFuture(iblk)) {
         queueReportedBlock(node, iblk, reportedState,
             QUEUE_REASON_FUTURE_GENSTAMP);
         continue;
@@ -1848,7 +1848,7 @@ public class BlockManager {
     }
   
     if (shouldPostponeBlocksFromFuture &&
-        namesystem.isGenStampInFuture(block.getGenerationStamp())) {
+        namesystem.isGenStampInFuture(block)) {
       queueReportedBlock(dn, block, reportedState,
           QUEUE_REASON_FUTURE_GENSTAMP);
       return null;

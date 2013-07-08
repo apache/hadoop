@@ -55,7 +55,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetNSQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
@@ -65,6 +64,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.util.Holder;
@@ -404,9 +406,9 @@ public class FSEditLogLoader {
                              mkdirOp.timestamp);
       break;
     }
-    case OP_SET_GENSTAMP: {
-      SetGenstampOp setGenstampOp = (SetGenstampOp)op;
-      fsNamesys.setGenerationStamp(setGenstampOp.genStamp);
+    case OP_SET_GENSTAMP_V1: {
+      SetGenstampV1Op setGenstampV1Op = (SetGenstampV1Op)op;
+      fsNamesys.setGenerationStampV1(setGenstampV1Op.genStampV1);
       break;
     }
     case OP_SET_PERMISSIONS: {
@@ -550,6 +552,16 @@ public class FSEditLogLoader {
       DisallowSnapshotOp disallowSnapshotOp = (DisallowSnapshotOp) op;
       fsNamesys.getSnapshotManager().resetSnapshottable(
           disallowSnapshotOp.snapshotRoot);
+      break;
+    }
+    case OP_SET_GENSTAMP_V2: {
+      SetGenstampV2Op setGenstampV2Op = (SetGenstampV2Op) op;
+      fsNamesys.setGenerationStampV2(setGenstampV2Op.genStampV2);
+      break;
+    }
+    case OP_ALLOCATE_BLOCK_ID: {
+      AllocateBlockIdOp allocateBlockIdOp = (AllocateBlockIdOp) op;
+      fsNamesys.setLastAllocatedBlockId(allocateBlockIdOp.blockId);
       break;
     }
     default:

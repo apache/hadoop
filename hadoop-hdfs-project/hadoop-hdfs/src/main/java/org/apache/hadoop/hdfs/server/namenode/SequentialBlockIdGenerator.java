@@ -18,27 +18,41 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.util.IdGenerator;
+import org.apache.hadoop.util.SequentialNumber;
 
 /**
- * Generator of random block IDs.
+ * Generate the next valid block ID by incrementing the maximum block
+ * ID allocated so far, starting at 2^30+1.
+ *
+ * Block IDs used to be allocated randomly in the past. Hence we may
+ * find some conflicts while stepping through the ID space sequentially.
+ * However given the sparsity of the ID space, conflicts should be rare
+ * and can be skipped over when detected.
  */
 @InterfaceAudience.Private
-public class RandomBlockIdGenerator implements IdGenerator {
+public class SequentialBlockIdGenerator extends SequentialNumber {
+  /**
+   * The last reserved block ID.
+   */
+  public static final long LAST_RESERVED_BLOCK_ID = 1024L * 1024 * 1024;
+
   private final BlockManager blockManager;
 
-  RandomBlockIdGenerator(FSNamesystem namesystem) {
-    this.blockManager = namesystem.getBlockManager();
+  SequentialBlockIdGenerator(BlockManager blockManagerRef) {
+    super(LAST_RESERVED_BLOCK_ID);
+    this.blockManager = blockManagerRef;
   }
 
   @Override // NumberGenerator
   public long nextValue() {
-    Block b = new Block(DFSUtil.getRandom().nextLong(), 0, 0); 
+    Block b = new Block(super.nextValue());
+
+    // There may be an occasional conflict with randomly generated
+    // block IDs. Skip over the conflicts.
     while(isValidBlock(b)) {
-      b.setBlockId(DFSUtil.getRandom().nextLong());
+      b.setBlockId(super.nextValue());
     }
     return b.getBlockId();
   }

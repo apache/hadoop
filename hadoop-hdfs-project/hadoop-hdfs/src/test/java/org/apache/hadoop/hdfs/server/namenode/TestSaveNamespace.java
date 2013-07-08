@@ -513,7 +513,7 @@ public class TestSaveNamespace {
     FSNamesystem spyFsn = spy(fsn);
     final FSNamesystem finalFsn = spyFsn;
     DelayAnswer delayer = new GenericTestUtils.DelayAnswer(LOG);
-    doAnswer(delayer).when(spyFsn).getGenerationStamp();
+    doAnswer(delayer).when(spyFsn).getGenerationStampV2();
     
     ExecutorService pool = Executors.newFixedThreadPool(2);
     

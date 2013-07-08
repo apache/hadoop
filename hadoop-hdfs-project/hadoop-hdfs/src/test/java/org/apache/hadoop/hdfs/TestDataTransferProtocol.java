@@ -202,6 +202,7 @@ public class TestDataTransferProtocol {
   @Test 
   public void testOpWrite() throws IOException {
     int numDataNodes = 1;
+    final long BLOCK_ID_FUDGE = 128;
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     try {
@@ -252,8 +253,9 @@ public class TestDataTransferProtocol {
           "Recover failed close to a finalized replica", false);
       firstBlock.setGenerationStamp(newGS);
 
-      /* Test writing to a new block */
-      long newBlockId = firstBlock.getBlockId() + 1;
+      // Test writing to a new block. Don't choose the next sequential
+      // block ID to avoid conflicting with IDs chosen by the NN.
+      long newBlockId = firstBlock.getBlockId() + BLOCK_ID_FUDGE;
       ExtendedBlock newBlock = new ExtendedBlock(firstBlock.getBlockPoolId(),
           newBlockId, 0, firstBlock.getGenerationStamp());
 
@@ -284,7 +286,7 @@ public class TestDataTransferProtocol {
       Path file1 = new Path("dataprotocol1.dat");    
       DFSTestUtil.createFile(fileSys, file1, 1L, (short)numDataNodes, 0L);
       DFSOutputStream out = (DFSOutputStream)(fileSys.append(file1).
-          getWrappedStream()); 
+          getWrappedStream());
       out.write(1);
       out.hflush();
       FSDataInputStream in = fileSys.open(file1);

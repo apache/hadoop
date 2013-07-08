@@ -44,7 +44,13 @@ public class TestOfflineEditsViewer {
   private static final Map<FSEditLogOpCodes, Boolean> obsoleteOpCodes =
     new HashMap<FSEditLogOpCodes, Boolean>();
 
-  static { initializeObsoleteOpCodes(); }
+  private static final Map<FSEditLogOpCodes, Boolean> missingOpCodes =
+      new HashMap<FSEditLogOpCodes, Boolean>();
+
+  static {
+    initializeObsoleteOpCodes();
+    initializeMissingOpCodes();
+  }
 
   private static String buildDir =
     System.getProperty("test.build.data", "build/test/data");
@@ -72,6 +78,16 @@ public class TestOfflineEditsViewer {
     obsoleteOpCodes.put(FSEditLogOpCodes.OP_DATANODE_REMOVE, true);
     obsoleteOpCodes.put(FSEditLogOpCodes.OP_SET_NS_QUOTA, true);
     obsoleteOpCodes.put(FSEditLogOpCodes.OP_CLEAR_NS_QUOTA, true);
+  }
+
+  /**
+   * Initialize missingOpcodes
+   *
+   *  Opcodes that are not available except after uprade from
+   *  an older version. We don't test these here.
+   */
+  private static void initializeMissingOpCodes() {
+    obsoleteOpCodes.put(FSEditLogOpCodes.OP_SET_GENSTAMP_V1, true);
   }
 
   @Before
@@ -103,6 +119,8 @@ public class TestOfflineEditsViewer {
     assertTrue(
       "Edits " + edits + " should have all op codes",
       hasAllOpCodes(edits));
+    LOG.info("Comparing generated file " + editsReparsed +
+             " with reference file " + edits);
     assertTrue(
       "Generated edits and reparsed (bin to XML to bin) should be same",
       filesEqualIgnoreTrailingZeros(edits, editsReparsed));
@@ -222,9 +240,12 @@ public class TestOfflineEditsViewer {
       // don't need to test obsolete opCodes
       if(obsoleteOpCodes.containsKey(opCode)) {
         continue;
-      }
-      if (opCode == FSEditLogOpCodes.OP_INVALID)
+      } else if (missingOpCodes.containsKey(opCode)) {
         continue;
+      } else if (opCode == FSEditLogOpCodes.OP_INVALID) {
+        continue;
+      }
+
       Long count = visitor.getStatistics().get(opCode);
       if((count == null) || (count == 0)) {
         hasAllOpCodes = false;
