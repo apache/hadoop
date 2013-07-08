@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import org.apache.hadoop.util.Shell;
 import org.junit.Test;
 
 public class TestProxyUserFromEnv {
@@ -37,11 +38,24 @@ public class TestProxyUserFromEnv {
 
     UserGroupInformation realUgi = ugi.getRealUser();
     assertNotNull(realUgi);
+    String realUgiName = realUgi.getUserName();
+
     // get the expected real user name
     Process pp = Runtime.getRuntime().exec("whoami");
     BufferedReader br = new BufferedReader
                           (new InputStreamReader(pp.getInputStream()));
     String realUser = br.readLine().trim();
-    assertEquals(realUser, realUgi.getUserName());
+    // If on windows domain, token format is DOMAIN\\user and we want to
+    // extract only the user name
+    if (Shell.WINDOWS) {
+      int sp = realUser.lastIndexOf('\\');
+      if (sp != -1) {
+        realUser = realUser.substring(sp + 1);
+      }
+      // user names are case insensitive on Windows. Make consistent
+      realUser = realUser.toLowerCase();
+      realUgiName = realUgiName.toLowerCase();
+    }
+    assertEquals(realUser, realUgiName);
   }
 }

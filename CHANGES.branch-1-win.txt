@@ -295,6 +295,9 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     HADOOP-9685. hadoop-config.cmd: builds a classpath that is too long on
     windows. (Raja Aluri via cnauroth)
 
+    MAPREDUCE-5371. TestProxyUserFromEnv#testProxyUserFromEnvironment failed
+    caused by domains of windows users. (Xi Fang via cnauroth)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a
