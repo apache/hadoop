@@ -141,13 +141,7 @@ for %%i in (%HADOOP_CORE_HOME%\*.jar) do (
 @rem add libs to CLASSPATH
 @rem
 
-for %%i in (%HADOOP_CORE_HOME%\lib\*.jar) do (
-  set CLASSPATH=!CLASSPATH!;%%i
-)
-
-for %%i in (%HADOOP_CORE_HOME%\lib\jsp-2.1\*.jar) do (
-  set CLASSPATH=!CLASSPATH!;%%i
-)
+set CLASSPATH=!CLASSPATH!;%HADOOP_CORE_HOME%\lib\*;%HADOOP_CORE_HOME%\lib\jsp-2.1\*
 
 if not defined HADOOP_LOG_DIR (
   set HADOOP_LOG_DIR=%HADOOP_HOME%\logs
