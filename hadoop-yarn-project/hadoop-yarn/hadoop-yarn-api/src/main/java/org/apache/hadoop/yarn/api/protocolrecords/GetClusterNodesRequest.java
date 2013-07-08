@@ -18,16 +18,19 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.EnumSet;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request from clients to get a report of all nodes
  * in the cluster from the <code>ResourceManager</code>.</p>
  *
- * <p>Currently, this is empty.</p>
+ * The request will ask for all nodes in the given {@link NodeState}s.
  *
  * @see ApplicationClientProtocol#getClusterNodes(GetClusterNodesRequest) 
  */
@@ -36,9 +39,28 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class GetClusterNodesRequest {
   @Public
   @Stable 
+  public static GetClusterNodesRequest newInstance(EnumSet<NodeState> states) {
+    GetClusterNodesRequest request =
+        Records.newRecord(GetClusterNodesRequest.class);
+    request.setNodeStates(states);
+    return request;
+  }
+  
+  @Public
+  @Stable 
   public static GetClusterNodesRequest newInstance() {
     GetClusterNodesRequest request =
         Records.newRecord(GetClusterNodesRequest.class);
     return request;
   }
+  
+  /**
+   * The state to filter the cluster nodes with.
+   */
+  public abstract EnumSet<NodeState> getNodeStates();
+  
+  /**
+   * The state to filter the cluster nodes with.
+   */
+  public abstract void setNodeStates(EnumSet<NodeState> states);
 }
