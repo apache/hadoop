@@ -71,6 +71,9 @@ Release 1.3.0 - unreleased
     HADOOP-9678. TestRPC#testStopsAllThreads intermittently fails on Windows.
     (Ivan Mitic via cnauroth)
 
+    HADOOP-9307. BufferedFSInputStream.read returns wrong results after certain
+    seeks. (todd)
+
 Release 1.2.1 - 2013.07.06
 
   INCOMPATIBLE CHANGES
