@@ -72,6 +72,10 @@ public class TestProtoBufRpc {
     @Override
     public EmptyResponseProto ping(RpcController unused,
         EmptyRequestProto request) throws ServiceException {
+      // Ensure clientId is received
+      byte[] clientId = Server.getClientId();
+      Assert.assertNotNull(Server.getClientId());
+      Assert.assertEquals(16, clientId.length);
       return EmptyResponseProto.newBuilder().build();
     }
 

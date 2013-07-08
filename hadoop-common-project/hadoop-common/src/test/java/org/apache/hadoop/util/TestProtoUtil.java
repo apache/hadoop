@@ -17,13 +17,18 @@
  */
 package org.apache.hadoop.util;
 
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
+import org.apache.hadoop.ipc.RPC.RpcKind;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
 import org.junit.Test;
 
 import com.google.protobuf.CodedOutputStream;
@@ -68,5 +73,13 @@ public class TestProtoUtil {
     DataInputStream dis = new DataInputStream(
         new ByteArrayInputStream(baos.toByteArray()));
     assertEquals(value, ProtoUtil.readRawVarint32(dis));
+  }
+  
+  @Test
+  public void testRpcClientId() {
+    byte[] uuid = StringUtils.getUuidBytes();
+    RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
+        RpcKind.RPC_PROTOCOL_BUFFER, OperationProto.RPC_FINAL_PACKET, 0, uuid);
+    assertTrue(Arrays.equals(uuid, header.getClientId().toByteArray()));
   }
 }
