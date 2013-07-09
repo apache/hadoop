@@ -78,10 +78,19 @@ public class MockAM {
         finalState, attempt.getAppAttemptState());
   }
 
-  public RegisterApplicationMasterResponse registerAppAttempt() throws Exception {
-    waitForState(RMAppAttemptState.LAUNCHED);
+  public RegisterApplicationMasterResponse registerAppAttempt()
+      throws Exception {
+    return registerAppAttempt(true);
+  }
+
+  public RegisterApplicationMasterResponse registerAppAttempt(boolean wait)
+      throws Exception {
+    if (wait) {
+      waitForState(RMAppAttemptState.LAUNCHED);
+    }
     responseId = 0;
-    RegisterApplicationMasterRequest req = Records.newRecord(RegisterApplicationMasterRequest.class);
+    RegisterApplicationMasterRequest req =
+        Records.newRecord(RegisterApplicationMasterRequest.class);
     req.setApplicationAttemptId(attemptId);
     req.setHost("");
     req.setRpcPort(1);
