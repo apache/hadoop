@@ -451,6 +451,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9676.  Make maximum RPC buffer size configurable (Colin Patrick
     McCabe)
 
+    HADOOP-9691. RPC clients can generate call ID using AtomicInteger instead of
+    synchronizing on the Client instance. (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
