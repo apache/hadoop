@@ -484,6 +484,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9665. Fixed BlockDecompressorStream#decompress to return -1 rather
     than throw EOF at end of file. (Zhijie Shen via acmurthy)
 
+    HADOOP-8440. HarFileSystem.decodeHarURI fails for URIs whose host contains
+    numbers. (Ivan Mitic via cnauroth)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES

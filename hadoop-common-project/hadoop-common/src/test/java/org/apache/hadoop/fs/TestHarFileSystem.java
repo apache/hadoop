@@ -33,6 +33,8 @@ public class TestHarFileSystem {
     checkInvalidPath("har://hdfs/foo.har", conf);
     checkInvalidPath("har://-hdfs/foo.har", conf);
     checkInvalidPath("har://-/foo.har", conf);
+    checkInvalidPath("har://127.0.0.1-/foo.har", conf);
+    checkInvalidPath("har://127.0.0.1/foo.har", conf);
   }
 
   static void checkInvalidPath(String s, Configuration conf) {
