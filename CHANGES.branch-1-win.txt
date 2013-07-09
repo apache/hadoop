@@ -298,6 +298,9 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     MAPREDUCE-5371. TestProxyUserFromEnv#testProxyUserFromEnvironment failed
     caused by domains of windows users. (Xi Fang via cnauroth)
 
+    MAPREDUCE-5278. Distributed cache is broken when JT staging dir is not on the
+    default FS. (Xi Fang via cnauroth)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a

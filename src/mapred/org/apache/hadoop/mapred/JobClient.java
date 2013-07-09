@@ -47,6 +47,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -450,6 +451,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private static final String TASKLOG_PULL_TIMEOUT_KEY = 
     "mapreduce.client.tasklog.timeout";
   private static final int DEFAULT_TASKLOG_TIMEOUT = 60000;
+  @Private
+  public static final String CLIENT_ACCESSIBLE_REMOTE_SCHEMES_KEY =
+    "mapreduce.client.accessible.remote.schemes";
   static int tasklogtimeout;
 
   public static final String MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_KEY =
@@ -688,18 +692,33 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private Path copyRemoteFiles(FileSystem jtFs, Path parentDir, 
       final Path originalPath, final JobConf job, short replication) 
   throws IOException, InterruptedException {
-    //check if we do not need to copy the files
-    // is jt using the same file system.
-    // just checking for uri strings... doing no dns lookups 
-    // to see if the filesystems are the same. This is not optimal.
-    // but avoids name resolution.
     
     FileSystem remoteFs = null;
     remoteFs = originalPath.getFileSystem(job);
+
+    // Check if we do not need to copy the files
     
+    // Check whether the given path is accessible from all the 
+    // nodes in the cluster in which case we skip the copy operation 
+    // altogether and pass the original path.
+    String remoteFsScheme = remoteFs.getUri().getScheme();
+    String [] accessibleSchemes = job.getStrings(
+        CLIENT_ACCESSIBLE_REMOTE_SCHEMES_KEY, null);
+    if (accessibleSchemes != null) {
+      for (String s : accessibleSchemes) {
+        if (remoteFsScheme.equalsIgnoreCase(s)) {
+          return originalPath;
+        }
+      }
+    }     
+    // Check whether jt is using the same file system.
+    // just checking for uri strings... doing no dns lookups 
+    // to see if the filesystems are the same. This is not optimal.
+    // but avoids name resolution.
     if (compareFs(remoteFs, jtFs)) {
       return originalPath;
     }
+    
     // this might have name collisions. copy will throw an exception
     //parse the original path to create new path
     Path newPath = new Path(parentDir, originalPath.getName());
@@ -808,7 +827,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         Path tmp = new Path(tmpjars);
         Path newPath = copyRemoteFiles(fs, libjarsDir, tmp, job, replication);
         DistributedCache.addArchiveToClassPath
-          (new Path(newPath.toUri().getPath()), job, fs);
+          (new Path(newPath.toUri().getPath()), job, newPath.getFileSystem(job));
       }
     }
     

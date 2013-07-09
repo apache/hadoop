@@ -415,6 +415,15 @@
 </property>
 
 <property>
+  <name>mapreduce.client.accessible.remote.schemes</name>
+  <value></value>
+  <description>The schemes of the file systems that are accessible from 
+  all the nodes in the cluster. Used by the job client to avoid copying 
+  distributed cache entries to the job staging dir if path is accessible.
+  </description>
+</property>
+
+<property>
   <name>mapred.tasktracker.reduce.tasks.maximum</name>
   <value>2</value>
   <description>The maximum number of reduce tasks that will be run
