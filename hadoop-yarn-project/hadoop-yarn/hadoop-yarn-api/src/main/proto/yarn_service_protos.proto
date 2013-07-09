@@ -123,10 +123,11 @@ message GetClusterMetricsResponseProto {
   optional YarnClusterMetricsProto cluster_metrics = 1;
 }
 
-message GetAllApplicationsRequestProto {
+message GetApplicationsRequestProto {
+  repeated string application_types = 1;
 }
 
-message GetAllApplicationsResponseProto {
+message GetApplicationsResponseProto {
   repeated ApplicationReportProto applications = 1;
 }
 

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client.api;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -174,8 +175,28 @@ public abstract class YarnClient extends AbstractService {
    * @throws YarnException
    * @throws IOException
    */
-  public abstract List<ApplicationReport> getApplicationList() throws YarnException,
-      IOException;
+  public abstract List<ApplicationReport> getApplications()
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get a report (ApplicationReport) of Applications
+   * matching the given application types in the cluster.
+   * </p>
+   *
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access for an application
+   * then the corresponding report will be filtered as described in
+   * {@link #getApplicationReport(ApplicationId)}.
+   * </p>
+   *
+   * @param applicationTypes
+   * @return a list of reports of applications
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract List<ApplicationReport> getApplications(
+      Set<String> applicationTypes) throws YarnException, IOException;
 
   /**
    * <p>

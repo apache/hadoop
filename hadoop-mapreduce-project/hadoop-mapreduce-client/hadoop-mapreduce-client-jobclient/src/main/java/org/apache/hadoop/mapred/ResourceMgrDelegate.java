@@ -20,7 +20,9 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -131,7 +133,10 @@ public class ResourceMgrDelegate extends YarnClient {
 
   public JobStatus[] getAllJobs() throws IOException, InterruptedException {
     try {
-      return TypeConverter.fromYarnApps(client.getApplicationList(), this.conf);
+      Set<String> appTypes = new HashSet<String>(1);
+      appTypes.add(MRJobConfig.MR_APPLICATION_TYPE);
+      return TypeConverter.fromYarnApps(
+          client.getApplications(appTypes), this.conf);
     } catch (YarnException e) {
       throw new IOException(e);
     }
@@ -299,9 +304,15 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
-  public List<ApplicationReport> getApplicationList() throws YarnException,
+  public List<ApplicationReport> getApplications() throws YarnException,
       IOException {
-    return client.getApplicationList();
+    return client.getApplications();
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(
+      Set<String> applicationTypes) throws YarnException, IOException {
+    return client.getApplications(applicationTypes);
   }
 
   @Override

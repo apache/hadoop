@@ -26,8 +26,8 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
@@ -205,27 +205,30 @@ public interface ApplicationClientProtocol {
   throws YarnException, IOException;
   
   /**
-   * <p>The interface used by clients to get a report of all Applications
+   * <p>The interface used by clients to get a report of Applications
+   * matching the filters defined by {@link GetApplicationsRequest}
    * in the cluster from the <code>ResourceManager</code>.</p>
    * 
    * <p>The <code>ResourceManager</code> responds with a 
-   * {@link GetAllApplicationsResponse} which includes the 
-   * {@link ApplicationReport} for all the applications.</p>
+   * {@link GetApplicationsResponse} which includes the
+   * {@link ApplicationReport} for the applications.</p>
    * 
    * <p>If the user does not have <code>VIEW_APP</code> access for an
    * application then the corresponding report will be filtered as
    * described in {@link #getApplicationReport(GetApplicationReportRequest)}.
    * </p>
    *
-   * @param request request for report on all running applications
-   * @return report on all running applications
+   * @param request request for report on applications
+   * @return report on applications matching the given application types
+   *           defined in the request
    * @throws YarnException
    * @throws IOException
+   * @see GetApplicationsRequest
    */
   @Public
   @Stable
-  public GetAllApplicationsResponse getAllApplications(
-      GetAllApplicationsRequest request) 
+  public GetApplicationsResponse getApplications(
+      GetApplicationsRequest request)
   throws YarnException, IOException;
   
   /**

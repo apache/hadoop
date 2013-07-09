@@ -185,6 +185,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-791. Changed RM APIs and web-services related to nodes to ensure that
     both are consistent with each other. (Sandy Ryza via vinodkv)
 
+    YARN-727. ClientRMProtocol.getAllApplications should accept ApplicationType as
+    a parameter. (Xuan Gong via hitesh)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
