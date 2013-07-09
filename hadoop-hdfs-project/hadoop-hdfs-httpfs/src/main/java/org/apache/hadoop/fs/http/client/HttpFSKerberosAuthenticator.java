@@ -61,7 +61,6 @@ public class HttpFSKerberosAuthenticator extends KerberosAuthenticator {
   public static final String DELEGATION_PARAM = "delegation";
   public static final String TOKEN_PARAM = "token";
   public static final String RENEWER_PARAM = "renewer";
-  public static final String TOKEN_KIND = "HTTPFS_DELEGATION_TOKEN";
   public static final String DELEGATION_TOKEN_JSON = "Token";
   public static final String DELEGATION_TOKEN_URL_STRING_JSON = "urlString";
   public static final String RENEW_DELEGATION_TOKEN_JSON = "long";
