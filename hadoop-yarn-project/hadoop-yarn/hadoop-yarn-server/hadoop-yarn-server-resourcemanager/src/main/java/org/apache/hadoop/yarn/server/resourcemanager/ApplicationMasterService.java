@@ -195,17 +195,35 @@ public class ApplicationMasterService extends AbstractService implements
     // Allow only one thread in AM to do registerApp at a time.
     synchronized (lastResponse) {
 
-      LOG.info("AM registration " + applicationAttemptId);
+      if (hasApplicationMasterRegistered(applicationAttemptId)) {
+        String message =
+            "Application Master is already registered : "
+                + applicationAttemptId.getApplicationId();
+        LOG.warn(message);
+        RMAuditLogger.logFailure(
+          this.rmContext.getRMApps()
+            .get(applicationAttemptId.getApplicationId()).getUser(),
+          AuditConstants.REGISTER_AM, "", "ApplicationMasterService", message,
+          applicationAttemptId.getApplicationId(), applicationAttemptId);
+        throw new InvalidApplicationMasterRequestException(message);
+      }
+      
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);
-
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppAttemptRegistrationEvent(applicationAttemptId, request
-              .getHost(), request.getRpcPort(), request.getTrackingUrl()));
-
       RMApp app = this.rmContext.getRMApps().get(appID);
-      RMAuditLogger.logSuccess(app.getUser(),
-          AuditConstants.REGISTER_AM, "ApplicationMasterService", appID,
-          applicationAttemptId);
+      
+      // Setting the response id to 0 to identify if the
+      // application master is register for the respective attemptid
+      lastResponse.setResponseId(0);
+      responseMap.put(applicationAttemptId, lastResponse);
+      LOG.info("AM registration " + applicationAttemptId);
+      this.rmContext
+        .getDispatcher()
+        .getEventHandler()
+        .handle(
+          new RMAppAttemptRegistrationEvent(applicationAttemptId, request
+            .getHost(), request.getRpcPort(), request.getTrackingUrl()));
+      RMAuditLogger.logSuccess(app.getUser(), AuditConstants.REGISTER_AM,
+        "ApplicationMasterService", appID, applicationAttemptId);
 
       // Pick up min/max resource from scheduler...
       RegisterApplicationMasterResponse response = recordFactory
@@ -257,6 +275,24 @@ public class ApplicationMasterService extends AbstractService implements
     }
   }
 
+  /**
+   * @param appAttemptId
+   * @return true if application is registered for the respective attemptid
+   */
+  public boolean hasApplicationMasterRegistered(
+      ApplicationAttemptId appAttemptId) {
+    boolean hasApplicationMasterRegistered = false;
+    AllocateResponse lastResponse = responseMap.get(appAttemptId);
+    if (lastResponse != null) {
+      synchronized (lastResponse) {
+        if (lastResponse.getResponseId() >= 0) {
+          hasApplicationMasterRegistered = true;
+        }
+      }
+    }
+    return hasApplicationMasterRegistered;
+  }
+
   @Override
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnException, IOException {
@@ -272,6 +308,20 @@ public class ApplicationMasterService extends AbstractService implements
       LOG.error("AppAttemptId doesnt exist in cache " + appAttemptId);
       return resync;
     }
+    
+    if (!hasApplicationMasterRegistered(appAttemptId)) {
+      String message =
+          "Application Master is trying to allocate before registering for: "
+              + appAttemptId.getApplicationId();
+      LOG.error(message);
+      RMAuditLogger.logFailure(
+        this.rmContext.getRMApps().get(appAttemptId.getApplicationId())
+          .getUser(), AuditConstants.REGISTER_AM, "",
+        "ApplicationMasterService", message, appAttemptId.getApplicationId(),
+        appAttemptId);
+      throw new InvalidApplicationMasterRequestException(message);
+    }
+
     if ((request.getResponseId() + 1) == lastResponse.getResponseId()) {
       /* old heartbeat */
       return lastResponse;
@@ -442,7 +492,9 @@ public class ApplicationMasterService extends AbstractService implements
   public void registerAppAttempt(ApplicationAttemptId attemptId) {
     AllocateResponse response =
         recordFactory.newRecordInstance(AllocateResponse.class);
-    response.setResponseId(0);
+    // set response id to -1 before application master for the following
+    // attemptID get registered
+    response.setResponseId(-1);
     LOG.info("Registering app attempt : " + attemptId);
     responseMap.put(attemptId, response);
     rmContext.getNMTokenSecretManager().registerApplicationAttempt(attemptId);
