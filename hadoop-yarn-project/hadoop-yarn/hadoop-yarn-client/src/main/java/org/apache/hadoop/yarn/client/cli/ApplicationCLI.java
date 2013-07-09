@@ -21,11 +21,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DecimalFormat;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -35,12 +38,16 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @Private
 @Unstable
 public class ApplicationCLI extends YarnCLI {
   private static final String APPLICATIONS_PATTERN =
     "%30s\t%20s\t%20s\t%10s\t%10s\t%18s\t%18s\t%15s\t%35s" +
     System.getProperty("line.separator");
+
+  private static final String APP_TYPE_CMD = "appTypes";
 
   public static void main(String[] args) throws Exception {
     ApplicationCLI cli = new ApplicationCLI();
@@ -56,8 +63,19 @@ public class ApplicationCLI extends YarnCLI {
 
     Options opts = new Options();
     opts.addOption(STATUS_CMD, true, "Prints the status of the application.");
-    opts.addOption(LIST_CMD, false, "Lists all the Applications from RM.");
+    opts.addOption(LIST_CMD, false, "List applications from the RM. " +
+        "Supports optional use of --appTypes to filter applications " +
+        "based on application type.");
     opts.addOption(KILL_CMD, true, "Kills the application.");
+    opts.addOption(HELP_CMD, false, "Displays help for all commands.");
+    Option appTypeOpt = new Option(APP_TYPE_CMD, true,
+        "Works with --list to filter applications based on their type.");
+    appTypeOpt.setValueSeparator(',');
+    appTypeOpt.setArgs(Option.UNLIMITED_VALUES);
+    appTypeOpt.setArgName("Comma-separated list of application types");
+    opts.addOption(appTypeOpt);
+    opts.getOption(KILL_CMD).setArgName("Application ID");
+    opts.getOption(STATUS_CMD).setArgName("Application ID");
     CommandLine cliParser = new GnuParser().parse(opts, args);
 
     int exitCode = -1;
@@ -68,13 +86,27 @@ public class ApplicationCLI extends YarnCLI {
       }
       printApplicationReport(cliParser.getOptionValue(STATUS_CMD));
     } else if (cliParser.hasOption(LIST_CMD)) {
-      listAllApplications();
+      Set<String> appTypes = new HashSet<String>();
+      if(cliParser.hasOption(APP_TYPE_CMD)) {
+        String[] types = cliParser.getOptionValues(APP_TYPE_CMD);
+        if (types != null) {
+          for (String type : types) {
+            if (!type.trim().isEmpty()) {
+              appTypes.add(type.trim());
+            }
+          }
+        }
+      }
+      listApplications(appTypes);
     } else if (cliParser.hasOption(KILL_CMD)) {
       if (args.length != 2) {
         printUsage(opts);
         return exitCode;
       }
       killApplication(cliParser.getOptionValue(KILL_CMD));
+    } else if (cliParser.hasOption(HELP_CMD)) {
+      printUsage(opts);
+      return 0;
     } else {
       syserr.println("Invalid Command Usage : ");
       printUsage(opts);
@@ -87,19 +119,24 @@ public class ApplicationCLI extends YarnCLI {
    * 
    * @param opts
    */
-  private void printUsage(Options opts) {
+  @VisibleForTesting
+  void printUsage(Options opts) {
     new HelpFormatter().printHelp("application", opts);
   }
 
   /**
-   * Lists all the applications present in the Resource Manager
+   * Lists the applications matching the given application Types
+   * present in the Resource Manager
    * 
+   * @param appTypes
    * @throws YarnException
    * @throws IOException
    */
-  private void listAllApplications() throws YarnException, IOException {
+  private void listApplications(Set<String> appTypes)
+      throws YarnException, IOException {
     PrintWriter writer = new PrintWriter(sysout);
-    List<ApplicationReport> appsReport = client.getApplicationList();
+    List<ApplicationReport> appsReport =
+        client.getApplications(appTypes);
 
     writer.println("Total Applications:" + appsReport.size());
     writer.printf(APPLICATIONS_PATTERN, "Application-Id",

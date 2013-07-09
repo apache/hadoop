@@ -30,36 +30,36 @@ import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to a client
- * requesting an {@link ApplicationReport} for all applications.</p>
- * 
- * <p>The <code>ApplicationReport</code> for each application includes details 
- * such as user, queue, name, host on which the <code>ApplicationMaster</code> 
+ * requesting an {@link ApplicationReport} for applications.</p>
+ *
+ * <p>The <code>ApplicationReport</code> for each application includes details
+ * such as user, queue, name, host on which the <code>ApplicationMaster</code>
  * is running, RPC port, tracking URL, diagnostics, start time etc.</p>
- * 
+ *
  * @see ApplicationReport
- * @see ApplicationClientProtocol#getAllApplications(GetAllApplicationsRequest)
+ * @see ApplicationClientProtocol#getApplications(GetApplicationsRequest)
  */
 @Public
 @Stable
-public abstract class GetAllApplicationsResponse {
+public abstract class GetApplicationsResponse {
   @Private
   @Unstable
-  public static GetAllApplicationsResponse newInstance(
+  public static GetApplicationsResponse newInstance(
       List<ApplicationReport> applications) {
-    GetAllApplicationsResponse response =
-        Records.newRecord(GetAllApplicationsResponse.class);
+    GetApplicationsResponse response =
+        Records.newRecord(GetApplicationsResponse.class);
     response.setApplicationList(applications);
     return response;
   }
 
   /**
-   * Get <code>ApplicationReport</code> for all applications.
-   * @return <code>ApplicationReport</code> for all applications
+   * Get <code>ApplicationReport</code> for applications.
+   * @return <code>ApplicationReport</code> for applications
    */
   @Public
   @Stable
   public abstract List<ApplicationReport> getApplicationList();
-  
+
   @Private
   @Unstable
   public abstract void setApplicationList(List<ApplicationReport> applications);

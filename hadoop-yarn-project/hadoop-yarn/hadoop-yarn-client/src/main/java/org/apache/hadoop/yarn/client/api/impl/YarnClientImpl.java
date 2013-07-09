@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,8 +33,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
@@ -206,11 +207,18 @@ public class YarnClientImpl extends YarnClient {
   }
 
   @Override
-  public List<ApplicationReport> getApplicationList()
-      throws YarnException, IOException {
-    GetAllApplicationsRequest request =
-        Records.newRecord(GetAllApplicationsRequest.class);
-    GetAllApplicationsResponse response = rmClient.getAllApplications(request);
+  public List<ApplicationReport> getApplications() throws YarnException,
+      IOException {
+    return getApplications(null);
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(
+      Set<String> applicationTypes) throws YarnException, IOException {
+    GetApplicationsRequest request =
+        applicationTypes == null ? GetApplicationsRequest.newInstance()
+            : GetApplicationsRequest.newInstance(applicationTypes);
+    GetApplicationsResponse response = rmClient.getApplications(request);
     return response.getApplicationList();
   }
 

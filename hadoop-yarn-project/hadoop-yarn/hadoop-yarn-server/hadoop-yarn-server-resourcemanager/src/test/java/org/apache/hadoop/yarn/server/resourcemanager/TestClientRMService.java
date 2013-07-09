@@ -26,8 +26,10 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.HashSet;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
@@ -42,6 +44,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -49,6 +53,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -87,6 +92,8 @@ public class TestClientRMService {
 
   private RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
+
+  private String appType = "MockApp";
 
   private static RMDelegationTokenSecretManager dtsm;
   
@@ -292,11 +299,18 @@ public class TestClientRMService {
         new EventHandler<Event>() {
           public void handle(Event event) {}
         });
+    ApplicationId appId1 = getApplicationId(100);
+
+    ApplicationACLsManager mockAclsManager = mock(ApplicationACLsManager.class);
+    when(
+        mockAclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
+            ApplicationAccessType.VIEW_APP, null, appId1)).thenReturn(true);
     ClientRMService rmService =
-        new ClientRMService(rmContext, yarnScheduler, appManager, null, null);
+        new ClientRMService(rmContext, yarnScheduler, appManager,
+            mockAclsManager, null);
 
     // without name and queue
-    ApplicationId appId1 = getApplicationId(100);
+
     SubmitApplicationRequest submitRequest1 = mockSubmitAppRequest(
         appId1, null, null);
     try {
@@ -317,6 +331,8 @@ public class TestClientRMService {
     ApplicationId appId2 = getApplicationId(101);
     SubmitApplicationRequest submitRequest2 = mockSubmitAppRequest(
         appId2, name, queue);
+    submitRequest2.getApplicationSubmissionContext().setApplicationType(
+        "matchType");
     try {
       rmService.submitApplication(submitRequest2);
     } catch (YarnException e) {
@@ -335,6 +351,25 @@ public class TestClientRMService {
       Assert.assertTrue("The thrown exception is not expected.",
           e.getMessage().contains("Cannot add a duplicate!"));
     }
+
+    GetApplicationsRequest getAllAppsRequest =
+        GetApplicationsRequest.newInstance(new HashSet<String>());
+    GetApplicationsResponse getAllApplicationsResponse =
+        rmService.getApplications(getAllAppsRequest);
+    Assert.assertEquals(5,
+        getAllApplicationsResponse.getApplicationList().size());
+
+    Set<String> appTypes = new HashSet<String>();
+    appTypes.add("matchType");
+
+    getAllAppsRequest = GetApplicationsRequest.newInstance(appTypes);
+    getAllApplicationsResponse =
+        rmService.getApplications(getAllAppsRequest);
+    Assert.assertEquals(1,
+        getAllApplicationsResponse.getApplicationList().size());
+    Assert.assertEquals(appId2,
+        getAllApplicationsResponse.getApplicationList()
+            .get(0).getApplicationId());
   }
   
   @Test(timeout=4000)
@@ -416,6 +451,7 @@ public class TestClientRMService {
     submissionContext.setQueue(queue);
     submissionContext.setApplicationId(appId);
     submissionContext.setResource(resource);
+    submissionContext.setApplicationType(appType);
 
    SubmitApplicationRequest submitRequest =
        recordFactory.newRecordInstance(SubmitApplicationRequest.class);
