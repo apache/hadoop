@@ -623,6 +623,10 @@ Release 2.1.0-beta - 2013-07-02
 
     YARN-845. RM crash with NPE on NODE_UPDATE (Mayank Bansal via bikas)
 
+    YARN-369. Handle ( or throw a proper error when receiving) status updates
+    from application masters that have not registered (Mayank Bansal &
+    Abhishek Kapoor via bikas)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
