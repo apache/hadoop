@@ -27,8 +27,8 @@ import junit.framework.Assert;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -93,8 +93,8 @@ public class TestResourceMgrDelegate {
   @Test
   public void tesAllJobs() throws Exception {
     final ApplicationClientProtocol applicationsManager = Mockito.mock(ApplicationClientProtocol.class);
-    GetAllApplicationsResponse allApplicationsResponse = Records
-        .newRecord(GetAllApplicationsResponse.class);
+    GetApplicationsResponse allApplicationsResponse = Records
+        .newRecord(GetApplicationsResponse.class);
     List<ApplicationReport> applications = new ArrayList<ApplicationReport>();
     applications.add(getApplicationReport(YarnApplicationState.FINISHED,
         FinalApplicationStatus.FAILED));
@@ -106,8 +106,8 @@ public class TestResourceMgrDelegate {
         FinalApplicationStatus.FAILED));
     allApplicationsResponse.setApplicationList(applications);
     Mockito.when(
-        applicationsManager.getAllApplications(Mockito
-            .any(GetAllApplicationsRequest.class))).thenReturn(
+        applicationsManager.getApplications(Mockito
+            .any(GetApplicationsRequest.class))).thenReturn(
         allApplicationsResponse);
     ResourceMgrDelegate resourceMgrDelegate = new ResourceMgrDelegate(
       new YarnConfiguration()) {

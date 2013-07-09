@@ -34,7 +34,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
@@ -213,8 +213,8 @@ public class TestApplicationACLs {
 
     // List apps as owner
     Assert.assertEquals("App view by owner should list the apps!!", 1,
-        rmClient.getAllApplications(
-            recordFactory.newRecordInstance(GetAllApplicationsRequest.class))
+        rmClient.getApplications(
+            recordFactory.newRecordInstance(GetApplicationsRequest.class))
             .getApplicationList().size());
 
     // Kill app as owner
@@ -244,8 +244,8 @@ public class TestApplicationACLs {
 
     // List apps as superUser
     Assert.assertEquals("App view by super-user should list the apps!!", 2,
-        superUserClient.getAllApplications(
-            recordFactory.newRecordInstance(GetAllApplicationsRequest.class))
+        superUserClient.getApplications(
+            recordFactory.newRecordInstance(GetApplicationsRequest.class))
             .getApplicationList().size());
 
     // Kill app as the superUser
@@ -275,8 +275,8 @@ public class TestApplicationACLs {
 
     // List apps as friend
     Assert.assertEquals("App view by a friend should list the apps!!", 3,
-        friendClient.getAllApplications(
-            recordFactory.newRecordInstance(GetAllApplicationsRequest.class))
+        friendClient.getApplications(
+            recordFactory.newRecordInstance(GetApplicationsRequest.class))
             .getApplicationList().size());
 
     // Kill app as the friend
@@ -308,8 +308,8 @@ public class TestApplicationACLs {
 
     // List apps as enemy
     List<ApplicationReport> appReports = enemyRmClient
-        .getAllApplications(recordFactory
-            .newRecordInstance(GetAllApplicationsRequest.class))
+        .getApplications(recordFactory
+            .newRecordInstance(GetApplicationsRequest.class))
         .getApplicationList();
     Assert.assertEquals("App view by enemy should list the apps!!", 4,
         appReports.size());
