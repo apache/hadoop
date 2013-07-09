@@ -24,36 +24,36 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllApplicationsResponseProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllApplicationsResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsResponseProtoOrBuilder;
 
 @Private
 @Unstable
-public class GetAllApplicationsResponsePBImpl 
-extends GetAllApplicationsResponse {
+public class GetApplicationsResponsePBImpl
+extends GetApplicationsResponse {
 
-  GetAllApplicationsResponseProto proto = 
-    GetAllApplicationsResponseProto.getDefaultInstance();
-  GetAllApplicationsResponseProto.Builder builder = null;
+  GetApplicationsResponseProto proto =
+    GetApplicationsResponseProto.getDefaultInstance();
+  GetApplicationsResponseProto.Builder builder = null;
   boolean viaProto = false;
 
   List<ApplicationReport> applicationList;
-  
-  public GetAllApplicationsResponsePBImpl() {
-    builder = GetAllApplicationsResponseProto.newBuilder();
+
+  public GetApplicationsResponsePBImpl() {
+    builder = GetApplicationsResponseProto.newBuilder();
   }
-  
-  public GetAllApplicationsResponsePBImpl(GetAllApplicationsResponseProto proto) {
+
+  public GetApplicationsResponsePBImpl(GetApplicationsResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
   @Override
-  public List<ApplicationReport> getApplicationList() {    
+  public List<ApplicationReport> getApplicationList() {
     initLocalApplicationsList();
     return this.applicationList;
   }
@@ -61,12 +61,12 @@ extends GetAllApplicationsResponse {
   @Override
   public void setApplicationList(List<ApplicationReport> applications) {
     maybeInitBuilder();
-    if (applications == null) 
+    if (applications == null)
       builder.clearApplications();
     this.applicationList = applications;
   }
 
-  public GetAllApplicationsResponseProto getProto() {    
+  public GetApplicationsResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -100,7 +100,7 @@ extends GetAllApplicationsResponse {
   }
 
   private void mergeLocalToProto() {
-    if (viaProto) 
+    if (viaProto)
       maybeInitBuilder();
     mergeLocalToBuilder();
     proto = builder.build();
@@ -109,7 +109,7 @@ extends GetAllApplicationsResponse {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = GetAllApplicationsResponseProto.newBuilder(proto);
+      builder = GetApplicationsResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -120,7 +120,7 @@ extends GetAllApplicationsResponse {
     if (this.applicationList != null) {
       return;
     }
-    GetAllApplicationsResponseProtoOrBuilder p = viaProto ? proto : builder;
+    GetApplicationsResponseProtoOrBuilder p = viaProto ? proto : builder;
     List<ApplicationReportProto> list = p.getApplicationsList();
     applicationList = new ArrayList<ApplicationReport>();
 

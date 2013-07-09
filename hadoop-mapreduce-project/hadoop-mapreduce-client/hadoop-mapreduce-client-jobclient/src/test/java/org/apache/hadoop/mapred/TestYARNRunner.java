@@ -60,8 +60,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
@@ -213,10 +213,10 @@ public class TestYARNRunner extends TestCase {
     verify(clientRMProtocol).forceKillApplication(any(KillApplicationRequest.class));
 
     /* make sure getalljobs calls get all applications */
-    when(clientRMProtocol.getAllApplications(any(GetAllApplicationsRequest.class))).
-    thenReturn(recordFactory.newRecordInstance(GetAllApplicationsResponse.class));
+    when(clientRMProtocol.getApplications(any(GetApplicationsRequest.class))).
+    thenReturn(recordFactory.newRecordInstance(GetApplicationsResponse.class));
     delegate.getAllJobs();
-    verify(clientRMProtocol).getAllApplications(any(GetAllApplicationsRequest.class));
+    verify(clientRMProtocol).getApplications(any(GetApplicationsRequest.class));
 
     /* make sure getapplication report is called */
     when(clientRMProtocol.getApplicationReport(any(GetApplicationReportRequest.class)))
