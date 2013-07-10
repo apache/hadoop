@@ -25,28 +25,23 @@ import org.apache.hadoop.oncrpc.XDR;
  */
 public interface PortmapInterface {
   public enum Procedure {
-    PMAPPROC_NULL(0),
-    PMAPPROC_SET(1),
-    PMAPPROC_UNSET(2),
-    PMAPPROC_GETPORT(3),
-    PMAPPROC_DUMP(4),
-    PMAPPROC_CALLIT(5),
-    PMAPPROC_GETTIME(6),
-    PMAPPROC_UADDR2TADDR(7),
-    PMAPPROC_TADDR2UADDR(8),
-    PMAPPROC_GETVERSADDR(9),
-    PMAPPROC_INDIRECT(10),
-    PMAPPROC_GETADDRLIST(11),
-    PMAPPROC_GETSTAT(12);
-    
-    private final int value;
-    
-    Procedure(int value) {
-      this.value = value;
-    }
+    // the order of the values below are significant.
+    PMAPPROC_NULL,
+    PMAPPROC_SET,
+    PMAPPROC_UNSET,
+    PMAPPROC_GETPORT,
+    PMAPPROC_DUMP,
+    PMAPPROC_CALLIT,
+    PMAPPROC_GETTIME,
+    PMAPPROC_UADDR2TADDR,
+    PMAPPROC_TADDR2UADDR,
+    PMAPPROC_GETVERSADDR,
+    PMAPPROC_INDIRECT,
+    PMAPPROC_GETADDRLIST,
+    PMAPPROC_GETSTAT;
     
     public int getValue() {
-      return value;
+      return ordinal();
     }
     
     public static Procedure fromValue(int value) {

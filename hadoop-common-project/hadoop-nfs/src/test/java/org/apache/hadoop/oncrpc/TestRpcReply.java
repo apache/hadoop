@@ -39,11 +39,11 @@ public class TestRpcReply {
   
   @Test
   public void testRpcReply() {
-    RpcReply reply = new RpcReply(0, 1, ReplyState.MSG_ACCEPTED) {
+    RpcReply reply = new RpcReply(0, RpcMessage.Type.RPC_REPLY, ReplyState.MSG_ACCEPTED) {
       // Anonymous class
     };
     Assert.assertEquals(0, reply.getXid());
-    Assert.assertEquals(1, reply.getMessageType());
+    Assert.assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());
     Assert.assertEquals(ReplyState.MSG_ACCEPTED, reply.getState());
   }
 }

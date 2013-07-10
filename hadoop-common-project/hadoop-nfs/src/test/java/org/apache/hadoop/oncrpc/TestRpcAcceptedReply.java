@@ -46,10 +46,10 @@ public class TestRpcAcceptedReply {
   @Test
   public void testConstructor() {
     RpcAuthInfo verifier = new RpcAuthInfo(AuthFlavor.AUTH_NONE, new byte[0]);
-    RpcAcceptedReply reply = new RpcAcceptedReply(0, RpcMessage.RPC_REPLY,
+    RpcAcceptedReply reply = new RpcAcceptedReply(0, RpcMessage.Type.RPC_REPLY,
         ReplyState.MSG_ACCEPTED, verifier, AcceptState.SUCCESS);
     assertEquals(0, reply.getXid());
-    assertEquals(RpcMessage.RPC_REPLY, reply.getMessageType());
+    assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());
     assertEquals(ReplyState.MSG_ACCEPTED, reply.getState());
     assertEquals(verifier, reply.getVerifier());
     assertEquals(AcceptState.SUCCESS, reply.getAcceptState());

@@ -14,6 +14,8 @@ Trunk (Unreleased)
 
     HDFS-4762 Provide HDFS based NFSv3 and Mountd implementation (brandonli)
 
+    HDFS-4962 Use enum for nfs constants (Nicholas SZE via jing9)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.

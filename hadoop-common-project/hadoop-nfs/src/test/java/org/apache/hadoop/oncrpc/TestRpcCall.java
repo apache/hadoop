@@ -34,9 +34,10 @@ public class TestRpcCall {
     int program = 2;
     int version = 3;
     int procedure = 4;
-    RpcCall call = new RpcCall(0, RpcMessage.RPC_CALL, rpcVersion, program, version, procedure, credential, verifier);
+    RpcCall call = new RpcCall(0, RpcMessage.Type.RPC_CALL, rpcVersion, program,
+        version, procedure, credential, verifier);
     assertEquals(0, call.getXid());
-    assertEquals(RpcMessage.RPC_CALL, call.getMessageType());
+    assertEquals(RpcMessage.Type.RPC_CALL, call.getMessageType());
     assertEquals(rpcVersion, call.getRpcVersion());
     assertEquals(program, call.getProgram());
     assertEquals(version, call.getVersion());
@@ -48,12 +49,12 @@ public class TestRpcCall {
   @Test(expected=IllegalArgumentException.class)
   public void testInvalidRpcVersion() {
     int invalidRpcVersion = 3;
-    new RpcCall(0, RpcMessage.RPC_CALL, invalidRpcVersion, 2, 3, 4, null, null);
+    new RpcCall(0, RpcMessage.Type.RPC_CALL, invalidRpcVersion, 2, 3, 4, null, null);
   }
   
   @Test(expected=IllegalArgumentException.class)
   public void testInvalidRpcMessageType() {
-    int invalidMessageType = 3; // Message typ is not RpcMessage.RPC_CALL
+    RpcMessage.Type invalidMessageType = RpcMessage.Type.RPC_REPLY; // Message typ is not RpcMessage.RPC_CALL
     new RpcCall(0, invalidMessageType, RpcCall.RPC_VERSION, 2, 3, 4, null, null);
   }
 }
