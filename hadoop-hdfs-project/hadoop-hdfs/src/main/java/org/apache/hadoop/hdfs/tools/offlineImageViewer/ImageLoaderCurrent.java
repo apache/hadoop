@@ -126,7 +126,7 @@ class ImageLoaderCurrent implements ImageLoader {
                                       new SimpleDateFormat("yyyy-MM-dd HH:mm");
   private static int[] versions = { -16, -17, -18, -19, -20, -21, -22, -23,
       -24, -25, -26, -27, -28, -30, -31, -32, -33, -34, -35, -36, -37, -38, -39,
-      -40, -41, -42, -43};
+      -40, -41, -42, -43, -44, -45};
   private int imageVersion = 0;
   
   private final Map<Long, String> subtreeMap = new HashMap<Long, String>();
@@ -531,8 +531,12 @@ class ImageLoaderCurrent implements ImageLoader {
     boolean useRoot = in.readBoolean();
     if (!useRoot) {
       if (in.readBoolean()) {
-        v.visitEnclosingElement(ImageElement.SNAPSHOT_DIFF_SNAPSHOTINODE);
-        processINode(in, v, true, currentINodeName, true);
+        v.visitEnclosingElement(ImageElement.SNAPSHOT_INODE_DIRECTORY_ATTRIBUTES);
+        if (LayoutVersion.supports(Feature.OPTIMIZE_SNAPSHOT_INODES, imageVersion)) {
+          processINodeDirectoryAttributes(in, v, currentINodeName);
+        } else {
+          processINode(in, v, true, currentINodeName, true);
+        }
         v.leaveEnclosingElement();
       }
     }
@@ -559,7 +563,18 @@ class ImageLoaderCurrent implements ImageLoader {
     v.leaveEnclosingElement();
     v.leaveEnclosingElement();
   }
-  
+
+  private void processINodeDirectoryAttributes(DataInputStream in, ImageVisitor v,
+      String parentName) throws IOException {
+    final String pathName = readINodePath(in, parentName);
+    v.visit(ImageElement.INODE_PATH, pathName);
+    processPermission(in, v);
+    v.visit(ImageElement.MODIFICATION_TIME, formatDate(in.readLong()));
+
+    v.visit(ImageElement.NS_QUOTA, in.readLong());
+    v.visit(ImageElement.DS_QUOTA, in.readLong());
+  }
+
   /** Process children under a directory */
   private int processChildren(DataInputStream in, ImageVisitor v,
       boolean skipBlocks, String parentName) throws IOException {
@@ -586,6 +601,18 @@ class ImageLoaderCurrent implements ImageLoader {
     }
   }
  
+  private String readINodePath(DataInputStream in, String parentName)
+      throws IOException {
+    String pathName = FSImageSerialization.readString(in);
+    if (parentName != null) {  // local name
+      pathName = "/" + pathName;
+      if (!"/".equals(parentName)) { // children of non-root directory
+        pathName = parentName + pathName;
+      }
+    }
+    return pathName;
+  }
+
   /**
    * Process an INode
    * 
@@ -605,16 +632,10 @@ class ImageLoaderCurrent implements ImageLoader {
         LayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion);
     
     v.visitEnclosingElement(ImageElement.INODE);
-    String pathName = FSImageSerialization.readString(in);
-    if (parentName != null) {  // local name
-      pathName = "/" + pathName;
-      if (!"/".equals(parentName)) { // children of non-root directory
-        pathName = parentName + pathName;
-      }
-    }
+    final String pathName = readINodePath(in, parentName);
+    v.visit(ImageElement.INODE_PATH, pathName);
 
     long inodeId = INodeId.GRANDFATHER_INODE_ID;
-    v.visit(ImageElement.INODE_PATH, pathName);
     if (supportInodeId) {
       inodeId = in.readLong();
       v.visit(ImageElement.INODE_ID, inodeId);
@@ -683,6 +704,20 @@ class ImageLoaderCurrent implements ImageLoader {
 
     v.leaveEnclosingElement(); // INode
   }
+
+  private void processINodeFileAttributes(DataInputStream in, ImageVisitor v,
+      String parentName) throws IOException {
+    final String pathName = readINodePath(in, parentName);
+    v.visit(ImageElement.INODE_PATH, pathName);
+    processPermission(in, v);
+    v.visit(ImageElement.MODIFICATION_TIME, formatDate(in.readLong()));
+    if(LayoutVersion.supports(Feature.FILE_ACCESS_TIME, imageVersion)) {
+      v.visit(ImageElement.ACCESS_TIME, formatDate(in.readLong()));
+    }
+
+    v.visit(ImageElement.REPLICATION, in.readShort());
+    v.visit(ImageElement.BLOCK_SIZE, in.readLong());
+  }
   
   private void processFileDiffList(DataInputStream in, ImageVisitor v,
       String currentINodeName) throws IOException {
@@ -704,8 +739,12 @@ class ImageLoaderCurrent implements ImageLoader {
         ImageElement.SNAPSHOT_DIFF_SNAPSHOTID, snapshotId);
     v.visit(ImageElement.SNAPSHOT_FILE_SIZE, in.readLong());
     if (in.readBoolean()) {
-      v.visitEnclosingElement(ImageElement.SNAPSHOT_DIFF_SNAPSHOTINODE);
-      processINode(in, v, true, currentINodeName, true);
+      v.visitEnclosingElement(ImageElement.SNAPSHOT_INODE_FILE_ATTRIBUTES);
+      if (LayoutVersion.supports(Feature.OPTIMIZE_SNAPSHOT_INODES, imageVersion)) {
+        processINodeFileAttributes(in, v, currentINodeName);
+      } else {
+        processINode(in, v, true, currentINodeName, true);
+      }
       v.leaveEnclosingElement();
     }
     v.leaveEnclosingElement();

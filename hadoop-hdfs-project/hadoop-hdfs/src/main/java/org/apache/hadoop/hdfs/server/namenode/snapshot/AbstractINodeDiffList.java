@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 
@@ -35,7 +36,8 @@ import org.apache.hadoop.hdfs.server.namenode.Quota;
  * @param <D> The diff type, which must extend {@link AbstractINodeDiff}.
  */
 abstract class AbstractINodeDiffList<N extends INode,
-                                     D extends AbstractINodeDiff<N, D>> 
+                                     A extends INodeAttributes,
+                                     D extends AbstractINodeDiff<N, A, D>> 
     implements Iterable<D> {
   /** Diff list sorted by snapshot IDs, i.e. in chronological order. */
   private final List<D> diffs = new ArrayList<D>();
@@ -54,7 +56,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   abstract D createDiff(Snapshot snapshot, N currentINode);
 
   /** @return a snapshot copy of the current inode. */  
-  abstract N createSnapshotCopy(N currentINode);
+  abstract A createSnapshotCopy(N currentINode);
 
   /**
    * Delete a snapshot. The synchronization of the diff list will be done 
@@ -93,7 +95,7 @@ abstract class AbstractINodeDiffList<N extends INode,
             collectedBlocks, removedINodes));
       }
     } else if (snapshotIndex > 0) {
-      final AbstractINodeDiff<N, D> previous = diffs.get(snapshotIndex - 1);
+      final AbstractINodeDiff<N, A, D> previous = diffs.get(snapshotIndex - 1);
       if (!previous.getSnapshot().equals(prior)) {
         diffs.get(snapshotIndex).setSnapshot(prior);
       } else {
@@ -106,9 +108,8 @@ abstract class AbstractINodeDiffList<N extends INode,
         }
         if (previous.snapshotINode == null) {
           previous.snapshotINode = removed.snapshotINode;
-        } else if (removed.snapshotINode != null) {
-          removed.snapshotINode.clear();
         }
+
         counts.add(previous.combinePosteriorAndCollectBlocks(
             currentINode, removed, collectedBlocks, removedINodes));
         previous.setPosterior(removed.getPosterior());
@@ -150,7 +151,7 @@ abstract class AbstractINodeDiffList<N extends INode,
 
   /** @return the last snapshot. */
   public final Snapshot getLastSnapshot() {
-    final AbstractINodeDiff<N, D> last = getLast();
+    final AbstractINodeDiff<N, A, D> last = getLast();
     return last == null? null: last.getSnapshot();
   }
   
@@ -270,9 +271,9 @@ abstract class AbstractINodeDiffList<N extends INode,
    *         Note that the current inode is returned if there is no change
    *         between the given snapshot and the current state. 
    */
-  N getSnapshotINode(final Snapshot snapshot, final N currentINode) {
+  A getSnapshotINode(final Snapshot snapshot, final A currentINode) {
     final D diff = getDiff(snapshot);
-    final N inode = diff == null? null: diff.getSnapshotINode();
+    final A inode = diff == null? null: diff.getSnapshotINode();
     return inode == null? currentINode: inode;
   }
 
@@ -297,7 +298,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** Save the snapshot copy to the latest snapshot. */
-  public void saveSelf2Snapshot(Snapshot latest, N currentINode, N snapshotCopy)
+  public void saveSelf2Snapshot(Snapshot latest, N currentINode, A snapshotCopy)
       throws QuotaExceededException {
     if (latest != null) {
       D diff = checkAndAddLatestSnapshotDiff(latest, currentINode);

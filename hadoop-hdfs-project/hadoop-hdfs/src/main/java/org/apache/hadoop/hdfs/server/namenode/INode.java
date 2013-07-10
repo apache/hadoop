@@ -50,7 +50,7 @@ import com.google.common.base.Preconditions;
  * directory inodes.
  */
 @InterfaceAudience.Private
-public abstract class INode implements Diff.Element<byte[]> {
+public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   public static final Log LOG = LogFactory.getLog(INode.class);
 
   /** parent is either an {@link INodeDirectory} or an {@link INodeReference}.*/
@@ -87,6 +87,7 @@ public abstract class INode implements Diff.Element<byte[]> {
   abstract String getUserName(Snapshot snapshot);
 
   /** The same as getUserName(null). */
+  @Override
   public final String getUserName() {
     return getUserName(null);
   }
@@ -110,6 +111,7 @@ public abstract class INode implements Diff.Element<byte[]> {
   abstract String getGroupName(Snapshot snapshot);
 
   /** The same as getGroupName(null). */
+  @Override
   public final String getGroupName() {
     return getGroupName(null);
   }
@@ -134,6 +136,7 @@ public abstract class INode implements Diff.Element<byte[]> {
   abstract FsPermission getFsPermission(Snapshot snapshot);
   
   /** The same as getFsPermission(null). */
+  @Override
   public final FsPermission getFsPermission() {
     return getFsPermission(null);
   }
@@ -153,7 +156,7 @@ public abstract class INode implements Diff.Element<byte[]> {
    * @return if the given snapshot is null, return this;
    *     otherwise return the corresponding snapshot inode.
    */
-  public INode getSnapshotINode(final Snapshot snapshot) {
+  public INodeAttributes getSnapshotINode(final Snapshot snapshot) {
     return this;
   }
 
@@ -464,12 +467,6 @@ public abstract class INode implements Diff.Element<byte[]> {
     return name == null? null: DFSUtil.bytes2String(name);
   }
 
-  /**
-   * @return null if the local name is null;
-   *         otherwise, return the local name byte array.
-   */
-  public abstract byte[] getLocalNameBytes();
-
   @Override
   public final byte[] getKey() {
     return getLocalNameBytes();
@@ -555,6 +552,7 @@ public abstract class INode implements Diff.Element<byte[]> {
   abstract long getModificationTime(Snapshot snapshot);
 
   /** The same as getModificationTime(null). */
+  @Override
   public final long getModificationTime() {
     return getModificationTime(null);
   }
@@ -583,6 +581,7 @@ public abstract class INode implements Diff.Element<byte[]> {
   abstract long getAccessTime(Snapshot snapshot);
 
   /** The same as getAccessTime(null). */
+  @Override
   public final long getAccessTime() {
     return getAccessTime(null);
   }

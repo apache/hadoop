@@ -24,10 +24,10 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
-import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
+import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 
@@ -39,7 +39,7 @@ public interface FileWithSnapshot {
   /**
    * The difference of an {@link INodeFile} between two snapshots.
    */
-  public static class FileDiff extends AbstractINodeDiff<INodeFile, FileDiff> {
+  public static class FileDiff extends AbstractINodeDiff<INodeFile, INodeFileAttributes, FileDiff> {
     /** The file size at snapshot creation time. */
     private final long fileSize;
 
@@ -49,7 +49,7 @@ public interface FileWithSnapshot {
     }
 
     /** Constructor used by FSImage loading */
-    FileDiff(Snapshot snapshot, INodeFile snapshotINode,
+    FileDiff(Snapshot snapshot, INodeFileAttributes snapshotINode,
         FileDiff posteriorDiff, long fileSize) {
       super(snapshot, snapshotINode, posteriorDiff);
       this.fileSize = fileSize;
@@ -104,7 +104,7 @@ public interface FileWithSnapshot {
       // write snapshotINode
       if (snapshotINode != null) {
         out.writeBoolean(true);
-        FSImageSerialization.writeINodeFile(snapshotINode, out, true);
+        FSImageSerialization.writeINodeFileAttributes(snapshotINode, out);
       } else {
         out.writeBoolean(false);
       }
@@ -120,7 +120,7 @@ public interface FileWithSnapshot {
 
   /** A list of FileDiffs for storing snapshot data. */
   public static class FileDiffList
-      extends AbstractINodeDiffList<INodeFile, FileDiff> {
+      extends AbstractINodeDiffList<INodeFile, INodeFileAttributes, FileDiff> {
 
     @Override
     FileDiff createDiff(Snapshot snapshot, INodeFile file) {
@@ -128,21 +128,8 @@ public interface FileWithSnapshot {
     }
     
     @Override
-    INodeFile createSnapshotCopy(INodeFile currentINode) {
-      if (currentINode instanceof INodeFileUnderConstructionWithSnapshot) {
-        final INodeFileUnderConstruction uc = 
-            (INodeFileUnderConstruction) currentINode;
-        
-        final INodeFileUnderConstruction copy = new INodeFileUnderConstruction(
-            uc, uc.getClientName(), uc.getClientMachine(), uc.getClientNode());
-        
-        copy.setBlocks(null);
-        return copy;
-      } else {
-        final INodeFile copy = new INodeFile(currentINode);
-        copy.setBlocks(null);
-        return copy;
-      }
+    INodeFileAttributes createSnapshotCopy(INodeFile currentINode) {
+      return new INodeFileAttributes.SnapshotCopy(currentINode);
     }
   }
 
