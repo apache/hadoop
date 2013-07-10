@@ -119,6 +119,7 @@
     <ClCompile Include="src\org\apache\hadoop\io\compress\zlib\ZlibDecompressor.c" Condition="Exists('$(ZLIB_HOME)')" />
     <ClCompile Include="src\org\apache\hadoop\io\nativeio\file_descriptor.c" />
     <ClCompile Include="src\org\apache\hadoop\io\nativeio\NativeIO.c" />
+    <ClCompile Include="src\org\apache\hadoop\security\JniBasedUnixGroupsMappingWin.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\build\native\$(OS)-$(Platform)\src\org\apache\hadoop\io\nativeio\org_apache_hadoop_io_nativeio_NativeIO.h" />

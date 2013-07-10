@@ -301,6 +301,9 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     MAPREDUCE-5278. Distributed cache is broken when JT staging dir is not on the
     default FS. (Xi Fang via cnauroth)
 
+    HADOOP-9718. Branch-1-win TestGroupFallback#testGroupWithFallback() failed
+    caused by java.lang.UnsatisfiedLinkError. (Xi Fang via cnauroth)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a
