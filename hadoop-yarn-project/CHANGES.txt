@@ -63,6 +63,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-368. Fixed a typo in error message in Auxiliary services. (Albert Chu
     via vinodkv)
 
+    YARN-295. Fixed a race condition in ResourceManager RMAppAttempt state
+    machine. (Mayank Bansal via vinodkv)
+
 Release 2.1.0-beta - 2013-07-02
 
   INCOMPATIBLE CHANGES
