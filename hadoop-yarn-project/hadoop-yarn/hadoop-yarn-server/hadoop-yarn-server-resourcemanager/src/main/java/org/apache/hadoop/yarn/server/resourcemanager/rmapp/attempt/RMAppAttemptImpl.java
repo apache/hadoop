@@ -245,6 +245,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.KILLED,
           RMAppAttemptEventType.KILL, new KillAllocatedAMTransition())
           
+      .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.FAILED,
+          RMAppAttemptEventType.CONTAINER_FINISHED,
+          new AMContainerCrashedTransition())
+
        // Transitions from LAUNCHED State
       .addTransition(RMAppAttemptState.LAUNCHED, RMAppAttemptState.RUNNING,
           RMAppAttemptEventType.REGISTERED, new AMRegisteredTransition())

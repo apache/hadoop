@@ -655,6 +655,20 @@ public class TestRMAppAttemptTransitions {
   }
   
   @Test
+  public void testAMCrashAtAllocated() {
+    Container amContainer = allocateApplicationAttempt();
+    String containerDiagMsg = "some error";
+    int exitCode = 123;
+    ContainerStatus cs =
+        BuilderUtils.newContainerStatus(amContainer.getId(),
+          ContainerState.COMPLETE, containerDiagMsg, exitCode);
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+      applicationAttempt.getAppAttemptId(), cs));
+    assertEquals(RMAppAttemptState.FAILED,
+      applicationAttempt.getAppAttemptState());
+  }
+  
+  @Test
   public void testRunningToFailed() {
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
