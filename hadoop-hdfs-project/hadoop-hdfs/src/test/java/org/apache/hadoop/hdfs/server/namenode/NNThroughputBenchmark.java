@@ -1194,14 +1194,8 @@ public class NNThroughputBenchmark {
       // start data-nodes; create a bunch of files; generate block reports.
       blockReportObject.generateInputs(ignore);
       // stop replication monitor
-      BlockManagerTestUtil.getReplicationThread(namesystem.getBlockManager())
-          .interrupt();
-      try {
-        BlockManagerTestUtil.getReplicationThread(namesystem.getBlockManager())
-            .join();
-      } catch(InterruptedException ei) {
-        return;
-      }
+      BlockManagerTestUtil.stopReplicationThread(namesystem.getBlockManager());
+
       // report blocks once
       int nrDatanodes = blockReportObject.getNumDatanodes();
       for(int idx=0; idx < nrDatanodes; idx++) {
