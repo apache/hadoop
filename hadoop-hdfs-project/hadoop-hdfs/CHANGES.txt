@@ -20,8 +20,6 @@ Release 2.2.0 - UNRELEASED
 
   IMPROVEMENTS
 
-    HDFS-4908. Reduce snapshot inode memory usage.  (szetszwo)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -205,6 +203,8 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4932. Avoid a wide line on the name node webUI if we have more Journal
     nodes. (Fengdong Yu via cnauroth)
+
+    HDFS-4908. Reduce snapshot inode memory usage.  (szetszwo)
 
     HDFS-4645. Move from randomly generated block ID to sequentially generated
     block ID.  (Arpit Agarwal via szetszwo)
