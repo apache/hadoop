@@ -176,7 +176,8 @@
   <description>User added environment variables for the task tracker child 
   processes. Example :
   1) A=foo  This will set the env variable A to foo
-  2) B=$B:c This is inherit nodemanager's B env variable.
+  2) B=$B:c This is inherit nodemanager's B env variable on Unix.
+  3) B=%B%;c This is inherit nodemanager's B env variable on Windows.
   </description>
 </property>
 
