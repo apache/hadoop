@@ -280,12 +280,14 @@ public class JobConf extends Configuration {
    * Configuration key to set the environment of the child map/reduce tasks.
    * 
    * The format of the value is <code>k1=v1,k2=v2</code>. Further it can 
-   * reference existing environment variables via <code>$key</code>.
+   * reference existing environment variables via <code>$key</code> on
+   * Linux or <code>%key%</code> on Windows.
    * 
    * Example:
    * <ul>
    *   <li> A=foo - This will set the env variable A to foo. </li>
-   *   <li> B=$X:c This is inherit tasktracker's X env variable. </li>
+   *   <li> B=$X:c This is inherit tasktracker's X env variable on Linux. </li>
+   *   <li> B=%X%;c This is inherit tasktracker's X env variable on Windows. </li>
    * </ul>
    * 
    * @deprecated Use {@link #MAPRED_MAP_TASK_ENV} or 
@@ -295,31 +297,33 @@ public class JobConf extends Configuration {
   public static final String MAPRED_TASK_ENV = "mapred.child.env";
 
   /**
-   * Configuration key to set the maximum virutal memory available to the
-   * map tasks.
+   * Configuration key to set the environment of the child map tasks.
    * 
-   * The format of the value is <code>k1=v1,k2=v2</code>. Further it can 
-   * reference existing environment variables via <code>$key</code>.
+   * The format of the value is <code>k1=v1,k2=v2</code>. Further it can
+   * reference existing environment variables via <code>$key</code> on
+   * Linux or <code>%key%</code> on Windows.
    * 
    * Example:
    * <ul>
    *   <li> A=foo - This will set the env variable A to foo. </li>
-   *   <li> B=$X:c This is inherit tasktracker's X env variable. </li>
+   *   <li> B=$X:c This is inherit tasktracker's X env variable on Linux. </li>
+   *   <li> B=%X%;c This is inherit tasktracker's X env variable on Windows. </li>
    * </ul>
    */
   public static final String MAPRED_MAP_TASK_ENV = JobContext.MAP_ENV;
   
   /**
-   * Configuration key to set the maximum virutal memory available to the
-   * reduce tasks.
+   * Configuration key to set the environment of the child reduce tasks.
    * 
    * The format of the value is <code>k1=v1,k2=v2</code>. Further it can 
-   * reference existing environment variables via <code>$key</code>.
+   * reference existing environment variables via <code>$key</code> on
+   * Linux or <code>%key%</code> on Windows.
    * 
    * Example:
    * <ul>
    *   <li> A=foo - This will set the env variable A to foo. </li>
-   *   <li> B=$X:c This is inherit tasktracker's X env variable. </li>
+   *   <li> B=$X:c This is inherit tasktracker's X env variable on Linux. </li>
+   *   <li> B=%X%;c This is inherit tasktracker's X env variable on Windows. </li>
    * </ul>
    */
   public static final String MAPRED_REDUCE_TASK_ENV = JobContext.REDUCE_ENV;
