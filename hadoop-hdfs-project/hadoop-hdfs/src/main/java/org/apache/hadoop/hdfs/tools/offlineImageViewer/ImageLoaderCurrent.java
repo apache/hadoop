@@ -126,7 +126,7 @@ class ImageLoaderCurrent implements ImageLoader {
                                       new SimpleDateFormat("yyyy-MM-dd HH:mm");
   private static int[] versions = { -16, -17, -18, -19, -20, -21, -22, -23,
       -24, -25, -26, -27, -28, -30, -31, -32, -33, -34, -35, -36, -37, -38, -39,
-      -40, -41, -42, -43, -44, -45};
+      -40, -41, -42, -43, -44, -45, -46 };
   private int imageVersion = 0;
   
   private final Map<Long, String> subtreeMap = new HashMap<Long, String>();
@@ -164,6 +164,12 @@ class ImageLoaderCurrent implements ImageLoader {
       long numInodes = in.readLong();
 
       v.visit(ImageElement.GENERATION_STAMP, in.readLong());
+
+      if (LayoutVersion.supports(Feature.SEQUENTIAL_BLOCK_ID, imageVersion)) {
+        v.visit(ImageElement.GENERATION_STAMP_V2, in.readLong());
+        v.visit(ImageElement.GENERATION_STAMP_V1_LIMIT, in.readLong());
+        v.visit(ImageElement.LAST_ALLOCATED_BLOCK_ID, in.readLong());
+      }
 
       if (LayoutVersion.supports(Feature.STORED_TXIDS, imageVersion)) {
         v.visit(ImageElement.TRANSACTION_ID, in.readLong());

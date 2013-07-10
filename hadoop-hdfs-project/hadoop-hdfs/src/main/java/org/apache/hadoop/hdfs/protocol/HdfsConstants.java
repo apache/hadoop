@@ -86,6 +86,10 @@ public class HdfsConstants {
   // An invalid transaction ID that will never be seen in a real namesystem.
   public static final long INVALID_TXID = -12345;
 
+  // Number of generation stamps reserved for legacy blocks.
+  public static final long RESERVED_GENERATION_STAMPS_V1 =
+      1024L * 1024 * 1024 * 1024;
+
   /**
    * URI Scheme for hdfs://namenode/ URIs.
    */
