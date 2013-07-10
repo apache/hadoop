@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
@@ -224,7 +225,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    * The difference of an {@link INodeDirectory} between two snapshots.
    */
   public static class DirectoryDiff extends
-      AbstractINodeDiff<INodeDirectory, DirectoryDiff> {
+      AbstractINodeDiff<INodeDirectory, INodeDirectoryAttributes, DirectoryDiff> {
     /** The size of the children list at snapshot creation time. */
     private final int childrenSize;
     /** The children list diff. */
@@ -238,7 +239,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
 
     /** Constructor used by FSImage loading */
-    DirectoryDiff(Snapshot snapshot, INodeDirectory snapshotINode,
+    DirectoryDiff(Snapshot snapshot, INodeDirectoryAttributes snapshotINode,
         DirectoryDiff posteriorDiff, int childrenSize,
         List<INode> createdList, List<INode> deletedList) {
       super(snapshot, snapshotINode, posteriorDiff);
@@ -352,7 +353,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         out.writeBoolean(false);
         if (snapshotINode != null) {
           out.writeBoolean(true);
-          FSImageSerialization.writeINodeDirectory(snapshotINode, out);
+          FSImageSerialization.writeINodeDirectoryAttributes(snapshotINode, out);
         } else {
           out.writeBoolean(false);
         }
@@ -373,7 +374,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
   /** A list of directory diffs. */
   public static class DirectoryDiffList
-      extends AbstractINodeDiffList<INodeDirectory, DirectoryDiff> {
+      extends AbstractINodeDiffList<INodeDirectory, INodeDirectoryAttributes, DirectoryDiff> {
 
     @Override
     DirectoryDiff createDiff(Snapshot snapshot, INodeDirectory currentDir) {
@@ -381,13 +382,10 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
 
     @Override
-    INodeDirectory createSnapshotCopy(INodeDirectory currentDir) {
-      final INodeDirectory copy = currentDir.isQuotaSet()?
-          new INodeDirectoryWithQuota(currentDir, false,
-              currentDir.getNsQuota(), currentDir.getDsQuota())
-        : new INodeDirectory(currentDir, false);
-      copy.clearChildren();
-      return copy;
+    INodeDirectoryAttributes createSnapshotCopy(INodeDirectory currentDir) {
+      return currentDir.isQuotaSet()?
+          new INodeDirectoryAttributes.CopyWithQuota(currentDir)
+        : new INodeDirectoryAttributes.SnapshotCopy(currentDir);
     }
 
     /** Replace the given child in the created/deleted list, if there is any. */
@@ -454,7 +452,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         : laterDiffIndex;
     
     boolean dirMetadataChanged = false;
-    INodeDirectory dirCopy = null;
+    INodeDirectoryAttributes dirCopy = null;
     for (int i = earlierDiffIndex; i < laterDiffIndex; i++) {
       DirectoryDiff sdiff = difflist.get(i);
       diff.combinePosterior(sdiff.diff, null);
@@ -506,7 +504,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   @Override
-  public INodeDirectory getSnapshotINode(Snapshot snapshot) {
+  public INodeDirectoryAttributes getSnapshotINode(Snapshot snapshot) {
     return diffs.getSnapshotINode(snapshot, this);
   }
 

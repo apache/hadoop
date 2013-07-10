@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
@@ -78,7 +79,7 @@ public class INodeFileUnderConstructionWithSnapshot
   }
 
   @Override
-  public INodeFile getSnapshotINode(Snapshot snapshot) {
+  public INodeFileAttributes getSnapshotINode(Snapshot snapshot) {
     return diffs.getSnapshotINode(snapshot, this);
   }
 

@@ -212,12 +212,21 @@ public abstract class INodeReference extends INode {
   public final FsPermission getFsPermission(Snapshot snapshot) {
     return referred.getFsPermission(snapshot);
   }
+  @Override
+  public final short getFsPermissionShort() {
+    return referred.getFsPermissionShort();
+  }
   
   @Override
   void setPermission(FsPermission permission) {
     referred.setPermission(permission);
   }
-  
+
+  @Override
+  public long getPermissionLong() {
+    return referred.getPermissionLong();
+  }
+
   @Override
   public final long getModificationTime(Snapshot snapshot) {
     return referred.getModificationTime(snapshot);
@@ -280,7 +289,7 @@ public abstract class INodeReference extends INode {
   }
   
   @Override
-  public final INode getSnapshotINode(Snapshot snapshot) {
+  public final INodeAttributes getSnapshotINode(Snapshot snapshot) {
     return referred.getSnapshotINode(snapshot);
   }
 
