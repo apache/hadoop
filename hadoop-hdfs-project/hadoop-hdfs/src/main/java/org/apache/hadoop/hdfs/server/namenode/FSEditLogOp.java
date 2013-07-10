@@ -90,7 +90,7 @@ public abstract class FSEditLogOp {
       inst.put(OP_RENAME_OLD, new RenameOldOp());
       inst.put(OP_DELETE, new DeleteOp());
       inst.put(OP_MKDIR, new MkdirOp());
-      inst.put(OP_SET_GENSTAMP, new SetGenstampOp());
+      inst.put(OP_SET_GENSTAMP_V1, new SetGenstampV1Op());
       inst.put(OP_SET_PERMISSIONS, new SetPermissionsOp());
       inst.put(OP_SET_OWNER, new SetOwnerOp());
       inst.put(OP_SET_NS_QUOTA, new SetNSQuotaOp());
@@ -116,6 +116,8 @@ public abstract class FSEditLogOp {
       inst.put(OP_CREATE_SNAPSHOT, new CreateSnapshotOp());
       inst.put(OP_DELETE_SNAPSHOT, new DeleteSnapshotOp());
       inst.put(OP_RENAME_SNAPSHOT, new RenameSnapshotOp());
+      inst.put(OP_SET_GENSTAMP_V2, new SetGenstampV2Op());
+      inst.put(OP_ALLOCATE_BLOCK_ID, new AllocateBlockIdOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
@@ -1054,39 +1056,39 @@ public abstract class FSEditLogOp {
     }
   }
 
-  static class SetGenstampOp extends FSEditLogOp {
-    long genStamp;
+  static class SetGenstampV1Op extends FSEditLogOp {
+    long genStampV1;
 
-    private SetGenstampOp() {
-      super(OP_SET_GENSTAMP);
+    private SetGenstampV1Op() {
+      super(OP_SET_GENSTAMP_V1);
     }
 
-    static SetGenstampOp getInstance(OpInstanceCache cache) {
-      return (SetGenstampOp)cache.get(OP_SET_GENSTAMP);
+    static SetGenstampV1Op getInstance(OpInstanceCache cache) {
+      return (SetGenstampV1Op)cache.get(OP_SET_GENSTAMP_V1);
     }
 
-    SetGenstampOp setGenerationStamp(long genStamp) {
-      this.genStamp = genStamp;
+    SetGenstampV1Op setGenerationStamp(long genStamp) {
+      this.genStampV1 = genStamp;
       return this;
     }
-    
+
     @Override
-    public 
+    public
     void writeFields(DataOutputStream out) throws IOException {
-      FSImageSerialization.writeLong(genStamp, out);
+      FSImageSerialization.writeLong(genStampV1, out);
     }
-    
+
     @Override
     void readFields(DataInputStream in, int logVersion)
         throws IOException {
-      this.genStamp = FSImageSerialization.readLong(in);
+      this.genStampV1 = FSImageSerialization.readLong(in);
     }
 
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
-      builder.append("SetGenstampOp [genStamp=");
-      builder.append(genStamp);
+      builder.append("SetGenstampOp [GenStamp=");
+      builder.append(genStampV1);
       builder.append(", opCode=");
       builder.append(opCode);
       builder.append(", txid=");
@@ -1094,15 +1096,119 @@ public abstract class FSEditLogOp {
       builder.append("]");
       return builder.toString();
     }
-    
+
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "GENSTAMP",
-          Long.valueOf(genStamp).toString());
+                            Long.valueOf(genStampV1).toString());
     }
-    
+
     @Override void fromXml(Stanza st) throws InvalidXmlException {
-      this.genStamp = Long.valueOf(st.getValue("GENSTAMP"));
+      this.genStampV1 = Long.valueOf(st.getValue("GENSTAMP"));
+    }
+  }
+
+  static class SetGenstampV2Op extends FSEditLogOp {
+    long genStampV2;
+
+    private SetGenstampV2Op() {
+      super(OP_SET_GENSTAMP_V2);
+    }
+
+    static SetGenstampV2Op getInstance(OpInstanceCache cache) {
+      return (SetGenstampV2Op)cache.get(OP_SET_GENSTAMP_V2);
+    }
+
+    SetGenstampV2Op setGenerationStamp(long genStamp) {
+      this.genStampV2 = genStamp;
+      return this;
+    }
+
+    @Override
+    public
+    void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(genStampV2, out);
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion)
+        throws IOException {
+      this.genStampV2 = FSImageSerialization.readLong(in);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("SetGenstampV2Op [GenStampV2=");
+      builder.append(genStampV2);
+      builder.append(", opCode=");
+      builder.append(opCode);
+      builder.append(", txid=");
+      builder.append(txid);
+      builder.append("]");
+      return builder.toString();
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "GENSTAMPV2",
+                            Long.valueOf(genStampV2).toString());
+    }
+
+    @Override void fromXml(Stanza st) throws InvalidXmlException {
+      this.genStampV2 = Long.valueOf(st.getValue("GENSTAMPV2"));
+    }
+  }
+
+  static class AllocateBlockIdOp extends FSEditLogOp {
+    long blockId;
+
+    private AllocateBlockIdOp() {
+      super(OP_ALLOCATE_BLOCK_ID);
+    }
+
+    static AllocateBlockIdOp getInstance(OpInstanceCache cache) {
+      return (AllocateBlockIdOp)cache.get(OP_ALLOCATE_BLOCK_ID);
+    }
+
+    AllocateBlockIdOp setBlockId(long blockId) {
+      this.blockId = blockId;
+      return this;
+    }
+
+    @Override
+    public
+    void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(blockId, out);
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion)
+        throws IOException {
+      this.blockId = FSImageSerialization.readLong(in);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("AllocateBlockIdOp [blockId=");
+      builder.append(blockId);
+      builder.append(", opCode=");
+      builder.append(opCode);
+      builder.append(", txid=");
+      builder.append(txid);
+      builder.append("]");
+      return builder.toString();
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "BLOCK_ID",
+                            Long.valueOf(blockId).toString());
+    }
+
+    @Override void fromXml(Stanza st) throws InvalidXmlException {
+      this.blockId = Long.valueOf(st.getValue("BLOCK_ID"));
     }
   }
 
