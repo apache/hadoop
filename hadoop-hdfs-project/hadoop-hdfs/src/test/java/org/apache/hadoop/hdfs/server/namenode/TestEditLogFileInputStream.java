@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.is;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -51,10 +52,10 @@ public class TestEditLogFileInputStream {
       // Read the edit log and verify that we got all of the data.
       EnumMap<FSEditLogOpCodes, Holder<Integer>> counts =
           FSImageTestUtil.countEditLogOpTypes(elis);
-      assertEquals(1L, (long)counts.get(FSEditLogOpCodes.OP_ADD).held);
-      assertEquals(1L, (long)counts.get(FSEditLogOpCodes.OP_SET_GENSTAMP).held);
-      assertEquals(1L, (long)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
-     
+      assertThat(counts.get(FSEditLogOpCodes.OP_ADD).held, is(1));
+      assertThat(counts.get(FSEditLogOpCodes.OP_SET_GENSTAMP_V1).held, is(1));
+      assertThat(counts.get(FSEditLogOpCodes.OP_CLOSE).held, is(1));
+
       // Check that length header was picked up.
       assertEquals(FAKE_LOG_DATA.length, elis.length());
       elis.close();

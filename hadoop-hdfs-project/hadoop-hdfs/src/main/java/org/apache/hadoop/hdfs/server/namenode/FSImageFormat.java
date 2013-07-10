@@ -70,8 +70,10 @@ import org.apache.hadoop.io.Text;
  * <pre>
  * FSImage {
  *   layoutVersion: int, namespaceID: int, numberItemsInFSDirectoryTree: long,
- *   namesystemGenerationStamp: long, transactionID: long, 
- *   snapshotCounter: int, numberOfSnapshots: int, numOfSnapshottableDirs: int,
+ *   namesystemGenerationStampV1: long, namesystemGenerationStampV2: long,
+ *   generationStampAtBlockIdSwitch:long, lastAllocatedBlockId:
+ *   long transactionID: long, snapshotCounter: int, numberOfSnapshots: int,
+ *   numOfSnapshottableDirs: int,
  *   {FSDirectoryTree, FilesUnderConstruction, SecretManagerState} (can be compressed)
  * }
  * 
@@ -257,10 +259,30 @@ public class FSImageFormat {
 
         long numFiles = in.readLong();
 
-        // read in the last generation stamp.
+        // read in the last generation stamp for legacy blocks.
         long genstamp = in.readLong();
-        namesystem.setGenerationStamp(genstamp); 
+        namesystem.setGenerationStampV1(genstamp);
         
+        if (LayoutVersion.supports(Feature.SEQUENTIAL_BLOCK_ID, imgVersion)) {
+          // read the starting generation stamp for sequential block IDs
+          genstamp = in.readLong();
+          namesystem.setGenerationStampV2(genstamp);
+
+          // read the last generation stamp for blocks created after
+          // the switch to sequential block IDs.
+          long stampAtIdSwitch = in.readLong();
+          namesystem.setGenerationStampV1Limit(stampAtIdSwitch);
+
+          // read the max sequential block ID.
+          long maxSequentialBlockId = in.readLong();
+          namesystem.setLastAllocatedBlockId(maxSequentialBlockId);
+        } else {
+          long startingGenStamp = namesystem.upgradeGenerationStampToV2();
+          // This is an upgrade.
+          LOG.info("Upgrading to sequential block IDs. Generation stamp " +
+                   "for new blocks set to " + startingGenStamp);
+        }
+
         // read the transaction ID of the last edit represented by
         // this image
         if (LayoutVersion.supports(Feature.STORED_TXIDS, imgVersion)) {
@@ -884,9 +906,13 @@ public class FSImageFormat {
         out.writeInt(sourceNamesystem.unprotectedGetNamespaceInfo()
             .getNamespaceID());
         out.writeLong(fsDir.rootDir.numItemsInTree());
-        out.writeLong(sourceNamesystem.getGenerationStamp());
+        out.writeLong(sourceNamesystem.getGenerationStampV1());
+        out.writeLong(sourceNamesystem.getGenerationStampV2());
+        out.writeLong(sourceNamesystem.getGenerationStampAtblockIdSwitch());
+        out.writeLong(sourceNamesystem.getLastAllocatedBlockId());
         out.writeLong(context.getTxId());
         out.writeLong(sourceNamesystem.getLastInodeId());
+
         
         sourceNamesystem.getSnapshotManager().write(out);
         

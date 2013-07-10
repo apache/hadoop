@@ -41,7 +41,7 @@ public enum FSEditLogOpCodes {
   OP_SET_PERMISSIONS            ((byte)  7),
   OP_SET_OWNER                  ((byte)  8),
   OP_CLOSE                      ((byte)  9),
-  OP_SET_GENSTAMP               ((byte) 10),
+  OP_SET_GENSTAMP_V1            ((byte) 10),
   OP_SET_NS_QUOTA               ((byte) 11), // obsolete
   OP_CLEAR_NS_QUOTA             ((byte) 12), // obsolete
   OP_TIMES                      ((byte) 13), // set atime, mtime
@@ -61,8 +61,9 @@ public enum FSEditLogOpCodes {
   OP_DELETE_SNAPSHOT            ((byte) 27),
   OP_RENAME_SNAPSHOT            ((byte) 28),
   OP_ALLOW_SNAPSHOT             ((byte) 29),
-  OP_DISALLOW_SNAPSHOT          ((byte) 30);
-
+  OP_DISALLOW_SNAPSHOT          ((byte) 30),
+  OP_SET_GENSTAMP_V2            ((byte) 31),
+  OP_ALLOCATE_BLOCK_ID          ((byte) 32);
   private byte opCode;
 
   /**

@@ -241,6 +241,39 @@ public class DFSTestUtil {
       IOUtils.closeStream(out);
     }
   }
+
+  public static void createFile(FileSystem fs, Path fileName, int bufferLen,
+                                long fileLen, long blockSize, short replFactor, long seed)
+      throws IOException {
+    assert bufferLen > 0;
+    if (!fs.mkdirs(fileName.getParent())) {
+      throw new IOException("Mkdirs failed to create " +
+                            fileName.getParent().toString());
+    }
+    FSDataOutputStream out = null;
+    try {
+      out = fs.create(fileName, true, fs.getConf()
+                                        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
+                      replFactor, blockSize);
+      if (fileLen > 0) {
+        byte[] toWrite = new byte[bufferLen];
+        Random rb = new Random(seed);
+        long bytesToWrite = fileLen;
+        while (bytesToWrite>0) {
+          rb.nextBytes(toWrite);
+          int bytesToWriteNext = (bufferLen < bytesToWrite) ? bufferLen
+              : (int) bytesToWrite;
+
+          out.write(toWrite, 0, bytesToWriteNext);
+          bytesToWrite -= bytesToWriteNext;
+        }
+      }
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+    }
+  }
   
   /** check if the files have been copied correctly. */
   public boolean checkFiles(FileSystem fs, String topdir) throws IOException {
@@ -554,7 +587,7 @@ public class DFSTestUtil {
   }
   
   public static ExtendedBlock getFirstBlock(FileSystem fs, Path path) throws IOException {
-    HdfsDataInputStream in = (HdfsDataInputStream)((DistributedFileSystem)fs).open(path);
+    HdfsDataInputStream in = (HdfsDataInputStream) fs.open(path);
     in.readByte();
     return in.getCurrentBlock();
   }  
@@ -562,6 +595,12 @@ public class DFSTestUtil {
   public static List<LocatedBlock> getAllBlocks(FSDataInputStream in)
       throws IOException {
     return ((HdfsDataInputStream) in).getAllBlocks();
+  }
+
+  public static List<LocatedBlock> getAllBlocks(FileSystem fs, Path path)
+      throws IOException {
+    HdfsDataInputStream in = (HdfsDataInputStream) fs.open(path);
+    return in.getAllBlocks();
   }
 
   public static Token<BlockTokenIdentifier> getBlockToken(

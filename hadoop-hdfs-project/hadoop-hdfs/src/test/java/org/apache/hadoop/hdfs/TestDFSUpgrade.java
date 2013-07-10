@@ -53,7 +53,9 @@ import com.google.common.base.Joiner;
 */
 public class TestDFSUpgrade {
  
-  private static final int EXPECTED_TXID = 45;
+  // TODO: Avoid hard-coding expected_txid. The test should be more robust.
+  private static final int EXPECTED_TXID = 61;
+
   private static final Log LOG = LogFactory.getLog(TestDFSUpgrade.class.getName());
   private Configuration conf;
   private int testCounter = 0;
