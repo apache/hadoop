@@ -973,6 +973,9 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4951. FsShell commands using secure httpfs throw exceptions due 
     to missing TokenRenewer. (rknater via tucu)
 
+    HDFS-4969. WebhdfsFileSystem expects non-standard WEBHDFS Json element. 
+    (rkanter via tucu)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
