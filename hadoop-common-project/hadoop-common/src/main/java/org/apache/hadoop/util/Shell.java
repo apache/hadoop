@@ -136,6 +136,12 @@ abstract public class Shell {
       new String[] { "kill", "-" + code, isSetsidAvailable ? "-" + pid : pid };
   }
 
+  /** Return a regular expression string that match environment variables */
+  public static String getEnvironmentVariableRegex() {
+    return (WINDOWS) ? "%([A-Za-z_][A-Za-z0-9_]*?)%" :
+      "\\$([A-Za-z_][A-Za-z0-9_]*)";
+  }
+  
   /**
    * Returns a File referencing a script with the given basename, inside the
    * given parent directory.  The file extension is inferred by platform: ".cmd"
