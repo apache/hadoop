@@ -227,6 +227,9 @@ public class BlockManager {
 
   /** for block replicas placement */
   private BlockPlacementPolicy blockplacement;
+
+  /** Check whether name system is running before terminating */
+  private boolean checkNSRunning = true;
   
   public BlockManager(final Namesystem namesystem, final FSClusterStats stats,
       final Configuration conf) throws IOException {
@@ -354,6 +357,12 @@ public class BlockManager {
   @VisibleForTesting
   public BlockTokenSecretManager getBlockTokenSecretManager() {
     return blockTokenSecretManager;
+  }
+
+  /** Allow silent termination of replication monitor for testing */
+  @VisibleForTesting
+  void enableRMTerminationForTesting() {
+    checkNSRunning = false;
   }
 
   private boolean isBlockTokenEnabled() {
@@ -3112,6 +3121,9 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
               LOG.info("ReplicationMonitor received an exception"
                   + " while shutting down.", t);
             }
+            break;
+          } else if (!checkNSRunning && t instanceof InterruptedException) {
+            LOG.info("Stopping ReplicationMonitor for testing.");
             break;
           }
           LOG.fatal("ReplicationMonitor thread received Runtime exception. ", t);

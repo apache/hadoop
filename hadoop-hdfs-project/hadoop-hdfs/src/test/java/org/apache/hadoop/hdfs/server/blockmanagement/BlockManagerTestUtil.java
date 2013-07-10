@@ -108,6 +108,22 @@ public class BlockManagerTestUtil {
   }
   
   /**
+   * Stop the replication monitor thread
+   * @param blockManager
+   */
+  public static void stopReplicationThread(final BlockManager blockManager) 
+      throws IOException {
+    blockManager.enableRMTerminationForTesting();
+    blockManager.replicationThread.interrupt();
+    try {
+      blockManager.replicationThread.join();
+    } catch(InterruptedException ie) {
+      throw new IOException(
+          "Interrupted while trying to stop ReplicationMonitor");
+    }
+  }
+
+  /**
    * @param blockManager
    * @return corruptReplicas from block manager
    */
