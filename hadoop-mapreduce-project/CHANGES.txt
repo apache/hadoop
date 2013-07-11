@@ -166,9 +166,6 @@ Release 2.2.0 - UNRELEASED
 
   IMPROVEMENTS
 
-    MAPREDUCE-5333. Add test that verifies MRAM works correctly when sending 
-    requests with non-normalized capabilities. (ywskycn via tucu)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -343,6 +340,9 @@ Release 2.1.0-beta - 2013-07-02
 
     MAPREDUCE-5326. Added version to shuffle header. (Zhijie Shen via
     acmurthy)
+
+    MAPREDUCE-5333. Add test that verifies MRAM works correctly when sending
+    requests with non-normalized capabilities. (ywskycn via tucu)
 
   OPTIMIZATIONS
 

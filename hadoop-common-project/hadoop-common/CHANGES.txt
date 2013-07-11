@@ -298,23 +298,6 @@ Release 2.2.0 - UNRELEASED
 
   IMPROVEMENTS
 
-    HADOOP-9661. Allow metrics sources to be extended. (sandyr via tucu)
-
-    HADOOP-9370.  Write FSWrapper class to wrap FileSystem and FileContext for
-    better test coverage.  (Andrew Wang via Colin Patrick McCabe)
-
-    HADOOP-9355.  Abstract symlink tests to use either FileContext or
-    FileSystem.  (Andrew Wang via Colin Patrick McCabe)
-
-    HADOOP-9673.  NetworkTopology: when a node can't be added, print out its
-    location for diagnostic purposes.  (Colin Patrick McCabe)
-
-    HADOOP-9414.  Refactor out FSLinkResolver and relevant helper methods.
-    (Andrew Wang via Colin Patrick McCabe)
-
-    HADOOP-9416.  Add new symlink resolution methods in FileSystem and
-    FileSystemLinkResolver.  (Andrew Wang via Colin Patrick McCabe)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -453,6 +436,23 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9691. RPC clients can generate call ID using AtomicInteger instead of
     synchronizing on the Client instance. (cnauroth)
+
+    HADOOP-9661. Allow metrics sources to be extended. (sandyr via tucu)
+
+    HADOOP-9370.  Write FSWrapper class to wrap FileSystem and FileContext for
+    better test coverage.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9355.  Abstract symlink tests to use either FileContext or
+    FileSystem.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9673.  NetworkTopology: when a node can't be added, print out its
+    location for diagnostic purposes.  (Colin Patrick McCabe)
+
+    HADOOP-9414.  Refactor out FSLinkResolver and relevant helper methods.
+    (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9416.  Add new symlink resolution methods in FileSystem and
+    FileSystemLinkResolver.  (Andrew Wang via Colin Patrick McCabe)
 
   OPTIMIZATIONS
 
