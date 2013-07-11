@@ -1038,7 +1038,8 @@ public class DFSClient implements java.io.Closeable {
       return namenode.recoverLease(src, clientName);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(FileNotFoundException.class,
-                                     AccessControlException.class);
+                                     AccessControlException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -2177,7 +2178,11 @@ public class DFSClient implements java.io.Closeable {
    */
   public void allowSnapshot(String snapshotRoot) throws IOException {
     checkOpen();
-    namenode.allowSnapshot(snapshotRoot);
+    try {
+      namenode.allowSnapshot(snapshotRoot);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
   }
   
   /**
@@ -2187,7 +2192,11 @@ public class DFSClient implements java.io.Closeable {
    */
   public void disallowSnapshot(String snapshotRoot) throws IOException {
     checkOpen();
-    namenode.disallowSnapshot(snapshotRoot);
+    try {
+      namenode.disallowSnapshot(snapshotRoot);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
   }
   
   /**
