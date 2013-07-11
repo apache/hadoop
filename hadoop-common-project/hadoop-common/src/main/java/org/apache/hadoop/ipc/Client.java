@@ -115,7 +115,7 @@ public class Client {
   private final int connectionTimeout;
 
   private final boolean fallbackAllowed;
-  private final byte[] uuid;
+  private final byte[] clientId;
   
   /**
    * Executor on which IPC calls' parameters are sent. Deferring
@@ -891,7 +891,7 @@ public class Client {
       // Items '1' and '2' are prepared here. 
       final DataOutputBuffer d = new DataOutputBuffer();
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
-         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, uuid);
+         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, clientId);
       header.writeDelimitedTo(d);
       call.rpcRequest.write(d);
 
@@ -1091,7 +1091,7 @@ public class Client {
         CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
     this.fallbackAllowed = conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
-    this.uuid = StringUtils.getUuidBytes();
+    this.clientId = StringUtils.getUuidBytes();
   }
 
   /**
