@@ -302,6 +302,9 @@ Release 2.2.0 - UNRELEASED
     HADOOP-9417.  Support for symlink resolution in LocalFileSystem /
     RawLocalFileSystem.  (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9186.  test-patch.sh should report build failure to JIRA.
+    (Binglin Chang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES

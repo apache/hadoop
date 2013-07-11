@@ -266,7 +266,7 @@ verifyPatch () {
 }
 
 ###############################################################################
-buildWithPatch () {
+prebuildWithoutPatch () {
   echo ""
   echo ""
   echo "======================================================================"
@@ -283,7 +283,10 @@ buildWithPatch () {
     $MVN clean test -DskipTests > $PATCH_DIR/trunkCompile.txt 2>&1
     if [[ $? != 0 ]] ; then
       echo "Top-level trunk compilation is broken?"
-      cleanupAndExit 1
+      JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:red}-1 patch{color}.  Top-level trunk compilation may be broken."
+      return 1
     fi
     cd -
   fi
@@ -292,8 +295,12 @@ buildWithPatch () {
   $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     echo "Trunk compilation is broken?"
-    cleanupAndExit 1
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:red}-1 patch{color}.  Trunk compilation may be broken."
+    return 1
   fi
+  return 0
 }
 
 ###############################################################################
@@ -954,7 +961,12 @@ if [[ $RESULT != 0 ]] ; then
   submitJiraComment 1
   cleanupAndExit 1
 fi
-buildWithPatch
+prebuildWithoutPatch
+(( RESULT = RESULT + $? ))
+if [[ $RESULT != 0 ]] ; then
+  submitJiraComment 1
+  cleanupAndExit 1
+fi
 checkAuthor
 (( RESULT = RESULT + $? ))
 
