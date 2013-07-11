@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -156,11 +157,11 @@ public class TestFsShellReturnCode {
     verify(fs, "-chown", argv, 1, fsShell, 0);
 
     // Test 2: exit code for chown on non-existing path is 1
-    String argv2[] = { "-chown", "admin", f2 };
+    String argv2[] = { "-chown", username, f2 };
     verify(fs, "-chown", argv2, 1, fsShell, 1);
 
     // Test 3: exit code for chown on non-existing path with globbed input is 1
-    String argv3[] = { "-chown", "admin", f3 };
+    String argv3[] = { "-chown", username, f3 };
     verify(fs, "-chown", argv3, 1, fsShell, 1);
 
     // create required files
@@ -212,16 +213,19 @@ public class TestFsShellReturnCode {
     writeFile(fileSys, p1);
     assertTrue(fileSys.exists(p1));
 
+    String userGroups [] = UserGroupInformation.getCurrentUser().getGroupNames();
+    assertTrue(userGroups.length != 0);
+
     // Test 1: exit code for chgrp on existing file is 0
-    String argv[] = { "-chgrp", "admin", f1 };
+    String argv[] = { "-chgrp", userGroups[0], f1 };
     verify(fs, "-chgrp", argv, 1, fsShell, 0);
 
     // Test 2: exit code for chgrp on non existing path is 1
-    String argv2[] = { "-chgrp", "admin", f2 };
+    String argv2[] = { "-chgrp", userGroups[0], f2 };
     verify(fs, "-chgrp", argv2, 1, fsShell, 1);
 
     // Test 3: exit code for chgrp on non-existing path with globbed input is 1
-    String argv3[] = { "-chgrp", "admin", f3 };
+    String argv3[] = { "-chgrp", userGroups[0], f3 };
     verify(fs, "-chgrp", argv3, 1, fsShell, 1);
 
     // create required files
@@ -233,7 +237,7 @@ public class TestFsShellReturnCode {
     assertTrue(fileSys.exists(p6));
 
     // Test 4: exit code for chgrp on existing path with globbed input is 0
-    String argv4[] = { "-chgrp", "admin", f7 };
+    String argv4[] = { "-chgrp", userGroups[0], f7 };
     verify(fs, "-chgrp", argv4, 1, fsShell, 0);
   }
   
