@@ -169,6 +169,12 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Status;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
@@ -328,7 +334,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
   final DelegationTokenSecretManager dtSecretManager;
   private final boolean alwaysUseDelegationTokensForTests;
-  
+
+  private static final Step STEP_AWAITING_REPORTED_BLOCKS =
+    new Step(StepType.AWAITING_REPORTED_BLOCKS);
+
   // Tracks whether the default audit logger is the only configured audit
   // logger; this allows isAuditEnabled() to return false in case the
   // underlying logger is disabled, and avoid some unnecessary work.
@@ -716,8 +725,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       // We shouldn't be calling saveNamespace if we've come up in standby state.
       MetaRecoveryContext recovery = startOpt.createRecoveryContext();
-      if (fsImage.recoverTransitionRead(startOpt, this, recovery) && !haEnabled) {
+      boolean needToSave =
+        fsImage.recoverTransitionRead(startOpt, this, recovery) && !haEnabled;
+      if (needToSave) {
         fsImage.saveNamespace(this);
+      } else {
+        // No need to save, so mark the phase done.
+        StartupProgress prog = NameNode.getStartupProgress();
+        prog.beginPhase(Phase.SAVING_CHECKPOINT);
+        prog.endPhase(Phase.SAVING_CHECKPOINT);
       }
       // This will start a new log segment and write to the seen_txid file, so
       // we shouldn't do it when coming up in standby state
@@ -776,6 +792,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkAvailableResources();
       assert safeMode != null &&
         !safeMode.isPopulatingReplQueues();
+      StartupProgress prog = NameNode.getStartupProgress();
+      prog.beginPhase(Phase.SAFEMODE);
+      prog.setTotal(Phase.SAFEMODE, STEP_AWAITING_REPORTED_BLOCKS,
+        getCompleteBlocksTotal());
       setBlockTotal();
       blockManager.activate(conf);
     } finally {
@@ -4077,6 +4097,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     private boolean resourcesLow = false;
     /** Should safemode adjust its block totals as blocks come in */
     private boolean shouldIncrementallyTrackBlocks = false;
+    /** counter for tracking startup progress of reported blocks */
+    private Counter awaitingReportedBlocksCounter;
     
     /**
      * Creates SafeModeInfo when the name node enters
@@ -4197,6 +4219,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + blockManager.numOfUnderReplicatedBlocks() + " blocks");
 
       startSecretManagerIfNecessary();
+
+      // If startup has not yet completed, end safemode phase.
+      StartupProgress prog = NameNode.getStartupProgress();
+      if (prog.getStatus(Phase.SAFEMODE) != Status.COMPLETE) {
+        prog.endStep(Phase.SAFEMODE, STEP_AWAITING_REPORTED_BLOCKS);
+        prog.endPhase(Phase.SAFEMODE);
+      }
     }
 
     /**
@@ -4314,6 +4343,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     private synchronized void incrementSafeBlockCount(short replication) {
       if (replication == safeReplication) {
         this.blockSafe++;
+
+        // Report startup progress only if we haven't completed startup yet.
+        StartupProgress prog = NameNode.getStartupProgress();
+        if (prog.getStatus(Phase.SAFEMODE) != Status.COMPLETE) {
+          if (this.awaitingReportedBlocksCounter == null) {
+            this.awaitingReportedBlocksCounter = prog.getCounter(Phase.SAFEMODE,
+              STEP_AWAITING_REPORTED_BLOCKS);
+          }
+          this.awaitingReportedBlocksCounter.increment();
+        }
+
         checkMode();
       }
     }
@@ -5671,9 +5711,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /**
    * @param out save state of the secret manager
+   * @param sdPath String storage directory path
    */
-  void saveSecretManagerState(DataOutputStream out) throws IOException {
-    dtSecretManager.saveSecretManagerState(out);
+  void saveSecretManagerState(DataOutputStream out, String sdPath)
+      throws IOException {
+    dtSecretManager.saveSecretManagerState(out, sdPath);
   }
 
   /**
