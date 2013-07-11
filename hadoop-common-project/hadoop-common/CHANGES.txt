@@ -12,6 +12,8 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9432 Add support for markdown .md files in site documentation (stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
