@@ -157,6 +157,13 @@ public class TestDistributedFileSystem {
     public boolean exists(Path p) {
       return true; // trick out deleteOnExit
     }
+    // Symlink resolution doesn't work with a mock, since it doesn't
+    // have a valid Configuration to resolve paths to the right FileSystem.
+    // Just call the DFSClient directly to register the delete
+    @Override
+    public boolean delete(Path f, final boolean recursive) throws IOException {
+      return dfs.delete(f.toUri().getPath(), recursive);
+    }
   }
 
   @Test
