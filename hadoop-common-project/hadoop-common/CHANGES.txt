@@ -105,6 +105,8 @@ Trunk (Unreleased)
     HADOOP-8844. Add a plaintext fs -text test-case.
     (Akira AJISAKA via harsh)
 
+    HADOOP-9432 Add support for markdown .md files in site documentation (stevel)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -118,7 +120,6 @@ Trunk (Unreleased)
     HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc
     (Jon Eagles via bobby)
 
->
     HADOOP-7610. Fix for hadoop debian package (Eric Yang via gkesavan)
 
     HADOOP-7641. Add Apache License to template config files.
