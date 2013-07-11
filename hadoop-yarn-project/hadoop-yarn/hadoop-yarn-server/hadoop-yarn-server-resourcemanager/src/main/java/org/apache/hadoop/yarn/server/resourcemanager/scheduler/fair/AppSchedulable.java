@@ -254,13 +254,6 @@ public class AppSchedulable extends Schedulable {
         }
         return Resources.none();
       }
-      else {
-        // TODO this should subtract resource just assigned
-        // TEMPROARY
-        getMetrics().setAvailableResourcesToQueue(
-            scheduler.getClusterCapacity());
-      }
-
 
       // If we had previously made a reservation, delete it
       if (reserved) {
