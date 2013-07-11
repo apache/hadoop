@@ -136,6 +136,11 @@ public abstract class MockAsm extends MockApps {
     public String getApplicationType() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
+    public void setQueue(String name) {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
   }
 
   public static RMApp newApplication(int i) {
