@@ -319,6 +319,8 @@ Release 2.1.0-beta - 2013-07-02
     (Junping Du via szetszwo)
 
     HDFS-4372. Track NameNode startup progress. (cnauroth)
+
+    HDFS-4373. Add HTTP API for querying NameNode startup progress. (cnauroth)
     
   IMPROVEMENTS
 
