@@ -28,6 +28,8 @@ Release 2.2.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-9417.  Support for symlink resolution in LocalFileSystem /
+    RawLocalFileSystem.  (Andrew Wang via Colin Patrick McCabe)
 
   OPTIMIZATIONS
 
