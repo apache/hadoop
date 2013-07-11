@@ -274,6 +274,7 @@ public class TestNativeIO {
 
   @Test
   public void testPosixFadvise() throws Exception {
+    org.junit.Assume.assumeTrue(!Shell.WINDOWS);
     FileInputStream fis = new FileInputStream("/dev/zero");
     try {
       NativeIO.posix_fadvise(fis.getFD(), 0, 0,

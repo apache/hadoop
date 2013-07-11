@@ -307,6 +307,9 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     HADOOP-9719. Branch-1-win TestFsShellReturnCode#testChgrp() failed caused by
     incorrect exit codes. (Xi Fang via cnauroth)
 
+    HADOOP-9722. Branch-1-win TestNativeIO failed caused by Window incompatible
+    test case. (Xi Fang via cnauroth)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a
