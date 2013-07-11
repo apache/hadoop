@@ -18,22 +18,28 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
-import static org.mockito.Mockito.mock;
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.*;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.jsp.JspWriter;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 public class TestNameNodeJspHelper {
 
@@ -78,5 +84,43 @@ public class TestNameNodeJspHelper {
     securityOnOff = NamenodeJspHelper.getSecurityModeText();
     Assert.assertTrue("security mode doesn't match. Should be OFF", 
         securityOnOff.contains("OFF"));
+  }
+
+  @Test
+  public void testGenerateStartupProgress() throws Exception {
+    cluster.waitClusterUp();
+    NamenodeJspHelper.HealthJsp jsp = new NamenodeJspHelper.HealthJsp();
+    StartupProgress prog = NameNode.getStartupProgress();
+    JspWriter out = mock(JspWriter.class);
+    jsp.generateStartupProgress(out, prog);
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(out, atLeastOnce()).println(captor.capture());
+    List<String> contents = captor.getAllValues();
+
+    // Verify 100% overall completion and all phases mentioned in output.
+    Assert.assertTrue(containsMatch(contents, "Elapsed Time\\:"));
+    Assert.assertTrue(containsMatch(contents, "Percent Complete\\:.*?100\\.00%"));
+    Assert.assertTrue(containsMatch(contents, LOADING_FSIMAGE.getDescription()));
+    Assert.assertTrue(containsMatch(contents, LOADING_EDITS.getDescription()));
+    Assert.assertTrue(containsMatch(contents,
+      SAVING_CHECKPOINT.getDescription()));
+    Assert.assertTrue(containsMatch(contents, SAFEMODE.getDescription()));
+  }
+
+  /**
+   * Checks if the list contains any string that partially matches the regex.
+   * 
+   * @param list List<String> containing strings to check
+   * @param regex String regex to check
+   * @return boolean true if some string in list partially matches regex
+   */
+  private static boolean containsMatch(List<String> list, String regex) {
+    Pattern pattern = Pattern.compile(regex);
+    for (String str: list) {
+      if (pattern.matcher(str).find()) {
+        return true;
+      }
+    }
+    return false;
   }
 }

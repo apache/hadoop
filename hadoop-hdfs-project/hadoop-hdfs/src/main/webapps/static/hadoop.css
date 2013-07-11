@@ -155,3 +155,36 @@ span.failed {
 div.security {
     width:100%;
 }
+
+#startupprogress table, #startupprogress th, #startupprogress td {
+  border-collapse: collapse;
+  border-left: 1px solid black;
+  border-right: 1px solid black;
+  padding: 5px;
+  text-align: left;
+}
+
+#startupprogress table {
+  border: 1px solid black;
+}
+
+.phase {
+  border-top: 1px solid black;
+  font-weight: bold;
+}
+
+.current {
+  font-style: italic;
+}
+
+.later {
+  color: gray;
+}
+
+.step .startupdesc {
+  text-indent: 20px;
+}
+
+#startupprogress span {
+  font-weight: bold;
+}
