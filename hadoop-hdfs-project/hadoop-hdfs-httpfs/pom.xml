@@ -554,6 +554,7 @@
                     <delete file="${httpfs.tomcat.dist.dir}/conf/server.xml"/>
                     <copy file="${basedir}/src/main/tomcat/server.xml"
                           toDir="${httpfs.tomcat.dist.dir}/conf"/>
+                    <delete file="${httpfs.tomcat.dist.dir}/conf/logging.properties"/>
                     <copy file="${basedir}/src/main/tomcat/logging.properties"
                           toDir="${httpfs.tomcat.dist.dir}/conf"/>
                     <copy toDir="${httpfs.tomcat.dist.dir}/webapps/ROOT">
