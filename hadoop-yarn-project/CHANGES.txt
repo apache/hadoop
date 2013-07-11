@@ -710,6 +710,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-799. Fix CgroupsLCEResourcesHandler to use /tasks instead of
     /cgroup.procs. (Chris Riccomini via acmurthy) 
 
+    YARN-333. Schedulers cannot control the queue-name of an 
+    application. (sandyr via tucu)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES

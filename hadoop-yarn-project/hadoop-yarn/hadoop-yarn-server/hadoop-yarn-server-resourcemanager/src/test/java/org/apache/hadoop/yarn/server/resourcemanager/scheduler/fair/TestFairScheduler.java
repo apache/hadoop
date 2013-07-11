@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -393,7 +394,6 @@ public class TestFairScheduler {
     scheduler.handle(nodeEvent1);
 
     // Have two queues which want entire cluster capacity
-    createSchedulingRequest(10 * 1024, "default", "user1");
     createSchedulingRequest(10 * 1024, "parent.queue2", "user1");
     createSchedulingRequest(10 * 1024, "parent.queue3", "user1");
 
@@ -557,6 +557,25 @@ public class TestFairScheduler {
         .getAppSchedulables().size());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user2")
         .getAppSchedulables().size());
+  }
+  
+  @Test
+  public void testAssignToQueue() throws Exception {
+    Configuration conf = createConfiguration();
+    conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    
+    RMApp rmApp1 = new MockRMApp(0, 0, RMAppState.NEW);
+    RMApp rmApp2 = new MockRMApp(1, 1, RMAppState.NEW);
+    
+    FSLeafQueue queue1 = scheduler.assignToQueue(rmApp1, "default", "asterix");
+    FSLeafQueue queue2 = scheduler.assignToQueue(rmApp2, "notdefault", "obelix");
+    
+    // assert FSLeafQueue's name is the correct name is the one set in the RMApp
+    assertEquals(rmApp1.getQueue(), queue1.getName());
+    assertEquals("root.asterix", rmApp1.getQueue());
+    assertEquals(rmApp2.getQueue(), queue2.getName());
+    assertEquals("root.notdefault", rmApp2.getQueue());
   }
 
   @Test

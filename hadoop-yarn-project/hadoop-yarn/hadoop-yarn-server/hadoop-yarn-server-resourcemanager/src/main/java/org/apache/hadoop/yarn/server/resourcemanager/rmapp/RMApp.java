@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 /**
- * The read interface to an Application in the ResourceManager. Take a
+ * The interface to an Application in the ResourceManager. Take a
  * look at {@link RMAppImpl} for its implementation. This interface
  * exposes methods to access various updates in application status/report.
  */
@@ -85,6 +85,13 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the queue to which the application was submitted to.
    */
   String getQueue();
+  
+  /**
+   * Reflects a change in the application's queue from the one specified in the
+   * {@link ApplicationSubmissionContext}.
+   * @param name the new queue name
+   */
+  void setQueue(String name);
 
   /**
    * The name of the application as set in {@link
