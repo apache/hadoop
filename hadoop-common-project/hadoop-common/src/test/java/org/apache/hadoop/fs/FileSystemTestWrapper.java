@@ -133,8 +133,11 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
   }
 
   public boolean isSymlink(Path p) throws IOException {
-    throw new UnsupportedFileSystemException(
-        "FileSystem does not support symlinks");
+    try {
+      return fs.getFileLinkStatus(p).isSymlink();
+    } catch (FileNotFoundException e) {
+      return false;
+    }
   }
 
   public void writeFile(Path path, byte b[]) throws IOException {
@@ -182,8 +185,16 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
 
   public void checkFileLinkStatus(String path, fileType expectedType)
       throws IOException {
-    throw new UnsupportedFileSystemException(
-        "FileSystem does not support symlinks");
+    FileStatus s = fs.getFileLinkStatus(new Path(path));
+    Assert.assertNotNull(s);
+    if (expectedType == fileType.isDir) {
+      Assert.assertTrue(s.isDirectory());
+    } else if (expectedType == fileType.isFile) {
+      Assert.assertTrue(s.isFile());
+    } else if (expectedType == fileType.isSymlink) {
+      Assert.assertTrue(s.isSymlink());
+    }
+    Assert.assertEquals(fs.makeQualified(new Path(path)), s.getPath());
   }
 
   //
@@ -215,8 +226,7 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
   @Override
   public FileStatus getFileLinkStatus(Path f) throws AccessControlException,
       FileNotFoundException, UnsupportedFileSystemException, IOException {
-    throw new UnsupportedFileSystemException(
-        "FileSystem does not support symlinks");
+    return fs.getFileLinkStatus(f);
   }
 
   @Override
@@ -224,8 +234,7 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
       throws AccessControlException, FileAlreadyExistsException,
       FileNotFoundException, ParentNotDirectoryException,
       UnsupportedFileSystemException, IOException {
-    throw new UnsupportedFileSystemException(
-        "FileSystem does not support symlinks");
+    fs.createSymlink(target, link, createParent);
   }
 
   @Override
@@ -297,8 +306,7 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
   @Override
   public Path getLinkTarget(Path f) throws AccessControlException,
       FileNotFoundException, UnsupportedFileSystemException, IOException {
-    throw new UnsupportedFileSystemException(
-        "FileSystem does not support symlinks");
+    return fs.getLinkTarget(f);
   }
 
   @Override

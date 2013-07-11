@@ -151,6 +151,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9414.  Refactor out FSLinkResolver and relevant helper methods.
     (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9416.  Add new symlink resolution methods in FileSystem and
+    FileSystemLinkResolver.  (Andrew Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs

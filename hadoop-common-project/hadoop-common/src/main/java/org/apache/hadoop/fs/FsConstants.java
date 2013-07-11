@@ -33,8 +33,10 @@ public interface FsConstants {
   
   // URI scheme for FTP
   public static final String FTP_SCHEME = "ftp";
-  
-  
+
+  // Maximum number of symlinks to recursively resolve in a path
+  static final int MAX_PATH_LINKS = 32;
+
   /**
    * ViewFs: viewFs file system (ie the mount file system on client side)
    */
