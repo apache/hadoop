@@ -145,6 +145,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9355.  Abstract symlink tests to use either FileContext or
     FileSystem.  (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9673.  NetworkTopology: when a node can't be added, print out its
+    location for diagnostic purposes.  (Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
