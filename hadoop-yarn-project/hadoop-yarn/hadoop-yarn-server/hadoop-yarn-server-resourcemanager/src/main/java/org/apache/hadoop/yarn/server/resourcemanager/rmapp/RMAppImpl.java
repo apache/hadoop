@@ -81,7 +81,6 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final RMContext rmContext;
   private final Configuration conf;
   private final String user;
-  private final String queue;
   private final String name;
   private final ApplicationSubmissionContext submissionContext;
   private final Dispatcher dispatcher;
@@ -101,6 +100,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private long startTime;
   private long finishTime;
   private RMAppAttempt currentAttempt;
+  private String queue;
   @SuppressWarnings("rawtypes")
   private EventHandler handler;
   private static final FinalTransition FINAL_TRANSITION = new FinalTransition();
@@ -340,6 +340,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   @Override
   public String getQueue() {
     return this.queue;
+  }
+  
+  @Override
+  public void setQueue(String queue) {
+    this.queue = queue;
   }
 
   @Override
