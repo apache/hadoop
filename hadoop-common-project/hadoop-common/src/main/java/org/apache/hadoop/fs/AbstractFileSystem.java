@@ -729,6 +729,7 @@ public abstract class AbstractFileSystem {
   
   /**
    * Returns true if the file system supports symlinks, false otherwise.
+   * @return true if filesystem supports symlinks
    */
   public boolean supportsSymlinks() {
     return false;
@@ -744,8 +745,9 @@ public abstract class AbstractFileSystem {
   }
 
   /**
-   * The specification of this method matches that of  
-   * {@link FileContext#getLinkTarget(Path)};
+   * Partially resolves the path. This is used during symlink resolution in
+   * {@link FSLinkResolver}, and differs from the similarly named method
+   * {@link FileContext#getLinkTarget(Path)}.
    */
   public Path getLinkTarget(final Path f) throws IOException {
     /* We should never get here. Any file system that threw an

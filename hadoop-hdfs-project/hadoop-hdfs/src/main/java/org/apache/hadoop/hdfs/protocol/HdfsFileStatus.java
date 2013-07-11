@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.net.URI;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -237,5 +240,15 @@ public class HdfsFileStatus {
   
   final public int getChildrenNum() {
     return childrenNum;
+  }
+
+  final public FileStatus makeQualified(URI defaultUri, Path path) {
+    return new FileStatus(getLen(), isDir(), getReplication(),
+        getBlockSize(), getModificationTime(),
+        getAccessTime(),
+        getPermission(), getOwner(), getGroup(),
+        isSymlink() ? new Path(getSymlink()) : null,
+        (getFullPath(path)).makeQualified(
+            defaultUri, null)); // fully-qualify path
   }
 }

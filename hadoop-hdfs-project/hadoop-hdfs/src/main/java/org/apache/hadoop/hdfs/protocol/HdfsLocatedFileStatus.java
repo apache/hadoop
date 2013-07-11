@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.net.URI;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSUtil;
 
 /** 
  * Interface that represents the over the wire information
@@ -60,5 +65,17 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
 	
   public LocatedBlocks getBlockLocations() {
     return locations;
+  }
+
+  final public LocatedFileStatus makeQualifiedLocated(URI defaultUri,
+      Path path) {
+    return new LocatedFileStatus(getLen(), isDir(), getReplication(),
+        getBlockSize(), getModificationTime(),
+        getAccessTime(),
+        getPermission(), getOwner(), getGroup(),
+        isSymlink() ? new Path(getSymlink()) : null,
+        (getFullPath(path)).makeQualified(
+            defaultUri, null), // fully-qualify path
+        DFSUtil.locatedBlocks2Locations(getBlockLocations()));
   }
 }
