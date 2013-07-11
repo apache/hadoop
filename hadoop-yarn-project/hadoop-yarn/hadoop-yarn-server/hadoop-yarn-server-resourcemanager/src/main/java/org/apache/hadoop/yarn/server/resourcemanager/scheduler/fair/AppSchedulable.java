@@ -109,7 +109,12 @@ public class AppSchedulable extends Schedulable {
 
   @Override
   public Resource getMinShare() {
-    return Resources.createResource(0);
+    return Resources.none();
+  }
+  
+  @Override
+  public Resource getMaxShare() {
+    return Resources.unbounded();
   }
 
   /**

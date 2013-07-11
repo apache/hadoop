@@ -64,13 +64,8 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
   @Override
   public void computeShares(Collection<? extends Schedulable> schedulables,
       Resource totalResources) {
-    
-    // TODO: For now, set all fair shares to 0, because, in the context of DRF,
-    // it doesn't make sense to set a value for each resource.  YARN-736 should
-    // add in a sensible replacement.
-    
-    for (Schedulable schedulable : schedulables) {
-      schedulable.setFairShare(Resources.none());
+    for (ResourceType type : ResourceType.values()) {
+      ComputeFairShares.computeShares(schedulables, totalResources, type);
     }
   }
   

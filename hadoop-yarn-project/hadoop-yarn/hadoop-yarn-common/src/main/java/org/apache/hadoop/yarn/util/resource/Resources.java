@@ -60,6 +60,39 @@ public class Resources {
     }
     
   };
+  
+  private static final Resource UNBOUNDED = new Resource() {
+
+    @Override
+    public int getMemory() {
+      return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public void setMemory(int memory) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
+    public int getVirtualCores() {
+      return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public void setVirtualCores(int cores) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
+    public int compareTo(Resource o) {
+      int diff = 0 - o.getMemory();
+      if (diff == 0) {
+        diff = 0 - o.getVirtualCores();
+      }
+      return diff;
+    }
+    
+  };
 
   public static Resource createResource(int memory) {
     return createResource(memory, (memory > 0) ? 1 : 0);
@@ -74,6 +107,10 @@ public class Resources {
 
   public static Resource none() {
     return NONE;
+  }
+  
+  public static Resource unbounded() {
+    return UNBOUNDED;
   }
 
   public static Resource clone(Resource res) {

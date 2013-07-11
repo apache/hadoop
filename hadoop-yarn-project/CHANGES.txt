@@ -428,6 +428,8 @@ Release 2.1.0-beta - 2013-07-02
 
     YARN-866. Add test for class ResourceWeights. (ywskycn via tucu)
 
+    YARN-736. Add a multi-resource fair sharing metric. (sandyr via tucu)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it

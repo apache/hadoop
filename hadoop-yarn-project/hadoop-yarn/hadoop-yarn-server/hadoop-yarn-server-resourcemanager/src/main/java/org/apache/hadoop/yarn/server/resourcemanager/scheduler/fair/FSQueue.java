@@ -93,6 +93,11 @@ public abstract class FSQueue extends Schedulable implements Queue {
   public Resource getMinShare() {
     return queueMgr.getMinResources(getName());
   }
+  
+  @Override
+  public Resource getMaxShare() {
+    return queueMgr.getMaxResources(getName());
+  }
 
   @Override
   public long getStartTime() {

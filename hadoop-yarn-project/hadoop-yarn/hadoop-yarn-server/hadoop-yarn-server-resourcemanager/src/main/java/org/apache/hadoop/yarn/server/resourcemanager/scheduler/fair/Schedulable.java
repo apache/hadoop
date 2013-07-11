@@ -79,6 +79,8 @@ public abstract class Schedulable {
   /** Minimum Resource share assigned to the schedulable. */
   public abstract Resource getMinShare();
 
+  /** Maximum Resource share assigned to the schedulable. */
+  public abstract Resource getMaxShare();
 
   /** Job/queue weight in fair sharing. */
   public abstract ResourceWeights getWeights();

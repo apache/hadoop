@@ -73,9 +73,14 @@ public class FifoPolicy extends SchedulingPolicy {
   @Override
   public void computeShares(Collection<? extends Schedulable> schedulables,
       Resource totalResources) {
-    for (Schedulable sched : schedulables) {
-      sched.setFairShare(Resources.createResource(0));
+    Schedulable earliest = null;
+    for (Schedulable schedulable : schedulables) {
+      if (earliest == null ||
+          schedulable.getStartTime() < earliest.getStartTime()) {
+        earliest = schedulable;
+      }
     }
+    earliest.setFairShare(Resources.clone(totalResources));
   }
 
   @Override
