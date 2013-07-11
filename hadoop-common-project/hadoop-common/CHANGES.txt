@@ -139,6 +139,12 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9661. Allow metrics sources to be extended. (sandyr via tucu)
 
+    HADOOP-9370.  Write FSWrapper class to wrap FileSystem and FileContext for
+    better test coverage.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9355.  Abstract symlink tests to use either FileContext or
+    FileSystem.  (Andrew Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
