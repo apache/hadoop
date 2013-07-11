@@ -184,6 +184,8 @@ Release 2.1.0-beta - 2013-07-02
 
   OPTIMIZATIONS
 
+    HDFS-4465. Optimize datanode ReplicasMap and ReplicaInfo. (atm)
+
   BUG FIXES
 
     HDFS-4626. ClientProtocol#getLinkTarget should throw an exception for

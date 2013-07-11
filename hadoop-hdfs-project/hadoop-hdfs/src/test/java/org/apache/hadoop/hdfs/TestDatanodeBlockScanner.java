@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
@@ -436,5 +438,24 @@ public class TestDatanodeBlockScanner {
       Thread.sleep(100);
       blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
     }
+  }
+  
+  private static final String BASE_PATH = "/data/current/finalized";
+  
+  @Test
+  public void testReplicaInfoParsing() throws Exception {
+    testReplicaInfoParsingSingle(BASE_PATH, new int[0]);
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir1", new int[]{1});
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir43", new int[]{43});
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir1/subdir2/subdir3", new int[]{1, 2, 3});
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir1/subdir2/subdir43", new int[]{1, 2, 43});
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir1/subdir23/subdir3", new int[]{1, 23, 3});
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir13/subdir2/subdir3", new int[]{13, 2, 3});
+  }
+  
+  private static void testReplicaInfoParsingSingle(String subDirPath, int[] expectedSubDirs) {
+    File testFile = new File(subDirPath);
+    assertArrayEquals(expectedSubDirs, ReplicaInfo.parseSubDirs(testFile).subDirs);
+    assertEquals(BASE_PATH, ReplicaInfo.parseSubDirs(testFile).baseDirPath);
   }
 }
