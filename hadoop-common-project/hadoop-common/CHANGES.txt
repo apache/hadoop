@@ -107,6 +107,9 @@ Trunk (Unreleased)
 
     HADOOP-9432 Add support for markdown .md files in site documentation (stevel)
 
+    HADOOP-9186.  test-patch.sh should report build failure to JIRA.
+    (Binglin Chang via Colin Patrick McCabe)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -301,9 +304,6 @@ Release 2.2.0 - UNRELEASED
 
     HADOOP-9417.  Support for symlink resolution in LocalFileSystem /
     RawLocalFileSystem.  (Andrew Wang via Colin Patrick McCabe)
-
-    HADOOP-9186.  test-patch.sh should report build failure to JIRA.
-    (Binglin Chang via Colin Patrick McCabe)
 
   OPTIMIZATIONS
 
