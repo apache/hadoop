@@ -1390,17 +1390,19 @@ public class LeafQueue implements CSQueue {
     node.reserveResource(application, priority, rmContainer);
   }
 
-  private void unreserve(FiCaSchedulerApp application, Priority priority, 
+  private boolean unreserve(FiCaSchedulerApp application, Priority priority,
       FiCaSchedulerNode node, RMContainer rmContainer) {
     // Done with the reservation?
-    application.unreserve(node, priority);
-    node.unreserveResource(application);
-      
-      // Update reserved metrics
-    getMetrics().unreserveResource(
-        application.getUser(), rmContainer.getContainer().getResource());
-  }
+    if (application.unreserve(node, priority)) {
+      node.unreserveResource(application);
 
+      // Update reserved metrics
+      getMetrics().unreserveResource(
+          application.getUser(), rmContainer.getContainer().getResource());
+      return true;
+    }
+    return false;
+  }
 
   @Override
   public void completedContainer(Resource clusterResource, 
@@ -1411,37 +1413,40 @@ public class LeafQueue implements CSQueue {
       synchronized (this) {
 
         Container container = rmContainer.getContainer();
-        
+
+        boolean removed = false;
         // Inform the application & the node
         // Note: It's safe to assume that all state changes to RMContainer
         // happen under scheduler's lock... 
         // So, this is, in effect, a transaction across application & node
         if (rmContainer.getState() == RMContainerState.RESERVED) {
-          unreserve(application, rmContainer.getReservedPriority(), 
+          removed = unreserve(application, rmContainer.getReservedPriority(),
               node, rmContainer);
         } else {
-          application.containerCompleted(rmContainer, containerStatus, event);
+          removed =
+            application.containerCompleted(rmContainer, containerStatus, event);
           node.releaseContainer(container);
         }
 
-
         // Book-keeping
-        releaseResource(clusterResource, 
-            application, container.getResource());
-
-        LOG.info("completedContainer" +
-            " container=" + container +
-            " resource=" + container.getResource() +
-        		" queue=" + this + 
-            " usedCapacity=" + getUsedCapacity() +
-            " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() +
-            " used=" + usedResources + 
-            " cluster=" + clusterResource);
+        if (removed) {
+          releaseResource(clusterResource,
+              application, container.getResource());
+          LOG.info("completedContainer" +
+              " container=" + container +
+              " resource=" + container.getResource() +
+              " queue=" + this +
+              " usedCapacity=" + getUsedCapacity() +
+              " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() +
+              " used=" + usedResources +
+              " cluster=" + clusterResource);
+          // Inform the parent queue
+          getParent().completedContainer(clusterResource, application,
+              node, rmContainer, null, event);
+        }
       }
 
-      // Inform the parent queue
-      getParent().completedContainer(clusterResource, application, 
-          node, rmContainer, null, event);
+
     }
   }
 
@@ -1588,5 +1593,19 @@ public class LeafQueue implements CSQueue {
     getParent().recoverContainer(clusterResource, application, container);
 
   }
-  
+
+  // need to access the list of apps from the preemption monitor
+  public Set<FiCaSchedulerApp> getApplications() {
+    return Collections.unmodifiableSet(activeApplications);
+  }
+
+  // return a single Resource capturing the overal amount of pending resources
+  public Resource getTotalResourcePending() {
+    Resource ret = BuilderUtils.newResource(0, 0);
+    for (FiCaSchedulerApp f : activeApplications) {
+      Resources.addTo(ret, f.getTotalPendingRequests());
+    }
+    return ret;
+  }
+
 }

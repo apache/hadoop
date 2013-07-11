@@ -132,6 +132,18 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "scheduler.client.thread-count";
   public static final int DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT = 50;
 
+  /**
+   * Enable periodic monitor threads.
+   * @see #RM_SCHEDULER_MONITOR_POLICIES
+   */
+  public static final String RM_SCHEDULER_ENABLE_MONITORS =
+    RM_PREFIX + "scheduler.monitor.enable";
+  public static final boolean DEFAULT_RM_SCHEDULER_ENABLE_MONITORS = false;
+
+  /** List of SchedulingEditPolicy classes affecting the scheduler. */
+  public static final String RM_SCHEDULER_MONITOR_POLICIES =
+    RM_PREFIX + "scheduler.monitor.policies";
+
   /** The address of the RM web application.*/
   public static final String RM_WEBAPP_ADDRESS = 
     RM_PREFIX + "webapp.address";

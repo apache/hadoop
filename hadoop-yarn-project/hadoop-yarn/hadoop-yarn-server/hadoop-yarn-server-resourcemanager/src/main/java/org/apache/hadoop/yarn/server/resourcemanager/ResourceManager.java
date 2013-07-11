@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -48,6 +48,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -61,9 +63,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -237,6 +243,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
       throw new RuntimeException("Failed to initialize scheduler", ioe);
     }
 
+    // creating monitors that handle preemption
+    createPolicyMonitors();
+
     masterService = createApplicationMasterService();
     addService(masterService) ;
 
@@ -315,7 +324,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     } catch (ClassNotFoundException e) {
       throw new YarnRuntimeException("Could not instantiate Scheduler: "
           + schedulerClassName, e);
-    }  }
+    }
+  }
 
   protected ApplicationMasterLauncher createAMLauncher() {
     return new ApplicationMasterLauncher(this.rmContext);
@@ -472,6 +482,36 @@ public class ResourceManager extends CompositeService implements Recoverable {
           LOG.error("Error in handling event type " + event.getType()
               + " for application " + appID, t);
         }
+      }
+    }
+  }
+
+  @Private
+  public static final class
+    RMContainerPreemptEventDispatcher
+      implements EventHandler<ContainerPreemptEvent> {
+
+    private final PreemptableResourceScheduler scheduler;
+
+    public RMContainerPreemptEventDispatcher(
+        PreemptableResourceScheduler scheduler) {
+      this.scheduler = scheduler;
+    }
+
+    @Override
+    public void handle(ContainerPreemptEvent event) {
+      ApplicationAttemptId aid = event.getAppId();
+      RMContainer container = event.getContainer();
+      switch (event.getType()) {
+      case DROP_RESERVATION:
+        scheduler.dropContainerReservation(container);
+        break;
+      case PREEMPT_CONTAINER:
+        scheduler.preemptContainer(aid, container);
+        break;
+      case KILL_CONTAINER:
+        scheduler.killContainer(container);
+        break;
       }
     }
   }
@@ -676,7 +716,37 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected ApplicationMasterService createApplicationMasterService() {
     return new ApplicationMasterService(this.rmContext, scheduler);
   }
-  
+
+  protected void createPolicyMonitors() {
+    if (scheduler instanceof PreemptableResourceScheduler
+        && conf.getBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_ENABLE_MONITORS)) {
+      LOG.info("Loading policy monitors");
+      List<SchedulingEditPolicy> policies = conf.getInstances(
+              YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+              SchedulingEditPolicy.class);
+      if (policies.size() > 0) {
+        this.rmDispatcher.register(ContainerPreemptEventType.class,
+          new RMContainerPreemptEventDispatcher(
+            (PreemptableResourceScheduler) scheduler));
+        for (SchedulingEditPolicy policy : policies) {
+          LOG.info("LOADING SchedulingEditPolicy:" + policy.getPolicyName());
+          policy.init(conf, this.rmContext.getDispatcher().getEventHandler(),
+              (PreemptableResourceScheduler) scheduler);
+          // periodically check whether we need to take action to guarantee
+          // constraints
+          SchedulingMonitor mon = new SchedulingMonitor(policy);
+          addService(mon);
+
+        }
+      } else {
+        LOG.warn("Policy monitors configured (" +
+            YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS +
+            ") but none specified (" +
+            YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES + ")");
+      }
+    }
+  }
 
   protected AdminService createAdminService(
       ClientRMService clientRMService, 

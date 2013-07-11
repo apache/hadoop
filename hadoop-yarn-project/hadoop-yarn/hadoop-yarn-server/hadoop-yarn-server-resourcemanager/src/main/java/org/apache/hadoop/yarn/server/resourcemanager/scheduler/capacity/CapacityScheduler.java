@@ -61,8 +61,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
@@ -83,8 +83,9 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @LimitedPrivate("yarn")
 @Evolving
 @SuppressWarnings("unchecked")
-public class CapacityScheduler 
-implements ResourceScheduler, CapacitySchedulerContext, Configurable {
+public class CapacityScheduler
+  implements PreemptableResourceScheduler, CapacitySchedulerContext,
+             Configurable {
 
   private static final Log LOG = LogFactory.getLog(CapacityScheduler.class);
 
@@ -525,8 +526,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     
     // Sanity check
     SchedulerUtils.normalizeRequests(
-        ask, calculator, getClusterResources(), minimumAllocation,
-        maximumAllocation);
+        ask, getResourceCalculator(), getClusterResources(),
+        getMinimumResourceCapability(), maximumAllocation);
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
@@ -578,9 +579,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
           " #ask=" + ask.size());
       }
 
-      return new Allocation(
-          application.pullNewlyAllocatedContainers(), 
-          application.getHeadroom());
+      return application.getAllocation(getResourceCalculator(),
+                   clusterResource, getMinimumResourceCapability());
     }
   }
 
@@ -812,7 +812,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     Container container = rmContainer.getContainer();
     
     // Get the application for the finished container
-    ApplicationAttemptId applicationAttemptId = container.getId().getApplicationAttemptId();
+    ApplicationAttemptId applicationAttemptId =
+      container.getId().getApplicationAttemptId();
     FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Container " + container + " of" +
@@ -869,5 +870,41 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     FiCaSchedulerNode node = getNode(nodeId);
     return node == null ? null : new SchedulerNodeReport(node);
   }
-  
+
+  @Override
+  public void dropContainerReservation(RMContainer container) {
+    if(LOG.isDebugEnabled()){
+      LOG.debug("DROP_RESERVATION:" + container.toString());
+    }
+    completedContainer(container,
+        SchedulerUtils.createAbnormalContainerStatus(
+            container.getContainerId(),
+            SchedulerUtils.UNRESERVED_CONTAINER),
+        RMContainerEventType.KILL);
+  }
+
+  @Override
+  public void preemptContainer(ApplicationAttemptId aid, RMContainer cont) {
+    if(LOG.isDebugEnabled()){
+      LOG.debug("PREEMPT_CONTAINER: application:" + aid.toString() +
+          " container: " + cont.toString());
+    }
+    FiCaSchedulerApp app = applications.get(aid);
+    if (app != null) {
+      app.addPreemptContainer(cont.getContainerId());
+    }
+  }
+
+  @Override
+  public void killContainer(RMContainer cont) {
+    if(LOG.isDebugEnabled()){
+      LOG.debug("KILL_CONTAINER: container" + cont.toString());
+    }
+    completedContainer(cont,
+        SchedulerUtils.createAbnormalContainerStatus(
+            cont.getContainerId(),"Container being forcibly preempted:"
+        + cont.getContainerId()),
+        RMContainerEventType.KILL);
+  }
+
 }

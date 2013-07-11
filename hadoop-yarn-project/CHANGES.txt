@@ -432,6 +432,9 @@ Release 2.1.0-beta - 2013-07-02
 
     YARN-883. Expose Fair Scheduler-specific queue metrics. (sandyr via tucu)
 
+    YARN-569. Add support for requesting and enforcing preemption requests via
+    a capacity monitor. (Carlo Curino, cdouglas)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
