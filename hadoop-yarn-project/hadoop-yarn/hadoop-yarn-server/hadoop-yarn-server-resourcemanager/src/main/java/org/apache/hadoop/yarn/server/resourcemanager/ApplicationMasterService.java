@@ -411,6 +411,19 @@ public class ApplicationMasterService extends AbstractService implements
       allocateResponse.setResponseId(lastResponse.getResponseId() + 1);
       allocateResponse.setAvailableResources(allocation.getResourceLimit());
       
+      allocateResponse.setNumClusterNodes(this.rScheduler.getNumClusterNodes());
+   
+      // add preemption to the allocateResponse message (if any)
+      allocateResponse.setPreemptionMessage(generatePreemptionMessage(allocation));
+
+      // Adding NMTokens for allocated containers.
+      if (!allocation.getContainers().isEmpty()) {
+        allocateResponse.setNMTokens(rmContext.getNMTokenSecretManager()
+            .createAndGetNMTokens(app.getUser(), appAttemptId,
+                allocation.getContainers()));
+      }
+
+      // before returning response, verify in sync
       AllocateResponse oldResponse =
           responseMap.put(appAttemptId, allocateResponse);
       if (oldResponse == null) {
@@ -421,18 +434,7 @@ public class ApplicationMasterService extends AbstractService implements
         LOG.error(message);
         return resync;
       }
-      
-      allocateResponse.setNumClusterNodes(this.rScheduler.getNumClusterNodes());
-   
-      // add preemption to the allocateResponse message (if any)
-      allocateResponse.setPreemptionMessage(generatePreemptionMessage(allocation));
-      
-      // Adding NMTokens for allocated containers.
-      if (!allocation.getContainers().isEmpty()) {
-        allocateResponse.setNMTokens(rmContext.getNMTokenSecretManager()
-            .createAndGetNMTokens(app.getUser(), appAttemptId,
-                allocation.getContainers()));
-      }
+
       return allocateResponse;
     }
   }

@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class Priority implements Comparable<Priority> {
 
+  public static final Priority UNDEFINED = newInstance(-1);
+
   @Public
   @Stable
   public static Priority newInstance(int p) {

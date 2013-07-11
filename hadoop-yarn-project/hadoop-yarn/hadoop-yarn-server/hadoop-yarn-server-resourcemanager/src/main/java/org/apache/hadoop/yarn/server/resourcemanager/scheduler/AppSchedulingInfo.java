@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -203,6 +204,14 @@ public class AppSchedulingInfo {
   synchronized public Map<String, ResourceRequest> getResourceRequests(
       Priority priority) {
     return requests.get(priority);
+  }
+
+  synchronized public List<ResourceRequest> getAllResourceRequests() {
+    List<ResourceRequest> ret = new ArrayList<ResourceRequest>();
+    for (Map<String, ResourceRequest> r : requests.values()) {
+      ret.addAll(r.values());
+    }
+    return ret;
   }
 
   synchronized public ResourceRequest getResourceRequest(Priority priority,
