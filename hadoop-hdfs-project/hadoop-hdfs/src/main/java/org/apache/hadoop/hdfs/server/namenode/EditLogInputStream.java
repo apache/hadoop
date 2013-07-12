@@ -33,7 +33,18 @@ import java.io.IOException;
 @InterfaceStability.Evolving
 public abstract class EditLogInputStream implements Closeable {
   private FSEditLogOp cachedOp = null; 
-  
+
+  /**
+   * Returns the name of the currently active underlying stream.  The default
+   * implementation returns the same value as getName unless overridden by the
+   * subclass.
+   * 
+   * @return String name of the currently active underlying stream
+   */
+  public String getCurrentStreamName() {
+    return getName();
+  }
+
   /** 
    * @return the name of the EditLogInputStream
    */
@@ -157,7 +168,9 @@ public abstract class EditLogInputStream implements Closeable {
   public abstract long getPosition();
 
   /**
-   * Return the size of the current edits log.
+   * Return the size of the current edits log or -1 if unknown.
+   * 
+   * @return long size of the current edits log or -1 if unknown
    */
   public abstract long length() throws IOException;
   

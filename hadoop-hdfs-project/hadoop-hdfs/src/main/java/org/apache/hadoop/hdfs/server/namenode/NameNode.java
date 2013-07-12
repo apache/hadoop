@@ -59,6 +59,8 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyState;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgressMetrics;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -262,6 +264,10 @@ public class NameNode {
   }
 
   static NameNodeMetrics metrics;
+  private static final StartupProgress startupProgress = new StartupProgress();
+  static {
+    StartupProgressMetrics.register(startupProgress);
+  }
 
   /** Return the {@link FSNamesystem} object.
    * @return {@link FSNamesystem} object.
@@ -281,7 +287,16 @@ public class NameNode {
   public static NameNodeMetrics getNameNodeMetrics() {
     return metrics;
   }
-  
+
+  /**
+   * Returns object used for reporting namenode startup progress.
+   * 
+   * @return StartupProgress for reporting namenode startup progress
+   */
+  public static StartupProgress getStartupProgress() {
+    return startupProgress;
+  }
+
   public static InetSocketAddress getAddress(String address) {
     return NetUtils.createSocketAddr(address, DEFAULT_PORT);
   }
@@ -434,15 +449,19 @@ public class NameNode {
     loginAsNameNodeUser(conf);
 
     NameNode.initMetrics(conf, this.getRole());
+
+    if (NamenodeRole.NAMENODE == role) {
+      startHttpServer(conf);
+      validateConfigurationSettingsOrAbort(conf);
+    }
     loadNamesystem(conf);
 
     rpcServer = createRpcServer(conf);
-    
-    try {
-      validateConfigurationSettings(conf);
-    } catch (IOException e) {
-      LOG.fatal(e.toString());
-      throw e;
+    if (NamenodeRole.NAMENODE == role) {
+      httpServer.setNameNodeAddress(getNameNodeAddress());
+      httpServer.setFSImage(getFSImage());
+    } else {
+      validateConfigurationSettingsOrAbort(conf);
     }
 
     startCommonServices(conf);
@@ -479,10 +498,31 @@ public class NameNode {
     } 
   }
 
+  /**
+   * Validate NameNode configuration.  Log a fatal error and abort if
+   * configuration is invalid.
+   * 
+   * @param conf Configuration to validate
+   * @throws IOException thrown if conf is invalid
+   */
+  private void validateConfigurationSettingsOrAbort(Configuration conf)
+      throws IOException {
+    try {
+      validateConfigurationSettings(conf);
+    } catch (IOException e) {
+      LOG.fatal(e.toString());
+      throw e;
+    }
+  }
+
   /** Start the services common to active and standby states */
   private void startCommonServices(Configuration conf) throws IOException {
     namesystem.startCommonServices(conf, haContext);
-    startHttpServer(conf);
+    if (NamenodeRole.NAMENODE != role) {
+      startHttpServer(conf);
+      httpServer.setNameNodeAddress(getNameNodeAddress());
+      httpServer.setFSImage(getFSImage());
+    }
     rpcServer.start();
     plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,
         ServicePlugin.class);
@@ -550,6 +590,7 @@ public class NameNode {
   private void startHttpServer(final Configuration conf) throws IOException {
     httpServer = new NameNodeHttpServer(conf, this, getHttpServerAddress(conf));
     httpServer.start();
+    httpServer.setStartupProgress(startupProgress);
     setHttpServerAddress(conf);
   }
   
