@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -855,6 +856,11 @@ class Journal implements Closeable {
         new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws IOException {
+            // We may have lost our ticket since last checkpoint, log in again, just in case
+            if (UserGroupInformation.isSecurityEnabled()) {
+              UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
+            }
+
             boolean success = false;
             try {
               TransferFsImage.doGetUrl(url, localPaths, storage, true);
