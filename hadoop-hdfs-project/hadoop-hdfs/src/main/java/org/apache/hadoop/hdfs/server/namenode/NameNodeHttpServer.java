@@ -194,6 +194,8 @@ public class NameNodeHttpServer {
   }
 
   private static void setupServlets(HttpServer httpServer, Configuration conf) {
+    httpServer.addInternalServlet("startupProgress",
+        StartupProgressServlet.PATH_SPEC, StartupProgressServlet.class);
     httpServer.addInternalServlet("getDelegationToken",
         GetDelegationTokenServlet.PATH_SPEC, 
         GetDelegationTokenServlet.class, true);
