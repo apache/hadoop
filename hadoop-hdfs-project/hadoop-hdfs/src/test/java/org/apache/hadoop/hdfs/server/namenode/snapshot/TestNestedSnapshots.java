@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SNAPSHOT_LIMIT;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Random;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -132,13 +130,6 @@ public class TestNestedSnapshots {
     print("delete snapshot " + rootSnapshot);
     hdfs.disallowSnapshot(rootPath);
     print("disallow snapshot " + rootStr);
-    try {
-      hdfs.disallowSnapshot(rootPath);
-      fail("Expect snapshot exception when disallowing snapshot on root again");
-    } catch (SnapshotException e) {
-      GenericTestUtils.assertExceptionContains(
-          "Root is not a snapshottable directory", e);
-    }
     
     //change foo to non-snapshottable
     hdfs.deleteSnapshot(foo, s1name);

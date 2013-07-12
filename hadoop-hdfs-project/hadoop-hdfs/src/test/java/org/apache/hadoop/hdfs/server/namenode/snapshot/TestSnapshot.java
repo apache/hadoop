@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree.Node;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer;
@@ -373,6 +375,71 @@ public class TestSnapshot {
       GenericTestUtils.assertExceptionContains(
           "Directory is not a snapshottable directory: " + dir, e);
     }
+  }
+  
+  /**
+   * Test multiple calls of allowSnapshot and disallowSnapshot, to make sure 
+   * they are idempotent
+   */
+  @Test
+  public void testAllowAndDisallowSnapshot() throws Exception {
+    final Path dir = new Path("/dir");
+    final Path file0 = new Path(dir, "file0");
+    final Path file1 = new Path(dir, "file1");
+    DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+    
+    INodeDirectory dirNode = fsdir.getINode4Write(dir.toString()).asDirectory();
+    assertFalse(dirNode.isSnapshottable());
+    
+    hdfs.allowSnapshot(dir);
+    dirNode = fsdir.getINode4Write(dir.toString()).asDirectory();
+    assertTrue(dirNode.isSnapshottable());
+    // call allowSnapshot again
+    hdfs.allowSnapshot(dir);
+    dirNode = fsdir.getINode4Write(dir.toString()).asDirectory();
+    assertTrue(dirNode.isSnapshottable());
+    
+    // disallowSnapshot on dir
+    hdfs.disallowSnapshot(dir);
+    dirNode = fsdir.getINode4Write(dir.toString()).asDirectory();
+    assertFalse(dirNode.isSnapshottable());
+    // do it again
+    hdfs.disallowSnapshot(dir);
+    dirNode = fsdir.getINode4Write(dir.toString()).asDirectory();
+    assertFalse(dirNode.isSnapshottable());
+    
+    // same process on root
+    
+    final Path root = new Path("/");
+    INodeDirectory rootNode = fsdir.getINode4Write(root.toString())
+        .asDirectory();
+    assertTrue(rootNode.isSnapshottable());
+    // root is snapshottable dir, but with 0 snapshot quota
+    assertEquals(0, ((INodeDirectorySnapshottable) rootNode).getSnapshotQuota());
+    
+    hdfs.allowSnapshot(root);
+    rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
+    assertTrue(rootNode.isSnapshottable());
+    assertEquals(INodeDirectorySnapshottable.SNAPSHOT_LIMIT,
+        ((INodeDirectorySnapshottable) rootNode).getSnapshotQuota());
+    // call allowSnapshot again
+    hdfs.allowSnapshot(root);
+    rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
+    assertTrue(rootNode.isSnapshottable());
+    assertEquals(INodeDirectorySnapshottable.SNAPSHOT_LIMIT,
+        ((INodeDirectorySnapshottable) rootNode).getSnapshotQuota());
+    
+    // disallowSnapshot on dir
+    hdfs.disallowSnapshot(root);
+    rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
+    assertTrue(rootNode.isSnapshottable());
+    assertEquals(0, ((INodeDirectorySnapshottable) rootNode).getSnapshotQuota());
+    // do it again
+    hdfs.disallowSnapshot(root);
+    rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
+    assertTrue(rootNode.isSnapshottable());
+    assertEquals(0, ((INodeDirectorySnapshottable) rootNode).getSnapshotQuota());
   }
 
   /**
