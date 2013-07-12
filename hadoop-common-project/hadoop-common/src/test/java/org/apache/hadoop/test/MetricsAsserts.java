@@ -236,6 +236,25 @@ public class MetricsAsserts {
     return captor.getValue();
   }
 
+   /**
+   * Assert a float gauge metric as expected
+   * @param name  of the metric
+   * @param expected  value of the metric
+   * @param rb  the record builder mock used to getMetrics
+   */
+  public static void assertGauge(String name, float expected,
+                                 MetricsRecordBuilder rb) {
+    Assert.assertEquals("Bad value for metric " + name,
+        expected, getFloatGauge(name, rb), EPSILON);
+  }
+
+  public static float getFloatGauge(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<Float> captor = ArgumentCaptor.forClass(Float.class);
+    verify(rb, atLeast(0)).addGauge(eqName(info(name, "")), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
+  }
+
   /**
    * Check that this metric was captured exactly once.
    */
