@@ -305,6 +305,9 @@ Release 2.2.0 - UNRELEASED
     HADOOP-9417.  Support for symlink resolution in LocalFileSystem /
     RawLocalFileSystem.  (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9703.  org.apache.hadoop.ipc.Client leaks threads on stop.
+    (Tsuyoshi OZAWA vi Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
