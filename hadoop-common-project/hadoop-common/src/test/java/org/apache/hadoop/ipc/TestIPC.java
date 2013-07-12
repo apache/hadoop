@@ -562,6 +562,24 @@ public class TestIPC {
     assertFalse(noChanged ^ serviceClass == serviceClass2);
     client.stop();
   }
+  
+  @Test(timeout=30000, expected=IOException.class)
+  public void testIpcAfterStopping() throws IOException, InterruptedException {
+    // start server
+    Server server = new TestServer(5, false);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+
+    // start client
+    Client client = new Client(LongWritable.class, conf);
+    client.call(new LongWritable(RANDOM.nextLong()),
+        addr, null, null, MIN_SLEEP_TIME, 0, conf);
+    client.stop();
+ 
+    // This call should throw IOException.
+    client.call(new LongWritable(RANDOM.nextLong()),
+        addr, null, null, MIN_SLEEP_TIME, 0, conf);
+  }
 
   /**
    * Check that file descriptors aren't leaked by starting
