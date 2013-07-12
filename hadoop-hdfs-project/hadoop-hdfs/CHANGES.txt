@@ -958,6 +958,8 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4797. BlockScanInfo does not override equals(..) and hashCode()
     consistently.  (szetszwo)
 
+    HDFS-4978. Make disallowSnapshot idempotent. (jing9)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES

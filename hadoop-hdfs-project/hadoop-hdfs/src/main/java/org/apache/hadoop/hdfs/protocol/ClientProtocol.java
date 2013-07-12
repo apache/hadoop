@@ -1041,6 +1041,7 @@ public interface ClientProtocol {
    * @param snapshotRoot the directory to be snapped
    * @throws IOException on error
    */
+  @Idempotent
   public void allowSnapshot(String snapshotRoot)
       throws IOException;
     
@@ -1049,6 +1050,7 @@ public interface ClientProtocol {
    * @param snapshotRoot the directory to disallow snapshot
    * @throws IOException on error
    */
+  @Idempotent
   public void disallowSnapshot(String snapshotRoot)
       throws IOException;
   
@@ -1067,6 +1069,7 @@ public interface ClientProtocol {
    * @return The difference report represented as a {@link SnapshotDiffReport}.
    * @throws IOException on error
    */
+  @Idempotent
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,
       String fromSnapshot, String toSnapshot) throws IOException;
 }
