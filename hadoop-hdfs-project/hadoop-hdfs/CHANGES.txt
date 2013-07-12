@@ -215,6 +215,8 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4645. Move from randomly generated block ID to sequentially generated
     block ID.  (Arpit Agarwal via szetszwo)
 
+    HDFS-4912. Cleanup FSNamesystem#startFileInternal. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-4465. Optimize datanode ReplicasMap and ReplicaInfo. (atm)
