@@ -70,6 +70,8 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4762 Provide HDFS based NFSv3 and Mountd implementation (brandonli)
 
+    HDFS-4372. Track NameNode startup progress. (cnauroth)
+    
   IMPROVEMENTS
 
     HDFS-4461. DirectoryScanner: volume path prefix takes up memory for every

@@ -123,6 +123,11 @@ class RedundantEditLogInputStream extends EditLogInputStream {
   }
 
   @Override
+  public String getCurrentStreamName() {
+    return streams[curIdx].getCurrentStreamName();
+  }
+
+  @Override
   public String getName() {
     StringBuilder bld = new StringBuilder();
     String prefix = "";

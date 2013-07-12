@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.web.AuthFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
@@ -55,6 +56,7 @@ public class NameNodeHttpServer {
   public static final String NAMENODE_ADDRESS_ATTRIBUTE_KEY = "name.node.address";
   public static final String FSIMAGE_ATTRIBUTE_KEY = "name.system.image";
   protected static final String NAMENODE_ATTRIBUTE_KEY = "name.node";
+  public static final String STARTUP_PROGRESS_ATTRIBUTE_KEY = "startup.progress";
   
   public NameNodeHttpServer(
       Configuration conf,
@@ -146,9 +148,6 @@ public class NameNodeHttpServer {
         .getPort());
     }
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
-    httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY,
-        NetUtils.getConnectAddress(nn.getNameNodeAddress()));
-    httpServer.setAttribute(FSIMAGE_ATTRIBUTE_KEY, nn.getFSImage());
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     setupServlets(httpServer, conf);
     httpServer.start();
@@ -164,6 +163,34 @@ public class NameNodeHttpServer {
 
   public InetSocketAddress getHttpAddress() {
     return httpAddress;
+  }
+
+  /**
+   * Sets fsimage for use by servlets.
+   * 
+   * @param fsImage FSImage to set
+   */
+  public void setFSImage(FSImage fsImage) {
+    httpServer.setAttribute(FSIMAGE_ATTRIBUTE_KEY, fsImage);
+  }
+
+  /**
+   * Sets address of namenode for use by servlets.
+   * 
+   * @param nameNodeAddress InetSocketAddress to set
+   */
+  public void setNameNodeAddress(InetSocketAddress nameNodeAddress) {
+    httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY,
+        NetUtils.getConnectAddress(nameNodeAddress));
+  }
+
+  /**
+   * Sets startup progress of namenode for use by servlets.
+   * 
+   * @param prog StartupProgress to set
+   */
+  public void setStartupProgress(StartupProgress prog) {
+    httpServer.setAttribute(STARTUP_PROGRESS_ATTRIBUTE_KEY, prog);
   }
 
   private static void setupServlets(HttpServer httpServer, Configuration conf) {
@@ -206,5 +233,16 @@ public class NameNodeHttpServer {
       ServletContext context) {
     return (InetSocketAddress)context.getAttribute(
         NAMENODE_ADDRESS_ATTRIBUTE_KEY);
+  }
+
+  /**
+   * Returns StartupProgress associated with ServletContext.
+   * 
+   * @param context ServletContext to get
+   * @return StartupProgress associated with context
+   */
+  public static StartupProgress getStartupProgressFromContext(
+      ServletContext context) {
+    return (StartupProgress)context.getAttribute(STARTUP_PROGRESS_ATTRIBUTE_KEY);
   }
 }
