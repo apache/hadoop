@@ -130,7 +130,7 @@ public class TestLeaseRecovery2 {
     size = AppendTestUtil.nextInt(FILE_SIZE);
     filepath = createFile("/immediateRecoverLease-longlease", size, false);
 
-    // test recoverLese from a different client
+    // test recoverLease from a different client
     recoverLease(filepath, null);
     verifyFile(dfs, filepath, actual, size);
 
