@@ -642,6 +642,9 @@ Release 2.1.0-beta - 2013-07-02
     from application masters that have not registered (Mayank Bansal &
     Abhishek Kapoor via bikas)
 
+    YARN-541. getAllocatedContainers() is not returning all the allocated
+    containers (bikas)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
