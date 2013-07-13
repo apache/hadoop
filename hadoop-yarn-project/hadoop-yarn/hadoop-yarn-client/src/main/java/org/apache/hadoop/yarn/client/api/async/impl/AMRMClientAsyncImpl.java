@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -92,6 +93,7 @@ extends AMRMClientAsync<T> {
   
   @Override
   protected void serviceStart() throws Exception {
+    handlerThread.setDaemon(true);
     handlerThread.start();
     client.start();
     super.serviceStart();
@@ -99,27 +101,19 @@ extends AMRMClientAsync<T> {
   
   /**
    * Tells the heartbeat and handler threads to stop and waits for them to
-   * terminate.  Calling this method from the callback handler thread would cause
-   * deadlock, and thus should be avoided.
+   * terminate.
    */
   @Override
   protected void serviceStop() throws Exception {
-    if (Thread.currentThread() == handlerThread) {
-      throw new YarnRuntimeException("Cannot call stop from callback handler thread!");
-    }
     keepRunning = false;
+    heartbeatThread.interrupt();
     try {
       heartbeatThread.join();
     } catch (InterruptedException ex) {
       LOG.error("Error joining with heartbeat thread", ex);
     }
     client.stop();
-    try {
-      handlerThread.interrupt();
-      handlerThread.join();
-    } catch (InterruptedException ex) {
-      LOG.error("Error joining with hander thread", ex);
-    }
+    handlerThread.interrupt();
     super.serviceStop();
   }
   
@@ -248,6 +242,10 @@ extends AMRMClientAsync<T> {
           while (true) {
             try {
               responseQueue.put(response);
+              if (response.getAMCommand() == AMCommand.AM_RESYNC
+                  || response.getAMCommand() == AMCommand.AM_SHUTDOWN) {
+                return;
+              }
               break;
             } catch (InterruptedException ex) {
               LOG.info("Interrupted while waiting to put on response queue", ex);
@@ -285,23 +283,17 @@ extends AMRMClientAsync<T> {
         }
 
         if (response.getAMCommand() != null) {
-          boolean stop = false;
           switch(response.getAMCommand()) {
           case AM_RESYNC:
           case AM_SHUTDOWN:
             handler.onShutdownRequest();
             LOG.info("Shutdown requested. Stopping callback.");
-            stop = true;
-            break;
+            return;
           default:
             String msg =
                   "Unhandled value of AMCommand: " + response.getAMCommand();
             LOG.error(msg);
             throw new YarnRuntimeException(msg);
-          }
-          if(stop) {
-            // should probably stop heartbeating also YARN-763
-            break;
           }
         }
         List<NodeReport> updatedNodes = response.getUpdatedNodes();
