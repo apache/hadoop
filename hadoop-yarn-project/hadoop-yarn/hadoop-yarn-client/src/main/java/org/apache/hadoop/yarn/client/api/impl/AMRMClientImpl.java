@@ -230,7 +230,14 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     
     try {
       synchronized (this) {
-        askList = new ArrayList<ResourceRequest>(ask);
+        askList = new ArrayList<ResourceRequest>(ask.size());
+        for(ResourceRequest r : ask) {
+          // create a copy of ResourceRequest as we might change it while the 
+          // RPC layer is using it to send info across
+          askList.add(ResourceRequest.newInstance(r.getPriority(),
+              r.getResourceName(), r.getCapability(), r.getNumContainers(),
+              r.getRelaxLocality()));
+        }
         releaseList = new ArrayList<ContainerId>(release);
         // optimistically clear this collection assuming no RPC failure
         ask.clear();
