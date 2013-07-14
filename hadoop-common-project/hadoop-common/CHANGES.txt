@@ -287,6 +287,8 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9241. DU refresh interval is not configurable (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
