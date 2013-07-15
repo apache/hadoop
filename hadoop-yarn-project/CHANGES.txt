@@ -680,6 +680,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-894. NodeHealthScriptRunner timeout checking is inaccurate on Windows.
     (Chuan Liu via cnauroth)
 
+    YARN-909. Disable TestLinuxContainerExecutorWithMocks on Windows. (Chuan Liu
+    via cnauroth)
+
     YARN-795. Fair scheduler queue metrics should subtract allocated vCores from 
     available vCores. (ywskycn via tucu) 
 
