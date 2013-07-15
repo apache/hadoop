@@ -208,8 +208,9 @@ public class INodeFile extends INode {
   
   long diskspaceConsumed(Block[] blkArr) {
     long size = 0;
-    if(blkArr == null) 
+    if(blkArr == null || blocks.length == 0) { 
       return 0;
+    }
     
     for (Block blk : blkArr) {
       if (blk != null) {
@@ -219,9 +220,10 @@ public class INodeFile extends INode {
     /* If the last block is being written to, use prefferedBlockSize
      * rather than the actual block size.
      */
-    if (blkArr.length > 0 && blkArr[blkArr.length-1] != null && 
-        isUnderConstruction()) {
-      size += getPreferredBlockSize() - blkArr[blkArr.length-1].getNumBytes();
+    final int last = blkArr.length - 1;
+    if (blkArr.length > 0 && blkArr[last] != null && 
+        blkArr[last] instanceof BlockInfoUnderConstruction) {
+      size += getPreferredBlockSize() - blkArr[last].getNumBytes();
     }
     return size * getReplication();
   }
