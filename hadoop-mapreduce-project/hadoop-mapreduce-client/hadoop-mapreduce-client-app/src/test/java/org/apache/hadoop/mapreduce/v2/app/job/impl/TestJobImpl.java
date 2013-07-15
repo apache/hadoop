@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -84,6 +85,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 
 /**
@@ -330,6 +332,39 @@ public class TestJobImpl {
     assertJobState(job, JobStateInternal.KILLED);
     dispatcher.stop();
     commitHandler.stop();
+  }
+
+  @Test
+  public void testAbortJobCalledAfterKillingTasks() throws IOException,
+    InterruptedException {
+    Configuration conf = new Configuration();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
+    conf.set(MRJobConfig.MR_AM_COMMITTER_CANCEL_TIMEOUT_MS, "1000");
+    InlineDispatcher dispatcher = new InlineDispatcher();
+    dispatcher.init(conf);
+    dispatcher.start();
+    OutputCommitter committer = Mockito.mock(OutputCommitter.class);
+    CommitterEventHandler commitHandler =
+        createCommitterEventHandler(dispatcher, committer);
+    commitHandler.init(conf);
+    commitHandler.start();
+    JobImpl job = createRunningStubbedJob(conf, dispatcher, 2);
+
+    //Fail one task. This should land the JobImpl in the FAIL_WAIT state
+    job.handle(new JobTaskEvent(
+      MRBuilderUtils.newTaskId(job.getID(), 1, TaskType.MAP),
+      TaskState.FAILED));
+    //Verify abort job hasn't been called
+    Mockito.verify(committer, Mockito.never())
+      .abortJob((JobContext) Mockito.any(), (State) Mockito.any());
+    assertJobState(job, JobStateInternal.FAIL_WAIT);
+
+    //Verify abortJob is called once and the job failed
+    Mockito.verify(committer, Mockito.timeout(2000).times(1))
+      .abortJob((JobContext) Mockito.any(), (State) Mockito.any());
+    assertJobState(job, JobStateInternal.FAILED);
+
+    dispatcher.stop();
   }
 
   @Test(timeout=20000)
