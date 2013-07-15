@@ -30,6 +30,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -43,6 +45,7 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.StaticMapping;
@@ -69,6 +72,7 @@ public class MiniDFSCluster {
     }
   }
 
+  private static final Log LOG = LogFactory.getLog(MiniDFSCluster.class);
   private Configuration conf;
   protected NameNode nameNode;
   protected int numDataNodes;
@@ -381,7 +385,6 @@ public class MiniDFSCluster {
                         operation != StartupOption.ROLLBACK) ?
         null : new String[] {operation.getName()};
     
-    
     for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; i++) {
       Configuration dnConf = new Configuration(conf);
       if (manageDfsDirs) {
@@ -431,8 +434,12 @@ public class MiniDFSCluster {
         StaticMapping.addNodeToRack(ipAddr + ":" + port,
                                   racks[i-curDatanodesNum]);
       }
-      DataNode.runDatanodeDaemon(dn);
-      dataNodes.add(new DataNodeProperties(dn, newconf, dnArgs));
+      try {
+        dataNodes.add(new DataNodeProperties(dn, newconf, dnArgs));
+        DataNode.runDatanodeDaemon(dn);
+      } catch (RemoteException e) {
+        LOG.warn("Datanode:" + dn.getHostName() + " is failed to be started!");
+      }
     }
     curDatanodesNum += numDataNodes;
     this.numDataNodes += numDataNodes;
@@ -870,6 +877,14 @@ public class MiniDFSCluster {
   }
 
   private synchronized boolean shouldWait(DatanodeInfo[] dnInfo) {
+  
+    for (DataNodeProperties datanode: dataNodes) {
+      // If any datanode failed to start, then do not wait 
+      if (nameNode.getNamesystem().getDataNodeInfo(
+          datanode.datanode.dnRegistration.getStorageID()) == null) {
+        return false;
+      }
+    }
     if (dnInfo.length != numDataNodes) {
       return true;
     }

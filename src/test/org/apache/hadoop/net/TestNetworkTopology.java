@@ -24,8 +24,18 @@ import java.util.Map;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
+import org.junit.Assert;
 
 public class TestNetworkTopology extends TestCase {
   private final static NetworkTopology cluster = new NetworkTopology();
@@ -40,6 +50,8 @@ public class TestNetworkTopology extends TestCase {
   };
   private final static DatanodeDescriptor NODE = 
     new DatanodeDescriptor(new DatanodeID("h8:5020"), "/d2/r4");
+  
+  private static final Log LOG = LogFactory.getLog(TestNetworkTopology.class);
   
   static {
     for(int i=0; i<dataNodes.length; i++) {
@@ -70,7 +82,7 @@ public class TestNetworkTopology extends TestCase {
     try {
       invalCluster.add(invalDataNodes[2]);
       fail("expected InvalidTopologyException");
-    } catch (NetworkTopology.InvalidTopologyException e) {
+    } catch (InvalidTopologyException e) {
       assertEquals(e.getMessage(), "Invalid network topology. " +
           "You cannot have a rack and a non-rack node at the same " +
           "level of the network topology.");
@@ -184,6 +196,68 @@ public class TestNetworkTopology extends TestCase {
         assertEquals(0, freq);
       } else {
         assertTrue(freq > 0);
+      }
+    }
+  }
+  
+  public void testInvalidNetworkTopologiesNotCachedInHdfs() throws Exception {
+    // start a cluster
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      // bad rack topology
+      String racks[] = { "/a/b", "/c" };
+      String hosts[] = { "foo1.example.com", "foo2.example.com" };
+
+      cluster = new MiniDFSCluster(conf, 2, true, racks, hosts);
+      
+      cluster.waitActive();
+     
+      ClientProtocol client = DFSClient.createNamenode(conf);
+      
+      Assert.assertNotNull(client);
+      
+      // Wait for one DataNode to register.
+      // The other DataNode will not be able to register up because of the rack mismatch.
+      DatanodeInfo[] info;
+      while (true) {
+        info = client.getDatanodeReport(DatanodeReportType.LIVE);
+        Assert.assertFalse(info.length == 2);
+        if (info.length == 1) {
+          break;
+        }
+        Thread.sleep(1000);
+      }
+      // Set the network topology of the other node to the match the network
+      // topology of the node that came up.
+      int validIdx = info[0].getHostName().equals(hosts[0]) ? 0 : 1;
+      int invalidIdx = validIdx == 1 ? 0 : 1;
+      StaticMapping.addNodeToRack(hosts[invalidIdx], racks[validIdx]);
+      LOG.info("datanode " + validIdx + " came up with network location " + 
+        info[0].getNetworkLocation());
+
+      // Restart the DN with the invalid topology and wait for it to register.
+      cluster.restartDataNode(invalidIdx);
+      
+      Thread.sleep(5000);
+      while (true) {
+        info = client.getDatanodeReport(DatanodeReportType.LIVE);
+        if (info.length == 2) {
+          break;
+        }
+        if (info.length == 0) {
+          LOG.info("got no valid DNs");
+        } else if (info.length == 1) {
+          LOG.info("got one valid DN: " + info[0].getHostName() +
+              " (at " + info[0].getNetworkLocation() + ")");
+        }
+        Thread.sleep(1000);
+      }
+      Assert.assertEquals(info[0].getNetworkLocation(),
+                          info[1].getNetworkLocation());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
       }
     }
   }

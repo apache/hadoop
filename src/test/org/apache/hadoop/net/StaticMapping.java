@@ -59,4 +59,9 @@ public class StaticMapping extends Configured implements DNSToSwitchMapping {
       return m;
     }
   }
+  
+  public void reloadCachedMappings() {
+    // reloadCachedMappings does nothing for StaticMapping; there is
+    // nowhere to reload from since all data is in memory.
+  }
 }

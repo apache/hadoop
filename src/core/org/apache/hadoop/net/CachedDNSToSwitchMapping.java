@@ -98,6 +98,11 @@ public class CachedDNSToSwitchMapping implements DNSToSwitchMapping {
     List<String> resolvedHosts = rawMapping.resolve(uncachedHosts);
     this.cacheResolvedHosts(uncachedHosts, resolvedHosts);
     return this.getCachedHosts(names);
-
   }
+  
+  @Override
+  public void reloadCachedMappings() {
+    cache.clear();
+  }
+  
 }

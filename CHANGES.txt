@@ -74,6 +74,9 @@ Release 1.3.0 - unreleased
     HADOOP-9307. BufferedFSInputStream.read returns wrong results after certain
     seeks. (todd)
 
+    HDFS-4521.  Invalid Network Topologies should not be cached.
+    (Backported by Junping Du, reviewed by Colin Patrick McCabe.)
+
 Release 1.2.1 - 2013.07.06
 
   INCOMPATIBLE CHANGES

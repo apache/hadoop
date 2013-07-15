@@ -155,5 +155,11 @@ implements Configurable
     }
     return allOutput.toString();
   }
+  
+  @Override
+  public void reloadCachedMappings() {
+    // nothing to do here, since RawScriptBasedMapping has no cache.
+  }
+  
   }
 }

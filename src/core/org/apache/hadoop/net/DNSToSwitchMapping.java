@@ -18,7 +18,6 @@
 package org.apache.hadoop.net;
 
 import java.util.List;
-import java.net.UnknownHostException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -45,5 +44,13 @@ public interface DNSToSwitchMapping {
    * @return list of resolved network paths
    */
   public List<String> resolve(List<String> names);
+  
+  /**
+   * Reload all of the cached mappings.
+   *
+   * If there is a cache, this method will clear it, so that future accesses
+   * will get a chance to see the new data.
+   */
+  public void reloadCachedMappings();
 
 }
