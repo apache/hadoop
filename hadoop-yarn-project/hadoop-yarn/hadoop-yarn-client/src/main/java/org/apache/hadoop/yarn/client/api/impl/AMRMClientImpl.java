@@ -68,8 +68,7 @@ import org.apache.hadoop.yarn.util.RackResolver;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-
-// TODO check inputs for null etc. YARN-654
+import com.google.common.base.Preconditions;
 
 @Private
 @Unstable
@@ -204,6 +203,10 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   public RegisterApplicationMasterResponse registerApplicationMaster(
       String appHostName, int appHostPort, String appTrackingUrl)
       throws YarnException, IOException {
+    Preconditions.checkArgument(appHostName != null,
+        "The host name should not be null");
+    Preconditions.checkArgument(appHostPort >= 0,
+        "Port number of the host should not be negative");
     // do this only once ???
     RegisterApplicationMasterRequest request = recordFactory
         .newRecordInstance(RegisterApplicationMasterRequest.class);
@@ -223,6 +226,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   @Override
   public AllocateResponse allocate(float progressIndicator) 
       throws YarnException, IOException {
+    Preconditions.checkArgument(progressIndicator > 0,
+        "Progress indicator should not be negative");
     AllocateResponse allocateResponse = null;
     ArrayList<ResourceRequest> askList = null;
     ArrayList<ContainerId> releaseList = null;
@@ -302,6 +307,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
       String appMessage, String appTrackingUrl) throws YarnException,
       IOException {
+    Preconditions.checkArgument(appStatus != null,
+        "AppStatus should not be null.");
     FinishApplicationMasterRequest request = recordFactory
                   .newRecordInstance(FinishApplicationMasterRequest.class);
     request.setAppAttemptId(appAttemptId);
@@ -317,6 +324,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   
   @Override
   public synchronized void addContainerRequest(T req) {
+    Preconditions.checkArgument(req != null,
+        "Resource request can not be null.");
     Set<String> allRacks = new HashSet<String>();
     if (req.getRacks() != null) {
       allRacks.addAll(req.getRacks());
@@ -355,6 +364,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
 
   @Override
   public synchronized void removeContainerRequest(T req) {
+    Preconditions.checkArgument(req != null,
+        "Resource request can not be null.");
     Set<String> allRacks = new HashSet<String>();
     if (req.getRacks() != null) {
       allRacks.addAll(req.getRacks());
@@ -380,6 +391,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
 
   @Override
   public synchronized void releaseAssignedContainer(ContainerId containerId) {
+    Preconditions.checkArgument(containerId != null,
+        "ContainerId can not be null.");
     release.add(containerId);
   }
   
@@ -398,6 +411,10 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
                                           Priority priority, 
                                           String resourceName, 
                                           Resource capability) {
+    Preconditions.checkArgument(capability != null,
+        "The Resource to be requested should not be null ");
+    Preconditions.checkArgument(priority != null,
+        "The priority at which to request containers should not be null ");
     List<LinkedHashSet<T>> list = new LinkedList<LinkedHashSet<T>>();
     Map<String, TreeMap<Resource, ResourceRequestInfo>> remoteRequests = 
         this.remoteRequestsTable.get(priority);

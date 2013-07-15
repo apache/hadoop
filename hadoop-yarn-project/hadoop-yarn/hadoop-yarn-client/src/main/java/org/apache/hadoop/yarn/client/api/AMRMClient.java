@@ -36,8 +36,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-
 import com.google.common.collect.ImmutableList;
+import com.google.common.base.Preconditions;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -57,6 +57,8 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   @Public
   public static <T extends ContainerRequest> AMRMClient<T> createAMRMClient(
       ApplicationAttemptId appAttemptId) {
+    Preconditions.checkArgument(appAttemptId != null,
+        "ApplicationAttempId should not be null");
     AMRMClient<T> client = new AMRMClientImpl<T>(appAttemptId);
     return client;
   }
@@ -95,6 +97,13 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
         
     public ContainerRequest(Resource capability, String[] nodes,
         String[] racks, Priority priority, int containerCount) {
+      Preconditions.checkArgument(capability != null,
+          "The Resource to be requested for each container " +
+              "should not be null ");
+      Preconditions.checkArgument(priority != null,
+          "The priority at which to request containers should not be null ");
+      Preconditions.checkArgument(containerCount > 0,
+          "The number of containers to request should larger than 0");
       this.capability = capability;
       this.nodes = (nodes != null ? ImmutableList.copyOf(nodes) : null);
       this.racks = (racks != null ? ImmutableList.copyOf(racks) : null);
