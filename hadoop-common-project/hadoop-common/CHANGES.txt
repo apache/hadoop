@@ -336,6 +336,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9656. Gridmix unit tests fail on Windows and Linux. (Chuan Liu via
     cnauroth)
 
+    HADOOP-9707. Fix register lists for crc32c inline assembly. (todd via
+    kihwal)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
