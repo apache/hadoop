@@ -733,11 +733,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlocks getBlockLocations(String src, long offset, long length,
       boolean doAccessTime, boolean needBlockToken) throws FileNotFoundException,
       UnresolvedLinkException, IOException {
-    FSPermissionChecker pc = getPermissionChecker();
-    if (isPermissionEnabled) {
-      checkPathAccess(pc, src, FsAction.READ);
-    }
-
     if (offset < 0) {
       throw new HadoopIllegalArgumentException(
           "Negative offset is not supported. File: " + src);
@@ -762,7 +757,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                                        boolean doAccessTime, 
                                                        boolean needBlockToken)
       throws FileNotFoundException, UnresolvedLinkException, IOException {
-
+    FSPermissionChecker pc = getPermissionChecker();
     for (int attempt = 0; attempt < 2; attempt++) {
       if (attempt == 0) { // first attempt is with readlock
         readLock();
@@ -770,12 +765,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         writeLock(); // writelock is needed to set accesstime
       }
 
-      // if the namenode is in safemode, then do not update access time
-      if (isInSafeMode()) {
-        doAccessTime = false;
-      }
-
       try {
+        if (isPermissionEnabled) {
+          checkPathAccess(pc, src, FsAction.READ);
+        }
+
+        // if the namenode is in safemode, then do not update access time
+        if (isInSafeMode()) {
+          doAccessTime = false;
+        }
+
         long now = now();
         INodeFile inode = dir.getFileINode(src);
         if (inode == null) {

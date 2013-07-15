@@ -11,7 +11,11 @@ Release 0.23.10 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
     HDFS-4984. Incorrect Quota counting in INodeFile. (jing9 via kihwal)
+
+    HDFS-4972. Permission check and operation are done in a separate lock for
+    getBlockLocations(). (kihwal)
 
 Release 0.23.9 - 2013-07-08
 
