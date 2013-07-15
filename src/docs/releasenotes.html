@@ -2,7 +2,7 @@
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop 1.2.0 Release Notes</title>
+<title>Hadoop 1.2.1 Release Notes</title>
 <STYLE type="text/css">
 		H1 {font-family: sans-serif}
 		H2 {font-family: sans-serif; margin-left: 7mm}
@@ -10,10 +10,113 @@
 	</STYLE>
 </head>
 <body>
-<h1>Hadoop 1.2.0 Release Notes</h1>
+<h1>Hadoop 1.2.1 Release Notes</h1>
 		These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 
 <a name="changes"/>
+
+<h2>Changes since Hadoop 1.2.0</h2>
+
+<h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3859">MAPREDUCE-3859</a>.
+     Major bug reported by sergeant and fixed by sergeant (capacity-sched)<br>
+     <b>CapacityScheduler incorrectly utilizes extra-resources of queue for high-memory jobs</b><br>
+     <blockquote>                                          Fixed wrong CapacityScheduler resource allocation for high memory consumption jobs
+
+      
+</blockquote></li>
+
+</ul>
+
+
+<h3>Other Jiras (describe bug fixes and minor changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9504">HADOOP-9504</a>.
+     Critical bug reported by xieliang007 and fixed by xieliang007 (metrics)<br>
+     <b>MetricsDynamicMBeanBase has concurrency issues in createMBeanInfo</b><br>
+     <blockquote>Please see HBASE-8416 for detail information.<br>we need to take care of the synchronization for HashMap put(), otherwise it may lead to spin loop.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9665">HADOOP-9665</a>.
+     Critical bug reported by zjshen and fixed by zjshen <br>
+     <b>BlockDecompressorStream#decompress will throw EOFException instead of return -1 when EOF</b><br>
+     <blockquote>BlockDecompressorStream#decompress ultimately calls rawReadInt, which will throw EOFException instead of return -1 when encountering end of a stream. Then, decompress will be called by read. However, InputStream#read is supposed to return -1 instead of throwing EOFException to indicate the end of a stream. This explains why in LineReader,<br>{code}<br>      if (bufferPosn &gt;= bufferLength) {<br>        startPosn = bufferPosn = 0;<br>        if (prevCharCR)<br>          ++bytesConsumed; //account for CR from ...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4261">HDFS-4261</a>.
+     Major bug reported by szetszwo and fixed by djp (balancer)<br>
+     <b>TestBalancerWithNodeGroup times out</b><br>
+     <blockquote>When I manually ran TestBalancerWithNodeGroup, it always timed out in my machine.  Looking at the Jerkins report [build #3573|https://builds.apache.org/job/PreCommit-HDFS-Build/3573//testReport/org.apache.hadoop.hdfs.server.balancer/], TestBalancerWithNodeGroup somehow was skipped so that the problem was not detected.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4581">HDFS-4581</a>.
+     Major bug reported by rohit_kochar and fixed by rohit_kochar (datanode)<br>
+     <b>DataNode#checkDiskError should not be called on network errors</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4699">HDFS-4699</a>.
+     Major bug reported by cnauroth and fixed by cnauroth (test)<br>
+     <b>TestPipelinesFailover#testPipelineRecoveryStress fails sporadically</b><br>
+     <blockquote>I have seen {{TestPipelinesFailover#testPipelineRecoveryStress}} fail sporadically due to timeout during {{loopRecoverLease}}, which waits for up to 30 seconds before timing out.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4880">HDFS-4880</a>.
+     Major bug reported by arpitagarwal and fixed by sureshms (namenode)<br>
+     <b>Diagnostic logging while loading name/edits files</b><br>
+     <blockquote>Add some minimal diagnostic logging to help determine location of the files being loaded.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4838">MAPREDUCE-4838</a>.
+     Major improvement reported by acmurthy and fixed by zjshen <br>
+     <b>Add extra info to JH files</b><br>
+     <blockquote>It will be useful to add more task-info to JH for analytics.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5148">MAPREDUCE-5148</a>.
+     Major bug reported by yeshavora and fixed by acmurthy (tasktracker)<br>
+     <b>Syslog missing from Map/Reduce tasks</b><br>
+     <blockquote>MAPREDUCE-4970 introduced incompatible change and causes syslog to be missing from tasktracker on old clusters which just have log4j.properties configured</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5206">MAPREDUCE-5206</a>.
+     Minor bug reported by acmurthy and fixed by acmurthy <br>
+     <b>JT can show the same job multiple times in Retired Jobs section</b><br>
+     <blockquote>JT can show the same job multiple times in Retired Jobs section since the RetireJobs thread has a bug which adds the same job multiple times to collection of retired jobs.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5256">MAPREDUCE-5256</a>.
+     Major bug reported by vinodkv and fixed by vinodkv <br>
+     <b>CombineInputFormat isn&apos;t thread safe affecting HiveServer</b><br>
+     <blockquote>This was originally fixed as part of MAPREDUCE-5038, but that got reverted now. Which uncovers this issue, breaking HiveServer. Originally reported by [~thejas].</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5260">MAPREDUCE-5260</a>.
+     Major bug reported by zhaoyunjiong and fixed by zhaoyunjiong (tasktracker)<br>
+     <b>Job failed because of JvmManager running into inconsistent state</b><br>
+     <blockquote>In our cluster, jobs failed due to randomly task initialization failed because of JvmManager running into inconsistent state and TaskTracker failed to exit:<br><br>java.lang.Throwable: Child Error<br>	at org.apache.hadoop.mapred.TaskRunner.run(TaskRunner.java:271)<br>Caused by: java.lang.NullPointerException<br>	at org.apache.hadoop.mapred.JvmManager$JvmManagerForType.getDetails(JvmManager.java:402)<br>	at org.apache.hadoop.mapred.JvmManager$JvmManagerForType.reapJvm(JvmManager.java:387)<br>	at org.apache.hadoop....</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5318">MAPREDUCE-5318</a>.
+     Minor bug reported by bohou and fixed by bohou (jobtracker)<br>
+     <b>Ampersand in JSPUtil.java is not escaped</b><br>
+     <blockquote>The malformed urls cause hue crash. The malformed urls are caused by the unescaped ampersand &quot;&amp;&quot;. </blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5351">MAPREDUCE-5351</a>.
+     Critical bug reported by sandyr and fixed by sandyr (jobtracker)<br>
+     <b>JobTracker memory leak caused by CleanupQueue reopening FileSystem</b><br>
+     <blockquote>When a job is completed, closeAllForUGI is called to close all the cached FileSystems in the FileSystem cache.  However, the CleanupQueue may run after this occurs and call FileSystem.get() to delete the staging directory, adding a FileSystem to the cache that will never be closed.<br><br>People on the user-list have reported this causing their JobTrackers to OOME every two weeks.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5364">MAPREDUCE-5364</a>.
+     Major bug reported by kkambatl and fixed by kkambatl <br>
+     <b>Deadlock between RenewalTimerTask methods cancel() and run()</b><br>
+     <blockquote>MAPREDUCE-4860 introduced a local variable {{cancelled}} in {{RenewalTimerTask}} to fix the race where {{DelegationTokenRenewal}} attempts to renew a token even after the job is removed. However, the patch also makes {{run()}} and {{cancel()}} synchronized methods leading to a potential deadlock against {{run()}}&apos;s catch-block (error-path).<br><br>The deadlock stacks below:<br><br>{noformat}<br> - org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal$RenewalTimerTask.cancel() @bci=0, line=240 (I...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5368">MAPREDUCE-5368</a>.
+     Major improvement reported by zhaoyunjiong and fixed by zhaoyunjiong (mrv1)<br>
+     <b>Save memory by  set capacity, load factor and concurrency level for ConcurrentHashMap in TaskInProgress</b><br>
+     <blockquote>Below is histo from our JobTracker:<br><br> num     #instances         #bytes  class name<br>----------------------------------------------<br>   1:     136048824    11347237456  [C<br>   2:     124156992     5959535616  java.util.concurrent.locks.ReentrantLock$NonfairSync<br>   3:     124156973     5959534704  java.util.concurrent.ConcurrentHashMap$Segment<br>   4:     135887753     5435510120  java.lang.String<br>   5:     124213692     3975044400  [Ljava.util.concurrent.ConcurrentHashMap$HashEntry;<br>   6:      637...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5375">MAPREDUCE-5375</a>.
+     Critical bug reported by venkatnrangan and fixed by venkatnrangan <br>
+     <b>Delegation Token renewal exception in jobtracker logs</b><br>
+     <blockquote>Filing on behalf of [~venkatnrangan] who found this originally and provided a patch.<br><br>Saw this in the JT logs while oozie tests were running with Hadoop.<br><br>When Oozie java action is executed, the following shows up in the job tracker log.<br><br>{code}<br>ERROR org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal: Exception renewing tokenIdent: 00 07 68 64 70 75 73 65 72 06 6d 61 70 72 65 64 26 6f 6f 7a 69 65 2f 63 6f 6e 64 6f 72 2d 73 65 63 2e 76 65 6e 6b 61 74 2e 6f 72 67 40 76 65 6e 6b ...</blockquote></li>
+
+
+</ul>
+
 
 <h2>Changes since Hadoop 1.1.2</h2>
 

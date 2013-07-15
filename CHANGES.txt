@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 1.2.1 - 2013.07.06
+Release 1.2.1 - 2013.07.14
 
   INCOMPATIBLE CHANGES
 
@@ -10,6 +10,9 @@ Release 1.2.1 - 2013.07.06
 
     HDFS-4880. Print the image and edits file loaded by the namenode in the
     logs. (Arpit Agarwal via suresh)
+
+    MAPREDUCE-4838. Addendum patch to fix TestRumenJobTraces.
+    (Arun C Murthy)
 
   BUG FIXES
 
