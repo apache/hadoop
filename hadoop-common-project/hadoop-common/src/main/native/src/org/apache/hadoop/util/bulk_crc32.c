@@ -427,7 +427,7 @@ static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, con
         "crc32q (%7,%6,1), %1;\n\t"
         "crc32q (%7,%6,2), %2;\n\t"
          : "=r"(c1), "=r"(c2), "=r"(c3)
-         : "r"(c1), "r"(c2), "r"(c3), "r"(block_size), "r"(data)
+         : "0"(c1), "1"(c2), "2"(c3), "r"(block_size), "r"(data)
         );
         data++;
         counter--;
@@ -443,7 +443,7 @@ static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, con
         "crc32b (%7,%6,1), %1;\n\t"
         "crc32b (%7,%6,2), %2;\n\t"
          : "=r"(c1), "=r"(c2), "=r"(c3)
-         : "r"(c1), "r"(c2), "r"(c3), "r"(block_size), "r"(bdata)
+         : "0"(c1), "1"(c2), "2"(c3), "r"(block_size), "r"(bdata)
         );
         bdata++;
         remainder--;
@@ -456,7 +456,7 @@ static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, con
         "crc32q (%5), %0;\n\t"
         "crc32q (%5,%4,1), %1;\n\t"
          : "=r"(c1), "=r"(c2) 
-         : "r"(c1), "r"(c2), "r"(block_size), "r"(data)
+         : "0"(c1), "1"(c2), "r"(block_size), "r"(data)
         );
         data++;
         counter--;
@@ -468,7 +468,7 @@ static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, con
         "crc32b (%5), %0;\n\t"
         "crc32b (%5,%4,1), %1;\n\t"
          : "=r"(c1), "=r"(c2) 
-         : "r"(c1), "r"(c2), "r"(block_size), "r"(bdata)
+         : "0"(c1), "1"(c2), "r"(block_size), "r"(bdata)
         );
         bdata++;
         remainder--;
@@ -480,7 +480,7 @@ static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, con
         __asm__ __volatile__(
         "crc32q (%2), %0;\n\t"
          : "=r"(c1) 
-         : "r"(c1), "r"(data)
+         : "0"(c1), "r"(data)
         );
         data++;
         counter--;
@@ -490,7 +490,7 @@ static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, con
         __asm__ __volatile__(
         "crc32b (%2), %0;\n\t"
          : "=r"(c1) 
-         : "r"(c1), "r"(bdata)
+         : "0"(c1), "r"(bdata)
         );
         bdata++;
         remainder--;
