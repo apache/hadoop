@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 1.2.1 - 2013.07.14
+Release 1.2.1 - 2013.07.15
 
   INCOMPATIBLE CHANGES
 
@@ -61,6 +61,9 @@ Release 1.2.1 - 2013.07.14
     MAPREDUCE-5368. Reduce memory footprint of JobTracker by using non-default
     values for hash-tables to store Locality and Avataar for TaskAttempts.
     (zhaoyunjiong via acmurthy)
+
+    HADOOP-9730. Fix hadoop.spec to add task-log4j.properties. (Giridharan Kesavan
+    via mattf)
 
 Release 1.2.0 - 2013.05.05
 

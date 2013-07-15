@@ -44,6 +44,11 @@
      <b>BlockDecompressorStream#decompress will throw EOFException instead of return -1 when EOF</b><br>
      <blockquote>BlockDecompressorStream#decompress ultimately calls rawReadInt, which will throw EOFException instead of return -1 when encountering end of a stream. Then, decompress will be called by read. However, InputStream#read is supposed to return -1 instead of throwing EOFException to indicate the end of a stream. This explains why in LineReader,<br>{code}<br>      if (bufferPosn &gt;= bufferLength) {<br>        startPosn = bufferPosn = 0;<br>        if (prevCharCR)<br>          ++bytesConsumed; //account for CR from ...</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9730">HADOOP-9730</a>.
+     Major bug reported by gkesavan and fixed by gkesavan (build)<br>
+     <b>fix hadoop.spec to add task-log4j.properties </b><br>
+     <blockquote></blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4261">HDFS-4261</a>.
      Major bug reported by szetszwo and fixed by djp (balancer)<br>
      <b>TestBalancerWithNodeGroup times out</b><br>

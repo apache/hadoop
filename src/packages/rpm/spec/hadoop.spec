@@ -186,6 +186,7 @@ bash ${RPM_INSTALL_PREFIX0}/sbin/update-hadoop-env.sh \
 %config(noreplace) %{_conf_dir}/hadoop-policy.xml
 %config(noreplace) %{_conf_dir}/hdfs-site.xml
 %config(noreplace) %{_conf_dir}/log4j.properties
+%config(noreplace) %{_conf_dir}/task-log4j.properties
 %config(noreplace) %{_conf_dir}/mapred-queue-acls.xml
 %config(noreplace) %{_conf_dir}/mapred-site.xml
 %config(noreplace) %{_conf_dir}/masters
@@ -194,6 +195,7 @@ bash ${RPM_INSTALL_PREFIX0}/sbin/update-hadoop-env.sh \
 %config(noreplace) %{_conf_dir}/ssl-server.xml.example
 %config(noreplace) %{_conf_dir}/taskcontroller.cfg
 %config(noreplace) %{_conf_dir}/fair-scheduler.xml
+
 %{_prefix}
 %attr(0755,root,root) %{_prefix}/libexec
 %attr(0755,root,root) /etc/rc.d/init.d
