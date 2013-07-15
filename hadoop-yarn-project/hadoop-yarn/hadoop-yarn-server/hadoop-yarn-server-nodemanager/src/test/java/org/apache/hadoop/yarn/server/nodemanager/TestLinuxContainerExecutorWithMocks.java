@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import static junit.framework.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -79,6 +80,7 @@ public class TestLinuxContainerExecutorWithMocks {
   
   @Before
   public void setup() {
+    assumeTrue(!Path.WINDOWS);
     File f = new File("./src/test/resources/mock-container-executor");
     if(!FileUtil.canExecute(f)) {
       FileUtil.setExecutable(f, true);
