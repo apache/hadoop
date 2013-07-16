@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
+import org.apache.hadoop.yarn.server.nodemanager.DeletionService.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
@@ -69,8 +70,8 @@ import org.mockito.ArgumentMatcher;
 
 public class TestNodeManagerReboot {
 
-  static final File basedir =
-      new File("target", TestNodeManagerReboot.class.getName());
+  static final File basedir = new File("target",
+    TestNodeManagerReboot.class.getName());
   static final File logsDir = new File(basedir, "logs");
   static final File nmLocalDir = new File(basedir, "nm0");
   static final File localResourceDir = new File(basedir, "resource");
@@ -100,7 +101,8 @@ public class TestNodeManagerReboot {
     nm = new MyNodeManager();
     nm.start();
 
-    final ContainerManagementProtocol containerManager = nm.getContainerManager();
+    final ContainerManagementProtocol containerManager =
+        nm.getContainerManager();
 
     // create files under fileCache
     createFiles(nmLocalDir.getAbsolutePath(), ContainerLocalizer.FILECACHE, 100);
@@ -112,16 +114,13 @@ public class TestNodeManagerReboot {
     ContainerId cId = createContainerId();
 
     URL localResourceUri =
-        ConverterUtils.getYarnUrlFromPath(localFS
-            .makeQualified(new Path(localResourceDir.getAbsolutePath())));
+        ConverterUtils.getYarnUrlFromPath(localFS.makeQualified(new Path(
+          localResourceDir.getAbsolutePath())));
 
     LocalResource localResource =
-        Records.newRecord(LocalResource.class);
-    localResource.setResource(localResourceUri);
-    localResource.setSize(-1);
-    localResource.setVisibility(LocalResourceVisibility.APPLICATION);
-    localResource.setType(LocalResourceType.FILE);
-    localResource.setTimestamp(localResourceDir.lastModified());
+        LocalResource.newInstance(localResourceUri, LocalResourceType.FILE,
+          LocalResourceVisibility.APPLICATION, -1,
+          localResourceDir.lastModified());
     String destinationFile = "dest_file";
     Map<String, LocalResource> localResources =
         new HashMap<String, LocalResource>();
@@ -129,7 +128,7 @@ public class TestNodeManagerReboot {
     containerLaunchContext.setLocalResources(localResources);
     List<String> commands = new ArrayList<String>();
     containerLaunchContext.setCommands(commands);
-    
+
     final StartContainerRequest startRequest =
         Records.newRecord(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
@@ -137,8 +136,9 @@ public class TestNodeManagerReboot {
     startRequest.setContainerToken(TestContainerManager.createContainerToken(
       cId, 0, nodeId, destinationFile, nm.getNMContext()
         .getContainerTokenSecretManager()));
-    final UserGroupInformation currentUser = UserGroupInformation
-        .createRemoteUser(cId.getApplicationAttemptId().toString());
+    final UserGroupInformation currentUser =
+        UserGroupInformation.createRemoteUser(cId.getApplicationAttemptId()
+          .toString());
     NMTokenIdentifier nmIdentifier =
         new NMTokenIdentifier(cId.getApplicationAttemptId(), nodeId, user, 123);
     currentUser.addTokenIdentifier(nmIdentifier);
@@ -170,27 +170,31 @@ public class TestNodeManagerReboot {
 
     Assert.assertEquals(ContainerState.DONE, container.getContainerState());
 
-    Assert.assertTrue(
-        "The container should create a subDir named currentUser: " + user +
-            "under localDir/usercache",
+    Assert
+      .assertTrue(
+        "The container should create a subDir named currentUser: " + user
+            + "under localDir/usercache",
         numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-            ContainerLocalizer.USERCACHE) > 0);
+          ContainerLocalizer.USERCACHE) > 0);
 
-    Assert.assertTrue("There should be files or Dirs under nm_private when " +
-        "container is launched", numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+    Assert.assertTrue(
+      "There should be files or Dirs under nm_private when "
+          + "container is launched",
+      numOfLocalDirs(nmLocalDir.getAbsolutePath(),
         ResourceLocalizationService.NM_PRIVATE_DIR) > 0);
 
     // restart the NodeManager
     nm.stop();
     nm = new MyNodeManager();
-    nm.start();    
+    nm.start();
 
     numTries = 0;
-    while ((numOfLocalDirs(nmLocalDir.getAbsolutePath(), ContainerLocalizer
-        .USERCACHE) > 0 || numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-        ContainerLocalizer.FILECACHE) > 0 || numOfLocalDirs(nmLocalDir
-        .getAbsolutePath(), ResourceLocalizationService.NM_PRIVATE_DIR)
-        > 0) && numTries < MAX_TRIES) {
+    while ((numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+      ContainerLocalizer.USERCACHE) > 0
+        || numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+          ContainerLocalizer.FILECACHE) > 0 || numOfLocalDirs(
+      nmLocalDir.getAbsolutePath(), ResourceLocalizationService.NM_PRIVATE_DIR) > 0)
+        && numTries < MAX_TRIES) {
       try {
         Thread.sleep(500);
       } catch (InterruptedException ex) {
@@ -199,21 +203,27 @@ public class TestNodeManagerReboot {
       numTries++;
     }
 
-    Assert.assertTrue("After NM reboots, all local files should be deleted",
-        numOfLocalDirs(nmLocalDir.getAbsolutePath(), ContainerLocalizer
-            .USERCACHE) == 0 && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-            ContainerLocalizer.FILECACHE) == 0 && numOfLocalDirs(nmLocalDir
-            .getAbsolutePath(), ResourceLocalizationService.NM_PRIVATE_DIR)
-              == 0);
+    Assert
+      .assertTrue(
+        "After NM reboots, all local files should be deleted",
+        numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+          ContainerLocalizer.USERCACHE) == 0
+            && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+              ContainerLocalizer.FILECACHE) == 0
+            && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+              ResourceLocalizationService.NM_PRIVATE_DIR) == 0);
     verify(delService, times(1)).delete(
-        (String) isNull(),
-        argThat(new PathInclude(ResourceLocalizationService.NM_PRIVATE_DIR
-            + "_DEL_")));
+      (String) isNull(),
+      argThat(new PathInclude(ResourceLocalizationService.NM_PRIVATE_DIR
+          + "_DEL_")));
     verify(delService, times(1)).delete((String) isNull(),
-        argThat(new PathInclude(ContainerLocalizer.FILECACHE + "_DEL_")));
-    verify(delService, times(1)).delete((String) isNull(),
-        argThat(new PathInclude(ContainerLocalizer.USERCACHE + "_DEL_")));
-
+      argThat(new PathInclude(ContainerLocalizer.FILECACHE + "_DEL_")));
+    verify(delService, times(1)).scheduleFileDeletionTask(
+      argThat(new FileDeletionInclude(user, null,
+        new String[] { destinationFile })));
+    verify(delService, times(1)).scheduleFileDeletionTask(
+      argThat(new FileDeletionInclude(null, ContainerLocalizer.USERCACHE
+          + "_DEL_", new String[] {})));
   }
 
   private int numOfLocalDirs(String localDir, String localSubDir) {
@@ -238,7 +248,8 @@ public class TestNodeManagerReboot {
 
   private ContainerId createContainerId() {
     ApplicationId appId = ApplicationId.newInstance(0, 0);
-    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newInstance(appAttemptId, 0);
     return containerId;
   }
@@ -253,8 +264,8 @@ public class TestNodeManagerReboot {
     @Override
     protected NodeStatusUpdater createNodeStatusUpdater(Context context,
         Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
-      MockNodeStatusUpdater myNodeStatusUpdater = new MockNodeStatusUpdater(
-          context, dispatcher, healthChecker, metrics);
+      MockNodeStatusUpdater myNodeStatusUpdater =
+          new MockNodeStatusUpdater(context, dispatcher, healthChecker, metrics);
       return myNodeStatusUpdater;
     }
 
@@ -286,6 +297,60 @@ public class TestNodeManagerReboot {
     @Override
     public boolean matches(Object o) {
       return ((Path) o).getName().indexOf(part) != -1;
+    }
+  }
+  
+  class FileDeletionInclude extends ArgumentMatcher<FileDeletionTask> {
+    final String user;
+    final String subDirIncludes;
+    final String[] baseDirIncludes;
+    
+    public FileDeletionInclude(String user, String subDirIncludes,
+        String [] baseDirIncludes) {
+      this.user = user;
+      this.subDirIncludes = subDirIncludes;
+      this.baseDirIncludes = baseDirIncludes;
+    }
+    
+    @Override
+    public boolean matches(Object o) {
+      FileDeletionTask fd = (FileDeletionTask)o;
+      if (fd.getUser() == null && user != null) {
+        return false;
+      } else if (fd.getUser() != null && user == null) {
+        return false;
+      } else if (fd.getUser() != null && user != null) {
+        return fd.getUser().equals(user);
+      }
+      if (!comparePaths(fd.getSubDir(), subDirIncludes)) {
+        return false;
+      }
+      if (baseDirIncludes == null && fd.getBaseDirs() != null) {
+        return false;
+      } else if (baseDirIncludes != null && fd.getBaseDirs() == null ) {
+        return false;
+      } else if (baseDirIncludes != null && fd.getBaseDirs() != null) {
+        if (baseDirIncludes.length != fd.getBaseDirs().size()) {
+          return false;
+        }
+        for (int i =0 ; i < baseDirIncludes.length; i++) {
+          if (!comparePaths(fd.getBaseDirs().get(i), baseDirIncludes[i])) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+    
+    public boolean comparePaths(Path p1, String p2) {
+      if (p1 == null && p2 != null){
+        return false;
+      } else if (p1 != null && p2 == null) {
+        return false;
+      } else if (p1 != null && p2 != null ){
+        return p1.toUri().getPath().contains(p2.toString());
+      }
+      return true;
     }
   }
 }
