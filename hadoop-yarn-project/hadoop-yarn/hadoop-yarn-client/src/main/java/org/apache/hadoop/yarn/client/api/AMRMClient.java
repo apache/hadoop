@@ -69,24 +69,32 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   }
 
   /**
-   * Object to represent container request for resources. Scheduler
+   * Object to represent a container request for resources. Scheduler
    * documentation should be consulted for the specifics of how the parameters
    * are honored.
-   * All getters return immutable values.
    * 
-   * @param capability
-   *    The {@link Resource} to be requested for each container.
-   * @param nodes
-   *    Any hosts to request that the containers are placed on.
-   * @param racks
-   *    Any racks to request that the containers are placed on. The racks
-   *    corresponding to any hosts requested will be automatically added to
-   *    this list.
-   * @param priority
-   *    The priority at which to request the containers. Higher priorities have
-   *    lower numerical values.
-   * @param containerCount
-   *    The number of containers to request.
+   * By default, YARN schedulers try to allocate containers at the requested
+   * locations but they may relax the constraints in order to expedite meeting
+   * allocations limits. They first relax the constraint to the same rack as the
+   * requested node and then to anywhere in the cluster. The relaxLocality flag
+   * may be used to disable locality relaxation and request containers at only 
+   * specific locations. The following conditions apply.
+   * <ul>
+   * <li>Within a priority, all container requests must have the same value for
+   * locality relaxation. Either enabled or disabled.</li>
+   * <li>If locality relaxation is disabled, then across requests, locations at
+   * different network levels may not be specified. E.g. its invalid to make a
+   * request for a specific node and another request for a specific rack.</li>
+   * <li>If locality relaxation is disabled, then only within the same request,  
+   * a node and its rack may be specified together. This allows for a specific   
+   * rack with a preference for a specific node within that rack.</li>
+   * <li></li>
+   * </ul>
+   * To re-enable locality relaxation at a given priority, all pending requests 
+   * with locality relaxation disabled must be first removed. Then they can be 
+   * added back with locality relaxation enabled.
+   * 
+   * All getters return immutable values.
    */
   public static class ContainerRequest {
     final Resource capability;
@@ -94,9 +102,55 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     final List<String> racks;
     final Priority priority;
     final int containerCount;
-        
+    final boolean relaxLocality;
+    
+    /**
+     * Instantiates a {@link ContainerRequest} with the given constraints and
+     * locality relaxation enabled.
+     * 
+     * @param capability
+     *          The {@link Resource} to be requested for each container.
+     * @param nodes
+     *          Any hosts to request that the containers are placed on.
+     * @param racks
+     *          Any racks to request that the containers are placed on. The
+     *          racks corresponding to any hosts requested will be automatically
+     *          added to this list.
+     * @param priority
+     *          The priority at which to request the containers. Higher
+     *          priorities have lower numerical values.
+     * @param containerCount
+     *          The number of containers to request.
+     */
     public ContainerRequest(Resource capability, String[] nodes,
         String[] racks, Priority priority, int containerCount) {
+      this(capability, nodes, racks, priority, containerCount, true);
+    }
+          
+    /**
+     * Instantiates a {@link ContainerRequest} with the given constraints.
+     * 
+     * @param capability
+     *          The {@link Resource} to be requested for each container.
+     * @param nodes
+     *          Any hosts to request that the containers are placed on.
+     * @param racks
+     *          Any racks to request that the containers are placed on. The
+     *          racks corresponding to any hosts requested will be automatically
+     *          added to this list.
+     * @param priority
+     *          The priority at which to request the containers. Higher
+     *          priorities have lower numerical values.
+     * @param containerCount
+     *          The number of containers to request.
+     * @param relaxLocality
+     *          If true, containers for this request may be assigned on hosts
+     *          and racks other than the ones explicitly requested.
+     */
+    public ContainerRequest(Resource capability, String[] nodes,
+        String[] racks, Priority priority, int containerCount,
+        boolean relaxLocality) {
+      // Validate request
       Preconditions.checkArgument(capability != null,
           "The Resource to be requested for each container " +
               "should not be null ");
@@ -104,11 +158,17 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
           "The priority at which to request containers should not be null ");
       Preconditions.checkArgument(containerCount > 0,
           "The number of containers to request should larger than 0");
+      Preconditions.checkArgument(
+              (!relaxLocality && (racks == null || racks.length == 0) 
+                  && (nodes == null || nodes.length == 0)),
+              "Can't turn off locality relaxation on a " + 
+              "request with no location constraints");
       this.capability = capability;
       this.nodes = (nodes != null ? ImmutableList.copyOf(nodes) : null);
       this.racks = (racks != null ? ImmutableList.copyOf(racks) : null);
       this.priority = priority;
       this.containerCount = containerCount;
+      this.relaxLocality = relaxLocality;
     }
     
     public Resource getCapability() {
@@ -129,6 +189,10 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     
     public int getContainerCount() {
       return containerCount;
+    }
+    
+    public boolean getRelaxLocality() {
+      return relaxLocality;
     }
     
     public String toString() {
@@ -153,6 +217,11 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     public StoredContainerRequest(Resource capability, String[] nodes,
         String[] racks, Priority priority) {
       super(capability, nodes, racks, priority, 1);
+    }
+    
+    public StoredContainerRequest(Resource capability, String[] nodes,
+        String[] racks, Priority priority, boolean relaxLocality) {
+      super(capability, nodes, racks, priority, 1, relaxLocality);
     }
   }
   

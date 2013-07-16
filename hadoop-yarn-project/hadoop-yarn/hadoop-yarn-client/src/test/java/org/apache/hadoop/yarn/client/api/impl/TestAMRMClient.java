@@ -83,6 +83,7 @@ public class TestAMRMClient {
   
   static Resource capability;
   static Priority priority;
+  static Priority priority2;
   static String node;
   static String rack;
   static String[] nodes;
@@ -105,6 +106,7 @@ public class TestAMRMClient {
     nodeReports = yarnClient.getNodeReports(NodeState.RUNNING);
     
     priority = Priority.newInstance(1);
+    priority2 = Priority.newInstance(2);
     capability = Resource.newInstance(1024, 1);
 
     node = nodeReports.get(0).getNodeId().getHost();
@@ -181,6 +183,7 @@ public class TestAMRMClient {
       Resource capability4 = Resource.newInstance(2000, 1);
       Resource capability5 = Resource.newInstance(1000, 3);
       Resource capability6 = Resource.newInstance(2000, 1);
+      Resource capability7 = Resource.newInstance(2000, 1);
 
       StoredContainerRequest storedContainer1 = 
           new StoredContainerRequest(capability1, nodes, racks, priority);
@@ -194,12 +197,15 @@ public class TestAMRMClient {
           new StoredContainerRequest(capability5, nodes, racks, priority);
       StoredContainerRequest storedContainer6 = 
           new StoredContainerRequest(capability6, nodes, racks, priority);
+      StoredContainerRequest storedContainer7 = 
+          new StoredContainerRequest(capability7, nodes, racks, priority2, false);
       amClient.addContainerRequest(storedContainer1);
       amClient.addContainerRequest(storedContainer2);
       amClient.addContainerRequest(storedContainer3);
       amClient.addContainerRequest(storedContainer4);
       amClient.addContainerRequest(storedContainer5);
       amClient.addContainerRequest(storedContainer6);
+      amClient.addContainerRequest(storedContainer7);
       
       // test matching of containers
       List<? extends Collection<StoredContainerRequest>> matches;
@@ -248,6 +254,15 @@ public class TestAMRMClient {
       Resource testCapability5 = Resource.newInstance(512, 4);
       matches = amClient.getMatchingRequests(priority, node, testCapability5);
       assert(matches.size() == 0);
+      
+      // verify requests without relaxed locality are only returned at specific
+      // locations
+      Resource testCapability7 = Resource.newInstance(2000, 1);
+      matches = amClient.getMatchingRequests(priority2, ResourceRequest.ANY,
+          testCapability7);
+      assert(matches.size() == 0);
+      matches = amClient.getMatchingRequests(priority2, node, testCapability7);
+      assert(matches.size() == 1);
       
       amClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED,
           null, null);
