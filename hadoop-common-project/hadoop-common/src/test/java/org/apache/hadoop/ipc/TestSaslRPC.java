@@ -312,7 +312,7 @@ public class TestSaslRPC {
       doDigestRpc(server, sm);
     } catch (RemoteException e) {
       LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
-      assertTrue(ERROR_MESSAGE.equals(e.getLocalizedMessage()));
+      assertEquals(ERROR_MESSAGE, e.getLocalizedMessage());
       assertTrue(e.unwrapRemoteException() instanceof InvalidToken);
       succeeded = true;
     }
@@ -818,6 +818,7 @@ public class TestSaslRPC {
     }
 
     try {
+      LOG.info("trying ugi:"+clientUgi+" tokens:"+clientUgi.getTokens());
       return clientUgi.doAs(new PrivilegedExceptionAction<String>() {
         @Override
         public String run() throws IOException {
