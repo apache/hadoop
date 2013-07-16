@@ -78,6 +78,8 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9421. [RPC v9] Convert SASL to use ProtoBuf and provide
     negotiation capabilities (daryn)
 
+    HADOOP-9683. [RPC v9] Wrap IpcConnectionContext in RPC headers (daryn)
+
   NEW FEATURES
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)

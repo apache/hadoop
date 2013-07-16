@@ -62,7 +62,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcRequestMessageWrapper;
+import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.AuthProtocol;
+import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
@@ -113,6 +116,8 @@ public class Client {
   private final boolean fallbackAllowed;
   
   final static int PING_CALL_ID = -1;
+
+  final static int CONNECTION_CONTEXT_CALL_ID = -3;
   
   /**
    * Executor on which IPC calls' parameters are sent.
@@ -832,17 +837,19 @@ public class Client {
                                         AuthMethod authMethod)
                                             throws IOException {
       // Write out the ConnectionHeader
-      DataOutputBuffer buf = new DataOutputBuffer();
-      ProtoUtil.makeIpcConnectionContext(
+      IpcConnectionContextProto message = ProtoUtil.makeIpcConnectionContext(
           RPC.getProtocolName(remoteId.getProtocol()),
           remoteId.getTicket(),
-          authMethod).writeTo(buf);
+          authMethod);
+      RpcRequestHeaderProto connectionContextHeader =
+          ProtoUtil.makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
+              OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID);
+      RpcRequestMessageWrapper request =
+          new RpcRequestMessageWrapper(connectionContextHeader, message);
       
       // Write out the packet length
-      int bufLen = buf.getLength();
-
-      out.writeInt(bufLen);
-      out.write(buf.getData(), 0, bufLen);
+      out.writeInt(request.getLength());
+      request.write(out);
     }
     
     /* wait till someone signals us to start reading RPC response or
