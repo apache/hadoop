@@ -41,6 +41,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.ServiceOperations;
@@ -53,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.client.RMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -60,9 +63,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
+import org.apache.hadoop.yarn.server.api.ServerRMProxy;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
@@ -103,10 +106,16 @@ public class TestNodeStatusUpdater {
   volatile int heartBeatID = 0;
   volatile Throwable nmStartError = null;
   private final List<NodeId> registeredNodes = new ArrayList<NodeId>();
-  private final Configuration conf = createNMConfig();
+  private boolean triggered = false;
+  private Configuration conf;
   private NodeManager nm;
   private boolean containerStatusBackupSuccessfully = true;
   private List<ContainerStatus> completedContainerStatusList = new ArrayList<ContainerStatus>();
+
+  @Before
+  public void setUp() {
+    conf = createNMConfig();
+  }
 
   @After
   public void tearDown() {
@@ -274,6 +283,11 @@ public class TestNodeStatusUpdater {
     protected ResourceTracker getRMClient() {
       return resourceTracker;
     }
+
+    @Override
+    protected void stopRMProxy() {
+      return;
+    }
   }
 
   private class MyNodeStatusUpdater2 extends NodeStatusUpdaterImpl {
@@ -290,6 +304,10 @@ public class TestNodeStatusUpdater {
       return resourceTracker;
     }
 
+    @Override
+    protected void stopRMProxy() {
+      return;
+    }
   }
 
   private class MyNodeStatusUpdater3 extends NodeStatusUpdaterImpl {
@@ -307,7 +325,12 @@ public class TestNodeStatusUpdater {
     protected ResourceTracker getRMClient() {
       return resourceTracker;
     }
-    
+
+    @Override
+    protected void stopRMProxy() {
+      return;
+    }
+
     @Override
     protected boolean isTokenKeepAliveEnabled(Configuration conf) {
       return true;
@@ -315,21 +338,16 @@ public class TestNodeStatusUpdater {
   }
 
   private class MyNodeStatusUpdater4 extends NodeStatusUpdaterImpl {
-    public ResourceTracker resourceTracker =
-        new MyResourceTracker(this.context);
+
     private Context context;
-    private long waitStartTime;
     private final long rmStartIntervalMS;
     private final boolean rmNeverStart;
-    private volatile boolean triggered = false;
-    private long durationWhenTriggered = -1;
-
+    public ResourceTracker resourceTracker;
     public MyNodeStatusUpdater4(Context context, Dispatcher dispatcher,
         NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
         long rmStartIntervalMS, boolean rmNeverStart) {
       super(context, dispatcher, healthChecker, metrics);
       this.context = context;
-      this.waitStartTime = System.currentTimeMillis();
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
     }
@@ -337,25 +355,16 @@ public class TestNodeStatusUpdater {
     @Override
     protected void serviceStart() throws Exception {
       //record the startup time
-      this.waitStartTime = System.currentTimeMillis();
       super.serviceStart();
     }
 
     @Override
-    protected ResourceTracker getRMClient() {
-      if (!triggered) {
-        long t = System.currentTimeMillis();
-        long duration = t - waitStartTime;
-        if (duration <= rmStartIntervalMS
-            || rmNeverStart) {
-          throw new YarnRuntimeException("Faking RM start failure as start " +
-                                  "delay timer has not expired.");
-        } else {
-          //triggering
-          triggered = true;
-          durationWhenTriggered = duration;
-        }
-      }
+    protected ResourceTracker getRMClient() throws IOException {
+      RetryPolicy retryPolicy = RMProxy.createRetryPolicy(conf);
+      resourceTracker =
+          (ResourceTracker) RetryProxy.create(ResourceTracker.class,
+            new MyResourceTracker6(this.context, rmStartIntervalMS,
+              rmNeverStart), retryPolicy);
       return resourceTracker;
     }
 
@@ -363,37 +372,35 @@ public class TestNodeStatusUpdater {
       return triggered;
     }
 
-    private long getWaitStartTime() {
-      return waitStartTime;
-    }
-
-    private long getDurationWhenTriggered() {
-      return durationWhenTriggered;
-    }
-
     @Override
-    public String toString() {
-      return "MyNodeStatusUpdater4{" +
-             "rmNeverStart=" + rmNeverStart +
-             ", triggered=" + triggered +
-             ", duration=" + durationWhenTriggered +
-             ", rmStartIntervalMS=" + rmStartIntervalMS +
-             '}';
+    protected void stopRMProxy() {
+      return;
     }
   }
 
+
+
   private class MyNodeStatusUpdater5 extends NodeStatusUpdaterImpl {
     private ResourceTracker resourceTracker;
+    private Configuration conf;
 
     public MyNodeStatusUpdater5(Context context, Dispatcher dispatcher,
-        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
+        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics, Configuration conf) {
       super(context, dispatcher, healthChecker, metrics);
       resourceTracker = new MyResourceTracker5();
+      this.conf = conf;
     }
 
     @Override
     protected ResourceTracker getRMClient() {
-      return resourceTracker;
+      RetryPolicy retryPolicy = RMProxy.createRetryPolicy(conf);
+      return (ResourceTracker) RetryProxy.create(ResourceTracker.class,
+        resourceTracker, retryPolicy);
+    }
+
+    @Override
+    protected void stopRMProxy() {
+      return;
     }
   }
 
@@ -417,15 +424,18 @@ public class TestNodeStatusUpdater {
     public boolean isStopped = false;
     private NodeStatusUpdater nodeStatusUpdater;
     private CyclicBarrier syncBarrier;
-    public MyNodeManager2 (CyclicBarrier syncBarrier) {
+    private Configuration conf;
+
+    public MyNodeManager2 (CyclicBarrier syncBarrier, Configuration conf) {
       this.syncBarrier = syncBarrier;
+      this.conf = conf;
     }
     @Override
     protected NodeStatusUpdater createNodeStatusUpdater(Context context,
         Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
       nodeStatusUpdater =
           new MyNodeStatusUpdater5(context, dispatcher, healthChecker,
-                                     metrics);
+                                     metrics, conf);
       return nodeStatusUpdater;
     }
 
@@ -577,7 +587,7 @@ public class TestNodeStatusUpdater {
               .get(4).getState() == ContainerState.RUNNING
               && request.getNodeStatus().getContainersStatuses().get(4)
                   .getContainerId().getId() == 5);
-          throw new YarnRuntimeException("Lost the heartbeat response");
+          throw new java.net.ConnectException("Lost the heartbeat response");
         } else if (heartBeatID == 2) {
           Assert.assertEquals(request.getNodeStatus().getContainersStatuses()
               .size(), 7);
@@ -646,7 +656,63 @@ public class TestNodeStatusUpdater {
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
         throws YarnException, IOException {
       heartBeatID++;
-      throw RPCUtil.getRemoteException("NodeHeartbeat exception");
+      throw new java.net.ConnectException(
+          "NodeHeartbeat exception");
+    }
+  }
+
+  private class MyResourceTracker6 implements ResourceTracker {
+
+    private final Context context;
+    private long rmStartIntervalMS;
+    private boolean rmNeverStart;
+    private final long waitStartTime;
+
+    public MyResourceTracker6(Context context, long rmStartIntervalMS,
+        boolean rmNeverStart) {
+      this.context = context;
+      this.rmStartIntervalMS = rmStartIntervalMS;
+      this.rmNeverStart = rmNeverStart;
+      this.waitStartTime = System.currentTimeMillis();
+    }
+
+    @Override
+    public RegisterNodeManagerResponse registerNodeManager(
+        RegisterNodeManagerRequest request) throws YarnException, IOException,
+        IOException {
+      if (System.currentTimeMillis() - waitStartTime <= rmStartIntervalMS
+          || rmNeverStart) {
+        throw new java.net.ConnectException("Faking RM start failure as start "
+            + "delay timer has not expired.");
+      } else {
+        NodeId nodeId = request.getNodeId();
+        Resource resource = request.getResource();
+        LOG.info("Registering " + nodeId.toString());
+        // NOTE: this really should be checking against the config value
+        InetSocketAddress expected = NetUtils.getConnectAddress(
+            conf.getSocketAddr(YarnConfiguration.NM_ADDRESS, null, -1));
+        Assert.assertEquals(NetUtils.getHostPortString(expected),
+            nodeId.toString());
+        Assert.assertEquals(5 * 1024, resource.getMemory());
+        registeredNodes.add(nodeId);
+
+        RegisterNodeManagerResponse response = recordFactory
+            .newRecordInstance(RegisterNodeManagerResponse.class);
+        triggered = true;
+        return response;
+      }
+    }
+
+    @Override
+    public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
+        throws YarnException, IOException {
+      NodeStatus nodeStatus = request.getNodeStatus();
+      nodeStatus.setResponseId(heartBeatID++);
+
+      NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils.
+          newNodeHeartbeatResponse(heartBeatID, NodeAction.NORMAL, null,
+              null, null, null, 1000L);
+      return nhResponse;
     }
   }
 
@@ -843,8 +909,7 @@ public class TestNodeStatusUpdater {
     final long connectionRetryIntervalSecs = 1;
     //Waiting for rmStartIntervalMS, RM will be started
     final long rmStartIntervalMS = 2*1000;
-    YarnConfiguration conf = createNMConfig();
-    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_WAIT_SECS,
+    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS,
         connectionWaitSecs);
     conf.setLong(YarnConfiguration
         .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
@@ -907,8 +972,6 @@ public class TestNodeStatusUpdater {
     }
     long duration = System.currentTimeMillis() - waitStartTime;
     MyNodeStatusUpdater4 myUpdater = (MyNodeStatusUpdater4) updater;
-    Assert.assertTrue("Updater was never started",
-                      myUpdater.getWaitStartTime()>0);
     Assert.assertTrue("NM started before updater triggered",
                       myUpdater.isTriggered());
     Assert.assertTrue("NM should have connected to RM after "
@@ -1037,13 +1100,13 @@ public class TestNodeStatusUpdater {
     final long connectionWaitSecs = 1;
     final long connectionRetryIntervalSecs = 1;
     YarnConfiguration conf = createNMConfig();
-    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_WAIT_SECS,
+    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS,
         connectionWaitSecs);
     conf.setLong(YarnConfiguration
         .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
         connectionRetryIntervalSecs);
     CyclicBarrier syncBarrier = new CyclicBarrier(2);
-    nm = new MyNodeManager2(syncBarrier);
+    nm = new MyNodeManager2(syncBarrier, conf);
     nm.init(conf);
     nm.start();
     try {

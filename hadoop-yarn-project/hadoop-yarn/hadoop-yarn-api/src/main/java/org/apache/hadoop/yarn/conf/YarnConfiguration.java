@@ -655,17 +655,17 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
       2000;
 
-  /** Max time to wait to establish a connection to RM when NM starts
+  /** Max time to wait to establish a connection to RM
    */
-  public static final String RESOURCEMANAGER_CONNECT_WAIT_SECS =
-      NM_PREFIX + "resourcemanager.connect.wait.secs";
-  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_WAIT_SECS =
+  public static final String RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS =
+      RM_PREFIX + "resourcemanager.connect.max.wait.secs";
+  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS =
       15*60;
 
-  /** Time interval between each NM attempt to connect to RM
+  /** Time interval between each attempt to connect to RM
    */
   public static final String RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS =
-      NM_PREFIX + "resourcemanager.connect.retry_interval.secs";
+      RM_PREFIX + "resourcemanager.connect.retry_interval.secs";
   public static final long DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS
       = 30;
 
