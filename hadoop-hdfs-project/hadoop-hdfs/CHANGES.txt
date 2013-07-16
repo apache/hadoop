@@ -220,6 +220,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4912. Cleanup FSNamesystem#startFileInternal. (suresh)
 
+    HDFS-4903. Print trash configuration and trash emptier state in
+    namenode log. (Arpit Agarwal via suresh)
+
   OPTIMIZATIONS
 
     HDFS-4465. Optimize datanode ReplicasMap and ReplicaInfo. (atm)

@@ -57,7 +57,7 @@ public class TestStateTransitionFailure {
         fail("Transitioned to active but should not have been able to.");
       } catch (ExitException ee) {
         assertExceptionContains(
-            "Cannot start tresh emptier with negative interval", ee);
+            "Cannot start trash emptier with negative interval", ee);
       }
     } finally {
       if (cluster != null) {

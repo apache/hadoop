@@ -561,7 +561,7 @@ public class NameNode {
     if (trashInterval == 0) {
       return;
     } else if (trashInterval < 0) {
-      throw new IOException("Cannot start tresh emptier with negative interval."
+      throw new IOException("Cannot start trash emptier with negative interval."
           + " Set " + FS_TRASH_INTERVAL_KEY + " to a positive value.");
     }
     
