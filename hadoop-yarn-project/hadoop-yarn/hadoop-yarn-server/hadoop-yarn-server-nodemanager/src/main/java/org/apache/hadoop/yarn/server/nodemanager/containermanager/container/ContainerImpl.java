@@ -290,6 +290,11 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.DONE, ContainerState.DONE,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
+    // This transition may result when
+    // we notify container of failed localization if localizer thread (for
+    // that container) fails for some reason
+    .addTransition(ContainerState.DONE, ContainerState.DONE,
+        ContainerEventType.RESOURCE_FAILED)
 
     // create the topology tables
     .installTopology();
