@@ -59,6 +59,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-295. Fixed a race condition in ResourceManager RMAppAttempt state
     machine. (Mayank Bansal via vinodkv)
 
+    YARN-523. Modified a test-case to validate container diagnostics on
+    localization failures. (Jian He via vinodkv)
+
 Release 2.1.0-beta - 2013-07-02
 
   INCOMPATIBLE CHANGES
