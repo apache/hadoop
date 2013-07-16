@@ -169,6 +169,7 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -279,6 +280,8 @@ public class DataNode extends Configured
   
   // For InterDataNodeProtocol
   public RPC.Server ipcServer;
+
+  private JvmPauseMonitor pauseMonitor;
 
   private SecureResources secureResources = null;
   private AbstractList<File> dataDirs;
@@ -739,6 +742,8 @@ public class DataNode extends Configured
     registerMXBean();
     initDataXceiver(conf);
     startInfoServer(conf);
+    pauseMonitor = new JvmPauseMonitor(conf);
+    pauseMonitor.start();
   
     // BlockPoolTokenSecretManager is required to create ipc server.
     this.blockPoolTokenSecretManager = new BlockPoolTokenSecretManager();
@@ -1220,6 +1225,9 @@ public class DataNode extends Configured
     }
     if (ipcServer != null) {
       ipcServer.stop();
+    }
+    if (pauseMonitor != null) {
+      pauseMonitor.stop();
     }
     
     if (dataXceiverServer != null) {
