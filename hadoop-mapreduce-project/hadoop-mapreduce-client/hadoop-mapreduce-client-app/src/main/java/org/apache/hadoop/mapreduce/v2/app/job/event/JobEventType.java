@@ -44,7 +44,6 @@ public enum JobEventType {
 
   //Producer:Job
   JOB_COMPLETED,
-  JOB_FAIL_WAIT_TIMEDOUT,
 
   //Producer:Any component
   JOB_DIAGNOSTIC_UPDATE,
