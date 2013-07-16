@@ -435,6 +435,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-569. Add support for requesting and enforcing preemption requests via
     a capacity monitor. (Carlo Curino, cdouglas)
 
+    YARN-521. Augment AM - RM client module to be able to request containers
+    only at specific locations (Sandy Ryza via bikas)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
