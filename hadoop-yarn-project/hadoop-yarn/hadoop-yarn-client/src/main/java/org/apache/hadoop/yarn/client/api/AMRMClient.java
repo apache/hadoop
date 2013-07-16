@@ -159,7 +159,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       Preconditions.checkArgument(containerCount > 0,
           "The number of containers to request should larger than 0");
       Preconditions.checkArgument(
-              (!relaxLocality && (racks == null || racks.length == 0) 
+              !(!relaxLocality && (racks == null || racks.length == 0) 
                   && (nodes == null || nodes.length == 0)),
               "Can't turn off locality relaxation on a " + 
               "request with no location constraints");
