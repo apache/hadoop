@@ -240,6 +240,32 @@ public class TestContainer {
       }
     }
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  // mocked generic
+  public void testLocalizationFailureAtDone() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(6, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      wc.launchContainer();
+      reset(wc.localizerBus);
+      wc.containerSuccessful();
+      wc.containerResourcesCleanup();
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      // Now in DONE, issue RESOURCE_FAILED as done by LocalizeRunner
+      wc.resourceFailedContainer();
+      // Verify still in DONE
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      verifyCleanupCall(wc);
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
   
   @Test
   @SuppressWarnings("unchecked") // mocked generic
@@ -621,6 +647,11 @@ public class TestContainer {
 
     public void initContainer() {
       c.handle(new ContainerEvent(cId, ContainerEventType.INIT_CONTAINER));
+      drainDispatcherEvents();
+    }
+
+    public void resourceFailedContainer() {
+      c.handle(new ContainerEvent(cId, ContainerEventType.RESOURCE_FAILED));
       drainDispatcherEvents();
     }
 
