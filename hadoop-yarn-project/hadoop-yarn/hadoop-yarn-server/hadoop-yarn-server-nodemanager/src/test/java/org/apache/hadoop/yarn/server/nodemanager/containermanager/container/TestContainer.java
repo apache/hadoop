@@ -41,6 +41,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -80,7 +82,7 @@ public class TestContainer {
 
   final NodeManagerMetrics metrics = NodeManagerMetrics.create();
   final Configuration conf = new YarnConfiguration();
-
+  final String FAKE_LOCALIZATION_ERROR = "Fake localization error";
   
   /**
    * Verify correct container request events sent to localizer.
@@ -294,6 +296,7 @@ public class TestContainer {
       wc.localizeResourcesFromInvalidState(failCount);
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
       verifyCleanupCall(wc);
+      Assert.assertTrue(wc.getDiagnostics().contains(FAKE_LOCALIZATION_ERROR));
     } finally {
       if (wc != null) {
         wc.finished();
@@ -663,7 +666,7 @@ public class TestContainer {
         throws URISyntaxException {
       LocalResource rsrc = localResources.get(rsrcKey);
       LocalResourceRequest req = new LocalResourceRequest(rsrc);
-      Exception e = new Exception("Fake localization error");
+      Exception e = new Exception(FAKE_LOCALIZATION_ERROR);
       c.handle(new ContainerResourceFailedEvent(c.getContainerId(), req, e
         .getMessage()));
       drainDispatcherEvents();
@@ -679,7 +682,7 @@ public class TestContainer {
         }
         ++counter;
         LocalResourceRequest req = new LocalResourceRequest(rsrc.getValue());
-        Exception e = new Exception("Fake localization error");
+        Exception e = new Exception(FAKE_LOCALIZATION_ERROR);
         c.handle(new ContainerResourceFailedEvent(c.getContainerId(),
                  req, e.getMessage()));
       }
@@ -724,6 +727,10 @@ public class TestContainer {
     
     public int getLocalResourceCount() {
       return localResources.size();
+    }
+
+    public String getDiagnostics() {
+      return c.cloneAndGetContainerStatus().getDiagnostics();
     }
   }
 }
