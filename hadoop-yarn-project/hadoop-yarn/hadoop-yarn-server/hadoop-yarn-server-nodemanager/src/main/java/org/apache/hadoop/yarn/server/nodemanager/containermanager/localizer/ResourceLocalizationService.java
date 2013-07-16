@@ -82,6 +82,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.DeletionService.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
 import org.apache.hadoop.yarn.server.nodemanager.api.ResourceLocalizationSpec;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalResourceStatus;
@@ -1094,7 +1095,8 @@ public class ResourceLocalizationService extends CompositeService
         try {
           if (status.getPath().getName().matches(".*" +
               ContainerLocalizer.USERCACHE + "_DEL_.*")) {
-            cleanUpFilesFromSubDir(lfs, del, status.getPath());
+            LOG.info("usercache path : " + status.getPath().toString());
+            cleanUpFilesPerUserDir(lfs, del, status.getPath());
           } else if (status.getPath().getName()
               .matches(".*" + NM_PRIVATE_DIR + "_DEL_.*")
               ||
@@ -1111,17 +1113,28 @@ public class ResourceLocalizationService extends CompositeService
     }
   }
 
-  private void cleanUpFilesFromSubDir(FileContext lfs, DeletionService del,
-      Path dirPath) throws IOException {
-    RemoteIterator<FileStatus> fileStatus = lfs.listStatus(dirPath);
-    if (fileStatus != null) {
-      while (fileStatus.hasNext()) {
-        FileStatus status = fileStatus.next();
+  private void cleanUpFilesPerUserDir(FileContext lfs, DeletionService del,
+      Path userDirPath) throws IOException {
+    RemoteIterator<FileStatus> userDirStatus = lfs.listStatus(userDirPath);
+    FileDeletionTask dependentDeletionTask =
+        del.createFileDeletionTask(null, userDirPath, new Path[] {});
+    if (userDirStatus != null) {
+      List<FileDeletionTask> deletionTasks = new ArrayList<FileDeletionTask>();
+      while (userDirStatus.hasNext()) {
+        FileStatus status = userDirStatus.next();
         String owner = status.getOwner();
-        del.delete(owner, status.getPath(), new Path[] {});
+        FileDeletionTask deletionTask =
+            del.createFileDeletionTask(owner, null,
+              new Path[] { status.getPath() });
+        deletionTask.addFileDeletionTaskDependency(dependentDeletionTask);
+        deletionTasks.add(deletionTask);
       }
+      for (FileDeletionTask task : deletionTasks) {
+        del.scheduleFileDeletionTask(task);
+      }
+    } else {
+      del.scheduleFileDeletionTask(dependentDeletionTask);
     }
-    del.delete(null, dirPath, new Path[] {});
   }
 
 }

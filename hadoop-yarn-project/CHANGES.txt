@@ -21,6 +21,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-523. Modified a test-case to validate container diagnostics on
     localization failures. (Jian He via vinodkv)
 
+    YARN-661. Fixed NM to cleanup users' local directories correctly when
+    starting up. (Omkar Vinit Joshi via vinodkv)
+
 Release 2.1.0-beta - 2013-07-02
 
   INCOMPATIBLE CHANGES
