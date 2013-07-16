@@ -216,6 +216,9 @@ public class BlockManager {
   
   // whether or not to issue block encryption keys.
   final boolean encryptDataTransfer;
+  
+  // Max number of blocks to log info about during a block report.
+  private final long maxNumBlocksToLog;
 
   /**
    * When running inside a Standby node, the node may receive block reports
@@ -297,6 +300,10 @@ public class BlockManager {
         conf.getBoolean(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY,
             DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT);
     
+    this.maxNumBlocksToLog =
+        conf.getLong(DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
+            DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
+    
     LOG.info("defaultReplication         = " + defaultReplication);
     LOG.info("maxReplication             = " + maxReplication);
     LOG.info("minReplication             = " + minReplication);
@@ -304,6 +311,7 @@ public class BlockManager {
     LOG.info("shouldCheckForEnoughRacks  = " + shouldCheckForEnoughRacks);
     LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
     LOG.info("encryptDataTransfer        = " + encryptDataTransfer);
+    LOG.info("maxNumBlocksToLog          = " + maxNumBlocksToLog);
   }
 
   private static BlockTokenSecretManager createBlockTokenSecretManager(
@@ -1698,8 +1706,14 @@ public class BlockManager {
     for (Block b : toRemove) {
       removeStoredBlock(b, node);
     }
+    int numBlocksLogged = 0;
     for (BlockInfo b : toAdd) {
-      addStoredBlock(b, node, null, true);
+      addStoredBlock(b, node, null, numBlocksLogged < maxNumBlocksToLog);
+      numBlocksLogged++;
+    }
+    if (numBlocksLogged > maxNumBlocksToLog) {
+      blockLog.info("BLOCK* processReport: logged info for " + maxNumBlocksToLog
+          + " of " + numBlocksLogged + " reported.");
     }
     for (Block b : toInvalidate) {
       blockLog.info("BLOCK* processReport: "
@@ -2637,8 +2651,14 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     for (StatefulBlockInfo b : toUC) { 
       addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState);
     }
+    long numBlocksLogged = 0;
     for (BlockInfo b : toAdd) {
-      addStoredBlock(b, node, delHintNode, true);
+      addStoredBlock(b, node, delHintNode, numBlocksLogged < maxNumBlocksToLog);
+      numBlocksLogged++;
+    }
+    if (numBlocksLogged > maxNumBlocksToLog) {
+      blockLog.info("BLOCK* addBlock: logged info for " + maxNumBlocksToLog
+          + " of " + numBlocksLogged + " reported.");
     }
     for (Block b : toInvalidate) {
       blockLog.info("BLOCK* addBlock: block "
