@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.client.cli;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -31,11 +29,11 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -164,32 +162,10 @@ public class RMAdminCLI extends Configured implements Tool {
     }
   }
 
-  private static UserGroupInformation getUGI(Configuration conf
-  ) throws IOException {
-    return UserGroupInformation.getCurrentUser();
-  }
-
   private ResourceManagerAdministrationProtocol createAdminProtocol() throws IOException {
     // Get the current configuration
     final YarnConfiguration conf = new YarnConfiguration(getConf());
-
-    // Create the client
-    final InetSocketAddress addr = conf.getSocketAddr(
-        YarnConfiguration.RM_ADMIN_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
-    final YarnRPC rpc = YarnRPC.create(conf);
-    
-    ResourceManagerAdministrationProtocol adminProtocol =
-      getUGI(conf).doAs(new PrivilegedAction<ResourceManagerAdministrationProtocol>() {
-        @Override
-        public ResourceManagerAdministrationProtocol run() {
-          return (ResourceManagerAdministrationProtocol) rpc.getProxy(ResourceManagerAdministrationProtocol.class,
-              addr, conf);
-        }
-      });
-
-    return adminProtocol;
+    return ClientRMProxy.createRMProxy(conf, ResourceManagerAdministrationProtocol.class);
   }
   
   private int refreshQueues() throws IOException, YarnException {

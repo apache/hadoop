@@ -59,11 +59,12 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -81,16 +82,7 @@ public class YarnClientImpl extends YarnClient {
   private static final String ROOT = "root";
 
   public YarnClientImpl() {
-    this(null);
-  }
-  
-  public YarnClientImpl(InetSocketAddress rmAddress) {
-    this(YarnClientImpl.class.getName(), rmAddress);
-  }
-
-  public YarnClientImpl(String name, InetSocketAddress rmAddress) {
-    super(name);
-    this.rmAddress = rmAddress;
+    super(YarnClientImpl.class.getName());
   }
 
   private static InetSocketAddress getRmAddress(Configuration conf) {
@@ -100,9 +92,7 @@ public class YarnClientImpl extends YarnClient {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    if (this.rmAddress == null) {
-      this.rmAddress = getRmAddress(conf);
-    }
+    this.rmAddress = getRmAddress(conf);
     statePollIntervalMillis = conf.getLong(
         YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS,
         YarnConfiguration.DEFAULT_YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS);
@@ -111,12 +101,11 @@ public class YarnClientImpl extends YarnClient {
 
   @Override
   protected void serviceStart() throws Exception {
-    YarnRPC rpc = YarnRPC.create(getConfig());
-
-    this.rmClient = (ApplicationClientProtocol) rpc.getProxy(
-        ApplicationClientProtocol.class, rmAddress, getConfig());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Connecting to ResourceManager at " + rmAddress);
+    try {
+      rmClient = ClientRMProxy.createRMProxy(getConfig(),
+            ApplicationClientProtocol.class);
+    } catch (IOException e) {
+      throw new YarnRuntimeException(e);
     }
     super.serviceStart();
   }

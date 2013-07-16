@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.client.api;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Set;
 
@@ -51,25 +50,6 @@ public abstract class YarnClient extends AbstractService {
   @Public
   public static YarnClient createYarnClient() {
     YarnClient client = new YarnClientImpl();
-    return client;
-  }
-
-  /**
-   * Create a new instance of YarnClient.
-   */
-  @Public
-  public static YarnClient createYarnClient(InetSocketAddress rmAddress) {
-    YarnClient client = new YarnClientImpl(rmAddress);
-    return client;
-  }
-
-  /**
-   * Create a new instance of YarnClient.
-   */
-  @Public
-  public static YarnClient createYarnClient(String name,
-      InetSocketAddress rmAddress) {
-    YarnClient client = new YarnClientImpl(name, rmAddress);
     return client;
   }
 
