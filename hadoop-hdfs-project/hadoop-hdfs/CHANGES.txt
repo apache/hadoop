@@ -188,6 +188,9 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4645. Move from randomly generated block ID to sequentially generated
     block ID.  (Arpit Agarwal via szetszwo)
 
+    HDFS-4992. Make balancer's mover thread count and dispatcher thread count
+    configurable.  (Max Lapan via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
