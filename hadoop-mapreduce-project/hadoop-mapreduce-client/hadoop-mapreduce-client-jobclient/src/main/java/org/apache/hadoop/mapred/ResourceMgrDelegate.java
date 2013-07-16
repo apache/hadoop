@@ -75,36 +75,18 @@ public class ResourceMgrDelegate extends YarnClient {
    * @param conf the configuration object.
    */
   public ResourceMgrDelegate(YarnConfiguration conf) {
-    this(conf, null);
-  }
-
-  /**
-   * Delegate responsible for communicating with the Resource Manager's
-   * {@link ApplicationClientProtocol}.
-   * @param conf the configuration object.
-   * @param rmAddress the address of the Resource Manager
-   */
-  public ResourceMgrDelegate(YarnConfiguration conf,
-      InetSocketAddress rmAddress) {
     super(ResourceMgrDelegate.class.getName());
     this.conf = conf;
-    this.rmAddress = rmAddress;
-    if (rmAddress == null) {
-      client = YarnClient.createYarnClient();
-    } else {
-      client = YarnClient.createYarnClient(rmAddress);
-    }
+    this.client = YarnClient.createYarnClient();
     init(conf);
     start();
   }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    if (rmAddress == null) {
-      this.rmAddress = conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
+    this.rmAddress = conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
           YarnConfiguration.DEFAULT_RM_ADDRESS,
           YarnConfiguration.DEFAULT_RM_PORT);
-    }
     client.init(conf);
     super.serviceInit(conf);
   }
