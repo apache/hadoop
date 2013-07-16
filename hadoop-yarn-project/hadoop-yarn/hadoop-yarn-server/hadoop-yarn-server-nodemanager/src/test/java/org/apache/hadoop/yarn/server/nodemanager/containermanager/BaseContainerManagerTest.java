@@ -118,6 +118,11 @@ public abstract class BaseContainerManagerTest {
     };
 
     @Override
+    protected void stopRMProxy() {
+      return;
+    }
+
+    @Override
     protected void startStatusUpdater() {
       return; // Don't start any updating thread.
     }

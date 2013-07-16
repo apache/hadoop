@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -47,9 +48,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
+import org.apache.hadoop.yarn.server.api.ServerRMProxy;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
@@ -77,7 +78,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private NodeId nodeId;
   private long nextHeartBeatInterval;
   private ResourceTracker resourceTracker;
-  private InetSocketAddress rmAddress;
   private Resource totalResource;
   private int httpPort;
   private volatile boolean isStopped;
@@ -91,9 +91,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
-  private long rmConnectWaitMS;
-  private long rmConnectionRetryIntervalMS;
-  private boolean waitForEver;
 
   private Runnable statusUpdaterRunnable;
   private Thread  statusUpdater;
@@ -110,11 +107,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    this.rmAddress = conf.getSocketAddr(
-        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
-
     int memoryMb = 
         conf.getInt(
             YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
@@ -153,6 +145,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     try {
       // Registration has to be in start so that ContainerManager can get the
       // perNM tokens needed to authenticate ContainerTokens.
+      this.resourceTracker = getRMClient();
       registerWithRM();
       super.serviceStart();
       startStatusUpdater();
@@ -167,6 +160,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   protected void serviceStop() throws Exception {
     // Interrupt the updater.
     this.isStopped = true;
+    stopRMProxy();
     super.serviceStop();
   }
 
@@ -188,6 +182,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
   }
 
+  @VisibleForTesting
+  protected void stopRMProxy() {
+    if(this.resourceTracker != null) {
+      RPC.stopProxy(this.resourceTracker);
+    }
+  }
+
   @Private
   protected boolean isTokenKeepAliveEnabled(Configuration conf) {
     return conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
@@ -195,93 +196,22 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         && UserGroupInformation.isSecurityEnabled();
   }
 
-  protected ResourceTracker getRMClient() {
+  @VisibleForTesting
+  protected ResourceTracker getRMClient() throws IOException {
     Configuration conf = getConfig();
-    YarnRPC rpc = YarnRPC.create(conf);
-    return (ResourceTracker) rpc.getProxy(ResourceTracker.class, rmAddress,
-        conf);
+    return ServerRMProxy.createRMProxy(conf, ResourceTracker.class);
   }
 
   @VisibleForTesting
   protected void registerWithRM() throws YarnException, IOException {
-    Configuration conf = getConfig();
-    rmConnectWaitMS =
-        conf.getInt(
-            YarnConfiguration.RESOURCEMANAGER_CONNECT_WAIT_SECS,
-            YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_WAIT_SECS)
-        * 1000;
-    rmConnectionRetryIntervalMS =
-        conf.getLong(
-            YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
-            YarnConfiguration
-                .DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS)
-        * 1000;
-
-    if(rmConnectionRetryIntervalMS < 0) {
-      throw new YarnRuntimeException("Invalid Configuration. " +
-          YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS +
-          " should not be negative.");
-    }
-
-    waitForEver = (rmConnectWaitMS == -1000);
-
-    if(! waitForEver) {
-      if(rmConnectWaitMS < 0) {
-          throw new YarnRuntimeException("Invalid Configuration. " +
-              YarnConfiguration.RESOURCEMANAGER_CONNECT_WAIT_SECS +
-              " can be -1, but can not be other negative numbers");
-      }
-
-      //try connect once
-      if(rmConnectWaitMS < rmConnectionRetryIntervalMS) {
-        LOG.warn(YarnConfiguration.RESOURCEMANAGER_CONNECT_WAIT_SECS
-            + " is smaller than "
-            + YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS
-            + ". Only try connect once.");
-        rmConnectWaitMS = 0;
-      }
-    }
-
-    int rmRetryCount = 0;
-    long waitStartTime = System.currentTimeMillis();
-
     RegisterNodeManagerRequest request =
         recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
     request.setHttpPort(this.httpPort);
     request.setResource(this.totalResource);
     request.setNodeId(this.nodeId);
-    RegisterNodeManagerResponse regNMResponse;
-
-    while(true) {
-      try {
-        rmRetryCount++;
-        LOG.info("Connecting to ResourceManager at " + this.rmAddress
-            + ". current no. of attempts is " + rmRetryCount);
-        this.resourceTracker = getRMClient();
-        regNMResponse =
-            this.resourceTracker.registerNodeManager(request);
-        this.rmIdentifier = regNMResponse.getRMIdentifier();
-        break;
-      } catch(Throwable e) {
-        LOG.warn("Trying to connect to ResourceManager, " +
-            "current no. of failed attempts is "+rmRetryCount);
-        if(System.currentTimeMillis() - waitStartTime < rmConnectWaitMS
-            || waitForEver) {
-          try {
-            LOG.info("Sleeping for " + rmConnectionRetryIntervalMS/1000
-                + " seconds before next connection retry to RM");
-            Thread.sleep(rmConnectionRetryIntervalMS);
-          } catch(InterruptedException ex) {
-            //done nothing
-          }
-        } else {
-          String errorMessage = "Failed to Connect to RM, " +
-              "no. of failed attempts is "+rmRetryCount;
-          LOG.error(errorMessage,e);
-          throw new YarnRuntimeException(errorMessage,e);
-        }
-      }
-    }
+    RegisterNodeManagerResponse regNMResponse =
+        resourceTracker.registerNodeManager(request);
+    this.rmIdentifier = regNMResponse.getRMIdentifier();
     // if the Resourcemanager instructs NM to shutdown.
     if (NodeAction.SHUTDOWN.equals(regNMResponse.getNodeAction())) {
       String message =
@@ -426,8 +356,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           // Send heartbeat
           try {
             NodeHeartbeatResponse response = null;
-            int rmRetryCount = 0;
-            long waitStartTime = System.currentTimeMillis();
             NodeStatus nodeStatus = getNodeStatusAndUpdateContainersInContext();
             nodeStatus.setResponseId(lastHeartBeatID);
             
@@ -440,31 +368,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             request
               .setLastKnownNMTokenMasterKey(NodeStatusUpdaterImpl.this.context
                 .getNMTokenSecretManager().getCurrentKey());
-            while (!isStopped) {
-              try {
-                rmRetryCount++;
-                response = resourceTracker.nodeHeartbeat(request);
-                break;
-              } catch (Throwable e) {
-                LOG.warn("Trying to heartbeat to ResourceManager, "
-                    + "current no. of failed attempts is " + rmRetryCount);
-                if(System.currentTimeMillis() - waitStartTime < rmConnectWaitMS
-                    || waitForEver) {
-                  try {
-                    LOG.info("Sleeping for " + rmConnectionRetryIntervalMS/1000
-                        + " seconds before next heartbeat to RM");
-                    Thread.sleep(rmConnectionRetryIntervalMS);
-                  } catch(InterruptedException ex) {
-                    //done nothing
-                  }
-                } else {
-                  String errorMessage = "Failed to heartbeat to RM, " +
-                      "no. of failed attempts is "+rmRetryCount;
-                  LOG.error(errorMessage,e);
-                  throw new YarnRuntimeException(errorMessage,e);
-                }
-              }
-            }
+            response = resourceTracker.nodeHeartbeat(request);
             //get next heartbeat interval from response
             nextHeartBeatInterval = response.getNextHeartBeatInterval();
             updateMasterKeys(response);
@@ -508,11 +412,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               dispatcher.getEventHandler().handle(
                   new CMgrCompletedAppsEvent(appsToCleanup));
             }
-          } catch (YarnRuntimeException e) {
+          } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM
             dispatcher.getEventHandler().handle(
                 new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
-            throw e;
+            throw new YarnRuntimeException(e);
           } catch (Throwable e) {
             // TODO Better error handling. Thread can die with the rest of the
             // NM still running.

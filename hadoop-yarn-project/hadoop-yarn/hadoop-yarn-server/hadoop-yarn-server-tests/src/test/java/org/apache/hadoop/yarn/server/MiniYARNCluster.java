@@ -390,6 +390,11 @@ public class MiniYARNCluster extends CompositeService {
             }
           };
         };
+
+        @Override
+        protected void stopRMProxy() {
+          return;
+        }
       };
     };
   }
