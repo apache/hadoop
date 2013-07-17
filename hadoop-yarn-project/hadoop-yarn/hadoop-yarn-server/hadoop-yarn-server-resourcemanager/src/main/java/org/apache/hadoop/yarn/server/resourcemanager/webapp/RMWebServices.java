@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.http.HttpServletRequest;
@@ -231,11 +233,13 @@ public class RMWebServices {
       @QueryParam("startedTimeBegin") String startedBegin,
       @QueryParam("startedTimeEnd") String startedEnd,
       @QueryParam("finishedTimeBegin") String finishBegin,
-      @QueryParam("finishedTimeEnd") String finishEnd) {
+      @QueryParam("finishedTimeEnd") String finishEnd,
+      @QueryParam("applicationTypes") Set<String> applicationTypes) {
     long num = 0;
     boolean checkCount = false;
     boolean checkStart = false;
     boolean checkEnd = false;
+    boolean checkAppTypes = false;
     long countNum = 0;
 
     // set values suitable in case both of begin/end not specified
@@ -291,6 +295,27 @@ public class RMWebServices {
           "finishTimeEnd must be greater than finishTimeBegin");
     }
 
+    Set<String> appTypes = new HashSet<String>();
+    if (!applicationTypes.isEmpty()) {
+      for (String applicationType : applicationTypes) {
+        if (applicationType != null && !applicationType.trim().isEmpty()) {
+          if (applicationType.indexOf(",") == -1) {
+            appTypes.add(applicationType.trim());
+          } else {
+            String[] types = applicationType.split(",");
+            for (String type : types) {
+              if (!type.trim().isEmpty()) {
+                appTypes.add(type.trim());
+              }
+            }
+          }
+        }
+      }
+    }
+    if (!appTypes.isEmpty()) {
+      checkAppTypes = true;
+    }
+
     final ConcurrentMap<ApplicationId, RMApp> apps = rm.getRMContext()
         .getRMApps();
     AppsInfo allApps = new AppsInfo();
@@ -331,6 +356,10 @@ public class RMWebServices {
         if (!rmapp.getQueue().equals(queueQuery)) {
           continue;
         }
+      }
+      if (checkAppTypes
+          && !appTypes.contains(rmapp.getApplicationType())) {
+        continue;
       }
 
       if (checkStart
