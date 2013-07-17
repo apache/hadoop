@@ -503,6 +503,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-922. Change FileSystemRMStateStore to use directories (Jian He via
     bikas)
 
+    YARN-865. RM webservices can't query based on application Types. (Xuan Gong
+    via hitesh)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
