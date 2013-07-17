@@ -24,10 +24,14 @@ import java.io.Writer;
 import java.io.InputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Iterator;
+import java.util.jar.Attributes.Name;
+import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.Scanner;
 
@@ -39,6 +43,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.util.Shell;
 
 public class TestNonLocalJobJarSubmission extends ClusterMapReduceTestCase {
   
@@ -150,7 +155,26 @@ public class TestNonLocalJobJarSubmission extends ClusterMapReduceTestCase {
       }
       URL[] urls = ((URLClassLoader)applicationClassLoader).getURLs();
       for(URL url : urls) {
+        if (Shell.WINDOWS && url.getPath().contains("classpath") &&
+            url.getPath().endsWith(".jar")) {
+          // On Windows, classpath is packed into an intermediate jar file with
+          // a manifest containing a classpath entry to work around command line
+          // length limitation.  Unpack the individual class path entries from
+          // the intermediate jar.
+          final JarFile jf;
+          try {
+            jf = new JarFile(new File(url.toURI()));
+          } catch (URISyntaxException e) {
+            throw new IOException("unexpected URISyntaxException", e);
+          }
+          Manifest mf = jf.getManifest();
+          String classPath = mf.getMainAttributes().getValue(Name.CLASS_PATH);
+          for (String classPathEntry: classPath.split(" ")) {
+            out.collect(zero, new Text(classPathEntry));
+          }
+        } else {
           out.collect(zero, new Text(url.toString()));
+        }
       }
     }
     
