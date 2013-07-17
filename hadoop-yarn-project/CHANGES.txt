@@ -24,6 +24,10 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+Branch YARN-321: Generic ApplicationHistoryService
+
+  YARN-930. Bootstrapping ApplicationHistoryService module. (vinodkv)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
