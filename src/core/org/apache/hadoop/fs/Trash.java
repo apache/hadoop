@@ -79,6 +79,8 @@ public class Trash extends Configured {
     this.trash = new Path(home, TRASH);
     this.current = new Path(trash, CURRENT);
     this.interval = conf.getLong("fs.trash.interval", 60) * MSECS_PER_MINUTE;
+    LOG.info("Namenode trash configuration: Trash interval = " +
+        this.interval + " minutes.");
   }
   
   private Path makeTrashRelativePath(Path basePath, Path rmFilePath) {

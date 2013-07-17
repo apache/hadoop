@@ -21,6 +21,9 @@ Release 1.3.0 - unreleased
     HADOOP-8873. Port HADOOP-8175 (Add mkdir -p flag) to branch-1.
     (Akira Ajisaka via suresh)
 
+    HDFS-4903. Print trash configuration and trash emptier state in namenode
+    log. (Arpit Agarwal via suresh)
+
   BUG FIXES
 
     MAPREDUCE-5047. keep.failed.task.files=true causes job failure on 
