@@ -29,7 +29,6 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -52,7 +51,6 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.NMClient;
@@ -220,7 +218,7 @@ public class TestNMClient {
 
     for (int i = 0; i < num; ++i) {
       rmClient.addContainerRequest(new ContainerRequest(capability, nodes,
-          racks, priority, 1));
+          racks, priority));
     }
 
     int containersRequestedAny = rmClient.remoteRequestsTable.get(priority)
