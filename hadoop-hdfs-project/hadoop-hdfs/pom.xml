@@ -419,12 +419,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <source>
                 <directory>${basedir}/src/main/proto</directory>
                 <includes>
-                  <include>GetUserMappingsProtocol.proto</include>
                   <include>HAZKInfo.proto</include>
                   <include>InterDatanodeProtocol.proto</include>
                   <include>JournalProtocol.proto</include>
-                  <include>RefreshAuthorizationPolicyProtocol.proto</include>
-                  <include>RefreshUserMappingsProtocol.proto</include>
                   <include>datatransfer.proto</include>
                   <include>hdfs.proto</include>
                 </includes>

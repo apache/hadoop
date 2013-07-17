@@ -321,6 +321,9 @@
                   <include>ZKFCProtocol.proto</include>
                   <include>ProtobufRpcEngine.proto</include>
                   <include>Security.proto</include>
+                  <include>GetUserMappingsProtocol.proto</include>
+                  <include>RefreshAuthorizationPolicyProtocol.proto</include>
+                  <include>RefreshUserMappingsProtocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
