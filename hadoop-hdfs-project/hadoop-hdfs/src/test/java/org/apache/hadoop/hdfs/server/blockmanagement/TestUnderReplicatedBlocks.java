@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.junit.Test;
 
 public class TestUnderReplicatedBlocks {
-  @Test(timeout=300000) // 5 min timeout
+  @Test(timeout=60000) // 1 min timeout
   public void testSetrepIncWithUnderReplicatedBlocks() throws Exception {
     Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = 2;
@@ -49,6 +49,7 @@ public class TestUnderReplicatedBlocks {
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
       DatanodeDescriptor dn = bm.blocksMap.nodeIterator(b.getLocalBlock()).next();
       bm.addToInvalidates(b.getLocalBlock(), dn);
+      Thread.sleep(5000);
       bm.blocksMap.removeNode(b.getLocalBlock(), dn);
       
       // increment this file's replication factor
