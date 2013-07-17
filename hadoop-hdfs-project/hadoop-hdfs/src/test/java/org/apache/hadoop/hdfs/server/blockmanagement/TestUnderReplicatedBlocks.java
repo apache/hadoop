@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.junit.Test;
 
 public class TestUnderReplicatedBlocks {
-  @Test(timeout=300000) // 5 min timeout
+  @Test(timeout=60000) // 1 min timeout
   public void testSetrepIncWithUnderReplicatedBlocks() throws Exception {
     Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = 2;
@@ -54,7 +54,7 @@ public class TestUnderReplicatedBlocks {
       BlockManagerTestUtil.computeAllPendingWork(bm);
       DataNodeTestUtils.triggerHeartbeat(cluster.getDataNode(dn.getIpcPort()));
       // Wait to make sure the DataNode receives the deletion request 
-      Thread.sleep(1000);
+      Thread.sleep(5000);
       // Remove the record from blocksMap
       bm.blocksMap.removeNode(b.getLocalBlock(), dn);
       
