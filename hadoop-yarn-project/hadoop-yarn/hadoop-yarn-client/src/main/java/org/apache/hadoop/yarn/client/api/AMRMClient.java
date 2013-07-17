@@ -69,7 +69,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   }
 
   /**
-   * Object to represent a container request for resources. Scheduler
+   * Object to represent a single container request for resources. Scheduler
    * documentation should be consulted for the specifics of how the parameters
    * are honored.
    * 
@@ -101,7 +101,6 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     final List<String> nodes;
     final List<String> racks;
     final Priority priority;
-    final int containerCount;
     final boolean relaxLocality;
     
     /**
@@ -119,12 +118,10 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
      * @param priority
      *          The priority at which to request the containers. Higher
      *          priorities have lower numerical values.
-     * @param containerCount
-     *          The number of containers to request.
      */
     public ContainerRequest(Resource capability, String[] nodes,
-        String[] racks, Priority priority, int containerCount) {
-      this(capability, nodes, racks, priority, containerCount, true);
+        String[] racks, Priority priority) {
+      this(capability, nodes, racks, priority, true);
     }
           
     /**
@@ -141,23 +138,18 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
      * @param priority
      *          The priority at which to request the containers. Higher
      *          priorities have lower numerical values.
-     * @param containerCount
-     *          The number of containers to request.
      * @param relaxLocality
      *          If true, containers for this request may be assigned on hosts
      *          and racks other than the ones explicitly requested.
      */
     public ContainerRequest(Resource capability, String[] nodes,
-        String[] racks, Priority priority, int containerCount,
-        boolean relaxLocality) {
+        String[] racks, Priority priority, boolean relaxLocality) {
       // Validate request
       Preconditions.checkArgument(capability != null,
           "The Resource to be requested for each container " +
               "should not be null ");
       Preconditions.checkArgument(priority != null,
           "The priority at which to request containers should not be null ");
-      Preconditions.checkArgument(containerCount > 0,
-          "The number of containers to request should larger than 0");
       Preconditions.checkArgument(
               !(!relaxLocality && (racks == null || racks.length == 0) 
                   && (nodes == null || nodes.length == 0)),
@@ -167,7 +159,6 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       this.nodes = (nodes != null ? ImmutableList.copyOf(nodes) : null);
       this.racks = (racks != null ? ImmutableList.copyOf(racks) : null);
       this.priority = priority;
-      this.containerCount = containerCount;
       this.relaxLocality = relaxLocality;
     }
     
@@ -187,10 +178,6 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       return priority;
     }
     
-    public int getContainerCount() {
-      return containerCount;
-    }
-    
     public boolean getRelaxLocality() {
       return relaxLocality;
     }
@@ -199,32 +186,10 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       StringBuilder sb = new StringBuilder();
       sb.append("Capability[").append(capability).append("]");
       sb.append("Priority[").append(priority).append("]");
-      sb.append("ContainerCount[").append(containerCount).append("]");
       return sb.toString();
     }
   }
  
-  /**
-   * This creates a <code>ContainerRequest</code> for 1 container and the
-   * AMRMClient stores this request internally. <code>getMatchingRequests</code>
-   * can be used to retrieve these requests from AMRMClient. These requests may 
-   * be matched with an allocated container to determine which request to assign
-   * the container to. <code>removeContainerRequest</code> must be called using 
-   * the same assigned <code>StoredContainerRequest</code> object so that 
-   * AMRMClient can remove it from its internal store.
-   */
-  public static class StoredContainerRequest extends ContainerRequest {    
-    public StoredContainerRequest(Resource capability, String[] nodes,
-        String[] racks, Priority priority) {
-      super(capability, nodes, racks, priority, 1);
-    }
-    
-    public StoredContainerRequest(Resource capability, String[] nodes,
-        String[] racks, Priority priority, boolean relaxLocality) {
-      super(capability, nodes, racks, priority, 1, relaxLocality);
-    }
-  }
-  
   /**
    * Register the application master. This must be called before any 
    * other interaction
@@ -311,8 +276,8 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   public abstract int getClusterNodeCount();
 
   /**
-   * Get outstanding <code>StoredContainerRequest</code>s matching the given 
-   * parameters. These StoredContainerRequests should have been added via
+   * Get outstanding <code>ContainerRequest</code>s matching the given 
+   * parameters. These ContainerRequests should have been added via
    * <code>addContainerRequest</code> earlier in the lifecycle. For performance,
    * the AMRMClient may return its internal collection directly without creating 
    * a copy. Users should not perform mutable operations on the return value.

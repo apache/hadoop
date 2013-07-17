@@ -24,7 +24,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -53,7 +52,7 @@ public class TestAMRMClientContainerRequest {
     Resource capability = Resource.newInstance(1024, 1);
     ContainerRequest request =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
-            new String[] {"/rack2"}, Priority.newInstance(1), 4);
+            new String[] {"/rack2"}, Priority.newInstance(1));
     client.addContainerRequest(request);
     verifyResourceRequest(client, request, "host1", true);
     verifyResourceRequest(client, request, "host2", true);
@@ -75,7 +74,7 @@ public class TestAMRMClientContainerRequest {
     Resource capability = Resource.newInstance(1024, 1);
     ContainerRequest nodeLevelRequest =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
-            null, Priority.newInstance(1), 4, false);
+            null, Priority.newInstance(1), false);
     client.addContainerRequest(nodeLevelRequest);
 
     verifyResourceRequest(client, nodeLevelRequest, ResourceRequest.ANY, false);
@@ -87,12 +86,12 @@ public class TestAMRMClientContainerRequest {
     // same priority
     ContainerRequest nodeLevelRequest2 =
         new ContainerRequest(capability, new String[] {"host2", "host3"},
-            null, Priority.newInstance(1), 4, false);
+            null, Priority.newInstance(1), false);
     client.addContainerRequest(nodeLevelRequest2);
     
     AMRMClient.ContainerRequest rackLevelRequest =
         new AMRMClient.ContainerRequest(capability, null,
-            new String[] {"/rack3", "/rack4"}, Priority.newInstance(2), 3, false);
+            new String[] {"/rack3", "/rack4"}, Priority.newInstance(2), false);
     client.addContainerRequest(rackLevelRequest);
     
     verifyResourceRequest(client, rackLevelRequest, ResourceRequest.ANY, false);
@@ -103,13 +102,13 @@ public class TestAMRMClientContainerRequest {
     // same priority
     AMRMClient.ContainerRequest rackLevelRequest2 =
         new AMRMClient.ContainerRequest(capability, null,
-            new String[] {"/rack4", "/rack5"}, Priority.newInstance(2), 3, false);
+            new String[] {"/rack4", "/rack5"}, Priority.newInstance(2), false);
     client.addContainerRequest(rackLevelRequest2);
     
     ContainerRequest bothLevelRequest =
         new ContainerRequest(capability, new String[] {"host3", "host4"},
             new String[] {"rack1", "/otherrack"},
-            Priority.newInstance(3), 4, false);
+            Priority.newInstance(3), false);
     client.addContainerRequest(bothLevelRequest);
 
     verifyResourceRequest(client, bothLevelRequest, ResourceRequest.ANY, false);
@@ -125,7 +124,7 @@ public class TestAMRMClientContainerRequest {
     ContainerRequest bothLevelRequest2 =
         new ContainerRequest(capability, new String[] {"host4", "host5"},
             new String[] {"rack1", "/otherrack2"},
-            Priority.newInstance(3), 4, false);
+            Priority.newInstance(3), false);
     client.addContainerRequest(bothLevelRequest2);
   }
   
@@ -142,11 +141,11 @@ public class TestAMRMClientContainerRequest {
     Resource capability = Resource.newInstance(1024, 1);
     ContainerRequest request1 =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
-            null, Priority.newInstance(1), 4, false);
+            null, Priority.newInstance(1), false);
     client.addContainerRequest(request1);
     ContainerRequest request2 =
         new ContainerRequest(capability, new String[] {"host3"},
-            null, Priority.newInstance(1), 4, true);
+            null, Priority.newInstance(1), true);
     client.addContainerRequest(request2);
   }
   
@@ -163,28 +162,28 @@ public class TestAMRMClientContainerRequest {
     Resource capability = Resource.newInstance(1024, 1);
     ContainerRequest request1 =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
-            null, Priority.newInstance(1), 4, false);
+            null, Priority.newInstance(1), false);
     client.addContainerRequest(request1);
     
     client.removeContainerRequest(request1);
 
     ContainerRequest request2 =
         new ContainerRequest(capability, new String[] {"host3"},
-            null, Priority.newInstance(1), 4, true);
+            null, Priority.newInstance(1), true);
     client.addContainerRequest(request2);
     
     client.removeContainerRequest(request2);
     
     ContainerRequest request3 =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
-            null, Priority.newInstance(1), 4, false);
+            null, Priority.newInstance(1), false);
     client.addContainerRequest(request3);
     
     client.removeContainerRequest(request3);
     
     ContainerRequest request4 =
         new ContainerRequest(capability, null,
-            new String[] {"rack1"}, Priority.newInstance(1), 4, true);
+            new String[] {"rack1"}, Priority.newInstance(1), true);
     client.addContainerRequest(request4);
 
   }
@@ -202,11 +201,11 @@ public class TestAMRMClientContainerRequest {
     Resource capability = Resource.newInstance(1024, 1);
     ContainerRequest request1 =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
-            null, Priority.newInstance(1), 4, false);
+            null, Priority.newInstance(1), false);
     client.addContainerRequest(request1);
     ContainerRequest request2 =
         new ContainerRequest(capability, null,
-            new String[] {"rack1"}, Priority.newInstance(1), 4, true);
+            new String[] {"rack1"}, Priority.newInstance(1), true);
     client.addContainerRequest(request2);
   }
   
@@ -227,7 +226,7 @@ public class TestAMRMClientContainerRequest {
     ResourceRequest ask =  client.remoteRequestsTable.get(request.getPriority())
         .get(location).get(request.getCapability()).remoteRequest;
     assertEquals(location, ask.getResourceName());
-    assertEquals(request.getContainerCount(), ask.getNumContainers());
+    assertEquals(1, ask.getNumContainers());
     assertEquals(expectedRelaxLocality, ask.getRelaxLocality());
   }
 }

@@ -343,26 +343,26 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
             + joiner.join(req.getNodes()));        
       }
       for (String node : dedupedNodes) {
-        addResourceRequest(req.getPriority(), node, req.getCapability(),
-            req.getContainerCount(), req, true);
+        addResourceRequest(req.getPriority(), node, req.getCapability(), req,
+            true);
       }
     }
 
     for (String rack : dedupedRacks) {
-      addResourceRequest(req.getPriority(), rack, req.getCapability(),
-          req.getContainerCount(), req, true);
+      addResourceRequest(req.getPriority(), rack, req.getCapability(), req,
+          true);
     }
 
     // Ensure node requests are accompanied by requests for
     // corresponding rack
     for (String rack : inferredRacks) {
-      addResourceRequest(req.getPriority(), rack, req.getCapability(),
-          req.getContainerCount(), req, req.getRelaxLocality());
+      addResourceRequest(req.getPriority(), rack, req.getCapability(), req,
+          req.getRelaxLocality());
     }
 
     // Off-switch
-    addResourceRequest(req.getPriority(), ResourceRequest.ANY, req.getCapability(),
-        req.getContainerCount(), req, req.getRelaxLocality());
+    addResourceRequest(req.getPriority(), ResourceRequest.ANY, 
+                    req.getCapability(), req, req.getRelaxLocality());
   }
 
   @Override
@@ -378,18 +378,16 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     // Update resource requests
     if (req.getNodes() != null) {
       for (String node : new HashSet<String>(req.getNodes())) {
-        decResourceRequest(req.getPriority(), node, req.getCapability(),
-            req.getContainerCount(), req);
+        decResourceRequest(req.getPriority(), node, req.getCapability(), req);
       }
     }
 
     for (String rack : allRacks) {
-      decResourceRequest(req.getPriority(), rack, req.getCapability(),
-          req.getContainerCount(), req);
+      decResourceRequest(req.getPriority(), rack, req.getCapability(), req);
     }
 
-    decResourceRequest(req.getPriority(), ResourceRequest.ANY, req.getCapability(),
-        req.getContainerCount(), req);
+    decResourceRequest(req.getPriority(), ResourceRequest.ANY,
+        req.getCapability(), req);
   }
 
   @Override
@@ -516,7 +514,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   }
 
   private void addResourceRequest(Priority priority, String resourceName,
-      Resource capability, int containerCount, T req, boolean relaxLocality) {
+      Resource capability, T req, boolean relaxLocality) {
     Map<String, TreeMap<Resource, ResourceRequestInfo>> remoteRequests =
       this.remoteRequestsTable.get(priority);
     if (remoteRequests == null) {
@@ -544,9 +542,9 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     }
     
     resourceRequestInfo.remoteRequest.setNumContainers(
-         resourceRequestInfo.remoteRequest.getNumContainers() + containerCount);
+         resourceRequestInfo.remoteRequest.getNumContainers() + 1);
 
-    if (req instanceof StoredContainerRequest && relaxLocality) {
+    if (relaxLocality) {
       resourceRequestInfo.containerRequests.add(req);
     }
 
@@ -565,7 +563,6 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   private void decResourceRequest(Priority priority, 
                                    String resourceName,
                                    Resource capability, 
-                                   int containerCount, 
                                    T req) {
     Map<String, TreeMap<Resource, ResourceRequestInfo>> remoteRequests =
       this.remoteRequestsTable.get(priority);
@@ -597,11 +594,9 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     }
 
     resourceRequestInfo.remoteRequest.setNumContainers(
-        resourceRequestInfo.remoteRequest.getNumContainers() - containerCount);
+        resourceRequestInfo.remoteRequest.getNumContainers() - 1);
 
-    if(req instanceof StoredContainerRequest) {
-      resourceRequestInfo.containerRequests.remove(req);
-    }
+    resourceRequestInfo.containerRequests.remove(req);
     
     if(resourceRequestInfo.remoteRequest.getNumContainers() < 0) {
       // guard against spurious removals
