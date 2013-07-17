@@ -105,8 +105,6 @@ public class TestRMStateStore {
 
   interface RMStateStoreHelper {
     RMStateStore getRMStateStore() throws Exception;
-    void addOrphanAttemptIfNeeded(RMStateStore testStore,
-                                  TestDispatcher dispatcher) throws Exception;
     boolean isFinalStateValid() throws Exception;
   }
 
@@ -151,15 +149,6 @@ public class TestRMStateStore {
       conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI, workingDirPathURI.toString());
       this.store = new TestFileSystemRMStore(conf);
       return store;
-    }
-
-    @Override
-    public void addOrphanAttemptIfNeeded(RMStateStore testStore,
-                                 TestDispatcher dispatcher) throws Exception {
-      ApplicationAttemptId attemptId = ConverterUtils.toApplicationAttemptId(
-                                      "appattempt_1352994193343_0003_000001");
-      storeAttempt(testStore, attemptId,
-          "container_1352994193343_0003_01_000001", null, null, dispatcher);
     }
 
     @Override
@@ -289,9 +278,6 @@ public class TestRMStateStore {
     attempts.put(attemptIdRemoved, mockRemovedAttempt);
     store.removeApplication(mockRemovedApp);
 
-    // add orphan attempt file to simulate incomplete removal of app state
-    stateStoreHelper.addOrphanAttemptIfNeeded(store, dispatcher);
-
     // let things settle down
     Thread.sleep(1000);
     store.close();
@@ -300,9 +286,6 @@ public class TestRMStateStore {
     store = stateStoreHelper.getRMStateStore();
     RMState state = store.loadState();
     Map<ApplicationId, ApplicationState> rmAppState = state.getApplicationState();
-
-    // removed app or orphan attempt is not loaded
-    assertEquals(1, rmAppState.size());
 
     ApplicationState appState = rmAppState.get(appId1);
     // app is loaded
