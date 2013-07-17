@@ -16,30 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
+package org.apache.hadoop.yarn.exceptions;
 
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 
 /**
- * The exception is thrown when a {@link ResourceRequest} is out of the range
- * of the configured lower and upper resource boundaries.
- *
+ * This exception is thrown on
+ * {@link ContainerManagementProtocol#startContainer(StartContainerRequest)} API
+ * when an NM starts from scratch but has not yet connected with RM.
  */
-public class InvalidResourceRequestException extends YarnException {
+public class NMNotYetReadyException extends YarnException {
 
-  private static final long serialVersionUID = 13498237L;
+  private static final long serialVersionUID = 1L;
 
-  public InvalidResourceRequestException(Throwable cause) {
-    super(cause);
+  public NMNotYetReadyException(String msg) {
+    super(msg);
   }
-
-  public InvalidResourceRequestException(String message) {
-    super(message);
-  }
-
-  public InvalidResourceRequestException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
 }

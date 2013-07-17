@@ -16,12 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager;
+package org.apache.hadoop.yarn.exceptions;
 
-import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 
 /**
- * This Exception happens when NM is rejecting container requests from RM
+ * This exception is thrown by a NodeManager that is rejecting start-container
+ * requests via
+ * {@link ContainerManagementProtocol#startContainer(StartContainerRequest)}
+ * for containers allocated by a previous instance of the RM.
  */
 public class InvalidContainerException extends YarnException {
 
