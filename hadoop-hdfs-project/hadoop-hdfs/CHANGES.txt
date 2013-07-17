@@ -17,6 +17,8 @@ Release 0.23.10 - UNRELEASED
     HDFS-4972. Permission check and operation are done in a separate lock for
     getBlockLocations(). (kihwal)
 
+    HDFS-4998. TestUnderReplicatedBlocks fails intermittently (kihwal)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES

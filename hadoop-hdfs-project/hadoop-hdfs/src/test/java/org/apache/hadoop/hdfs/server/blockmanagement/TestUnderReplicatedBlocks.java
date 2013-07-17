@@ -48,6 +48,7 @@ public class TestUnderReplicatedBlocks extends TestCase {
       DatanodeDescriptor dn = bm.blocksMap.nodeIterator(b.getLocalBlock()).next();
       bm.addToInvalidates(b.getLocalBlock(), dn);
       bm.blocksMap.removeNode(b.getLocalBlock(), dn);
+      Thread.sleep(5000);
       
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);
