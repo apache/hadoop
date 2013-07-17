@@ -709,26 +709,31 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
-   * Create the given dir
+   * Create the given dir.
+   * @param src a path to create dir
+   * @param createParents
+   *   if set to true, mkdir will not fail when the given dir already exists
+   * @throws IOException
    */
-  void mkdir(String src) throws IOException {
+  void mkdir(String src, boolean createParents) throws IOException {
     Path f = new Path(src);
     FileSystem srcFs = f.getFileSystem(getConf());
     FileStatus fstatus = null;
     try {
       fstatus = srcFs.getFileStatus(f);
       if (fstatus.isDir()) {
-        throw new IOException("cannot create directory " 
-            + src + ": File exists");
-      }
-      else {
+        if (!createParents) {
+          throw new IOException("cannot create directory "
+              + src + ": File exists");
+        }
+      } else {
         throw new IOException(src + " exists but " +
             "is not a directory");
       }
-    } catch(FileNotFoundException e) {
-        if (!srcFs.mkdirs(f)) {
-          throw new IOException("failed to create " + src);
-        }
+    } catch (FileNotFoundException e) {
+      if (!srcFs.mkdirs(f)) {
+        throw new IOException("failed to create " + src);
+      }
     }
   }
 
@@ -1294,7 +1299,7 @@ public class FsShell extends Configured implements Tool {
       GET_SHORT_USAGE + "\n\t" +
       "[-getmerge <src> <localdst> [addnl]] [-cat <src>]\n\t" +
       "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
-      "[-mkdir <path>] [-report] [" + SETREP_SHORT_USAGE + "]\n\t" +
+      "[-mkdir [-p] <path>] [-report] [" + SETREP_SHORT_USAGE + "]\n\t" +
       "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n\t" +
       "[-tail [-f] <path>] [-text <path>]\n\t" +
       "[" + FsShellPermissions.CHMOD_USAGE + "]\n\t" +
@@ -1394,7 +1399,9 @@ public class FsShell extends Configured implements Tool {
 
     String moveToLocal = "-moveToLocal <src> <localdst>:  Not implemented yet \n";
         
-    String mkdir = "-mkdir <path>: \tCreate a directory in specified location. \n";
+    String mkdir = "-mkdir [-p] <path>: "
+      + "\tCreate a directory in specified location. \n"
+      + "\t\t-p Do not fail if the directory already exists.";
 
     String setrep = SETREP_SHORT_USAGE
       + ":  Set the replication level of a file. \n"
@@ -1556,7 +1563,14 @@ public class FsShell extends Configured implements Tool {
   private int doall(String cmd, String argv[], int startindex) {
     int exitCode = 0;
     int i = startindex;
+    boolean mkdirCreateParents = false;
     boolean rmSkipTrash = false;
+    
+    // Check for -p option in mkdir
+    if("-mkdir".equals(cmd) && "-p".equals(argv[i])) {
+      mkdirCreateParents = true;
+      i++;
+    }
     
     // Check for -skipTrash option in rm/rmr
     if(("-rm".equals(cmd) || "-rmr".equals(cmd)) 
@@ -1576,7 +1590,7 @@ public class FsShell extends Configured implements Tool {
         if ("-cat".equals(cmd)) {
           cat(argv[i], true);
         } else if ("-mkdir".equals(cmd)) {
-          mkdir(argv[i]);
+          mkdir(argv[i], mkdirCreateParents);
         } else if ("-rm".equals(cmd)) {
           delete(argv[i], false, rmSkipTrash);
         } else if ("-rmr".equals(cmd)) {
@@ -1644,10 +1658,12 @@ public class FsShell extends Configured implements Tool {
                          " [-D <[property=value>]");
     } else if ("-ls".equals(cmd) || "-lsr".equals(cmd) ||
                "-du".equals(cmd) || "-dus".equals(cmd) ||
-               "-touchz".equals(cmd) || "-mkdir".equals(cmd) ||
-               "-text".equals(cmd)) {
+               "-touchz".equals(cmd) || "-text".equals(cmd)){
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <path>]");
+    } else if ("-mkdir".equals(cmd)) {
+      System.err.println("Usage: java FsShell" + 
+                         " [" + cmd + " [-p] <path>]");
     } else if (Count.matches(cmd)) {
       System.err.println(prefix + " [" + Count.USAGE + "]");
     } else if ("-rm".equals(cmd) || "-rmr".equals(cmd)) {
@@ -1701,7 +1717,7 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-text <src>]");
       System.err.println("           [" + COPYTOLOCAL_SHORT_USAGE + "]");
       System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
-      System.err.println("           [-mkdir <path>]");
+      System.err.println("           [-mkdir [-p] <path>]");
       System.err.println("           [" + SETREP_SHORT_USAGE + "]");
       System.err.println("           [-touchz <path>]");
       System.err.println("           [-test -[ezd] <path>]");

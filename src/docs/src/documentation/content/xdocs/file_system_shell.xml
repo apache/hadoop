@@ -307,12 +307,12 @@
 		<section>
 			<title> mkdir </title>
 			<p>
-				<code>Usage: hdfs dfs -mkdir &lt;paths&gt;</code>
-				<br/>
+				<code>Usage: hdfs dfs -mkdir [-p] &lt;paths&gt;</code><br/>
 			</p>
 			<p>
-	   Takes path uri's as argument and creates directories. The behavior is much like unix mkdir -p creating parent directories along the path.
-	  </p>
+	            Takes path uri's as argument and creates directories. The behavior is much like unix mkdir -p creating parent directories along the path.
+	            With <code>-p</code>, mkdir doesn't fail if the target already exists.
+	        </p>
 			<p>Example:</p>
 			<ul>
 				<li>

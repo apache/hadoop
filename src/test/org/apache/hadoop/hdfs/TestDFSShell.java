@@ -1102,7 +1102,36 @@ public class TestDFSShell extends TestCase {
         }
         assertTrue(val == 0);
       }
-        
+
+      // Verify mkdir when the directory already exists.
+      {
+        // no option should fail.
+        String[] args = new String[2];
+        args[0] = "-mkdir";
+        args[1] = "/test";
+        int val = 0;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertTrue(val == -1);
+
+        // with -p option, mkdir should succeed.
+        String[] args1 = new String[3];
+        args1[0] = "-mkdir";
+        args1[1] = "-p";
+        args1[2] = "/test";
+        val = -1;
+        try {
+          val = shell.run(args1);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertTrue(val == 0);
+      }
     } finally {
       try {
         fileSys.close();
