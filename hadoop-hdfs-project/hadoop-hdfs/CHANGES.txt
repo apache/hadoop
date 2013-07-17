@@ -20,7 +20,7 @@ Release 2.2.0 - UNRELEASED
 
   IMPROVEMENTS
     HDFS-4657.  Limit the number of blocks logged by the NN after a block
-    report to a configurable value.  (Aaron Twinning Meyers via Colin Patrick
+    report to a configurable value.  (Aaron T. Myers via Colin Patrick
     McCabe)
 
   OPTIMIZATIONS
