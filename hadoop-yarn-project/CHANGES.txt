@@ -456,6 +456,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-513. Create common proxy client for communicating with RM. (Xuan Gong
     & Jian He via bikas)
 
+    YARN-922. Change FileSystemRMStateStore to use directories (Jian He via
+    bikas)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
