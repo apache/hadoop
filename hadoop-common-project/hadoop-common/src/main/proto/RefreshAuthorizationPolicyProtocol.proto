@@ -22,49 +22,31 @@
  * for what changes are allowed for a *stable* .proto interface.
  */
 
-option java_package = "org.apache.hadoop.hdfs.protocol.proto";
-option java_outer_classname = "RefreshUserMappingsProtocolProtos";
+option java_package = "org.apache.hadoop.security.proto";
+option java_outer_classname = "RefreshAuthorizationPolicyProtocolProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
-package hadoop.hdfs;
+package hadoop.common;
 
 /**
- *  Refresh user to group mappings request.
+ *  Refresh service acl request.
  */
-message RefreshUserToGroupsMappingsRequestProto {
+message RefreshServiceAclRequestProto {
 }
 
 /**
  * void response
  */
-message RefreshUserToGroupsMappingsResponseProto {
+message RefreshServiceAclResponseProto {
 }
 
 /**
- * Refresh superuser configuration request.
+ * Protocol which is used to refresh the authorization policy in use currently.
  */
-message RefreshSuperUserGroupsConfigurationRequestProto {
-}
-
-/**
- * void response
- */
-message RefreshSuperUserGroupsConfigurationResponseProto {
-}
-
-/**
- * Protocol to refresh the user mappings.
- */
-service RefreshUserMappingsProtocolService {
+service RefreshAuthorizationPolicyProtocolService {
   /**
-   * Refresh user to group mappings.
+   * Refresh the service-level authorization policy in-effect.
    */
-  rpc refreshUserToGroupsMappings(RefreshUserToGroupsMappingsRequestProto)
-      returns(RefreshUserToGroupsMappingsResponseProto);
-
-  /**
-   * Refresh superuser proxy group list.
-   */
-  rpc refreshSuperUserGroupsConfiguration(RefreshSuperUserGroupsConfigurationRequestProto)
-      returns(RefreshSuperUserGroupsConfigurationResponseProto);
+  rpc refreshServiceAcl(RefreshServiceAclRequestProto)
+      returns(RefreshServiceAclResponseProto);
 }

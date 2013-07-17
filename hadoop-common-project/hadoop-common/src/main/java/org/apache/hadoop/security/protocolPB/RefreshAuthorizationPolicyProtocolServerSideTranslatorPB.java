@@ -16,42 +16,40 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.protocolPB;
+package org.apache.hadoop.security.protocolPB;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetGroupsForUserRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetGroupsForUserResponseProto;
-import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
+import org.apache.hadoop.security.proto.RefreshAuthorizationPolicyProtocolProtos.RefreshServiceAclRequestProto;
+import org.apache.hadoop.security.proto.RefreshAuthorizationPolicyProtocolProtos.RefreshServiceAclResponseProto;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class GetUserMappingsProtocolServerSideTranslatorPB implements
-    GetUserMappingsProtocolPB {
+public class RefreshAuthorizationPolicyProtocolServerSideTranslatorPB implements
+    RefreshAuthorizationPolicyProtocolPB {
 
-  private final GetUserMappingsProtocol impl;
+  private final RefreshAuthorizationPolicyProtocol impl;
 
-  public GetUserMappingsProtocolServerSideTranslatorPB(
-      GetUserMappingsProtocol impl) {
+  private final static RefreshServiceAclResponseProto
+  VOID_REFRESH_SERVICE_ACL_RESPONSE = RefreshServiceAclResponseProto
+      .newBuilder().build();
+
+  public RefreshAuthorizationPolicyProtocolServerSideTranslatorPB(
+      RefreshAuthorizationPolicyProtocol impl) {
     this.impl = impl;
   }
 
   @Override
-  public GetGroupsForUserResponseProto getGroupsForUser(
-      RpcController controller, GetGroupsForUserRequestProto request)
+  public RefreshServiceAclResponseProto refreshServiceAcl(
+      RpcController controller, RefreshServiceAclRequestProto request)
       throws ServiceException {
-    String[] groups;
     try {
-      groups = impl.getGroupsForUser(request.getUser());
+      impl.refreshServiceAcl();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    GetGroupsForUserResponseProto.Builder builder = GetGroupsForUserResponseProto
-        .newBuilder();
-    for (String g : groups) {
-      builder.addGroups(g);
-    }
-    return builder.build();
+    return VOID_REFRESH_SERVICE_ACL_RESPONSE;
   }
 }

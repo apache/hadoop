@@ -22,35 +22,49 @@
  * for what changes are allowed for a *stable* .proto interface.
  */
 
-option java_package = "org.apache.hadoop.hdfs.protocol.proto";
-option java_outer_classname = "GetUserMappingsProtocolProtos";
+option java_package = "org.apache.hadoop.security.proto";
+option java_outer_classname = "RefreshUserMappingsProtocolProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
-package hadoop.hdfs;
+package hadoop.common;
 
 /**
- *  Get groups for user request.
+ *  Refresh user to group mappings request.
  */
-message GetGroupsForUserRequestProto {
-  required string user = 1;
+message RefreshUserToGroupsMappingsRequestProto {
 }
 
 /**
- * Response for get groups.
+ * void response
  */
-message GetGroupsForUserResponseProto {
-  repeated string groups = 1;
+message RefreshUserToGroupsMappingsResponseProto {
 }
 
+/**
+ * Refresh superuser configuration request.
+ */
+message RefreshSuperUserGroupsConfigurationRequestProto {
+}
 
 /**
- * Protocol implemented by the Name Node and Job Tracker which maps users to
- * groups.
+ * void response
  */
-service GetUserMappingsProtocolService {
+message RefreshSuperUserGroupsConfigurationResponseProto {
+}
+
+/**
+ * Protocol to refresh the user mappings.
+ */
+service RefreshUserMappingsProtocolService {
   /**
-   * Get the groups which are mapped to the given user.
+   * Refresh user to group mappings.
    */
-  rpc getGroupsForUser(GetGroupsForUserRequestProto)
-      returns(GetGroupsForUserResponseProto);
+  rpc refreshUserToGroupsMappings(RefreshUserToGroupsMappingsRequestProto)
+      returns(RefreshUserToGroupsMappingsResponseProto);
+
+  /**
+   * Refresh superuser proxy group list.
+   */
+  rpc refreshSuperUserGroupsConfiguration(RefreshSuperUserGroupsConfigurationRequestProto)
+      returns(RefreshSuperUserGroupsConfigurationResponseProto);
 }
