@@ -19,6 +19,9 @@ Release 0.23.10 - UNRELEASED
 
     HDFS-4998. TestUnderReplicatedBlocks fails intermittently (kihwal)
 
+    HDFS-4943. WebHdfsFileSystem does not work when original file path has
+    encoded chars. (Jerry He and Robert Parker via kihwal)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES

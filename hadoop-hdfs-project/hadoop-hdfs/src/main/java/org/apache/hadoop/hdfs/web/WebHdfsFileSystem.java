@@ -324,7 +324,7 @@ public class WebHdfsFileSystem extends FileSystem
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
     final String path = PATH_PREFIX
-        + (fspath == null? "/": makeQualified(fspath).toUri().getPath());
+        + (fspath == null? "/": makeQualified(fspath).toUri().getRawPath());
     final String query = op.toQueryString()
         + Param.toSortedString("&", getAuthParameters(op))
         + Param.toSortedString("&", parameters);
