@@ -16,17 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
+package org.apache.hadoop.yarn.exceptions;
 
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
- * The exception is thrown when an application provides an invalid
- * specification for the blacklist.
+ * This exception is thrown when an application provides an invalid
+ * {@link ResourceBlacklistRequest} specification for blacklisting of resources
+ * in {@link ApplicationMasterProtocol#allocate(AllocateRequest)} API.
  * 
- * As an e.g., currently this exceptions is thrown when an application 
- * tries to blacklist {@link ResourceRequest#ANY}. 
+ * Currently this exceptions is thrown when an application tries to
+ * blacklist {@link ResourceRequest#ANY}.
  */
 public class InvalidResourceBlacklistRequestException extends YarnException {
 

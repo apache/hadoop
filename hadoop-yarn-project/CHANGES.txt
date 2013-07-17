@@ -49,6 +49,9 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-912. Move client facing exceptions to yarn-api module. (Mayank Bansal
+    via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

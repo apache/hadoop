@@ -16,13 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager;
+package org.apache.hadoop.yarn.exceptions;
 
-import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 
 /**
- * The exception is thrown when an application Master call allocate without
- * calling RegisterApplicationMaster or try to register more then once.
+ * This exception is thrown when an ApplicationMaster asks for resources by
+ * calling {@link ApplicationMasterProtocol#allocate(AllocateRequest)} API
+ * without first registering by calling
+ * {@link ApplicationMasterProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)}
+ * or if it tries to register more then once.
  */
 public class InvalidApplicationMasterRequestException extends YarnException {
 
