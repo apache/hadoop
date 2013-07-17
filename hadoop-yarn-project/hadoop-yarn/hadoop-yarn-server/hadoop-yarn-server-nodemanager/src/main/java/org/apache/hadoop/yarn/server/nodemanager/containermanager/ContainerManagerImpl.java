@@ -24,8 +24,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -165,7 +168,6 @@ public class ContainerManagerImpl extends CompositeService implements
     this.containersMonitor =
         new ContainersMonitorImpl(exec, dispatcher, this.context);
     addService(this.containersMonitor);
-
 
     dispatcher.register(ContainerEventType.class,
         new ContainerEventDispatcher());
@@ -345,7 +347,7 @@ public class ContainerManagerImpl extends CompositeService implements
         .append(ugi.getUserName()).append(" Found: ")
         .append(nmTokenIdentifier.getApplicationAttemptId().toString());
     } else if (!this.context.getContainerTokenSecretManager()
-        .isValidStartContainerRequest(containerId)) {
+        .isValidStartContainerRequest(containerTokenIdentifier)) {
       // Is the container being relaunched? Or RPC layer let startCall with
       // tokens generated off old-secret through?
       unauthorized = true;
