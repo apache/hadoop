@@ -42,12 +42,12 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -211,11 +211,24 @@ public class TestContainerManagerSecurity {
     Assert.assertTrue(testStartContainer(rpc, validAppAttemptId, validNode,
         validContainerToken, invalidNMToken, true).contains(sb.toString()));
     
-    // using correct tokens. nmtoken for appattempt should get saved.
+    // using correct tokens. nmtoken for app attempt should get saved.
+    conf.setInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+        4 * 60 * 1000);
+    validContainerToken =
+        containerTokenSecretManager.createContainerToken(validContainerId,
+            validNode, user, r);
+    
     testStartContainer(rpc, validAppAttemptId, validNode, validContainerToken,
         validNMToken, false);
     Assert.assertTrue(nmTokenSecretManagerNM
         .isAppAttemptNMTokenKeyPresent(validAppAttemptId));
+    
+    //Now lets wait till container finishes and is removed from node manager.
+    waitForContainerToFinishOnNM(validContainerId);
+    sb = new StringBuilder("Attempt to relaunch the same container with id ");
+    sb.append(validContainerId);
+    Assert.assertTrue(testStartContainer(rpc, validAppAttemptId, validNode,
+        validContainerToken, validNMToken, true).contains(sb.toString()));
     
     // Rolling over master key twice so that we can check whether older keys
     // are used for authentication.
@@ -231,6 +244,19 @@ public class TestContainerManagerSecurity {
     Assert.assertTrue(testGetContainer(rpc, validAppAttemptId, validNode,
         validContainerId, validNMToken, false).contains(sb.toString()));
     
+  }
+
+  private void waitForContainerToFinishOnNM(ContainerId containerId) {
+    Context nmContet = yarnCluster.getNodeManager(0).getNMContext();
+    int interval = 4 * 60; // Max time for container token to expire.
+    while ((interval-- > 0)
+        && nmContet.getContainers().containsKey(containerId)) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+      }
+    }
+    Assert.assertFalse(nmContet.getContainers().containsKey(containerId));
   }
 
   protected void waitForNMToReceiveNMTokenKey(

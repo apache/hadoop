@@ -27,6 +27,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-820. Fixed an invalid state transition in NodeManager caused by failing
     resource localization. (Mayank Bansal via vinodkv)
 
+    YARN-62. Modified NodeManagers to avoid AMs from abusing container tokens for
+    repetitive container launches. (Omkar Vinit Joshi via vinodkv)
+
 Release 2.1.0-beta - 2013-07-02
 
   INCOMPATIBLE CHANGES
