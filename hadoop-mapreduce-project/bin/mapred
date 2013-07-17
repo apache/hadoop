@@ -78,7 +78,7 @@ elif [ "$COMMAND" = "mradmin" ] \
   echo "Sorry, the $COMMAND command is no longer supported."
   echo "You may find similar functionality with the \"yarn\" shell command."
   print_usage
-  exit
+  exit 1
 elif [ "$COMMAND" = "distcp" ] ; then
   CLASS=org.apache.hadoop.tools.DistCp
   CLASSPATH=${CLASSPATH}:${TOOL_PATH}
@@ -90,7 +90,7 @@ elif [ "$COMMAND" = "archive" ] ; then
 else
   echo $COMMAND - invalid command
   print_usage
-  exit
+  exit 1
 fi
 
 # for developers, add mapred classes to CLASSPATH
