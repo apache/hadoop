@@ -117,4 +117,19 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
   return (jint)buf_len;
 }
 
+JNIEXPORT jstring JNICALL
+Java_org_apache_hadoop_io_compress_snappy_SnappyCompressor_getLibraryName(JNIEnv *env, jclass class) {
+#ifdef UNIX
+  if (dlsym_snappy_compress) {
+    Dl_info dl_info;
+    if(dladdr(
+        dlsym_snappy_compress,
+        &dl_info)) {
+      return (*env)->NewStringUTF(env, dl_info.dli_fname);
+    }
+  }
+#endif
+  return (*env)->NewStringUTF(env, HADOOP_SNAPPY_LIBRARY);
+}
+
 #endif //define HADOOP_SNAPPY_LIBRARY

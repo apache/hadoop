@@ -103,3 +103,9 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_comp
   return (jint)compressed_direct_buf_len;
 }
 
+JNIEXPORT jstring JNICALL
+Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_getLibraryName(
+ JNIEnv *env, jclass class
+ ) {
+  return (*env)->NewStringUTF(env, "revision:43");
+}
