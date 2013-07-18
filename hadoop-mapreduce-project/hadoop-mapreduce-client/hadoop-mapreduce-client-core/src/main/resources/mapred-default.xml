@@ -1138,4 +1138,16 @@
   <description>Whether to use fixed ports with the minicluster</description>
 </property>
 
+<property>
+  <name>mapreduce.jobhistory.admin.address</name>
+  <value>0.0.0.0:10033</value>
+  <description>The address of the History server admin interface.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.admin.acl</name>
+  <value>*</value>
+  <description>ACL of who can be admin of the History server.</description>
+</property>
+
 </configuration>

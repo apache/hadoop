@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.v2.hs.server.HSAdminServer;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
@@ -59,6 +60,7 @@ public class JobHistoryServer extends CompositeService {
   private JobHistory jobHistoryService;
   private JHSDelegationTokenSecretManager jhsDTSecretManager;
   private AggregatedLogDeletionService aggLogDelService;
+  private HSAdminServer hsAdminServer;
 
   public JobHistoryServer() {
     super(JobHistoryServer.class.getName());
@@ -81,9 +83,11 @@ public class JobHistoryServer extends CompositeService {
     clientService = new HistoryClientService(historyContext, 
         this.jhsDTSecretManager);
     aggLogDelService = new AggregatedLogDeletionService();
+    hsAdminServer = new HSAdminServer();
     addService(jobHistoryService);
     addService(clientService);
     addService(aggLogDelService);
+    addService(hsAdminServer);
     super.serviceInit(config);
   }
 

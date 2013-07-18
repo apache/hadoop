@@ -143,6 +143,9 @@ Release 2.3.0 - UNRELEASED
 
   NEW FEATURES
 
+    MAPREDUCE-5265. History server admin service to refresh user and superuser
+    group mappings (Ashwin Shankar via jlowe)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

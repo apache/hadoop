@@ -458,6 +458,9 @@
     <Package name="org.apache.hadoop.yarn.proto" />
   </Match>
   <Match>
+    <Package name="org.apache.hadoop.mapreduce.v2.hs.proto" />
+  </Match>
+  <Match>
     <Class name="~org\.apache\.hadoop\.mapreduce\.v2\.proto.*" />
   </Match>
   
