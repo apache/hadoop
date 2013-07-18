@@ -24,7 +24,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
@@ -33,11 +36,13 @@ import java.util.TreeSet;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -48,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -57,12 +63,15 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.client.api.YarnClient;
-import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -71,6 +80,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.mortbay.log.Log;
 
 public class TestAMRMClient {
   static Configuration conf = null;
@@ -130,11 +140,14 @@ public class TestAMRMClient {
     // Set the queue to which this application is to be submitted in the RM
     appContext.setQueue("default");
     // Set up the container launch context for the application master
-    ContainerLaunchContext amContainer = Records
-        .newRecord(ContainerLaunchContext.class);
+    ContainerLaunchContext amContainer =
+        BuilderUtils.newContainerLaunchContext(
+          Collections.<String, LocalResource> emptyMap(),
+          new HashMap<String, String>(), Arrays.asList("sleep", "100"),
+          new HashMap<String, ByteBuffer>(), null,
+          new HashMap<ApplicationAccessType, String>());
     appContext.setAMContainerSpec(amContainer);
-    // unmanaged AM
-    appContext.setUnmanagedAM(true);
+    appContext.setResource(Resource.newInstance(1024, 1));
     // Create the request to send to the applications manager
     SubmitApplicationRequest appRequest = Records
         .newRecord(SubmitApplicationRequest.class);
@@ -143,17 +156,32 @@ public class TestAMRMClient {
     yarnClient.submitApplication(appContext);
 
     // wait for app to start
+    RMAppAttempt appAttempt = null;
     while (true) {
       ApplicationReport appReport = yarnClient.getApplicationReport(appId);
       if (appReport.getYarnApplicationState() == YarnApplicationState.ACCEPTED) {
         attemptId = appReport.getCurrentApplicationAttemptId();
+        appAttempt =
+            yarnCluster.getResourceManager().getRMContext().getRMApps()
+              .get(attemptId.getApplicationId()).getCurrentAppAttempt();
+        while (true) {
+          if (appAttempt.getAppAttemptState() == RMAppAttemptState.LAUNCHED) {
+            break;
+          }
+        }
         break;
       }
     }
+    // Just dig into the ResourceManager and get the AMRMToken just for the sake
+    // of testing.
+    UserGroupInformation.setLoginUser(UserGroupInformation
+      .createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
+    UserGroupInformation.getCurrentUser().addToken(appAttempt.getAMRMToken());
   }
   
   @After
-  public void cancelApp() {
+  public void cancelApp() throws YarnException, IOException {
+    yarnClient.killApplication(attemptId.getApplicationId());
     attemptId = null;
   }
   
@@ -403,6 +431,7 @@ public class TestAMRMClient {
       int iterationsLeft = 3;
       while (allocatedContainerCount < 2
           && iterationsLeft-- > 0) {
+        Log.info(" == alloc " + allocatedContainerCount + " it left " + iterationsLeft);
         AllocateResponse allocResponse = amClient.allocate(0.1f);
         assertTrue(amClient.ask.size() == 0);
         assertTrue(amClient.release.size() == 0);

@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -66,6 +67,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
@@ -103,7 +105,6 @@ public class ApplicationMasterService extends AbstractService implements
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.rScheduler = scheduler;
     this.resync.setAMCommand(AMCommand.AM_RESYNC);
-//    this.reboot.containers = new ArrayList<Container>();
     this.rmContext = rmContext;
   }
 
@@ -117,10 +118,17 @@ public class ApplicationMasterService extends AbstractService implements
         YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
 
+    Configuration serverConf = conf;
+    if (!UserGroupInformation.isSecurityEnabled()) {
+      // If the auth is not-simple, enforce it to be token-based.
+      serverConf = new Configuration(conf);
+      serverConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        UserGroupInformation.AuthenticationMethod.TOKEN.toString());
+    }
     this.server =
       rpc.getServer(ApplicationMasterProtocol.class, this, masterServiceAddress,
-          conf, this.rmContext.getAMRMTokenSecretManager(),
-          conf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
+          serverConf, this.rmContext.getAMRMTokenSecretManager(),
+          serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
               YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
     
     // Enable service authorization?
@@ -142,12 +150,25 @@ public class ApplicationMasterService extends AbstractService implements
     return this.bindAddress;
   }
 
+  // Obtain the needed AMRMTokenIdentifier from the remote-UGI. RPC layer
+  // currently sets only the required id, but iterate through anyways just to be
+  // sure.
+  private AMRMTokenIdentifier selectAMRMTokenIdentifier(
+      UserGroupInformation remoteUgi) throws IOException {
+    AMRMTokenIdentifier result = null;
+    Set<TokenIdentifier> tokenIds = remoteUgi.getTokenIdentifiers();
+    for (TokenIdentifier tokenId : tokenIds) {
+      if (tokenId instanceof AMRMTokenIdentifier) {
+        result = (AMRMTokenIdentifier) tokenId;
+        break;
+      }
+    }
+
+    return result;
+  }
+
   private void authorizeRequest(ApplicationAttemptId appAttemptID)
       throws YarnException {
-
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      return;
-    }
 
     String appAttemptIDStr = appAttemptID.toString();
 
@@ -162,9 +183,33 @@ public class ApplicationMasterService extends AbstractService implements
       throw RPCUtil.getRemoteException(msg);
     }
 
-    if (!remoteUgi.getUserName().equals(appAttemptIDStr)) {
+    boolean tokenFound = false;
+    String message = "";
+    AMRMTokenIdentifier appTokenIdentifier = null;
+    try {
+      appTokenIdentifier = selectAMRMTokenIdentifier(remoteUgi);
+      if (appTokenIdentifier == null) {
+        tokenFound = false;
+        message = "No AMRMToken found for " + appAttemptIDStr;
+      } else {
+        tokenFound = true;
+      }
+    } catch (IOException e) {
+      tokenFound = false;
+      message =
+          "Got exception while looking for AMRMToken for " + appAttemptIDStr;
+    }
+
+    if (!tokenFound) {
+      LOG.warn(message);
+      throw RPCUtil.getRemoteException(message);
+    }
+
+    ApplicationAttemptId remoteApplicationAttemptId =
+        appTokenIdentifier.getApplicationAttemptId();
+    if (!remoteApplicationAttemptId.equals(appAttemptID)) {
       String msg = "Unauthorized request from ApplicationMaster. "
-          + "Expected ApplicationAttemptID: " + remoteUgi.getUserName()
+          + "Expected ApplicationAttemptID: " + remoteApplicationAttemptId
           + " Found: " + appAttemptIDStr;
       LOG.warn(msg);
       throw RPCUtil.getRemoteException(msg);

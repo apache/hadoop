@@ -30,6 +30,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -296,7 +297,8 @@ public class TestSchedulerUtils {
 
     UserGroupInformation currentUser = 
         UserGroupInformation.createRemoteUser(applicationAttemptId.toString());
-
+    Credentials credentials = containerManager.getContainerCredentials();
+    currentUser.addCredentials(credentials);
     ApplicationMasterProtocol client = currentUser
         .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
