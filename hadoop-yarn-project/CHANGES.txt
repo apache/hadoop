@@ -28,6 +28,9 @@ Branch YARN-321: Generic ApplicationHistoryService
 
   YARN-930. Bootstrapping ApplicationHistoryService module. (vinodkv)
 
+  YARN-935. Correcting pom.xml to build applicationhistoryserver module
+  successfully. (Zhijie Shen via vinodkv) 
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
