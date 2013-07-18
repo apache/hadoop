@@ -18,17 +18,22 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
+import java.security.PrivilegedExceptionAction;
 import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -87,6 +92,22 @@ public class TestAMRMRPCNodeUpdates {
     dispatcher.await();
   }
 
+  private AllocateResponse allocate(final AllocateRequest req) throws Exception {
+    ApplicationAttemptId attemptId = req.getApplicationAttemptId();
+    UserGroupInformation ugi =
+        UserGroupInformation.createRemoteUser(attemptId.toString());
+    Token<AMRMTokenIdentifier> token =
+        rm.getRMContext().getRMApps().get(attemptId.getApplicationId())
+          .getRMAppAttempt(attemptId).getAMRMToken();
+    ugi.addTokenIdentifier(token.decodeIdentifier());
+    return ugi.doAs(new PrivilegedExceptionAction<AllocateResponse>() {
+      @Override
+      public AllocateResponse run() throws Exception {
+        return amService.allocate(req);
+      }
+    });
+  }
+
   @Test
   public void testAMRMUnusableNodes() throws Exception {
     
@@ -109,7 +130,7 @@ public class TestAMRMRPCNodeUpdates {
     // allocate request returns no updated node
     AllocateRequest allocateRequest1 = AllocateRequest.newInstance(attempt1
         .getAppAttemptId(), 0, 0F, null, null, null);
-    AllocateResponse response1 = amService.allocate(allocateRequest1);
+    AllocateResponse response1 = allocate(allocateRequest1);
     List<NodeReport> updatedNodes = response1.getUpdatedNodes();
     Assert.assertEquals(0, updatedNodes.size());
 
@@ -118,7 +139,7 @@ public class TestAMRMRPCNodeUpdates {
     // allocate request returns updated node
     allocateRequest1 = AllocateRequest.newInstance(attempt1
         .getAppAttemptId(), response1.getResponseId(), 0F, null, null, null);
-    response1 = amService.allocate(allocateRequest1);
+    response1 = allocate(allocateRequest1);
     updatedNodes = response1.getUpdatedNodes();
     Assert.assertEquals(1, updatedNodes.size());
     NodeReport nr = updatedNodes.iterator().next();
@@ -126,7 +147,7 @@ public class TestAMRMRPCNodeUpdates {
     Assert.assertEquals(NodeState.UNHEALTHY, nr.getNodeState());
     
     // resending the allocate request returns the same result
-    response1 = amService.allocate(allocateRequest1);
+    response1 = allocate(allocateRequest1);
     updatedNodes = response1.getUpdatedNodes();
     Assert.assertEquals(1, updatedNodes.size());
     nr = updatedNodes.iterator().next();
@@ -138,7 +159,7 @@ public class TestAMRMRPCNodeUpdates {
     // subsequent allocate request returns delta
     allocateRequest1 = AllocateRequest.newInstance(attempt1
         .getAppAttemptId(), response1.getResponseId(), 0F, null, null, null);
-    response1 = amService.allocate(allocateRequest1);
+    response1 = allocate(allocateRequest1);
     updatedNodes = response1.getUpdatedNodes();
     Assert.assertEquals(1, updatedNodes.size());
     nr = updatedNodes.iterator().next();
@@ -158,7 +179,7 @@ public class TestAMRMRPCNodeUpdates {
     // allocate request returns no updated node
     AllocateRequest allocateRequest2 = AllocateRequest.newInstance(attempt2
         .getAppAttemptId(), 0, 0F, null, null, null);
-    AllocateResponse response2 = amService.allocate(allocateRequest2);
+    AllocateResponse response2 = allocate(allocateRequest2);
     updatedNodes = response2.getUpdatedNodes();
     Assert.assertEquals(0, updatedNodes.size());
     
@@ -167,7 +188,7 @@ public class TestAMRMRPCNodeUpdates {
     // both AM's should get delta updated nodes
     allocateRequest1 = AllocateRequest.newInstance(attempt1
         .getAppAttemptId(), response1.getResponseId(), 0F, null, null, null);
-    response1 = amService.allocate(allocateRequest1);
+    response1 = allocate(allocateRequest1);
     updatedNodes = response1.getUpdatedNodes();
     Assert.assertEquals(1, updatedNodes.size());
     nr = updatedNodes.iterator().next();
@@ -176,7 +197,7 @@ public class TestAMRMRPCNodeUpdates {
     
     allocateRequest2 = AllocateRequest.newInstance(attempt2
         .getAppAttemptId(), response2.getResponseId(), 0F, null, null, null);
-    response2 = amService.allocate(allocateRequest2);
+    response2 = allocate(allocateRequest2);
     updatedNodes = response2.getUpdatedNodes();
     Assert.assertEquals(1, updatedNodes.size());
     nr = updatedNodes.iterator().next();
@@ -186,7 +207,7 @@ public class TestAMRMRPCNodeUpdates {
     // subsequent allocate calls should return no updated nodes
     allocateRequest2 = AllocateRequest.newInstance(attempt2
         .getAppAttemptId(), response2.getResponseId(), 0F, null, null, null);
-    response2 = amService.allocate(allocateRequest2);
+    response2 = allocate(allocateRequest2);
     updatedNodes = response2.getUpdatedNodes();
     Assert.assertEquals(0, updatedNodes.size());
     

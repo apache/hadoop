@@ -40,7 +40,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestUnmanagedAMLauncher {
-
+/**
   private static final Log LOG = LogFactory
       .getLog(TestUnmanagedAMLauncher.class);
 
@@ -185,5 +185,5 @@ public class TestUnmanagedAMLauncher {
       // Expected
     }
   }
-
+*/
 }

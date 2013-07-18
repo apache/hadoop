@@ -57,7 +57,7 @@ public class RMContextImpl implements RMContext {
   private RMStateStore stateStore = null;
   private ContainerAllocationExpirer containerAllocationExpirer;
   private final DelegationTokenRenewer tokenRenewer;
-  private final AMRMTokenSecretManager appTokenSecretManager;
+  private final AMRMTokenSecretManager amRMTokenSecretManager;
   private final RMContainerTokenSecretManager containerTokenSecretManager;
   private final NMTokenSecretManagerInRM nmTokenSecretManager;
   private final ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager;
@@ -68,7 +68,7 @@ public class RMContextImpl implements RMContext {
       AMLivelinessMonitor amLivelinessMonitor,
       AMLivelinessMonitor amFinishingMonitor,
       DelegationTokenRenewer tokenRenewer,
-      AMRMTokenSecretManager appTokenSecretManager,
+      AMRMTokenSecretManager amRMTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager,
       ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager) {
@@ -78,7 +78,7 @@ public class RMContextImpl implements RMContext {
     this.amLivelinessMonitor = amLivelinessMonitor;
     this.amFinishingMonitor = amFinishingMonitor;
     this.tokenRenewer = tokenRenewer;
-    this.appTokenSecretManager = appTokenSecretManager;
+    this.amRMTokenSecretManager = amRMTokenSecretManager;
     this.containerTokenSecretManager = containerTokenSecretManager;
     this.nmTokenSecretManager = nmTokenSecretManager;
     this.clientToAMTokenSecretManager = clientToAMTokenSecretManager;
@@ -156,7 +156,7 @@ public class RMContextImpl implements RMContext {
 
   @Override
   public AMRMTokenSecretManager getAMRMTokenSecretManager() {
-    return this.appTokenSecretManager;
+    return this.amRMTokenSecretManager;
   }
 
   @Override

@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import java.security.PrivilegedAction;
+import java.util.Arrays;
+import java.util.Collection;
 
 import javax.crypto.SecretKey;
 
@@ -26,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -46,17 +47,29 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class TestAMRMTokens {
 
   private static final Log LOG = LogFactory.getLog(TestAMRMTokens.class);
 
-  private static final Configuration confWithSecurityEnabled =
-      new Configuration();
-  static {
-    confWithSecurityEnabled.set(
+  private final Configuration conf;
+
+  @Parameters
+  public static Collection<Object[]> configs() {
+    Configuration conf = new Configuration();
+    Configuration confWithSecurity = new Configuration();
+    confWithSecurity.set(
       CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    UserGroupInformation.setConfiguration(confWithSecurityEnabled);
+    return Arrays.asList(new Object[][] {{ conf }, { confWithSecurity } });
+  }
+
+  public TestAMRMTokens(Configuration conf) {
+    this.conf = conf;
+    UserGroupInformation.setConfiguration(conf);
   }
 
   /**
@@ -70,7 +83,7 @@ public class TestAMRMTokens {
 
     MyContainerManager containerManager = new MyContainerManager();
     final MockRM rm =
-        new MockRMWithAMS(confWithSecurityEnabled, containerManager);
+        new MockRMWithAMS(conf, containerManager);
     rm.start();
 
     final Configuration conf = rm.getConfig();
@@ -85,11 +98,11 @@ public class TestAMRMTokens {
       nm1.nodeHeartbeat(true);
 
       int waitCount = 0;
-      while (containerManager.amTokens == null && waitCount++ < 20) {
+      while (containerManager.containerTokens == null && waitCount++ < 20) {
         LOG.info("Waiting for AM Launch to happen..");
         Thread.sleep(1000);
       }
-      Assert.assertNotNull(containerManager.amTokens);
+      Assert.assertNotNull(containerManager.containerTokens);
 
       RMAppAttempt attempt = app.getCurrentAppAttempt();
       ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -98,11 +111,7 @@ public class TestAMRMTokens {
       UserGroupInformation currentUser =
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
-      Credentials credentials = new Credentials();
-      DataInputByteBuffer buf = new DataInputByteBuffer();
-      containerManager.amTokens.rewind();
-      buf.reset(containerManager.amTokens);
-      credentials.readTokenStorageStream(buf);
+      Credentials credentials = containerManager.getContainerCredentials();
       currentUser.addCredentials(credentials);
 
       rmClient = createRMClient(rm, conf, rpc, currentUser);
@@ -162,7 +171,7 @@ public class TestAMRMTokens {
 
     MyContainerManager containerManager = new MyContainerManager();
     final MockRM rm =
-        new MockRMWithAMS(confWithSecurityEnabled, containerManager);
+        new MockRMWithAMS(conf, containerManager);
     rm.start();
 
     final Configuration conf = rm.getConfig();
@@ -177,11 +186,11 @@ public class TestAMRMTokens {
       nm1.nodeHeartbeat(true);
 
       int waitCount = 0;
-      while (containerManager.amTokens == null && waitCount++ < 20) {
+      while (containerManager.containerTokens == null && waitCount++ < 20) {
         LOG.info("Waiting for AM Launch to happen..");
         Thread.sleep(1000);
       }
-      Assert.assertNotNull(containerManager.amTokens);
+      Assert.assertNotNull(containerManager.containerTokens);
 
       RMAppAttempt attempt = app.getCurrentAppAttempt();
       ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -190,11 +199,7 @@ public class TestAMRMTokens {
       UserGroupInformation currentUser =
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
-      Credentials credentials = new Credentials();
-      DataInputByteBuffer buf = new DataInputByteBuffer();
-      containerManager.amTokens.rewind();
-      buf.reset(containerManager.amTokens);
-      credentials.readTokenStorageStream(buf);
+      Credentials credentials = containerManager.getContainerCredentials();
       currentUser.addCredentials(credentials);
 
       rmClient = createRMClient(rm, conf, rpc, currentUser);
