@@ -83,6 +83,9 @@ Release 1.3.0 - unreleased
     HDFS-4521.  Invalid Network Topologies should not be cached.
     (Backported by Junping Du, reviewed by Colin Patrick McCabe.)
 
+    HDFS-5003. TestNNThroughputBenchmark failed caused by existing directories.
+    (Xi Fang via cnauroth)
+
 Release 1.2.1 - 2013.07.06
 
   INCOMPATIBLE CHANGES
