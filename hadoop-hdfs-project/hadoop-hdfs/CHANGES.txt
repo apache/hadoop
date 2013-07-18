@@ -1012,6 +1012,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4978. Make disallowSnapshot idempotent. (jing9)
 
+    HDFS-5005. Move SnapshotException and SnapshotAccessControlException 
+    to o.a.h.hdfs.protocol. (jing9)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
