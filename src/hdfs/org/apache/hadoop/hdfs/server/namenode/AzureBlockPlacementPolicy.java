@@ -360,7 +360,8 @@ public class AzureBlockPlacementPolicy extends BlockPlacementPolicyDefault {
   @Override
   protected DatanodeDescriptor chooseTarget(int numOfReplicas,
       DatanodeDescriptor writer, HashMap<Node, Node> excludedNodes,
-      long blocksize, int maxNodesPerRack, List<DatanodeDescriptor> results) {
+      long blocksize, int maxNodesPerRack, List<DatanodeDescriptor> results, 
+      boolean avoidStaleNodes) {
 
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves() == 0) {
       return writer;

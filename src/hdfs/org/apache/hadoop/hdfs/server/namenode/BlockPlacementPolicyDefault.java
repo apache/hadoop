@@ -522,8 +522,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   protected boolean isGoodTarget(DatanodeDescriptor node,
                                long blockSize, int maxTargetPerLoc,
                                List<DatanodeDescriptor> results) {
-    return isGoodTarget(node, blockSize, maxTargetPerLoc,
-                            this.considerLoad, results, false);
+    return isGoodTarget(node, blockSize, maxTargetPerLoc, results, false);
   }
   
   /* judge if a node is a good target.

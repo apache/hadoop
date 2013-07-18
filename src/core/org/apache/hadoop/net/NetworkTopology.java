@@ -381,22 +381,23 @@ public class NetworkTopology {
                                            + node.toString() 
                                            + " at an illegal network location");
       }
+      if (clusterMap.getNumOfLeaves() == 0) {
+        depthOfAllLeaves = -1;
+      }
       if (clusterMap.add(node)) {
         LOG.info("Adding a new node: "+NodeBase.getPath(node));
         if (rack == null) {
           numOfRacks++;
         }
-        if (!(node instanceof InnerNode)) {
-          if (depthOfAllLeaves == -1) {
-            depthOfAllLeaves = node.getLevel();
-          } else {
-            if (depthOfAllLeaves != node.getLevel()) {
-              LOG.error("Error: can't add leaf node at depth " +
-                  node.getLevel() + " to topology:\n" + oldTopoStr);
-              throw new InvalidTopologyException("Invalid network topology. " +
-                  "You cannot have a rack and a non-rack node at the same " +
-                  "level of the network topology.");
-            }
+        if (depthOfAllLeaves == -1) {
+          depthOfAllLeaves = node.getLevel();
+        } else {
+          if (depthOfAllLeaves != node.getLevel()) {
+            LOG.error("Error: can't add leaf node at depth " +
+                node.getLevel() + " to topology:\n" + oldTopoStr);
+            throw new InvalidTopologyException("Invalid network topology. " +
+                "You cannot have a rack and a non-rack node at the same " +
+                "level of the network topology.");
           }
         }
       }

@@ -316,6 +316,10 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     MAPREDUCE-5391. TestNonLocalJobJarSubmission fails on Windows due to missing
     classpath entries. (cnauroth)
 
+    HDFS-5001. TestAzureBlockPlacementPolicy and
+    TestReplicationPolicyWithNodeGroup failed caused by 1) old APIs and
+    2) incorrect value of depthOfAllLeaves. (Xi Fang via cnauroth)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a
