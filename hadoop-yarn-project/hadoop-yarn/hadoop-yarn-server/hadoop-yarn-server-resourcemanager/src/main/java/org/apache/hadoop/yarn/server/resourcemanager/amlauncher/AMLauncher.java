@@ -50,7 +50,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -193,11 +192,11 @@ public class AMLauncher implements Runnable {
     environment.put(ApplicationConstants.MAX_APP_ATTEMPTS_ENV,
         String.valueOf(rmContext.getRMApps().get(
             applicationId).getMaxAppAttempts()));
- 
+
+    Credentials credentials = new Credentials();
+    
     if (UserGroupInformation.isSecurityEnabled()) {
       // TODO: Security enabled/disabled info should come from RM.
-
-      Credentials credentials = new Credentials();
 
       DataInputByteBuffer dibb = new DataInputByteBuffer();
       if (container.getTokens() != null) {
@@ -205,18 +204,16 @@ public class AMLauncher implements Runnable {
         dibb.reset(container.getTokens());
         credentials.readTokenStorageStream(dibb);
       }
-
-      // Add application token
-      Token<AMRMTokenIdentifier> amrmToken =
-          application.getAMRMToken();
-      if(amrmToken != null) {
-        credentials.addToken(amrmToken.getService(), amrmToken);
-      }
-      DataOutputBuffer dob = new DataOutputBuffer();
-      credentials.writeTokenStorageToStream(dob);
-      container.setTokens(ByteBuffer.wrap(dob.getData(), 0,
-        dob.getLength()));
     }
+
+    // Add AMRMToken
+    Token<AMRMTokenIdentifier> amrmToken = application.getAMRMToken();
+    if (amrmToken != null) {
+      credentials.addToken(amrmToken.getService(), amrmToken);
+    }
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    container.setTokens(ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
   }
   
   @SuppressWarnings("unchecked")
