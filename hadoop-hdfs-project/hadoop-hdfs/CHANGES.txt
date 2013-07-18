@@ -449,6 +449,9 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4992. Make balancer's mover thread count and dispatcher thread count
     configurable.  (Max Lapan via szetszwo)
 
+    HDFS-4996. ClientProtocol#metaSave can be made idempotent by overwriting the
+    output file instead of appending to it. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-4465. Optimize datanode ReplicasMap and ReplicaInfo. (atm)

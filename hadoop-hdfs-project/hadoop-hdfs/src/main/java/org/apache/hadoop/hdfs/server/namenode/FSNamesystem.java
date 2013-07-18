@@ -1197,7 +1197,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkOperation(OperationCategory.UNCHECKED);
       File file = new File(System.getProperty("hadoop.log.dir"), filename);
       PrintWriter out = new PrintWriter(new BufferedWriter(
-          new OutputStreamWriter(new FileOutputStream(file, true), Charsets.UTF_8)));
+          new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8)));
       metaSave(out);
       out.flush();
       out.close();
