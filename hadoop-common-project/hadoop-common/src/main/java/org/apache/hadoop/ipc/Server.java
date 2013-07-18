@@ -278,7 +278,7 @@ public abstract class Server {
    * 
    * @return int sequential ID number of currently active RPC call
    */
-  public static int getCallId() {
+  static int getCallId() {
     Call call = CurCall.get();
     return call != null ? call.callId : RpcConstants.INVALID_CALL_ID;
   }
@@ -464,12 +464,12 @@ public abstract class Server {
     private final RPC.RpcKind rpcKind;
     private final byte[] clientId;
 
-    public Call(int id, Writable param, Connection connection) {
+    private Call(int id, Writable param, Connection connection) {
       this(id, param, connection, RPC.RpcKind.RPC_BUILTIN,
           RpcConstants.DUMMY_CLIENT_ID);
     }
 
-    public Call(int id, Writable param, Connection connection,
+    private Call(int id, Writable param, Connection connection,
         RPC.RpcKind kind, byte[] clientId) {
       this.callId = id;
       this.rpcRequest = param;
@@ -482,7 +482,7 @@ public abstract class Server {
     
     @Override
     public String toString() {
-      return rpcRequest.toString() + " from " + connection.toString();
+      return rpcRequest + " from " + connection + " Call#" + callId;
     }
 
     public void setResponse(ByteBuffer response) {
@@ -987,8 +987,7 @@ public abstract class Server {
           call = responseQueue.removeFirst();
           SocketChannel channel = call.connection.channel;
           if (LOG.isDebugEnabled()) {
-            LOG.debug(getName() + ": responding to #" + call.callId + " from " +
-                      call.connection);
+            LOG.debug(getName() + ": responding to " + call);
           }
           //
           // Send as much data as we can in the non-blocking fashion
@@ -1007,8 +1006,8 @@ public abstract class Server {
               done = false;            // more calls pending to be sent.
             }
             if (LOG.isDebugEnabled()) {
-              LOG.debug(getName() + ": responding to #" + call.callId + " from " +
-                        call.connection + " Wrote " + numBytes + " bytes.");
+              LOG.debug(getName() + ": responding to " + call
+                  + " Wrote " + numBytes + " bytes.");
             }
           } else {
             //
@@ -1035,9 +1034,8 @@ public abstract class Server {
               }
             }
             if (LOG.isDebugEnabled()) {
-              LOG.debug(getName() + ": responding to #" + call.callId + " from " +
-                        call.connection + " Wrote partial " + numBytes + 
-                        " bytes.");
+              LOG.debug(getName() + ": responding to " + call
+                  + " Wrote partial " + numBytes + " bytes.");
             }
           }
           error = false;              // everything went off well
@@ -2004,8 +2002,7 @@ public abstract class Server {
         try {
           final Call call = callQueue.take(); // pop the queue; maybe blocked here
           if (LOG.isDebugEnabled()) {
-            LOG.debug(getName() + ": has Call#" + call.callId + 
-                "for RpcKind " + call.rpcKind + " from " + call.connection);
+            LOG.debug(getName() + ": " + call + " for RpcKind " + call.rpcKind);
           }
           String errorClass = null;
           String error = null;

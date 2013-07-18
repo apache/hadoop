@@ -94,7 +94,7 @@ public class TestRPC {
 
   int datasize = 1024*100;
   int numThreads = 50;
-	
+
   public interface TestProtocol extends VersionedProtocol {
     public static final long versionID = 1L;
     
@@ -360,8 +360,7 @@ public class TestRPC {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
 
       // create a client
-      proxy = (TestProtocol)RPC.getProxy(
-          TestProtocol.class, TestProtocol.versionID, addr, conf);
+      proxy = RPC.getProxy(TestProtocol.class, TestProtocol.versionID, addr, conf);
       
       assertEquals(addr, RPC.getServerAddress(proxy));
     } finally {
@@ -388,8 +387,7 @@ public class TestRPC {
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
 
     // create a client
-    proxy = (TestProtocol)RPC.getProxy(
-        TestProtocol.class, TestProtocol.versionID, addr, conf);
+    proxy = RPC.getProxy(TestProtocol.class, TestProtocol.versionID, addr, conf);
 
     SlowRPC slowrpc = new SlowRPC(proxy);
     Thread thread = new Thread(slowrpc, "SlowRPC");
@@ -432,8 +430,7 @@ public class TestRPC {
     server.start();
 
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
-    proxy = (TestProtocol)RPC.getProxy(
-        TestProtocol.class, TestProtocol.versionID, addr, conf);
+    proxy = RPC.getProxy(TestProtocol.class, TestProtocol.versionID, addr, conf);
       
     proxy.ping();
 
@@ -557,8 +554,7 @@ public class TestRPC {
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
     
     try {
-      proxy = (TestProtocol)RPC.getProxy(
-          TestProtocol.class, TestProtocol.versionID, addr, conf);
+      proxy = RPC.getProxy(TestProtocol.class, TestProtocol.versionID, addr, conf);
       proxy.ping();
 
       if (expectFailure) {
@@ -660,7 +656,7 @@ public class TestRPC {
   
   @Test
   public void testStopProxy() throws IOException {
-    StoppedProtocol proxy = (StoppedProtocol) RPC.getProxy(StoppedProtocol.class,
+    StoppedProtocol proxy = RPC.getProxy(StoppedProtocol.class,
         StoppedProtocol.versionID, null, conf);
     StoppedInvocationHandler invocationHandler = (StoppedInvocationHandler)
         Proxy.getInvocationHandler(proxy);
@@ -671,7 +667,7 @@ public class TestRPC {
   
   @Test
   public void testWrappedStopProxy() throws IOException {
-    StoppedProtocol wrappedProxy = (StoppedProtocol) RPC.getProxy(StoppedProtocol.class,
+    StoppedProtocol wrappedProxy = RPC.getProxy(StoppedProtocol.class,
         StoppedProtocol.versionID, null, conf);
     StoppedInvocationHandler invocationHandler = (StoppedInvocationHandler)
         Proxy.getInvocationHandler(wrappedProxy);
@@ -701,8 +697,7 @@ public class TestRPC {
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     TestProtocol proxy = null;
     try {
-      proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
-          TestProtocol.versionID, addr, conf);
+      proxy = RPC.getProxy(TestProtocol.class, TestProtocol.versionID, addr, conf);
       proxy.echo("");
     } catch (RemoteException e) {
       LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
@@ -730,7 +725,7 @@ public class TestRPC {
     proxy = null;
     try {
       UserGroupInformation.setConfiguration(conf);
-      proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
+      proxy = RPC.getProxy(TestProtocol.class,
           TestProtocol.versionID, mulitServerAddr, conf);
       proxy.echo("");
     } catch (RemoteException e) {
@@ -847,7 +842,7 @@ public class TestRPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
   
-      final TestProtocol proxy = (TestProtocol) RPC.getProxy(
+      final TestProtocol proxy = RPC.getProxy(
           TestProtocol.class, TestProtocol.versionID, addr, conf);
       // Connect to the server
       proxy.ping();
@@ -887,8 +882,8 @@ public class TestRPC {
       
       for (int i = 0; i < numConcurrentRPC; i++) {
         final int num = i;
-        final TestProtocol proxy = (TestProtocol) RPC.getProxy(
-        TestProtocol.class, TestProtocol.versionID, addr, conf);
+        final TestProtocol proxy = RPC.getProxy(TestProtocol.class,
+            TestProtocol.versionID, addr, conf);
         Thread rpcThread = new Thread(new Runnable() {
           @Override
           public void run() {
@@ -906,7 +901,7 @@ public class TestRPC {
                 error.set(e);
               }
   
-              LOG.error(e);
+              LOG.error("thread " + num, e);
             } finally {
               latch.countDown();
             }
