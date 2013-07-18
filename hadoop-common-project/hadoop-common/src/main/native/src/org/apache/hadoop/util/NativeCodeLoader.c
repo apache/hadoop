@@ -19,6 +19,7 @@
 #include "org_apache_hadoop.h"
 
 #ifdef UNIX
+#include <dlfcn.h>
 #include "config.h"
 #endif // UNIX
 
@@ -32,4 +33,14 @@ JNIEXPORT jboolean JNICALL Java_org_apache_hadoop_util_NativeCodeLoader_buildSup
 #else
   return JNI_FALSE;
 #endif
+}
+
+JNIEXPORT jstring JNICALL Java_org_apache_hadoop_util_NativeCodeLoader_getLibraryName
+  (JNIEnv *env, jclass clazz)
+{
+  Dl_info dl_info;
+  int ret = dladdr(
+      Java_org_apache_hadoop_util_NativeCodeLoader_getLibraryName,
+      &dl_info);
+  return (*env)->NewStringUTF(env, ret==0 ? "Unavailable" : dl_info.dli_fname);
 }

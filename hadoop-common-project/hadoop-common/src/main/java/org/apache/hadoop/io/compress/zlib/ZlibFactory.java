@@ -65,7 +65,11 @@ public class ZlibFactory {
                           CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, 
                           CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_DEFAULT);
   }
-  
+
+  public static String getLibraryName() {
+    return ZlibCompressor.getLibraryName();
+  }
+
   /**
    * Return the appropriate type of the zlib compressor. 
    * 
