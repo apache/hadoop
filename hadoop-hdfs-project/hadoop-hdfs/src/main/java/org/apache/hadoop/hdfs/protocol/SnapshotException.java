@@ -15,19 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode.snapshot;
+package org.apache.hadoop.hdfs.protocol;
 
-import org.apache.hadoop.security.AccessControlException;
+import java.io.IOException;
 
-/** Snapshot access related exception. */
-public class SnapshotAccessControlException extends AccessControlException {
+/** Snapshot related exception. */
+public class SnapshotException extends IOException {
   private static final long serialVersionUID = 1L;
 
-  public SnapshotAccessControlException(final String message) {
+  public SnapshotException(final String message) {
     super(message);
   }
 
-  public SnapshotAccessControlException(final Throwable cause) {
+  public SnapshotException(final Throwable cause) {
     super(cause);
   }
 }
