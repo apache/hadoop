@@ -68,6 +68,9 @@ Release 1.3.0 - unreleased
     HADOOP-9678. TestRPC#testStopsAllThreads intermittently fails on Windows.
     (Ivan Mitic via cnauroth)
 
+    HDFS-5003. TestNNThroughputBenchmark failed caused by existing directories.
+    (Xi Fang via cnauroth)
+
 Release 1.2.1 - Unreleased 
 
   INCOMPATIBLE CHANGES

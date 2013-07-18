@@ -102,7 +102,7 @@ public class NNThroughputBenchmark {
     config.set("dfs.hosts.exclude", "${hadoop.tmp.dir}/dfs/hosts/exclude");
     File excludeFile = new File(config.get("dfs.hosts.exclude", "exclude"));
     if(! excludeFile.exists()) {
-      if(!excludeFile.getParentFile().mkdirs())
+      if(!excludeFile.getParentFile().exists() && !excludeFile.getParentFile().mkdirs())
         throw new IOException("NNThroughputBenchmark: cannot mkdir " + excludeFile);
     }
     new FileOutputStream(excludeFile).close();
