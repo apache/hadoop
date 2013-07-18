@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.ipc.RPC.RpcKind;
+import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
 import org.junit.Test;
@@ -79,7 +80,8 @@ public class TestProtoUtil {
   public void testRpcClientId() {
     byte[] uuid = StringUtils.getUuidBytes();
     RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
-        RpcKind.RPC_PROTOCOL_BUFFER, OperationProto.RPC_FINAL_PACKET, 0, uuid);
+        RpcKind.RPC_PROTOCOL_BUFFER, OperationProto.RPC_FINAL_PACKET, 0,
+        RpcConstants.INVALID_RETRY_COUNT, uuid);
     assertTrue(Arrays.equals(uuid, header.getClientId().toByteArray()));
   }
 }

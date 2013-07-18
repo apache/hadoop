@@ -483,6 +483,8 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9716. Rpc retries should use the same call ID as the original call.
     (szetszwo)
 
+    HADOOP-9717. Add retry attempt count to the RPC requests. (jing9)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs

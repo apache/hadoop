@@ -111,12 +111,16 @@ public class Client {
   private static final AtomicInteger callIdCounter = new AtomicInteger();
 
   private static final ThreadLocal<Integer> callId = new ThreadLocal<Integer>();
+  private static final ThreadLocal<Integer> retryCount = new ThreadLocal<Integer>();
 
-  /** Set call id for the next call. */
-  public static void setCallId(int cid) {
+  /** Set call id and retry count for the next call. */
+  public static void setCallIdAndRetryCount(int cid, int rc) {
     Preconditions.checkArgument(cid != RpcConstants.INVALID_CALL_ID);
     Preconditions.checkState(callId.get() == null);
+    Preconditions.checkArgument(rc != RpcConstants.INVALID_RETRY_COUNT);
+
     callId.set(cid);
+    retryCount.set(rc);
   }
 
   private Hashtable<ConnectionId, Connection> connections =
@@ -281,6 +285,7 @@ public class Client {
    */
   static class Call {
     final int id;               // call id
+    final int retry;           // retry count
     final Writable rpcRequest;  // the serialized rpc request
     Writable rpcResponse;       // null if rpc has error
     IOException error;          // exception, null if success
@@ -297,6 +302,13 @@ public class Client {
       } else {
         callId.set(null);
         this.id = id;
+      }
+      
+      final Integer rc = retryCount.get();
+      if (rc == null) {
+        this.retry = 0;
+      } else {
+        this.retry = rc;
       }
     }
 
@@ -865,10 +877,10 @@ public class Client {
           RPC.getProtocolName(remoteId.getProtocol()),
           remoteId.getTicket(),
           authMethod);
-      RpcRequestHeaderProto connectionContextHeader =
-          ProtoUtil.makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
+      RpcRequestHeaderProto connectionContextHeader = ProtoUtil
+          .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
               OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID,
-              clientId);
+              RpcConstants.INVALID_RETRY_COUNT, clientId);
       RpcRequestMessageWrapper request =
           new RpcRequestMessageWrapper(connectionContextHeader, message);
       
@@ -976,7 +988,8 @@ public class Client {
       // Items '1' and '2' are prepared here. 
       final DataOutputBuffer d = new DataOutputBuffer();
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
-         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, clientId);
+          call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, call.retry,
+          clientId);
       header.writeDelimitedTo(d);
       call.rpcRequest.write(d);
 
