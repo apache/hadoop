@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.AMCommand;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -68,9 +67,8 @@ extends AMRMClientAsync<T> {
   
   private volatile Exception savedException;
   
-  public AMRMClientAsyncImpl(ApplicationAttemptId id, int intervalMs,
-      CallbackHandler callbackHandler) {
-    this(new AMRMClientImpl<T>(id), intervalMs, callbackHandler);
+  public AMRMClientAsyncImpl(int intervalMs, CallbackHandler callbackHandler) {
+    this(new AMRMClientImpl<T>(), intervalMs, callbackHandler);
   }
   
   @Private

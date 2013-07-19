@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -63,7 +62,6 @@ public abstract class RMCommunicator extends AbstractService
   private static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
   private int rmPollInterval;//millis
   protected ApplicationId applicationId;
-  protected ApplicationAttemptId applicationAttemptId;
   private final AtomicBoolean stopped;
   protected Thread allocatorThread;
   @SuppressWarnings("rawtypes")
@@ -91,7 +89,6 @@ public abstract class RMCommunicator extends AbstractService
     this.context = context;
     this.eventHandler = context.getEventHandler();
     this.applicationId = context.getApplicationID();
-    this.applicationAttemptId = context.getApplicationAttemptId();
     this.stopped = new AtomicBoolean(false);
     this.heartbeatCallbacks = new ConcurrentLinkedQueue<Runnable>();
   }
@@ -142,7 +139,6 @@ public abstract class RMCommunicator extends AbstractService
     try {
       RegisterApplicationMasterRequest request =
         recordFactory.newRecordInstance(RegisterApplicationMasterRequest.class);
-      request.setApplicationAttemptId(applicationAttemptId);
       if (serviceAddr != null) {
         request.setHost(serviceAddr.getHostName());
         request.setRpcPort(serviceAddr.getPort());
@@ -193,11 +189,8 @@ public abstract class RMCommunicator extends AbstractService
       LOG.info("History url is " + historyUrl);
 
       FinishApplicationMasterRequest request =
-          recordFactory.newRecordInstance(FinishApplicationMasterRequest.class);
-      request.setAppAttemptId(this.applicationAttemptId);
-      request.setFinalApplicationStatus(finishState);
-      request.setDiagnostics(sb.toString());
-      request.setTrackingUrl(historyUrl);
+          FinishApplicationMasterRequest.newInstance(finishState,
+            sb.toString(), historyUrl);
       scheduler.finishApplicationMaster(request);
     } catch(Exception are) {
       LOG.error("Exception while unregistering ", are);

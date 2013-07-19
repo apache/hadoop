@@ -29,15 +29,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import com.google.common.collect.ImmutableList;
+
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -49,17 +49,13 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * For usage:
    * <pre>
    * {@code
-   * AMRMClient.<T>createAMRMClientContainerRequest(appAttemptId)
+   * AMRMClient.<T>createAMRMClientContainerRequest()
    * }</pre>
-   * @param appAttemptId the appAttemptId associated with the AMRMClient
    * @return the newly create AMRMClient instance.
    */
   @Public
-  public static <T extends ContainerRequest> AMRMClient<T> createAMRMClient(
-      ApplicationAttemptId appAttemptId) {
-    Preconditions.checkArgument(appAttemptId != null,
-        "ApplicationAttempId should not be null");
-    AMRMClient<T> client = new AMRMClientImpl<T>(appAttemptId);
+  public static <T extends ContainerRequest> AMRMClient<T> createAMRMClient() {
+    AMRMClient<T> client = new AMRMClientImpl<T>();
     return client;
   }
 

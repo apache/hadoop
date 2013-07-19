@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -118,12 +117,10 @@ public class TestAMRMTokens {
 
       RegisterApplicationMasterRequest request =
           Records.newRecord(RegisterApplicationMasterRequest.class);
-      request.setApplicationAttemptId(applicationAttemptId);
       rmClient.registerApplicationMaster(request);
 
       FinishApplicationMasterRequest finishAMRequest =
           Records.newRecord(FinishApplicationMasterRequest.class);
-      finishAMRequest.setAppAttemptId(applicationAttemptId);
       finishAMRequest
         .setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
       finishAMRequest.setDiagnostics("diagnostics");
@@ -134,11 +131,8 @@ public class TestAMRMTokens {
       // exception.
       rpc.stopProxy(rmClient, conf); // To avoid using cached client
       rmClient = createRMClient(rm, conf, rpc, currentUser);
-      request.setApplicationAttemptId(BuilderUtils.newApplicationAttemptId(
-        BuilderUtils.newApplicationId(12345, 78), 987));
       AllocateRequest allocateRequest =
           Records.newRecord(AllocateRequest.class);
-      allocateRequest.setApplicationAttemptId(applicationAttemptId);
       try {
         rmClient.allocate(allocateRequest);
         Assert.fail("You got to be kidding me! "
@@ -206,13 +200,11 @@ public class TestAMRMTokens {
 
       RegisterApplicationMasterRequest request =
           Records.newRecord(RegisterApplicationMasterRequest.class);
-      request.setApplicationAttemptId(applicationAttemptId);
       rmClient.registerApplicationMaster(request);
 
       // One allocate call.
       AllocateRequest allocateRequest =
           Records.newRecord(AllocateRequest.class);
-      allocateRequest.setApplicationAttemptId(applicationAttemptId);
       Assert.assertTrue(
           rmClient.allocate(allocateRequest).getAMCommand() == null);
 
@@ -229,7 +221,6 @@ public class TestAMRMTokens {
       rpc.stopProxy(rmClient, conf); // To avoid using cached client
       rmClient = createRMClient(rm, conf, rpc, currentUser);
       allocateRequest = Records.newRecord(AllocateRequest.class);
-      allocateRequest.setApplicationAttemptId(applicationAttemptId);
       Assert.assertTrue(
           rmClient.allocate(allocateRequest).getAMCommand() == null);
     } finally {

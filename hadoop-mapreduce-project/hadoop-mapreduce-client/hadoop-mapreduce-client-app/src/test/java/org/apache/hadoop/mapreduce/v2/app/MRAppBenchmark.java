@@ -234,7 +234,7 @@ public class MRAppBenchmark {
                   for (int i = 0; i < numContainers; i++) {
                     ContainerId containerId =
                         ContainerId.newInstance(
-                          request.getApplicationAttemptId(),
+                          getContext().getApplicationAttemptId(),
                           request.getResponseId() + i);
                     containers.add(Container.newInstance(containerId,
                       NodeId.newInstance("host" + containerId.getId(), 2345),
