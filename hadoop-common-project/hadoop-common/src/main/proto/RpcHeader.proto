@@ -130,6 +130,8 @@ message RpcResponseHeaderProto {
   optional string exceptionClassName = 4;  // if request fails
   optional string errorMsg = 5;  // if request fails, often contains strack trace
   optional RpcErrorCodeProto errorDetail = 6; // in case of error
+  optional bytes clientId = 7; // Globally unique client ID
+  optional sint32 retryCount = 8 [default = -1];
 }
 
 message RpcSaslProto {

@@ -33,6 +33,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -272,6 +273,24 @@ public class Client {
    */
   synchronized boolean isZeroReference() {
     return refCount==0;
+  }
+
+  /** Check the rpc response header. */
+  void checkResponse(RpcResponseHeaderProto header) throws IOException {
+    if (header == null) {
+      throw new IOException("Response is null.");
+    }
+    if (header.hasClientId()) {
+      // check client IDs
+      final byte[] id = header.getClientId().toByteArray();
+      if (!Arrays.equals(id, RpcConstants.DUMMY_CLIENT_ID)) {
+        if (!Arrays.equals(id, clientId)) {
+          throw new IOException("Client IDs not matched: local ID="
+              + StringUtils.byteToHexString(clientId) + ", ID in reponse="
+              + StringUtils.byteToHexString(header.getClientId().toByteArray()));
+        }
+      }
+    }
   }
 
   Call createCall(RPC.RpcKind rpcKind, Writable rpcRequest) {
@@ -1052,9 +1071,8 @@ public class Client {
         int totalLen = in.readInt();
         RpcResponseHeaderProto header = 
             RpcResponseHeaderProto.parseDelimitedFrom(in);
-        if (header == null) {
-          throw new IOException("Response is null.");
-        }
+        checkResponse(header);
+
         int headerLen = header.getSerializedSize();
         headerLen += CodedOutputStream.computeRawVarint32Size(headerLen);
 

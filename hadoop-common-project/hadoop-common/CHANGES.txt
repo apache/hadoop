@@ -205,6 +205,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9717. Add retry attempt count to the RPC requests. (jing9)
 
+    HADOOP-9751. Add clientId and retryCount to RpcResponseHeaderProto.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
