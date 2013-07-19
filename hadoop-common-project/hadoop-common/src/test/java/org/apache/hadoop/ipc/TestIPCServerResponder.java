@@ -105,10 +105,10 @@ public class TestIPCServerResponder extends TestCase {
           byte[] bytes = new byte[byteSize];
           System.arraycopy(BYTES, 0, bytes, 0, byteSize);
           Writable param = new BytesWritable(bytes);
-          Writable value = client.call(param, address);
+          client.call(param, address);
           Thread.sleep(RANDOM.nextInt(20));
         } catch (Exception e) {
-          LOG.fatal("Caught: " + e);
+          LOG.fatal("Caught Exception", e);
           failed = true;
         }
       }

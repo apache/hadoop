@@ -200,6 +200,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9734. Common protobuf definitions for GetUserMappingsProtocol,
     RefreshAuthorizationPolicyProtocol and RefreshUserMappingsProtocol (jlowe)
 
+    HADOOP-9716. Rpc retries should use the same call ID as the original call.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs

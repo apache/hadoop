@@ -89,6 +89,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.CodedOutputStream;
 
@@ -102,11 +103,22 @@ public class Client {
   
   public static final Log LOG = LogFactory.getLog(Client.class);
 
+  /** A counter for generating call IDs. */
+  private static final AtomicInteger callIdCounter = new AtomicInteger();
+
+  private static final ThreadLocal<Integer> callId = new ThreadLocal<Integer>();
+
+  /** Set call id for the next call. */
+  public static void setCallId(int cid) {
+    Preconditions.checkArgument(cid != RpcConstants.INVALID_CALL_ID);
+    Preconditions.checkState(callId.get() == null);
+    callId.set(cid);
+  }
+
   private Hashtable<ConnectionId, Connection> connections =
     new Hashtable<ConnectionId, Connection>();
 
   private Class<? extends Writable> valueClass;   // class of call values
-  private final AtomicInteger counter = new AtomicInteger(); // call ID sequence
   private AtomicBoolean running = new AtomicBoolean(true); // if client runs
   final private Configuration conf;
 
@@ -257,11 +269,15 @@ public class Client {
   synchronized boolean isZeroReference() {
     return refCount==0;
   }
-  
+
+  Call createCall(RPC.RpcKind rpcKind, Writable rpcRequest) {
+    return new Call(rpcKind, rpcRequest);
+  }
+
   /** 
    * Class that represents an RPC call
    */
-  private class Call {
+  static class Call {
     final int id;               // call id
     final Writable rpcRequest;  // the serialized rpc request
     Writable rpcResponse;       // null if rpc has error
@@ -269,10 +285,17 @@ public class Client {
     final RPC.RpcKind rpcKind;      // Rpc EngineKind
     boolean done;               // true when call is done
 
-    protected Call(RPC.RpcKind rpcKind, Writable param) {
+    private Call(RPC.RpcKind rpcKind, Writable param) {
       this.rpcKind = rpcKind;
       this.rpcRequest = param;
-      this.id = nextCallId();
+
+      final Integer id = callId.get();
+      if (id == null) {
+        this.id = nextCallId();
+      } else {
+        callId.set(null);
+        this.id = id;
+      }
     }
 
     /** Indicate when the call is complete and the
@@ -1344,7 +1367,7 @@ public class Client {
   public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
       ConnectionId remoteId, int serviceClass)
       throws InterruptedException, IOException {
-    Call call = new Call(rpcKind, rpcRequest);
+    final Call call = createCall(rpcKind, rpcRequest);
     Connection connection = getConnection(remoteId, call, serviceClass);
     try {
       connection.sendRpcRequest(call);                 // send the rpc request
@@ -1631,9 +1654,9 @@ public class Client {
    * versions of the client did not mask off the sign bit, so a server may still
    * see a negative call ID if it receives connections from an old client.
    * 
-   * @return int next valid call ID
+   * @return next call ID
    */
-  private int nextCallId() {
-    return counter.getAndIncrement() & 0x7FFFFFFF;
+  public static int nextCallId() {
+    return callIdCounter.getAndIncrement() & 0x7FFFFFFF;
   }
 }

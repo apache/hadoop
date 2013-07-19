@@ -124,7 +124,7 @@ public class ProtobufRpcEngine implements RpcEngine {
     /**
      * This constructor takes a connectionId, instead of creating a new one.
      */
-    public Invoker(Class<?> protocol, Client.ConnectionId connId,
+    private Invoker(Class<?> protocol, Client.ConnectionId connId,
         Configuration conf, SocketFactory factory) {
       this.remoteId = connId;
       this.client = CLIENTS.getClient(conf, factory, RpcResponseWrapper.class);
