@@ -39,8 +39,10 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 
 public abstract class ContainerExecutor implements Configurable {
 
@@ -291,15 +293,16 @@ public abstract class ContainerExecutor implements Configurable {
   }
 
   public static class DelayedProcessKiller extends Thread {
+    private Container container;
     private final String user;
     private final String pid;
     private final long delay;
     private final Signal signal;
     private final ContainerExecutor containerExecutor;
 
-    public DelayedProcessKiller(String user, String pid, long delay,
-        Signal signal,
-        ContainerExecutor containerExecutor) {
+    public DelayedProcessKiller(Container container, String user, String pid,
+        long delay, Signal signal, ContainerExecutor containerExecutor) {
+      this.container = container;
       this.user = user;
       this.pid = pid;
       this.delay = delay;
@@ -316,7 +319,11 @@ public abstract class ContainerExecutor implements Configurable {
       } catch (InterruptedException e) {
         return;
       } catch (IOException e) {
-        LOG.warn("Exception when killing task " + pid, e);
+        String message = "Exception when user " + user + " killing task " + pid
+            + " in DelayedProcessKiller: " + StringUtils.stringifyException(e);
+        LOG.warn(message);
+        container.handle(new ContainerDiagnosticsUpdateEvent(container
+          .getContainerId(), message));
       }
     }
   }

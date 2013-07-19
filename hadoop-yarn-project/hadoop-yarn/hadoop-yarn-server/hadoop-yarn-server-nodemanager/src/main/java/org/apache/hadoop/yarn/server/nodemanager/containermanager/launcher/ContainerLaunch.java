@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
@@ -308,6 +309,7 @@ public class ContainerLaunch implements Callable<Integer> {
    * the process id is available.
    * @throws IOException
    */
+  @SuppressWarnings("unchecked") // dispatcher not typed
   public void cleanupContainer() throws IOException {
     ContainerId containerId = container.getContainerId();
     String containerIdStr = ConverterUtils.toString(containerId);
@@ -355,13 +357,17 @@ public class ContainerLaunch implements Callable<Integer> {
               + " as user " + user
               + " for container " + containerIdStr
               + ", result=" + (result? "success" : "failed"));
-          new DelayedProcessKiller(user,
+          new DelayedProcessKiller(container, user,
               processId, sleepDelayBeforeSigKill, Signal.KILL, exec).start();
         }
       }
     } catch (Exception e) {
-      LOG.warn("Got error when trying to cleanup container " + containerIdStr
-          + ", error=" + e.getMessage());
+      String message =
+          "Exception when trying to cleanup container " + containerIdStr
+              + ": " + StringUtils.stringifyException(e);
+      LOG.warn(message);
+      dispatcher.getEventHandler().handle(
+        new ContainerDiagnosticsUpdateEvent(containerId, message));
     } finally {
       // cleanup pid file if present
       if (pidFilePath != null) {
