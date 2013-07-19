@@ -672,7 +672,7 @@ public class SecurityUtil {
   public static AuthenticationMethod getAuthenticationMethod(Configuration conf) {
     String value = conf.get(HADOOP_SECURITY_AUTHENTICATION, "simple");
     try {
-      return Enum.valueOf(AuthenticationMethod.class, value.toUpperCase());
+      return Enum.valueOf(AuthenticationMethod.class, value.toUpperCase(Locale.ENGLISH));
     } catch (IllegalArgumentException iae) {
       throw new IllegalArgumentException("Invalid attribute value for " +
           HADOOP_SECURITY_AUTHENTICATION + " of " + value);
@@ -685,6 +685,6 @@ public class SecurityUtil {
       authenticationMethod = AuthenticationMethod.SIMPLE;
     }
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
-             authenticationMethod.toString().toLowerCase());
+             authenticationMethod.toString().toLowerCase(Locale.ENGLISH));
   }
 }
