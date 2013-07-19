@@ -8,15 +8,9 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
-    HADOOP-9418.  Add symlink resolution support to DistributedFileSystem.
-    (Andrew Wang via Colin Patrick McCabe)
-
   OPTIMIZATIONS
 
   BUG FIXES
-
-    HDFS-4982. JournalNode should relogin from keytab before fetching logs
-    from other JNs (todd)
 
 Release 2.1.0-beta - 2013-07-02
 
@@ -204,6 +198,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4996. ClientProtocol#metaSave can be made idempotent by overwriting the
     output file instead of appending to it. (cnauroth)
+
+    HADOOP-9418.  Add symlink support to DistributedFileSystem (Andrew Wang via
+    Colin Patrick McCabe)
 
   OPTIMIZATIONS
 
@@ -990,6 +987,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-5005. Move SnapshotException and SnapshotAccessControlException 
     to o.a.h.hdfs.protocol. (jing9)
+
+    HDFS-4982. JournalNode should relogin from keytab before fetching logs
+    from other JNs (todd)
 
 Release 2.0.5-alpha - 06/06/2013
 
