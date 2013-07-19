@@ -33,6 +33,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-62. Modified NodeManagers to avoid AMs from abusing container tokens for
     repetitive container launches. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-814. Improving diagnostics when containers fail during launch due to
+    various reasons like invalid env etc. (Jian He via vinodkv)
+
 Release 2.1.0-beta - 2013-07-02
 
   INCOMPATIBLE CHANGES
