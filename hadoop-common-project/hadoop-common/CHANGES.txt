@@ -191,6 +191,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9416.  Add new symlink resolution methods in FileSystem and
     FileSystemLinkResolver.  (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9720. Rename Client#uuid to Client#clientId. (Arpit Agarwal via
+    suresh)
+
     HADOOP-9734. Common protobuf definitions for GetUserMappingsProtocol,
     RefreshAuthorizationPolicyProtocol and RefreshUserMappingsProtocol (jlowe)
 
