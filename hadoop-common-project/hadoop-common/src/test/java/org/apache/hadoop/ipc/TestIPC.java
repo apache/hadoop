@@ -736,7 +736,7 @@ public class TestIPC {
       "6f 6e 67 00 00 00 00 00  00 00 0a                ong..... ...     \n");
 
     final static String HADOOP0_18_ERROR_MSG =
-      "Server IPC version " + RpcConstants.CURRENT_VERSION +
+      "Server IPC version " + Server.CURRENT_VERSION +
       " cannot communicate with client version 2";
     
     /**
@@ -775,7 +775,7 @@ public class TestIPC {
       "00 14                                            ..               \n");
 
     final static String HADOOP0_20_ERROR_MSG =
-      "Server IPC version " + RpcConstants.CURRENT_VERSION +
+      "Server IPC version " + Server.CURRENT_VERSION +
       " cannot communicate with client version 3";
     
 
@@ -790,7 +790,7 @@ public class TestIPC {
     
     
     final static String HADOOP0_21_ERROR_MSG =
-      "Server IPC version " + RpcConstants.CURRENT_VERSION +
+      "Server IPC version " + Server.CURRENT_VERSION +
       " cannot communicate with client version 4";
 
     final static byte[] HADOOP_0_21_0_RPC_DUMP =

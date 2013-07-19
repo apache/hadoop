@@ -46,7 +46,6 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcRequestMessageWrapper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcResponseMessageWrapper;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.Server.AuthProtocol;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
@@ -72,10 +71,9 @@ public class SaslRpcClient {
   private final AuthMethod authMethod;
   private final SaslClient saslClient;
   private final boolean fallbackAllowed;
-  private static final RpcRequestHeaderProto saslHeader = ProtoUtil
-      .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
-          OperationProto.RPC_FINAL_PACKET, AuthProtocol.SASL.callId,
-          RpcConstants.DUMMY_CLIENT_ID);
+  private static final RpcRequestHeaderProto saslHeader =
+      ProtoUtil.makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
+          OperationProto.RPC_FINAL_PACKET, AuthProtocol.SASL.callId);
   private static final RpcSaslProto negotiateRequest =
       RpcSaslProto.newBuilder().setState(SaslState.NEGOTIATE).build();
   

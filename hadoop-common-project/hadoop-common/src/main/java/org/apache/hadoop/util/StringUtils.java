@@ -22,7 +22,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,7 +32,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.StringTokenizer;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -895,16 +893,5 @@ public class StringUtils {
     }
     matcher.appendTail(sb);
     return sb.toString();
-  }
-  
-  /**
-   * Return a new UUID as byte[]
-   */
-  public static byte[] getUuidBytes() {
-    UUID uuid = UUID.randomUUID();
-    ByteBuffer buf = ByteBuffer.wrap(new byte[16]);
-    buf.putLong(uuid.getMostSignificantBits());
-    buf.putLong(uuid.getLeastSignificantBits());
-    return buf.array();
   }
 }
