@@ -32,33 +32,9 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
-    YARN-912. Move client facing exceptions to yarn-api module. (Mayank Bansal
-    via vinodkv)
-
   OPTIMIZATIONS
 
   BUG FIXES
-
-    YARN-368. Fixed a typo in error message in Auxiliary services. (Albert Chu
-    via vinodkv)
-
-    YARN-295. Fixed a race condition in ResourceManager RMAppAttempt state
-    machine. (Mayank Bansal via vinodkv)
-
-    YARN-523. Modified a test-case to validate container diagnostics on
-    localization failures. (Jian He via vinodkv)
-
-    YARN-661. Fixed NM to cleanup users' local directories correctly when
-    starting up. (Omkar Vinit Joshi via vinodkv)
-
-    YARN-820. Fixed an invalid state transition in NodeManager caused by failing
-    resource localization. (Mayank Bansal via vinodkv)
-
-    YARN-62. Modified NodeManagers to avoid AMs from abusing container tokens for
-    repetitive container launches. (Omkar Vinit Joshi via vinodkv)
-
-    YARN-814. Improving diagnostics when containers fail during launch due to
-    various reasons like invalid env etc. (Jian He via vinodkv)
 
 Release 2.1.0-beta - 2013-07-02
 
@@ -498,6 +474,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-865. RM webservices can't query based on application Types. (Xuan Gong
     via hitesh)
 
+    YARN-912. Move client facing exceptions to yarn-api module. (Mayank Bansal
+    via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
@@ -787,6 +766,27 @@ Release 2.1.0-beta - 2013-07-02
 
     YARN-333. Schedulers cannot control the queue-name of an 
     application. (sandyr via tucu)
+
+    YARN-368. Fixed a typo in error message in Auxiliary services. (Albert Chu
+    via vinodkv)
+
+    YARN-295. Fixed a race condition in ResourceManager RMAppAttempt state
+    machine. (Mayank Bansal via vinodkv)
+
+    YARN-523. Modified a test-case to validate container diagnostics on
+    localization failures. (Jian He via vinodkv)
+
+    YARN-661. Fixed NM to cleanup users' local directories correctly when
+    starting up. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-820. Fixed an invalid state transition in NodeManager caused by failing
+    resource localization. (Mayank Bansal via vinodkv)
+
+    YARN-62. Modified NodeManagers to avoid AMs from abusing container tokens for
+    repetitive container launches. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-814. Improving diagnostics when containers fail during launch due to
+    various reasons like invalid env etc. (Jian He via vinodkv)
 
 Release 2.0.5-alpha - 06/06/2013
 
