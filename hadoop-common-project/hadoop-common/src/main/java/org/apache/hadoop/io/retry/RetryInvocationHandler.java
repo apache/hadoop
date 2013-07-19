@@ -36,6 +36,8 @@ import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.util.ThreadUtil;
 
+import com.google.common.base.Preconditions;
+
 class RetryInvocationHandler implements RpcInvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
   private final FailoverProxyProvider proxyProvider;
@@ -87,7 +89,7 @@ class RetryInvocationHandler implements RpcInvocationHandler {
       }
 
       if (isRpc) {
-        Client.setCallId(callId);
+        Client.setCallIdAndRetryCount(callId, retries);
       }
       try {
         Object ret = invokeMethod(method, args);
@@ -97,8 +99,8 @@ class RetryInvocationHandler implements RpcInvocationHandler {
         boolean isMethodIdempotent = proxyProvider.getInterface()
             .getMethod(method.getName(), method.getParameterTypes())
             .isAnnotationPresent(Idempotent.class);
-        RetryAction action = policy.shouldRetry(e, retries++, invocationFailoverCount,
-            isMethodIdempotent);
+        RetryAction action = policy.shouldRetry(e, retries++,
+            invocationFailoverCount, isMethodIdempotent);
         if (action.action == RetryAction.RetryDecision.FAIL) {
           if (action.reason != null) {
             LOG.warn("Exception while invoking " + 

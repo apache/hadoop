@@ -160,10 +160,11 @@ public abstract class ProtoUtil {
   }
  
   public static RpcRequestHeaderProto makeRpcRequestHeader(RPC.RpcKind rpcKind,
-      RpcRequestHeaderProto.OperationProto operation, int callId, byte[] uuid) {
+      RpcRequestHeaderProto.OperationProto operation, int callId,
+      int retryCount, byte[] uuid) {
     RpcRequestHeaderProto.Builder result = RpcRequestHeaderProto.newBuilder();
     result.setRpcKind(convert(rpcKind)).setRpcOp(operation).setCallId(callId)
-        .setClientId(ByteString.copyFrom(uuid));
+        .setRetryCount(retryCount).setClientId(ByteString.copyFrom(uuid));
     return result.build();
   }
 }
