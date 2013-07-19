@@ -342,7 +342,7 @@ public class DatanodeWebHdfsMethods {
       }
       
       final long n = length.getValue() != null? length.getValue()
-          : in.getVisibleLength();
+          : in.getVisibleLength() - offset.getValue();
       return Response.ok(new OpenEntity(in, n, dfsclient)).type(
           MediaType.APPLICATION_OCTET_STREAM).build();
     }
