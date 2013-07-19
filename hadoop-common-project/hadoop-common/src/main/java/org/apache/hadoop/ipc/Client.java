@@ -115,7 +115,7 @@ public class Client {
   private final int connectionTimeout;
 
   private final boolean fallbackAllowed;
-  private final byte[] clientId;
+  private final byte[] uuid;
   
   final static int CONNECTION_CONTEXT_CALL_ID = -3;
   
@@ -841,10 +841,9 @@ public class Client {
           RPC.getProtocolName(remoteId.getProtocol()),
           remoteId.getTicket(),
           authMethod);
-      RpcRequestHeaderProto connectionContextHeader = ProtoUtil
-          .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
-              OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID,
-              clientId);
+      RpcRequestHeaderProto connectionContextHeader =
+          ProtoUtil.makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
+              OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID, uuid);
       RpcRequestMessageWrapper request =
           new RpcRequestMessageWrapper(connectionContextHeader, message);
       
@@ -952,7 +951,7 @@ public class Client {
       // Items '1' and '2' are prepared here. 
       final DataOutputBuffer d = new DataOutputBuffer();
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
-         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, clientId);
+         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, uuid);
       header.writeDelimitedTo(d);
       call.rpcRequest.write(d);
 
@@ -1152,7 +1151,7 @@ public class Client {
         CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
     this.fallbackAllowed = conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
-    this.clientId = StringUtils.getUuidBytes();
+    this.uuid = StringUtils.getUuidBytes();
     this.sendParamsExecutor = clientExcecutorFactory.refAndGetInstance();
   }
 
