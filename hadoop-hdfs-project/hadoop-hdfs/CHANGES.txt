@@ -255,6 +255,9 @@ Release 2.3.0 - UNRELEASED
     report to a configurable value.  (Aaron T. Myers via Colin Patrick
     McCabe)
 
+    HDFS-4278. Log an ERROR when DFS_BLOCK_ACCESS_TOKEN_ENABLE config is
+    disabled but security is turned on. (Kousuke Saruta via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
