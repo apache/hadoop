@@ -442,8 +442,8 @@ public class ApplicationMaster {
     LOG.info("Starting ApplicationMaster");
 
     AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
-    resourceManager = 
-        AMRMClientAsync.createAMRMClientAsync(appAttemptID, 1000, allocListener);
+    resourceManager =
+        AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
     resourceManager.init(conf);
     resourceManager.start();
 

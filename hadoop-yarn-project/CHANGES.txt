@@ -256,6 +256,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-701. Use application tokens irrespective of secure or non-secure
     mode. (vinodkv via acmurthy)
 
+    YARN-918. Remove ApplicationAttemptId from
+    RegisterApplicationMasterRequestProto. (vinodkv via acmurthy)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

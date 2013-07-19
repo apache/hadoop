@@ -96,7 +96,6 @@ public class MockAM {
     responseId = 0;
     final RegisterApplicationMasterRequest req =
         Records.newRecord(RegisterApplicationMasterRequest.class);
-    req.setApplicationAttemptId(attemptId);
     req.setHost("");
     req.setRpcPort(1);
     req.setTrackingUrl("");
@@ -174,8 +173,9 @@ public class MockAM {
   public AllocateResponse allocate(
       List<ResourceRequest> resourceRequest, List<ContainerId> releases)
       throws Exception {
-    final AllocateRequest req = AllocateRequest.newInstance(attemptId,
-        ++responseId, 0F, resourceRequest, releases, null);
+    final AllocateRequest req =
+        AllocateRequest.newInstance(++responseId, 0F, resourceRequest,
+          releases, null);
     UserGroupInformation ugi =
         UserGroupInformation.createRemoteUser(attemptId.toString());
     Token<AMRMTokenIdentifier> token =
@@ -197,11 +197,8 @@ public class MockAM {
   public void unregisterAppAttempt() throws Exception {
     waitForState(RMAppAttemptState.RUNNING);
     final FinishApplicationMasterRequest req =
-        Records.newRecord(FinishApplicationMasterRequest.class);
-    req.setAppAttemptId(attemptId);
-    req.setDiagnostics("");
-    req.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
-    req.setTrackingUrl("");
+        FinishApplicationMasterRequest.newInstance(
+          FinalApplicationStatus.SUCCEEDED, "", "");
     UserGroupInformation ugi =
         UserGroupInformation.createRemoteUser(attemptId.toString());
     Token<AMRMTokenIdentifier> token =

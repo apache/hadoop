@@ -167,18 +167,16 @@ public class ApplicationMasterService extends AbstractService implements
     return result;
   }
 
-  private void authorizeRequest(ApplicationAttemptId appAttemptID)
+  private ApplicationAttemptId authorizeRequest()
       throws YarnException {
-
-    String appAttemptIDStr = appAttemptID.toString();
 
     UserGroupInformation remoteUgi;
     try {
       remoteUgi = UserGroupInformation.getCurrentUser();
     } catch (IOException e) {
-      String msg = "Cannot obtain the user-name for ApplicationAttemptID: "
-          + appAttemptIDStr + ". Got exception: "
-          + StringUtils.stringifyException(e);
+      String msg =
+          "Cannot obtain the user-name for authorizing ApplicationMaster. "
+              + "Got exception: " + StringUtils.stringifyException(e);
       LOG.warn(msg);
       throw RPCUtil.getRemoteException(msg);
     }
@@ -190,14 +188,15 @@ public class ApplicationMasterService extends AbstractService implements
       appTokenIdentifier = selectAMRMTokenIdentifier(remoteUgi);
       if (appTokenIdentifier == null) {
         tokenFound = false;
-        message = "No AMRMToken found for " + appAttemptIDStr;
+        message = "No AMRMToken found for user " + remoteUgi.getUserName();
       } else {
         tokenFound = true;
       }
     } catch (IOException e) {
       tokenFound = false;
       message =
-          "Got exception while looking for AMRMToken for " + appAttemptIDStr;
+          "Got exception while looking for AMRMToken for user "
+              + remoteUgi.getUserName();
     }
 
     if (!tokenFound) {
@@ -205,15 +204,7 @@ public class ApplicationMasterService extends AbstractService implements
       throw RPCUtil.getRemoteException(message);
     }
 
-    ApplicationAttemptId remoteApplicationAttemptId =
-        appTokenIdentifier.getApplicationAttemptId();
-    if (!remoteApplicationAttemptId.equals(appAttemptID)) {
-      String msg = "Unauthorized request from ApplicationMaster. "
-          + "Expected ApplicationAttemptID: " + remoteApplicationAttemptId
-          + " Found: " + appAttemptIDStr;
-      LOG.warn(msg);
-      throw RPCUtil.getRemoteException(msg);
-    }
+    return appTokenIdentifier.getApplicationAttemptId();
   }
 
   @Override
@@ -221,9 +212,7 @@ public class ApplicationMasterService extends AbstractService implements
       RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
 
-    ApplicationAttemptId applicationAttemptId = request
-        .getApplicationAttemptId();
-    authorizeRequest(applicationAttemptId);
+    ApplicationAttemptId applicationAttemptId = authorizeRequest();
 
     ApplicationId appID = applicationAttemptId.getApplicationId();
     AllocateResponse lastResponse = responseMap.get(applicationAttemptId);
@@ -293,9 +282,7 @@ public class ApplicationMasterService extends AbstractService implements
       FinishApplicationMasterRequest request) throws YarnException,
       IOException {
 
-    ApplicationAttemptId applicationAttemptId = request
-        .getApplicationAttemptId();
-    authorizeRequest(applicationAttemptId);
+    ApplicationAttemptId applicationAttemptId = authorizeRequest();
 
     AllocateResponse lastResponse = responseMap.get(applicationAttemptId);
     if (lastResponse == null) {
@@ -343,8 +330,7 @@ public class ApplicationMasterService extends AbstractService implements
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnException, IOException {
 
-    ApplicationAttemptId appAttemptId = request.getApplicationAttemptId();
-    authorizeRequest(appAttemptId);
+    ApplicationAttemptId appAttemptId = authorizeRequest();
 
     this.amLivelinessMonitor.receivedPing(appAttemptId);
 
