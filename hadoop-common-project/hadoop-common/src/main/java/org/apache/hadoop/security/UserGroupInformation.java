@@ -190,7 +190,6 @@ public class UserGroupInformation {
   /** Metrics to track UGI activity */
   static UgiMetrics metrics = UgiMetrics.create();
   /** Are the static variables that depend on configuration initialized? */
-  private static boolean isInitialized = false;
   /** Should we use Kerberos configuration? */
   private static boolean useKerberos;
   /** Server-side groups fetching service */
@@ -210,9 +209,13 @@ public class UserGroupInformation {
    * A method to initialize the fields that depend on a configuration.
    * Must be called before useKerberos or groups is used.
    */
-  private static synchronized void ensureInitialized() {
-    if (!isInitialized) {
-        initialize(new Configuration(), KerberosName.hasRulesBeenSet());
+  private static void ensureInitialized() {
+    if (conf == null) {
+      synchronized(UserGroupInformation.class) {
+        if (conf == null) { // someone might have beat us
+          initialize(new Configuration(), KerberosName.hasRulesBeenSet());
+        }
+      }
     }
   }
 
@@ -252,7 +255,6 @@ public class UserGroupInformation {
     if (!(groups instanceof TestingGroups)) {
       groups = Groups.getUserToGroupsMappingService(conf);
     }
-    isInitialized = true;
     UserGroupInformation.conf = conf;
   }
 

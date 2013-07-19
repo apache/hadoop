@@ -10,6 +10,8 @@ Release 0.23.10 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
+
   BUG FIXES
 
 Release 0.23.9 - 2013-07-08
