@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
@@ -98,7 +99,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       tempFile = Shell.appendScriptExtension(tmpDir, "temp");
       String timeoutCommand = Shell.WINDOWS ? "@echo \"hello\"" :
         "echo \"hello\"";
-      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));    
+      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
       FileUtil.setExecutable(shellFile, true);
       writer.println(timeoutCommand);
       writer.close();
@@ -132,7 +133,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       assertEquals(shexc.getExitCode(), 0);
       assert(shexc.getOutput().contains("hello"));
 
-      symLinkFile = new File(tmpDir, badSymlink);      
+      symLinkFile = new File(tmpDir, badSymlink);
     }
     finally {
       // cleanup
@@ -148,6 +149,173 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           && symLinkFile.exists()) {
         symLinkFile.delete();
       } 
+    }
+  }
+
+  // test the diagnostics are generated
+  @Test (timeout = 20000)
+  public void testInvalidSymlinkDiagnostics() throws IOException  {
+
+    File shellFile = null;
+    File tempFile = null;
+    String symLink = Shell.WINDOWS ? "test.cmd" :
+      "test";
+    File symLinkFile = null;
+
+    try {
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      tempFile = Shell.appendScriptExtension(tmpDir, "temp");
+      String timeoutCommand = Shell.WINDOWS ? "@echo \"hello\"" :
+        "echo \"hello\"";
+      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
+      FileUtil.setExecutable(shellFile, true);
+      writer.println(timeoutCommand);
+      writer.close();
+
+      Map<Path, List<String>> resources =
+          new HashMap<Path, List<String>>();
+      //This is an invalid path and should throw exception because of No such file.
+      Path invalidPath = new Path(shellFile.getAbsolutePath()+"randomPath");
+      resources.put(invalidPath, Arrays.asList(symLink));
+      FileOutputStream fos = new FileOutputStream(tempFile);
+
+      Map<String, String> env = new HashMap<String, String>();
+      List<String> commands = new ArrayList<String>();
+      if (Shell.WINDOWS) {
+        commands.add("cmd");
+        commands.add("/c");
+        commands.add("\"" + symLink + "\"");
+      } else {
+        commands.add("/bin/sh ./\\\"" + symLink + "\\\"");
+      }
+      ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
+      fos.flush();
+      fos.close();
+      FileUtil.setExecutable(tempFile, true);
+
+      Shell.ShellCommandExecutor shexc
+      = new Shell.ShellCommandExecutor(new String[]{tempFile.getAbsolutePath()}, tmpDir);
+      String diagnostics = null;
+      try {
+        shexc.execute();
+        Assert.fail("Should catch exception");
+      } catch(ExitCodeException e){
+        diagnostics = e.getMessage();
+      }
+      Assert.assertNotNull(diagnostics);
+      Assert.assertTrue(shexc.getExitCode() != 0);
+      symLinkFile = new File(tmpDir, symLink);
+    }
+    finally {
+      // cleanup
+      if (shellFile != null
+          && shellFile.exists()) {
+        shellFile.delete();
+      }
+      if (tempFile != null
+          && tempFile.exists()) {
+        tempFile.delete();
+      }
+      if (symLinkFile != null
+          && symLinkFile.exists()) {
+        symLinkFile.delete();
+      }
+    }
+  }
+
+  @Test (timeout = 20000)
+  public void testInvalidEnvSyntaxDiagnostics() throws IOException  {
+
+    File shellFile = null;
+    try {
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      String timeoutCommand = Shell.WINDOWS ? "@echo \"hello\"" :
+        "echo \"hello\"";
+      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
+      FileUtil.setExecutable(shellFile, true);
+      writer.println(timeoutCommand);
+      writer.close();
+      Map<Path, List<String>> resources =
+          new HashMap<Path, List<String>>();
+      FileOutputStream fos = new FileOutputStream(shellFile);
+
+      Map<String, String> env = new HashMap<String, String>();
+      // invalid env
+      env.put(
+          "APPLICATION_WORKFLOW_CONTEXT", "{\"workflowId\":\"609f91c5cd83\"," +
+          "\"workflowName\":\"\n\ninsert table " +
+          "\npartition (cd_education_status)\nselect cd_demo_sk, cd_gender, " );
+      List<String> commands = new ArrayList<String>();
+      ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
+      fos.flush();
+      fos.close();
+
+      Shell.ShellCommandExecutor shexc
+      = new Shell.ShellCommandExecutor(new String[]{shellFile.getAbsolutePath()}, tmpDir);
+      String diagnostics = null;
+      try {
+        shexc.execute();
+        Assert.fail("Should catch exception");
+      } catch(ExitCodeException e){
+        diagnostics = e.getMessage();
+      }
+      Assert.assertTrue(diagnostics.contains("command not found"));
+      Assert.assertTrue(shexc.getExitCode() != 0);
+    }
+    finally {
+      // cleanup
+      if (shellFile != null
+          && shellFile.exists()) {
+        shellFile.delete();
+      }
+    }
+  }
+
+  @Test (timeout = 20000)
+  public void testContainerLaunchStdoutAndStderrDiagnostics() throws IOException {
+
+    File shellFile = null;
+    try {
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      // echo "hello" to stdout and "error" to stderr and exit code with 2;
+      String command = Shell.WINDOWS ? "@echo \"hello\"; @echo \"error\" 1>&2; exit 2;" :
+        "echo \"hello\"; echo \"error\" 1>&2; exit 2;";
+      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
+      FileUtil.setExecutable(shellFile, true);
+      writer.println(command);
+      writer.close();
+      Map<Path, List<String>> resources =
+          new HashMap<Path, List<String>>();
+      FileOutputStream fos = new FileOutputStream(shellFile);
+
+      Map<String, String> env = new HashMap<String, String>();
+      List<String> commands = new ArrayList<String>();
+      commands.add(command);
+      ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
+      fos.flush();
+      fos.close();
+
+      Shell.ShellCommandExecutor shexc
+      = new Shell.ShellCommandExecutor(new String[]{shellFile.getAbsolutePath()}, tmpDir);
+      String diagnostics = null;
+      try {
+        shexc.execute();
+        Assert.fail("Should catch exception");
+      } catch(ExitCodeException e){
+        diagnostics = e.getMessage();
+      }
+      // test stderr
+      Assert.assertTrue(diagnostics.contains("error"));
+      // test stdout
+      Assert.assertTrue(shexc.getOutput().contains("hello"));
+      Assert.assertTrue(shexc.getExitCode() == 2);
+    }
+    finally {
+      // cleanup
+      if (shellFile != null
+          && shellFile.exists()) {
+        shellFile.delete();
+      }
     }
   }
 
