@@ -310,7 +310,6 @@ public class TestSchedulerUtils {
 
     RegisterApplicationMasterRequest request = Records
         .newRecord(RegisterApplicationMasterRequest.class);
-    request.setApplicationAttemptId(applicationAttemptId);
     client.registerApplicationMaster(request);
 
     ResourceBlacklistRequest blacklistRequest =
@@ -318,8 +317,7 @@ public class TestSchedulerUtils {
             Collections.singletonList(ResourceRequest.ANY), null);
 
     AllocateRequest allocateRequest =
-        AllocateRequest.newInstance(applicationAttemptId, 0, 0.0f, null, null, 
-            blacklistRequest);
+        AllocateRequest.newInstance(0, 0.0f, null, null, blacklistRequest);
     boolean error = false;
     try {
       client.allocate(allocateRequest);

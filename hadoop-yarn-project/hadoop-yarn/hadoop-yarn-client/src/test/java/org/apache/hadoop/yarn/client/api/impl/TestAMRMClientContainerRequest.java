@@ -18,30 +18,27 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.InvalidContainerRequestException;
-import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class TestAMRMClientContainerRequest {
   @Test
   public void testFillInRacks() {
-    AMRMClientImpl<ContainerRequest> client = new AMRMClientImpl<ContainerRequest>(
-        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0l, 0), 0));
+    AMRMClientImpl<ContainerRequest> client =
+        new AMRMClientImpl<ContainerRequest>();
     
     Configuration conf = new Configuration();
     conf.setClass(
@@ -63,8 +60,8 @@ public class TestAMRMClientContainerRequest {
   
   @Test
   public void testDisableLocalityRelaxation() {
-    AMRMClientImpl<ContainerRequest> client = new AMRMClientImpl<ContainerRequest>(
-        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0l, 0), 0));
+    AMRMClientImpl<ContainerRequest> client =
+        new AMRMClientImpl<ContainerRequest>();
     Configuration conf = new Configuration();
     conf.setClass(
         CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
@@ -130,8 +127,8 @@ public class TestAMRMClientContainerRequest {
   
   @Test (expected = InvalidContainerRequestException.class)
   public void testDifferentLocalityRelaxationSamePriority() {
-    AMRMClientImpl<ContainerRequest> client = new AMRMClientImpl<ContainerRequest>(
-        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0l, 0), 0));
+    AMRMClientImpl<ContainerRequest> client =
+        new AMRMClientImpl<ContainerRequest>();
     Configuration conf = new Configuration();
     conf.setClass(
         CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
@@ -151,8 +148,8 @@ public class TestAMRMClientContainerRequest {
   
   @Test
   public void testInvalidValidWhenOldRemoved() {
-    AMRMClientImpl<ContainerRequest> client = new AMRMClientImpl<ContainerRequest>(
-        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0l, 0), 0));
+    AMRMClientImpl<ContainerRequest> client =
+        new AMRMClientImpl<ContainerRequest>();
     Configuration conf = new Configuration();
     conf.setClass(
         CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
@@ -190,8 +187,8 @@ public class TestAMRMClientContainerRequest {
   
   @Test (expected = InvalidContainerRequestException.class)
   public void testLocalityRelaxationDifferentLevels() {
-    AMRMClientImpl<ContainerRequest> client = new AMRMClientImpl<ContainerRequest>(
-        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0l, 0), 0));
+    AMRMClientImpl<ContainerRequest> client =
+        new AMRMClientImpl<ContainerRequest>();
     Configuration conf = new Configuration();
     conf.setClass(
         CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,

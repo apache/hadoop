@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -389,20 +388,6 @@ public class BuilderUtils {
     url.setPort(port);
     url.setFile(file);
     return url;
-  }
-
-  public static AllocateRequest newAllocateRequest(
-      ApplicationAttemptId applicationAttemptId, int responseID,
-      float appProgress, List<ResourceRequest> resourceAsk,
-      List<ContainerId> containersToBeReleased) {
-    AllocateRequest allocateRequest = recordFactory
-        .newRecordInstance(AllocateRequest.class);
-    allocateRequest.setApplicationAttemptId(applicationAttemptId);
-    allocateRequest.setResponseId(responseID);
-    allocateRequest.setProgress(appProgress);
-    allocateRequest.setAskList(resourceAsk);
-    allocateRequest.setReleaseList(containersToBeReleased);
-    return allocateRequest;
   }
   
   public static AllocateResponse newAllocateResponse(int responseId,

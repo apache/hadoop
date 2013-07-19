@@ -52,8 +52,8 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,6 +66,7 @@ public class TestAMAuthorization {
   private static final Log LOG = LogFactory.getLog(TestAMAuthorization.class);
 
   private final Configuration conf;
+  private MockRM rm;
 
   @Parameters
   public static Collection<Object[]> configs() {
@@ -80,6 +81,13 @@ public class TestAMAuthorization {
   public TestAMAuthorization(Configuration conf) {
     this.conf = conf;
     UserGroupInformation.setConfiguration(conf);
+  }
+
+  @After
+  public void tearDown() {
+    if (rm != null) {
+      rm.stop();
+    }
   }
 
   public static final class MyContainerManager implements ContainerManagementProtocol {
@@ -139,7 +147,7 @@ public class TestAMAuthorization {
   @Test
   public void testAuthorizedAccess() throws Exception {
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm =
+    rm =
         new MockRMWithAMS(conf, containerManager);
     rm.start();
 
@@ -183,7 +191,6 @@ public class TestAMAuthorization {
 
     RegisterApplicationMasterRequest request = Records
         .newRecord(RegisterApplicationMasterRequest.class);
-    request.setApplicationAttemptId(applicationAttemptId);
     RegisterApplicationMasterResponse response =
         client.registerApplicationMaster(request);
     Assert.assertNotNull(response.getClientToAMTokenMasterKey());
@@ -193,14 +200,12 @@ public class TestAMAuthorization {
     }
     Assert.assertEquals("Register response has bad ACLs", "*",
         response.getApplicationACLs().get(ApplicationAccessType.VIEW_APP));
-
-    rm.stop();
   }
 
   @Test
   public void testUnauthorizedAccess() throws Exception {
     MyContainerManager containerManager = new MyContainerManager();
-    MockRM rm = new MockRMWithAMS(conf, containerManager);
+    rm = new MockRMWithAMS(conf, containerManager);
     rm.start();
 
     MockNM nm1 = rm.registerNode("localhost:1234", 5120);
@@ -242,7 +247,6 @@ public class TestAMAuthorization {
     
     RegisterApplicationMasterRequest request = Records
         .newRecord(RegisterApplicationMasterRequest.class);
-    request.setApplicationAttemptId(applicationAttemptId);
     try {
       client.registerApplicationMaster(request);
       Assert.fail("Should fail with authorization error");
@@ -260,37 +264,8 @@ public class TestAMAuthorization {
             + "Available:" + availableAuthMethods));
     }
 
-    // Now try to validate invalid authorization.
-    Credentials credentials = containerManager.getContainerCredentials();
-    currentUser.addCredentials(credentials);
-
-    // Create a client to the RM.
-    client = currentUser
-        .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
-          @Override
-          public ApplicationMasterProtocol run() {
-            return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class,
-                serviceAddr, conf);
-          }
-        });
-
-    request =
-        Records.newRecord(RegisterApplicationMasterRequest.class);
-    ApplicationAttemptId otherAppAttemptId = BuilderUtils
-        .newApplicationAttemptId(applicationAttemptId.getApplicationId(), 42);
-    request.setApplicationAttemptId(otherAppAttemptId);
-    try {
-      client.registerApplicationMaster(request);
-      Assert.fail("Should fail with authorization error");
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().contains(
-          "Unauthorized request from ApplicationMaster. "
-              + "Expected ApplicationAttemptID: "
-              + applicationAttemptId.toString() + " Found: "
-              + otherAppAttemptId.toString()));
-    } finally {
-      rm.stop();
-    }
+    // TODO: Add validation of invalid authorization when there's more data in
+    // the AMRMToken
   }
 
   private void waitForLaunchedState(RMAppAttempt attempt)

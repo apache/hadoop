@@ -200,7 +200,7 @@ public class TestAMRMClient {
     AMRMClient<ContainerRequest> amClient = null;
     try {
       // start am rm client
-      amClient = AMRMClient.<ContainerRequest>createAMRMClient(attemptId);
+      amClient = AMRMClient.<ContainerRequest>createAMRMClient();
       amClient.init(conf);
       amClient.start();
       amClient.registerApplicationMaster("Host", 10000, "");
@@ -314,7 +314,7 @@ public class TestAMRMClient {
     AMRMClientImpl<ContainerRequest> amClient = null;
     try {
       // start am rm client
-      amClient = new AMRMClientImpl<ContainerRequest>(attemptId);
+      amClient = new AMRMClientImpl<ContainerRequest>();
       amClient.init(conf);
       amClient.start();
       amClient.registerApplicationMaster("Host", 10000, "");
@@ -361,7 +361,7 @@ public class TestAMRMClient {
       // start am rm client
       amClient =
           (AMRMClientImpl<ContainerRequest>) AMRMClient
-            .<ContainerRequest> createAMRMClient(attemptId);
+            .<ContainerRequest> createAMRMClient();
       amClient.init(conf);
       amClient.start();
       amClient.registerApplicationMaster("Host", 10000, "");
@@ -482,7 +482,7 @@ public class TestAMRMClient {
     AMRMClient<ContainerRequest> amClient = null;
     try {
       // start am rm client
-      amClient = AMRMClient.<ContainerRequest>createAMRMClient(attemptId);
+      amClient = AMRMClient.<ContainerRequest>createAMRMClient();
       amClient.init(conf);
       amClient.start();
 

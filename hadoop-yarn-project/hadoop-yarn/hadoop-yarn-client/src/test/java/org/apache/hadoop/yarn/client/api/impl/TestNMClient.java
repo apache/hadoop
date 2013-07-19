@@ -157,7 +157,7 @@ public class TestNMClient {
     // start am rm client
     rmClient =
         (AMRMClientImpl<ContainerRequest>) AMRMClient
-          .<ContainerRequest> createAMRMClient(attemptId);
+          .<ContainerRequest> createAMRMClient();
     rmClient.init(conf);
     rmClient.start();
     assertNotNull(rmClient);

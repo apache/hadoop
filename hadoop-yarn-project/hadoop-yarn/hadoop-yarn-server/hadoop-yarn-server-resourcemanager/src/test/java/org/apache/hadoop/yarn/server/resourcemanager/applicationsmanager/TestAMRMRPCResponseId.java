@@ -57,8 +57,8 @@ public class TestAMRMRPCResponseId {
     }
   }
 
-  private AllocateResponse allocate(final AllocateRequest req) throws Exception {
-    ApplicationAttemptId attemptId = req.getApplicationAttemptId();
+  private AllocateResponse allocate(ApplicationAttemptId attemptId,
+      final AllocateRequest req) throws Exception {
     UserGroupInformation ugi =
         UserGroupInformation.createRemoteUser(attemptId.toString());
     org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> token =
@@ -88,25 +88,26 @@ public class TestAMRMRPCResponseId {
 
     am.registerAppAttempt();
     
-    AllocateRequest allocateRequest = AllocateRequest.newInstance(attempt
-        .getAppAttemptId(), 0, 0F, null, null, null);
+    AllocateRequest allocateRequest =
+        AllocateRequest.newInstance(0, 0F, null, null, null);
 
-    AllocateResponse response = allocate(allocateRequest);
+    AllocateResponse response =
+        allocate(attempt.getAppAttemptId(), allocateRequest);
     Assert.assertEquals(1, response.getResponseId());
     Assert.assertTrue(response.getAMCommand() == null);
-    allocateRequest = AllocateRequest.newInstance(attempt
-        .getAppAttemptId(), response.getResponseId(), 0F, null, null, null);
+    allocateRequest =
+        AllocateRequest.newInstance(response.getResponseId(), 0F, null, null,
+          null);
     
-    response = allocate(allocateRequest);
+    response = allocate(attempt.getAppAttemptId(), allocateRequest);
     Assert.assertEquals(2, response.getResponseId());
     /* try resending */
-    response = allocate(allocateRequest);
+    response = allocate(attempt.getAppAttemptId(), allocateRequest);
     Assert.assertEquals(2, response.getResponseId());
     
     /** try sending old request again **/
-    allocateRequest = AllocateRequest.newInstance(attempt
-        .getAppAttemptId(), 0, 0F, null, null, null);
-    response = allocate(allocateRequest);
+    allocateRequest = AllocateRequest.newInstance(0, 0F, null, null, null);
+    response = allocate(attempt.getAppAttemptId(), allocateRequest);
     Assert.assertTrue(response.getAMCommand() == AMCommand.AM_RESYNC);
   }
 }
