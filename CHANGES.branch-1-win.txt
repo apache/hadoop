@@ -460,3 +460,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HDFS-4261. Fix bugs in Balaner causing infinite loop and
     TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
+
+    HDFS-3794. WebHDFS Open used with Offset returns the original (and incorrect)
+    Content Length in the HTTP Header. (Tsz Wo (Nicholas), SZE via cnauroth)
