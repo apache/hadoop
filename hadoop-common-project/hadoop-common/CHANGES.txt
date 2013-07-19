@@ -520,6 +520,10 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-8440. HarFileSystem.decodeHarURI fails for URIs whose host contains
     numbers. (Ivan Mitic via cnauroth)
 
+    HADOOP-9643. org.apache.hadoop.security.SecurityUtil calls 
+    toUpperCase(Locale.getDefault()) as well as toLowerCase(Locale.getDefault()) 
+    on hadoop.security.authentication value. (markrmiller@gmail.com via tucu)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
