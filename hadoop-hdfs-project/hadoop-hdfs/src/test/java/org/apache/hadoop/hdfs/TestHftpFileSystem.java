@@ -306,8 +306,8 @@ public class TestHftpFileSystem {
   @Test
   public void testHftpCustomDefaultPorts() throws IOException {
     Configuration conf = new Configuration();
-    conf.setInt("dfs.http.port", 123);
-    conf.setInt("dfs.https.port", 456);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 456);
 
     URI uri = URI.create("hftp://localhost");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
@@ -341,8 +341,8 @@ public class TestHftpFileSystem {
   @Test
   public void testHftpCustomUriPortWithCustomDefaultPorts() throws IOException {
     Configuration conf = new Configuration();
-    conf.setInt("dfs.http.port", 123);
-    conf.setInt("dfs.https.port", 456);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 456);
 
     URI uri = URI.create("hftp://localhost:789");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
@@ -378,8 +378,8 @@ public class TestHftpFileSystem {
   @Test
   public void testHsftpCustomDefaultPorts() throws IOException {
     Configuration conf = new Configuration();
-    conf.setInt("dfs.http.port", 123);
-    conf.setInt("dfs.https.port", 456);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 456);
 
     URI uri = URI.create("hsftp://localhost");
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
@@ -413,8 +413,8 @@ public class TestHftpFileSystem {
   @Test
   public void testHsftpCustomUriPortWithCustomDefaultPorts() throws IOException {
     Configuration conf = new Configuration();
-    conf.setInt("dfs.http.port", 123);
-    conf.setInt("dfs.https.port", 456);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 456);
 
     URI uri = URI.create("hsftp://localhost:789");
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);

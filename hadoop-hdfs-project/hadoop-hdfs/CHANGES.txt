@@ -202,6 +202,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9418.  Add symlink support to DistributedFileSystem (Andrew Wang via
     Colin Patrick McCabe)
 
+    HDFS-5007. Replace hard-coded property keys with DFSConfigKeys fields. 
+    (Kousuke Saruta via jing9)
+
   OPTIMIZATIONS
 
     HDFS-4465. Optimize datanode ReplicasMap and ReplicaInfo. (atm)
