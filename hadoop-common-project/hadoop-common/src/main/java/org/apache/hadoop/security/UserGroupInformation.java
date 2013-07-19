@@ -209,9 +209,13 @@ public class UserGroupInformation {
    * A method to initialize the fields that depend on a configuration.
    * Must be called before useKerberos or groups is used.
    */
-  private static synchronized void ensureInitialized() {
+  private static void ensureInitialized() {
     if (conf == null) {
-      initialize(new Configuration(), false);
+      synchronized(UserGroupInformation.class) {
+        if (conf == null) { // someone might have beat us
+          initialize(new Configuration(), false);
+        }
+      }
     }
   }
 

@@ -300,6 +300,8 @@ Release 2.3.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
+
   BUG FIXES
 
     HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
