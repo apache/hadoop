@@ -16,20 +16,6 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-9241. DU refresh interval is not configurable (harsh)
 
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
-    (Ashwin Shankar via jlowe)
-
-Release 2.2.0 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
     HADOOP-9417.  Support for symlink resolution in LocalFileSystem /
     RawLocalFileSystem.  (Andrew Wang via Colin Patrick McCabe)
 
@@ -42,6 +28,9 @@ Release 2.2.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
+    (Ashwin Shankar via jlowe)
 
 Release 2.1.1-beta - UNRELEASED
 
