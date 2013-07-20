@@ -149,6 +149,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -1937,7 +1938,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
   private FSPermissionChecker getPermissionChecker()
       throws AccessControlException {
-    return new FSPermissionChecker(fsOwnerShortUserName, supergroup);
+    try {
+      return new FSPermissionChecker(fsOwnerShortUserName, supergroup, getRemoteUser());
+    } catch (IOException ioe) {
+      throw new AccessControlException(ioe);
+    }
   }
   /**
    * Remove a file/directory from the namespace.
@@ -2117,8 +2122,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   ContentSummary getContentSummary(String src) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException {
-    FSPermissionChecker pc = new FSPermissionChecker(fsOwnerShortUserName,
-        supergroup);
+    FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       if (isPermissionEnabled) {
@@ -4305,12 +4309,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   // optimize ugi lookup for RPC operations to avoid a trip through
   // UGI.getCurrentUser which is synch'ed
-  private static UserGroupInformation getRemoteUser() throws IOException {
-    UserGroupInformation ugi = null;
-    if (Server.isRpcInvocation()) {
-      ugi = Server.getRemoteUser();
-    }
-    return (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
+  public static UserGroupInformation getRemoteUser() throws IOException {
+    return NameNode.getRemoteUser();
   }  
   
   /**

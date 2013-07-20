@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -313,6 +314,15 @@ public class NameNode {
         getFSImage().getStorage(), getRole());
     return nodeRegistration;
   }
+
+  /* optimize ugi lookup for RPC operations to avoid a trip through
+   * UGI.getCurrentUser which is synch'ed
+   */
+  public static UserGroupInformation getRemoteUser() throws IOException {
+    UserGroupInformation ugi = Server.getRemoteUser();
+    return (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
+  }
+
 
   /**
    * Login as the configured user for the NameNode.
