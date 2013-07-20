@@ -673,7 +673,7 @@ public class CapacityScheduler
           SchedulerUtils.createAbnormalContainerStatus(
               container.getId(), 
               SchedulerUtils.UNRESERVED_CONTAINER), 
-          RMContainerEventType.RELEASED);
+          RMContainerEventType.RELEASED, null);
       }
 
     }
@@ -828,7 +828,7 @@ public class CapacityScheduler
     // Inform the queue
     LeafQueue queue = (LeafQueue)application.getQueue();
     queue.completedContainer(clusterResource, application, node, 
-        rmContainer, containerStatus, event);
+        rmContainer, containerStatus, event, null);
 
     LOG.info("Application " + applicationAttemptId + 
         " released container " + container.getId() +
