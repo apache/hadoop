@@ -24,6 +24,9 @@ Release 1.3.0 - unreleased
     HDFS-4903. Print trash configuration and trash emptier state in namenode
     log. (Arpit Agarwal via suresh)
 
+    MAPREDUCE-5406. Improve logging around Task Tracker exiting with JVM manager
+    inconsistent state. (Chelsey Chang via cnauroth)
+
   BUG FIXES
 
     MAPREDUCE-5047. keep.failed.task.files=true causes job failure on 
