@@ -2561,7 +2561,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             if (!tip.canBeLaunched()) {
               //got killed externally while still in the launcher queue
               LOG.info("Not launching task " + task.getTaskID() + " as it got"
-                + " killed externally. Task's state is " + tip.getRunState());
+                  + " killed externally. Task's state is " + tip.getRunState()
+                  + ". Add " + task.getNumSlotsRequired() + " slots.");
               addFreeSlots(task.getNumSlotsRequired());
               continue;
             }
@@ -3340,6 +3341,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     private synchronized void releaseSlot() {
       if (slotTaken) {
         if (launcher != null) {
+          LOG.info("Releasing " + task.getNumSlotsRequired() + " slots from"
+              + " task " + task.getTaskID());
           launcher.addFreeSlots(task.getNumSlotsRequired());
         }
         slotTaken = false;

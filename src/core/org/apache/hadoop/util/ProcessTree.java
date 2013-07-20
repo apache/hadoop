@@ -188,7 +188,7 @@ public class ProcessTree {
                pgrpId + " ."+ 
           StringUtils.stringifyException(e));
     } finally {
-      LOG.info("Killing process group" + pgrpId + " with signal " + signal + 
+      LOG.info("Killing process group " + pgrpId + " with signal " + signal + 
                ". Exit code " + shexec.getExitCode());
     }
   }

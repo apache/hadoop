@@ -279,6 +279,8 @@ class JvmManager {
 
     synchronized public void taskFinished(TaskRunner tr) {
       JVMId jvmId = runningTaskToJvm.remove(tr);
+      LOG.info("Task " + tr.getTask().getTaskID()
+          + " finished. Mark JVM Idle: " + jvmId);
       if (jvmId != null) {
         jvmToRunningTask.remove(jvmId);
         JvmRunner jvmRunner;
@@ -292,6 +294,8 @@ class JvmManager {
                                         ) throws IOException,
                                                  InterruptedException {
       JVMId jvmId = runningTaskToJvm.remove(tr);
+      LOG.info("Task " + tr.getTask().getTaskID() + " killed. Kill JVM: "
+          + jvmId);
       if (jvmId != null) {
         jvmToRunningTask.remove(jvmId);
         killJvm(jvmId);
@@ -347,6 +351,7 @@ class JvmManager {
       // (3) kill an idle JVM (from a different job) 
       // (the order of return is in the order above)
       int numJvmsSpawned = jvmIdToRunner.size();
+      LOG.info("Reaping JVM. Number of active JVMs = " + numJvmsSpawned);
       JvmRunner runnerToKill = null;
       if (numJvmsSpawned >= maxJvms) {
         //go through the list of JVMs for all jobs.
@@ -385,7 +390,7 @@ class JvmManager {
 
       if (spawnNewJvm) {
         if (runnerToKill != null) {
-          LOG.info("Killing JVM: " + runnerToKill.jvmId);
+          LOG.info("Killing JVM: " + runnerToKill.jvmId + " to spawn a new one");
           killJvmRunner(runnerToKill);
         }
         spawnNewJvm(jobId, env, t);
