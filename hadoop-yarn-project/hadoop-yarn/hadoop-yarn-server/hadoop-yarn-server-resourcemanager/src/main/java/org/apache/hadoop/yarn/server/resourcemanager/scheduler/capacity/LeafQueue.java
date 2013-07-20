@@ -1407,7 +1407,7 @@ public class LeafQueue implements CSQueue {
   @Override
   public void completedContainer(Resource clusterResource, 
       FiCaSchedulerApp application, FiCaSchedulerNode node, RMContainer rmContainer, 
-      ContainerStatus containerStatus, RMContainerEventType event) {
+      ContainerStatus containerStatus, RMContainerEventType event, CSQueue childQueue) {
     if (application != null) {
       // Careful! Locking order is important!
       synchronized (this) {
@@ -1442,7 +1442,7 @@ public class LeafQueue implements CSQueue {
               " cluster=" + clusterResource);
           // Inform the parent queue
           getParent().completedContainer(clusterResource, application,
-              node, rmContainer, null, event);
+              node, rmContainer, null, event, this);
         }
       }
 
