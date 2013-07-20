@@ -227,7 +227,7 @@ public class TestLeafQueue {
     doNothing().when(parent).completedContainer(
         any(Resource.class), any(FiCaSchedulerApp.class), any(FiCaSchedulerNode.class), 
         any(RMContainer.class), any(ContainerStatus.class), 
-        any(RMContainerEventType.class));
+        any(RMContainerEventType.class), any(CSQueue.class));
     
     return queue;
   }
@@ -480,7 +480,7 @@ public class TestLeafQueue {
     // Release each container from app_0
     for (RMContainer rmContainer : app_0.getLiveContainers()) {
       a.completedContainer(clusterResource, app_0, node_0, rmContainer, 
-          null, RMContainerEventType.KILL);
+          null, RMContainerEventType.KILL, null);
     }
     assertEquals(1*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
@@ -491,7 +491,7 @@ public class TestLeafQueue {
     // Release each container from app_1
     for (RMContainer rmContainer : app_1.getLiveContainers()) {
       a.completedContainer(clusterResource, app_1, node_0, rmContainer, 
-          null, RMContainerEventType.KILL);
+          null, RMContainerEventType.KILL, null);
     }
     assertEquals(0*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
@@ -850,7 +850,7 @@ public class TestLeafQueue {
     // 8. Release each container from app_0
     for (RMContainer rmContainer : app_0.getLiveContainers()) {
       a.completedContainer(clusterResource, app_0, node_0, rmContainer, 
-          null, RMContainerEventType.KILL);
+          null, RMContainerEventType.KILL, null);
     }
     assertEquals(5*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
@@ -861,7 +861,7 @@ public class TestLeafQueue {
     // 9. Release each container from app_2
     for (RMContainer rmContainer : app_2.getLiveContainers()) {
       a.completedContainer(clusterResource, app_2, node_0, rmContainer, 
-          null, RMContainerEventType.KILL);
+          null, RMContainerEventType.KILL, null);
     }
     assertEquals(2*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
@@ -872,7 +872,7 @@ public class TestLeafQueue {
     // 10. Release each container from app_3
     for (RMContainer rmContainer : app_3.getLiveContainers()) {
       a.completedContainer(clusterResource, app_3, node_0, rmContainer, 
-          null, RMContainerEventType.KILL);
+          null, RMContainerEventType.KILL, null);
     }
     assertEquals(0*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
@@ -959,7 +959,8 @@ public class TestLeafQueue {
     
     // Now free 1 container from app_0 i.e. 1G
     a.completedContainer(clusterResource, app_0, node_0, 
-        app_0.getLiveContainers().iterator().next(), null, RMContainerEventType.KILL);
+        app_0.getLiveContainers().iterator().next(), 
+        null, RMContainerEventType.KILL, null);
     a.assignContainers(clusterResource, node_0);
     assertEquals(5*GB, a.getUsedResources().getMemory()); 
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
@@ -971,7 +972,8 @@ public class TestLeafQueue {
 
     // Now finish another container from app_0 and fulfill the reservation
     a.completedContainer(clusterResource, app_0, node_0, 
-        app_0.getLiveContainers().iterator().next(), null, RMContainerEventType.KILL);
+        app_0.getLiveContainers().iterator().next(), 
+        null, RMContainerEventType.KILL, null);
     a.assignContainers(clusterResource, node_0);
     assertEquals(4*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
@@ -1069,7 +1071,8 @@ public class TestLeafQueue {
 
     // Now free 1 container from app_0 and try to assign to node_0
     a.completedContainer(clusterResource, app_0, node_0,
-        app_0.getLiveContainers().iterator().next(), null, RMContainerEventType.KILL);
+        app_0.getLiveContainers().iterator().next(), 
+        null, RMContainerEventType.KILL, null);
     a.assignContainers(clusterResource, node_0);
     assertEquals(8*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
@@ -1160,7 +1163,8 @@ public class TestLeafQueue {
     
     // Now free 1 container from app_0 i.e. 1G, and re-reserve it
     a.completedContainer(clusterResource, app_0, node_0, 
-        app_0.getLiveContainers().iterator().next(), null, RMContainerEventType.KILL);
+        app_0.getLiveContainers().iterator().next(), 
+        null, RMContainerEventType.KILL, null);
     a.assignContainers(clusterResource, node_0);
     assertEquals(5*GB, a.getUsedResources().getMemory()); 
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
@@ -1191,7 +1195,8 @@ public class TestLeafQueue {
     
     // Now finish another container from app_0 and see the reservation cancelled
     a.completedContainer(clusterResource, app_0, node_0, 
-        app_0.getLiveContainers().iterator().next(), null, RMContainerEventType.KILL);
+        app_0.getLiveContainers().iterator().next(), 
+        null, RMContainerEventType.KILL, null);
     CSAssignment assignment = a.assignContainers(clusterResource, node_0);
     assertEquals(8*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());

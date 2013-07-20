@@ -767,6 +767,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-814. Improving diagnostics when containers fail during launch due to
     various reasons like invalid env etc. (Jian He via vinodkv)
 
+    YARN-897. Ensure child queues are ordered correctly to account for
+    completed containers. (Djellel Eddine Difallah via acmurthy)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
