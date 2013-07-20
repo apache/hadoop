@@ -168,6 +168,7 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
@@ -2926,7 +2927,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
   private FSPermissionChecker getPermissionChecker()
       throws AccessControlException {
-    return new FSPermissionChecker(fsOwnerShortUserName, supergroup);
+    try {
+      return new FSPermissionChecker(fsOwnerShortUserName, supergroup, getRemoteUser());
+    } catch (IOException ioe) {
+      throw new AccessControlException(ioe);
+    }
   }
   /**
    * Remove a file/directory from the namespace.
@@ -3136,9 +3141,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return !INodeFile.valueOf(dir.getINode(src), src).isUnderConstruction();
     } catch (AccessControlException e) {
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      getRemoteIp(),
-                      "isFileClosed", src, null, null);
+        logAuditEvent(false, "isFileClosed", src);
       }
       throw e;
     } finally {
@@ -5808,11 +5811,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   // optimize ugi lookup for RPC operations to avoid a trip through
   // UGI.getCurrentUser which is synch'ed
   private static UserGroupInformation getRemoteUser() throws IOException {
-    UserGroupInformation ugi = null;
-    if (Server.isRpcInvocation()) {
-      ugi = Server.getRemoteUser();
-    }
-    return (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
+    return NameNode.getRemoteUser();
   }
   
   /**
@@ -6317,8 +6316,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      FSPermissionChecker checker = new FSPermissionChecker(
-          fsOwner.getShortUserName(), supergroup);
+      FSPermissionChecker checker = getPermissionChecker();
       final String user = checker.isSuperUser()? null : checker.getUser();
       status = snapshotManager.getSnapshottableDirListing(user);
     } finally {

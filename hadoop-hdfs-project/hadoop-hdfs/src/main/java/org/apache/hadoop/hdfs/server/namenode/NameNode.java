@@ -433,6 +433,15 @@ public class NameNode {
     return nodeRegistration;
   }
 
+  /* optimize ugi lookup for RPC operations to avoid a trip through
+   * UGI.getCurrentUser which is synch'ed
+   */
+  public static UserGroupInformation getRemoteUser() throws IOException {
+    UserGroupInformation ugi = Server.getRemoteUser();
+    return (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
+  }
+
+
   /**
    * Login as the configured user for the NameNode.
    */
