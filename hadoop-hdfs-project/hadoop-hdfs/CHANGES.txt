@@ -31,6 +31,8 @@ Release 2.3.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-4602. TestBookKeeperHACheckpoints fails. (umamahesh)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
