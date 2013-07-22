@@ -21,11 +21,12 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -45,7 +46,7 @@ public class TestAbandonBlock {
   static final String FILE_NAME_PREFIX
       = "/" + TestAbandonBlock.class.getSimpleName() + "_"; 
   private MiniDFSCluster cluster;
-  private FileSystem fs;
+  private DistributedFileSystem fs;
 
   @Before
   public void setUp() throws Exception {
@@ -73,29 +74,34 @@ public class TestAbandonBlock {
     fout.hflush();
 
     // Now abandon the last block
-    DFSClient dfsclient = DFSClientAdapter.getDFSClient((DistributedFileSystem)fs);
+    DFSClient dfsclient = DFSClientAdapter.getDFSClient(fs);
     LocatedBlocks blocks =
       dfsclient.getNamenode().getBlockLocations(src, 0, Integer.MAX_VALUE);
     int orginalNumBlocks = blocks.locatedBlockCount();
     LocatedBlock b = blocks.getLastLocatedBlock();
-    dfsclient.getNamenode().abandonBlock(b.getBlock(), src, dfsclient.clientName);
+    dfsclient.getNamenode().abandonBlock(b.getBlock(), src,
+        dfsclient.clientName);
+    
+    // call abandonBlock again to make sure the operation is idempotent
+    dfsclient.getNamenode().abandonBlock(b.getBlock(), src,
+        dfsclient.clientName);
 
     // And close the file
     fout.close();
 
     // Close cluster and check the block has been abandoned after restart
     cluster.restartNameNode();
-    blocks = dfsclient.getNamenode().getBlockLocations(src, 0, Integer.MAX_VALUE);
-    assert orginalNumBlocks == blocks.locatedBlockCount() + 1 :
-      "Blocks " + b + " has not been abandoned.";
+    blocks = dfsclient.getNamenode().getBlockLocations(src, 0,
+        Integer.MAX_VALUE);
+    Assert.assertEquals("Blocks " + b + " has not been abandoned.",
+        orginalNumBlocks, blocks.locatedBlockCount() + 1);
   }
 
   @Test
   /** Make sure that the quota is decremented correctly when a block is abandoned */
   public void testQuotaUpdatedWhenBlockAbandoned() throws IOException {
-    DistributedFileSystem dfs = (DistributedFileSystem)fs;
     // Setting diskspace quota to 3MB
-    dfs.setQuota(new Path("/"), HdfsConstants.QUOTA_DONT_SET, 3 * 1024 * 1024);
+    fs.setQuota(new Path("/"), HdfsConstants.QUOTA_DONT_SET, 3 * 1024 * 1024);
 
     // Start writing a file with 2 replicas to ensure each datanode has one.
     // Block Size is 1MB.

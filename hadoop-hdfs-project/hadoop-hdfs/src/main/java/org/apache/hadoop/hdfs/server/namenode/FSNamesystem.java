@@ -2559,7 +2559,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // Remove the block from the pending creates list
       //
       INodeFileUnderConstruction file = checkLease(src, holder);
-      dir.removeBlock(src, file, ExtendedBlock.getLocalBlock(b));
+      boolean removed = dir.removeBlock(src, file,
+          ExtendedBlock.getLocalBlock(b));
+      if (!removed) {
+        return true;
+      }
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
                                       + b + " is removed from pendingCreates");
@@ -3534,7 +3538,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)iFile;
 
       if (deleteblock) {
-        pendingFile.removeLastBlock(ExtendedBlock.getLocalBlock(lastblock));
+        Block blockToDel = ExtendedBlock.getLocalBlock(lastblock);
+        boolean remove = pendingFile.removeLastBlock(blockToDel);
+        if (!remove) {
+          throw new IOException("Trying to delete non-existant block "
+              + blockToDel);
+        }
         blockManager.removeBlockFromMap(storedBlock);
       }
       else {
