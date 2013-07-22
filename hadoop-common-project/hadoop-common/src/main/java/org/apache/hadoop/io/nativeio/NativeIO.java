@@ -37,6 +37,8 @@ import org.apache.hadoop.util.Shell;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * JNI wrappers for various native IO-related calls not available in Java.
  * These functions should generally be used alongside a fallback to another
@@ -92,6 +94,9 @@ public class NativeIO {
 
     private static final Log LOG = LogFactory.getLog(NativeIO.class);
 
+    @VisibleForTesting
+    public static CacheTracker cacheTracker = null;
+    
     private static boolean nativeLoaded = false;
     private static boolean fadvisePossible = true;
     private static boolean syncFileRangePossible = true;
@@ -102,6 +107,10 @@ public class NativeIO {
 
     private static long cacheTimeout = -1;
 
+    public static interface CacheTracker {
+      public void fadvise(String identifier, long offset, long len, int flags);
+    }
+    
     static {
       if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {
@@ -178,9 +187,12 @@ public class NativeIO {
      *
      * @throws NativeIOException if there is an error with the syscall
      */
-    public static void posixFadviseIfPossible(
+    public static void posixFadviseIfPossible(String identifier,
         FileDescriptor fd, long offset, long len, int flags)
         throws NativeIOException {
+      if (cacheTracker != null) {
+        cacheTracker.fadvise(identifier, offset, len, flags);
+      }
       if (nativeLoaded && fadvisePossible) {
         try {
           posix_fadvise(fd, offset, len, flags);

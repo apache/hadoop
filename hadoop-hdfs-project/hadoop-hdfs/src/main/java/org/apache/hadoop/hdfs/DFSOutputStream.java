@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
+import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -83,6 +85,7 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
+import org.mortbay.log.Log;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheBuilder;
@@ -115,7 +118,8 @@ import com.google.common.cache.RemovalNotification;
  * starts sending packets from the dataQueue.
 ****************************************************************/
 @InterfaceAudience.Private
-public class DFSOutputStream extends FSOutputSummer implements Syncable {
+public class DFSOutputStream extends FSOutputSummer
+    implements Syncable, CanSetDropBehind {
   private static final int MAX_PACKETS = 80; // each packet 64K, total 5MB
   private final DFSClient dfsClient;
   private Socket s;
@@ -147,6 +151,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
   private Progressable progress;
   private final short blockReplication; // replication factor of file
   private boolean shouldSyncBlock = false; // force blocks to disk upon close
+  private CachingStrategy cachingStrategy;
   
   private static class Packet {
     private static final long HEART_BEAT_SEQNO = -1L;
@@ -1138,7 +1143,8 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
           // send the request
           new Sender(out).writeBlock(block, accessToken, dfsClient.clientName,
               nodes, null, recoveryFlag? stage.getRecoveryStage() : stage, 
-              nodes.length, block.getNumBytes(), bytesSent, newGS, checksum);
+              nodes.length, block.getNumBytes(), bytesSent, newGS, checksum,
+              cachingStrategy);
   
           // receive ack for connect
           BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
@@ -1336,6 +1342,8 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     this.blockSize = stat.getBlockSize();
     this.blockReplication = stat.getReplication();
     this.progress = progress;
+    this.cachingStrategy =
+        dfsClient.getDefaultWriteCachingStrategy().duplicate();
     if ((progress != null) && DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug(
           "Set non-null progress callback on DFSOutputStream " + src);
@@ -1930,4 +1938,8 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     return streamer.getBlockToken();
   }
 
+  @Override
+  public void setDropBehind(Boolean dropBehind) throws IOException {
+    this.cachingStrategy.setDropBehind(dropBehind);
+  }
 }

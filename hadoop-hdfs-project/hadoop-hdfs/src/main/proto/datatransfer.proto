@@ -54,11 +54,17 @@ message ClientOperationHeaderProto {
   required string clientName = 2;
 }
 
+message CachingStrategyProto {
+  optional bool dropBehind = 1;
+  optional int64 readahead = 2;
+}
+
 message OpReadBlockProto {
   required ClientOperationHeaderProto header = 1;
   required uint64 offset = 2;
   required uint64 len = 3;
   optional bool sendChecksums = 4 [default = true];
+  optional CachingStrategyProto cachingStrategy = 5;
 }
 
 
@@ -100,6 +106,7 @@ message OpWriteBlockProto {
    * The requested checksum mechanism for this block write.
    */
   required ChecksumProto requestedChecksum = 9;
+  optional CachingStrategyProto cachingStrategy = 10;
 }
   
 message OpTransferBlockProto {

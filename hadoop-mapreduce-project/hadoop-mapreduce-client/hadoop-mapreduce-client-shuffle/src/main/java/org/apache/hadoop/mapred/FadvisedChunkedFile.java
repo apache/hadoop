@@ -69,7 +69,7 @@ public class FadvisedChunkedFile extends ChunkedFile {
     }
     if (manageOsCache && getEndOffset() - getStartOffset() > 0) {
       try {
-        NativeIO.POSIX.posixFadviseIfPossible(
+        NativeIO.POSIX.posixFadviseIfPossible(identifier,
             fd,
             getStartOffset(), getEndOffset() - getStartOffset(),
             NativeIO.POSIX.POSIX_FADV_DONTNEED);
