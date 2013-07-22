@@ -71,6 +71,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import static org.apache.hadoop.ipc.RpcConstants.CURRENT_VERSION;
+import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcRequestMessageWrapper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcResponseWrapper;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
@@ -155,11 +157,7 @@ public abstract class Server {
       return terseExceptions.contains(t.toString());
     }
   }
-  
-  /**
-   * The first four bytes of Hadoop RPC connections
-   */
-  public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
+
   
   /**
    * If the user accidentally sends an HTTP GET to an IPC port, we detect this
@@ -177,17 +175,6 @@ public abstract class Server {
     "Content-type: text/plain\r\n\r\n" +
     "It looks like you are making an HTTP request to a Hadoop IPC port. " +
     "This is not the correct port for the web interface on this daemon.\r\n";
-  
-  // 1 : Introduce ping and server does not throw away RPCs
-  // 3 : Introduce the protocol into the RPC connection header
-  // 4 : Introduced SASL security layer
-  // 5 : Introduced use of {@link ArrayPrimitiveWritable$Internal}
-  //     in ObjectWritable to efficiently transmit arrays of primitives
-  // 6 : Made RPC Request header explicit
-  // 7 : Changed Ipc Connection Header to use Protocol buffers
-  // 8 : SASL server always sends a final response
-  // 9 : Changes to protocol for HADOOP-8990
-  public static final byte CURRENT_VERSION = 9;
 
   /**
    * Initial and max size of response buffer
@@ -291,6 +278,15 @@ public abstract class Server {
     }
     return null;
   }
+  
+  /**
+   * Returns the clientId from the current RPC request
+   */
+  public static byte[] getClientId() {
+    Call call = CurCall.get();
+    return call != null ? call.clientId : RpcConstants.DUMMY_CLIENT_ID;
+  }
+  
   /** Returns remote address as a string when invoked inside an RPC.
    *  Returns null in case of an error.
    */
@@ -451,17 +447,22 @@ public abstract class Server {
                                           // time served when response is not null
     private ByteBuffer rpcResponse;       // the response for this call
     private final RPC.RpcKind rpcKind;
+    private final byte[] clientId;
 
     public Call(int id, Writable param, Connection connection) {
-      this( id,  param,  connection, RPC.RpcKind.RPC_BUILTIN );    
+      this(id, param, connection, RPC.RpcKind.RPC_BUILTIN,
+          RpcConstants.DUMMY_CLIENT_ID);
     }
-    public Call(int id, Writable param, Connection connection, RPC.RpcKind kind) { 
+
+    public Call(int id, Writable param, Connection connection,
+        RPC.RpcKind kind, byte[] clientId) {
       this.callId = id;
       this.rpcRequest = param;
       this.connection = connection;
       this.timestamp = Time.now();
       this.rpcResponse = null;
       this.rpcKind = kind;
+      this.clientId = clientId;
     }
     
     @Override
@@ -1439,8 +1440,9 @@ public abstract class Server {
             setupHttpRequestOnIpcPortResponse();
             return -1;
           }
-        
-          if (!HEADER.equals(dataLengthBuffer) || version != CURRENT_VERSION) {
+          
+          if (!RpcConstants.HEADER.equals(dataLengthBuffer)
+              || version != CURRENT_VERSION) {
             //Warning is ok since this is not supposed to happen.
             LOG.warn("Incorrect header or version mismatch from " + 
                      hostAddress + ":" + remotePort +
@@ -1462,7 +1464,7 @@ public abstract class Server {
         if (data == null) {
           dataLengthBuffer.flip();
           dataLength = dataLengthBuffer.getInt();
-          if ((dataLength == Client.PING_CALL_ID) && (!useWrap)) {
+          if ((dataLength == RpcConstants.PING_CALL_ID) && (!useWrap)) {
             // covers the !useSasl too
             dataLengthBuffer.clear();
             return 0; // ping message
@@ -1702,7 +1704,7 @@ public abstract class Server {
           unwrappedDataLengthBuffer.flip();
           int unwrappedDataLength = unwrappedDataLengthBuffer.getInt();
 
-          if (unwrappedDataLength == Client.PING_CALL_ID) {
+          if (unwrappedDataLength == RpcConstants.PING_CALL_ID) {
             if (LOG.isDebugEnabled())
               LOG.debug("Received ping message");
             unwrappedDataLengthBuffer.clear();
@@ -1834,8 +1836,9 @@ public abstract class Server {
             RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST, err);
       }
         
-      Call call = new Call(header.getCallId(), rpcRequest, this, 
-          ProtoUtil.convert(header.getRpcKind()));
+      Call call = new Call(header.getCallId(), rpcRequest, this,
+          ProtoUtil.convert(header.getRpcKind()), header.getClientId()
+              .toByteArray());
       callQueue.put(call);              // queue the call; maybe blocked here
       incRpcCount();  // Increment the rpc count
     }
@@ -2258,7 +2261,7 @@ public abstract class Server {
         RpcResponseHeaderProto.newBuilder();
     headerBuilder.setCallId(call.callId);
     headerBuilder.setStatus(status);
-    headerBuilder.setServerIpcVersionNum(Server.CURRENT_VERSION);
+    headerBuilder.setServerIpcVersionNum(CURRENT_VERSION);
 
     if (status == RpcStatusProto.SUCCESS) {
       RpcResponseHeaderProto header = headerBuilder.build();

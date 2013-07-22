@@ -85,6 +85,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -114,9 +115,8 @@ public class Client {
   private final int connectionTimeout;
 
   private final boolean fallbackAllowed;
+  private final byte[] uuid;
   
-  final static int PING_CALL_ID = -1;
-
   final static int CONNECTION_CONTEXT_CALL_ID = -3;
   
   /**
@@ -762,8 +762,8 @@ public class Client {
         throws IOException {
       DataOutputStream out = new DataOutputStream(new BufferedOutputStream(outStream));
       // Write out the header, version and authentication method
-      out.write(Server.HEADER.array());
-      out.write(Server.CURRENT_VERSION);
+      out.write(RpcConstants.HEADER.array());
+      out.write(RpcConstants.CURRENT_VERSION);
       out.write(serviceClass);
       final AuthProtocol authProtocol;
       switch (authMethod) {
@@ -790,7 +790,7 @@ public class Client {
           authMethod);
       RpcRequestHeaderProto connectionContextHeader =
           ProtoUtil.makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
-              OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID);
+              OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID, uuid);
       RpcRequestMessageWrapper request =
           new RpcRequestMessageWrapper(connectionContextHeader, message);
       
@@ -842,7 +842,7 @@ public class Client {
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
         synchronized (out) {
-          out.writeInt(PING_CALL_ID);
+          out.writeInt(RpcConstants.PING_CALL_ID);
           out.flush();
         }
       }
@@ -897,7 +897,7 @@ public class Client {
       // Items '1' and '2' are prepared here. 
       final DataOutputBuffer d = new DataOutputBuffer();
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
-         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id);
+         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, uuid);
       header.writeDelimitedTo(d);
       call.rpcRequest.write(d);
 
@@ -1097,6 +1097,7 @@ public class Client {
         CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
     this.fallbackAllowed = conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
+    this.uuid = StringUtils.getUuidBytes();
   }
 
   /**
