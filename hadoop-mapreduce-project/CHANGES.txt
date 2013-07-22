@@ -27,6 +27,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5380. Invalid mapred command should return non-zero exit code
     (Stephen Chu via jlowe)
 
+    MAPREDUCE-5404. HSAdminServer does not use ephemeral ports in minicluster
+    mode (Ted Yu via jlowe)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
