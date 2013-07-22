@@ -672,7 +672,40 @@ Release 2.1.0-beta - 2013-07-02
     YARN-919. Document setting default heap sizes in yarn-env.sh (Mayank
     Bansal via hitesh)
 
-  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
+    YARN-795. Fair scheduler queue metrics should subtract allocated vCores from 
+    available vCores. (ywskycn via tucu) 
+
+    YARN-799. Fix CgroupsLCEResourcesHandler to use /tasks instead of
+    /cgroup.procs. (Chris Riccomini via acmurthy) 
+
+    YARN-333. Schedulers cannot control the queue-name of an 
+    application. (sandyr via tucu)
+
+    YARN-368. Fixed a typo in error message in Auxiliary services. (Albert Chu
+    via vinodkv)
+
+    YARN-295. Fixed a race condition in ResourceManager RMAppAttempt state
+    machine. (Mayank Bansal via vinodkv)
+
+    YARN-523. Modified a test-case to validate container diagnostics on
+    localization failures. (Jian He via vinodkv)
+
+    YARN-661. Fixed NM to cleanup users' local directories correctly when
+    starting up. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-820. Fixed an invalid state transition in NodeManager caused by failing
+    resource localization. (Mayank Bansal via vinodkv)
+
+    YARN-62. Modified NodeManagers to avoid AMs from abusing container tokens for
+    repetitive container launches. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-814. Improving diagnostics when containers fail during launch due to
+    various reasons like invalid env etc. (Jian He via vinodkv)
+
+    YARN-897. Ensure child queues are ordered correctly to account for
+    completed containers. (Djellel Eddine Difallah via acmurthy)
+
+  BREAKDOWN OF HADOOP-8562/YARN-191 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
     (Chris Nauroth via suresh)
@@ -736,39 +769,6 @@ Release 2.1.0-beta - 2013-07-02
 
     YARN-909. Disable TestLinuxContainerExecutorWithMocks on Windows. (Chuan Liu
     via cnauroth)
-
-    YARN-795. Fair scheduler queue metrics should subtract allocated vCores from 
-    available vCores. (ywskycn via tucu) 
-
-    YARN-799. Fix CgroupsLCEResourcesHandler to use /tasks instead of
-    /cgroup.procs. (Chris Riccomini via acmurthy) 
-
-    YARN-333. Schedulers cannot control the queue-name of an 
-    application. (sandyr via tucu)
-
-    YARN-368. Fixed a typo in error message in Auxiliary services. (Albert Chu
-    via vinodkv)
-
-    YARN-295. Fixed a race condition in ResourceManager RMAppAttempt state
-    machine. (Mayank Bansal via vinodkv)
-
-    YARN-523. Modified a test-case to validate container diagnostics on
-    localization failures. (Jian He via vinodkv)
-
-    YARN-661. Fixed NM to cleanup users' local directories correctly when
-    starting up. (Omkar Vinit Joshi via vinodkv)
-
-    YARN-820. Fixed an invalid state transition in NodeManager caused by failing
-    resource localization. (Mayank Bansal via vinodkv)
-
-    YARN-62. Modified NodeManagers to avoid AMs from abusing container tokens for
-    repetitive container launches. (Omkar Vinit Joshi via vinodkv)
-
-    YARN-814. Improving diagnostics when containers fail during launch due to
-    various reasons like invalid env etc. (Jian He via vinodkv)
-
-    YARN-897. Ensure child queues are ordered correctly to account for
-    completed containers. (Djellel Eddine Difallah via acmurthy)
 
 Release 2.0.5-alpha - 06/06/2013
 
