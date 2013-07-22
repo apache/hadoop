@@ -35,6 +35,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -53,6 +55,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.Connection;
 import org.apache.hadoop.net.ConnectTimeoutException;
@@ -171,6 +176,45 @@ public class TestIPC {
     }
   }
 
+  /**
+   * A RpcInvocationHandler instance for test. Its invoke function uses the same
+   * {@link Client} instance, and will fail the first totalRetry times (by 
+   * throwing an IOException).
+   */
+  private static class TestInvocationHandler implements RpcInvocationHandler {
+    private static int retry = 0;
+    private final Client client;
+    private final Server server;
+    private final int total;
+    
+    TestInvocationHandler(Client client, Server server, int total) {
+      this.client = client;
+      this.server = server;
+      this.total = total;
+    }
+    
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args)
+        throws Throwable {
+      LongWritable param = new LongWritable(RANDOM.nextLong());
+      LongWritable value = (LongWritable) client.call(param,
+          NetUtils.getConnectAddress(server), null, null, 0, conf);
+      if (retry++ < total) {
+        throw new IOException("Fake IOException");
+      } else {
+        return value;
+      }
+    }
+
+    @Override
+    public void close() throws IOException {}
+    
+    @Override
+    public ConnectionId getConnectionId() {
+      return null;
+    }
+  }
+  
   @Test
   public void testSerial() throws Exception {
     testSerial(3, false, 2, 5, 100);
@@ -673,6 +717,110 @@ public class TestIPC {
       @Override
       public void run() {
         Assert.assertEquals(callId.id, Server.getCallId());
+      }
+    };
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      final SerialCaller caller = new SerialCaller(client, addr, 10);
+      caller.run();
+      assertFalse(caller.failed);
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+  
+  /** A dummy protocol */
+  private interface DummyProtocol {
+    public void dummyRun();
+  }
+  
+  /**
+   * Test the retry count while used in a retry proxy.
+   */
+  @Test
+  public void testRetryProxy() throws Exception {
+    final Client client = new Client(LongWritable.class, conf);
+    
+    final TestServer server = new TestServer(1, false);
+    server.callListener = new Runnable() {
+      private int retryCount = 0;
+      @Override
+      public void run() {
+        Assert.assertEquals(retryCount++, Server.getCallRetryCount());
+      }
+    };
+
+    final int totalRetry = 256;
+    DummyProtocol proxy = (DummyProtocol) Proxy.newProxyInstance(
+        DummyProtocol.class.getClassLoader(),
+        new Class[] { DummyProtocol.class }, new TestInvocationHandler(client,
+            server, totalRetry));
+    DummyProtocol retryProxy = (DummyProtocol) RetryProxy.create(
+        DummyProtocol.class, proxy, RetryPolicies.RETRY_FOREVER);
+    
+    try {
+      server.start();
+      retryProxy.dummyRun();
+      Assert.assertEquals(TestInvocationHandler.retry, totalRetry + 1);
+    } finally {
+      Client.setCallIdAndRetryCount(0, 0);
+      client.stop();
+      server.stop();
+    }
+  }
+  
+  /**
+   * Test if the rpc server gets the default retry count (0) from client.
+   */
+  @Test
+  public void testInitialCallRetryCount() throws Exception {
+    // Override client to store the call id
+    final Client client = new Client(LongWritable.class, conf);
+
+    // Attach a listener that tracks every call ID received by the server.
+    final TestServer server = new TestServer(1, false);
+    server.callListener = new Runnable() {
+      @Override
+      public void run() {
+        // we have not set the retry count for the client, thus on the server
+        // side we should see retry count as 0
+        Assert.assertEquals(0, Server.getCallRetryCount());
+      }
+    };
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      final SerialCaller caller = new SerialCaller(client, addr, 10);
+      caller.run();
+      assertFalse(caller.failed);
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+  
+  /**
+   * Test if the rpc server gets the retry count from client.
+   */
+  @Test
+  public void testCallRetryCount() throws Exception {
+    final int retryCount = 255;
+    // Override client to store the call id
+    final Client client = new Client(LongWritable.class, conf);
+    Client.setCallIdAndRetryCount(Client.nextCallId(), 255);
+
+    // Attach a listener that tracks every call ID received by the server.
+    final TestServer server = new TestServer(1, false);
+    server.callListener = new Runnable() {
+      @Override
+      public void run() {
+        // we have not set the retry count for the client, thus on the server
+        // side we should see retry count as 0
+        Assert.assertEquals(retryCount, Server.getCallRetryCount());
       }
     };
 

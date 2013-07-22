@@ -33,6 +33,8 @@ public class RpcConstants {
   
   public static final int INVALID_CALL_ID = -2;
   
+  public static final int INVALID_RETRY_COUNT = -1;
+  
   /**
    * The first four bytes of Hadoop RPC connections
    */
