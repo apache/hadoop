@@ -238,6 +238,8 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-5007. Replace hard-coded property keys with DFSConfigKeys fields. 
     (Kousuke Saruta via jing9)
 
+    HDFS-5008. Make ClientProtocol#abandonBlock() idempotent. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-4465. Optimize datanode ReplicasMap and ReplicaInfo. (atm)

@@ -274,8 +274,8 @@ public interface ClientProtocol {
 
   /**
    * The client can give up on a block by calling abandonBlock().
-   * The client can then
-   * either obtain a new block, or complete or abandon the file.
+   * The client can then either obtain a new block, or complete or abandon the 
+   * file.
    * Any partial writes to the block will be discarded.
    * 
    * @throws AccessControlException If access is denied
@@ -283,6 +283,7 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
+  @Idempotent
   public void abandonBlock(ExtendedBlock b, String src, String holder)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
