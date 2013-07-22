@@ -334,7 +334,7 @@ public class TestSaslRPC {
 
     TestSaslProtocol proxy = null;
     try {
-      proxy = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+      proxy = RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, conf);
       //QOP must be auth
       Assert.assertEquals(SaslRpcServer.SASL_PROPS.get(Sasl.QOP), "auth");
@@ -415,20 +415,20 @@ public class TestSaslRPC {
     TestSaslProtocol proxy2 = null;
     TestSaslProtocol proxy3 = null;
     try {
-      proxy1 = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+      proxy1 = RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, newConf);
       proxy1.getAuthMethod();
       Client client = WritableRpcEngine.getClient(conf);
       Set<ConnectionId> conns = client.getConnectionIds();
       assertEquals("number of connections in cache is wrong", 1, conns.size());
       // same conf, connection should be re-used
-      proxy2 = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+      proxy2 = RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, newConf);
       proxy2.getAuthMethod();
       assertEquals("number of connections in cache is wrong", 1, conns.size());
       // different conf, new connection should be set up
       newConf.set(SERVER_PRINCIPAL_KEY, SERVER_PRINCIPAL_2);
-      proxy3 = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+      proxy3 = RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, newConf);
       proxy3.getAuthMethod();
       ConnectionId[] connsArray = conns.toArray(new ConnectionId[0]);
@@ -468,7 +468,7 @@ public class TestSaslRPC {
 
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
     try {
-      proxy = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+      proxy = RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, newConf);
       proxy.ping();
     } finally {
@@ -488,7 +488,7 @@ public class TestSaslRPC {
   }
 
   @Test
-  public void testSaslPlainServerBadPassword() throws IOException {
+  public void testSaslPlainServerBadPassword() {
     SaslException e = null;
     try {
       runNegotiation(
@@ -824,7 +824,7 @@ public class TestSaslRPC {
         public String run() throws IOException {
           TestSaslProtocol proxy = null;
           try {
-            proxy = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+            proxy = RPC.getProxy(TestSaslProtocol.class,
                 TestSaslProtocol.versionID, addr, clientConf);
             
             proxy.ping();

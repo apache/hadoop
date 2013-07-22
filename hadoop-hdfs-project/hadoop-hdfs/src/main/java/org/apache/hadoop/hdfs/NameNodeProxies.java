@@ -297,9 +297,8 @@ public class NameNodeProxies {
     return new ClientNamenodeProtocolTranslatorPB(proxy);
   }
   
-  @SuppressWarnings("unchecked")
   private static Object createNameNodeProxy(InetSocketAddress address,
-      Configuration conf, UserGroupInformation ugi, Class xface)
+      Configuration conf, UserGroupInformation ugi, Class<?> xface)
       throws IOException {
     RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine.class);
     Object proxy = RPC.getProxy(xface, RPC.getProtocolVersion(xface), address,

@@ -902,7 +902,7 @@ public class TestIPC {
   }
 
   private void assertRetriesOnSocketTimeouts(Configuration conf,
-      int maxTimeoutRetries) throws IOException, InterruptedException {
+      int maxTimeoutRetries) throws IOException {
     SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
     doThrow(new ConnectTimeoutException("fake")).when(mockFactory).createSocket();
     Client client = new Client(IntWritable.class, conf, mockFactory);

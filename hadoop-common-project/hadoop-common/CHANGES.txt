@@ -178,6 +178,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9751. Add clientId and retryCount to RpcResponseHeaderProto.
     (szetszwo)
 
+    HADOOP-9754. Remove unnecessary "throws IOException/InterruptedException",
+    and fix generic and other javac warnings.  (szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
