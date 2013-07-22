@@ -95,8 +95,9 @@ IF("${CMAKE_SYSTEM}" MATCHES "Linux")
         NAMES jni.h 
         PATHS ${_JDK_DIRS}
         NO_DEFAULT_PATH)
+    #In IBM java, it's jniport.h instead of jni_md.h
     FIND_PATH(JAVA_INCLUDE_PATH2 
-        NAMES jni_md.h
+        NAMES jni_md.h jniport.h
         PATHS ${_JDK_DIRS}
         NO_DEFAULT_PATH)
     SET(JNI_INCLUDE_DIRS ${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2})
