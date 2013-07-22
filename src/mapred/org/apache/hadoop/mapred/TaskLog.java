@@ -106,6 +106,16 @@ public class TaskLog {
     String strLinkAttemptLogDir = 
         getJobDir(taskID.getJobID()).getAbsolutePath() + File.separatorChar + 
         taskID.toString() + cleanupSuffix;
+    // If the job is recovered, then the symlink might still exist from the prior
+    // run.  Symlink creation fails if it already exists, so attempt to delete
+    // first.
+    File linkAttemptLogDir = new File(strLinkAttemptLogDir);
+    if (linkAttemptLogDir.exists()) {
+      if (!linkAttemptLogDir.delete()) {
+        LOG.warn("Failed to delete existing file at path " +
+          strLinkAttemptLogDir);
+      }
+    }
     if (FileUtil.symLink(strAttemptLogDir, strLinkAttemptLogDir) != 0) {
       throw new IOException("Creation of symlink from " + 
                             strLinkAttemptLogDir + " to " + strAttemptLogDir +

@@ -92,6 +92,9 @@ Release 1.3.0 - unreleased
     HDFS-3794. WebHDFS Open used with Offset returns the original (and incorrect)
     Content Length in the HTTP Header. (Tsz Wo (Nicholas), SZE via cnauroth)
 
+    MAPREDUCE-5405. Job recovery can fail if task log directory symlink from
+    prior run still exists. (cnauroth)
+
 Release 1.2.1 - 2013.07.06
 
   INCOMPATIBLE CHANGES
