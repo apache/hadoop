@@ -717,6 +717,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-897. Ensure child queues are ordered correctly to account for
     completed containers. (Djellel Eddine Difallah via acmurthy)
 
+    YARN-853. Fixed CapacityScheduler's maximum-am-resource-percent to properly
+    work beyond refreshing queues. (Devaraj K via vinodkv)
+
   BREAKDOWN OF HADOOP-8562/YARN-191 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.

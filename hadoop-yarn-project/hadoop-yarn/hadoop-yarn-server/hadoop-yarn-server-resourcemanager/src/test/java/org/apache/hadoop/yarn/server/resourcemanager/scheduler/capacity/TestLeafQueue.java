@@ -43,7 +43,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -1960,6 +1959,50 @@ public class TestLeafQueue {
     assertEquals(0, app_0.getSchedulingOpportunities(priority)); 
     assertEquals(0, app_0.getTotalRequiredResources(priority));
 
+  }
+  
+  @Test
+  public void testMaxAMResourcePerQueuePercentAfterQueueRefresh()
+      throws Exception {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    Resource clusterResource = Resources
+        .createResource(100 * 16 * GB, 100 * 32);
+    CapacitySchedulerContext csContext = mockCSContext(csConf, clusterResource);
+    csConf.setFloat(CapacitySchedulerConfiguration.
+        MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.1f);
+    ParentQueue root = new ParentQueue(csContext, 
+        CapacitySchedulerConfiguration.ROOT, null, null);
+    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + A, 80);
+    LeafQueue a = new LeafQueue(csContext, A, root, null);
+    assertEquals(0.1f, a.getMaxAMResourcePerQueuePercent(), 1e-3f);
+    assertEquals(160, a.getMaximumActiveApplications());
+    
+    csConf.setFloat(CapacitySchedulerConfiguration.
+        MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.2f);
+    LeafQueue newA = new LeafQueue(csContext, A, root, null);
+    a.reinitialize(newA, clusterResource);
+    assertEquals(0.2f, a.getMaxAMResourcePerQueuePercent(), 1e-3f);
+    assertEquals(320, a.getMaximumActiveApplications());
+
+    Resource newClusterResource = Resources.createResource(100 * 20 * GB,
+        100 * 32);
+    a.updateClusterResource(newClusterResource);
+    //  100 * 20 * 0.2 = 400
+    assertEquals(400, a.getMaximumActiveApplications());
+  }
+
+  private CapacitySchedulerContext mockCSContext(
+      CapacitySchedulerConfiguration csConf, Resource clusterResource) {
+    CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
+    when(csContext.getConfiguration()).thenReturn(csConf);
+    when(csContext.getConf()).thenReturn(new YarnConfiguration());
+    when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    when(csContext.getClusterResources()).thenReturn(clusterResource);
+    when(csContext.getMinimumResourceCapability()).thenReturn(
+        Resources.createResource(GB, 1));
+    when(csContext.getMaximumResourceCapability()).thenReturn(
+        Resources.createResource(2 * GB, 2));
+    return csContext;
   }
 
   @After
