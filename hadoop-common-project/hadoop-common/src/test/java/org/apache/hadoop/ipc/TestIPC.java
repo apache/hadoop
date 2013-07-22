@@ -30,6 +30,9 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -83,6 +86,10 @@ public class TestIPC {
   private static final File FD_DIR = new File("/proc/self/fd");
 
   private static class TestServer extends Server {
+    // Tests can set callListener to run a piece of code each time the server
+    // receives a call.  This code executes on the server thread, so it has
+    // visibility of that thread's thread-local storage.
+    private Runnable callListener;
     private boolean sleep;
     private Class<? extends Writable> responseClass;
 
@@ -107,6 +114,9 @@ public class TestIPC {
         try {
           Thread.sleep(RANDOM.nextInt(PING_INTERVAL) + MIN_SLEEP_TIME);
         } catch (InterruptedException e) {}
+      }
+      if (callListener != null) {
+        callListener.run();
       }
       if (responseClass != null) {
         try {
@@ -625,6 +635,57 @@ public class TestIPC {
       CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
       3);
     assertRetriesOnSocketTimeouts(conf, 4);
+  }
+
+  /**
+   * Tests that client generates a unique sequential call ID for each RPC call,
+   * even if multiple threads are using the same client.
+   */
+  @Test
+  public void testUniqueSequentialCallIds() throws Exception {
+    int serverThreads = 10, callerCount = 100, perCallerCallCount = 100;
+    TestServer server = new TestServer(serverThreads, false);
+
+    // Attach a listener that tracks every call ID received by the server.  This
+    // list must be synchronized, because multiple server threads will add to it.
+    final List<Integer> callIds = Collections.synchronizedList(
+      new ArrayList<Integer>());
+    server.callListener = new Runnable() {
+      @Override
+      public void run() {
+        callIds.add(Server.getCallId());
+      }
+    };
+
+    Client client = new Client(LongWritable.class, conf);
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      SerialCaller[] callers = new SerialCaller[callerCount];
+      for (int i = 0; i < callerCount; ++i) {
+        callers[i] = new SerialCaller(client, addr, perCallerCallCount);
+        callers[i].start();
+      }
+      for (int i = 0; i < callerCount; ++i) {
+        callers[i].join();
+        assertFalse(callers[i].failed);
+      }
+    } finally {
+      client.stop();
+      server.stop();
+    }
+
+    int expectedCallCount = callerCount * perCallerCallCount;
+    assertEquals(expectedCallCount, callIds.size());
+
+    // It is not guaranteed that the server executes requests in sequential order
+    // of client call ID, so we must sort the call IDs before checking that it
+    // contains every expected value.
+    Collections.sort(callIds);
+    for (int i = 0; i < expectedCallCount; ++i) {
+      assertEquals(i, callIds.get(i).intValue());
+    }
   }
 
   private void assertRetriesOnSocketTimeouts(Configuration conf,

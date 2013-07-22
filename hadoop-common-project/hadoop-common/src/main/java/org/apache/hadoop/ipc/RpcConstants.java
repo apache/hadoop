@@ -31,6 +31,7 @@ public class RpcConstants {
   
   public static final byte[] DUMMY_CLIENT_ID = new byte[0];
   
+  public static final int INVALID_CALL_ID = -2;
   
   /**
    * The first four bytes of Hadoop RPC connections

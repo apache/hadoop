@@ -144,6 +144,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9676.  Make maximum RPC buffer size configurable (Colin Patrick
     McCabe)
 
+    HADOOP-9691. RPC clients can generate call ID using AtomicInteger instead of
+    synchronizing on the Client instance. (cnauroth)
+
     HADOOP-9661. Allow metrics sources to be extended. (sandyr via tucu)
 
     HADOOP-9370.  Write FSWrapper class to wrap FileSystem and FileContext for
