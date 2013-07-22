@@ -628,7 +628,7 @@ public class TestIPC {
   }
   
   @Test(timeout=30000, expected=IOException.class)
-  public void testIpcAfterStopping() throws IOException, InterruptedException {
+  public void testIpcAfterStopping() throws IOException {
     // start server
     Server server = new TestServer(5, false);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -920,7 +920,7 @@ public class TestIPC {
   }
 
   private void assertRetriesOnSocketTimeouts(Configuration conf,
-      int maxTimeoutRetries) throws IOException, InterruptedException {
+      int maxTimeoutRetries) throws IOException {
     SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
     doThrow(new ConnectTimeoutException("fake")).when(mockFactory).createSocket();
     Client client = new Client(IntWritable.class, conf, mockFactory);

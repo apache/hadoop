@@ -57,7 +57,7 @@ public class TestRPCCompatibility {
     void ping() throws IOException;    
   }
   
-  public interface TestProtocol1 extends VersionedProtocol, TestProtocol0 {
+  public interface TestProtocol1 extends TestProtocol0 {
     String echo(String value) throws IOException;
   }
 
@@ -123,7 +123,7 @@ public class TestRPCCompatibility {
   }
   
   @After
-  public void tearDown() throws IOException {
+  public void tearDown() {
     if (proxy != null) {
       RPC.stopProxy(proxy.getProxy());
       proxy = null;
