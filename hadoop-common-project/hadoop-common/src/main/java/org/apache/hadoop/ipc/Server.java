@@ -912,11 +912,7 @@ public abstract class Server {
           }
           
           for(Call call : calls) {
-            try {
-              doPurge(call, now);
-            } catch (IOException e) {
-              LOG.warn("Error in purging old calls " + e);
-            }
+            doPurge(call, now);
           }
         } catch (OutOfMemoryError e) {
           //
@@ -961,7 +957,7 @@ public abstract class Server {
     // Remove calls that have been pending in the responseQueue 
     // for a long time.
     //
-    private void doPurge(Call call, long now) throws IOException {
+    private void doPurge(Call call, long now) {
       LinkedList<Call> responseQueue = call.connection.responseQueue;
       synchronized (responseQueue) {
         Iterator<Call> iter = responseQueue.listIterator(0);
@@ -1516,7 +1512,7 @@ public abstract class Server {
     }
 
     private AuthProtocol initializeAuthContext(int authType)
-        throws IOException, InterruptedException {
+        throws IOException {
       AuthProtocol authProtocol = AuthProtocol.valueOf(authType);
       if (authProtocol == null) {
         IOException ioe = new IpcException("Unknown auth protocol:" + authType);
@@ -1988,7 +1984,7 @@ public abstract class Server {
       this.serviceClass = serviceClass;
     }
 
-    private synchronized void close() throws IOException {
+    private synchronized void close() {
       disposeSasl();
       data = null;
       dataLengthBuffer = null;
@@ -2264,10 +2260,7 @@ public abstract class Server {
       if (connectionList.remove(connection))
         numConnections--;
     }
-    try {
-      connection.close();
-    } catch (IOException e) {
-    }
+    connection.close();
   }
   
   /**

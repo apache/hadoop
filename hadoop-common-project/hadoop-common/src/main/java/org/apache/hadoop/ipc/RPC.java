@@ -917,7 +917,7 @@ public class RPC {
    
    // Register  protocol and its impl for rpc calls
    void registerProtocolAndImpl(RpcKind rpcKind, Class<?> protocolClass, 
-       Object protocolImpl) throws IOException {
+       Object protocolImpl) {
      String protocolName = RPC.getProtocolName(protocolClass);
      long version;
      
@@ -947,8 +947,6 @@ public class RPC {
      }
    }
    
-   
-   @SuppressWarnings("unused") // will be useful later.
    VerProtocolImpl[] getSupportedProtocolVersions(RPC.RpcKind rpcKind,
        String protocolName) {
      VerProtocolImpl[] resultk = 
@@ -1003,8 +1001,7 @@ public class RPC {
       initProtocolMetaInfo(conf);
     }
     
-    private void initProtocolMetaInfo(Configuration conf)
-        throws IOException {
+    private void initProtocolMetaInfo(Configuration conf) {
       RPC.setProtocolEngine(conf, ProtocolMetaInfoPB.class,
           ProtobufRpcEngine.class);
       ProtocolMetaInfoServerSideTranslatorPB xlator = 
@@ -1022,7 +1019,7 @@ public class RPC {
      * @return the server (for convenience)
      */
     public Server addProtocol(RpcKind rpcKind, Class<?> protocolClass,
-        Object protocolImpl) throws IOException {
+        Object protocolImpl) {
       registerProtocolAndImpl(rpcKind, protocolClass, protocolImpl);
       return this;
     }

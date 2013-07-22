@@ -456,7 +456,7 @@ public class Client {
       
       if (LOG.isDebugEnabled())
         LOG.debug("Use " + authMethod + " authentication for protocol "
-            + protocol.getSimpleName());
+            + (protocol == null? null: protocol.getSimpleName()));
       
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
           server.toString() +
@@ -707,7 +707,7 @@ public class Client {
      * a header to the server and starts
      * the connection thread that waits for responses.
      */
-    private synchronized void setupIOstreams() throws InterruptedException {
+    private synchronized void setupIOstreams() {
       if (socket != null || shouldCloseConnection.get()) {
         return;
       } 
@@ -1262,7 +1262,7 @@ public class Client {
    *  for RPC_BUILTIN
    */
   public Writable call(Writable param, InetSocketAddress address)
-  throws InterruptedException, IOException {
+      throws IOException {
     return call(RPC.RpcKind.RPC_BUILTIN, param, address);
     
   }
@@ -1274,7 +1274,7 @@ public class Client {
    */
   @Deprecated
   public Writable call(RPC.RpcKind rpcKind, Writable param, InetSocketAddress address)
-  throws InterruptedException, IOException {
+  throws IOException {
       return call(rpcKind, param, address, null);
   }
   
@@ -1288,8 +1288,7 @@ public class Client {
    */
   @Deprecated
   public Writable call(RPC.RpcKind rpcKind, Writable param, InetSocketAddress addr, 
-      UserGroupInformation ticket)  
-      throws InterruptedException, IOException {
+      UserGroupInformation ticket) throws IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, null, ticket, 0,
         conf);
     return call(rpcKind, param, remoteId);
@@ -1307,8 +1306,7 @@ public class Client {
   @Deprecated
   public Writable call(RPC.RpcKind rpcKind, Writable param, InetSocketAddress addr, 
                        Class<?> protocol, UserGroupInformation ticket,
-                       int rpcTimeout)  
-                       throws InterruptedException, IOException {
+                       int rpcTimeout) throws IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
         ticket, rpcTimeout, conf);
     return call(rpcKind, param, remoteId);
@@ -1322,8 +1320,7 @@ public class Client {
    */
   public Writable call(Writable param, InetSocketAddress addr,
       Class<?> protocol, UserGroupInformation ticket,
-      int rpcTimeout, Configuration conf)
-      throws InterruptedException, IOException {
+      int rpcTimeout, Configuration conf) throws IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
         ticket, rpcTimeout, conf);
     return call(RPC.RpcKind.RPC_BUILTIN, param, remoteId);
@@ -1337,7 +1334,7 @@ public class Client {
   public Writable call(Writable param, InetSocketAddress addr,
       Class<?> protocol, UserGroupInformation ticket,
       int rpcTimeout, int serviceClass, Configuration conf)
-      throws InterruptedException, IOException {
+      throws IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
         ticket, rpcTimeout, conf);
     return call(RPC.RpcKind.RPC_BUILTIN, param, remoteId, serviceClass);
@@ -1353,8 +1350,7 @@ public class Client {
    */
   public Writable call(RPC.RpcKind rpcKind, Writable param, InetSocketAddress addr, 
                        Class<?> protocol, UserGroupInformation ticket,
-                       int rpcTimeout, Configuration conf)  
-                       throws InterruptedException, IOException {
+                       int rpcTimeout, Configuration conf) throws IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
         ticket, rpcTimeout, conf);
     return call(rpcKind, param, remoteId);
@@ -1364,8 +1360,8 @@ public class Client {
    * Same as {link {@link #call(RPC.RpcKind, Writable, ConnectionId)}
    * except the rpcKind is RPC_BUILTIN
    */
-  public Writable call(Writable param, ConnectionId remoteId)  
-      throws InterruptedException, IOException {
+  public Writable call(Writable param, ConnectionId remoteId)
+      throws IOException {
      return call(RPC.RpcKind.RPC_BUILTIN, param, remoteId);
   }
   
@@ -1381,7 +1377,7 @@ public class Client {
    * threw an exception.
    */
   public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
-      ConnectionId remoteId) throws InterruptedException, IOException {
+      ConnectionId remoteId) throws IOException {
     return call(rpcKind, rpcRequest, remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT);
   }
 
@@ -1398,8 +1394,7 @@ public class Client {
    * threw an exception.
    */
   public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
-      ConnectionId remoteId, int serviceClass)
-      throws InterruptedException, IOException {
+      ConnectionId remoteId, int serviceClass) throws IOException {
     final Call call = createCall(rpcKind, rpcRequest);
     Connection connection = getConnection(remoteId, call, serviceClass);
     try {
@@ -1458,8 +1453,7 @@ public class Client {
   /** Get a connection from the pool, or create a new one and add it to the
    * pool.  Connections to a given ConnectionId are reused. */
   private Connection getConnection(ConnectionId remoteId,
-                                   Call call, int serviceClass)
-                                   throws IOException, InterruptedException {
+      Call call, int serviceClass) throws IOException {
     if (!running.get()) {
       // the client is stopped
       throw new IOException("The client is stopped");
