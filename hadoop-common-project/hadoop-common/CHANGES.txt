@@ -298,6 +298,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9618.  Add thread which detects GC pauses.
     (Todd Lipcon via Colin Patrick McCabe)
 
+    HADOOP-9435.  Support building the JNI code against the IBM JVM.
+    (Tian Hong Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
