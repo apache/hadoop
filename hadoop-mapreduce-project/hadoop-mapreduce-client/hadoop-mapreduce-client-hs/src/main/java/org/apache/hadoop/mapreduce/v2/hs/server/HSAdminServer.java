@@ -34,6 +34,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 import org.apache.hadoop.security.proto.RefreshUserMappingsProtocolProtos.RefreshUserMappingsProtocolService;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolServerSideTranslatorPB;
@@ -55,14 +56,16 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
 
   private static final Log LOG = LogFactory.getLog(HSAdminServer.class);
   private AccessControlList adminAcl;
+  private AggregatedLogDeletionService aggLogDelService = null;
 
   /** The RPC server that listens to requests from clients */
   protected RPC.Server clientRpcServer;
   protected InetSocketAddress clientRpcAddress;
   private static final String HISTORY_ADMIN_SERVER = "HSAdminServer";
-
-  public HSAdminServer() {
+  
+  public HSAdminServer(AggregatedLogDeletionService aggLogDelService) {
     super(HSAdminServer.class.getName());
+    this.aggLogDelService = aggLogDelService;
   }
 
   @Override
@@ -101,6 +104,7 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
 
     adminAcl = new AccessControlList(conf.get(JHAdminConfig.JHS_ADMIN_ACL,
         JHAdminConfig.DEFAULT_JHS_ADMIN_ACL));
+
   }
 
   @Override
@@ -192,5 +196,14 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
     HSAuditLogger.logSuccess(user.getShortUserName(), "refreshAdminAcls",
         HISTORY_ADMIN_SERVER);
   }
+ 
+  @Override
+  public void refreshLogRetentionSettings() throws IOException {
+    UserGroupInformation user = checkAcls("refreshLogRetentionSettings");
 
+    aggLogDelService.refreshLogRetentionSettings();
+
+    HSAuditLogger.logSuccess(user.getShortUserName(),
+        "refreshLogRetentionSettings", "HSAdminServer");
+  }
 }
