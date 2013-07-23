@@ -558,7 +558,26 @@ public class TestFairScheduler {
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user2")
         .getAppSchedulables().size());
   }
-  
+
+  @Test
+  public void testEmptyQueueName() throws Exception {
+    Configuration conf = createConfiguration();
+
+    // only default queue
+    assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
+
+    // submit app with empty queue
+    ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
+    AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
+            appAttemptId, "", "user1");
+    scheduler.handle(appAddedEvent);
+
+    // submission rejected
+    assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
+    assertNull(scheduler.getSchedulerApp(appAttemptId));
+    assertEquals(0, resourceManager.getRMContext().getRMApps().size());
+  }
+
   @Test
   public void testAssignToQueue() throws Exception {
     Configuration conf = createConfiguration();
@@ -1929,7 +1948,7 @@ public class TestFairScheduler {
     scheduler.handle(node2UpdateEvent);
     assertEquals(1, app.getLiveContainers().size());
   }
-  
+
   /**
    * If we update our ask to strictly request a node, it doesn't make sense to keep
    * a reservation on another.
