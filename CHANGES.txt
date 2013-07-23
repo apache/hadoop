@@ -27,6 +27,8 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5406. Improve logging around Task Tracker exiting with JVM manager
     inconsistent state. (Chelsey Chang via cnauroth)
 
+    MAPREDUCE-5408. Backport MAPREDUCE-336 to branch-1. (acmurthy)
+
   BUG FIXES
 
     MAPREDUCE-5047. keep.failed.task.files=true causes job failure on 

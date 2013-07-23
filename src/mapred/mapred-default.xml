@@ -589,6 +589,22 @@
 </property>
 
 <property>
+  <name>mapred.map.child.log.level</name>
+  <value>INFO</value>
+  <description>The logging level for the map task. The allowed levels are:
+  OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
+  </description>
+</property>
+
+<property>
+  <name>mapred.reduce.child.log.level</name>
+  <value>INFO</value>
+  <description>The logging level for the reduce task. The allowed levels are:
+  OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
+  </description>
+</property>
+
+<property>
   <name>mapred.inmem.merge.threshold</name>
   <value>1000</value>
   <description>The threshold, in terms of the number of files 
