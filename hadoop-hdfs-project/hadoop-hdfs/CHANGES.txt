@@ -105,6 +105,9 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4373. Add HTTP API for querying NameNode startup progress. (cnauroth)
 
     HDFS-4374. Display NameNode startup progress in UI. (cnauroth)
+
+    HDFS-4974. Add Idempotent and AtMostOnce annotations to namenode
+    protocol methods. (suresh)
     
   IMPROVEMENTS
 
