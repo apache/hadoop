@@ -53,13 +53,17 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.commit.CommitterEventHandler;
 import org.apache.hadoop.mapreduce.v2.app.commit.CommitterEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
+import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobFinishEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobStartEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl.InitTransition;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
@@ -70,7 +74,9 @@ import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.InlineDispatcher;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -79,6 +85,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 
 /**
@@ -237,6 +244,78 @@ public class TestJobImpl {
     assertJobState(job, JobStateInternal.KILLED);
     dispatcher.stop();
     commitHandler.stop();
+  }
+
+  @Test
+  public void testAbortJobCalledAfterKillingTasks() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
+    conf.set(MRJobConfig.MR_AM_COMMITTER_CANCEL_TIMEOUT_MS, "1000");
+    InlineDispatcher dispatcher = new InlineDispatcher();
+    dispatcher.init(conf);
+    dispatcher.start();
+    OutputCommitter committer = Mockito.mock(OutputCommitter.class);
+    CommitterEventHandler commitHandler =
+        createCommitterEventHandler(dispatcher, committer);
+    commitHandler.init(conf);
+    commitHandler.start();
+    JobImpl job = createRunningStubbedJob(conf, dispatcher, 2);
+
+    //Fail one task. This should land the JobImpl in the FAIL_WAIT state
+    job.handle(new JobTaskEvent(
+      MRBuilderUtils.newTaskId(job.getID(), 1, TaskType.MAP),
+      TaskState.FAILED));
+    //Verify abort job hasn't been called
+    Mockito.verify(committer, Mockito.never())
+      .abortJob((JobContext) Mockito.any(), (State) Mockito.any());
+    assertJobState(job, JobStateInternal.FAIL_WAIT);
+
+    //Verify abortJob is called once and the job failed
+    Mockito.verify(committer, Mockito.timeout(2000).times(1))
+      .abortJob((JobContext) Mockito.any(), (State) Mockito.any());
+    assertJobState(job, JobStateInternal.FAILED);
+
+    dispatcher.stop();
+  }
+
+  @Test (timeout=10000)
+  public void testFailAbortDoesntHang() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
+    conf.set(MRJobConfig.MR_AM_COMMITTER_CANCEL_TIMEOUT_MS, "1000");
+    
+    DrainDispatcher dispatcher = new DrainDispatcher();
+    dispatcher.init(conf);
+    dispatcher.start();
+    OutputCommitter committer = Mockito.mock(OutputCommitter.class);
+    CommitterEventHandler commitHandler =
+        createCommitterEventHandler(dispatcher, committer);
+    commitHandler.init(conf);
+    commitHandler.start();
+    //Job has only 1 mapper task. No reducers
+    conf.setInt(MRJobConfig.NUM_REDUCES, 0);
+    conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 1);
+    JobImpl job = createRunningStubbedJob(conf, dispatcher, 1);
+
+    //Fail / finish all the tasks. This should land the JobImpl directly in the
+    //FAIL_ABORT state
+    for(Task t: job.tasks.values()) {
+      TaskImpl task = (TaskImpl) t;
+      task.handle(new TaskEvent(task.getID(), TaskEventType.T_SCHEDULE));
+      for(TaskAttempt ta: task.getAttempts().values()) {
+        task.handle(new TaskTAttemptEvent(ta.getID(),
+          TaskEventType.T_ATTEMPT_FAILED));
+      }
+    }
+    assertJobState(job, JobStateInternal.FAIL_ABORT);
+
+    dispatcher.await();
+    //Verify abortJob is called once and the job failed
+    Mockito.verify(committer, Mockito.timeout(2000).times(1))
+      .abortJob((JobContext) Mockito.any(), (State) Mockito.any());
+    assertJobState(job, JobStateInternal.FAILED);
+
+    dispatcher.stop();
   }
 
   @Test(timeout=20000)
