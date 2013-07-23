@@ -207,6 +207,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-5008. Make ClientProtocol#abandonBlock() idempotent. (jing9)
 
+    HADOOP-9760. Move GSet and related classes to common from HDFS.
+    (suresh)
+
   OPTIMIZATIONS
 
     HDFS-4465. Optimize datanode ReplicasMap and ReplicaInfo. (atm)
