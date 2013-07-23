@@ -484,6 +484,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9754. Remove unnecessary "throws IOException/InterruptedException",
     and fix generic and other javac warnings.  (szetszwo)
 
+    HADOOP-9760. Move GSet and related classes to common from HDFS.
+    (suresh)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
