@@ -15,34 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.security.authorize;
+package org.apache.hadoop.hdfs.protocol;
 
-import java.io.IOException;
+import java.lang.reflect.Method;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.io.retry.AtMostOnce;
 import org.apache.hadoop.io.retry.Idempotent;
-import org.apache.hadoop.security.KerberosInfo;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
- * Protocol which is used to refresh the authorization policy in use currently.
+ * Tests to make sure all the protocol class public methods have
+ * either {@link Idempotent} or {@link AtMostOnce} once annotations.
  */
-@KerberosInfo(
-    serverPrincipal=CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
-@InterfaceStability.Evolving
-public interface RefreshAuthorizationPolicyProtocol {
-  
-  /**
-   * Version 1: Initial version
-   */
-  public static final long versionID = 1L;
-
-  /**
-   * Refresh the service-level authorization policy in-effect.
-   * @throws IOException
-   */
-  @Idempotent
-  void refreshServiceAcl() throws IOException;
+public class TestAnnotations {
+  @Test
+  public void checkAnnotations() {
+    Method[] methods = NamenodeProtocols.class.getMethods();
+    for (Method m : methods) {
+      Assert.assertTrue(
+          "Idempotent or AtMostOnce annotation is not present " + m,
+          m.isAnnotationPresent(Idempotent.class)
+              || m.isAnnotationPresent(AtMostOnce.class));
+    }
+  }
 }

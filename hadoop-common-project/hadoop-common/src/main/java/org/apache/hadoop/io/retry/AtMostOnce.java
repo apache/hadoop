@@ -15,42 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.security;
+package org.apache.hadoop.io.retry;
 
-import java.io.IOException;
-
-import org.apache.hadoop.classification.InterfaceAudience;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.io.retry.Idempotent;
-import org.apache.hadoop.security.KerberosInfo;
 
 /**
- * Protocol use 
- *
+ * Used to mark certain methods of an interface with at-most-once semantics.
+ * 
+ * Server must guarantee that methods are executed at most once, by keeping
+ * a retry cache. The previous response must be returned when duplicate 
+ * requests are received. Because of these guarantee, a client can retry
+ * this request on failover and other network failure conditions.
  */
-@KerberosInfo(
-    serverPrincipal=CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@Inherited
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
 @InterfaceStability.Evolving
-public interface RefreshUserMappingsProtocol {
-  
-  /**
-   * Version 1: Initial version.
-   */
-  public static final long versionID = 1L;
+public @interface AtMostOnce {
 
-  /**
-   * Refresh user to group mappings.
-   * @throws IOException
-   */
-  @Idempotent
-  public void refreshUserToGroupsMappings() throws IOException;
-  
-  /**
-   * Refresh superuser proxy group list
-   * @throws IOException
-   */
-  @Idempotent
-  public void refreshSuperUserGroupsConfiguration() throws IOException;
 }
