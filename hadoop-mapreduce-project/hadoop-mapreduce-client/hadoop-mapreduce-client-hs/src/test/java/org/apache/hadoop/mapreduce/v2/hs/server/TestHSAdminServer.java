@@ -39,14 +39,17 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 
 public class TestHSAdminServer {
   private HSAdminServer hsAdminServer = null;
   private HSAdmin hsAdminClient = null;
   Configuration conf = null;
   private static long groupRefreshTimeoutSec = 1;
+  AggregatedLogDeletionService alds = null;
 
   public static class MockUnixGroupsMapping implements
       GroupMappingServiceProvider {
@@ -82,7 +85,9 @@ public class TestHSAdminServer {
         GroupMappingServiceProvider.class);
     conf.setLong("hadoop.security.groups.cache.secs", groupRefreshTimeoutSec);
     Groups.getUserToGroupsMappingService(conf);
-    hsAdminServer = new HSAdminServer() {
+    alds = mock(AggregatedLogDeletionService.class);
+
+    hsAdminServer = new HSAdminServer(alds) {
       @Override
       protected Configuration createConf() {
         return conf;
@@ -230,6 +235,14 @@ public class TestHSAdminServer {
       th = e;
     }
     assertTrue(th instanceof RemoteException);
+  }
+  
+  @Test
+  public void testRefreshLogRetentionSettings() throws Exception {
+	String[] args = new String[1];
+	args[0] = "-refreshLogRetentionSettings";
+	hsAdminClient.run(args);
+	verify(alds).refreshLogRetentionSettings();
   }
 
   @After

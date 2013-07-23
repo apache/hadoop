@@ -34,6 +34,18 @@ message RefreshAdminAclsResponseProto {
 }
 
 /**
+ *  refresh log retention request.
+ */
+message RefreshLogRetentionSettingsRequestProto {
+}
+
+/**
+ * Response for refresh log retention.
+ */
+message RefreshLogRetentionSettingsResponseProto {
+}
+
+/**
  * Refresh Protocols implemented by the History server
  */
 service HSAdminRefreshProtocolService {
@@ -42,4 +54,9 @@ service HSAdminRefreshProtocolService {
    */
   rpc refreshAdminAcls(RefreshAdminAclsRequestProto)
       returns(RefreshAdminAclsResponseProto);
+   /**
+   * Refresh log retention
+   */
+  rpc refreshLogRetentionSettings(RefreshLogRetentionSettingsRequestProto)
+      returns(RefreshLogRetentionSettingsResponseProto);
 }

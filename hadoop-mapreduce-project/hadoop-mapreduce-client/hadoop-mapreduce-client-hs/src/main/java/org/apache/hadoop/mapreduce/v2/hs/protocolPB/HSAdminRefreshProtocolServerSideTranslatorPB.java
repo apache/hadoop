@@ -23,6 +23,8 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshAdminAclsResponseProto;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshAdminAclsRequestProto;
+import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshLogRetentionSettingsRequestProto;
+import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshLogRetentionSettingsResponseProto;
 import org.apache.hadoop.mapreduce.v2.hs.protocol.HSAdminRefreshProtocol;
 
 import com.google.protobuf.RpcController;
@@ -35,6 +37,8 @@ public class HSAdminRefreshProtocolServerSideTranslatorPB implements
   private final HSAdminRefreshProtocol impl;
 
   private final static RefreshAdminAclsResponseProto VOID_REFRESH_ADMIN_ACLS_RESPONSE = RefreshAdminAclsResponseProto
+      .newBuilder().build();
+  private final static RefreshLogRetentionSettingsResponseProto VOID_REFRESH_LOG_RETENTION_SETTINGS_RESPONSE = RefreshLogRetentionSettingsResponseProto
       .newBuilder().build();
 
   public HSAdminRefreshProtocolServerSideTranslatorPB(
@@ -54,4 +58,15 @@ public class HSAdminRefreshProtocolServerSideTranslatorPB implements
     return VOID_REFRESH_ADMIN_ACLS_RESPONSE;
   }
 
+  @Override
+  public RefreshLogRetentionSettingsResponseProto refreshLogRetentionSettings(
+      RpcController controller, RefreshLogRetentionSettingsRequestProto request)
+      throws ServiceException {
+    try {
+      impl.refreshLogRetentionSettings();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_REFRESH_LOG_RETENTION_SETTINGS_RESPONSE;
+  }
 }

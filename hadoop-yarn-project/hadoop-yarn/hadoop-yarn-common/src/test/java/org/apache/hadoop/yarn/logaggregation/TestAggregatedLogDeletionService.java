@@ -30,6 +30,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Assert;
 
 import static org.mockito.Mockito.*;
 
@@ -129,6 +130,99 @@ public class TestAggregatedLogDeletionService {
   }
 
   @Test
+  public void testRefreshLogRetentionSettings() throws IOException {
+    long now = System.currentTimeMillis();
+    //time before 2000 sec
+    long before2000Secs = now - (2000 * 1000);
+    //time before 50 sec
+    long before50Secs = now - (50 * 1000);
+    String root = "mockfs://foo/";
+    String remoteRootLogDir = root + "tmp/logs";
+    String suffix = "logs";
+    final Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+    conf.set(YarnConfiguration.LOG_AGGREGATION_ENABLED, "true");
+    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, "1800");
+    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
+        "1");
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
+
+    Path rootPath = new Path(root);
+    FileSystem rootFs = rootPath.getFileSystem(conf);
+    FileSystem mockFs = ((FilterFileSystem) rootFs).getRawFileSystem();
+
+    Path remoteRootLogPath = new Path(remoteRootLogDir);
+
+    Path userDir = new Path(remoteRootLogPath, "me");
+    FileStatus userDirStatus = new FileStatus(0, true, 0, 0, before50Secs,
+        userDir);
+
+    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(
+        new FileStatus[] { userDirStatus });
+
+    Path userLogDir = new Path(userDir, suffix);
+
+    //Set time last modified of app1Dir directory and its files to before2000Secs 
+    Path app1Dir = new Path(userLogDir, "application_1_1");
+    FileStatus app1DirStatus = new FileStatus(0, true, 0, 0, before2000Secs,
+        app1Dir);
+    
+    //Set time last modified of app1Dir directory and its files to before50Secs 
+    Path app2Dir = new Path(userLogDir, "application_1_2");
+    FileStatus app2DirStatus = new FileStatus(0, true, 0, 0, before50Secs,
+        app2Dir);
+
+    when(mockFs.listStatus(userLogDir)).thenReturn(
+        new FileStatus[] { app1DirStatus, app2DirStatus });
+
+    Path app1Log1 = new Path(app1Dir, "host1");
+    FileStatus app1Log1Status = new FileStatus(10, false, 1, 1, before2000Secs,
+        app1Log1);
+
+    when(mockFs.listStatus(app1Dir)).thenReturn(
+        new FileStatus[] { app1Log1Status });
+
+    Path app2Log1 = new Path(app2Dir, "host1");
+    FileStatus app2Log1Status = new FileStatus(10, false, 1, 1, before50Secs,
+        app2Log1);
+
+    when(mockFs.listStatus(app2Dir)).thenReturn(
+        new FileStatus[] { app2Log1Status });
+
+    AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionService() {
+      @Override
+      protected Configuration createConf() {
+        return conf;
+      }
+    };
+    
+    deletionSvc.init(conf);
+    deletionSvc.start();
+    
+    //app1Dir would be deleted since its done above log retention period
+    verify(mockFs, timeout(10000)).delete(app1Dir, true);
+    //app2Dir is not expected to be deleted since its below the threshold
+    verify(mockFs, timeout(3000).times(0)).delete(app2Dir, true);
+
+    //Now,lets change the confs
+    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, "50");
+    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
+        "2");
+    //We have not called refreshLogSettings,hence don't expect to see the changed conf values
+    Assert.assertTrue(2000l != deletionSvc.getCheckIntervalMsecs());
+    
+    //refresh the log settings
+    deletionSvc.refreshLogRetentionSettings();
+
+    //Check interval time should reflect the new value
+    Assert.assertTrue(2000l == deletionSvc.getCheckIntervalMsecs());
+    //app2Dir should be deleted since it falls above the threshold
+    verify(mockFs, timeout(10000)).delete(app2Dir, true);
+    deletionSvc.stop();
+  }
+  
+  @Test
   public void testCheckInterval() throws Exception {
     long RETENTION_SECS = 10 * 24 * 3600;
     long now = System.currentTimeMillis();
@@ -176,7 +270,7 @@ public class TestAggregatedLogDeletionService {
         new AggregatedLogDeletionService();
     deletionSvc.init(conf);
     deletionSvc.start();
-
+ 
     verify(mockFs, timeout(10000).atLeast(4)).listStatus(any(Path.class));
     verify(mockFs, never()).delete(app1Dir, true);
 
