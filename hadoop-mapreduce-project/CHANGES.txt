@@ -30,6 +30,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5404. HSAdminServer does not use ephemeral ports in minicluster
     mode (Ted Yu via jlowe)
 
+    MAPREDUCE-5317. Stale files left behind for failed jobs (Ravi Prakash via
+    jlowe)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1096,6 +1099,9 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5380. Invalid mapred command should return non-zero exit code
     (Stephen Chu via jlowe)
+
+    MAPREDUCE-5317. Stale files left behind for failed jobs (Ravi Prakash via
+    jlowe)
 
 Release 0.23.9 - 2013-07-08
 
