@@ -20,6 +20,7 @@ package org.apache.hadoop.ha;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -106,6 +107,7 @@ public interface HAServiceProtocol {
    * @throws IOException
    *           if other errors happen
    */
+  @Idempotent
   public void monitorHealth() throws HealthCheckFailedException,
                                      AccessControlException,
                                      IOException;
@@ -121,6 +123,7 @@ public interface HAServiceProtocol {
    * @throws IOException
    *           if other errors happen
    */
+  @Idempotent
   public void transitionToActive(StateChangeRequestInfo reqInfo)
                                    throws ServiceFailedException,
                                           AccessControlException,
@@ -137,6 +140,7 @@ public interface HAServiceProtocol {
    * @throws IOException
    *           if other errors happen
    */
+  @Idempotent
   public void transitionToStandby(StateChangeRequestInfo reqInfo)
                                     throws ServiceFailedException,
                                            AccessControlException,
@@ -152,6 +156,7 @@ public interface HAServiceProtocol {
    * @throws IOException
    *           if other errors happen
    */
+  @Idempotent
   public HAServiceStatus getServiceStatus() throws AccessControlException,
                                                    IOException;
 }
