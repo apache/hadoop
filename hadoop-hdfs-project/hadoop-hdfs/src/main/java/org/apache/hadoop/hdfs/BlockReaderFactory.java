@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.unix.DomainSocket;
@@ -85,7 +86,8 @@ public class BlockReaderFactory {
                                      DomainSocketFactory domSockFactory,
                                      PeerCache peerCache,
                                      FileInputStreamCache fisCache,
-                                     boolean allowShortCircuitLocalReads)
+                                     boolean allowShortCircuitLocalReads,
+                                     CachingStrategy cachingStrategy)
   throws IOException {
     peer.setReadTimeout(conf.socketTimeout);
     peer.setWriteTimeout(HdfsServerConstants.WRITE_TIMEOUT);
@@ -122,12 +124,14 @@ public class BlockReaderFactory {
       @SuppressWarnings("deprecation")
       RemoteBlockReader reader = RemoteBlockReader.newBlockReader(file,
           block, blockToken, startOffset, len, conf.ioBufferSize,
-          verifyChecksum, clientName, peer, datanodeID, peerCache);
+          verifyChecksum, clientName, peer, datanodeID, peerCache,
+          cachingStrategy);
       return reader;
     } else {
       return RemoteBlockReader2.newBlockReader(
           file, block, blockToken, startOffset, len,
-          verifyChecksum, clientName, peer, datanodeID, peerCache);
+          verifyChecksum, clientName, peer, datanodeID, peerCache,
+          cachingStrategy);
     }
   }
 

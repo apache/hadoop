@@ -27,6 +27,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4278. Log an ERROR when DFS_BLOCK_ACCESS_TOKEN_ENABLE config is
     disabled but security is turned on. (Kousuke Saruta via harsh)
 
+    HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
+    (Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
