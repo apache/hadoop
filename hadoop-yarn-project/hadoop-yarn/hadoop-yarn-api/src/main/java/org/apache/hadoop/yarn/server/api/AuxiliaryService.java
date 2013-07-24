@@ -24,8 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
@@ -71,8 +71,8 @@ public abstract class AuxiliaryService extends AbstractService {
    * 
    * <p>
    * The information is passed along to applications via
-   * {@link StartContainerResponse#getAllServicesMetaData()} that is returned by
-   * {@link ContainerManagementProtocol#startContainer(StartContainerRequest)}
+   * {@link StartContainersResponse#getAllServicesMetaData()} that is returned by
+   * {@link ContainerManagementProtocol#startContainers(StartContainersRequest)}
    * </p>
    * 
    * @return meta-data for this service that should be made available to

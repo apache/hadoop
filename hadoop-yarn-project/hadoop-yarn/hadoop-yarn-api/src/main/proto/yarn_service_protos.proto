@@ -182,3 +182,37 @@ message GetContainerStatusRequestProto {
 message GetContainerStatusResponseProto {
   optional ContainerStatusProto status = 1;
 }
+
+//// bulk API records
+message StartContainersRequestProto {
+  repeated StartContainerRequestProto start_container_request = 1;
+}
+
+message ContainerExceptionMapProto {
+  optional ContainerIdProto container_id = 1;
+  optional SerializedExceptionProto exception = 2;
+}
+
+message StartContainersResponseProto {
+  repeated StringBytesMapProto services_meta_data = 1;
+  repeated ContainerIdProto succeeded_requests = 2;
+  repeated ContainerExceptionMapProto failed_requests = 3;
+}
+
+message StopContainersRequestProto {
+  repeated ContainerIdProto container_id = 1;
+}
+
+message StopContainersResponseProto {
+  repeated ContainerIdProto succeeded_requests = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
+message GetContainerStatusesRequestProto {
+  repeated ContainerIdProto container_id = 1;
+}
+
+message GetContainerStatusesResponseProto {
+  repeated ContainerStatusProto status = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}

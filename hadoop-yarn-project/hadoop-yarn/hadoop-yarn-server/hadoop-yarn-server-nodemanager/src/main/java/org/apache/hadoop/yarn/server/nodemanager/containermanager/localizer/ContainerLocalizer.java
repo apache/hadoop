@@ -53,6 +53,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -288,11 +289,10 @@ public class ContainerLocalizer {
           stat.setStatus(ResourceStatusType.FETCH_SUCCESS);
         } catch (ExecutionException e) {
           stat.setStatus(ResourceStatusType.FETCH_FAILURE);
-          stat.setException(
-              YarnServerBuilderUtils.newSerializedException(e.getCause()));
+          stat.setException(SerializedException.newInstance(e.getCause()));
         } catch (CancellationException e) {
           stat.setStatus(ResourceStatusType.FETCH_FAILURE);
-          stat.setException(YarnServerBuilderUtils.newSerializedException(e));
+          stat.setException(SerializedException.newInstance(e));
         }
         // TODO shouldn't remove until ACK
         i.remove();

@@ -16,14 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.api.records.impl.pb;
+package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 
+import org.apache.hadoop.yarn.api.records.SerializedException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnProtos.SerializedExceptionProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.SerializedExceptionProtoOrBuilder;
-import org.apache.hadoop.yarn.server.api.records.SerializedException;
 
 public class SerializedExceptionPBImpl extends SerializedException {
 
@@ -58,7 +63,6 @@ public class SerializedExceptionPBImpl extends SerializedException {
     if (t.getCause() == null) {
     } else {
       builder.setCause(new SerializedExceptionPBImpl(t.getCause()).getProto());
-      builder.setClassName(t.getClass().getCanonicalName());
     }
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
@@ -68,12 +72,39 @@ public class SerializedExceptionPBImpl extends SerializedException {
       builder.setTrace(sw.toString());
     if (t.getMessage() != null)
       builder.setMessage(t.getMessage());
+    builder.setClassName(t.getClass().getCanonicalName());
   }
 
   public void init(String message, Throwable t) {
     init(t);
     if (message != null)
       builder.setMessage(message);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public Throwable deSerialize() {
+
+    SerializedException cause = getCause();
+    SerializedExceptionProtoOrBuilder p = viaProto ? proto : builder;
+    Class<?> realClass = null;
+    try {
+      realClass = Class.forName(p.getClassName());
+    } catch (ClassNotFoundException e) {
+      throw new YarnRuntimeException(e);
+    }
+    Class classType = null;
+    if (YarnException.class.isAssignableFrom(realClass)) {
+      classType = YarnException.class;
+    } else if (IOException.class.isAssignableFrom(realClass)) {
+      classType = IOException.class;
+    } else if (RuntimeException.class.isAssignableFrom(realClass)) {
+      classType = RuntimeException.class;
+    } else {
+      classType = Exception.class;
+    }
+    return instantiateException(realClass.asSubclass(classType), getMessage(),
+      cause == null ? null : cause.deSerialize());
   }
 
   @Override
@@ -109,5 +140,30 @@ public class SerializedExceptionPBImpl extends SerializedException {
       builder = SerializedExceptionProto.newBuilder(proto);
     }
     viaProto = false;
+  }
+
+  private static <T extends Throwable> T instantiateException(
+      Class<? extends T> cls, String message, Throwable cause) {
+    Constructor<? extends T> cn;
+    T ex = null;
+    try {
+      cn = cls.getConstructor(String.class);
+      cn.setAccessible(true);
+      ex = cn.newInstance(message);
+      ex.initCause(cause);
+    } catch (SecurityException e) {
+      throw new YarnRuntimeException(e);
+    } catch (NoSuchMethodException e) {
+      throw new YarnRuntimeException(e);
+    } catch (IllegalArgumentException e) {
+      throw new YarnRuntimeException(e);
+    } catch (InstantiationException e) {
+      throw new YarnRuntimeException(e);
+    } catch (IllegalAccessException e) {
+      throw new YarnRuntimeException(e);
+    } catch (InvocationTargetException e) {
+      throw new YarnRuntimeException(e);
+    }
+    return ex;
   }
 }

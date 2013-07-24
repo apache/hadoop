@@ -36,14 +36,14 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -98,23 +98,23 @@ public class TestAMAuthorization {
     }
 
     @Override
-    public StartContainerResponse
-        startContainer(StartContainerRequest request)
+    public StartContainersResponse
+        startContainers(StartContainersRequest request)
             throws YarnException {
-      containerTokens = request.getContainerLaunchContext().getTokens();
-      return null;
+      containerTokens = request.getStartContainerRequests().get(0).getContainerLaunchContext().getTokens();
+      return StartContainersResponse.newInstance(null, null, null);
     }
 
     @Override
-    public StopContainerResponse stopContainer(StopContainerRequest request)
+    public StopContainersResponse stopContainers(StopContainersRequest request)
         throws YarnException {
-      return null;
+      return StopContainersResponse.newInstance(null, null);
     }
 
     @Override
-    public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnException {
-      return null;
+    public GetContainerStatusesResponse getContainerStatuses(
+        GetContainerStatusesRequest request) throws YarnException {
+      return GetContainerStatusesResponse.newInstance(null, null);
     }
 
     public Credentials getContainerCredentials() throws IOException {

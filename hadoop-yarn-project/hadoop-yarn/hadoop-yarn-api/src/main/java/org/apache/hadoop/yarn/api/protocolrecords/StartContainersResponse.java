@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.protocolrecords;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -26,28 +27,70 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The response sent by the <code>NodeManager</code> to the 
- * <code>ApplicationMaster</code> when asked to <em>start</em> an
- * allocated container.</p>
+ * <p>
+ * The response sent by the <code>NodeManager</code> to the
+ * <code>ApplicationMaster</code> when asked to <em>start</em> an allocated
+ * container.
+ * </p>
  * 
- * @see ContainerManagementProtocol#startContainer(StartContainerRequest)
+ * @see ContainerManagementProtocol#startContainers(StartContainersRequest)
  */
 @Public
 @Stable
-public abstract class StartContainerResponse {
+public abstract class StartContainersResponse {
 
   @Private
   @Unstable
-  public static StartContainerResponse newInstance(
-      Map<String, ByteBuffer> servicesMetaData) {
-    StartContainerResponse response =
-        Records.newRecord(StartContainerResponse.class);
+  public static StartContainersResponse newInstance(
+      Map<String, ByteBuffer> servicesMetaData,
+      List<ContainerId> succeededContainers,
+      Map<ContainerId, SerializedException> failedContainers) {
+    StartContainersResponse response =
+        Records.newRecord(StartContainersResponse.class);
     response.setAllServicesMetaData(servicesMetaData);
+    response.setSuccessfullyStartedContainers(succeededContainers);
+    response.setFailedRequests(failedContainers);
     return response;
   }
+
+  /**
+   * Get the list of <code>ContainerId</code> s of the containers that are
+   * started successfully.
+   * 
+   * @return the list of <code>ContainerId</code> s of the containers that are
+   *         started successfully.
+   * @see ContainerManagementProtocol#startContainers(StartContainersRequest)
+   */
+  @Public
+  @Stable
+  public abstract List<ContainerId> getSuccessfullyStartedContainers();
+
+  @Private
+  @Unstable
+  public abstract void setSuccessfullyStartedContainers(
+      List<ContainerId> succeededContainers);
+
+  /**
+   * Get the containerId-to-exception map in which the exception indicates error
+   * from per container for failed requests
+   */
+  @Public
+  @Stable
+  public abstract Map<ContainerId, SerializedException> getFailedRequests();
+
+  /**
+   * Set the containerId-to-exception map in which the exception indicates error
+   * from per container for failed requests
+   */
+  @Private
+  @Unstable
+  public abstract void setFailedRequests(
+      Map<ContainerId, SerializedException> failedContainers);
 
   /**
    * <p>
@@ -76,8 +119,10 @@ public abstract class StartContainerResponse {
    * Set to the list of auxiliary services which have been started on the
    * <code>NodeManager</code>. This is done only once when the
    * <code>NodeManager</code> starts up
-   * @param allServicesMetaData A map from auxiliary service names to the opaque
-   * blob <code>ByteBuffer</code> for that auxiliary service
+   * 
+   * @param allServicesMetaData
+   *          A map from auxiliary service names to the opaque blob
+   *          <code>ByteBuffer</code> for that auxiliary service
    */
   @Private
   @Unstable

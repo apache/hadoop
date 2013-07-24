@@ -587,6 +587,9 @@ Release 2.1.0-beta - 2013-07-02
     MAPREDUCE-5325. MR changes related to YARN-727. ClientRMProtocol.getAllApplications
     should accept ApplicationType as a parameter. (Xuan Gong via hitesh)
 
+    MAPREDUCE-5412. Update MR app to use multiple containers API of
+    ContainerManager after YARN-926. (Jian He via vinodkv)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
