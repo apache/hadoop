@@ -1336,7 +1336,7 @@ public class BlockManager {
           // Move the block-replication into a "pending" state.
           // The reason we use 'pending' is so we can retry
           // replications that fail after an appropriate amount of time.
-          pendingReplications.increment(block, targets.length);
+          pendingReplications.increment(block, targets);
           if(blockLog.isDebugEnabled()) {
             blockLog.debug(
                 "BLOCK* block " + block
@@ -2622,6 +2622,8 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   void addBlock(DatanodeDescriptor node, Block block, String delHint)
       throws IOException {
     // decrement number of blocks scheduled to this datanode.
+    // for a retry request (of DatanodeProtocol#blockReceivedAndDeleted with 
+    // RECEIVED_BLOCK), we currently also decrease the approximate number. 
     node.decBlocksScheduled();
 
     // get the deletion hint node
@@ -2637,7 +2639,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     //
     // Modify the blocks->datanode map and node's map.
     //
-    pendingReplications.decrement(block);
+    pendingReplications.decrement(block, node);
     processAndHandleReportedBlock(node, block, ReplicaState.FINALIZED,
         delHintNode);
   }

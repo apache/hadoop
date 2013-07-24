@@ -982,7 +982,8 @@ public class DataNode extends Configured
    * @return BP registration object
    * @throws IOException
    */
-  DatanodeRegistration getDNRegistrationForBP(String bpid) 
+  @VisibleForTesting
+  public DatanodeRegistration getDNRegistrationForBP(String bpid) 
   throws IOException {
     BPOfferService bpos = blockPoolManager.get(bpid);
     if(bpos==null || bpos.bpRegistration==null) {
