@@ -217,7 +217,7 @@ extends AMRMClientAsync<T> {
         // synchronization ensures we don't send heartbeats after unregistering
         synchronized (unregisterHeartbeatLock) {
           if (!keepRunning) {
-            break;
+            return;
           }
             
           try {
@@ -227,13 +227,13 @@ extends AMRMClientAsync<T> {
             savedException = ex;
             // interrupt handler thread in case it waiting on the queue
             handlerThread.interrupt();
-            break;
+            return;
           } catch (IOException e) {
             LOG.error("IO exception on heartbeat", e);
             savedException = e;
             // interrupt handler thread in case it waiting on the queue
             handlerThread.interrupt();
-            break;
+            return;
           }
         }
         if (response != null) {
@@ -266,51 +266,60 @@ extends AMRMClientAsync<T> {
     }
     
     public void run() {
-      while (keepRunning) {
-        AllocateResponse response;
+      while (true) {
+        if (!keepRunning) {
+          return;
+        }
         try {
+          AllocateResponse response;
           if(savedException != null) {
             LOG.error("Stopping callback due to: ", savedException);
             handler.onError(savedException);
-            break;
-          }
-          response = responseQueue.take();
-        } catch (InterruptedException ex) {
-          LOG.info("Interrupted while waiting for queue", ex);
-          continue;
-        }
-
-        if (response.getAMCommand() != null) {
-          switch(response.getAMCommand()) {
-          case AM_RESYNC:
-          case AM_SHUTDOWN:
-            handler.onShutdownRequest();
-            LOG.info("Shutdown requested. Stopping callback.");
             return;
-          default:
-            String msg =
-                  "Unhandled value of AMCommand: " + response.getAMCommand();
-            LOG.error(msg);
-            throw new YarnRuntimeException(msg);
           }
-        }
-        List<NodeReport> updatedNodes = response.getUpdatedNodes();
-        if (!updatedNodes.isEmpty()) {
-          handler.onNodesUpdated(updatedNodes);
-        }
-        
-        List<ContainerStatus> completed =
-            response.getCompletedContainersStatuses();
-        if (!completed.isEmpty()) {
-          handler.onContainersCompleted(completed);
-        }
+          try {
+            response = responseQueue.take();
+          } catch (InterruptedException ex) {
+            LOG.info("Interrupted while waiting for queue", ex);
+            continue;
+          }
 
-        List<Container> allocated = response.getAllocatedContainers();
-        if (!allocated.isEmpty()) {
-          handler.onContainersAllocated(allocated);
+          if (response.getAMCommand() != null) {
+            switch(response.getAMCommand()) {
+            case AM_RESYNC:
+            case AM_SHUTDOWN:
+              handler.onShutdownRequest();
+              LOG.info("Shutdown requested. Stopping callback.");
+              return;
+            default:
+              String msg =
+                    "Unhandled value of RM AMCommand: " + response.getAMCommand();
+              LOG.error(msg);
+              throw new YarnRuntimeException(msg);
+            }
+          }
+          List<NodeReport> updatedNodes = response.getUpdatedNodes();
+          if (!updatedNodes.isEmpty()) {
+            handler.onNodesUpdated(updatedNodes);
+          }
+
+          List<ContainerStatus> completed =
+              response.getCompletedContainersStatuses();
+          if (!completed.isEmpty()) {
+            handler.onContainersCompleted(completed);
+          }
+
+          List<Container> allocated = response.getAllocatedContainers();
+          if (!allocated.isEmpty()) {
+            handler.onContainersAllocated(allocated);
+          }
+
+          progress = handler.getProgress();
+        } catch (Throwable ex) {
+          handler.onError(ex);
+          // re-throw exception to end the thread
+          throw new YarnRuntimeException(ex);
         }
-        
-        progress = handler.getProgress();
       }
     }
   }

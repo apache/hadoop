@@ -649,8 +649,9 @@ public class ApplicationMaster {
     }
 
     @Override
-    public void onError(Exception e) {
+    public void onError(Throwable e) {
       done = true;
+      resourceManager.stop();
     }
   }
 

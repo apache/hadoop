@@ -220,6 +220,13 @@ extends AbstractService {
     
     public float getProgress();
     
-    public void onError(Exception e);
+    /**
+     * Called when error comes from RM communications as well as from errors in
+     * the callback itself from the app. Calling
+     * stop() is the recommended action.
+     *
+     * @param e
+     */
+    public void onError(Throwable e);
   }
 }
