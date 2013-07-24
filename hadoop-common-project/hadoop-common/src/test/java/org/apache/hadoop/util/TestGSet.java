@@ -169,9 +169,8 @@ public class TestGSet {
   }
 
   /**
-   * A long test,
-   * which may take ~5 hours,
-   * with various data sets and parameters.
+   * A long running test with various data sets and parameters.
+   * It may take ~5 hours, 
    * If you are changing the implementation,
    * please un-comment the following line in order to run the test.
    */
@@ -327,8 +326,6 @@ public class TestGSet {
       } else {
         Assert.assertEquals(e.id, gset.remove(key).id);
       }
-
-      check();
       return e;
     }
     @Override
@@ -391,7 +388,9 @@ public class TestGSet {
 
     @Override
     public void clear() {
+      expected.clear();
       gset.clear();
+      Assert.assertEquals(0, size());
     }
   }
 
