@@ -21,11 +21,9 @@ import java.io.PrintStream;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.HadoopIllegalArgumentException;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -59,7 +57,6 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
     public LinkedElement getNext();
   }
 
-  public static final Log LOG = LogFactory.getLog(GSet.class);
   static final int MAX_ARRAY_LENGTH = 1 << 30; //prevent int overflow problem
   static final int MIN_ARRAY_LENGTH = 1;
 
