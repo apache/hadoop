@@ -23,22 +23,22 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetContainerStatusRequestPBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetContainerStatusResponsePBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestPBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerResponsePBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainerRequestPBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainerResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetContainerStatusesRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetContainerStatusesResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainersRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainersResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainersRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainersResponsePBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusResponseProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerResponseProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainerRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainerResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusesRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusesResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainersRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainersResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainersRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainersResponseProto;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -53,12 +53,12 @@ public class ContainerManagementProtocolPBServiceImpl implements ContainerManage
   }
 
   @Override
-  public GetContainerStatusResponseProto getContainerStatus(RpcController arg0,
-      GetContainerStatusRequestProto proto) throws ServiceException {
-    GetContainerStatusRequestPBImpl request = new GetContainerStatusRequestPBImpl(proto);
+  public StartContainersResponseProto startContainers(RpcController arg0,
+      StartContainersRequestProto proto) throws ServiceException {
+    StartContainersRequestPBImpl request = new StartContainersRequestPBImpl(proto);
     try {
-      GetContainerStatusResponse response = real.getContainerStatus(request);
-      return ((GetContainerStatusResponsePBImpl)response).getProto();
+      StartContainersResponse response = real.startContainers(request);
+      return ((StartContainersResponsePBImpl)response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
@@ -67,12 +67,12 @@ public class ContainerManagementProtocolPBServiceImpl implements ContainerManage
   }
 
   @Override
-  public StartContainerResponseProto startContainer(RpcController arg0,
-      StartContainerRequestProto proto) throws ServiceException {
-    StartContainerRequestPBImpl request = new StartContainerRequestPBImpl(proto);
+  public StopContainersResponseProto stopContainers(RpcController arg0,
+      StopContainersRequestProto proto) throws ServiceException {
+    StopContainersRequestPBImpl request = new StopContainersRequestPBImpl(proto);
     try {
-      StartContainerResponse response = real.startContainer(request);
-      return ((StartContainerResponsePBImpl)response).getProto();
+      StopContainersResponse response = real.stopContainers(request);
+      return ((StopContainersResponsePBImpl)response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
@@ -81,17 +81,17 @@ public class ContainerManagementProtocolPBServiceImpl implements ContainerManage
   }
 
   @Override
-  public StopContainerResponseProto stopContainer(RpcController arg0,
-      StopContainerRequestProto proto) throws ServiceException {
-    StopContainerRequestPBImpl request = new StopContainerRequestPBImpl(proto);
+  public GetContainerStatusesResponseProto getContainerStatuses(
+      RpcController arg0, GetContainerStatusesRequestProto proto)
+      throws ServiceException {
+    GetContainerStatusesRequestPBImpl request = new GetContainerStatusesRequestPBImpl(proto);
     try {
-      StopContainerResponse response = real.stopContainer(request);
-      return ((StopContainerResponsePBImpl)response).getProto();
+      GetContainerStatusesResponse response = real.getContainerStatuses(request);
+      return ((GetContainerStatusesResponsePBImpl)response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
-
 }

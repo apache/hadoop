@@ -39,8 +39,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -129,13 +130,17 @@ public class TestNodeManagerReboot {
     List<String> commands = new ArrayList<String>();
     containerLaunchContext.setCommands(commands);
 
-    final StartContainerRequest startRequest =
-        Records.newRecord(StartContainerRequest.class);
-    startRequest.setContainerLaunchContext(containerLaunchContext);
     NodeId nodeId = nm.getNMContext().getNodeId();
-    startRequest.setContainerToken(TestContainerManager.createContainerToken(
-      cId, 0, nodeId, destinationFile, nm.getNMContext()
-        .getContainerTokenSecretManager()));
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(containerLaunchContext,
+          TestContainerManager.createContainerToken(
+            cId, 0, nodeId, destinationFile, nm.getNMContext()
+              .getContainerTokenSecretManager()));
+    List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+    list.add(scRequest);
+    final StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+
     final UserGroupInformation currentUser =
         UserGroupInformation.createRemoteUser(cId.getApplicationAttemptId()
           .toString());
@@ -145,16 +150,17 @@ public class TestNodeManagerReboot {
     currentUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws YarnException, IOException {
-        nm.getContainerManager().startContainer(startRequest);
+        nm.getContainerManager().startContainers(allRequests);
         return null;
       }
     });
 
-    GetContainerStatusRequest request =
-        Records.newRecord(GetContainerStatusRequest.class);
-    request.setContainerId(cId);
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(cId);
+    GetContainerStatusesRequest request =
+        GetContainerStatusesRequest.newInstance(containerIds);
     Container container =
-        nm.getNMContext().getContainers().get(request.getContainerId());
+        nm.getNMContext().getContainers().get(request.getContainerIds().get(0));
 
     final int MAX_TRIES = 20;
     int numTries = 0;

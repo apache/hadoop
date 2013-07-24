@@ -18,37 +18,41 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusesRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusesRequestProtoOrBuilder;
 
 @Private
 @Unstable
-public class GetContainerStatusRequestPBImpl extends GetContainerStatusRequest {
-  GetContainerStatusRequestProto proto = GetContainerStatusRequestProto.getDefaultInstance();
-  GetContainerStatusRequestProto.Builder builder = null;
+public class GetContainerStatusesRequestPBImpl extends
+    GetContainerStatusesRequest {
+  GetContainerStatusesRequestProto proto = GetContainerStatusesRequestProto
+    .getDefaultInstance();
+  GetContainerStatusesRequestProto.Builder builder = null;
   boolean viaProto = false;
-  
-  private ContainerId containerId = null;
-  
-  
-  public GetContainerStatusRequestPBImpl() {
-    builder = GetContainerStatusRequestProto.newBuilder();
+
+  private List<ContainerId> containerIds = null;
+
+  public GetContainerStatusesRequestPBImpl() {
+    builder = GetContainerStatusesRequestProto.newBuilder();
   }
 
-  public GetContainerStatusRequestPBImpl(GetContainerStatusRequestProto proto) {
+  public GetContainerStatusesRequestPBImpl(
+      GetContainerStatusesRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
-  
-  public GetContainerStatusRequestProto getProto() {
-      mergeLocalToProto();
+
+  public GetContainerStatusesRequestProto getProto() {
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -71,17 +75,18 @@ public class GetContainerStatusRequestPBImpl extends GetContainerStatusRequest {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return getProto().toString().replaceAll("\\n", ", ")
+      .replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToBuilder() {
-    if (this.containerId != null) {
-      builder.setContainerId(convertToProtoFormat(this.containerId));
+    if (this.containerIds != null) {
+      addLocalContainerIdsToProto();
     }
   }
 
   private void mergeLocalToProto() {
-    if (viaProto) 
+    if (viaProto)
       maybeInitBuilder();
     mergeLocalToBuilder();
     proto = builder.build();
@@ -90,31 +95,47 @@ public class GetContainerStatusRequestPBImpl extends GetContainerStatusRequest {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = GetContainerStatusRequestProto.newBuilder(proto);
+      builder = GetContainerStatusesRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }
-    
-  
-  @Override
-  public ContainerId getContainerId() {
-    GetContainerStatusRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.containerId != null) {
-      return this.containerId;
+
+  private void addLocalContainerIdsToProto() {
+    maybeInitBuilder();
+    builder.clearContainerId();
+    if (this.containerIds == null)
+      return;
+    List<ContainerIdProto> protoList = new ArrayList<ContainerIdProto>();
+    for (ContainerId id : containerIds) {
+      protoList.add(convertToProtoFormat(id));
     }
-    if (!p.hasContainerId()) {
-      return null;
+    builder.addAllContainerId(protoList);
+  }
+
+  private void initLocalContainerIds() {
+    if (this.containerIds != null) {
+      return;
     }
-    this.containerId = convertFromProtoFormat(p.getContainerId());
-    return this.containerId;
+    GetContainerStatusesRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerIdProto> containerIds = p.getContainerIdList();
+    this.containerIds = new ArrayList<ContainerId>();
+    for (ContainerIdProto id : containerIds) {
+      this.containerIds.add(convertFromProtoFormat(id));
+    }
   }
 
   @Override
-  public void setContainerId(ContainerId containerId) {
+  public List<ContainerId> getContainerIds() {
+    initLocalContainerIds();
+    return this.containerIds;
+  }
+
+  @Override
+  public void setContainerIds(List<ContainerId> containerIds) {
     maybeInitBuilder();
-    if (containerId == null) 
+    if (containerIds == null)
       builder.clearContainerId();
-    this.containerId = containerId;
+    this.containerIds = containerIds;
   }
 
   private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
@@ -122,9 +143,7 @@ public class GetContainerStatusRequestPBImpl extends GetContainerStatusRequest {
   }
 
   private ContainerIdProto convertToProtoFormat(ContainerId t) {
-    return ((ContainerIdPBImpl)t).getProto();
+    return ((ContainerIdPBImpl) t).getProto();
   }
 
-
-
-}  
+}

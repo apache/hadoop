@@ -22,17 +22,17 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.exceptions.InvalidContainerException;
 import org.apache.hadoop.yarn.exceptions.NMNotYetReadyException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
@@ -50,10 +50,12 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 @Public
 @Stable
 public interface ContainerManagementProtocol {
+
   /**
    * <p>
-   * The <code>ApplicationMaster</code> requests a <code>NodeManager</code> to
-   * <em>start</em> a {@link Container} allocated to it using this interface.
+   * The <code>ApplicationMaster</code> provides a list of
+   * {@link StartContainerRequest}s to a <code>NodeManager</code> to
+   * <em>start</em> {@link Container}s allocated to it using this interface.
    * </p>
    * 
    * <p>
@@ -65,82 +67,107 @@ public interface ContainerManagementProtocol {
    * </p>
    * 
    * <p>
-   * Currently the <code>NodeManager</code> sends an immediate, empty response
-   * via {@link StartContainerResponse} to signify acceptance of the request and
-   * throws an exception in case of errors. The <code>ApplicationMaster</code>
-   * can use {@link #getContainerStatus(GetContainerStatusRequest)} to get
-   * updated status of the to-be-launched or launched container.
+   * The <code>NodeManager</code> sends a response via
+   * {@link StartContainersResponse} which includes a list of
+   * {@link Container}s of successfully launched {@link Container}s, a
+   * containerId-to-exception map for each failed {@link StartContainerRequest} in
+   * which the exception indicates errors from per container and a
+   * allServicesMetaData map between the names of auxiliary services and their
+   * corresponding meta-data. Note: None-container-specific exceptions will
+   * still be thrown by the API method itself.
+   * </p>
+   * <p>
+   * The <code>ApplicationMaster</code> can use
+   * {@link #getContainerStatuses(GetContainerStatusesRequest)} to get updated
+   * statuses of the to-be-launched or launched containers.
    * </p>
    * 
    * @param request
-   *          request to start a container
-   * @return empty response to indicate acceptance of the request or an
-   *         exception
+   *          request to start a list of containers
+   * @return response including conatinerIds of all successfully launched
+   *         containers, a containerId-to-exception map for failed requests and
+   *         a allServicesMetaData map.
    * @throws YarnException
    * @throws IOException
    * @throws NMNotYetReadyException
    *           This exception is thrown when NM starts from scratch but has not
    *           yet connected with RM.
-   * @throws InvalidContainerException
-   *           This exception is thrown when NM is rejecting start-container
-   *           requests for containers allocated by a previous instance of the
-   *           RM
    */
   @Public
   @Stable
-  StartContainerResponse startContainer(StartContainerRequest request)
+  StartContainersResponse startContainers(StartContainersRequest request)
       throws YarnException, IOException;
 
   /**
-   * <p>The <code>ApplicationMaster</code> requests a <code>NodeManager</code>
-   * to <em>stop</em> a {@link Container} allocated to it using this interface.
+   * <p>
+   * The <code>ApplicationMaster</code> requests a <code>NodeManager</code> to
+   * <em>stop</em> a list of {@link Container}s allocated to it using this
+   * interface.
    * </p>
    * 
-   * <p>The <code>ApplicationMaster</code> sends a
-   * {@link StopContainerRequest} which includes the {@link ContainerId} of the
-   * container to be stopped.</p>
+   * <p>
+   * The <code>ApplicationMaster</code> sends a {@link StopContainersRequest}
+   * which includes the {@link ContainerId}s of the containers to be stopped.
+   * </p>
    * 
-   * <p>Currently the <code>NodeManager</code> sends an immediate, empty 
-   * response via {@link StopContainerResponse} to signify acceptance of the
-   * request and throws an exception in case of errors. The 
-   * <code>ApplicationMaster</code> can use 
-   * {@link #getContainerStatus(GetContainerStatusRequest)} to get updated 
-   * status of the container.</p>
+   * <p>
+   * The <code>NodeManager</code> sends a response via
+   * {@link StopContainersResponse} which includes a list of {@link ContainerId}
+   * s of successfully stopped containers, a containerId-to-exception map for
+   * each failed request in which the exception indicates errors from per
+   * container. Note: None-container-specific exceptions will still be thrown by
+   * the API method itself. <code>ApplicationMaster</code> can use
+   * {@link #getContainerStatuses(GetContainerStatusesRequest)} to get updated
+   * statuses of the containers.
+   * </p>
    * 
-   * @param request request to stop a container
-   * @return empty response to indicate acceptance of the request 
-   *         or an exception
+   * @param request
+   *          request to stop a list of containers
+   * @return response which includes a list of containerIds of successfully
+   *         stopped containers, a containerId-to-exception map for failed
+   *         requests.
    * @throws YarnException
    * @throws IOException
    */
   @Public
   @Stable
-  StopContainerResponse stopContainer(StopContainerRequest request)
+  StopContainersResponse stopContainers(StopContainersRequest request)
       throws YarnException, IOException;
 
   /**
-   * <p>The api used by the <code>ApplicationMaster</code> to request for 
-   * current status of a <code>Container</code> from the 
-   * <code>NodeManager</code>.</p>
+   * <p>
+   * The API used by the <code>ApplicationMaster</code> to request for current
+   * statuses of <code>Container</code>s from the <code>NodeManager</code>.
+   * </p>
    * 
-   * <p>The <code>ApplicationMaster</code> sends a
-   * {@link GetContainerStatusRequest} which includes the {@link ContainerId} of
-   * the container whose status is needed.</p>
-   *
-   *<p>The <code>NodeManager</code> responds with 
-   *{@link GetContainerStatusResponse} which includes the 
-   *{@link ContainerStatus} of the container.</p>
-   *
-   * @param request request to get <code>ContainerStatus</code> of a container
-   *                with the specified <code>ContainerId</code>
-   * @return response containing the <code>ContainerStatus</code> of the
-   * container
+   * <p>
+   * The <code>ApplicationMaster</code> sends a
+   * {@link GetContainerStatusesRequest} which includes the {@link ContainerId}s
+   * of all containers whose statuses are needed.
+   * </p>
+   * 
+   * <p>
+   * The <code>NodeManager</code> responds with
+   * {@link GetContainerStatusesResponse} which includes a list of
+   * {@link ContainerStatus} of the successfully queried containers and a
+   * containerId-to-exception map for each failed request in which the exception
+   * indicates errors from per container. Note: None-container-specific
+   * exceptions will still be thrown by the API method itself.
+   * </p>
+   * 
+   * @param request
+   *          request to get <code>ContainerStatus</code>es of containers with
+   *          the specified <code>ContainerId</code>s
+   * @return response containing the list of <code>ContainerStatus</code> of the
+   *         successfully queried containers and a containerId-to-exception map
+   *         for failed requests.
+   * 
    * @throws YarnException
    * @throws IOException
    */
   @Public
   @Stable
-  GetContainerStatusResponse getContainerStatus(
-      GetContainerStatusRequest request) throws YarnException,
+  GetContainerStatusesResponse getContainerStatuses(
+      GetContainerStatusesRequest request) throws YarnException,
       IOException;
 }

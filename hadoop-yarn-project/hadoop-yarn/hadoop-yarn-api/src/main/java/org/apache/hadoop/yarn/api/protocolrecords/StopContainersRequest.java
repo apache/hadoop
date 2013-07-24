@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
@@ -26,36 +28,36 @@ import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request sent by the <code>ApplicationMaster</code> to the
- * <code>NodeManager</code> to <em>stop</em> a container.</p>
+ * <code>NodeManager</code> to <em>stop</em> containers.</p>
  * 
- * @see ContainerManagementProtocol#stopContainer(StopContainerRequest)
+ * @see ContainerManagementProtocol#stopContainers(StopContainersRequest)
  */
 @Public
 @Stable
-public abstract class StopContainerRequest {
+public abstract class StopContainersRequest {
 
   @Public
   @Stable
-  public static StopContainerRequest newInstance(ContainerId containerId) {
-    StopContainerRequest request =
-        Records.newRecord(StopContainerRequest.class);
-    request.setContainerId(containerId);
+  public static StopContainersRequest newInstance(List<ContainerId> containerIds) {
+    StopContainersRequest request =
+        Records.newRecord(StopContainersRequest.class);
+    request.setContainerIds(containerIds);
     return request;
   }
 
   /**
-   * Get the <code>ContainerId</code> of the container to be stopped.
-   * @return <code>ContainerId</code> of container to be stopped
+   * Get the <code>ContainerId</code>s of the containers to be stopped.
+   * @return <code>ContainerId</code>s of containers to be stopped
    */
   @Public
   @Stable
-  public abstract ContainerId getContainerId();
+  public abstract List<ContainerId> getContainerIds();
   
   /**
-   * Set the <code>ContainerId</code> of the container to be stopped.
-   * @param containerId <code>ContainerId</code> of the container to be stopped
+   * Set the <code>ContainerId</code>s of the containers to be stopped.
+   * @param containerIds <code>ContainerId</code>s of the containers to be stopped
    */
   @Public
   @Stable
-  public abstract void setContainerId(ContainerId containerId);
+  public abstract void setContainerIds(List<ContainerId> containerIds);
 }
