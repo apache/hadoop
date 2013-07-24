@@ -791,6 +791,8 @@ Release 2.1.0-beta - 2013-07-02
     YARN-461. Fair scheduler should not accept apps with empty string queue name. 
     (ywskycn via tucu)
 
+    YARN-968. RM admin commands don't work. (vinodkv via kihwal)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
