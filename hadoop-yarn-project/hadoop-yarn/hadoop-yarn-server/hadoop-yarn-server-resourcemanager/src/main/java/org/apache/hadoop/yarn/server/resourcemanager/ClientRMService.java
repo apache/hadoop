@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -218,7 +219,7 @@ public class ClientRMService extends AbstractService implements
   
   /**
    * It gives response which includes application report if the application
-   * present otherwise gives response with application report as null.
+   * present otherwise throws ApplicationNotFoundException.
    */
   @Override
   public GetApplicationReportResponse getApplicationReport(
@@ -235,10 +236,10 @@ public class ClientRMService extends AbstractService implements
 
     RMApp application = this.rmContext.getRMApps().get(applicationId);
     if (application == null) {
-      // If the RM doesn't have the application, provide the response with
-      // application report as null and let the clients to handle.
-      return recordFactory
-          .newRecordInstance(GetApplicationReportResponse.class);
+      // If the RM doesn't have the application, throw
+      // ApplicationNotFoundException and let client to handle.
+      throw new ApplicationNotFoundException("Application with id '"
+          + applicationId + "' doesn't exist in RM.");
     }
 
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
