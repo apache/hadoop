@@ -855,6 +855,8 @@ Release 2.1.0-beta - 2013-07-02
     toUpperCase(Locale.getDefault()) as well as toLowerCase(Locale.getDefault()) 
     on hadoop.security.authentication value. (markrmiller@gmail.com via tucu)
 
+    HADOOP-9701. mvn site ambiguous links in hadoop-common. (kkambatl via tucu)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
