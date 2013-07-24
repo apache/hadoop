@@ -39,11 +39,11 @@ class ResourceEstimator {
 
   private int completedMapsUpdates;
   final private JobInProgress job;
-  private int threshholdToUse;
+  int thresholdToUse;
 
   public ResourceEstimator(JobInProgress job) {
     this.job = job;
-    threshholdToUse = job.desiredMaps()/ 10;
+    thresholdToUse = Math.max(1, job.desiredMaps()/ 10);
   }
 
   protected synchronized void updateWithCompletedTask(TaskStatus ts, 
@@ -68,14 +68,14 @@ class ResourceEstimator {
    * @return estimated length of this job's total map output
    */
   protected synchronized long getEstimatedTotalMapOutputSize()  {
-    if(completedMapsUpdates < threshholdToUse) {
+    if(completedMapsUpdates < thresholdToUse) {
       return 0;
     } else {
       long inputSize = job.getInputLength() + job.desiredMaps(); 
       //add desiredMaps() so that randomwriter case doesn't blow up
       //the multiplication might lead to overflow, casting it with
       //double prevents it
-      long estimate = Math.round(((double)inputSize * 
+      long estimate = Math.round(((double)inputSize *
           completedMapsOutputSize * 2.0)/completedMapsInputSize);
       if (LOG.isDebugEnabled()) {
         LOG.debug("estimate total map output will be " + estimate);
@@ -115,7 +115,11 @@ class ResourceEstimator {
    * that we can get right estimates before we reach these number
    * of maps.
    */
-  void setThreshhold(int numMaps) {
-    threshholdToUse = Math.min(threshholdToUse, numMaps);
+  void setThreshold(int numMaps) {
+    if (numMaps == 0) {
+      thresholdToUse = 1;
+    } else {
+      thresholdToUse = Math.min(thresholdToUse, numMaps);
+    }
   }
 }

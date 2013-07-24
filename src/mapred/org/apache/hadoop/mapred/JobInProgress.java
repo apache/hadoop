@@ -47,7 +47,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.Counters.CountersExceededException;
 import org.apache.hadoop.mapred.JobHistory.Values;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal;
@@ -779,7 +778,7 @@ public class JobInProgress {
            numMapTasks));
     
     // ... use the same for estimating the total output of all maps
-    resourceEstimator.setThreshhold(completedMapsForReduceSlowstart);
+    resourceEstimator.setThreshold(completedMapsForReduceSlowstart);
     
     // create cleanup two cleanup tips, one map and one reduce.
     cleanup = new TaskInProgress[2];

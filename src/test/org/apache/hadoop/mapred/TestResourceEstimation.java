@@ -17,12 +17,30 @@
  */
 package org.apache.hadoop.mapred;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
+
 import org.apache.hadoop.mapreduce.split.JobSplit;
+import org.junit.Test;
+import org.mockito.Mockito;
 
-public class TestResourceEstimation extends TestCase {
+public class TestResourceEstimation {
+
+  @Test (timeout = 1000)
+  public void testThresholdToUse() {
+    JobInProgress jip = Mockito.mock(JobInProgress.class);
+    Mockito.when(jip.desiredMaps()).thenReturn(4);
+
+    ResourceEstimator re = new ResourceEstimator(jip);
+    assertEquals("Incorrect thresholdToUse", 1, re.thresholdToUse);
+
+    re.setThreshold(10);
+    assertEquals("Incorrect thresholdToUse", 1, re.thresholdToUse);
+
+    re.setThreshold(0);
+    assertEquals("Incorrect thresholdToUse", 1, re.thresholdToUse);
+  }
   
-
+  @Test(timeout = 10000)
   public void testResourceEstimator() throws Exception {
     final int maps = 100;
     final int reduces = 2;
@@ -55,7 +73,8 @@ public class TestResourceEstimation extends TestCase {
     assertEquals(2* singleMapOutputSize * maps / reduces, re.getEstimatedReduceInputSize());
     
   }
-  
+
+  @Test (timeout = 10000)
   public void testWithNonZeroInput() throws Exception {
     final int maps = 100;
     final int reduces = 2;
