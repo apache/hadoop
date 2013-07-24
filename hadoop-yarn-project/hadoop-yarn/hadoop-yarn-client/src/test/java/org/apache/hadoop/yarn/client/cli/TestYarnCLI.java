@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Before;
 import org.junit.Test;
@@ -106,6 +107,23 @@ public class TestYarnCLI {
     String appReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appReportStr, sysOutStream.toString());
     verify(sysOut, times(1)).println(isA(String.class));
+  }
+
+  @Test
+  public void testGetApplicationReportException() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    when(client.getApplicationReport(any(ApplicationId.class))).thenThrow(
+        new ApplicationNotFoundException("Application with id '"
+            + applicationId + "' doesn't exist in RM."));
+    try {
+      cli.run(new String[] { "-status", applicationId.toString() });
+      Assert.fail();
+    } catch (Exception ex) {
+      Assert.assertTrue(ex instanceof ApplicationNotFoundException);
+      Assert.assertEquals("Application with id '" + applicationId
+          + "' doesn't exist in RM.", ex.getMessage());
+    }
   }
 
   @Test

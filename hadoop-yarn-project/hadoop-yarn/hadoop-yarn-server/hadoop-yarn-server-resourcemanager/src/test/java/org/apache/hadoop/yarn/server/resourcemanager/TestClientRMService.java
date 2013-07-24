@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -186,10 +187,14 @@ public class TestClientRMService {
     GetApplicationReportRequest request = recordFactory
         .newRecordInstance(GetApplicationReportRequest.class);
     request.setApplicationId(ApplicationId.newInstance(0, 0));
-    GetApplicationReportResponse applicationReport = rmService
-        .getApplicationReport(request);
-    Assert.assertNull("It should return null as application report for absent application.",
-        applicationReport.getApplicationReport());
+    try {
+      rmService.getApplicationReport(request);
+      Assert.fail();
+    } catch (ApplicationNotFoundException ex) {
+      Assert.assertEquals(ex.getMessage(),
+          "Application with id '" + request.getApplicationId()
+              + "' doesn't exist in RM.");
+    }
   }
   
   @Test
