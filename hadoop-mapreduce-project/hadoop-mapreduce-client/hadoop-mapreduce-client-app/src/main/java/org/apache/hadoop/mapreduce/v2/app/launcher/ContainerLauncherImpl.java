@@ -20,7 +20,9 @@ package org.apache.hadoop.mapreduce.v2.app.launcher;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,14 +46,15 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy;
 import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.ContainerManagementProtocolProxyData;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -139,13 +142,18 @@ public class ContainerLauncherImpl extends AbstractService implements
           event.getContainerLaunchContext();
 
         // Now launch the actual container
-        StartContainerRequest startRequest = Records
-          .newRecord(StartContainerRequest.class);
-        startRequest.setContainerLaunchContext(containerLaunchContext);
-        startRequest.setContainerToken(event.getContainerToken());
-        StartContainerResponse response =
-            proxy.getContainerManagementProtocol().startContainer(startRequest);
-
+        StartContainerRequest startRequest =
+            StartContainerRequest.newInstance(containerLaunchContext,
+              event.getContainerToken());
+        List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+        list.add(startRequest);
+        StartContainersRequest requestList = StartContainersRequest.newInstance(list);
+        StartContainersResponse response =
+            proxy.getContainerManagementProtocol().startContainers(requestList);
+        if (response.getFailedRequests() != null
+            && response.getFailedRequests().containsKey(containerID)) {
+          throw response.getFailedRequests().get(containerID).deSerialize();
+        }
         ByteBuffer portInfo =
             response.getAllServicesMetaData().get(
                 ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID);
@@ -192,13 +200,17 @@ public class ContainerLauncherImpl extends AbstractService implements
           proxy = getCMProxy(this.containerMgrAddress, this.containerID);
 
           // kill the remote container if already launched
-          StopContainerRequest stopRequest = Records
-              .newRecord(StopContainerRequest.class);
-          stopRequest.setContainerId(this.containerID);
-          proxy.getContainerManagementProtocol().stopContainer(stopRequest);
-
+          List<ContainerId> ids = new ArrayList<ContainerId>();
+          ids.add(this.containerID);
+          StopContainersRequest request = StopContainersRequest.newInstance(ids);
+          StopContainersResponse response =
+              proxy.getContainerManagementProtocol().stopContainers(request);
+          if (response.getFailedRequests() != null
+              && response.getFailedRequests().containsKey(this.containerID)) {
+            throw response.getFailedRequests().get(this.containerID)
+              .deSerialize();
+          }
         } catch (Throwable t) {
-
           // ignore the cleanup failure
           String message = "cleanup failed for container "
               + this.containerID + " : "

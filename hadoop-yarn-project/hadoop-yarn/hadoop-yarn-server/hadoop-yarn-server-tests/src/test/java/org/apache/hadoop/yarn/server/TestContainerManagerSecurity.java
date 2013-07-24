@@ -23,6 +23,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.List;
 
 import junit.framework.Assert;
 
@@ -32,15 +34,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -328,18 +335,21 @@ public class TestContainerManagerSecurity {
           ContainerId containerId,
           ApplicationAttemptId appAttemptId, NodeId nodeId,
           boolean isExceptionExpected) throws Exception {
-    GetContainerStatusRequest request =
-        Records.newRecord(GetContainerStatusRequest.class);
-    request.setContainerId(containerId);
-    
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(containerId);
+    GetContainerStatusesRequest request =
+        GetContainerStatusesRequest.newInstance(containerIds);
     ContainerManagementProtocol proxy = null;
-    
     try {
       proxy =
           getContainerManagementProtocolProxy(rpc, nmToken, nodeId,
               appAttemptId.toString());
-      proxy.getContainerStatus(request);
-      
+      GetContainerStatusesResponse statuses = proxy.getContainerStatuses(request);
+      if (statuses.getFailedRequests() != null
+          && statuses.getFailedRequests().containsKey(containerId)) {
+        parseAndThrowException(statuses.getFailedRequests().get(containerId)
+          .deSerialize());
+      }
     } finally {
       if (proxy != null) {
         rpc.stopProxy(proxy, conf);
@@ -352,21 +362,36 @@ public class TestContainerManagerSecurity {
       org.apache.hadoop.yarn.api.records.Token containerToken,
       NodeId nodeId, String user) throws Exception {
 
-    StartContainerRequest request =
-        Records.newRecord(StartContainerRequest.class);
-    request.setContainerToken(containerToken);
     ContainerLaunchContext context =
         Records.newRecord(ContainerLaunchContext.class);
-    request.setContainerLaunchContext(context);
-
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(context,containerToken);
+    List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
     ContainerManagementProtocol proxy = null;
     try {
       proxy = getContainerManagementProtocolProxy(rpc, nmToken, nodeId, user);
-      proxy.startContainer(request);
+      StartContainersResponse response = proxy.startContainers(allRequests);
+      for(SerializedException ex : response.getFailedRequests().values()){
+        parseAndThrowException(ex.deSerialize());
+      }
     } finally {
       if (proxy != null) {
         rpc.stopProxy(proxy, conf);
       }
+    }
+  }
+
+  private void parseAndThrowException(Throwable t) throws YarnException,
+      IOException {
+    if (t instanceof YarnException) {
+      throw (YarnException) t;
+    } else if (t instanceof InvalidToken) {
+      throw (InvalidToken) t;
+    } else {
+      throw (IOException) t;
     }
   }
 

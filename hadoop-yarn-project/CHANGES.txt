@@ -206,6 +206,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-918. Remove ApplicationAttemptId from
     RegisterApplicationMasterRequestProto. (vinodkv via acmurthy)
 
+    YARN-926. Modified ContainerManagerProtcol APIs to take in requests for
+    multiple containers. (Jian He via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

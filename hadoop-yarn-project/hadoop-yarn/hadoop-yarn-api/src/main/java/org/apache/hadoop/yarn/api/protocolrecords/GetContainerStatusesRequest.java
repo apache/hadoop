@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
@@ -26,41 +28,48 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The request sent by the <code>ApplicationMaster</code> to the
- * <code>NodeManager</code> to get {@link ContainerStatus} of a container.</p>
+ * <p>
+ * The request sent by the <code>ApplicationMaster</code> to the
+ * <code>NodeManager</code> to get {@link ContainerStatus} of requested
+ * containers.
+ * </p>
  * 
- * @see ContainerManagementProtocol#getContainerStatus(GetContainerStatusRequest)
+ * @see ContainerManagementProtocol#getContainerStatuses(GetContainerStatusesRequest)
  */
 @Public
 @Stable
-public abstract class GetContainerStatusRequest {
+public abstract class GetContainerStatusesRequest {
 
   @Public
   @Stable
-  public static GetContainerStatusRequest newInstance(ContainerId containerId) {
-    GetContainerStatusRequest request =
-        Records.newRecord(GetContainerStatusRequest.class);
-    request.setContainerId(containerId);
+  public static GetContainerStatusesRequest newInstance(
+      List<ContainerId> containerIds) {
+    GetContainerStatusesRequest request =
+        Records.newRecord(GetContainerStatusesRequest.class);
+    request.setContainerIds(containerIds);
     return request;
   }
 
   /**
-   * Get the <code>ContainerId</code> of container for which to obtain the
-   * <code>ContainerStatus</code>.
-   * @return <code>ContainerId</code> of container for which to obtain the
-   *         <code>ContainerStatus</code>
+   * Get the list of <code>ContainerId</code>s of containers for which to obtain
+   * the <code>ContainerStatus</code>.
+   * 
+   * @return the list of <code>ContainerId</code>s of containers for which to
+   *         obtain the <code>ContainerStatus</code>.
    */
   @Public
   @Stable
-  public abstract ContainerId getContainerId();
-  
+  public abstract List<ContainerId> getContainerIds();
+
   /**
-   * Set the <code>ContainerId</code> of container for which to obtain the
-   * <code>ContainerStatus</code>
-   * @param containerId <code>ContainerId</code> of container for which to 
-   *                    obtain the <code>ContainerStatus</code>
+   * Set a list of <code>ContainerId</code>s of containers for which to obtain
+   * the <code>ContainerStatus</code>
+   * 
+   * @param containerIds
+   *          a list of <code>ContainerId</code>s of containers for which to
+   *          obtain the <code>ContainerStatus</code>
    */
   @Public
   @Stable
-  public abstract void setContainerId(ContainerId containerId);
+  public abstract void setContainerIds(List<ContainerId> containerIds);
 }
