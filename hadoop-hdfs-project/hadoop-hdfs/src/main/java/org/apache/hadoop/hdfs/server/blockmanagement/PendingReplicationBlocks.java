@@ -22,8 +22,10 @@ import static org.apache.hadoop.util.Time.now;
 import java.io.PrintWriter;
 import java.sql.Time;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -71,14 +73,16 @@ class PendingReplicationBlocks {
 
   /**
    * Add a block to the list of pending Replications
+   * @param block The corresponding block
+   * @param targets The DataNodes where replicas of the block should be placed
    */
-  void increment(Block block, int numReplicas) {
+  void increment(Block block, DatanodeDescriptor[] targets) {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found == null) {
-        pendingReplications.put(block, new PendingBlockInfo(numReplicas));
+        pendingReplications.put(block, new PendingBlockInfo(targets));
       } else {
-        found.incrementReplicas(numReplicas);
+        found.incrementReplicas(targets);
         found.setTimeStamp();
       }
     }
@@ -88,15 +92,17 @@ class PendingReplicationBlocks {
    * One replication request for this block has finished.
    * Decrement the number of pending replication requests
    * for this block.
+   * 
+   * @param The DataNode that finishes the replication
    */
-  void decrement(Block block) {
+  void decrement(Block block, DatanodeDescriptor dn) {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found != null) {
         if(LOG.isDebugEnabled()) {
           LOG.debug("Removing pending replication for " + block);
         }
-        found.decrementReplicas();
+        found.decrementReplicas(dn);
         if (found.getNumReplicas() <= 0) {
           pendingReplications.remove(block);
         }
@@ -153,7 +159,7 @@ class PendingReplicationBlocks {
         return null;
       }
       Block[] blockList = timedOutItems.toArray(
-                                                new Block[timedOutItems.size()]);
+          new Block[timedOutItems.size()]);
       timedOutItems.clear();
       return blockList;
     }
@@ -163,16 +169,17 @@ class PendingReplicationBlocks {
    * An object that contains information about a block that 
    * is being replicated. It records the timestamp when the 
    * system started replicating the most recent copy of this
-   * block. It also records the number of replication
-   * requests that are in progress.
+   * block. It also records the list of Datanodes where the 
+   * replication requests are in progress.
    */
   static class PendingBlockInfo {
     private long timeStamp;
-    private int numReplicasInProgress;
+    private final List<DatanodeDescriptor> targets;
 
-    PendingBlockInfo(int numReplicas) {
+    PendingBlockInfo(DatanodeDescriptor[] targets) {
       this.timeStamp = now();
-      this.numReplicasInProgress = numReplicas;
+      this.targets = targets == null ? new ArrayList<DatanodeDescriptor>()
+          : new ArrayList<DatanodeDescriptor>(Arrays.asList(targets));
     }
 
     long getTimeStamp() {
@@ -183,17 +190,20 @@ class PendingReplicationBlocks {
       timeStamp = now();
     }
 
-    void incrementReplicas(int increment) {
-      numReplicasInProgress += increment;
+    void incrementReplicas(DatanodeDescriptor... newTargets) {
+      if (newTargets != null) {
+        for (DatanodeDescriptor dn : newTargets) {
+          targets.add(dn);
+        }
+      }
     }
 
-    void decrementReplicas() {
-      numReplicasInProgress--;
-      assert(numReplicasInProgress >= 0);
+    void decrementReplicas(DatanodeDescriptor dn) {
+      targets.remove(dn);
     }
 
     int getNumReplicas() {
-      return numReplicasInProgress;
+      return targets.size();
     }
   }
 
@@ -274,7 +284,7 @@ class PendingReplicationBlocks {
         out.println(block + 
                     " StartTime: " + new Time(pendingBlock.timeStamp) +
                     " NumReplicaInProgress: " + 
-                    pendingBlock.numReplicasInProgress);
+                    pendingBlock.getNumReplicas());
       }
     }
   }

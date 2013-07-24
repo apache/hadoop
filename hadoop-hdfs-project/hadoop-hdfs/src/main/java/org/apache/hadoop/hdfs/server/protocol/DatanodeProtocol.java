@@ -138,7 +138,7 @@ public interface DatanodeProtocol {
    * writes a new Block here, or another DataNode copies a Block to
    * this DataNode, it will call blockReceived().
    */
-  @AtMostOnce
+  @Idempotent
   public void blockReceivedAndDeleted(DatanodeRegistration registration,
                             String poolId,
                             StorageReceivedDeletedBlocks[] rcvdAndDeletedBlocks)
