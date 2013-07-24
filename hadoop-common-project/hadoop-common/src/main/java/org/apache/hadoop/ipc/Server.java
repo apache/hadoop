@@ -268,6 +268,12 @@ public abstract class Server {
    */
   private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
   
+  /** Get the current call */
+  @VisibleForTesting
+  public static ThreadLocal<Call> getCurCall() {
+    return CurCall;
+  }
+  
   /**
    * Returns the currently active RPC call's sequential ID number.  A negative
    * call ID indicates an invalid value, such as if there is no currently active
@@ -275,7 +281,7 @@ public abstract class Server {
    * 
    * @return int sequential ID number of currently active RPC call
    */
-  static int getCallId() {
+  public static int getCallId() {
     Call call = CurCall.get();
     return call != null ? call.callId : RpcConstants.INVALID_CALL_ID;
   }
@@ -294,10 +300,8 @@ public abstract class Server {
    */
   public static InetAddress getRemoteIp() {
     Call call = CurCall.get();
-    if (call != null) {
-      return call.connection.getHostInetAddress();
-    }
-    return null;
+    return (call != null && call.connection != null) ? call.connection
+        .getHostInetAddress() : null;
   }
   
   /**
@@ -322,7 +326,8 @@ public abstract class Server {
    */
   public static UserGroupInformation getRemoteUser() {
     Call call = CurCall.get();
-    return (call != null) ? call.connection.user : null;
+    return (call != null && call.connection != null) ? call.connection.user
+        : null;
   }
  
   /** Return true if the invocation was through an RPC.
@@ -460,7 +465,7 @@ public abstract class Server {
   }
 
   /** A call queued for handling. */
-  private static class Call {
+  public static class Call {
     private final int callId;             // the client's call id
     private final int retryCount;        // the retry count of the call
     private final Writable rpcRequest;    // Serialized Rpc request from client
@@ -471,13 +476,13 @@ public abstract class Server {
     private final RPC.RpcKind rpcKind;
     private final byte[] clientId;
 
-    private Call(int id, int retryCount, Writable param, 
+    public Call(int id, int retryCount, Writable param, 
         Connection connection) {
       this(id, retryCount, param, connection, RPC.RpcKind.RPC_BUILTIN,
           RpcConstants.DUMMY_CLIENT_ID);
     }
 
-    private Call(int id, int retryCount, Writable param, Connection connection,
+    public Call(int id, int retryCount, Writable param, Connection connection,
         RPC.RpcKind kind, byte[] clientId) {
       this.callId = id;
       this.retryCount = retryCount;
