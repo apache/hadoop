@@ -654,6 +654,9 @@ Release 2.1.0-beta - 2013-07-02
     MAPREDUCE-5310. MRAM should not normalize allocation request capabilities.
     (tucu)
 
+    MAPREDUCE-5213. Re-assess TokenCache methods marked @Private. 
+    (kkambatl via tucu)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
