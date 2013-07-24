@@ -6,6 +6,8 @@ Release 1.3.0 - unreleased
 
   NEW FEATURES
 
+    MAPREDUCE-2454. plugin for generic shuffle service. (avnerb via tucu)
+
   IMPROVEMENTS
 
     HADOOP-9450. HADOOP_USER_CLASSPATH_FIRST is not honored; CLASSPATH

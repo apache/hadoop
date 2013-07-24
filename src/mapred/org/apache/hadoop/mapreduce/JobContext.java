@@ -67,6 +67,9 @@ public class JobContext {
   public static final String USER_LOG_RETAIN_HOURS = 
     "mapred.userlog.retain.hours";
   
+  public static final String SHUFFLE_CONSUMER_PLUGIN_ATTR =
+    "mapreduce.job.reduce.shuffle.consumer.plugin.class";
+
   /**
    * The UserGroupInformation object that has a reference to the current user
    */

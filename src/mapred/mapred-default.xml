@@ -221,6 +221,24 @@
 </property>
 
 <property>
+  <name>mapreduce.job.reduce.shuffle.consumer.plugin.class</name>
+  <value>org.apache.hadoop.mapred.ReduceTask$ReduceCopier</value>
+  <description>Name of the class whose instance will be used
+   to send shuffle requests by reducetasks of this job.
+   The class must be an instance of org.apache.hadoop.mapred.ShuffleConsumerPlugin.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.provider.plugin.classes</name>
+  <value>org.apache.hadoop.mapred.TaskTracker$DefaultShuffleProvider</value>
+  <description>A comma-separated list of classes that should be loaded as ShuffleProviderPlugin(s).
+   A ShuffleProviderPlugin can serve shuffle requests from reducetasks.
+   Each class in the list must be an instance of org.apache.hadoop.mapred.ShuffleProviderPlugin.
+  </description>
+</property>
+
+<property>
   <name>mapred.tasktracker.taskmemorymanager.monitoring-interval</name>
   <value>5000</value>
   <description>The interval, in milliseconds, for which the tasktracker waits

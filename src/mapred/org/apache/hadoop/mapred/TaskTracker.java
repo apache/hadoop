@@ -141,6 +141,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   static final long WAIT_FOR_DONE = 3 * 1000;
   private int httpPort;
 
+  public static final String SHUFFLE_PROVIDER_PLUGIN_CLASSES = "mapreduce.shuffle.provider.plugin.classes";
+  final private ShuffleProviderPlugin shuffleProviderPlugin = new MultiShuffleProviderPlugin();
+
   static enum State {NORMAL, STALE, INTERRUPTED, DENIED}
 
   static{
@@ -232,6 +235,52 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       }
     }
   }
+
+  public static class DefaultShuffleProvider implements ShuffleProviderPlugin {
+    public void initialize(TaskTracker tt) {
+      tt.server.addInternalServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
+    }
+
+    public void destroy() {
+    }
+  }
+
+  private static class MultiShuffleProviderPlugin implements ShuffleProviderPlugin {
+
+    private ShuffleProviderPlugin[] plugins;
+
+    public void initialize(TaskTracker tt) {
+      Configuration conf = tt.getJobConf();
+      Class<?>[] klasses = conf.getClasses(SHUFFLE_PROVIDER_PLUGIN_CLASSES, DefaultShuffleProvider.class);
+
+      plugins = new ShuffleProviderPlugin[klasses.length];
+      for (int i = 0; i < klasses.length; i++) {
+        try{
+          LOG.info(" Loading ShuffleProviderPlugin: " + klasses[i]);
+          plugins[i] =  (ShuffleProviderPlugin)ReflectionUtils.newInstance(klasses[i], conf);
+          plugins[i].initialize(tt);
+        }
+        catch(Throwable t) {
+          LOG.warn("Exception instantiating/initializing a ShuffleProviderPlugin: " + klasses[i], t);
+          plugins[i] =  null;
+        }
+      }
+    }
+
+    public void destroy() {
+      if (plugins != null) {
+          for (ShuffleProviderPlugin plugin : plugins) {
+            try {
+              if (plugin != null) {
+                plugin.destroy();
+              }
+            } catch (Throwable t) {
+              LOG.warn("Exception destroying a ShuffleProviderPlugin: " + plugin, t);
+            }
+          }
+        }
+      }
+    }
 
   private LocalStorage localStorage;
   private long lastCheckDirsTime;
@@ -697,7 +746,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     + TaskTracker.LOCAL_SPLIT_FILE;
   }
 
-  static String getIntermediateOutputDir(String user, String jobid,
+  public static String getIntermediateOutputDir(String user, String jobid,
       String taskid) {
     return getLocalTaskDir(user, jobid, taskid) + Path.SEPARATOR
     + TaskTracker.OUTPUT;
@@ -1433,6 +1482,14 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   public synchronized void shutdown() throws IOException, InterruptedException {
     shuttingDown = true;
     close();
+    if (this.shuffleProviderPlugin != null) {
+      try {
+        LOG.info("Shutting down shuffleProviderPlugin");
+        this.shuffleProviderPlugin.destroy();
+      } catch (Exception e) {
+        LOG.warn("Exception shutting down shuffleProviderPlugin", e);
+      }
+    }
     if (this.server != null) {
       try {
         LOG.info("Shutting down StatusHttpServer");
@@ -1611,7 +1668,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
     server.setAttribute("shuffleExceptionTracking", shuffleExceptionTracking);
 
-    server.addInternalServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
+    shuffleProviderPlugin.initialize(this);
     server.addServlet("taskLog", "/tasklog", TaskLogServlet.class);
     server.start();
     this.httpPort = server.getPort();
@@ -3900,9 +3957,22 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   }
   
   /**
+   * Get the specific job conf for a running job.
+   */
+  public JobConf getJobConf(JobID jobId) throws IOException {
+    synchronized (runningJobs) {
+      RunningJob rjob = runningJobs.get(jobId);
+      if (rjob == null) {
+        throw new IOException("Unknown job " + jobId + "!!");
+      }
+      return rjob.getJobConf();
+    }
+  }
+
+  /**
    * Get the default job conf for this tracker.
    */
-  JobConf getJobConf() {
+  public JobConf getJobConf() {
     return fConf;
   }
 
@@ -4038,16 +4108,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         FileSystem rfs = ((LocalFileSystem)
             context.getAttribute("local.file.system")).getRaw();
 
-      String userName = null;
-      String runAsUserName = null;
-      synchronized (tracker.runningJobs) {
-        RunningJob rjob = tracker.runningJobs.get(JobID.forName(jobId));
-        if (rjob == null) {
-          throw new IOException("Unknown job " + jobId + "!!");
-        }
-        userName = rjob.jobConf.getUser();
-        runAsUserName = tracker.getTaskController().getRunAsUser(rjob.jobConf);
-      }
+      JobConf jobConf = tracker.getJobConf(JobID.forName(jobId));
+      String userName = jobConf.getUser();
+      String runAsUserName = tracker.getTaskController().getRunAsUser(jobConf);
+
       // Index file
       String intermediateOutputDir = TaskTracker.getIntermediateOutputDir(userName, jobId, mapId);
       String indexKey = intermediateOutputDir + "/file.out.index";
