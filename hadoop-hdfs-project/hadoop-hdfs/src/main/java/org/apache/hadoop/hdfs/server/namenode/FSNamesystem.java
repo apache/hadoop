@@ -3068,7 +3068,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     for (Block b : blocks.getToDeleteList()) {
       if (trackBlockCounts) {
-        BlockInfo bi = blockManager.getStoredBlock(b);
+        BlockInfo bi = getStoredBlock(b);
         if (bi.isComplete()) {
           numRemovedComplete++;
           if (bi.numNodes() >= blockManager.minReplication) {
@@ -3509,6 +3509,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     blockManager.checkReplication(newFile);
   }
 
+  @VisibleForTesting
+  BlockInfo getStoredBlock(Block block) {
+    return blockManager.getStoredBlock(block);
+  }
+
   void commitBlockSynchronization(ExtendedBlock lastblock,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets,
@@ -3534,16 +3539,28 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           "Cannot commitBlockSynchronization while in safe mode",
           safeMode);
       }
-      final BlockInfo storedBlock = blockManager.getStoredBlock(ExtendedBlock
-        .getLocalBlock(lastblock));
+      final BlockInfo storedBlock = getStoredBlock(
+          ExtendedBlock.getLocalBlock(lastblock));
       if (storedBlock == null) {
-        throw new IOException("Block (=" + lastblock + ") not found");
+        if (deleteblock) {
+          // This may be a retry attempt so ignore the failure
+          // to locate the block.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Block (=" + lastblock + ") not found");
+          }
+          return;
+        } else {
+          throw new IOException("Block (=" + lastblock + ") not found");
+        }
       }
       INodeFile iFile = ((INode)storedBlock.getBlockCollection()).asFile();
       if (!iFile.isUnderConstruction() || storedBlock.isComplete()) {
-        throw new IOException("Unexpected block (=" + lastblock
-                              + ") since the file (=" + iFile.getLocalName()
-                              + ") is not under construction");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Unexpected block (=" + lastblock
+                    + ") since the file (=" + iFile.getLocalName()
+                    + ") is not under construction");
+        }
+        return;
       }
 
       long recoveryId =
@@ -3559,11 +3576,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (deleteblock) {
         Block blockToDel = ExtendedBlock.getLocalBlock(lastblock);
         boolean remove = pendingFile.removeLastBlock(blockToDel);
-        if (!remove) {
-          throw new IOException("Trying to delete non-existant block "
-              + blockToDel);
+        if (remove) {
+          blockManager.removeBlockFromMap(storedBlock);
         }
-        blockManager.removeBlockFromMap(storedBlock);
       }
       else {
         // update last block
@@ -3593,17 +3608,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         pendingFile.setLastBlock(storedBlock, descriptors);
       }
 
-      src = leaseManager.findPath(pendingFile);
       if (closeFile) {
-        // commit the last block and complete it if it has minimum replicas
-        commitOrCompleteLastBlock(pendingFile, storedBlock);
-
-        //remove lease, close file
-        finalizeINodeFileUnderConstruction(src, pendingFile,
-            Snapshot.findLatestSnapshot(pendingFile, null));
+        src = closeFileCommitBlocks(pendingFile, storedBlock);
       } else {
         // If this commit does not want to close the file, persist blocks
-        dir.persistBlocks(src, pendingFile);
+        src = persistBlocks(pendingFile);
       }
     } finally {
       writeUnlock();
@@ -3620,6 +3629,44 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
+  /**
+   *
+   * @param pendingFile
+   * @param storedBlock
+   * @return Path of the file that was closed.
+   * @throws IOException
+   */
+  @VisibleForTesting
+  String closeFileCommitBlocks(INodeFileUnderConstruction pendingFile,
+                                       BlockInfo storedBlock)
+      throws IOException {
+
+    String src = leaseManager.findPath(pendingFile);
+
+    // commit the last block and complete it if it has minimum replicas
+    commitOrCompleteLastBlock(pendingFile, storedBlock);
+
+    //remove lease, close file
+    finalizeINodeFileUnderConstruction(src, pendingFile,
+                                       Snapshot.findLatestSnapshot(pendingFile, null));
+
+    return src;
+  }
+
+  /**
+   * Persist the block list for the given file.
+   *
+   * @param pendingFile
+   * @return Path to the given file.
+   * @throws IOException
+   */
+  @VisibleForTesting
+  String persistBlocks(INodeFileUnderConstruction pendingFile)
+      throws IOException {
+    String src = leaseManager.findPath(pendingFile);
+    dir.persistBlocks(src, pendingFile);
+    return src;
+  }
 
   /**
    * Renew the lease(s) held by the given client
@@ -4662,7 +4709,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null) // mostly true
       return;
-    BlockInfo storedBlock = blockManager.getStoredBlock(b);
+    BlockInfo storedBlock = getStoredBlock(b);
     if (storedBlock.isComplete()) {
       safeMode.decrementSafeBlockCount((short)blockManager.countNodes(b).liveReplicas());
     }
@@ -5279,7 +5326,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     
     // check stored block state
-    BlockInfo storedBlock = blockManager.getStoredBlock(ExtendedBlock.getLocalBlock(block));
+    BlockInfo storedBlock = getStoredBlock(ExtendedBlock.getLocalBlock(block));
     if (storedBlock == null || 
         storedBlock.getBlockUCState() != BlockUCState.UNDER_CONSTRUCTION) {
         throw new IOException(block + 

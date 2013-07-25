@@ -470,6 +470,9 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-5020. Make DatanodeProtocol#blockReceivedAndDeleted idempotent. 
     (jing9)
 
+    HDFS-5024. Make DatanodeProtocol#commitBlockSynchronization idempotent. 
+    (Arpit Agarwal via jing9)
+
   OPTIMIZATIONS
 
     HDFS-4465. Optimize datanode ReplicasMap and ReplicaInfo. (atm)
