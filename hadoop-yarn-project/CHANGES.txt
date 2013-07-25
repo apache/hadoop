@@ -12,6 +12,9 @@ Release 0.23.10 - UNRELEASED
 
   BUG FIXES
 
+    YARN-949. Failed log aggregation can leave a file open. (Kihwal Lee via
+    jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES

@@ -184,7 +184,9 @@ public class AggregatedLogFormat {
               out.write(buf, 0, len);
             }
           } finally {
-            in.close();
+            if (in != null) {
+              in.close();
+            }
           }
         }
       }
