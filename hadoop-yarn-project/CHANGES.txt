@@ -746,6 +746,14 @@ Release 2.1.0-beta - 2013-07-02
     YARN-875. Application can hang if AMRMClientAsync callback thread has
     exception (Xuan Gong via bikas)
 
+    YARN-461. Fair scheduler should not accept apps with empty string queue name. 
+    (ywskycn via tucu)
+
+    YARN-968. RM admin commands don't work. (vinodkv via kihwal)
+
+    YARN-688. Fixed NodeManager to properly cleanup containers when it is shut
+    down. (Jian He via vinodkv)
+
   BREAKDOWN OF HADOOP-8562/YARN-191 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
@@ -810,11 +818,6 @@ Release 2.1.0-beta - 2013-07-02
 
     YARN-909. Disable TestLinuxContainerExecutorWithMocks on Windows. (Chuan Liu
     via cnauroth)
-
-    YARN-461. Fair scheduler should not accept apps with empty string queue name. 
-    (ywskycn via tucu)
-
-    YARN-968. RM admin commands don't work. (vinodkv via kihwal)
 
 Release 2.0.5-alpha - 06/06/2013
 

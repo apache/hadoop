@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -34,6 +35,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -97,8 +99,12 @@ public class TestNodeStatusUpdater {
   }
 
   static final Log LOG = LogFactory.getLog(TestNodeStatusUpdater.class);
-  static final Path basedir =
-      new Path("target", TestNodeStatusUpdater.class.getName());
+  static final File basedir =
+      new File("target", TestNodeStatusUpdater.class.getName());
+  static final File nmLocalDir = new File(basedir, "nm0");
+  static final File tmpDir = new File(basedir, "tmpDir");
+  static final File remoteLogsDir = new File(basedir, "remotelogs");
+  static final File logsDir = new File(basedir, "logs");
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
@@ -110,9 +116,14 @@ public class TestNodeStatusUpdater {
   private NodeManager nm;
   private boolean containerStatusBackupSuccessfully = true;
   private List<ContainerStatus> completedContainerStatusList = new ArrayList<ContainerStatus>();
+  private AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
 
   @Before
   public void setUp() {
+    nmLocalDir.mkdirs();
+    tmpDir.mkdirs();
+    logsDir.mkdirs();
+    remoteLogsDir.mkdirs();
     conf = createNMConfig();
   }
 
@@ -121,6 +132,7 @@ public class TestNodeStatusUpdater {
     this.registeredNodes.clear();
     heartBeatID = 0;
     ServiceOperations.stop(nm);
+    assertionFailedInThread.set(false);
     DefaultMetricsSystem.shutdown();
   }
 
@@ -442,6 +454,13 @@ public class TestNodeStatusUpdater {
     protected void serviceStop() throws Exception {
       super.serviceStop();
       isStopped = true;
+      ConcurrentMap<ContainerId, org.apache.hadoop.yarn.server.nodemanager
+      .containermanager.container.Container> containers =
+          getNMContext().getContainers();
+      // ensure that containers are empty
+      if(!containers.isEmpty()) {
+        assertionFailedInThread.set(true);
+      }
       syncBarrier.await(10000, TimeUnit.MILLISECONDS);
     }
   }
@@ -723,7 +742,7 @@ public class TestNodeStatusUpdater {
   @After
   public void deleteBaseDir() throws IOException {
     FileContext lfs = FileContext.getLocalFSFileContext();
-    lfs.delete(basedir, true);
+    lfs.delete(new Path(basedir.getPath()), true);
   }
 
   @Test
@@ -1095,7 +1114,7 @@ public class TestNodeStatusUpdater {
 
   @Test(timeout = 200000)
   public void testNodeStatusUpdaterRetryAndNMShutdown() 
-      throws InterruptedException {
+      throws Exception {
     final long connectionWaitSecs = 1;
     final long connectionRetryIntervalSecs = 1;
     YarnConfiguration conf = createNMConfig();
@@ -1104,14 +1123,23 @@ public class TestNodeStatusUpdater {
     conf.setLong(YarnConfiguration
         .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
         connectionRetryIntervalSecs);
+    conf.setLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS, 5000);
     CyclicBarrier syncBarrier = new CyclicBarrier(2);
     nm = new MyNodeManager2(syncBarrier, conf);
     nm.init(conf);
     nm.start();
+    // start a container
+    ContainerId cId = TestNodeManagerShutdown.createContainerId();
+    FileContext localFS = FileContext.getLocalFSFileContext();
+    TestNodeManagerShutdown.startContainer(nm, cId, localFS, nmLocalDir,
+      new File("start_file.txt"));
+
     try {
       syncBarrier.await(10000, TimeUnit.MILLISECONDS);
     } catch (Exception e) {
     }
+    Assert.assertFalse("Containers not cleaned up when NM stopped",
+      assertionFailedInThread.get());
     Assert.assertTrue(((MyNodeManager2) nm).isStopped);
     Assert.assertTrue("calculate heartBeatCount based on" +
         " connectionWaitSecs and RetryIntervalSecs", heartBeatID == 2);
@@ -1229,15 +1257,13 @@ public class TestNodeStatusUpdater {
 
   private YarnConfiguration createNMConfig() {
     YarnConfiguration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.NM_PMEM_MB, 5*1024); // 5GB
+    conf.setInt(YarnConfiguration.NM_PMEM_MB, 5 * 1024); // 5GB
     conf.set(YarnConfiguration.NM_ADDRESS, "localhost:12345");
     conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "localhost:12346");
-    conf.set(YarnConfiguration.NM_LOG_DIRS, new Path(basedir, "logs").toUri()
-        .getPath());
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, new Path(basedir,
-        "remotelogs").toUri().getPath());
-    conf.set(YarnConfiguration.NM_LOCAL_DIRS, new Path(basedir, "nm0")
-        .toUri().getPath());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logsDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+      remoteLogsDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, nmLocalDir.getAbsolutePath());
     return conf;
   }
   
