@@ -385,7 +385,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             }
             if (response.getNodeAction() == NodeAction.RESYNC) {
               LOG.warn("Node is out of sync with ResourceManager,"
-                  + " hence rebooting.");
+                  + " hence resyncing.");
               LOG.warn("Message from ResourceManager: "
                   + response.getDiagnosticsMessage());
               // Invalidate the RMIdentifier while resync
@@ -418,6 +418,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                 new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
             throw new YarnRuntimeException(e);
           } catch (Throwable e) {
+
             // TODO Better error handling. Thread can die with the rest of the
             // NM still running.
             LOG.error("Caught exception in status-updater", e);
