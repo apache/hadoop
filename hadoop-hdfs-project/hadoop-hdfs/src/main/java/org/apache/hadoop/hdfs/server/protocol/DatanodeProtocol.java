@@ -166,7 +166,7 @@ public interface DatanodeProtocol {
   /**
    * Commit block synchronization in lease recovery
    */
-  @AtMostOnce
+  @Idempotent
   public void commitBlockSynchronization(ExtendedBlock block,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets,
