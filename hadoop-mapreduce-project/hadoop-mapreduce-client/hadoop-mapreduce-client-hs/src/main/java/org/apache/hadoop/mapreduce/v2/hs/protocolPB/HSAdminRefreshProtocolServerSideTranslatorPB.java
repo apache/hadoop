@@ -23,6 +23,8 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshAdminAclsResponseProto;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshAdminAclsRequestProto;
+import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshJobRetentionSettingsRequestProto;
+import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshJobRetentionSettingsResponseProto;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshLogRetentionSettingsRequestProto;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshLogRetentionSettingsResponseProto;
 import org.apache.hadoop.mapreduce.v2.hs.protocol.HSAdminRefreshProtocol;
@@ -36,10 +38,17 @@ public class HSAdminRefreshProtocolServerSideTranslatorPB implements
 
   private final HSAdminRefreshProtocol impl;
 
-  private final static RefreshAdminAclsResponseProto VOID_REFRESH_ADMIN_ACLS_RESPONSE = RefreshAdminAclsResponseProto
+  private final static RefreshAdminAclsResponseProto 
+    VOID_REFRESH_ADMIN_ACLS_RESPONSE = RefreshAdminAclsResponseProto
       .newBuilder().build();
-  private final static RefreshLogRetentionSettingsResponseProto VOID_REFRESH_LOG_RETENTION_SETTINGS_RESPONSE = RefreshLogRetentionSettingsResponseProto
-      .newBuilder().build();
+  
+  private final static RefreshJobRetentionSettingsResponseProto 
+    VOID_REFRESH_JOB_RETENTION_SETTINGS_RESPONSE = 
+      RefreshJobRetentionSettingsResponseProto.newBuilder().build();
+  
+  private final static RefreshLogRetentionSettingsResponseProto 
+    VOID_REFRESH_LOG_RETENTION_SETTINGS_RESPONSE = 
+      RefreshLogRetentionSettingsResponseProto.newBuilder().build();
 
   public HSAdminRefreshProtocolServerSideTranslatorPB(
       HSAdminRefreshProtocol impl) {
@@ -59,8 +68,22 @@ public class HSAdminRefreshProtocolServerSideTranslatorPB implements
   }
 
   @Override
+  public RefreshJobRetentionSettingsResponseProto refreshJobRetentionSettings(
+      RpcController controller, 
+      RefreshJobRetentionSettingsRequestProto request)
+      throws ServiceException {
+    try {
+      impl.refreshJobRetentionSettings();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_REFRESH_JOB_RETENTION_SETTINGS_RESPONSE;
+  }
+
+  @Override
   public RefreshLogRetentionSettingsResponseProto refreshLogRetentionSettings(
-      RpcController controller, RefreshLogRetentionSettingsRequestProto request)
+      RpcController controller, 
+      RefreshLogRetentionSettingsRequestProto request)
       throws ServiceException {
     try {
       impl.refreshLogRetentionSettings();

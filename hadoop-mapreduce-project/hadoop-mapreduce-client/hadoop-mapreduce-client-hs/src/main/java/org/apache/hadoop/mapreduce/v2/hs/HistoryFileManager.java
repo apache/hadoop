@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapreduce.jobhistory.JobSummary;
@@ -61,6 +62,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
@@ -416,7 +418,7 @@ public class HistoryFileManager extends AbstractService {
       return historyFile;
     }
     
-    private synchronized void delete() throws IOException {
+    protected synchronized void delete() throws IOException {
       if (LOG.isDebugEnabled()) {
         LOG.debug("deleting " + historyFile + " and " + confFile);
       }
@@ -524,10 +526,7 @@ public class HistoryFileManager extends AbstractService {
     maxHistoryAge = conf.getLong(JHAdminConfig.MR_HISTORY_MAX_AGE_MS,
         JHAdminConfig.DEFAULT_MR_HISTORY_MAX_AGE);
     
-    jobListCache = new JobListCache(conf.getInt(
-        JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE,
-        JHAdminConfig.DEFAULT_MR_HISTORY_JOBLIST_CACHE_SIZE),
-        maxHistoryAge);
+    jobListCache = createJobListCache();
 
     serialNumberIndex = new SerialNumberIndex(conf.getInt(
         JHAdminConfig.MR_HISTORY_DATESTRING_CACHE_SIZE,
@@ -542,6 +541,12 @@ public class HistoryFileManager extends AbstractService {
         1, TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
 
     super.serviceInit(conf);
+  }
+
+  protected JobListCache createJobListCache() {
+    return new JobListCache(conf.getInt(
+        JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE,
+        JHAdminConfig.DEFAULT_MR_HISTORY_JOBLIST_CACHE_SIZE), maxHistoryAge);
   }
 
   private void mkdir(FileContext fc, Path path, FsPermission fsp)
@@ -656,18 +661,18 @@ public class HistoryFileManager extends AbstractService {
     return jhStatusList;
   }
 
-  private static List<FileStatus> scanDirectoryForHistoryFiles(Path path,
+  protected List<FileStatus> scanDirectoryForHistoryFiles(Path path,
       FileContext fc) throws IOException {
     return scanDirectory(path, fc, JobHistoryUtils.getHistoryFileFilter());
   }
-
+  
   /**
    * Finds all history directories with a timestamp component by scanning the
    * filesystem. Used when the JobHistory server is started.
    * 
-   * @return
+   * @return list of history directories
    */
-  private List<FileStatus> findTimestampedDirectories() throws IOException {
+  protected List<FileStatus> findTimestampedDirectories() throws IOException {
     List<FileStatus> fsList = JobHistoryUtils.localGlobber(doneDirFc,
         doneDirPrefixPath, DONE_BEFORE_SERIAL_TAIL);
     return fsList;
@@ -954,7 +959,7 @@ public class HistoryFileManager extends AbstractService {
         }
       }
       if (!halted) {
-        doneDirFc.delete(doneDirFc.makeQualified(serialDir.getPath()), true);
+        deleteDir(serialDir);
         removeDirectoryFromSerialNumberIndex(serialDir.getPath());
         existingDoneSubdirs.remove(serialDir.getPath());
       } else {
@@ -962,6 +967,13 @@ public class HistoryFileManager extends AbstractService {
       }
     }
   }
+  
+  protected boolean deleteDir(FileStatus serialDir)
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, IOException {
+    return doneDirFc.delete(doneDirFc.makeQualified(serialDir.getPath()), true);
+  }
+
   // for test
   @VisibleForTesting
   void setMaxHistoryAge(long newValue){

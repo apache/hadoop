@@ -34,6 +34,18 @@ message RefreshAdminAclsResponseProto {
 }
 
 /**
+ *  refresh job retention settings request.
+ */
+message RefreshJobRetentionSettingsRequestProto {
+}
+
+/**
+ * Response for refresh job retention.
+ */
+message RefreshJobRetentionSettingsResponseProto {
+}
+
+/*
  *  refresh log retention request.
  */
 message RefreshLogRetentionSettingsRequestProto {
@@ -54,6 +66,13 @@ service HSAdminRefreshProtocolService {
    */
   rpc refreshAdminAcls(RefreshAdminAclsRequestProto)
       returns(RefreshAdminAclsResponseProto);
+      
+  /**
+   * Refresh job retention.
+   */
+  rpc refreshJobRetentionSettings(RefreshJobRetentionSettingsRequestProto)
+      returns(RefreshJobRetentionSettingsResponseProto);
+
    /**
    * Refresh log retention
    */

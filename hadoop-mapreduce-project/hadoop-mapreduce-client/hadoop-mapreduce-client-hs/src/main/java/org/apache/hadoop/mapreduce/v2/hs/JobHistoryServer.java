@@ -83,7 +83,7 @@ public class JobHistoryServer extends CompositeService {
     clientService = new HistoryClientService(historyContext, 
         this.jhsDTSecretManager);
     aggLogDelService = new AggregatedLogDeletionService();
-    hsAdminServer = new HSAdminServer(aggLogDelService);
+    hsAdminServer = new HSAdminServer(aggLogDelService, jobHistoryService);
     addService(jobHistoryService);
     addService(clientService);
     addService(aggLogDelService);

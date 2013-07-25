@@ -149,6 +149,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5356. Ability to refresh aggregated log retention period and
     check interval (Ashwin Shankar via jlowe)
 
+    MAPREDUCE-5386. Ability to refresh history server job retention and job
+    cleaner settings (Ashwin Shankar via jlowe)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

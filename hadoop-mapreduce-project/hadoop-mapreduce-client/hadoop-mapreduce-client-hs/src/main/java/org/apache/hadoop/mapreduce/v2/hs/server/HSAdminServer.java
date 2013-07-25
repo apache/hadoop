@@ -44,6 +44,7 @@ import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.mapreduce.v2.hs.HSAuditLogger;
 import org.apache.hadoop.mapreduce.v2.hs.HSAuditLogger.AuditConstants;
+import org.apache.hadoop.mapreduce.v2.hs.JobHistory;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.HSAdminRefreshProtocolService;
 import org.apache.hadoop.mapreduce.v2.hs.protocol.HSAdminProtocol;
 import org.apache.hadoop.mapreduce.v2.hs.protocolPB.HSAdminRefreshProtocolPB;
@@ -62,10 +63,13 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
   protected RPC.Server clientRpcServer;
   protected InetSocketAddress clientRpcAddress;
   private static final String HISTORY_ADMIN_SERVER = "HSAdminServer";
-  
-  public HSAdminServer(AggregatedLogDeletionService aggLogDelService) {
+  private JobHistory jobHistoryService = null;
+
+  public HSAdminServer(AggregatedLogDeletionService aggLogDelService,
+      JobHistory jobHistoryService) {
     super(HSAdminServer.class.getName());
     this.aggLogDelService = aggLogDelService;
+    this.jobHistoryService = jobHistoryService;
   }
 
   @Override
@@ -100,7 +104,8 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
         .setPort(clientRpcAddress.getPort()).setVerbose(false).build();
 
     addProtocol(conf, GetUserMappingsProtocolPB.class, getUserMappingService);
-    addProtocol(conf, HSAdminRefreshProtocolPB.class, refreshHSAdminProtocolService);
+    addProtocol(conf, HSAdminRefreshProtocolPB.class,
+        refreshHSAdminProtocolService);
 
     adminAcl = new AccessControlList(conf.get(JHAdminConfig.JHS_ADMIN_ACL,
         JHAdminConfig.DEFAULT_JHS_ADMIN_ACL));
@@ -196,7 +201,7 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
     HSAuditLogger.logSuccess(user.getShortUserName(), "refreshAdminAcls",
         HISTORY_ADMIN_SERVER);
   }
- 
+
   @Override
   public void refreshLogRetentionSettings() throws IOException {
     UserGroupInformation user = checkAcls("refreshLogRetentionSettings");
@@ -205,5 +210,15 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
 
     HSAuditLogger.logSuccess(user.getShortUserName(),
         "refreshLogRetentionSettings", "HSAdminServer");
+  }
+
+  @Override
+  public void refreshJobRetentionSettings() throws IOException {
+    UserGroupInformation user = checkAcls("refreshJobRetentionSettings");
+
+    jobHistoryService.refreshJobRetentionSettings();
+
+    HSAuditLogger.logSuccess(user.getShortUserName(),
+        "refreshJobRetentionSettings", HISTORY_ADMIN_SERVER);
   }
 }
