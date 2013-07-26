@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.util.Arrays;
 
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Shell.OSType;
 
 /**
  * Class for creating hardlinks.
@@ -41,15 +42,7 @@ import org.apache.hadoop.util.Shell;
  */
 public class HardLink { 
 
-  public enum OSType {
-    OS_TYPE_UNIX,
-    OS_TYPE_WIN,
-    OS_TYPE_SOLARIS,
-    OS_TYPE_MAC,
-    OS_TYPE_FREEBSD
-  }
-  
-  public static OSType osType;
+  public static OSType osType = Shell.osType;
   private static HardLinkCommandGetter getHardLinkCommand;
   
   public final LinkStats linkStats; //not static
@@ -57,12 +50,11 @@ public class HardLink {
   //initialize the command "getters" statically, so can use their 
   //methods without instantiating the HardLink object
   static { 
-    osType = getOSType();
     if (osType == OSType.OS_TYPE_WIN) {
       // Windows
       getHardLinkCommand = new HardLinkCGWin();
     } else {
-      // Unix
+      // Unix or Linux
       getHardLinkCommand = new HardLinkCGUnix();
       //override getLinkCountCommand for the particular Unix variant
       //Linux is already set as the default - {"stat","-c%h", null}
@@ -79,27 +71,7 @@ public class HardLink {
   public HardLink() {
     linkStats = new LinkStats();
   }
-  
-  static private OSType getOSType() {
-    String osName = System.getProperty("os.name");
-    if (Shell.WINDOWS) {
-      return OSType.OS_TYPE_WIN;
-    }
-    else if (osName.contains("SunOS") 
-            || osName.contains("Solaris")) {
-       return OSType.OS_TYPE_SOLARIS;
-    }
-    else if (osName.contains("Mac")) {
-       return OSType.OS_TYPE_MAC;
-    }
-    else if (osName.contains("FreeBSD")) {
-       return OSType.OS_TYPE_FREEBSD;
-    }
-    else {
-      return OSType.OS_TYPE_UNIX;
-    }
-  }
-  
+
   /**
    * This abstract class bridges the OS-dependent implementations of the 
    * needed functionality for creating hardlinks and querying link counts.
