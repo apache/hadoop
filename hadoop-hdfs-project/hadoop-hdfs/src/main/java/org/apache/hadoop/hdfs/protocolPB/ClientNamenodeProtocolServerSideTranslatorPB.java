@@ -707,11 +707,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       HdfsFileStatus result = server.getFileLinkInfo(req.getSrc());
       if (result != null) {
-        System.out.println("got non null result for getFileLinkInfo for " + req.getSrc());
         return GetFileLinkInfoResponseProto.newBuilder().setFs(
             PBHelper.convert(result)).build();
       } else {
-        System.out.println("got  null result for getFileLinkInfo for " + req.getSrc());
         return VOID_GETFILELINKINFO_RESPONSE;      
       }
 
