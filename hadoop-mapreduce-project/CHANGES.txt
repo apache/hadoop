@@ -27,6 +27,9 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-5251. Reducer should not implicate map attempt if it has
     insufficient space to fetch map output (Ashwin Shankar via jlowe)
 
+    MAPREDUCE-5419. TestSlive is getting FileNotFound Exception (Robert Parker
+    via jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
