@@ -18,6 +18,8 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -299,6 +301,16 @@ class ShuffleScheduler<K,V> {
   public synchronized void putBackKnownMapOutput(MapHost host, 
                                                  TaskAttemptID mapId) {
     host.addKnownMap(mapId);
+  }
+
+  public void reportLocalError(IOException ioe) {
+    try {
+      LOG.error("Shuffle failed : local error on this node: "
+          + InetAddress.getLocalHost());
+    } catch (UnknownHostException e) {
+      LOG.error("Shuffle failed : local error on this node");
+    }
+    reporter.reportException(ioe);
   }
 
   public synchronized MapHost getHost() throws InterruptedException {

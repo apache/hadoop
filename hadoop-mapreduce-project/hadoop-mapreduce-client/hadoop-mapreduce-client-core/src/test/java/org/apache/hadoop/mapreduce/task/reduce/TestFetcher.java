@@ -42,6 +42,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.junit.Test;
 
 /**
@@ -70,6 +71,56 @@ public class TestFetcher {
       }
       return super.openConnection(url);
     }
+  }
+  
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testReduceOutOfDiskSpace() throws Throwable {
+    LOG.info("testReduceOutOfDiskSpace");
+    JobConf job = new JobConf();
+    TaskAttemptID id = TaskAttemptID.forName("attempt_0_1_r_1_1");
+    ShuffleScheduler<Text, Text> ss = mock(ShuffleScheduler.class);
+    MergeManager<Text, Text> mm = mock(MergeManager.class);
+    Reporter r = mock(Reporter.class);
+    ShuffleClientMetrics metrics = mock(ShuffleClientMetrics.class);
+    ExceptionReporter except = mock(ExceptionReporter.class);
+    SecretKey key = JobTokenSecretManager.createSecretKey(new byte[] { 0, 0, 0,
+        0 });
+    HttpURLConnection connection = mock(HttpURLConnection.class);
+
+    Counters.Counter allErrs = mock(Counters.Counter.class);
+    when(r.getCounter(anyString(), anyString())).thenReturn(allErrs);
+
+    Fetcher<Text, Text> underTest = new FakeFetcher<Text, Text>(job, id, ss,
+        mm, r, metrics, except, key, connection);
+
+    MapHost host = new MapHost("localhost", "http://localhost:8080/");
+    ArrayList<TaskAttemptID> maps = new ArrayList<TaskAttemptID>(1);
+    TaskAttemptID map1ID = TaskAttemptID.forName("attempt_0_1_m_1_1");
+    maps.add(map1ID);
+    TaskAttemptID map2ID = TaskAttemptID.forName("attempt_0_1_m_2_1");
+    maps.add(map2ID);
+    String encHash = "vFE234EIFCiBgYs2tCXY/SjT8Kg=";
+    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 10, 10, 1);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    header.write(new DataOutputStream(bout));
+
+    ByteArrayInputStream in = new ByteArrayInputStream(bout.toByteArray());
+
+    when(ss.getMapsForHost(host)).thenReturn(maps);
+    when(connection.getResponseCode()).thenReturn(200);
+    when(
+        connection
+            .getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
+        .thenReturn(replyHash);
+    when(connection.getInputStream()).thenReturn(in);
+
+    when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt())).thenThrow(
+        new DiskErrorException("No disk space available"));
+
+    underTest.copyFromHost(host);
+    verify(ss).reportLocalError(any(IOException.class));
   }
   
   @SuppressWarnings("unchecked")
