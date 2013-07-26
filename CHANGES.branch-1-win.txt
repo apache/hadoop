@@ -469,3 +469,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     MAPREDUCE-5405. Job recovery can fail if task log directory symlink from
     prior run still exists. (cnauroth)
+
+    HADOOP-9507. LocalFileSystem rename() is broken in some cases when
+    destination exists. (cnauroth)

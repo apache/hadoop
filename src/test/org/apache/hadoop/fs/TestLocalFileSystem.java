@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import java.io.*;
 
 import junit.framework.*;
@@ -202,5 +203,126 @@ public class TestLocalFileSystem extends TestCase {
     BufferedFSInputStream bis = new BufferedFSInputStream(
         new RawLocalFileSystem().new LocalFSFileInputStream(path), 1024);
     assertNotNull(bis.getFileDescriptor());
+  }
+
+  /**
+   * Tests a simple rename of a directory.
+   */
+  public void testRenameDirectory() throws IOException {
+    FileSystem fs = FileSystem.getLocal(new Configuration());
+    Path src = new Path(TEST_ROOT_DIR, "dir1");
+    Path dst = new Path(TEST_ROOT_DIR, "dir2");
+    try {
+      fs.delete(src, true);
+      fs.delete(dst, true);
+      assertTrue(fs.mkdirs(src));
+      assertTrue(fs.rename(src, dst));
+      assertTrue(fs.exists(dst));
+      assertFalse(fs.exists(src));
+    } finally {
+      cleanupFileSystem(fs, src, dst);
+    }
+  }
+
+  /**
+   * Tests that renaming a directory replaces the destination if the destination
+   * is an existing empty directory.
+   * 
+   * Before:
+   *   /dir1
+   *     /file1
+   *     /file2
+   *   /dir2
+   * 
+   * After rename("/dir1", "/dir2"):
+   *   /dir2
+   *     /file1
+   *     /file2
+   */
+  public void testRenameReplaceExistingEmptyDirectory() throws IOException {
+    FileSystem fs = FileSystem.getLocal(new Configuration());
+    Path src = new Path(TEST_ROOT_DIR, "dir1");
+    Path dst = new Path(TEST_ROOT_DIR, "dir2");
+    try {
+      fs.delete(src, true);
+      fs.delete(dst, true);
+      assertTrue(fs.mkdirs(src));
+      writeFile(fs, new Path(src, "file1"));
+      writeFile(fs, new Path(src, "file2"));
+      assertTrue(fs.mkdirs(dst));
+      assertTrue(fs.rename(src, dst));
+      assertTrue(fs.exists(dst));
+      assertTrue(fs.exists(new Path(dst, "file1")));
+      assertTrue(fs.exists(new Path(dst, "file2")));
+      assertFalse(fs.exists(src));
+    } finally {
+      cleanupFileSystem(fs, src, dst);
+    }
+  }
+
+  /**
+   * Tests that renaming a directory to an existing directory that is not empty
+   * results in a full copy of source to destination.
+   * 
+   * Before:
+   *   /dir1
+   *     /dir2
+   *       /dir3
+   *         /file1
+   *         /file2
+   * 
+   * After rename("/dir1/dir2/dir3", "/dir1"):
+   *   /dir1
+   *     /dir3
+   *       /file1
+   *       /file2
+   */
+  public void testRenameMoveToExistingNonEmptyDirectory() throws IOException {
+    FileSystem fs = FileSystem.getLocal(new Configuration());
+    Path src = new Path(TEST_ROOT_DIR, "dir1/dir2/dir3");
+    Path dst = new Path(TEST_ROOT_DIR, "dir1");
+    try {
+      fs.delete(src, true);
+      fs.delete(dst, true);
+      assertTrue(fs.mkdirs(src));
+      writeFile(fs, new Path(src, "file1"));
+      writeFile(fs, new Path(src, "file2"));
+      assertTrue(fs.exists(dst));
+      assertTrue(fs.rename(src, dst));
+      assertTrue(fs.exists(dst));
+      assertTrue(fs.exists(new Path(dst, "dir3")));
+      assertTrue(fs.exists(new Path(dst, "dir3/file1")));
+      assertTrue(fs.exists(new Path(dst, "dir3/file2")));
+      assertFalse(fs.exists(src));
+    } finally {
+      cleanupFileSystem(fs, src, dst);
+    }
+  }
+
+  /**
+   * Cleans up the file system by deleting the given paths and closing the file
+   * system.
+   * 
+   * @param fs FileSystem to clean up
+   * @param paths Path... any number of paths to delete
+   */
+  private static void cleanupFileSystem(FileSystem fs, Path... paths) {
+    for (Path path: paths) {
+      deleteQuietly(fs, path);
+    }
+    IOUtils.cleanup(null, fs);
+  }
+
+  /**
+   * Deletes the given path and silences any exceptions.
+   * 
+   * @param fs FileSystem to perform the delete
+   * @param path Path to delete
+   */
+  private static void deleteQuietly(FileSystem fs, Path path) {
+    try {
+      fs.delete(path, true);
+    } catch (IOException e) {
+    }
   }
 }
