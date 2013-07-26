@@ -51,6 +51,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -728,7 +729,13 @@ class BlockReceiver implements Closeable {
       }
       if (responder != null) {
         try {
-          responder.join();
+          responder.join(datanode.getDnConf().getXceiverStopTimeout());
+          if (responder.isAlive()) {
+            String msg = "Join on responder thread " + responder
+                + " timed out";
+            LOG.warn(msg + "\n" + StringUtils.getStackTrace(responder));
+            throw new IOException(msg);
+          }
         } catch (InterruptedException e) {
           responder.interrupt();
           throw new IOException("Interrupted receiveBlock");
