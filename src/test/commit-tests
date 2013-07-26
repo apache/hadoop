@@ -5,6 +5,7 @@
 **/TestAuthenticationFilter.java
 **/TestAuthenticationToken.java
 **/TestAuthenticatedURL.java
+**/TestBlockDecompressorStream.java
 **/TestBloomMapFile.java
 **/TestBuffer.java
 **/TestBytesWritable.java
