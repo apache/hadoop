@@ -102,6 +102,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5288. ResourceEstimator#getEstimatedTotalMapOutputSize suffers 
     from divide by zero issues. (kkambatl via tucu)
 
+    HADOOP-9507. LocalFileSystem rename() is broken in some cases when
+    destination exists. (cnauroth)
+
 Release 1.2.1 - 2013.07.06
 
   INCOMPATIBLE CHANGES
