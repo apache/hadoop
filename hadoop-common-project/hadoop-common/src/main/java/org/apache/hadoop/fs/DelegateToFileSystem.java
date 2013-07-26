@@ -113,7 +113,14 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
 
   @Override
   public FileStatus getFileLinkStatus(final Path f) throws IOException {
-    return getFileStatus(f);
+    FileStatus status = fsImpl.getFileLinkStatus(f);
+    // FileSystem#getFileLinkStatus qualifies the link target
+    // AbstractFileSystem needs to return it plain since it's qualified
+    // in FileContext, so re-get and set the plain target
+    if (status.isSymlink()) {
+      status.setSymlink(fsImpl.getLinkTarget(f));
+    }
+    return status;
   }
 
   @Override
@@ -199,22 +206,18 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
 
   @Override
   public boolean supportsSymlinks() {
-    return false;
+    return fsImpl.supportsSymlinks();
   }  
   
   @Override
   public void createSymlink(Path target, Path link, boolean createParent) 
       throws IOException { 
-    throw new IOException("File system does not support symlinks");
+    fsImpl.createSymlink(target, link, createParent);
   } 
   
   @Override
   public Path getLinkTarget(final Path f) throws IOException {
-    /* We should never get here. Any file system that threw an 
-     * UnresolvedLinkException, causing this function to be called,
-     * should override getLinkTarget. 
-     */
-    throw new AssertionError();
+    return fsImpl.getLinkTarget(f);
   }
 
   @Override //AbstractFileSystem
