@@ -459,8 +459,33 @@ Release 2.1.0-beta - 2013-07-02
     MAPREDUCE-5325. MR changes related to YARN-727. ClientRMProtocol.getAllApplications
     should accept ApplicationType as a parameter. (Xuan Gong via hitesh)
 
+    MAPREDUCE-5291. Change MR App to use updated property names in
+    container-log4j.properties. (Zhijie Shen via sseth)
+
+    MAPREDUCE-5303. Changed MR app after moving ProtoBase to package impl.pb via
+    YARN-724. (Jian He via vinodkv)
+
+    MAPREDUCE-5312. TestRMNMInfo is failing. (sandyr via tucu)
+
+    MAPREDUCE-5304. mapreduce.Job killTask/failTask/getTaskCompletionEvents 
+    methods have incompatible signature changes. (kkambatl via tucu)
+
+    MAPREDUCE-5298. Moved MapReduce services to YARN-530 stricter lifecycle.
+    (Steve Loughran via vinodkv)
+
+    MAPREDUCE-5319. Set user.name in job.xml. (Xuan Gong via acmurthy)
+
+    MAPREDUCE-5310. MRAM should not normalize allocation request capabilities.
+    (tucu)
+
+    MAPREDUCE-5213. Re-assess TokenCache methods marked @Private. 
+    (kkambatl via tucu)
+
     MAPREDUCE-5412. Update MR app to use multiple containers API of
     ContainerManager after YARN-926. (Jian He via vinodkv)
+
+    MAPREDUCE-5421. Fixed TestNonExistentJob failure after YARN-873. (Junping Du
+    via vinodkv)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
@@ -512,28 +537,6 @@ Release 2.1.0-beta - 2013-07-02
 
     MAPREDUCE-4374. Fix child task environment variable config and add support
     for Windows. (Chuan Liu via cnauroth)
-
-    MAPREDUCE-5291. Change MR App to use updated property names in
-    container-log4j.properties. (Zhijie Shen via sseth)
-
-    MAPREDUCE-5303. Changed MR app after moving ProtoBase to package impl.pb via
-    YARN-724. (Jian He via vinodkv)
-
-    MAPREDUCE-5312. TestRMNMInfo is failing. (sandyr via tucu)
-
-    MAPREDUCE-5304. mapreduce.Job killTask/failTask/getTaskCompletionEvents 
-    methods have incompatible signature changes. (kkambatl via tucu)
-
-    MAPREDUCE-5298. Moved MapReduce services to YARN-530 stricter lifecycle.
-    (Steve Loughran via vinodkv)
-
-    MAPREDUCE-5319. Set user.name in job.xml. (Xuan Gong via acmurthy)
-
-    MAPREDUCE-5310. MRAM should not normalize allocation request capabilities.
-    (tucu)
-
-    MAPREDUCE-5213. Re-assess TokenCache methods marked @Private. 
-    (kkambatl via tucu)
 
 Release 2.0.5-alpha - 06/06/2013
 
