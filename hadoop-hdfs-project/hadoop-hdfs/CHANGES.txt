@@ -126,6 +126,9 @@ Trunk (Unreleased)
 
     HDFS-4904. Remove JournalService. (Arpit Agarwal via cnauroth)
 
+    HDFS-5004. Add additional JMX bean for NameNode status data
+    (Trevor Lorimer via cos)
+
   OPTIMIZATIONS
 
   BUG FIXES
