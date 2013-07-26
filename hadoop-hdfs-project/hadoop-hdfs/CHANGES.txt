@@ -33,8 +33,6 @@ Release 2.3.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-    HDFS-5034.  Remove debug prints from GetFileLinkInfo (Andrew Wang via Colin
-    Patrick McCabe)
 
 Release 2.1.1-beta - UNRELEASED
 
