@@ -10,6 +10,9 @@ Release 0.23.10 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-1981. Improve getSplits performance by using listLocatedStatus
+    (Hairong Kuang and Jason Lowe via jlowe)
+
   BUG FIXES
 
     MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
