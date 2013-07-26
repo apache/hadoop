@@ -52,7 +52,7 @@ public class RetryCache {
     private static byte SUCCESS = 1;
     private static byte FAILED = 2;
 
-    private volatile byte state = INPROGRESS;
+    private byte state = INPROGRESS;
     
     // Store uuid as two long for better memory utilization
     private final long clientIdMsb; // Most signficant bytes
@@ -63,8 +63,10 @@ public class RetryCache {
     private LightWeightGSet.LinkedElement next;
 
     CacheEntry(byte[] clientId, int callId, long expirationTime) {
-      Preconditions.checkArgument(clientId.length == 16, "Invalid clientId");
-      // Conver UUID bytes to two longs
+      // ClientId must be a UUID - that is 16 octets.
+      Preconditions.checkArgument(clientId.length == 16,
+          "Invalid clientId - must be UUID of size 16 octets");
+      // Convert UUID bytes to two longs
       long tmp = 0;
       for (int i=0; i<8; i++) {
         tmp = (tmp << 8) | (clientId[i] & 0xff);
@@ -116,7 +118,7 @@ public class RetryCache {
       this.notifyAll();
     }
 
-    public boolean isSuccess() {
+    public synchronized boolean isSuccess() {
       return state == SUCCESS;
     }
 
@@ -241,13 +243,13 @@ public class RetryCache {
 
   private static CacheEntry newEntry(long expirationTime) {
     return new CacheEntry(Server.getClientId(), Server.getCallId(),
-        expirationTime);
+        System.nanoTime() + expirationTime);
   }
 
   private static CacheEntryWithPayload newEntry(Object payload,
       long expirationTime) {
     return new CacheEntryWithPayload(Server.getClientId(), Server.getCallId(),
-        payload, expirationTime);
+        payload, System.nanoTime() + expirationTime);
   }
 
   /** Static method that provides null check for retryCache */

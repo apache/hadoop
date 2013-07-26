@@ -496,6 +496,8 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9756. Remove the deprecated getServer(..) methods from RPC.
     (Junping Du via szetszwo)
 
+    HADOOP-9770. Make RetryCache#state non volatile. (suresh)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
