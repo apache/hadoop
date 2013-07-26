@@ -27,9 +27,10 @@ import org.junit.Test;
 /** Testing {@link LightWeightCache} */
 public class TestLightWeightCache {
   private static final long starttime = Time.now();
-  private static final Random ran = new Random(starttime);
+  private static final long seed = starttime;
+  private static final Random ran = new Random(seed);
   static {
-    println("Start time = " + new Date(starttime) + ", seed=" +  starttime);
+    println("Start time = " + new Date(starttime) + ", seed=" +  seed);
   }
 
   private static void print(Object s) {
@@ -65,7 +66,7 @@ public class TestLightWeightCache {
     final int dataSize = 1 << 16;
     for(int i = 0; i < 10; i++) {
       final int modulus = ran.nextInt(1024) + 1;
-      final int sizeLimit = ran.nextInt(modulus);
+      final int sizeLimit = ran.nextInt(modulus) + 1;
       checkSizeLimit(sizeLimit, dataSize, modulus);
     }
   }
