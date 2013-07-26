@@ -19,6 +19,9 @@ Release 2.3.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-1981. Improve getSplits performance by using listLocatedStatus
+    (Hairong Kuang and Jason Lowe via jlowe)
+
   BUG FIXES
 
     MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
@@ -1106,6 +1109,9 @@ Release 0.23.10 - UNRELEASED
   IMPROVEMENTS
 
   OPTIMIZATIONS
+
+    MAPREDUCE-1981. Improve getSplits performance by using listLocatedStatus
+    (Hairong Kuang and Jason Lowe via jlowe)
 
   BUG FIXES
 
