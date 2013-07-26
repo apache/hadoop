@@ -2950,8 +2950,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       //      of rewriting the dst
       String actualdst = dir.isDir(dst)?
           dst + Path.SEPARATOR + new Path(src).getName(): dst;
-      checkParentAccess(pc, src, FsAction.WRITE);
-      checkAncestorAccess(pc, actualdst, FsAction.WRITE);
+      // Rename does not operates on link targets
+      // Do not resolveLink when checking permissions of src and dst
+      // Check write access to parent of src
+      checkPermission(pc, src, false, null, FsAction.WRITE, null, null, false);
+      // Check write access to ancestor of dst
+      checkPermission(pc, actualdst, false, FsAction.WRITE, null, null, null,
+          false);
     }
 
     if (dir.renameTo(src, dst)) {
@@ -3010,8 +3015,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       Options.Rename... options) throws IOException {
     assert hasWriteLock();
     if (isPermissionEnabled) {
-      checkParentAccess(pc, src, FsAction.WRITE);
-      checkAncestorAccess(pc, dst, FsAction.WRITE);
+      // Rename does not operates on link targets
+      // Do not resolveLink when checking permissions of src and dst
+      // Check write access to parent of src
+      checkPermission(pc, src, false, null, FsAction.WRITE, null, null, false);
+      // Check write access to ancestor of dst
+      checkPermission(pc, dst, false, FsAction.WRITE, null, null, null, false);
     }
 
     dir.renameTo(src, dst, options);
@@ -3244,7 +3253,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkOperation(OperationCategory.READ);
       src = FSDirectory.resolvePath(src, pathComponents, dir);
       if (isPermissionEnabled) {
-        checkTraverse(pc, src);
+        checkPermission(pc, src, false, null, null, null, null, resolveLink);
       }
       stat = dir.getFileInfo(src, resolveLink);
     } catch (AccessControlException e) {

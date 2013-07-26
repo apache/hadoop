@@ -20,10 +20,8 @@ package org.apache.hadoop.security;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -32,17 +30,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 
@@ -313,94 +308,6 @@ public class TestPermission {
       assertTrue(parent.isUriPathAbsolute());
       assertTrue(e.getMessage().contains(parent.toString()));
       return false;
-    }
-  }
-
-  @Test(timeout = 30000)
-  public void testSymlinkPermissions() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
-    conf.set(FsPermission.UMASK_LABEL, "000");
-    MiniDFSCluster cluster = null;
-    FileSystem fs = null;
-
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
-      cluster.waitActive();
-      FileContext fc = FileContext.getFileContext(conf);
-      fs = FileSystem.get(conf);
-
-      // Create initial test files
-      final Path testDir = new Path("/symtest");
-      final Path target = new Path(testDir, "target");
-      final Path link = new Path(testDir, "link");
-      fs.mkdirs(testDir);
-      DFSTestUtil.createFile(fs, target, 1024, (short)3, 0xBEEFl);
-      fc.createSymlink(target, link, false);
-
-      // Non-super user to run commands with
-      final UserGroupInformation user = UserGroupInformation
-          .createRemoteUser("myuser");
-
-      // Case 1: parent directory is read-only
-      fs.setPermission(testDir, new FsPermission((short)0555));
-      try {
-        user.doAs(new PrivilegedExceptionAction<Object>() {
-          @Override
-          public Object run() throws IOException {
-            FileContext myfc = FileContext.getFileContext(conf);
-            myfc.delete(link, false);
-            return null;
-          }
-        });
-        fail("Deleted symlink without write permissions on parent!");
-      } catch (AccessControlException e) {
-        GenericTestUtils.assertExceptionContains("Permission denied", e);
-      }
-
-      // Case 2: target is not readable
-      fs.setPermission(target, new FsPermission((short)0000));
-      try {
-        user.doAs(new PrivilegedExceptionAction<Object>() {
-          @Override
-          public Object run() throws IOException {
-            FileContext myfc = FileContext.getFileContext(conf);
-            myfc.open(link).read();
-            return null;
-          }
-        });
-        fail("Read link target even though target does not have" +
-            " read permissions!");
-      } catch (IOException e) {
-        GenericTestUtils.assertExceptionContains("Permission denied", e);
-      }
-
-      // Case 3: parent directory is read/write
-      fs.setPermission(testDir, new FsPermission((short)0777));
-      user.doAs(new PrivilegedExceptionAction<Object>() {
-        @Override
-        public Object run() throws IOException {
-          FileContext myfc = FileContext.getFileContext(conf);
-          myfc.delete(link, false);
-          return null;
-        }
-      });
-      // Make sure only the link was deleted
-      assertTrue("Target should not have been deleted!",
-          fc.util().exists(target));
-      assertFalse("Link should have been deleted!",
-          fc.util().exists(link));
-    } finally {
-      try {
-        if(fs != null) fs.close();
-      } catch(Exception e) {
-        LOG.error(StringUtils.stringifyException(e));
-      }
-      try {
-        if(cluster != null) cluster.shutdown();
-      } catch(Exception e) {
-        LOG.error(StringUtils.stringifyException(e));
-      }
     }
   }
 }
