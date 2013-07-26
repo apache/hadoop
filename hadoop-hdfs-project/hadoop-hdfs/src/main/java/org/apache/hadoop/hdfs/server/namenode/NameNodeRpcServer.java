@@ -951,7 +951,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +"from "+nodeReg+" "+receivedAndDeletedBlocks.length
           +" blocks.");
     }
-    namesystem.getBlockManager().processIncrementalBlockReport(
+    namesystem.processIncrementalBlockReport(
         nodeReg, poolId, receivedAndDeletedBlocks[0].getBlocks());
   }
   

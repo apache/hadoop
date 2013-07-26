@@ -75,6 +75,8 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4974. Add Idempotent and AtMostOnce annotations to namenode
     protocol methods. (suresh)
+
+    HDFS-4979. Implement retry cache on Namenode. (suresh)
     
   IMPROVEMENTS
 
