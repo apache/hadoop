@@ -493,6 +493,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9760. Move GSet and related classes to common from HDFS.
     (suresh)
 
+    HADOOP-9756. Remove the deprecated getServer(..) methods from RPC.
+    (Junping Du via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs

@@ -115,7 +115,8 @@ public class TestIPCServerResponder extends TestCase {
     }
   }
 
-  public void testResponseBuffer() throws Exception {
+  public void testResponseBuffer() 
+      throws IOException, InterruptedException {
     Server.INITIAL_RESP_BUF_SIZE = 1;
     conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
                 1);
@@ -123,7 +124,8 @@ public class TestIPCServerResponder extends TestCase {
     conf = new Configuration(); // reset configuration
   }
 
-  public void testServerResponder() throws Exception {
+  public void testServerResponder()
+      throws IOException, InterruptedException {
     testServerResponder(10, true, 1, 10, 200);
   }
 
@@ -131,7 +133,8 @@ public class TestIPCServerResponder extends TestCase {
                                   final boolean handlerSleep, 
                                   final int clientCount,
                                   final int callerCount,
-                                  final int callCount) throws Exception {
+                                  final int callCount) throws IOException,
+                                  InterruptedException {
     Server server = new TestServer(handlerCount, handlerSleep);
     server.start();
 

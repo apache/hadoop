@@ -344,7 +344,6 @@ public class NameNodeProxies {
   }
 
   /** Creates the Failover proxy provider instance*/
-  @SuppressWarnings("unchecked")
   private static <T> FailoverProxyProvider<T> createFailoverProxyProvider(
       Configuration conf, Class<FailoverProxyProvider<T>> failoverProxyProviderClass,
       Class<T> xface, URI nameNodeUri) throws IOException {
@@ -354,9 +353,9 @@ public class NameNodeProxies {
     try {
       Constructor<FailoverProxyProvider<T>> ctor = failoverProxyProviderClass
           .getConstructor(Configuration.class, URI.class, Class.class);
-      FailoverProxyProvider<?> provider = ctor.newInstance(conf, nameNodeUri,
+      FailoverProxyProvider<T> provider = ctor.newInstance(conf, nameNodeUri,
           xface);
-      return (FailoverProxyProvider<T>) provider;
+      return provider;
     } catch (Exception e) {
       String message = "Couldn't create proxy provider " + failoverProxyProviderClass;
       if (LOG.isDebugEnabled()) {
