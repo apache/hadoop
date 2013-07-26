@@ -644,6 +644,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9759. Add support for NativeCodeLoader#getLibraryName on Windows.
     (Chuan Liu via cnauroth)
 
+    HADOOP-9773. TestLightWeightCache should not set size limit to zero when
+    testing it.  (szetszwo)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
