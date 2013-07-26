@@ -27,6 +27,7 @@ import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshAdminAclsRequestProto;
+import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshJobRetentionSettingsRequestProto;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.RefreshLogRetentionSettingsRequestProto;
 import org.apache.hadoop.mapreduce.v2.hs.protocol.HSAdminRefreshProtocol;
 
@@ -42,12 +43,18 @@ public class HSAdminRefreshProtocolClientSideTranslatorPB implements
 
   private final HSAdminRefreshProtocolPB rpcProxy;
 
-  private final static RefreshAdminAclsRequestProto VOID_REFRESH_ADMIN_ACLS_REQUEST = RefreshAdminAclsRequestProto
+  private final static RefreshAdminAclsRequestProto 
+    VOID_REFRESH_ADMIN_ACLS_REQUEST = RefreshAdminAclsRequestProto
       .newBuilder().build();
   
-  private final static RefreshLogRetentionSettingsRequestProto VOID_REFRESH_LOG_RETENTION_SETTINGS_REQUEST = RefreshLogRetentionSettingsRequestProto
-      .newBuilder().build();
+  private final static RefreshJobRetentionSettingsRequestProto 
+    VOID_REFRESH_JOB_RETENTION_SETTINGS_REQUEST = 
+       RefreshJobRetentionSettingsRequestProto.newBuilder().build();
   
+  private final static RefreshLogRetentionSettingsRequestProto 
+    VOID_REFRESH_LOG_RETENTION_SETTINGS_REQUEST = 
+      RefreshLogRetentionSettingsRequestProto.newBuilder().build();
+
   public HSAdminRefreshProtocolClientSideTranslatorPB(
       HSAdminRefreshProtocolPB rpcProxy) {
     this.rpcProxy = rpcProxy;
@@ -69,6 +76,16 @@ public class HSAdminRefreshProtocolClientSideTranslatorPB implements
   }
 
   @Override
+  public void refreshJobRetentionSettings() throws IOException {
+    try {
+      rpcProxy.refreshJobRetentionSettings(NULL_CONTROLLER,
+          VOID_REFRESH_JOB_RETENTION_SETTINGS_REQUEST);
+    } catch (ServiceException se) {
+      throw ProtobufHelper.getRemoteException(se);
+    }
+  }
+
+  @Override
   public void refreshLogRetentionSettings() throws IOException {
     try {
       rpcProxy.refreshLogRetentionSettings(NULL_CONTROLLER,
@@ -77,7 +94,7 @@ public class HSAdminRefreshProtocolClientSideTranslatorPB implements
       throw ProtobufHelper.getRemoteException(se);
     }
   }
-  
+
   @Override
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy,
