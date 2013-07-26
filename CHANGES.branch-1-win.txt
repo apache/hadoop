@@ -320,6 +320,9 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     TestReplicationPolicyWithNodeGroup failed caused by 1) old APIs and
     2) incorrect value of depthOfAllLeaves. (Xi Fang via cnauroth)
 
+    HADOOP-9609. Remove sh dependency of bin-package target. (Chuan Liu via
+    cnauroth)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a

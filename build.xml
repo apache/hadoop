@@ -115,6 +115,10 @@
             value="${build.c++}/examples/pipes"/>
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.docs.cn" value="${build.dir}/docs/cn"/>
+  <property name="forrest.home" value="${env.FORREST_HOME}"/>
+  <condition property="forrest.exec" value="${forrest.home}/bin/forrest.bat" else="${forrest.home}/bin/forrest">
+    <os family="windows" />
+  </condition>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.javadoc.dev" value="${build.docs}/dev-api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
@@ -1462,7 +1466,7 @@
     <echo file="${build.dir}/hadoop.ent" append="false">
       &lt;!ENTITY HadoopVersion "${version}"&gt; 
     </echo>
-    <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest"
+    <exec dir="${docs.src}" executable="${forrest.exec}"
 	  failonerror="true">
     </exec>
     <copy todir="${build.docs}">
@@ -1481,7 +1485,7 @@
   <target name="cn-docs" depends="forrest.check, init" 
        description="Generate forrest-based Chinese documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." 
         if="forrest.home">
-    <exec dir="${src.docs.cn}" executable="${forrest.home}/bin/forrest" failonerror="true">
+    <exec dir="${src.docs.cn}" executable="${forrest.exec}" failonerror="true">
       <env key="LANG" value="en_US.utf8"/>
     </exec>
     <copy todir="${build.docs.cn}">
@@ -1683,7 +1687,7 @@
     </copy>
 
     <exec dir="${dist.dir}" executable="python" failonerror="true">
-    <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
+      <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
       <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
       <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
       <env key="BUNDLE_SNAPPY_LIB" value="${bundle.snappy}"/>
@@ -1914,18 +1918,22 @@
       </fileset>
     </copy>
 
+    <condition property="lib.data.model" value="lib/native" >
+        <os family="windows" />
+    </condition>
+
     <condition property="lib.data.model" value="lib64" else="lib" >
       <and>
         <equals arg1="${sun.arch.data.model}" arg2="64" />
       </and>
     </condition>
 
-    <exec dir="${dist.dir}" executable="sh" failonerror="true">
+    <exec dir="${dist.dir}" executable="python" failonerror="true">
       <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
       <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
       <env key="DIST_LIB_DIR" value="${dist.dir}/${lib.data.model}"/>
       <env key="NATIVE_PLATFORM" value="${build.platform}" />
-      <arg line="${native.src.dir}/packageBinNativeHadoop.sh"/>
+      <arg line="${native.src.dir}/packageBinNativeHadoop.py"/>
     </exec>
 
     <subant target="package">
@@ -3056,7 +3064,8 @@
 
   <target name="jsvc" >
     <mkdir dir="${jsvc.build.dir}" />
-    <get src="${jsvc.location}" dest="${jsvc.build.dir}/${jsvc.dest.name}"/>
+    <get src="${jsvc.location}" dest="${jsvc.build.dir}/${jsvc.dest.name}" />
+
     <untar compression="gzip" src="${jsvc.build.dir}/${jsvc.dest.name}" dest="${jsvc.build.dir}" />
 
     <copy file="${jsvc.build.dir}/jsvc" toFile="${jsvc.install.dir}/jsvc.${os.arch}" verbose="true" />
