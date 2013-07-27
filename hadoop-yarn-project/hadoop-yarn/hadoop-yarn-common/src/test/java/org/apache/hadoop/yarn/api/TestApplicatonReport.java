@@ -46,6 +46,7 @@ public class TestApplicatonReport {
     appReport2.setCurrentApplicationAttemptId(null);
     Assert.assertNull(appReport2.getCurrentApplicationAttemptId());
     Assert.assertNotSame(appReport2, appReport3);
+    Assert.assertNull(appReport1.getAMRMToken());
   }
 
   protected static ApplicationReport createApplicationReport(
@@ -57,7 +58,7 @@ public class TestApplicatonReport {
         ApplicationReport.newInstance(appId, appAttemptId, "user", "queue",
           "appname", "host", 124, null, YarnApplicationState.FINISHED,
           "diagnostics", "url", 0, 0, FinalApplicationStatus.SUCCEEDED, null,
-          "N/A", 0.53789f, YarnConfiguration.DEFAULT_APPLICATION_TYPE);
+          "N/A", 0.53789f, YarnConfiguration.DEFAULT_APPLICATION_TYPE, null);
     return appReport;
   }
 

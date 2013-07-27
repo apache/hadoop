@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -283,6 +284,12 @@ public class ResourceMgrDelegate extends YarnClient {
   public ApplicationReport getApplicationReport(ApplicationId appId)
       throws YarnException, IOException {
     return client.getApplicationReport(appId);
+  }
+
+  @Override
+  public Token<AMRMTokenIdentifier> getAMRMToken(ApplicationId appId) 
+    throws YarnException, IOException {
+    throw new UnsupportedOperationException();
   }
 
   @Override

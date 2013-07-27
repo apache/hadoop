@@ -149,6 +149,7 @@ message ApplicationReportProto {
   optional ApplicationAttemptIdProto currentApplicationAttemptId = 16;
   optional float progress = 17;
   optional string applicationType = 18;
+  optional hadoop.common.TokenProto am_rm_token = 19;
 }
 
 enum NodeStateProto {
