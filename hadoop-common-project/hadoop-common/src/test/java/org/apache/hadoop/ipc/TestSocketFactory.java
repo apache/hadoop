@@ -35,7 +35,7 @@ import org.junit.Test;
 public class TestSocketFactory {
 
   @Test
-  public void testSocketFactoryAsKeyInMap() throws Exception {
+  public void testSocketFactoryAsKeyInMap() {
     Map<SocketFactory, Integer> dummyCache = new HashMap<SocketFactory, Integer>();
     int toBeCached1 = 1;
     int toBeCached2 = 2;
