@@ -32,22 +32,22 @@ class JobTrackerInstrumentation {
     tracker = jt;
   }
 
-  public void launchMap(TaskAttemptID taskAttemptID)
+  public void launchMap(TaskAttemptID taskAttemptID, boolean speculative)
   { }
 
   public void completeMap(TaskAttemptID taskAttemptID)
   { }
 
-  public void failedMap(TaskAttemptID taskAttemptID)
+  public void failedMap(TaskAttemptID taskAttemptID, boolean taskNowWaiting)
   { }
 
-  public void launchReduce(TaskAttemptID taskAttemptID)
+  public void launchReduce(TaskAttemptID taskAttemptID, boolean speculative)
   { }
 
   public void completeReduce(TaskAttemptID taskAttemptID)
   { }
   
-  public void failedReduce(TaskAttemptID taskAttemptID)
+  public void failedReduce(TaskAttemptID taskAttemptID, boolean taskNowWaiting)
   { }
 
   public void submitJob(JobConf conf, JobID id) 

@@ -105,6 +105,9 @@ Release 1.3.0 - unreleased
     HADOOP-9507. LocalFileSystem rename() is broken in some cases when
     destination exists. (cnauroth)
 
+    MAPREDUCE-4366. mapred metrics shows negative count of waiting maps and 
+    reduces. (sandyr via tucu)
+
 Release 1.2.1 - 2013.07.06
 
   INCOMPATIBLE CHANGES

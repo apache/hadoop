@@ -111,9 +111,11 @@ class JobTrackerMetricsSource extends JobTrackerInstrumentation
   }
 
   @Override
-  public void launchMap(TaskAttemptID taskAttemptID) {
+  public void launchMap(TaskAttemptID taskAttemptID, boolean speculative) {
     mapsLaunched.incr();
-    decWaitingMaps(taskAttemptID.getJobID(), 1);
+    if (!speculative) {
+      decWaitingMaps(taskAttemptID.getJobID(), 1);
+    }
   }
 
   @Override
@@ -122,15 +124,19 @@ class JobTrackerMetricsSource extends JobTrackerInstrumentation
   }
 
   @Override
-  public void failedMap(TaskAttemptID taskAttemptID) {
+  public void failedMap(TaskAttemptID taskAttemptID, boolean incWaiting) {
     mapsFailed.incr();
-    addWaitingMaps(taskAttemptID.getJobID(), 1);
+    if (incWaiting) {
+      addWaitingMaps(taskAttemptID.getJobID(), 1);
+    }
   }
 
   @Override
-  public void launchReduce(TaskAttemptID taskAttemptID) {
+  public void launchReduce(TaskAttemptID taskAttemptID, boolean speculative) {
     redsLaunched.incr();
-    decWaitingReduces(taskAttemptID.getJobID(), 1);
+    if (!speculative) {
+      decWaitingReduces(taskAttemptID.getJobID(), 1);
+    }
   }
 
   @Override
@@ -139,9 +145,11 @@ class JobTrackerMetricsSource extends JobTrackerInstrumentation
   }
 
   @Override
-  public void failedReduce(TaskAttemptID taskAttemptID) {
+  public void failedReduce(TaskAttemptID taskAttemptID, boolean incWaiting) {
     redsFailed.incr();
-    addWaitingReduces(taskAttemptID.getJobID(), 1);
+    if (incWaiting) {
+      addWaitingReduces(taskAttemptID.getJobID(), 1);
+    }
   }
 
   @Override

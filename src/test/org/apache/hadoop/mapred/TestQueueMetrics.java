@@ -54,21 +54,21 @@ public class TestQueueMetrics extends TestCase {
     QueueMetrics metrics = QueueMetrics.create(queueName, new Configuration());
 
     assertEquals(metrics.getQueueName(), "single");
-    metrics.launchMap(taskAttemptID);
+    metrics.launchMap(taskAttemptID, false);
     checkMaps(metrics, 1, 0, 0, 0, -1, 0);
     metrics.addWaitingMaps(taskAttemptID.getJobID(), 5);
-    metrics.launchMap(taskAttemptID);
+    metrics.launchMap(taskAttemptID, false);
     checkMaps(metrics, 2, 0, 0, 0, 3, 0);
     checkReduces(metrics, 0, 0, 0, 0, 0, 0);
 
     metrics.completeMap(taskAttemptID);
-    metrics.failedMap(taskAttemptID);
+    metrics.failedMap(taskAttemptID, true);
     checkMaps(metrics, 2, 1, 1, 0, 4, 0);
     checkReduces(metrics, 0, 0, 0, 0, 0, 0);
 
-    metrics.launchReduce(taskAttemptID);
+    metrics.launchReduce(taskAttemptID, false);
     metrics.completeReduce(taskAttemptID);
-    metrics.failedReduce(taskAttemptID);
+    metrics.failedReduce(taskAttemptID, true);
     checkMaps(metrics, 2, 1, 1, 0, 4, 0);
     checkReduces(metrics, 1, 1, 1, 0, 0, 0);
 

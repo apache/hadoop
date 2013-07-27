@@ -219,7 +219,7 @@ public class LocalJobRunner implements JobSubmissionProtocol {
           map.setConf(localConf);
           try {
             map_tasks.getAndIncrement();
-            myMetrics.launchMap(mapId);
+            myMetrics.launchMap(mapId, false);
             map.run(localConf, Job.this);
             myMetrics.completeMap(mapId);
           } finally {
@@ -393,8 +393,8 @@ public class LocalJobRunner implements JobSubmissionProtocol {
               reduce.localizeConfiguration(localConf);
               reduce.setConf(localConf);
               reduce_tasks += 1;
-              myMetrics.launchReduce(reduce.getTaskID());
-              queueMetrics.launchReduce(reduce.getTaskID());
+              myMetrics.launchReduce(reduce.getTaskID(), false);
+              queueMetrics.launchReduce(reduce.getTaskID(), false);
               reduce.run(localConf, this);
               myMetrics.completeReduce(reduce.getTaskID());
               queueMetrics.completeReduce(reduce.getTaskID());
