@@ -91,8 +91,10 @@ public class TestUmbilicalProtocolWithJobToken {
       .when(mockTT).getProtocolSignature(anyString(), anyLong(), anyInt());
 
     JobTokenSecretManager sm = new JobTokenSecretManager();
-    final Server server = RPC.getServer(TaskUmbilicalProtocol.class, mockTT,
-        ADDRESS, 0, 5, true, conf, sm);
+    final Server server = new RPC.Builder(conf)
+        .setProtocol(TaskUmbilicalProtocol.class).setInstance(mockTT)
+        .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5).setVerbose(true)
+        .setSecretManager(sm).build();
 
     server.start();
 
