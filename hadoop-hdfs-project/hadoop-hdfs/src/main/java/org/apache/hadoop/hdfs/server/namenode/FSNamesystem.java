@@ -6320,6 +6320,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return dir;
   }
 
+  @Override  // NameNodeMXBean
+  public String getCorruptFiles() {
+    List<String> list = new ArrayList<String>();
+    Collection<FSNamesystem.CorruptFileBlockInfo> corruptFileBlocks;
+    try {
+      corruptFileBlocks = listCorruptFileBlocks("/", null);
+      int corruptFileCount = corruptFileBlocks.size();
+      if (corruptFileCount != 0) {
+        for (FSNamesystem.CorruptFileBlockInfo c : corruptFileBlocks) {
+          list.add(c.toString());
+        }
+      }
+    } catch (IOException e) {
+      LOG.warn("Get corrupt file blocks returned error: " + e.getMessage());
+    }
+    return JSON.toString(list);
+  }
+
   /**
    * Verifies that the given identifier and password are valid and match.
    * @param identifier Token identifier.

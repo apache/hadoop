@@ -30,6 +30,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
     (Colin Patrick McCabe)
 
+    HDFS-5004. Add additional JMX bean for NameNode status data. Contributed
+    by Trevor Lorimer.
+
   OPTIMIZATIONS
 
   BUG FIXES
