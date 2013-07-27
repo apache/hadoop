@@ -231,6 +231,11 @@ public class BuilderUtils {
     return newToken(Token.class, identifier, kind, password, service);
   }
 
+  public static Token newAMRMToken(byte[] identifier, String kind,
+                                   byte[] password, String service) {
+    return newToken(Token.class, identifier, kind, password, service);
+  }
+
   @Private
   @VisibleForTesting
   public static Token newContainerToken(NodeId nodeId,
@@ -307,7 +312,7 @@ public class BuilderUtils {
       String url, long startTime, long finishTime,
       FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
-      float progress, String appType) {
+      float progress, String appType, Token amRmToken) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -328,6 +333,7 @@ public class BuilderUtils {
     report.setOriginalTrackingUrl(origTrackingUrl);
     report.setProgress(progress);
     report.setApplicationType(appType);
+    report.setAMRMToken(amRmToken);
     return report;
   }
   
