@@ -727,6 +727,9 @@ Release 2.1.0-beta - 2013-07-02
     YARN-688. Fixed NodeManager to properly cleanup containers when it is shut
     down. (Jian He via vinodkv)
 
+    YARN-960. Fixed ResourceManager to propagate client-submitted credentials
+    irrespective of security. (Daryn Sharp via vinodkv)
+
   BREAKDOWN OF HADOOP-8562/YARN-191 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.

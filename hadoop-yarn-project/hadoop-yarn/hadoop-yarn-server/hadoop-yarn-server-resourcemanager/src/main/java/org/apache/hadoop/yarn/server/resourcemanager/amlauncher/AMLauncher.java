@@ -216,16 +216,11 @@ public class AMLauncher implements Runnable {
             applicationId).getMaxAppAttempts()));
 
     Credentials credentials = new Credentials();
-    
-    if (UserGroupInformation.isSecurityEnabled()) {
-      // TODO: Security enabled/disabled info should come from RM.
-
-      DataInputByteBuffer dibb = new DataInputByteBuffer();
-      if (container.getTokens() != null) {
-        // TODO: Don't do this kind of checks everywhere.
-        dibb.reset(container.getTokens());
-        credentials.readTokenStorageStream(dibb);
-      }
+    DataInputByteBuffer dibb = new DataInputByteBuffer();
+    if (container.getTokens() != null) {
+      // TODO: Don't do this kind of checks everywhere.
+      dibb.reset(container.getTokens());
+      credentials.readTokenStorageStream(dibb);
     }
 
     // Add AMRMToken
