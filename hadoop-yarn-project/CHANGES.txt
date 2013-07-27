@@ -456,6 +456,8 @@ Release 2.1.0-beta - 2013-07-02
     YARN-912. Move client facing exceptions to yarn-api module. (Mayank Bansal
     via vinodkv)
 
+    YARN-84. Use Builder to build RPC server. (Brandon Li via szetszwo)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
