@@ -80,7 +80,7 @@ public class TestYarnCLI {
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN");
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport);
     int result = cli.run(new String[] { "-status", applicationId.toString() });
@@ -134,7 +134,7 @@ public class TestYarnCLI {
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN");
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     List<ApplicationReport> applicationReports = new ArrayList<ApplicationReport>();
     applicationReports.add(newApplicationReport);
 
@@ -143,7 +143,8 @@ public class TestYarnCLI {
         applicationId2, ApplicationAttemptId.newInstance(applicationId2, 2),
         "user2", "queue2", "appname2", "host2", 125, null,
         YarnApplicationState.FINISHED, "diagnostics2", "url2", 2, 2,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.63789f, "NON-YARN");
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.63789f, "NON-YARN", 
+      null);
     applicationReports.add(newApplicationReport2);
 
     ApplicationId applicationId3 = ApplicationId.newInstance(1234, 7);
@@ -151,7 +152,8 @@ public class TestYarnCLI {
         applicationId3, ApplicationAttemptId.newInstance(applicationId3, 3),
         "user3", "queue3", "appname3", "host3", 126, null,
         YarnApplicationState.FINISHED, "diagnostics3", "url3", 3, 3,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f, "MAPREDUCE");
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f, "MAPREDUCE", 
+        null);
     applicationReports.add(newApplicationReport3);
 
     Set<String> appType1 = new HashSet<String>();

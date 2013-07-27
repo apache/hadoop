@@ -807,6 +807,8 @@ Release 2.1.0-beta - 2013-07-02
     YARN-909. Disable TestLinuxContainerExecutorWithMocks on Windows. (Chuan Liu
     via cnauroth)
 
+    YARN-937. Fix unmanaged AM in non-secure/secure setup post YARN-701. (tucu)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
