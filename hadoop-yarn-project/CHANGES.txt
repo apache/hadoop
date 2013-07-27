@@ -8,8 +8,6 @@ Trunk - Unreleased
 
   IMPROVEMENTS
 
-    YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -484,6 +482,8 @@ Release 2.1.0-beta - 2013-07-02
 
     YARN-912. Move client facing exceptions to yarn-api module. (Mayank Bansal
     via vinodkv)
+
+    YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
 
   OPTIMIZATIONS
 
