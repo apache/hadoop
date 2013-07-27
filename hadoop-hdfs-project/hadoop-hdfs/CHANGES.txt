@@ -99,9 +99,6 @@ Trunk (Unreleased)
 
     HDFS-2580. NameNode#main(...) can make use of GenericOptionsParser. (harsh)
 
-    HDFS-3880. Use Builder to build RPC server in HDFS.
-    (Brandon Li vias suresh)
-
     HDFS-2127. Add a test that ensure AccessControlExceptions contain
     a full path. (Stephen Chu via eli)
 
@@ -482,6 +479,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-5024. Make DatanodeProtocol#commitBlockSynchronization idempotent. 
     (Arpit Agarwal via jing9)
+
+    HDFS-3880. Use Builder to build RPC server in HDFS.
+    (Brandon Li via suresh)
 
   OPTIMIZATIONS
 
