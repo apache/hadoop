@@ -221,6 +221,9 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-5024. Make DatanodeProtocol#commitBlockSynchronization idempotent. 
     (Arpit Agarwal via jing9)
 
+    HDFS-3880. Use Builder to build RPC server in HDFS.
+    (Brandon Li and Junping Du via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-4465. Optimize datanode ReplicasMap and ReplicaInfo. (atm)

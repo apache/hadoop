@@ -232,8 +232,9 @@ public class TestBlockToken {
         ProtobufRpcEngine.class);
     BlockingService service = ClientDatanodeProtocolService
         .newReflectiveBlockingService(mockDN);
-    return RPC.getServer(ClientDatanodeProtocolPB.class, service, ADDRESS, 0, 5,
-        true, conf, sm);
+    return new RPC.Builder(conf).setProtocol(ClientDatanodeProtocolPB.class)
+        .setInstance(service).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(5).setVerbose(true).setSecretManager(sm).build();
   }
 
   @Test
