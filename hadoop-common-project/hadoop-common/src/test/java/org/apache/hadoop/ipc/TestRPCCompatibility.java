@@ -278,7 +278,7 @@ System.out.println("echo int is NOT supported");
         TestProtocol3.class.getMethod("echo_alias", int.class));
     assertFalse(intEchoHash == intEchoHashAlias);
     
-    // Make sure that methods with the same returninig type and method name but
+    // Make sure that methods with the same returning type and method name but
     // larger number of parameter types have different hash code
     int intEchoHash2 = ProtocolSignature.getFingerprint(
         TestProtocol3.class.getMethod("echo", int.class, int.class));
