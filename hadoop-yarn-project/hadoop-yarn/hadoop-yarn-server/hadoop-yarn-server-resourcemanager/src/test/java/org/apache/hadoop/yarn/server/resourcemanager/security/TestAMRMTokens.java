@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
+import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collection;
@@ -30,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -81,7 +84,7 @@ public class TestAMRMTokens {
   public void testTokenExpiry() throws Exception {
 
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm =
+    final MockRMWithAMS rm =
         new MockRMWithAMS(conf, containerManager);
     rm.start();
 
@@ -111,8 +114,12 @@ public class TestAMRMTokens {
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
       Credentials credentials = containerManager.getContainerCredentials();
-      currentUser.addCredentials(credentials);
-
+      final InetSocketAddress rmBindAddress =
+          rm.getApplicationMasterService().getBindAddress();
+      Token<? extends TokenIdentifier> amRMToken =
+          MockRMWithAMS.setupAndReturnAMRMToken(rmBindAddress,
+            credentials.getAllTokens());
+      currentUser.addToken(amRMToken);
       rmClient = createRMClient(rm, conf, rpc, currentUser);
 
       RegisterApplicationMasterRequest request =
@@ -164,7 +171,7 @@ public class TestAMRMTokens {
   public void testMasterKeyRollOver() throws Exception {
 
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm =
+    final MockRMWithAMS rm =
         new MockRMWithAMS(conf, containerManager);
     rm.start();
 
@@ -194,8 +201,12 @@ public class TestAMRMTokens {
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
       Credentials credentials = containerManager.getContainerCredentials();
-      currentUser.addCredentials(credentials);
-
+      final InetSocketAddress rmBindAddress =
+          rm.getApplicationMasterService().getBindAddress();
+      Token<? extends TokenIdentifier> amRMToken =
+          MockRMWithAMS.setupAndReturnAMRMToken(rmBindAddress,
+            credentials.getAllTokens());
+      currentUser.addToken(amRMToken);
       rmClient = createRMClient(rm, conf, rpc, currentUser);
 
       RegisterApplicationMasterRequest request =

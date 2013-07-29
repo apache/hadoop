@@ -61,6 +61,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * The launch of the AM itself.
  */
@@ -224,13 +226,18 @@ public class AMLauncher implements Runnable {
     }
 
     // Add AMRMToken
-    Token<AMRMTokenIdentifier> amrmToken = application.getAMRMToken();
+    Token<AMRMTokenIdentifier> amrmToken = getAMRMToken();
     if (amrmToken != null) {
       credentials.addToken(amrmToken.getService(), amrmToken);
     }
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     container.setTokens(ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
+  }
+
+  @VisibleForTesting
+  protected Token<AMRMTokenIdentifier> getAMRMToken() {
+    return application.getAMRMToken();
   }
   
   @SuppressWarnings("unchecked")

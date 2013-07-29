@@ -165,7 +165,7 @@ public abstract class YarnClient extends AbstractService {
    * @throws IOException
    */
   public abstract org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>
-  getAMRMToken(ApplicationId appId) throws YarnException, IOException;
+      getAMRMToken(ApplicationId appId) throws YarnException, IOException;
 
   /**
    * <p>
