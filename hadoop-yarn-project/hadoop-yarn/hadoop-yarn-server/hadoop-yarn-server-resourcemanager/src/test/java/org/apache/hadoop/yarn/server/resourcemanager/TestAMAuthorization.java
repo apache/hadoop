@@ -253,15 +253,14 @@ public class TestAMAuthorization {
     } catch (Exception e) {
       // Because there are no tokens, the request should be rejected as the
       // server side will assume we are trying simple auth.
-      String availableAuthMethods;
+      String expectedMessage = "";
       if (UserGroupInformation.isSecurityEnabled()) {
-        availableAuthMethods = "[TOKEN, KERBEROS]";
+        expectedMessage = "Client cannot authenticate via:[TOKEN]";
       } else {
-        availableAuthMethods = "[TOKEN]";
+        expectedMessage =
+            "SIMPLE authentication is not enabled.  Available:[TOKEN]";
       }
-      Assert.assertTrue(e.getCause().getMessage().contains(
-        "SIMPLE authentication is not enabled.  "
-            + "Available:" + availableAuthMethods));
+      Assert.assertTrue(e.getCause().getMessage().contains(expectedMessage));
     }
 
     // TODO: Add validation of invalid authorization when there's more data in
