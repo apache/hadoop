@@ -375,8 +375,10 @@ public class TestYarnCLI {
       + DateFormatUtils.format(new Date(0), "E dd/MMM/yy hh:mm:ss:SSzz"));
     pw.println("\tHealth-Report : ");
     pw.println("\tContainers : 0");
-    pw.println("\tMemory-Used : 0M");
-    pw.println("\tMemory-Capacity : 0");
+    pw.println("\tMemory-Used : 0MB");
+    pw.println("\tMemory-Capacity : 0MB");
+    pw.println("\tCPU-Used : 0 vcores");
+    pw.println("\tCPU-Capacity : 0 vcores");
     pw.close();
     String nodeStatusStr = baos.toString("UTF-8");
     verify(sysOut, times(1)).println(isA(String.class));

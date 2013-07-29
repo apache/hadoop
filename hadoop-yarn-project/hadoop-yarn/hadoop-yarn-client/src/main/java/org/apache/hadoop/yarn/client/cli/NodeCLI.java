@@ -143,10 +143,15 @@ public class NodeCLI extends YarnCLI {
       nodeReportStr.print("\tContainers : ");
       nodeReportStr.println(nodeReport.getNumContainers());
       nodeReportStr.print("\tMemory-Used : ");
-      nodeReportStr.println((nodeReport.getUsed() == null) ? "0M"
-          : (nodeReport.getUsed().getMemory() + "M"));
+      nodeReportStr.println((nodeReport.getUsed() == null) ? "0MB"
+          : (nodeReport.getUsed().getMemory() + "MB"));
       nodeReportStr.print("\tMemory-Capacity : ");
-      nodeReportStr.println(nodeReport.getCapability().getMemory());
+      nodeReportStr.println(nodeReport.getCapability().getMemory() + "MB");
+      nodeReportStr.print("\tCPU-Used : ");
+      nodeReportStr.println((nodeReport.getUsed() == null) ? "0 vcores"
+          : (nodeReport.getUsed().getVirtualCores() + " vcores"));
+      nodeReportStr.print("\tCPU-Capacity : ");
+      nodeReportStr.println(nodeReport.getCapability().getVirtualCores() + " vcores");
     }
 
     if (nodeReport == null) {
