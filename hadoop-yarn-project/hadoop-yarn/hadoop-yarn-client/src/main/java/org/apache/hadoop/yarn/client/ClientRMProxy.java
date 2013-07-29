@@ -24,12 +24,17 @@ import java.net.InetSocketAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 
-public class ClientRMProxy<T> extends RMProxy<T>{
+public class ClientRMProxy<T> extends RMProxy<T>  {
 
   private static final Log LOG = LogFactory.getLog(ClientRMProxy.class);
 
@@ -39,7 +44,24 @@ public class ClientRMProxy<T> extends RMProxy<T>{
     return createRMProxy(conf, protocol, rmAddress);
   }
 
-  private static InetSocketAddress getRMAddress(Configuration conf, Class<?> protocol) {
+  private static void setupTokens(InetSocketAddress resourceManagerAddress)
+      throws IOException {
+    // It is assumed for now that the only AMRMToken in AM's UGI is for this
+    // cluster/RM. TODO: Fix later when we have some kind of cluster-ID as
+    // default service-address, see YARN-986.
+    for (Token<? extends TokenIdentifier> token : UserGroupInformation
+      .getCurrentUser().getTokens()) {
+      if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
+        // This token needs to be directly provided to the AMs, so set the
+        // appropriate service-name. We'll need more infrastructure when we
+        // need to set it in HA case.
+        SecurityUtil.setTokenService(token, resourceManagerAddress);
+      }
+    }
+  }
+
+  private static InetSocketAddress getRMAddress(Configuration conf,
+      Class<?> protocol) throws IOException {
     if (protocol == ApplicationClientProtocol.class) {
       return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
           YarnConfiguration.DEFAULT_RM_ADDRESS,
@@ -50,10 +72,12 @@ public class ClientRMProxy<T> extends RMProxy<T>{
           YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
           YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
     } else if (protocol == ApplicationMasterProtocol.class) {
-      return conf.getSocketAddr(
-          YarnConfiguration.RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+      InetSocketAddress serviceAddr =
+          conf.getSocketAddr(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+      setupTokens(serviceAddr);
+      return serviceAddr;
     } else {
       String message = "Unsupported protocol found when creating the proxy " +
           "connection to ResourceManager: " +

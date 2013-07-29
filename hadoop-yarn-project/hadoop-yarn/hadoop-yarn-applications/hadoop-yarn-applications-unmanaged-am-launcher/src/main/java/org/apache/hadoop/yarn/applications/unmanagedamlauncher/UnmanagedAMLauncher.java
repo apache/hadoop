@@ -43,7 +43,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -183,6 +182,9 @@ public class UnmanagedAMLauncher {
     Credentials credentials = new Credentials();
     Token<AMRMTokenIdentifier> token = 
         rmClient.getAMRMToken(attemptId.getApplicationId());
+    // Service will be empty but that's okay, we are just passing down only
+    // AMRMToken down to the real AM which eventually sets the correct
+    // service-address.
     credentials.addToken(token.getService(), token);
     File tokenFile = File.createTempFile("unmanagedAMRMToken","", 
         new File(System.getProperty("user.dir")));
