@@ -33,10 +33,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -199,15 +199,11 @@ public class YarnClientImpl extends YarnClient {
 
   public org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>
       getAMRMToken(ApplicationId appId) throws YarnException, IOException {
-    org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken = null;
-    ApplicationReport report = getApplicationReport(appId);
-    Token token = report.getAMRMToken();
+    Token token = getApplicationReport(appId).getAMRMToken();
+    org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken =
+        null;
     if (token != null) {
-      InetSocketAddress address = getConfig().getSocketAddr(
-          YarnConfiguration.RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
-      amrmToken = ConverterUtils.convertFromYarn(token, address);
+      amrmToken = ConverterUtils.convertFromYarn(token, null);
     }
     return amrmToken;
   }

@@ -33,7 +33,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -49,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -142,6 +146,19 @@ public class TestAMAuthorization {
     protected ApplicationMasterService createApplicationMasterService() {
       return new ApplicationMasterService(getRMContext(), this.scheduler);
     }
+
+    @SuppressWarnings("unchecked")
+    public static Token<? extends TokenIdentifier> setupAndReturnAMRMToken(
+        InetSocketAddress rmBindAddress,
+        Collection<Token<? extends TokenIdentifier>> allTokens) {
+      for (Token<? extends TokenIdentifier> token : allTokens) {
+        if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
+          SecurityUtil.setTokenService(token, rmBindAddress);
+          return (Token<AMRMTokenIdentifier>) token;
+        }
+      }
+      return null;
+    }
   }
 
   @Test
@@ -178,8 +195,12 @@ public class TestAMAuthorization {
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(applicationAttemptId.toString());
     Credentials credentials = containerManager.getContainerCredentials();
-    currentUser.addCredentials(credentials);
-
+    final InetSocketAddress rmBindAddress =
+        rm.getApplicationMasterService().getBindAddress();
+    Token<? extends TokenIdentifier> amRMToken =
+        MockRMWithAMS.setupAndReturnAMRMToken(rmBindAddress,
+          credentials.getAllTokens());
+    currentUser.addToken(amRMToken);
     ApplicationMasterProtocol client = currentUser
         .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override

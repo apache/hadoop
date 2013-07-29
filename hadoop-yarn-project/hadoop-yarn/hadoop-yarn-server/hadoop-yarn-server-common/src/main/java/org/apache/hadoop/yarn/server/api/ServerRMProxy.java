@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.client.RMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-public class ServerRMProxy<T> extends RMProxy<T>{
+public class ServerRMProxy<T> extends RMProxy<T> {
 
   private static final Log LOG = LogFactory.getLog(ServerRMProxy.class);
 
@@ -43,8 +43,7 @@ public class ServerRMProxy<T> extends RMProxy<T>{
         YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
-    }
-    else {
+    } else {
       String message = "Unsupported protocol found when creating the proxy " +
           "connection to ResourceManager: " +
           ((protocol != null) ? protocol.getClass().getName() : "null");
