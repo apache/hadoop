@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice.records.pb.impl;
+package org.apache.hadoop.yarn.server.applicationhistoryservice.records.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
