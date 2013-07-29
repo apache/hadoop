@@ -229,6 +229,9 @@ Release 2.1.0-beta - 2013-07-02
 
   IMPROVEMENTS
 
+    YARN-347. Node CLI should show CPU info besides memory in node status.
+    (Junping Du via llu)
+
     YARN-365. Change NM heartbeat handling to not generate a scheduler event
     on each heartbeat. (Xuan Gong via sseth)
 
