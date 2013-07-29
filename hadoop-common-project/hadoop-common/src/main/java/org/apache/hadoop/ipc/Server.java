@@ -85,6 +85,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslAuth;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslState;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -792,7 +793,10 @@ public abstract class Server {
         LOG.info(getName() + ": readAndProcess caught InterruptedException", ieo);
         throw ieo;
       } catch (Exception e) {
-        // log stack trace for "interesting" exceptions not sent to client
+        // a WrappedRpcServerException is an exception that has been sent
+        // to the client, so the stacktrace is unnecessary; any other
+        // exceptions are unexpected internal server errors and thus the
+        // stacktrace should be logged
         LOG.info(getName() + ": readAndProcess from client " +
             c.getHostAddress() + " threw exception [" + e + "]",
             (e instanceof WrappedRpcServerException) ? null : e);
@@ -1161,7 +1165,6 @@ public abstract class Server {
     private AuthMethod authMethod;
     private AuthProtocol authProtocol;
     private boolean saslContextEstablished;
-    private boolean skipInitialSaslHandshake;
     private ByteBuffer connectionHeaderBuf = null;
     private ByteBuffer unwrappedData;
     private ByteBuffer unwrappedDataLengthBuffer;
@@ -1337,22 +1340,38 @@ public abstract class Server {
                 "Client already attempted negotiation");
           }
           saslResponse = buildSaslNegotiateResponse();
+          // simple-only server negotiate response is success which client
+          // interprets as switch to simple
+          if (saslResponse.getState() == SaslState.SUCCESS) {
+            switchToSimple();
+          }
           break;
         }
         case INITIATE: {
           if (saslMessage.getAuthsCount() != 1) {
             throw new SaslException("Client mechanism is malformed");
           }
-          String authMethodName = saslMessage.getAuths(0).getMethod();
-          authMethod = createSaslServer(authMethodName);
-          if (authMethod == null) { // the auth method is not supported
+          // verify the client requested an advertised authType
+          SaslAuth clientSaslAuth = saslMessage.getAuths(0);
+          if (!negotiateResponse.getAuthsList().contains(clientSaslAuth)) {
             if (sentNegotiate) {
               throw new AccessControlException(
-                  authMethodName + " authentication is not enabled."
+                  clientSaslAuth.getMethod() + " authentication is not enabled."
                       + "  Available:" + enabledAuthMethods);
             }
             saslResponse = buildSaslNegotiateResponse();
             break;
+          }
+          authMethod = AuthMethod.valueOf(clientSaslAuth.getMethod());
+          // abort SASL for SIMPLE auth, server has already ensured that
+          // SIMPLE is a legit option above.  we will send no response
+          if (authMethod == AuthMethod.SIMPLE) {
+            switchToSimple();
+            break;
+          }
+          // sasl server for tokens may already be instantiated
+          if (saslServer == null || authMethod != AuthMethod.TOKEN) {
+            saslServer = createSaslServer(authMethod);
           }
           // fallthru to process sasl token
         }
@@ -1375,6 +1394,12 @@ public abstract class Server {
           throw new SaslException("Client sent unsupported state " + state);
       }
       return saslResponse;
+    }
+
+    private void switchToSimple() {
+      // disable SASL and blank out any SASL server
+      authProtocol = AuthProtocol.NONE;
+      saslServer = null;
     }
     
     private RpcSaslProto buildSaslResponse(SaslState state, byte[] replyToken) {
@@ -1432,7 +1457,8 @@ public abstract class Server {
       }
     }
 
-    public int readAndProcess() throws IOException, InterruptedException {
+    public int readAndProcess()
+        throws WrappedRpcServerException, IOException, InterruptedException {
       while (true) {
         /* Read at most one RPC. If the header is not read completely yet
          * then iterate until we read first RPC or until there is no data left.
@@ -1535,15 +1561,7 @@ public abstract class Server {
           }
           break;
         }
-        case SASL: {
-          // switch to simple hack, but don't switch if other auths are
-          // supported, ex. tokens
-          if (isSimpleEnabled && enabledAuthMethods.size() == 1) {
-            authProtocol = AuthProtocol.NONE;
-            skipInitialSaslHandshake = true;
-            doSaslReply(buildSaslResponse(SaslState.SUCCESS, null));
-          }
-          // else wait for a negotiate or initiate
+        default: {
           break;
         }
       }
@@ -1568,25 +1586,6 @@ public abstract class Server {
       return negotiateMessage;
     }
     
-    private AuthMethod createSaslServer(String authMethodName)
-        throws IOException, InterruptedException {
-      AuthMethod authMethod;
-      try {
-        authMethod = AuthMethod.valueOf(authMethodName);
-        if (!enabledAuthMethods.contains(authMethod)) {
-          authMethod = null;
-        }
-      } catch (IllegalArgumentException iae) {
-        authMethod = null;
-      }
-      if (authMethod != null &&
-          // sasl server for tokens may already be instantiated
-          (saslServer == null || authMethod != AuthMethod.TOKEN)) {
-        saslServer = createSaslServer(authMethod);
-      }
-      return authMethod;
-    }
-
     private SaslServer createSaslServer(AuthMethod authMethod)
         throws IOException, InterruptedException {
       return new SaslRpcServer(authMethod).create(this, secretManager);
@@ -1701,8 +1700,8 @@ public abstract class Server {
      *   or the request could not be decoded into a Call
      * @throws InterruptedException
      */    
-    private void processRpcRequestPacket(byte[] buf) throws IOException,
-        InterruptedException {
+    private void processRpcRequestPacket(byte[] buf)
+        throws WrappedRpcServerException, IOException, InterruptedException {
       if (saslContextEstablished && useWrap) {
         if (LOG.isDebugEnabled())
           LOG.debug("Have read input token of size " + buf.length
@@ -1715,8 +1714,8 @@ public abstract class Server {
       }
     }
     
-    private void unwrapPacketAndProcessRpcs(byte[] inBuf) throws IOException,
-        InterruptedException {
+    private void unwrapPacketAndProcessRpcs(byte[] inBuf)
+        throws WrappedRpcServerException, IOException, InterruptedException {
       ReadableByteChannel ch = Channels.newChannel(new ByteArrayInputStream(
           inBuf));
       // Read all RPCs contained in the inBuf, even partial ones
@@ -1901,13 +1900,9 @@ public abstract class Server {
       } else if (callId == AuthProtocol.SASL.callId) {
         // if client was switched to simple, ignore first SASL message
         if (authProtocol != AuthProtocol.SASL) {
-          if (!skipInitialSaslHandshake) {
-            throw new WrappedRpcServerException(
-                RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
-                "SASL protocol not requested by client");
-          }
-          skipInitialSaslHandshake = false;
-          return;
+          throw new WrappedRpcServerException(
+              RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
+              "SASL protocol not requested by client");
         }
         RpcSaslProto response = saslReadAndProcess(dis);
         // send back response if any, may throw IOException
@@ -2218,17 +2213,23 @@ public abstract class Server {
   private RpcSaslProto buildNegotiateResponse(List<AuthMethod> authMethods)
       throws IOException {
     RpcSaslProto.Builder negotiateBuilder = RpcSaslProto.newBuilder();
-    negotiateBuilder.setState(SaslState.NEGOTIATE);
-    for (AuthMethod authMethod : authMethods) {
-      if (authMethod == AuthMethod.SIMPLE) { // not a SASL method
-        continue;
+    if (authMethods.contains(AuthMethod.SIMPLE) && authMethods.size() == 1) {
+      // SIMPLE-only servers return success in response to negotiate
+      negotiateBuilder.setState(SaslState.SUCCESS);
+    } else {
+      negotiateBuilder.setState(SaslState.NEGOTIATE);
+      for (AuthMethod authMethod : authMethods) {
+        SaslRpcServer saslRpcServer = new SaslRpcServer(authMethod);      
+        SaslAuth.Builder builder = negotiateBuilder.addAuthsBuilder()
+            .setMethod(authMethod.toString())
+            .setMechanism(saslRpcServer.mechanism);
+        if (saslRpcServer.protocol != null) {
+          builder.setProtocol(saslRpcServer.protocol);
+        }
+        if (saslRpcServer.serverId != null) {
+          builder.setServerId(saslRpcServer.serverId);
+        }
       }
-      SaslRpcServer saslRpcServer = new SaslRpcServer(authMethod);      
-      negotiateBuilder.addAuthsBuilder()
-          .setMethod(authMethod.toString())
-          .setMechanism(saslRpcServer.mechanism)
-          .setProtocol(saslRpcServer.protocol)
-          .setServerId(saslRpcServer.serverId);
     }
     return negotiateBuilder.build();
   }

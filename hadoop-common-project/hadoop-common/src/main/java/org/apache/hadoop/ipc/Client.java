@@ -80,11 +80,6 @@ import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.token.TokenInfo;
-import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -313,10 +308,9 @@ public class Client {
    * socket: responses may be delivered out of order. */
   private class Connection extends Thread {
     private InetSocketAddress server;             // server ip:port
-    private String serverPrincipal;  // server's krb5 principal name
     private final ConnectionId remoteId;                // connection id
     private AuthMethod authMethod; // authentication method
-    private Token<? extends TokenIdentifier> token;
+    private AuthProtocol authProtocol;
     private int serviceClass;
     private SaslRpcClient saslRpcClient;
     
@@ -363,45 +357,11 @@ public class Client {
       }
 
       UserGroupInformation ticket = remoteId.getTicket();
-      Class<?> protocol = remoteId.getProtocol();
-      if (protocol != null) {
-        TokenInfo tokenInfo = SecurityUtil.getTokenInfo(protocol, conf);
-        if (tokenInfo != null) {
-          TokenSelector<? extends TokenIdentifier> tokenSelector = null;
-          try {
-            tokenSelector = tokenInfo.value().newInstance();
-          } catch (InstantiationException e) {
-            throw new IOException(e.toString());
-          } catch (IllegalAccessException e) {
-            throw new IOException(e.toString());
-          }
-          token = tokenSelector.selectToken(
-              SecurityUtil.buildTokenService(server),
-              ticket.getTokens());
-        }
-        KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
-        if (krbInfo != null) {
-          serverPrincipal = remoteId.getServerPrincipal();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("RPC Server's Kerberos principal name for protocol="
-                + protocol.getCanonicalName() + " is " + serverPrincipal);
-          }
-        }
-      }
-      
-      AuthenticationMethod authentication;
-      if (token != null) {
-        authentication = AuthenticationMethod.TOKEN;
-      } else if (ticket != null) {
-        authentication = ticket.getRealAuthenticationMethod();
-      } else { // this only happens in lazy tests
-        authentication = AuthenticationMethod.SIMPLE;
-      }
-      authMethod = authentication.getAuthMethod();
-      
-      if (LOG.isDebugEnabled())
-        LOG.debug("Use " + authMethod + " authentication for protocol "
-            + (protocol == null? null: protocol.getSimpleName()));
+      // try SASL if security is enabled or if the ugi contains tokens.
+      // this causes a SIMPLE client with tokens to attempt SASL
+      boolean trySasl = UserGroupInformation.isSecurityEnabled() ||
+                        (ticket != null && !ticket.getTokens().isEmpty());
+      this.authProtocol = trySasl ? AuthProtocol.SASL : AuthProtocol.NONE;
       
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
           server.toString() +
@@ -512,11 +472,10 @@ public class Client {
       return false;
     }
     
-    private synchronized boolean setupSaslConnection(final InputStream in2, 
-        final OutputStream out2) 
-        throws IOException {
-      saslRpcClient = new SaslRpcClient(authMethod, token, serverPrincipal,
-          fallbackAllowed);
+    private synchronized AuthMethod setupSaslConnection(final InputStream in2, 
+        final OutputStream out2) throws IOException, InterruptedException {
+      saslRpcClient = new SaslRpcClient(remoteId.getTicket(),
+          remoteId.getProtocol(), remoteId.getAddress(), conf);
       return saslRpcClient.saslConnect(in2, out2);
     }
 
@@ -554,7 +513,8 @@ public class Client {
            * client, to ensure Server matching address of the client connection
            * to host name in principal passed.
            */
-          if (UserGroupInformation.isSecurityEnabled()) {
+          UserGroupInformation ticket = remoteId.getTicket();
+          if (ticket != null && ticket.hasKerberosCredentials()) {
             KerberosInfo krbInfo = 
               remoteId.getProtocol().getAnnotation(KerberosInfo.class);
             if (krbInfo != null && krbInfo.clientPrincipal() != null) {
@@ -632,7 +592,7 @@ public class Client {
             } else {
               String msg = "Couldn't setup connection for "
                   + UserGroupInformation.getLoginUser().getUserName() + " to "
-                  + serverPrincipal;
+                  + remoteId;
               LOG.warn(msg);
               throw (IOException) new IOException(msg).initCause(ex);
             }
@@ -668,19 +628,19 @@ public class Client {
           InputStream inStream = NetUtils.getInputStream(socket);
           OutputStream outStream = NetUtils.getOutputStream(socket);
           writeConnectionHeader(outStream);
-          if (authMethod != AuthMethod.SIMPLE) {
+          if (authProtocol == AuthProtocol.SASL) {
             final InputStream in2 = inStream;
             final OutputStream out2 = outStream;
             UserGroupInformation ticket = remoteId.getTicket();
             if (ticket.getRealUser() != null) {
               ticket = ticket.getRealUser();
             }
-            boolean continueSasl = false;
             try {
-              continueSasl = ticket
-                  .doAs(new PrivilegedExceptionAction<Boolean>() {
+              authMethod = ticket
+                  .doAs(new PrivilegedExceptionAction<AuthMethod>() {
                     @Override
-                    public Boolean run() throws IOException {
+                    public AuthMethod run()
+                        throws IOException, InterruptedException {
                       return setupSaslConnection(in2, out2);
                     }
                   });
@@ -692,13 +652,15 @@ public class Client {
                   ticket);
               continue;
             }
-            if (continueSasl) {
+            if (authMethod != AuthMethod.SIMPLE) {
               // Sasl connect is successful. Let's set up Sasl i/o streams.
               inStream = saslRpcClient.getInputStream(inStream);
               outStream = saslRpcClient.getOutputStream(outStream);
-            } else {
-              // fall back to simple auth because server told us so.
-              authMethod = AuthMethod.SIMPLE;
+            } else if (UserGroupInformation.isSecurityEnabled() &&
+                       !fallbackAllowed) {
+              throw new IOException("Server asks us to fall back to SIMPLE " +
+                  "auth, but this client is configured to only allow secure " +
+                  "connections.");
             }
           }
         
@@ -818,14 +780,6 @@ public class Client {
       out.write(RpcConstants.HEADER.array());
       out.write(RpcConstants.CURRENT_VERSION);
       out.write(serviceClass);
-      final AuthProtocol authProtocol;
-      switch (authMethod) {
-        case SIMPLE:
-          authProtocol = AuthProtocol.NONE;
-          break;
-        default:
-          authProtocol = AuthProtocol.SASL;
-      }
       out.write(authProtocol.callId);
       out.flush();
     }
@@ -1434,7 +1388,6 @@ public class Client {
     final Class<?> protocol;
     private static final int PRIME = 16777619;
     private final int rpcTimeout;
-    private final String serverPrincipal;
     private final int maxIdleTime; //connections will be culled if it was idle for 
     //maxIdleTime msecs
     private final RetryPolicy connectionRetryPolicy;
@@ -1445,15 +1398,13 @@ public class Client {
     private final int pingInterval; // how often sends ping to the server in msecs
     
     ConnectionId(InetSocketAddress address, Class<?> protocol, 
-                 UserGroupInformation ticket, int rpcTimeout,
-                 String serverPrincipal, int maxIdleTime, 
+                 UserGroupInformation ticket, int rpcTimeout, int maxIdleTime, 
                  RetryPolicy connectionRetryPolicy, int maxRetriesOnSocketTimeouts,
                  boolean tcpNoDelay, boolean doPing, int pingInterval) {
       this.protocol = protocol;
       this.address = address;
       this.ticket = ticket;
       this.rpcTimeout = rpcTimeout;
-      this.serverPrincipal = serverPrincipal;
       this.maxIdleTime = maxIdleTime;
       this.connectionRetryPolicy = connectionRetryPolicy;
       this.maxRetriesOnSocketTimeouts = maxRetriesOnSocketTimeouts;
@@ -1476,10 +1427,6 @@ public class Client {
     
     private int getRpcTimeout() {
       return rpcTimeout;
-    }
-    
-    String getServerPrincipal() {
-      return serverPrincipal;
     }
     
     int getMaxIdleTime() {
@@ -1531,11 +1478,9 @@ public class Client {
             max, 1, TimeUnit.SECONDS);
       }
 
-      String remotePrincipal = getRemotePrincipal(conf, addr, protocol);
       boolean doPing =
         conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, true);
-      return new ConnectionId(addr, protocol, ticket,
-          rpcTimeout, remotePrincipal,
+      return new ConnectionId(addr, protocol, ticket, rpcTimeout,
           conf.getInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
               CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT),
           connectionRetryPolicy,
@@ -1546,25 +1491,6 @@ public class Client {
               CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_DEFAULT),
           doPing, 
           (doPing ? Client.getPingInterval(conf) : 0));
-    }
-    
-    private static String getRemotePrincipal(Configuration conf,
-        InetSocketAddress address, Class<?> protocol) throws IOException {
-      if (!UserGroupInformation.isSecurityEnabled() || protocol == null) {
-        return null;
-      }
-      KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
-      if (krbInfo != null) {
-        String serverKey = krbInfo.serverPrincipal();
-        if (serverKey == null) {
-          throw new IOException(
-              "Can't obtain server Kerberos config key from protocol="
-                  + protocol.getCanonicalName());
-        }
-        return SecurityUtil.getServerPrincipal(conf.get(serverKey), address
-            .getAddress());
-      }
-      return null;
     }
     
     static boolean isEqual(Object a, Object b) {
@@ -1585,7 +1511,6 @@ public class Client {
             && this.pingInterval == that.pingInterval
             && isEqual(this.protocol, that.protocol)
             && this.rpcTimeout == that.rpcTimeout
-            && isEqual(this.serverPrincipal, that.serverPrincipal)
             && this.tcpNoDelay == that.tcpNoDelay
             && isEqual(this.ticket, that.ticket);
       }
@@ -1601,8 +1526,6 @@ public class Client {
       result = PRIME * result + pingInterval;
       result = PRIME * result + ((protocol == null) ? 0 : protocol.hashCode());
       result = PRIME * result + rpcTimeout;
-      result = PRIME * result
-          + ((serverPrincipal == null) ? 0 : serverPrincipal.hashCode());
       result = PRIME * result + (tcpNoDelay ? 1231 : 1237);
       result = PRIME * result + ((ticket == null) ? 0 : ticket.hashCode());
       return result;
@@ -1610,7 +1533,7 @@ public class Client {
     
     @Override
     public String toString() {
-      return serverPrincipal + "@" + address;
+      return address.toString();
     }
   }  
 

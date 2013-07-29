@@ -43,6 +43,8 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9683. [RPC v9] Wrap IpcConnectionContext in RPC headers (daryn)
 
+    HADOOP-9698. [RPC v9] Client must honor server's SASL negotiate response (daryn)
+
   NEW FEATURES
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
