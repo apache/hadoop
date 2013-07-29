@@ -40,6 +40,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-984. Renamed the incorrectly named applicationhistoryservice.records.pb.impl
   package to be applicationhistoryservice.records.impl.pb. (Devaraj K via vinodkv)
 
+  YARN-934. Defined a Writer Interface for HistoryStorage. (Zhijie Shen via
+  vinodkv)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
