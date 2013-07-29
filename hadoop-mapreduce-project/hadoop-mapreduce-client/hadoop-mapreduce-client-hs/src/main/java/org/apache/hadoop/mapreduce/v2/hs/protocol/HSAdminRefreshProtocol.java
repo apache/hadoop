@@ -41,6 +41,12 @@ public interface HSAdminRefreshProtocol {
   public void refreshAdminAcls() throws IOException;
   
   /**
+   * Refresh loaded job cache
+   * @throws IOException
+   */
+  public void refreshLoadedJobCache() throws IOException;
+
+  /**
    * Refresh job retention settings.
    * 
    * @throws IOException
