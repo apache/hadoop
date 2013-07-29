@@ -119,8 +119,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerResourceRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceFailedLocalizationEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -133,30 +134,43 @@ public class TestResourceLocalizationService {
   static final Path basedir =
       new Path("target", TestResourceLocalizationService.class.getName());
   static Server mockServer;
+
+  private Configuration conf;
+  private AbstractFileSystem spylfs;
+  private FileContext lfs;
   
   @BeforeClass
-  public static void setup() {
+  public static void setupClass() {
     mockServer = mock(Server.class);
     doReturn(new InetSocketAddress(123)).when(mockServer).getListenerAddress();
+  }
+
+  @Before
+  public void setup() throws IOException {
+    conf = new Configuration();
+    spylfs = spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
+    lfs = FileContext.getFileContext(spylfs, conf);
+    doNothing().when(spylfs).mkdir(
+        isA(Path.class), isA(FsPermission.class), anyBoolean());
+    String logDir = lfs.makeQualified(new Path(basedir, "logdir ")).toString();
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
+  }
+
+  @After
+  public void cleanup() {
+    conf = null;
   }
   
   @Test
   public void testLocalizationInit() throws Exception {
-    final Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(new Configuration());
 
     ContainerExecutor exec = mock(ContainerExecutor.class);
     DeletionService delService = spy(new DeletionService(exec));
-    delService.init(new Configuration());
+    delService.init(conf);
     delService.start();
-
-    AbstractFileSystem spylfs =
-      spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
-    FileContext lfs = FileContext.getFileContext(spylfs, conf);
-    doNothing().when(spylfs).mkdir(
-        isA(Path.class), isA(FsPermission.class), anyBoolean());
 
     List<Path> localDirs = new ArrayList<Path>();
     String[] sDirs = new String[4];
@@ -165,6 +179,7 @@ public class TestResourceLocalizationService {
       sDirs[i] = localDirs.get(i).toString();
     }
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
+
     LocalDirsHandlerService diskhandler = new LocalDirsHandlerService();
     diskhandler.init(conf);
 
@@ -205,13 +220,6 @@ public class TestResourceLocalizationService {
   @Test
   @SuppressWarnings("unchecked") // mocked generics
   public void testResourceRelease() throws Exception {
-    Configuration conf = new YarnConfiguration();
-    AbstractFileSystem spylfs =
-      spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
-    final FileContext lfs = FileContext.getFileContext(spylfs, conf);
-    doNothing().when(spylfs).mkdir(
-        isA(Path.class), isA(FsPermission.class), anyBoolean());
-
     List<Path> localDirs = new ArrayList<Path>();
     String[] sDirs = new String[4];
     for (int i = 0; i < 4; ++i) {
@@ -219,8 +227,7 @@ public class TestResourceLocalizationService {
       sDirs[i] = localDirs.get(i).toString();
     }
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
-    String logDir = lfs.makeQualified(new Path(basedir, "logdir " )).toString();
-    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
+
     LocalizerTracker mockLocallilzerTracker = mock(LocalizerTracker.class);
     DrainDispatcher dispatcher = new DrainDispatcher();
     dispatcher.init(conf);
@@ -395,13 +402,6 @@ public class TestResourceLocalizationService {
   @Test( timeout = 10000)
   @SuppressWarnings("unchecked") // mocked generics
   public void testLocalizationHeartbeat() throws Exception {
-    Configuration conf = new YarnConfiguration();
-    AbstractFileSystem spylfs =
-      spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
-    final FileContext lfs = FileContext.getFileContext(spylfs, conf);
-    doNothing().when(spylfs).mkdir(
-        isA(Path.class), isA(FsPermission.class), anyBoolean());
-
     List<Path> localDirs = new ArrayList<Path>();
     String[] sDirs = new String[1];
     // Making sure that we have only one local disk so that it will only be
@@ -414,8 +414,6 @@ public class TestResourceLocalizationService {
     // Adding configuration to make sure there is only one file per
     // directory
     conf.set(YarnConfiguration.NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY, "37");
-    String logDir = lfs.makeQualified(new Path(basedir, "logdir " )).toString();
-    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
     DrainDispatcher dispatcher = new DrainDispatcher();
     dispatcher.init(conf);
     dispatcher.start();
@@ -590,12 +588,6 @@ public class TestResourceLocalizationService {
   @Test(timeout=20000)
   @SuppressWarnings("unchecked") // mocked generics
   public void testFailedPublicResource() throws Exception {
-    Configuration conf = new YarnConfiguration();
-    AbstractFileSystem spylfs =
-      spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
-    final FileContext lfs = FileContext.getFileContext(spylfs, conf);
-    doNothing().when(spylfs).mkdir(
-        isA(Path.class), isA(FsPermission.class), anyBoolean());
     List<Path> localDirs = new ArrayList<Path>();
     String[] sDirs = new String[4];
     for (int i = 0; i < 4; ++i) {
@@ -603,8 +595,6 @@ public class TestResourceLocalizationService {
       sDirs[i] = localDirs.get(i).toString();
     }
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
-    String logDir = lfs.makeQualified(new Path(basedir, "logdir " )).toString();
-    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
 
     DrainDispatcher dispatcher = new DrainDispatcher();
     EventHandler<ApplicationEvent> applicationBus = mock(EventHandler.class);
@@ -702,15 +692,6 @@ public class TestResourceLocalizationService {
       String user = "testuser";
       ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
 
-      // mocked Resource Localization Service
-      Configuration conf = new Configuration();
-      AbstractFileSystem spylfs =
-          spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
-      final FileContext lfs = FileContext.getFileContext(spylfs, conf);
-      // We don't want files to be created
-      doNothing().when(spylfs).mkdir(isA(Path.class), isA(FsPermission.class),
-        anyBoolean());
-
       // creating one local directory
       List<Path> localDirs = new ArrayList<Path>();
       String[] sDirs = new String[1];
@@ -719,10 +700,6 @@ public class TestResourceLocalizationService {
         sDirs[i] = localDirs.get(i).toString();
       }
       conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
-      // setting log directory.
-      String logDir =
-          lfs.makeQualified(new Path(basedir, "logdir ")).toString();
-      conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
 
       LocalDirsHandlerService localDirHandler = new LocalDirsHandlerService();
       localDirHandler.init(conf);
@@ -866,15 +843,6 @@ public class TestResourceLocalizationService {
       String user = "testuser";
       ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
 
-      // mocked Resource Localization Service
-      Configuration conf = new Configuration();
-      AbstractFileSystem spylfs =
-          spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
-      final FileContext lfs = FileContext.getFileContext(spylfs, conf);
-      // We don't want files to be created
-      doNothing().when(spylfs).mkdir(isA(Path.class), isA(FsPermission.class),
-        anyBoolean());
-
       // creating one local directory
       List<Path> localDirs = new ArrayList<Path>();
       String[] sDirs = new String[1];
@@ -883,10 +851,6 @@ public class TestResourceLocalizationService {
         sDirs[i] = localDirs.get(i).toString();
       }
       conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
-      // setting log directory.
-      String logDir =
-          lfs.makeQualified(new Path(basedir, "logdir ")).toString();
-      conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
 
       LocalDirsHandlerService localDirHandler = new LocalDirsHandlerService();
       localDirHandler.init(conf);
@@ -1044,16 +1008,6 @@ public class TestResourceLocalizationService {
     DrainDispatcher dispatcher1 = null;
     String user = "testuser";
     try {
-      // Setting up ResourceLocalization service.
-      Configuration conf = new Configuration();
-      dispatcher1 = new DrainDispatcher();
-      AbstractFileSystem spylfs =
-          spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
-      final FileContext lfs = FileContext.getFileContext(spylfs, conf);
-      // We don't want files to be created
-      doNothing().when(spylfs).mkdir(isA(Path.class), isA(FsPermission.class),
-        anyBoolean());
-
       // creating one local directory
       List<Path> localDirs = new ArrayList<Path>();
       String[] sDirs = new String[1];
@@ -1062,13 +1016,10 @@ public class TestResourceLocalizationService {
         sDirs[i] = localDirs.get(i).toString();
       }
       conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
-      // setting log directory.
-      String logDir =
-          lfs.makeQualified(new Path(basedir, "logdir ")).toString();
-      conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
 
       // Registering event handlers
       EventHandler<ApplicationEvent> applicationBus = mock(EventHandler.class);
+      dispatcher1 = new DrainDispatcher();
       dispatcher1.register(ApplicationEventType.class, applicationBus);
       EventHandler<ContainerEvent> containerBus = mock(EventHandler.class);
       dispatcher1.register(ContainerEventType.class, containerBus);

@@ -143,6 +143,10 @@
               <name>application.submitter</name>
               <value>${application.submitter}</value>
             </property>
+	    <property>
+	      <name>yarn.log.dir</name>
+	      <value>${maven.project.build.directory}/logs</value>
+	    </property>
           </systemPropertyVariables>
           <excludes>
             <exclude>**/TestFSDownload.java</exclude>
