@@ -30,7 +30,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
 
 /**
@@ -124,7 +123,6 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     Path fileAbs  = new Path(testBaseDir1()+"/file");
     Path fileQual = new Path(testURI().toString(), fileAbs);
     Path link     = new Path(testBaseDir1()+"/linkToFile");
-    Path linkQual = new Path(testURI().toString(), link.toString());
     wrapper.createSymlink(fileAbs, link, false);
     // Deleting the link using FileContext currently fails because
     // resolve looks up LocalFs rather than RawLocalFs for the path 
@@ -142,15 +140,18 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
       // Expected. File's exists method returns false for dangling links
     }
     // We can stat a dangling link
-    UserGroupInformation user = UserGroupInformation.getCurrentUser();
     FileStatus fsd = wrapper.getFileLinkStatus(link);
     assertEquals(fileQual, fsd.getSymlink());
     assertTrue(fsd.isSymlink());
     assertFalse(fsd.isDirectory());
-    assertEquals(user.getUserName(), fsd.getOwner());
-    // Compare against user's primary group
-    assertEquals(user.getGroupNames()[0], fsd.getGroup());
-    assertEquals(linkQual, fsd.getPath());
+    assertEquals("", fsd.getOwner());
+    assertEquals("", fsd.getGroup());
+    assertEquals(link, fsd.getPath());
+    assertEquals(0, fsd.getLen());
+    assertEquals(0, fsd.getBlockSize());
+    assertEquals(0, fsd.getReplication());
+    assertEquals(0, fsd.getAccessTime());
+    assertEquals(FsPermission.getDefault(), fsd.getPermission());
     // Accessing the link 
     try {
       readFile(link);
