@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -63,7 +65,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class TestContainerManagerSecurity {
 
   static Log LOG = LogFactory.getLog(TestContainerManagerSecurity.class);
@@ -71,28 +77,33 @@ public class TestContainerManagerSecurity {
       .getRecordFactory(null);
   private static MiniYARNCluster yarnCluster;
 
-  static final Configuration conf = new Configuration();
+  private Configuration conf;
 
-  @Test (timeout = 1000000)
-  public void testContainerManagerWithSecurityEnabled() throws Exception {
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+  @Parameters
+  public static Collection<Object[]> configs() {
+    Configuration configurationWithoutSecurity = new Configuration();
+    configurationWithoutSecurity.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "simple");
+    
+    Configuration configurationWithSecurity = new Configuration();
+    configurationWithSecurity.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
-    testContainerManager();
+    return Arrays.asList(new Object[][] { { configurationWithoutSecurity },
+        { configurationWithSecurity } });
   }
   
-  @Test (timeout=1000000)
-  public void testContainerManagerWithSecurityDisabled() throws Exception {
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-        "simple");
-    testContainerManager();
+  public TestContainerManagerSecurity(Configuration conf) {
+    conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
+    UserGroupInformation.setConfiguration(conf);
+    this.conf = conf;
   }
   
-  private void testContainerManager() throws Exception {
+  @Test (timeout = 1000000)
+  public void testContainerManager() throws Exception {
     try {
       yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
           .getName(), 1, 1, 1);
-      conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
-      UserGroupInformation.setConfiguration(conf);
       yarnCluster.init(conf);
       yarnCluster.start();
       
@@ -183,6 +194,18 @@ public class TestContainerManagerSecurity {
       // Making sure key id is different.
     } while (tempManager.getCurrentKey().getKeyId() == nmTokenSecretManagerRM
         .getCurrentKey().getKeyId());
+    
+    // Testing that NM rejects the requests when we don't send any token.
+    if (UserGroupInformation.isSecurityEnabled()) {
+      sb = new StringBuilder("Client cannot authenticate via:[TOKEN]");
+    } else {
+      sb =
+          new StringBuilder(
+              "SIMPLE authentication is not enabled.  Available:[TOKEN]");
+    }
+    String errorMsg = testStartContainer(rpc, validAppAttemptId, validNode,
+        validContainerToken, null, true);
+    Assert.assertTrue(errorMsg.contains(sb.toString()));
     
     org.apache.hadoop.yarn.api.records.Token invalidNMToken =
         tempManager.createNMToken(validAppAttemptId, validNode, user);
@@ -402,7 +425,9 @@ public class TestContainerManagerSecurity {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
     final InetSocketAddress addr =
         NetUtils.createSocketAddr(nodeId.getHost(), nodeId.getPort());
-    ugi.addToken(ConverterUtils.convertFromYarn(nmToken, addr));
+    if (nmToken != null) {
+      ugi.addToken(ConverterUtils.convertFromYarn(nmToken, addr));      
+    }
 
     proxy = ugi
         .doAs(new PrivilegedAction<ContainerManagementProtocol>() {
