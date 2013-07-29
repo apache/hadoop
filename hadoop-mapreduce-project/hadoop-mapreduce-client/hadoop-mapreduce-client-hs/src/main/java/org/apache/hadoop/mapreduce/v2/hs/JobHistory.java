@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -97,9 +98,8 @@ public class JobHistory extends AbstractService implements HistoryContext {
       throw new YarnRuntimeException("Failed to intialize existing directories", e);
     }
 
-    storage = ReflectionUtils.newInstance(conf.getClass(
-        JHAdminConfig.MR_HISTORY_STORAGE, CachedHistoryStorage.class,
-        HistoryStorage.class), conf);
+    storage = createHistoryStorage();
+    
     if (storage instanceof Service) {
       ((Service) storage).init(conf);
     }
@@ -108,6 +108,12 @@ public class JobHistory extends AbstractService implements HistoryContext {
     super.serviceInit(conf);
   }
 
+  protected HistoryStorage createHistoryStorage() {
+    return ReflectionUtils.newInstance(conf.getClass(
+        JHAdminConfig.MR_HISTORY_STORAGE, CachedHistoryStorage.class,
+        HistoryStorage.class), conf);
+  }
+  
   protected HistoryFileManager createHistoryFileManager() {
     return new HistoryFileManager();
   }
@@ -229,6 +235,25 @@ public class JobHistory extends AbstractService implements HistoryContext {
     return storage.getAllPartialJobs();
   }
 
+  public void refreshLoadedJobCache() {
+    if (getServiceState() == STATE.STARTED) {
+      if (storage instanceof CachedHistoryStorage) {
+        ((CachedHistoryStorage) storage).refreshLoadedJobCache();
+      } else {
+        throw new UnsupportedOperationException(storage.getClass().getName()
+            + " is expected to be an instance of "
+            + CachedHistoryStorage.class.getName());
+      }
+    } else {
+      LOG.warn("Failed to execute refreshLoadedJobCache: JobHistory service is not started");
+    }
+  }
+
+  @VisibleForTesting
+  HistoryStorage getHistoryStorage() {
+    return storage;
+  }
+  
   /**
    * Look for a set of partial jobs.
    * 

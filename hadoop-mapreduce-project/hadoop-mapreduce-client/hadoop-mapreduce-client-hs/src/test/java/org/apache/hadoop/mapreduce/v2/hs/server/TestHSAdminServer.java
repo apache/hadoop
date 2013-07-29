@@ -242,6 +242,14 @@ public class TestHSAdminServer {
   }
 
   @Test
+  public void testRefreshLoadedJobCache() throws Exception {
+    String[] args = new String[1];
+    args[0] = "-refreshLoadedJobCache";
+    hsAdminClient.run(args);
+    verify(jobHistoryService).refreshLoadedJobCache();
+  }
+  
+  @Test
   public void testRefreshLogRetentionSettings() throws Exception {
     String[] args = new String[1];
     args[0] = "-refreshLogRetentionSettings";

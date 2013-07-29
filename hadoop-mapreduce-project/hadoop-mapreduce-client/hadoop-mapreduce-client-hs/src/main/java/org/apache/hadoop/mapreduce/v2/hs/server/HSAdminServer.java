@@ -203,6 +203,22 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
   }
 
   @Override
+  public void refreshLoadedJobCache() throws IOException {
+    UserGroupInformation user = checkAcls("refreshLoadedJobCache");
+
+    try {
+      jobHistoryService.refreshLoadedJobCache();
+    } catch (UnsupportedOperationException e) {
+      HSAuditLogger.logFailure(user.getShortUserName(),
+          "refreshLoadedJobCache", adminAcl.toString(), HISTORY_ADMIN_SERVER,
+          e.getMessage());
+      throw e;
+    }
+    HSAuditLogger.logSuccess(user.getShortUserName(), "refreshLoadedJobCache",
+        HISTORY_ADMIN_SERVER);
+  }
+
+  @Override
   public void refreshLogRetentionSettings() throws IOException {
     UserGroupInformation user = checkAcls("refreshLogRetentionSettings");
 

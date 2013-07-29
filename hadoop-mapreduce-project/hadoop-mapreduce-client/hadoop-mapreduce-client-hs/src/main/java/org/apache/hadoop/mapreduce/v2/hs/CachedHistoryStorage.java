@@ -40,6 +40,8 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Manages an in memory cache of parsed Job History files.
  */
@@ -58,12 +60,16 @@ public class CachedHistoryStorage extends AbstractService implements
     this.hsManager = hsManager;
   }
 
-  @SuppressWarnings("serial")
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
     LOG.info("CachedHistoryStorage Init");
 
+    createLoadedJobCache(conf);
+  }
+
+  @SuppressWarnings("serial")
+  private void createLoadedJobCache(Configuration conf) {
     loadedJobCacheSize = conf.getInt(
         JHAdminConfig.MR_HISTORY_LOADED_JOB_CACHE_SIZE,
         JHAdminConfig.DEFAULT_MR_HISTORY_LOADED_JOB_CACHE_SIZE);
@@ -76,11 +82,25 @@ public class CachedHistoryStorage extends AbstractService implements
       }
     });
   }
-
+  
+  public void refreshLoadedJobCache() {
+    if (getServiceState() == STATE.STARTED) {
+      setConfig(createConf());
+      createLoadedJobCache(getConfig());
+    } else {
+      LOG.warn("Failed to execute refreshLoadedJobCache: CachedHistoryStorage is not started");
+    }
+  }
+  
+  @VisibleForTesting
+  Configuration createConf() {
+    return new Configuration();
+  }
+  
   public CachedHistoryStorage() {
     super(CachedHistoryStorage.class.getName());
   }
-
+  
   private Job loadJob(HistoryFileInfo fileInfo) {
     try {
       Job job = fileInfo.loadJob();
@@ -98,6 +118,11 @@ public class CachedHistoryStorage extends AbstractService implements
     }
   }
 
+  @VisibleForTesting
+  Map<JobId, Job> getLoadedJobCache() {
+    return loadedJobCache;
+  }
+  
   @Override
   public Job getFullJob(JobId jobId) {
     if (LOG.isDebugEnabled()) {
