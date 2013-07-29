@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
@@ -158,7 +159,7 @@ public class NodeManager extends CompositeService
     addService(del);
 
     // NodeManager level dispatcher
-    this.dispatcher = new AsyncDispatcher();
+    this.dispatcher = (AsyncDispatcher) createDispatcher();
 
     nodeHealthChecker = new NodeHealthCheckerService();
     addService(nodeHealthChecker);
@@ -203,6 +204,16 @@ public class NodeManager extends CompositeService
     // TODO add local dirs to del
   }
 
+  @Private
+  protected Dispatcher createDispatcher(){
+    return new AsyncDispatcher();
+  }
+  
+  @Private
+  public Dispatcher getDispatcher(){
+    return this.dispatcher;
+  }
+  
   @Override
   protected void serviceStart() throws Exception {
     try {
