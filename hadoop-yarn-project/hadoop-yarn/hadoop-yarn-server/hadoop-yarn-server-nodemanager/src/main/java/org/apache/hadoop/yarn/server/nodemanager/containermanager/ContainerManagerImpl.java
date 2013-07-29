@@ -40,6 +40,7 @@ import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -230,6 +231,13 @@ public class ContainerManagerImpl extends CompositeService implements
     // Enqueue user dirs in deletion context
 
     Configuration conf = getConfig();
+    Configuration serverConf = new Configuration(conf);
+
+    // always enforce it to be token-based.
+    serverConf.set(
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+      SaslRpcServer.AuthMethod.TOKEN.toString());
+    
     YarnRPC rpc = YarnRPC.create(conf);
 
     InetSocketAddress initialAddress = conf.getSocketAddr(
@@ -238,8 +246,8 @@ public class ContainerManagerImpl extends CompositeService implements
         YarnConfiguration.DEFAULT_NM_PORT);
 
     server =
-        rpc.getServer(ContainerManagementProtocol.class, this, initialAddress, conf,
-            this.context.getNMTokenSecretManager(),
+        rpc.getServer(ContainerManagementProtocol.class, this, initialAddress, 
+            serverConf, this.context.getNMTokenSecretManager(),
             conf.getInt(YarnConfiguration.NM_CONTAINER_MGR_THREAD_COUNT, 
                 YarnConfiguration.DEFAULT_NM_CONTAINER_MGR_THREAD_COUNT));
     
@@ -249,7 +257,7 @@ public class ContainerManagerImpl extends CompositeService implements
         false)) {
       refreshServiceAcls(conf, new NMPolicyProvider());
     }
-
+    
     LOG.info("Blocking new container-requests as container manager rpc" +
     		" server is still starting.");
     this.setBlockNewContainerRequests(true);
