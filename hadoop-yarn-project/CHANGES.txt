@@ -733,6 +733,11 @@ Release 2.1.0-beta - 2013-07-02
     YARN-960. Fixed ResourceManager to propagate client-submitted credentials
     irrespective of security. (Daryn Sharp via vinodkv)
 
+    YARN-937. Fix unmanaged AM in non-secure/secure setup post YARN-701. (tucu)
+
+    YARN-245. Fixed NodeManager to handle duplicate responses from
+    ResourceManager. (Mayank Bansal via vinodkv)
+
   BREAKDOWN OF HADOOP-8562/YARN-191 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
@@ -797,8 +802,6 @@ Release 2.1.0-beta - 2013-07-02
 
     YARN-909. Disable TestLinuxContainerExecutorWithMocks on Windows. (Chuan Liu
     via cnauroth)
-
-    YARN-937. Fix unmanaged AM in non-secure/secure setup post YARN-701. (tucu)
 
 Release 2.0.5-alpha - 06/06/2013
 

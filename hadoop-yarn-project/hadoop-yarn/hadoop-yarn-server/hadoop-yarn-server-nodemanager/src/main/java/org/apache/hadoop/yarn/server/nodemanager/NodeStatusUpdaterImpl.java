@@ -369,6 +369,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               .setLastKnownNMTokenMasterKey(NodeStatusUpdaterImpl.this.context
                 .getNMTokenSecretManager().getCurrentKey());
             response = resourceTracker.nodeHeartbeat(request);
+            // Checking if the response id is the same which we just processed
+            // If yes then ignore the update.
+            if (lastHeartBeatID != response.getResponseId() - 1) {
+              LOG.info("Discarding the duplicate response "
+                  + response.getResponseId());
+              continue;
+            }
             //get next heartbeat interval from response
             nextHeartBeatInterval = response.getNextHeartBeatInterval();
             updateMasterKeys(response);
@@ -395,7 +402,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                   new NodeManagerEvent(NodeManagerEventType.RESYNC));
               break;
             }
-
             lastHeartBeatID = response.getResponseId();
             List<ContainerId> containersToCleanup = response
                 .getContainersToCleanup();
