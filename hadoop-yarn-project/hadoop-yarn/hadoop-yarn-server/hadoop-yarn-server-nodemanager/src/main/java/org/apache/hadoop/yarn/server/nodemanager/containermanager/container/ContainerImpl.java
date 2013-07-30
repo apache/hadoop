@@ -335,8 +335,11 @@ public class ContainerImpl implements Container {
   public Map<Path,List<String>> getLocalizedResources() {
     this.readLock.lock();
     try {
-    assert ContainerState.LOCALIZED == getContainerState(); // TODO: FIXME!!
-    return localizedResources;
+      if (ContainerState.LOCALIZED == getContainerState()) {
+        return localizedResources;
+      } else {
+        return null;
+      }
     } finally {
       this.readLock.unlock();
     }
