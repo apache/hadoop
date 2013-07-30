@@ -78,7 +78,7 @@ public class TestFailoverProxy {
 
     @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
-        boolean isMethodIdempotent) {
+        boolean isIdempotentOrAtMostOnce) {
       return failovers < 1 ? RetryAction.FAILOVER_AND_RETRY : RetryAction.FAIL;
     }
     
