@@ -77,6 +77,9 @@ Release 2.1.0-beta - 2013-07-02
     protocol methods. (suresh)
 
     HDFS-4979. Implement retry cache on Namenode. (suresh)
+
+    HDFS-5025. Record ClientId and CallId in EditLog to enable rebuilding 
+    retry cache in case of HA failover. (Jing Zhao via suresh)
     
   IMPROVEMENTS
 

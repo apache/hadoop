@@ -726,7 +726,8 @@ public class NameNode {
   }
     
   /** get FSImage */
-  FSImage getFSImage() {
+  @VisibleForTesting
+  public FSImage getFSImage() {
     return namesystem.dir.fsImage;
   }
 

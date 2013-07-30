@@ -1105,7 +1105,7 @@ public class Client {
         CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
     this.fallbackAllowed = conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
-    this.clientId = StringUtils.getUuidBytes();
+    this.clientId = ClientId.getClientId();
   }
 
   /**

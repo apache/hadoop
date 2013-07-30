@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -28,7 +28,9 @@ import static org.mockito.Mockito.spy;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.*;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -64,7 +66,7 @@ public class TestCommitBlockSynchronization {
         any(INodeFileUnderConstruction.class),
         any(BlockInfo.class));
     doReturn("").when(namesystemSpy).persistBlocks(
-        any(INodeFileUnderConstruction.class));
+        any(INodeFileUnderConstruction.class), anyBoolean());
     doReturn(mock(FSEditLog.class)).when(namesystemSpy).getEditLog();
 
     return namesystemSpy;
@@ -127,7 +129,6 @@ public class TestCommitBlockSynchronization {
     INodeFileUnderConstruction file = mock(INodeFileUnderConstruction.class);
     Block block = new Block(blockId, length, genStamp);
     FSNamesystem namesystemSpy = makeNameSystemSpy(block, file);
-    DatanodeDescriptor[] targets = new DatanodeDescriptor[0];
     DatanodeID[] newTargets = new DatanodeID[0];
 
     ExtendedBlock lastBlock = new ExtendedBlock();
@@ -148,7 +149,6 @@ public class TestCommitBlockSynchronization {
     INodeFileUnderConstruction file = mock(INodeFileUnderConstruction.class);
     Block block = new Block(blockId, length, genStamp);
     FSNamesystem namesystemSpy = makeNameSystemSpy(block, file);
-    DatanodeDescriptor[] targets = new DatanodeDescriptor[0];
     DatanodeID[] newTargets = new DatanodeID[0];
 
     ExtendedBlock lastBlock = new ExtendedBlock();
