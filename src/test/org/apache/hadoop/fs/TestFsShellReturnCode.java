@@ -19,6 +19,9 @@
 package org.apache.hadoop.fs;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -258,5 +261,111 @@ public class TestFsShellReturnCode {
     shell.setConf(conf);
     int run = shell.run(args);
     assertTrue("Return code should be 0", run == 0);
+  }
+
+  /**
+   * Tests combinations of valid and invalid user and group arguments to chown.
+   */
+  @Test
+  public void testChownUserAndGroupValidity() throws IOException {
+    // The following are valid (no exception expected).
+    new FsShellPermissions.ChownHandler(fs, "user");
+    new FsShellPermissions.ChownHandler(fs, "user:group");
+    new FsShellPermissions.ChownHandler(fs, ":group");
+
+    // The following are valid only on Windows.
+    assertChownValidArgumentsOnWindows(fs, "User With Spaces");
+    assertChownValidArgumentsOnWindows(fs, "User With Spaces:group");
+    assertChownValidArgumentsOnWindows(fs, "User With Spaces:Group With Spaces");
+    assertChownValidArgumentsOnWindows(fs, "user:Group With Spaces");
+    assertChownValidArgumentsOnWindows(fs, ":Group With Spaces");
+
+    // The following are invalid (exception expected).
+    assertChownIllegalArguments(fs, "us!er");
+    assertChownIllegalArguments(fs, "us^er");
+    assertChownIllegalArguments(fs, "user:gr#oup");
+    assertChownIllegalArguments(fs, "user:gr%oup");
+    assertChownIllegalArguments(fs, ":gr#oup");
+    assertChownIllegalArguments(fs, ":gr%oup");
+  }
+
+  /**
+   * Tests valid and invalid group arguments to chgrp.
+   */
+  @Test
+  public void testChgrpGroupValidity() throws IOException {
+    // The following are valid (no exception expected).
+    new FsShellPermissions.ChgrpHandler(fs, "group");
+
+    // The following are valid only on Windows.
+    assertChgrpValidArgumentsOnWindows(fs, "Group With Spaces");
+
+    // The following are invalid (exception expected).
+    assertChgrpIllegalArguments(fs, ":gr#oup");
+    assertChgrpIllegalArguments(fs, ":gr%oup");
+  }
+
+  /**
+   * Asserts that chgrp considers the given arguments invalid.  The expectation
+   * is that the command will throw IOException.
+   * 
+   * @param fs FileSystem argument
+   * @param group String argument
+   */
+  private static void assertChgrpIllegalArguments(FileSystem fs, String group) {
+    try {
+      new FsShellPermissions.ChgrpHandler(fs, group);
+      fail("Expected IOException from group: " + group);
+    } catch (IOException e) {
+    }
+  }
+
+  /**
+   * Asserts that chgrp considers the given arguments valid on Windows, but
+   * invalid elsewhere.
+   * 
+   * @param fs FileSystem argument
+   * @param group String argument
+   * @throws IOException if there is an I/O error running the command
+   */
+  private static void assertChgrpValidArgumentsOnWindows(FileSystem fs,
+      String group) throws IOException {
+    if (Shell.WINDOWS) {
+      new FsShellPermissions.ChgrpHandler(fs, group);
+    } else {
+      assertChgrpIllegalArguments(fs, group);
+    }
+  }
+
+  /**
+   * Asserts that chown considers the given arguments invalid.  The expectation
+   * is that the command will throw IOException.
+   * 
+   * @param fs FileSystem argument
+   * @param owner String argument
+   */
+  private static void assertChownIllegalArguments(FileSystem fs, String owner) {
+    try {
+      new FsShellPermissions.ChownHandler(fs, owner);
+      fail("Expected IOException from owner: " + owner);
+    } catch (IOException e) {
+    }
+  }
+
+  /**
+   * Asserts that chown considers the given arguments valid on Windows, but
+   * invalid elsewhere.
+   * 
+   * @param fs FileSystem argument
+   * @param owner String argument
+   * @throws IOException if there is an I/O error running the command
+   */
+  private static void assertChownValidArgumentsOnWindows(FileSystem fs,
+      String owner) throws IOException {
+    if (Shell.WINDOWS) {
+      new FsShellPermissions.ChownHandler(fs, owner);
+    } else {
+      assertChownIllegalArguments(fs, owner);
+    }
   }
 }

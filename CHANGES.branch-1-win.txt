@@ -475,3 +475,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-9665. Fixed BlockDecompressorStream#decompress to return -1 rather
     than throw EOF at end of file. (Zhijie Shen via acmurthy)
+
+    HADOOP-9768. chown and chgrp reject users and groups with spaces on platforms
+    where spaces are otherwise acceptable. (cnauroth)
