@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -180,32 +181,6 @@ public class SchedulerUtils {
           + ", requestedVirtualCores="
           + resReq.getCapability().getVirtualCores()
           + ", maxVirtualCores=" + maximumResource.getVirtualCores());
-    }
-  }
-
-  /**
-   * Utility method to validate a list resource requests, by insuring that the
-   * requested memory/vcore is non-negative and not greater than max
-   */
-  public static void validateResourceRequests(List<ResourceRequest> ask,
-      Resource maximumResource) throws InvalidResourceRequestException {
-    for (ResourceRequest resReq : ask) {
-      validateResourceRequest(resReq, maximumResource);
-    }
-  }
-
-  /*
-   * @throw <code>InvalidResourceBlacklistRequestException </code> if the
-   * resource is not able to be added to the blacklist.
-   */
-  public static void validateBlacklistRequest(ResourceBlacklistRequest blacklistRequest) 
-  throws InvalidResourceBlacklistRequestException {
-    if (blacklistRequest != null) {
-      List<String> plus = blacklistRequest.getBlacklistAdditions();
-      if (plus != null && plus.contains(ResourceRequest.ANY)) {
-        throw new InvalidResourceBlacklistRequestException(
-            "Cannot add " + ResourceRequest.ANY + " to the blacklist!");
-      }
     }
   }
 }

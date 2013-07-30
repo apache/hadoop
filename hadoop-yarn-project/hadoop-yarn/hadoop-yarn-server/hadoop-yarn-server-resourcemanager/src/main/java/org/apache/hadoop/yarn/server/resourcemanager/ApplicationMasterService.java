@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -386,7 +387,7 @@ public class ApplicationMasterService extends AbstractService implements
       
       // sanity check
       try {
-        SchedulerUtils.validateResourceRequests(ask,
+        RMServerUtils.validateResourceRequests(ask,
             rScheduler.getMaximumResourceCapability());
       } catch (InvalidResourceRequestException e) {
         LOG.warn("Invalid resource ask by application " + appAttemptId, e);
@@ -394,9 +395,16 @@ public class ApplicationMasterService extends AbstractService implements
       }
       
       try {
-        SchedulerUtils.validateBlacklistRequest(blacklistRequest);
+        RMServerUtils.validateBlacklistRequest(blacklistRequest);
       }  catch (InvalidResourceBlacklistRequestException e) {
         LOG.warn("Invalid blacklist request by application " + appAttemptId, e);
+        throw e;
+      }
+      
+      try {
+        RMServerUtils.validateContainerReleaseRequest(release, appAttemptId);
+      } catch (InvalidContainerReleaseException e) {
+        LOG.warn("Invalid container release by application " + appAttemptId, e);
         throw e;
       }
       
