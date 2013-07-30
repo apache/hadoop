@@ -747,9 +747,6 @@ Release 2.1.0-beta - 2013-07-02
 
     YARN-937. Fix unmanaged AM in non-secure/secure setup post YARN-701. (tucu)
 
-    YARN-245. Fixed NodeManager to handle duplicate responses from
-    ResourceManager. (Mayank Bansal via vinodkv)
-
     YARN-932. TestResourceLocalizationService.testLocalizationInit can fail on
     JDK7. (Karthik Kambatla via Sandy Ryza)
 
