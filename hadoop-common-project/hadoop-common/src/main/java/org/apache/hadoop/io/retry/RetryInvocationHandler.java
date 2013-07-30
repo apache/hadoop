@@ -52,7 +52,7 @@ class RetryInvocationHandler implements RpcInvocationHandler {
   private final Map<String,RetryPolicy> methodNameToPolicyMap;
   private Object currentProxy;
 
-  RetryInvocationHandler(FailoverProxyProvider proxyProvider,
+  protected RetryInvocationHandler(FailoverProxyProvider proxyProvider,
       RetryPolicy retryPolicy) {
     this(proxyProvider, retryPolicy, Collections.<String, RetryPolicy>emptyMap());
   }
@@ -96,11 +96,16 @@ class RetryInvocationHandler implements RpcInvocationHandler {
         hasMadeASuccessfulCall = true;
         return ret;
       } catch (Exception e) {
-        boolean isMethodIdempotent = proxyProvider.getInterface()
+        boolean isIdempotentOrAtMostOnce = proxyProvider.getInterface()
             .getMethod(method.getName(), method.getParameterTypes())
             .isAnnotationPresent(Idempotent.class);
+        if (!isIdempotentOrAtMostOnce) {
+          isIdempotentOrAtMostOnce = proxyProvider.getInterface()
+              .getMethod(method.getName(), method.getParameterTypes())
+              .isAnnotationPresent(AtMostOnce.class);
+        }
         RetryAction action = policy.shouldRetry(e, retries++,
-            invocationFailoverCount, isMethodIdempotent);
+            invocationFailoverCount, isIdempotentOrAtMostOnce);
         if (action.action == RetryAction.RetryDecision.FAIL) {
           if (action.reason != null) {
             LOG.warn("Exception while invoking " + 
@@ -168,7 +173,7 @@ class RetryInvocationHandler implements RpcInvocationHandler {
     }
   }
   
-  private Object invokeMethod(Method method, Object[] args) throws Throwable {
+  protected Object invokeMethod(Method method, Object[] args) throws Throwable {
     try {
       if (!method.isAccessible()) {
         method.setAccessible(true);
