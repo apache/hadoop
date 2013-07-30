@@ -31,12 +31,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.util.ThreadUtil;
 
-import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 
 class RetryInvocationHandler implements RpcInvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
@@ -76,7 +77,7 @@ class RetryInvocationHandler implements RpcInvocationHandler {
     
     // The number of times this method invocation has been failed over.
     int invocationFailoverCount = 0;
-    final boolean isRpc = isRpcInvocation();
+    final boolean isRpc = isRpcInvocation(currentProxy);
     final int callId = isRpc? Client.nextCallId(): RpcConstants.INVALID_CALL_ID;
     int retries = 0;
     while (true) {
@@ -179,11 +180,15 @@ class RetryInvocationHandler implements RpcInvocationHandler {
     }
   }
 
-  private boolean isRpcInvocation() {
-    if (!Proxy.isProxyClass(currentProxy.getClass())) {
+  @VisibleForTesting
+  static boolean isRpcInvocation(Object proxy) {
+    if (proxy instanceof ProtocolTranslator) {
+      proxy = ((ProtocolTranslator) proxy).getUnderlyingProxyObject();
+    }
+    if (!Proxy.isProxyClass(proxy.getClass())) {
       return false;
     }
-    final InvocationHandler ih = Proxy.getInvocationHandler(currentProxy);
+    final InvocationHandler ih = Proxy.getInvocationHandler(proxy);
     return ih instanceof RpcInvocationHandler;
   }
 
