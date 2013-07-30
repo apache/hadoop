@@ -58,7 +58,7 @@ public class FSParentQueue extends FSQueue {
   public void recomputeShares() {
     policy.computeShares(childQueues, getFairShare());
     for (FSQueue childQueue : childQueues) {
-      childQueue.getMetrics().setAvailableResourcesToQueue(childQueue.getFairShare());
+      childQueue.getMetrics().setFairShare(childQueue.getFairShare());
       childQueue.recomputeShares();
     }
   }

@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 
@@ -70,7 +70,7 @@ public class ApplicationInitializationContext {
 
   /**
    * Get the data sent to the NodeManager via
-   * {@link ContainerManagementProtocol#startContainer(StartContainerRequest)}
+   * {@link ContainerManagementProtocol#startContainers(StartContainersRequest)}
    * as part of {@link ContainerLaunchContext#getServiceData()}
    * 
    * @return the servicesData for this application.

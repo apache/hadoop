@@ -30,7 +30,7 @@ option java_generate_equals_and_hash = true;
 import "yarn_service_protos.proto";
 
 service ContainerManagementProtocolService {
-  rpc startContainer(StartContainerRequestProto) returns (StartContainerResponseProto);
-  rpc stopContainer(StopContainerRequestProto) returns (StopContainerResponseProto);
-  rpc getContainerStatus(GetContainerStatusRequestProto) returns (GetContainerStatusResponseProto);
+  rpc startContainers(StartContainersRequestProto) returns (StartContainersResponseProto);
+  rpc stopContainers(StopContainersRequestProto) returns (StopContainersResponseProto);
+  rpc getContainerStatuses(GetContainerStatusesRequestProto) returns (GetContainerStatusesResponseProto);
 }

@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
 
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -41,7 +40,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
@@ -62,7 +60,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.security.AMRMTokenSelector;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
@@ -245,6 +242,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.KILLED,
           RMAppAttemptEventType.KILL, new KillAllocatedAMTransition())
           
+      .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.FAILED,
+          RMAppAttemptEventType.CONTAINER_FINISHED,
+          new AMContainerCrashedTransition())
+
        // Transitions from LAUNCHED State
       .addTransition(RMAppAttemptState.LAUNCHED, RMAppAttemptState.RUNNING,
           RMAppAttemptEventType.REGISTERED, new AMRegisteredTransition())
@@ -678,23 +679,20 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       this.clientToAMToken =
           clientToAMTokenSelector.selectToken(new Text(),
             appAttemptTokens.getAllTokens());
-
-      InetSocketAddress serviceAddr = conf.getSocketAddr(
-            YarnConfiguration.RM_SCHEDULER_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
-      AMRMTokenSelector appTokenSelector = new AMRMTokenSelector();
-      this.amrmToken =
-          appTokenSelector.selectToken(
-            SecurityUtil.buildTokenService(serviceAddr),
-            appAttemptTokens.getAllTokens());
-
-      // For now, no need to populate tokens back to
-      // AMRMTokenSecretManager, because running attempts are rebooted
-      // Later in work-preserve restart, we'll create NEW->RUNNING transition
-      // in which the restored tokens will be added to the secret manager
     }
+
+    // Only one AMRMToken is stored per-attempt, so this should be fine. Can't
+    // use TokenSelector as service may change - think fail-over.
+    this.amrmToken =
+        (Token<AMRMTokenIdentifier>) appAttemptTokens
+          .getToken(RMStateStore.AM_RM_TOKEN_SERVICE);
+
+    // For now, no need to populate tokens back to AMRMTokenSecretManager,
+    // because running attempts are rebooted. Later in work-preserve restart,
+    // we'll create NEW->RUNNING transition in which the restored tokens will be
+    // added to the secret manager
   }
+
   private static class BaseTransition implements
       SingleArcTransition<RMAppAttemptImpl, RMAppAttemptEvent> {
 
@@ -726,25 +724,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             new Token<ClientToAMTokenIdentifier>(new ClientToAMTokenIdentifier(
               appAttempt.applicationAttemptId),
               appAttempt.rmContext.getClientToAMTokenSecretManager());
-
-        // create application token
-        AMRMTokenIdentifier id =
-            new AMRMTokenIdentifier(appAttempt.applicationAttemptId);
-        Token<AMRMTokenIdentifier> amRmToken =
-            new Token<AMRMTokenIdentifier>(id,
-              appAttempt.rmContext.getAMRMTokenSecretManager());
-        InetSocketAddress serviceAddr =
-            appAttempt.conf.getSocketAddr(
-              YarnConfiguration.RM_SCHEDULER_ADDRESS,
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
-        // normally the client should set the service after acquiring the
-        // token, but this token is directly provided to the AMs
-        SecurityUtil.setTokenService(amRmToken, serviceAddr);
-
-        appAttempt.amrmToken = amRmToken;
-
       }
+
+      // create AMRMToken
+      AMRMTokenIdentifier id =
+          new AMRMTokenIdentifier(appAttempt.applicationAttemptId);
+      appAttempt.amrmToken =
+          new Token<AMRMTokenIdentifier>(id,
+            appAttempt.rmContext.getAMRMTokenSecretManager());
 
       // Add the application to the scheduler
       appAttempt.eventHandler.handle(

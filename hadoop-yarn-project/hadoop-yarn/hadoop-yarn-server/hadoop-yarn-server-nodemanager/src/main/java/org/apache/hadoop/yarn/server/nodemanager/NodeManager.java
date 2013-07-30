@@ -229,6 +229,15 @@ public class NodeManager extends CompositeService
     return "NodeManager";
   }
 
+  protected void shutDown() {
+    new Thread() {
+      @Override
+      public void run() {
+        NodeManager.this.stop();
+      }
+    }.start();
+  }
+
   protected void resyncWithRM() {
     //we do not want to block dispatcher thread here
     new Thread() {
@@ -265,6 +274,8 @@ public class NodeManager extends CompositeService
       while (!containers.isEmpty()
           && System.currentTimeMillis() - waitStartTime < waitForContainersOnShutdownMillis) {
         try {
+          //To remove done containers in NM context
+          nodeStatusUpdater.getNodeStatusAndUpdateContainersInContext();
           Thread.sleep(1000);
         } catch (InterruptedException ex) {
           LOG.warn("Interrupted while sleeping on container kill on shutdown",
@@ -276,7 +287,6 @@ public class NodeManager extends CompositeService
       while (!containers.isEmpty()) {
         try {
           Thread.sleep(1000);
-          //to remove done containers from the map
           nodeStatusUpdater.getNodeStatusAndUpdateContainersInContext();
         } catch (InterruptedException ex) {
           LOG.warn("Interrupted while sleeping on container kill on resync",
@@ -409,7 +419,7 @@ public class NodeManager extends CompositeService
   public void handle(NodeManagerEvent event) {
     switch (event.getType()) {
     case SHUTDOWN:
-      stop();
+      shutDown();
       break;
     case RESYNC:
       resyncWithRM();

@@ -204,8 +204,10 @@ public class TestNMAuditLogger {
   public void testNMAuditLoggerWithIP() throws Exception {
     Configuration conf = new Configuration();
     // start the IPC server
-    Server server = RPC.getServer(TestProtocol.class,
-        new MyTestRPCServer(), "0.0.0.0", 0, 5, true, conf, null);
+    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+        .setInstance(new MyTestRPCServer()).setBindAddress("0.0.0.0")
+        .setPort(0).setNumHandlers(5).setVerbose(true).build();
+
     server.start();
 
     InetSocketAddress addr = NetUtils.getConnectAddress(server);

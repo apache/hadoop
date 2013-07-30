@@ -36,16 +36,10 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.RefreshAuthorizationPolicyProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.RefreshAuthorizationPolicyProtocolPB;
-import org.apache.hadoop.hdfs.protocolPB.RefreshUserMappingsProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.RefreshUserMappingsProtocolPB;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
@@ -66,8 +60,15 @@ import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
+import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolClientSideTranslatorPB;
+import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolPB;
+import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolClientSideTranslatorPB;
+import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
+import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -297,9 +298,8 @@ public class NameNodeProxies {
     return new ClientNamenodeProtocolTranslatorPB(proxy);
   }
   
-  @SuppressWarnings("unchecked")
   private static Object createNameNodeProxy(InetSocketAddress address,
-      Configuration conf, UserGroupInformation ugi, Class xface)
+      Configuration conf, UserGroupInformation ugi, Class<?> xface)
       throws IOException {
     RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine.class);
     Object proxy = RPC.getProxy(xface, RPC.getProtocolVersion(xface), address,
@@ -308,7 +308,8 @@ public class NameNodeProxies {
   }
 
   /** Gets the configured Failover proxy provider's class */
-  private static <T> Class<FailoverProxyProvider<T>> getFailoverProxyProviderClass(
+  @VisibleForTesting
+  public static <T> Class<FailoverProxyProvider<T>> getFailoverProxyProviderClass(
       Configuration conf, URI nameNodeUri, Class<T> xface) throws IOException {
     if (nameNodeUri == null) {
       return null;
@@ -345,8 +346,8 @@ public class NameNodeProxies {
   }
 
   /** Creates the Failover proxy provider instance*/
-  @SuppressWarnings("unchecked")
-  private static <T> FailoverProxyProvider<T> createFailoverProxyProvider(
+  @VisibleForTesting
+  public static <T> FailoverProxyProvider<T> createFailoverProxyProvider(
       Configuration conf, Class<FailoverProxyProvider<T>> failoverProxyProviderClass,
       Class<T> xface, URI nameNodeUri) throws IOException {
     Preconditions.checkArgument(
@@ -355,9 +356,9 @@ public class NameNodeProxies {
     try {
       Constructor<FailoverProxyProvider<T>> ctor = failoverProxyProviderClass
           .getConstructor(Configuration.class, URI.class, Class.class);
-      FailoverProxyProvider<?> provider = ctor.newInstance(conf, nameNodeUri,
+      FailoverProxyProvider<T> provider = ctor.newInstance(conf, nameNodeUri,
           xface);
-      return (FailoverProxyProvider<T>) provider;
+      return provider;
     } catch (Exception e) {
       String message = "Couldn't create proxy provider " + failoverProxyProviderClass;
       if (LOG.isDebugEnabled()) {

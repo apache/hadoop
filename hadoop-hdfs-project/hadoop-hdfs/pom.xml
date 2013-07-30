@@ -20,12 +20,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>2.1.0-beta</version>
+    <version>2.1.1-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-hdfs</artifactId>
-  <version>2.1.0-beta</version>
+  <version>2.1.1-SNAPSHOT</version>
   <description>Apache Hadoop HDFS</description>
   <name>Apache Hadoop HDFS</name>
   <packaging>jar</packaging>
@@ -419,12 +419,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <source>
                 <directory>${basedir}/src/main/proto</directory>
                 <includes>
-                  <include>GetUserMappingsProtocol.proto</include>
                   <include>HAZKInfo.proto</include>
                   <include>InterDatanodeProtocol.proto</include>
                   <include>JournalProtocol.proto</include>
-                  <include>RefreshAuthorizationPolicyProtocol.proto</include>
-                  <include>RefreshUserMappingsProtocol.proto</include>
                   <include>datatransfer.proto</include>
                   <include>hdfs.proto</include>
                 </includes>

@@ -6,6 +6,10 @@ Release 2.1.1-beta - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
+
+    HADOOP-9515. Add general interface for NFS and Mount. (brandonli)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
@@ -35,6 +39,12 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9421. [RPC v9] Convert SASL to use ProtoBuf and provide
     negotiation capabilities (daryn)
 
+    HADOOP-9688. Add globally unique Client ID to RPC requests. (suresh)
+
+    HADOOP-9683. [RPC v9] Wrap IpcConnectionContext in RPC headers (daryn)
+
+    HADOOP-9698. [RPC v9] Client must honor server's SASL negotiate response (daryn)
+
   NEW FEATURES
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
@@ -55,9 +65,14 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-8470. Add NetworkTopologyWithNodeGroup, a 4-layer implementation
     of NetworkTopology.  (Junping Du via szetszwo)
 
-    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
+    HADOOP-9763. Extends LightWeightGSet to support eviction of expired 
+    elements. (Tsz Wo (Nicholas) SZE via jing9)
 
-    HADOOP-9515. Add general interface for NFS and Mount. (brandonli)
+    HADOOP-9762. RetryCache utility for implementing RPC retries. 
+    (Suresh Srinivas via jing9)
+
+    HADOOP-9792. Retry the methods that are tagged @AtMostOnce along 
+    with @Idempotent. (suresh)
 
   IMPROVEMENTS
 
@@ -136,6 +151,57 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-8608. Add Configuration API for parsing time durations. (cdouglas)
 
     HADOOP-9619 Mark stability of .proto files (sanjay Radia)
+
+    HADOOP-9676.  Make maximum RPC buffer size configurable (Colin Patrick
+    McCabe)
+
+    HADOOP-9691. RPC clients can generate call ID using AtomicInteger instead of
+    synchronizing on the Client instance. (cnauroth)
+
+    HADOOP-9661. Allow metrics sources to be extended. (sandyr via tucu)
+
+    HADOOP-9370.  Write FSWrapper class to wrap FileSystem and FileContext for
+    better test coverage.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9355.  Abstract symlink tests to use either FileContext or
+    FileSystem.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9673.  NetworkTopology: when a node can't be added, print out its
+    location for diagnostic purposes.  (Colin Patrick McCabe)
+
+    HADOOP-9414.  Refactor out FSLinkResolver and relevant helper methods.
+    (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9416.  Add new symlink resolution methods in FileSystem and
+    FileSystemLinkResolver.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9720. Rename Client#uuid to Client#clientId. (Arpit Agarwal via
+    suresh)
+
+    HADOOP-9734. Common protobuf definitions for GetUserMappingsProtocol,
+    RefreshAuthorizationPolicyProtocol and RefreshUserMappingsProtocol (jlowe)
+
+    HADOOP-9716. Rpc retries should use the same call ID as the original call.
+    (szetszwo)
+
+    HADOOP-9717. Add retry attempt count to the RPC requests. (jing9)
+
+    HADOOP-9751. Add clientId and retryCount to RpcResponseHeaderProto.
+    (szetszwo)
+
+    HADOOP-9754. Remove unnecessary "throws IOException/InterruptedException",
+    and fix generic and other javac warnings.  (szetszwo)
+
+    HADOOP-9760. Move GSet and related classes to common from HDFS.
+    (suresh)
+
+    HADOOP-9756. Remove the deprecated getServer(..) methods from RPC.
+    (Junping Du via szetszwo)
+
+    HADOOP-9770. Make RetryCache#state non volatile. (suresh)
+
+    HADOOP-9786. RetryInvocationHandler#isRpcInvocation should support 
+    ProtocolTranslator. (suresh and jing9)
 
   OPTIMIZATIONS
 
@@ -282,6 +348,20 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9656. Gridmix unit tests fail on Windows and Linux. (Chuan Liu via
     cnauroth)
+
+    HADOOP-9707. Fix register lists for crc32c inline assembly. (todd via
+    kihwal)
+
+    HADOOP-9738. TestDistCh fails. (jing9 via kihwal)
+
+    HADOOP-9759. Add support for NativeCodeLoader#getLibraryName on Windows.
+    (Chuan Liu via cnauroth)
+
+    HADOOP-9773. TestLightWeightCache should not set size limit to zero when
+    testing it.  (szetszwo)
+
+    HADOOP-9507. LocalFileSystem rename() is broken in some cases when
+    destination exists. (cnauroth)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
@@ -489,6 +569,12 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-8440. HarFileSystem.decodeHarURI fails for URIs whose host contains
     numbers. (Ivan Mitic via cnauroth)
+
+    HADOOP-9643. org.apache.hadoop.security.SecurityUtil calls 
+    toUpperCase(Locale.getDefault()) as well as toLowerCase(Locale.getDefault()) 
+    on hadoop.security.authentication value. (markrmiller@gmail.com via tucu)
+
+    HADOOP-9701. mvn site ambiguous links in hadoop-common. (kkambatl via tucu)
 
 Release 2.0.5-alpha - 06/06/2013
 

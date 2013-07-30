@@ -638,6 +638,191 @@ public class TestRMWebServicesApps extends JerseyTest {
   }
 
   @Test
+  public void testAppsQueryAppTypes() throws JSONException, Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    Thread.sleep(1);
+    RMApp app1 = rm.submitApp(1024);
+    amNodeManager.nodeHeartbeat(true);
+    // finish App
+    MockAM am = rm
+        .sendAMLaunched(app1.getCurrentAppAttempt().getAppAttemptId());
+    am.registerAppAttempt();
+    am.unregisterAppAttempt();
+    amNodeManager.nodeHeartbeat(app1.getCurrentAppAttempt().getAppAttemptId(),
+        1, ContainerState.COMPLETE);
+
+    rm.submitApp(1024, "", UserGroupInformation.getCurrentUser()
+        .getShortUserName(), null, false, null, 2, null, "MAPREDUCE");
+    rm.submitApp(1024, "", UserGroupInformation.getCurrentUser()
+        .getShortUserName(), null, false, null, 2, null, "NON-YARN");
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps").queryParam("applicationTypes", "MAPREDUCE")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    JSONArray array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 1, array.length());
+    assertEquals("MAPREDUCE",
+        array.getJSONObject(0).getString("applicationType"));
+
+    r = resource();
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps")
+            .queryParam("applicationTypes", "YARN")
+            .queryParam("applicationTypes", "MAPREDUCE")
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 2, array.length());
+    assertTrue((array.getJSONObject(0).getString("applicationType")
+        .equals("YARN") && array.getJSONObject(1).getString("applicationType")
+        .equals("MAPREDUCE")) ||
+        (array.getJSONObject(1).getString("applicationType").equals("YARN")
+            && array.getJSONObject(0).getString("applicationType")
+            .equals("MAPREDUCE")));
+
+    r = resource();
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps")
+            .queryParam("applicationTypes", "YARN,NON-YARN")
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 2, array.length());
+    assertTrue((array.getJSONObject(0).getString("applicationType")
+        .equals("YARN") && array.getJSONObject(1).getString("applicationType")
+        .equals("NON-YARN")) ||
+        (array.getJSONObject(1).getString("applicationType").equals("YARN")
+            && array.getJSONObject(0).getString("applicationType")
+            .equals("NON-YARN")));
+
+    r = resource();
+    response = r.path("ws").path("v1").path("cluster")
+        .path("apps").queryParam("applicationTypes", "")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 3, array.length());
+
+    r = resource();
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps")
+            .queryParam("applicationTypes", "YARN,NON-YARN")
+            .queryParam("applicationTypes", "MAPREDUCE")
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 3, array.length());
+
+    r = resource();
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps")
+            .queryParam("applicationTypes", "YARN")
+            .queryParam("applicationTypes", "")
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 1, array.length());
+    assertEquals("YARN",
+        array.getJSONObject(0).getString("applicationType"));
+
+    r = resource();
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps")
+            .queryParam("applicationTypes", ",,, ,, YARN ,, ,")
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 1, array.length());
+    assertEquals("YARN",
+        array.getJSONObject(0).getString("applicationType"));
+
+    r = resource();
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps")
+            .queryParam("applicationTypes", ",,, ,,  ,, ,")
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 3, array.length());
+
+    r = resource();
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps")
+            .queryParam("applicationTypes", "YARN, ,NON-YARN, ,,")
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 2, array.length());
+    assertTrue((array.getJSONObject(0).getString("applicationType")
+        .equals("YARN") && array.getJSONObject(1).getString("applicationType")
+        .equals("NON-YARN")) ||
+        (array.getJSONObject(1).getString("applicationType").equals("YARN")
+            && array.getJSONObject(0).getString("applicationType")
+            .equals("NON-YARN")));
+
+    r = resource();
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps")
+            .queryParam("applicationTypes", " YARN, ,  ,,,")
+            .queryParam("applicationTypes", "MAPREDUCE , ,, ,")
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 2, array.length());
+    assertTrue((array.getJSONObject(0).getString("applicationType")
+        .equals("YARN") && array.getJSONObject(1).getString("applicationType")
+        .equals("MAPREDUCE")) ||
+        (array.getJSONObject(1).getString("applicationType").equals("YARN")
+            && array.getJSONObject(0).getString("applicationType")
+            .equals("MAPREDUCE")));
+
+    rm.stop();
+  }
+
+  @Test
   public void testSingleApp() throws JSONException, Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);

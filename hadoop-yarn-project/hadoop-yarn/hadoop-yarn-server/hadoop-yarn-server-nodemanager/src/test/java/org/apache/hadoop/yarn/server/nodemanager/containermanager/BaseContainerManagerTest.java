@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import junit.framework.Assert;
 
@@ -32,7 +34,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -118,6 +120,11 @@ public abstract class BaseContainerManagerTest {
     };
 
     @Override
+    protected void stopRMProxy() {
+      return;
+    }
+
+    @Override
     protected void startStatusUpdater() {
       return; // Don't start any updating thread.
     }
@@ -184,15 +191,18 @@ public abstract class BaseContainerManagerTest {
 
       @Override
         protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
-            Container container, boolean stopRequest) throws YarnException {
+            Container container, boolean stopRequest, NMTokenIdentifier identifier) throws YarnException {
           // do nothing
         }
-      
+      @Override
+      protected void authorizeUser(UserGroupInformation remoteUgi,
+          NMTokenIdentifier nmTokenIdentifier) {
+        // do nothing
+      }
       @Override
         protected void authorizeStartRequest(
             NMTokenIdentifier nmTokenIdentifier,
-            ContainerTokenIdentifier containerTokenIdentifier,
-            UserGroupInformation ugi) throws YarnException {
+            ContainerTokenIdentifier containerTokenIdentifier) throws YarnException {
           // do nothing
         }
       
@@ -233,18 +243,20 @@ public abstract class BaseContainerManagerTest {
   public static void waitForContainerState(ContainerManagementProtocol containerManager,
           ContainerId containerID, ContainerState finalState, int timeOutMax)
           throws InterruptedException, YarnException, IOException {
-    GetContainerStatusRequest request =
-        recordFactory.newRecordInstance(GetContainerStatusRequest.class);
-        request.setContainerId(containerID);
-        ContainerStatus containerStatus =
-            containerManager.getContainerStatus(request).getStatus();
-        int timeoutSecs = 0;
+    List<ContainerId> list = new ArrayList<ContainerId>();
+    list.add(containerID);
+    GetContainerStatusesRequest request =
+        GetContainerStatusesRequest.newInstance(list);
+    ContainerStatus containerStatus =
+        containerManager.getContainerStatuses(request).getContainerStatuses()
+          .get(0);
+    int timeoutSecs = 0;
       while (!containerStatus.getState().equals(finalState)
           && timeoutSecs++ < timeOutMax) {
           Thread.sleep(1000);
           LOG.info("Waiting for container to get into state " + finalState
               + ". Current state is " + containerStatus.getState());
-          containerStatus = containerManager.getContainerStatus(request).getStatus();
+          containerStatus = containerManager.getContainerStatuses(request).getContainerStatuses().get(0);
         }
         LOG.info("Container state is " + containerStatus.getState());
         Assert.assertEquals("ContainerState is not correct (timedout)",

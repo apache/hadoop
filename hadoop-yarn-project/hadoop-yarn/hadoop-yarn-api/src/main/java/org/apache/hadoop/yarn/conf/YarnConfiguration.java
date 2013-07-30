@@ -132,6 +132,18 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "scheduler.client.thread-count";
   public static final int DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT = 50;
 
+  /**
+   * Enable periodic monitor threads.
+   * @see #RM_SCHEDULER_MONITOR_POLICIES
+   */
+  public static final String RM_SCHEDULER_ENABLE_MONITORS =
+    RM_PREFIX + "scheduler.monitor.enable";
+  public static final boolean DEFAULT_RM_SCHEDULER_ENABLE_MONITORS = false;
+
+  /** List of SchedulingEditPolicy classes affecting the scheduler. */
+  public static final String RM_SCHEDULER_MONITOR_POLICIES =
+    RM_PREFIX + "scheduler.monitor.policies";
+
   /** The address of the RM web application.*/
   public static final String RM_WEBAPP_ADDRESS = 
     RM_PREFIX + "webapp.address";
@@ -643,17 +655,17 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
       2000;
 
-  /** Max time to wait to establish a connection to RM when NM starts
+  /** Max time to wait to establish a connection to RM
    */
-  public static final String RESOURCEMANAGER_CONNECT_WAIT_SECS =
-      NM_PREFIX + "resourcemanager.connect.wait.secs";
-  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_WAIT_SECS =
+  public static final String RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS =
+      RM_PREFIX + "resourcemanager.connect.max.wait.secs";
+  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS =
       15*60;
 
-  /** Time interval between each NM attempt to connect to RM
+  /** Time interval between each attempt to connect to RM
    */
   public static final String RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS =
-      NM_PREFIX + "resourcemanager.connect.retry_interval.secs";
+      RM_PREFIX + "resourcemanager.connect.retry_interval.secs";
   public static final long DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS
       = 30;
 

@@ -36,10 +36,10 @@ public class RetryProxy {
    * @param retryPolicy the policy for retrying method call failures
    * @return the retry proxy
    */
-  public static Object create(Class<?> iface, Object implementation,
+  public static <T> Object create(Class<T> iface, T implementation,
                               RetryPolicy retryPolicy) {
     return RetryProxy.create(iface,
-        new DefaultFailoverProxyProvider(iface, implementation),
+        new DefaultFailoverProxyProvider<T>(iface, implementation),
         retryPolicy);
   }
 
@@ -53,8 +53,8 @@ public class RetryProxy {
    * @param retryPolicy the policy for retrying or failing over method call failures
    * @return the retry proxy
    */
-  public static Object create(Class<?> iface, FailoverProxyProvider proxyProvider,
-      RetryPolicy retryPolicy) {
+  public static <T> Object create(Class<T> iface,
+      FailoverProxyProvider<T> proxyProvider, RetryPolicy retryPolicy) {
     return Proxy.newProxyInstance(
         proxyProvider.getInterface().getClassLoader(),
         new Class<?>[] { iface },
@@ -73,10 +73,10 @@ public class RetryProxy {
    * @param methodNameToPolicyMap a map of method names to retry policies
    * @return the retry proxy
    */
-  public static Object create(Class<?> iface, Object implementation,
+  public static <T> Object create(Class<T> iface, T implementation,
                               Map<String,RetryPolicy> methodNameToPolicyMap) {
     return create(iface,
-        new DefaultFailoverProxyProvider(iface, implementation),
+        new DefaultFailoverProxyProvider<T>(iface, implementation),
         methodNameToPolicyMap,
         RetryPolicies.TRY_ONCE_THEN_FAIL);
   }
@@ -92,7 +92,8 @@ public class RetryProxy {
    * @param methodNameToPolicyMapa map of method names to retry policies
    * @return the retry proxy
    */
-  public static Object create(Class<?> iface, FailoverProxyProvider proxyProvider,
+  public static <T> Object create(Class<T> iface,
+      FailoverProxyProvider<T> proxyProvider,
       Map<String,RetryPolicy> methodNameToPolicyMap,
       RetryPolicy defaultPolicy) {
     return Proxy.newProxyInstance(

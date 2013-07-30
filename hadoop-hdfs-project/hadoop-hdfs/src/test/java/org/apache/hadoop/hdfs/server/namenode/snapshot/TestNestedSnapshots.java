@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SNAPSHOT_LIMIT;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Random;
@@ -36,12 +35,12 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -132,13 +131,6 @@ public class TestNestedSnapshots {
     print("delete snapshot " + rootSnapshot);
     hdfs.disallowSnapshot(rootPath);
     print("disallow snapshot " + rootStr);
-    try {
-      hdfs.disallowSnapshot(rootPath);
-      fail("Expect snapshot exception when disallowing snapshot on root again");
-    } catch (RemoteException e) {
-      GenericTestUtils.assertExceptionContains(
-          "Root is not a snapshottable directory", e);
-    }
     
     //change foo to non-snapshottable
     hdfs.deleteSnapshot(foo, s1name);
@@ -149,16 +141,16 @@ public class TestNestedSnapshots {
     try {
       hdfs.allowSnapshot(rootPath);
       Assert.fail();
-    } catch(RemoteException se) {
+    } catch (SnapshotException se) {
       assertNestedSnapshotException(
-          (SnapshotException) se.unwrapRemoteException(), "subdirectory");
+          se, "subdirectory");
     }
     try {
       hdfs.allowSnapshot(foo);
       Assert.fail();
-    } catch(RemoteException se) {
+    } catch (SnapshotException se) {
       assertNestedSnapshotException(
-          (SnapshotException) se.unwrapRemoteException(), "subdirectory");
+          se, "subdirectory");
     }
 
     final Path sub1Bar = new Path(bar, "sub1");
@@ -167,16 +159,16 @@ public class TestNestedSnapshots {
     try {
       hdfs.allowSnapshot(sub1Bar);
       Assert.fail();
-    } catch(RemoteException se) {
+    } catch (SnapshotException se) {
       assertNestedSnapshotException(
-          (SnapshotException) se.unwrapRemoteException(), "ancestor");
+          se, "ancestor");
     }
     try {
       hdfs.allowSnapshot(sub2Bar);
       Assert.fail();
-    } catch(RemoteException se) {
+    } catch (SnapshotException se) {
       assertNestedSnapshotException(
-          (SnapshotException) se.unwrapRemoteException(), "ancestor");
+          se, "ancestor");
     }
   }
   

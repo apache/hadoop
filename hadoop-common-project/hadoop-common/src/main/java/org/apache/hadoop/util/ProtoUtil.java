@@ -28,6 +28,8 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.*;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import com.google.protobuf.ByteString;
+
 public abstract class ProtoUtil {
 
   /**
@@ -158,9 +160,11 @@ public abstract class ProtoUtil {
   }
  
   public static RpcRequestHeaderProto makeRpcRequestHeader(RPC.RpcKind rpcKind,
-      RpcRequestHeaderProto.OperationProto operation, int callId) {
+      RpcRequestHeaderProto.OperationProto operation, int callId,
+      int retryCount, byte[] uuid) {
     RpcRequestHeaderProto.Builder result = RpcRequestHeaderProto.newBuilder();
-    result.setRpcKind(convert(rpcKind)).setRpcOp(operation).setCallId(callId);
+    result.setRpcKind(convert(rpcKind)).setRpcOp(operation).setCallId(callId)
+        .setRetryCount(retryCount).setClientId(ByteString.copyFrom(uuid));
     return result.build();
   }
 }

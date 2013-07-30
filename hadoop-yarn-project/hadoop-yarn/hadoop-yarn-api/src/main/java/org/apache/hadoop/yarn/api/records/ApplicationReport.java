@@ -58,7 +58,7 @@ public abstract class ApplicationReport {
       YarnApplicationState state, String diagnostics, String url,
       long startTime, long finishTime, FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
-      float progress, String applicationType) {
+      float progress, String applicationType, Token amRmToken) {
     ApplicationReport report = Records.newRecord(ApplicationReport.class);
     report.setApplicationId(applicationId);
     report.setCurrentApplicationAttemptId(applicationAttemptId);
@@ -78,6 +78,7 @@ public abstract class ApplicationReport {
     report.setOriginalTrackingUrl(origTrackingUrl);
     report.setProgress(progress);
     report.setApplicationType(applicationType);
+    report.setAMRMToken(amRmToken);
     return report;
   }
 
@@ -319,4 +320,33 @@ public abstract class ApplicationReport {
   @Private
   @Unstable
   public abstract void setApplicationType(String applicationType);
+
+  @Private
+  @Stable
+  public abstract void setAMRMToken(Token amRmToken);
+
+  /**
+   * Get the AMRM token of the application.
+   * <p/>
+   * The AMRM token is required for AM to RM scheduling operations. For 
+   * managed Application Masters Yarn takes care of injecting it. For unmanaged
+   * Applications Masters, the token must be obtained via this method and set
+   * in the {@link org.apache.hadoop.security.UserGroupInformation} of the
+   * current user.
+   * <p/>
+   * The AMRM token will be returned only if all the following conditions are
+   * met:
+   * <li>
+   *   <ul>the requester is the owner of the ApplicationMaster</ul>
+   *   <ul>the application master is an unmanaged ApplicationMaster</ul>
+   *   <ul>the application master is in ACCEPTED state</ul>
+   * </li>
+   * Else this method returns NULL.
+   * 
+   * @return the AM to RM token if available.
+   */
+  @Public
+  @Stable
+  public abstract Token getAMRMToken();
+  
 }

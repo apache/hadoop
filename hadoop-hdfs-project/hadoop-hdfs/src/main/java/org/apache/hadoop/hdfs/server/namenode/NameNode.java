@@ -430,6 +430,15 @@ public class NameNode {
     return nodeRegistration;
   }
 
+  /* optimize ugi lookup for RPC operations to avoid a trip through
+   * UGI.getCurrentUser which is synch'ed
+   */
+  public static UserGroupInformation getRemoteUser() throws IOException {
+    UserGroupInformation ugi = Server.getRemoteUser();
+    return (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
+  }
+
+
   /**
    * Login as the configured user for the NameNode.
    */
@@ -561,7 +570,7 @@ public class NameNode {
     if (trashInterval == 0) {
       return;
     } else if (trashInterval < 0) {
-      throw new IOException("Cannot start tresh emptier with negative interval."
+      throw new IOException("Cannot start trash emptier with negative interval."
           + " Set " + FS_TRASH_INTERVAL_KEY + " to a positive value.");
     }
     
@@ -717,7 +726,8 @@ public class NameNode {
   }
     
   /** get FSImage */
-  FSImage getFSImage() {
+  @VisibleForTesting
+  public FSImage getFSImage() {
     return namesystem.dir.fsImage;
   }
 

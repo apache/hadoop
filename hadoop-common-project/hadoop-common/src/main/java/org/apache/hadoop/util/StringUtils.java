@@ -40,7 +40,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.util.Shell;
 
 import com.google.common.net.InetAddresses;
 
@@ -893,5 +892,17 @@ public class StringUtils {
     }
     matcher.appendTail(sb);
     return sb.toString();
+  }
+  
+  /**
+   * Get stack trace for a given thread.
+   */
+  public static String getStackTrace(Thread t) {
+    final StackTraceElement[] stackTrace = t.getStackTrace();
+    StringBuilder str = new StringBuilder();
+    for (StackTraceElement e : stackTrace) {
+      str.append(e.toString() + "\n");
+    }
+    return str.toString();
   }
 }

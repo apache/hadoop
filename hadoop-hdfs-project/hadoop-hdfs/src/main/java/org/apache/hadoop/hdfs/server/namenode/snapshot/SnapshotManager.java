@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
@@ -37,8 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
-
-import com.google.common.base.Preconditions;
 
 /**
  * Manage snapshottable directories and their snapshots.
@@ -128,8 +127,7 @@ public class SnapshotManager implements SnapshotStats {
 
   /** Remove the given snapshottable directory from {@link #snapshottables}. */
   private void removeSnapshottable(INodeDirectorySnapshottable s) {
-    final INodeDirectorySnapshottable removed = snapshottables.remove(s.getId());
-    Preconditions.checkState(s == removed);
+    snapshottables.remove(s.getId());
   }
   
   /** Remove snapshottable directories from {@link #snapshottables} */
@@ -148,17 +146,18 @@ public class SnapshotManager implements SnapshotStats {
    */
   public void resetSnapshottable(final String path) throws IOException {
     final INodesInPath iip = fsdir.getINodesInPath4Write(path);
-    final INodeDirectorySnapshottable s = INodeDirectorySnapshottable.valueOf(
-        iip.getLastINode(), path);
+    final INodeDirectory d = INodeDirectory.valueOf(iip.getLastINode(), path);
+    if (!d.isSnapshottable()) {
+      // the directory is already non-snapshottable
+      return;
+    }
+    final INodeDirectorySnapshottable s = (INodeDirectorySnapshottable) d;
     if (s.getNumSnapshots() > 0) {
       throw new SnapshotException("The directory " + path + " has snapshot(s). "
           + "Please redo the operation after removing all the snapshots.");
     }
 
     if (s == fsdir.getRoot()) {
-      if (s.getSnapshotQuota() == 0) {
-        throw new SnapshotException("Root is not a snapshottable directory");
-      }
       s.setSnapshotQuota(0); 
     } else {
       s.replaceSelf(iip.getLatestSnapshot(), fsdir.getINodeMap());

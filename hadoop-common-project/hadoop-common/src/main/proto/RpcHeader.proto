@@ -62,7 +62,11 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
 
   optional RpcKindProto rpcKind = 1;
   optional OperationProto rpcOp = 2;
-  required uint32 callId = 3; // each rpc has a callId that is also used in response
+  required uint32 callId = 3; // a sequence number that is sent back in response
+  required bytes clientId = 4; // Globally unique client ID
+  // clientId + callId uniquely identifies a request
+  // retry count, 1 means this is the first retry
+  optional sint32 retryCount = 5 [default = -1];
 }
 
 
@@ -126,6 +130,8 @@ message RpcResponseHeaderProto {
   optional string exceptionClassName = 4;  // if request fails
   optional string errorMsg = 5;  // if request fails, often contains strack trace
   optional RpcErrorCodeProto errorDetail = 6; // in case of error
+  optional bytes clientId = 7; // Globally unique client ID
+  optional sint32 retryCount = 8 [default = -1];
 }
 
 message RpcSaslProto {

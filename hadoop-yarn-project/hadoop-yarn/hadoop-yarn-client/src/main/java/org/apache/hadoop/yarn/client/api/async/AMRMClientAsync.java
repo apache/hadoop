@@ -28,7 +28,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -96,25 +95,19 @@ extends AbstractService {
   protected final CallbackHandler handler;
   protected final AtomicInteger heartbeatIntervalMs = new AtomicInteger();
 
-  public static <T extends ContainerRequest> AMRMClientAsync<T> 
-  createAMRMClientAsync(
-      ApplicationAttemptId id, 
-      int intervalMs, 
-      CallbackHandler callbackHandler) {
-    return new AMRMClientAsyncImpl<T>(id, intervalMs, callbackHandler);
+  public static <T extends ContainerRequest> AMRMClientAsync<T>
+      createAMRMClientAsync(int intervalMs, CallbackHandler callbackHandler) {
+    return new AMRMClientAsyncImpl<T>(intervalMs, callbackHandler);
   }
   
-  public static <T extends ContainerRequest> AMRMClientAsync<T> 
-  createAMRMClientAsync(
-      AMRMClient<T> client, 
-      int intervalMs, 
-      CallbackHandler callbackHandler) {
+  public static <T extends ContainerRequest> AMRMClientAsync<T>
+      createAMRMClientAsync(AMRMClient<T> client, int intervalMs,
+          CallbackHandler callbackHandler) {
     return new AMRMClientAsyncImpl<T>(client, intervalMs, callbackHandler);
   }
   
-  protected AMRMClientAsync(ApplicationAttemptId id, int intervalMs,
-      CallbackHandler callbackHandler) {
-    this(new AMRMClientImpl<T>(id), intervalMs, callbackHandler);
+  protected AMRMClientAsync(int intervalMs, CallbackHandler callbackHandler) {
+    this(new AMRMClientImpl<T>(), intervalMs, callbackHandler);
   }
   
   @Private
@@ -227,6 +220,13 @@ extends AbstractService {
     
     public float getProgress();
     
-    public void onError(Exception e);
+    /**
+     * Called when error comes from RM communications as well as from errors in
+     * the callback itself from the app. Calling
+     * stop() is the recommended action.
+     *
+     * @param e
+     */
+    public void onError(Throwable e);
   }
 }

@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -414,7 +415,11 @@ public class DFSAdmin extends FsShell {
    */
   public void allowSnapshot(String[] argv) throws IOException {   
     DistributedFileSystem dfs = getDFS();
-    dfs.allowSnapshot(new Path(argv[1]));
+    try {
+      dfs.allowSnapshot(new Path(argv[1]));
+    } catch (SnapshotException e) {
+      throw new RemoteException(e.getClass().getName(), e.getMessage());
+    }
     System.out.println("Allowing snaphot on " + argv[1] + " succeeded");
   }
   
@@ -426,7 +431,11 @@ public class DFSAdmin extends FsShell {
    */
   public void disallowSnapshot(String[] argv) throws IOException {  
     DistributedFileSystem dfs = getDFS();
-    dfs.disallowSnapshot(new Path(argv[1]));
+    try {
+      dfs.disallowSnapshot(new Path(argv[1]));
+    } catch (SnapshotException e) {
+      throw new RemoteException(e.getClass().getName(), e.getMessage());
+    }
     System.out.println("Disallowing snaphot on " + argv[1] + " succeeded");
   }
   

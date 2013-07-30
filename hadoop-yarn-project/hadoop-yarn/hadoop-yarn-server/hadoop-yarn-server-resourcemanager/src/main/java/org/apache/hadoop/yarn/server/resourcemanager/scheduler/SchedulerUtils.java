@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -155,6 +157,9 @@ public class SchedulerUtils {
   /**
    * Utility method to validate a resource request, by insuring that the
    * requested memory/vcore is non-negative and not greater than max
+   * 
+   * @throws <code>InvalidResourceRequestException</code> when there is invalid
+   *         request
    */
   public static void validateResourceRequest(ResourceRequest resReq,
       Resource maximumResource) throws InvalidResourceRequestException {
@@ -189,6 +194,10 @@ public class SchedulerUtils {
     }
   }
 
+  /*
+   * @throw <code>InvalidResourceBlacklistRequestException </code> if the
+   * resource is not able to be added to the blacklist.
+   */
   public static void validateBlacklistRequest(ResourceBlacklistRequest blacklistRequest) 
   throws InvalidResourceBlacklistRequestException {
     if (blacklistRequest != null) {

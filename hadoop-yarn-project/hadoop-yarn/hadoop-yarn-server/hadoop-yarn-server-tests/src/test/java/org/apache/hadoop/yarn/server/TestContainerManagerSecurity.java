@@ -23,6 +23,10 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
 import junit.framework.Assert;
 
@@ -32,22 +36,27 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -56,7 +65,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class TestContainerManagerSecurity {
 
   static Log LOG = LogFactory.getLog(TestContainerManagerSecurity.class);
@@ -64,28 +77,33 @@ public class TestContainerManagerSecurity {
       .getRecordFactory(null);
   private static MiniYARNCluster yarnCluster;
 
-  static final Configuration conf = new Configuration();
+  private Configuration conf;
 
-  @Test (timeout = 1000000)
-  public void testContainerManagerWithSecurityEnabled() throws Exception {
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+  @Parameters
+  public static Collection<Object[]> configs() {
+    Configuration configurationWithoutSecurity = new Configuration();
+    configurationWithoutSecurity.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "simple");
+    
+    Configuration configurationWithSecurity = new Configuration();
+    configurationWithSecurity.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
-    testContainerManager();
+    return Arrays.asList(new Object[][] { { configurationWithoutSecurity },
+        { configurationWithSecurity } });
   }
   
-  @Test (timeout=1000000)
-  public void testContainerManagerWithSecurityDisabled() throws Exception {
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-        "simple");
-    testContainerManager();
+  public TestContainerManagerSecurity(Configuration conf) {
+    conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
+    UserGroupInformation.setConfiguration(conf);
+    this.conf = conf;
   }
   
-  private void testContainerManager() throws Exception {
+  @Test (timeout = 1000000)
+  public void testContainerManager() throws Exception {
     try {
       yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
           .getName(), 1, 1, 1);
-      conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
-      UserGroupInformation.setConfiguration(conf);
       yarnCluster.init(conf);
       yarnCluster.start();
       
@@ -177,6 +195,18 @@ public class TestContainerManagerSecurity {
     } while (tempManager.getCurrentKey().getKeyId() == nmTokenSecretManagerRM
         .getCurrentKey().getKeyId());
     
+    // Testing that NM rejects the requests when we don't send any token.
+    if (UserGroupInformation.isSecurityEnabled()) {
+      sb = new StringBuilder("Client cannot authenticate via:[TOKEN]");
+    } else {
+      sb =
+          new StringBuilder(
+              "SIMPLE authentication is not enabled.  Available:[TOKEN]");
+    }
+    String errorMsg = testStartContainer(rpc, validAppAttemptId, validNode,
+        validContainerToken, null, true);
+    Assert.assertTrue(errorMsg.contains(sb.toString()));
+    
     org.apache.hadoop.yarn.api.records.Token invalidNMToken =
         tempManager.createNMToken(validAppAttemptId, validNode, user);
     sb = new StringBuilder("Given NMToken for application : ");
@@ -211,11 +241,24 @@ public class TestContainerManagerSecurity {
     Assert.assertTrue(testStartContainer(rpc, validAppAttemptId, validNode,
         validContainerToken, invalidNMToken, true).contains(sb.toString()));
     
-    // using correct tokens. nmtoken for appattempt should get saved.
+    // using correct tokens. nmtoken for app attempt should get saved.
+    conf.setInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+        4 * 60 * 1000);
+    validContainerToken =
+        containerTokenSecretManager.createContainerToken(validContainerId,
+            validNode, user, r);
+    
     testStartContainer(rpc, validAppAttemptId, validNode, validContainerToken,
         validNMToken, false);
     Assert.assertTrue(nmTokenSecretManagerNM
         .isAppAttemptNMTokenKeyPresent(validAppAttemptId));
+    
+    //Now lets wait till container finishes and is removed from node manager.
+    waitForContainerToFinishOnNM(validContainerId);
+    sb = new StringBuilder("Attempt to relaunch the same container with id ");
+    sb.append(validContainerId);
+    Assert.assertTrue(testStartContainer(rpc, validAppAttemptId, validNode,
+        validContainerToken, validNMToken, true).contains(sb.toString()));
     
     // Rolling over master key twice so that we can check whether older keys
     // are used for authentication.
@@ -231,6 +274,19 @@ public class TestContainerManagerSecurity {
     Assert.assertTrue(testGetContainer(rpc, validAppAttemptId, validNode,
         validContainerId, validNMToken, false).contains(sb.toString()));
     
+  }
+
+  private void waitForContainerToFinishOnNM(ContainerId containerId) {
+    Context nmContet = yarnCluster.getNodeManager(0).getNMContext();
+    int interval = 4 * 60; // Max time for container token to expire.
+    while ((interval-- > 0)
+        && nmContet.getContainers().containsKey(containerId)) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+      }
+    }
+    Assert.assertFalse(nmContet.getContainers().containsKey(containerId));
   }
 
   protected void waitForNMToReceiveNMTokenKey(
@@ -302,18 +358,21 @@ public class TestContainerManagerSecurity {
           ContainerId containerId,
           ApplicationAttemptId appAttemptId, NodeId nodeId,
           boolean isExceptionExpected) throws Exception {
-    GetContainerStatusRequest request =
-        Records.newRecord(GetContainerStatusRequest.class);
-    request.setContainerId(containerId);
-    
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(containerId);
+    GetContainerStatusesRequest request =
+        GetContainerStatusesRequest.newInstance(containerIds);
     ContainerManagementProtocol proxy = null;
-    
     try {
       proxy =
           getContainerManagementProtocolProxy(rpc, nmToken, nodeId,
               appAttemptId.toString());
-      proxy.getContainerStatus(request);
-      
+      GetContainerStatusesResponse statuses = proxy.getContainerStatuses(request);
+      if (statuses.getFailedRequests() != null
+          && statuses.getFailedRequests().containsKey(containerId)) {
+        parseAndThrowException(statuses.getFailedRequests().get(containerId)
+          .deSerialize());
+      }
     } finally {
       if (proxy != null) {
         rpc.stopProxy(proxy, conf);
@@ -326,21 +385,36 @@ public class TestContainerManagerSecurity {
       org.apache.hadoop.yarn.api.records.Token containerToken,
       NodeId nodeId, String user) throws Exception {
 
-    StartContainerRequest request =
-        Records.newRecord(StartContainerRequest.class);
-    request.setContainerToken(containerToken);
     ContainerLaunchContext context =
         Records.newRecord(ContainerLaunchContext.class);
-    request.setContainerLaunchContext(context);
-
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(context,containerToken);
+    List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
     ContainerManagementProtocol proxy = null;
     try {
       proxy = getContainerManagementProtocolProxy(rpc, nmToken, nodeId, user);
-      proxy.startContainer(request);
+      StartContainersResponse response = proxy.startContainers(allRequests);
+      for(SerializedException ex : response.getFailedRequests().values()){
+        parseAndThrowException(ex.deSerialize());
+      }
     } finally {
       if (proxy != null) {
         rpc.stopProxy(proxy, conf);
       }
+    }
+  }
+
+  private void parseAndThrowException(Throwable t) throws YarnException,
+      IOException {
+    if (t instanceof YarnException) {
+      throw (YarnException) t;
+    } else if (t instanceof InvalidToken) {
+      throw (InvalidToken) t;
+    } else {
+      throw (IOException) t;
     }
   }
 
@@ -351,7 +425,9 @@ public class TestContainerManagerSecurity {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
     final InetSocketAddress addr =
         NetUtils.createSocketAddr(nodeId.getHost(), nodeId.getPort());
-    ugi.addToken(ConverterUtils.convertFromYarn(nmToken, addr));
+    if (nmToken != null) {
+      ugi.addToken(ConverterUtils.convertFromYarn(nmToken, addr));      
+    }
 
     proxy = ugi
         .doAs(new PrivilegedAction<ContainerManagementProtocol>() {

@@ -31,7 +31,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.RPC.Server;
@@ -55,7 +54,7 @@ import com.google.protobuf.BlockingService;
  * Benchmark for protobuf RPC.
  * Run with --help option for usage.
  */
-public class RPCCallBenchmark implements Tool, Configurable {
+public class RPCCallBenchmark implements Tool {
   private Configuration conf;
   private AtomicLong callCount = new AtomicLong(0);
   private static ThreadMXBean threadBean =
@@ -403,7 +402,7 @@ public class RPCCallBenchmark implements Tool, Configurable {
         }
       };
     } else if (opts.rpcEngine == WritableRpcEngine.class) {
-      final TestProtocol proxy = (TestProtocol)RPC.getProxy(
+      final TestProtocol proxy = RPC.getProxy(
           TestProtocol.class, TestProtocol.versionID, addr, conf);
       return new RpcServiceWrapper() {
         @Override

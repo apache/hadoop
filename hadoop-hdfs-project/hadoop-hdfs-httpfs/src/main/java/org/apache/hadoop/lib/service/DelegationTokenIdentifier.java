@@ -18,7 +18,7 @@
 package org.apache.hadoop.lib.service;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 
@@ -29,8 +29,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 public class DelegationTokenIdentifier
   extends AbstractDelegationTokenIdentifier {
 
-  public static final Text KIND_NAME =
-    new Text(HttpFSKerberosAuthenticator.TOKEN_KIND);
+  public static final Text KIND_NAME = WebHdfsFileSystem.TOKEN_KIND;
 
   public DelegationTokenIdentifier() {
   }

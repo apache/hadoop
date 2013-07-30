@@ -53,6 +53,7 @@ public class TestFSLeafQueue {
     String queueName = "root.queue1";
     QueueManager mockMgr = mock(QueueManager.class);
     when(mockMgr.getMaxResources(queueName)).thenReturn(maxResource);
+    when(mockMgr.getMinResources(queueName)).thenReturn(Resources.none());
 
     schedulable = new FSLeafQueue(queueName, mockMgr, scheduler, null);
   }

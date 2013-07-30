@@ -41,6 +41,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -80,7 +82,7 @@ public class TestContainer {
 
   final NodeManagerMetrics metrics = NodeManagerMetrics.create();
   final Configuration conf = new YarnConfiguration();
-
+  final String FAKE_LOCALIZATION_ERROR = "Fake localization error";
   
   /**
    * Verify correct container request events sent to localizer.
@@ -238,6 +240,32 @@ public class TestContainer {
       }
     }
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  // mocked generic
+  public void testLocalizationFailureAtDone() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(6, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      wc.launchContainer();
+      reset(wc.localizerBus);
+      wc.containerSuccessful();
+      wc.containerResourcesCleanup();
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      // Now in DONE, issue RESOURCE_FAILED as done by LocalizeRunner
+      wc.resourceFailedContainer();
+      // Verify still in DONE
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      verifyCleanupCall(wc);
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
   
   @Test
   @SuppressWarnings("unchecked") // mocked generic
@@ -294,6 +322,7 @@ public class TestContainer {
       wc.localizeResourcesFromInvalidState(failCount);
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
       verifyCleanupCall(wc);
+      Assert.assertTrue(wc.getDiagnostics().contains(FAKE_LOCALIZATION_ERROR));
     } finally {
       if (wc != null) {
         wc.finished();
@@ -621,6 +650,11 @@ public class TestContainer {
       drainDispatcherEvents();
     }
 
+    public void resourceFailedContainer() {
+      c.handle(new ContainerEvent(cId, ContainerEventType.RESOURCE_FAILED));
+      drainDispatcherEvents();
+    }
+
     // Localize resources 
     // Skip some resources so as to consider them failed
     public Map<Path, List<String>> doLocalizeResources(
@@ -663,7 +697,7 @@ public class TestContainer {
         throws URISyntaxException {
       LocalResource rsrc = localResources.get(rsrcKey);
       LocalResourceRequest req = new LocalResourceRequest(rsrc);
-      Exception e = new Exception("Fake localization error");
+      Exception e = new Exception(FAKE_LOCALIZATION_ERROR);
       c.handle(new ContainerResourceFailedEvent(c.getContainerId(), req, e
         .getMessage()));
       drainDispatcherEvents();
@@ -679,7 +713,7 @@ public class TestContainer {
         }
         ++counter;
         LocalResourceRequest req = new LocalResourceRequest(rsrc.getValue());
-        Exception e = new Exception("Fake localization error");
+        Exception e = new Exception(FAKE_LOCALIZATION_ERROR);
         c.handle(new ContainerResourceFailedEvent(c.getContainerId(),
                  req, e.getMessage()));
       }
@@ -724,6 +758,10 @@ public class TestContainer {
     
     public int getLocalResourceCount() {
       return localResources.size();
+    }
+
+    public String getDiagnostics() {
+      return c.cloneAndGetContainerStatus().getDiagnostics();
     }
   }
 }

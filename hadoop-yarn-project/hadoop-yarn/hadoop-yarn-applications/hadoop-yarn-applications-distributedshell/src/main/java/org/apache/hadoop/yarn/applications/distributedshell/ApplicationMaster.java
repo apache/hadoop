@@ -442,8 +442,8 @@ public class ApplicationMaster {
     LOG.info("Starting ApplicationMaster");
 
     AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
-    resourceManager = 
-        AMRMClientAsync.createAMRMClientAsync(appAttemptID, 1000, allocListener);
+    resourceManager =
+        AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
     resourceManager.init(conf);
     resourceManager.start();
 
@@ -483,8 +483,10 @@ public class ApplicationMaster {
     // containers
     // Keep looping until all the containers are launched and shell script
     // executed on them ( regardless of success/failure).
-    ContainerRequest containerAsk = setupContainerAskForRM(numTotalContainers);
-    resourceManager.addContainerRequest(containerAsk);
+    for (int i = 0; i < numTotalContainers; ++i) {
+      ContainerRequest containerAsk = setupContainerAskForRM();
+      resourceManager.addContainerRequest(containerAsk);
+    }
     numRequestedContainers.set(numTotalContainers);
 
     while (!done) {
@@ -591,8 +593,10 @@ public class ApplicationMaster {
       numRequestedContainers.addAndGet(askCount);
 
       if (askCount > 0) {
-        ContainerRequest containerAsk = setupContainerAskForRM(askCount);
-        resourceManager.addContainerRequest(containerAsk);
+        for (int i = 0; i < askCount; ++i) {
+          ContainerRequest containerAsk = setupContainerAskForRM();
+          resourceManager.addContainerRequest(containerAsk);
+        }
       }
       
       if (numCompletedContainers.get() == numTotalContainers) {
@@ -645,8 +649,9 @@ public class ApplicationMaster {
     }
 
     @Override
-    public void onError(Exception e) {
+    public void onError(Throwable e) {
       done = true;
+      resourceManager.stop();
     }
   }
 
@@ -813,7 +818,7 @@ public class ApplicationMaster {
    * @param numContainers Containers to ask for from RM
    * @return the setup ResourceRequest to be sent to RM
    */
-  private ContainerRequest setupContainerAskForRM(int numContainers) {
+  private ContainerRequest setupContainerAskForRM() {
     // setup requirements for hosts
     // using * as any host will do for the distributed shell app
     // set the priority for the request
@@ -827,7 +832,7 @@ public class ApplicationMaster {
     capability.setMemory(containerMemory);
 
     ContainerRequest request = new ContainerRequest(capability, null, null,
-        pri, numContainers);
+        pri);
     LOG.info("Requested container ask: " + request.toString());
     return request;
   }

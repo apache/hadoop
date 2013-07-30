@@ -31,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -67,9 +67,8 @@ extends AMRMClientAsync<T> {
   
   private volatile Exception savedException;
   
-  public AMRMClientAsyncImpl(ApplicationAttemptId id, int intervalMs,
-      CallbackHandler callbackHandler) {
-    this(new AMRMClientImpl<T>(id), intervalMs, callbackHandler);
+  public AMRMClientAsyncImpl(int intervalMs, CallbackHandler callbackHandler) {
+    this(new AMRMClientImpl<T>(), intervalMs, callbackHandler);
   }
   
   @Private
@@ -92,6 +91,7 @@ extends AMRMClientAsync<T> {
   
   @Override
   protected void serviceStart() throws Exception {
+    handlerThread.setDaemon(true);
     handlerThread.start();
     client.start();
     super.serviceStart();
@@ -99,27 +99,19 @@ extends AMRMClientAsync<T> {
   
   /**
    * Tells the heartbeat and handler threads to stop and waits for them to
-   * terminate.  Calling this method from the callback handler thread would cause
-   * deadlock, and thus should be avoided.
+   * terminate.
    */
   @Override
   protected void serviceStop() throws Exception {
-    if (Thread.currentThread() == handlerThread) {
-      throw new YarnRuntimeException("Cannot call stop from callback handler thread!");
-    }
     keepRunning = false;
+    heartbeatThread.interrupt();
     try {
       heartbeatThread.join();
     } catch (InterruptedException ex) {
       LOG.error("Error joining with heartbeat thread", ex);
     }
     client.stop();
-    try {
-      handlerThread.interrupt();
-      handlerThread.join();
-    } catch (InterruptedException ex) {
-      LOG.error("Error joining with hander thread", ex);
-    }
+    handlerThread.interrupt();
     super.serviceStop();
   }
   
@@ -225,7 +217,7 @@ extends AMRMClientAsync<T> {
         // synchronization ensures we don't send heartbeats after unregistering
         synchronized (unregisterHeartbeatLock) {
           if (!keepRunning) {
-            break;
+            return;
           }
             
           try {
@@ -235,19 +227,23 @@ extends AMRMClientAsync<T> {
             savedException = ex;
             // interrupt handler thread in case it waiting on the queue
             handlerThread.interrupt();
-            break;
+            return;
           } catch (IOException e) {
             LOG.error("IO exception on heartbeat", e);
             savedException = e;
             // interrupt handler thread in case it waiting on the queue
             handlerThread.interrupt();
-            break;
+            return;
           }
         }
         if (response != null) {
           while (true) {
             try {
               responseQueue.put(response);
+              if (response.getAMCommand() == AMCommand.AM_RESYNC
+                  || response.getAMCommand() == AMCommand.AM_SHUTDOWN) {
+                return;
+              }
               break;
             } catch (InterruptedException ex) {
               LOG.info("Interrupted while waiting to put on response queue", ex);
@@ -270,57 +266,60 @@ extends AMRMClientAsync<T> {
     }
     
     public void run() {
-      while (keepRunning) {
-        AllocateResponse response;
+      while (true) {
+        if (!keepRunning) {
+          return;
+        }
         try {
+          AllocateResponse response;
           if(savedException != null) {
             LOG.error("Stopping callback due to: ", savedException);
             handler.onError(savedException);
-            break;
+            return;
           }
-          response = responseQueue.take();
-        } catch (InterruptedException ex) {
-          LOG.info("Interrupted while waiting for queue", ex);
-          continue;
-        }
+          try {
+            response = responseQueue.take();
+          } catch (InterruptedException ex) {
+            LOG.info("Interrupted while waiting for queue", ex);
+            continue;
+          }
 
-        if (response.getAMCommand() != null) {
-          boolean stop = false;
-          switch(response.getAMCommand()) {
-          case AM_RESYNC:
-          case AM_SHUTDOWN:
-            handler.onShutdownRequest();
-            LOG.info("Shutdown requested. Stopping callback.");
-            stop = true;
-            break;
-          default:
-            String msg =
-                  "Unhandled value of AMCommand: " + response.getAMCommand();
-            LOG.error(msg);
-            throw new YarnRuntimeException(msg);
+          if (response.getAMCommand() != null) {
+            switch(response.getAMCommand()) {
+            case AM_RESYNC:
+            case AM_SHUTDOWN:
+              handler.onShutdownRequest();
+              LOG.info("Shutdown requested. Stopping callback.");
+              return;
+            default:
+              String msg =
+                    "Unhandled value of RM AMCommand: " + response.getAMCommand();
+              LOG.error(msg);
+              throw new YarnRuntimeException(msg);
+            }
           }
-          if(stop) {
-            // should probably stop heartbeating also YARN-763
-            break;
+          List<NodeReport> updatedNodes = response.getUpdatedNodes();
+          if (!updatedNodes.isEmpty()) {
+            handler.onNodesUpdated(updatedNodes);
           }
-        }
-        List<NodeReport> updatedNodes = response.getUpdatedNodes();
-        if (!updatedNodes.isEmpty()) {
-          handler.onNodesUpdated(updatedNodes);
-        }
-        
-        List<ContainerStatus> completed =
-            response.getCompletedContainersStatuses();
-        if (!completed.isEmpty()) {
-          handler.onContainersCompleted(completed);
-        }
 
-        List<Container> allocated = response.getAllocatedContainers();
-        if (!allocated.isEmpty()) {
-          handler.onContainersAllocated(allocated);
+          List<ContainerStatus> completed =
+              response.getCompletedContainersStatuses();
+          if (!completed.isEmpty()) {
+            handler.onContainersCompleted(completed);
+          }
+
+          List<Container> allocated = response.getAllocatedContainers();
+          if (!allocated.isEmpty()) {
+            handler.onContainersAllocated(allocated);
+          }
+
+          progress = handler.getProgress();
+        } catch (Throwable ex) {
+          handler.onError(ex);
+          // re-throw exception to end the thread
+          throw new YarnRuntimeException(ex);
         }
-        
-        progress = handler.getProgress();
       }
     }
   }

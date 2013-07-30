@@ -124,7 +124,7 @@ public class ProtobufRpcEngine implements RpcEngine {
     /**
      * This constructor takes a connectionId, instead of creating a new one.
      */
-    public Invoker(Class<?> protocol, Client.ConnectionId connId,
+    private Invoker(Class<?> protocol, Client.ConnectionId connId,
         Configuration conf, SocketFactory factory) {
       this.remoteId = connId;
       this.client = CLIENTS.getClient(conf, factory, RpcResponseWrapper.class);
@@ -192,7 +192,6 @@ public class ProtobufRpcEngine implements RpcEngine {
       }
 
       RequestHeaderProto rpcRequestHeader = constructRpcRequestHeader(method);
-      RpcResponseWrapper val = null;
       
       if (LOG.isTraceEnabled()) {
         LOG.trace(Thread.currentThread().getId() + ": Call -> " +
@@ -202,6 +201,7 @@ public class ProtobufRpcEngine implements RpcEngine {
 
 
       Message theRequest = (Message) args[1];
+      final RpcResponseWrapper val;
       try {
         val = (RpcResponseWrapper) client.call(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
             new RpcRequestWrapper(rpcRequestHeader, theRequest), remoteId);

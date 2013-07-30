@@ -29,11 +29,11 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
@@ -52,16 +52,17 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.client.api.YarnClient;
-import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Before;
@@ -124,11 +125,20 @@ public class TestNMClient {
 
     // wait for app to start
     int iterationsLeft = 30;
+    RMAppAttempt appAttempt = null;
     while (iterationsLeft > 0) {
       ApplicationReport appReport = yarnClient.getApplicationReport(appId);
       if (appReport.getYarnApplicationState() ==
           YarnApplicationState.ACCEPTED) {
         attemptId = appReport.getCurrentApplicationAttemptId();
+        appAttempt =
+            yarnCluster.getResourceManager().getRMContext().getRMApps()
+              .get(attemptId.getApplicationId()).getCurrentAppAttempt();
+        while (true) {
+          if (appAttempt.getAppAttemptState() == RMAppAttemptState.LAUNCHED) {
+            break;
+          }
+        }
         break;
       }
       sleep(1000);
@@ -138,10 +148,16 @@ public class TestNMClient {
       fail("Application hasn't bee started");
     }
 
+    // Just dig into the ResourceManager and get the AMRMToken just for the sake
+    // of testing.
+    UserGroupInformation.setLoginUser(UserGroupInformation
+      .createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
+    UserGroupInformation.getCurrentUser().addToken(appAttempt.getAMRMToken());
+
     // start am rm client
     rmClient =
         (AMRMClientImpl<ContainerRequest>) AMRMClient
-          .<ContainerRequest> createAMRMClient(attemptId);
+          .<ContainerRequest> createAMRMClient();
     rmClient.init(conf);
     rmClient.start();
     assertNotNull(rmClient);
@@ -220,7 +236,7 @@ public class TestNMClient {
 
     for (int i = 0; i < num; ++i) {
       rmClient.addContainerRequest(new ContainerRequest(capability, nodes,
-          racks, priority, 1));
+          racks, priority));
     }
 
     int containersRequestedAny = rmClient.remoteRequestsTable.get(priority)

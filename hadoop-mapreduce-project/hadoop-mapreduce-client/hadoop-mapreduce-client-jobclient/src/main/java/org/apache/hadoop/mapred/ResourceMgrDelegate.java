@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -75,36 +76,18 @@ public class ResourceMgrDelegate extends YarnClient {
    * @param conf the configuration object.
    */
   public ResourceMgrDelegate(YarnConfiguration conf) {
-    this(conf, null);
-  }
-
-  /**
-   * Delegate responsible for communicating with the Resource Manager's
-   * {@link ApplicationClientProtocol}.
-   * @param conf the configuration object.
-   * @param rmAddress the address of the Resource Manager
-   */
-  public ResourceMgrDelegate(YarnConfiguration conf,
-      InetSocketAddress rmAddress) {
     super(ResourceMgrDelegate.class.getName());
     this.conf = conf;
-    this.rmAddress = rmAddress;
-    if (rmAddress == null) {
-      client = YarnClient.createYarnClient();
-    } else {
-      client = YarnClient.createYarnClient(rmAddress);
-    }
+    this.client = YarnClient.createYarnClient();
     init(conf);
     start();
   }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    if (rmAddress == null) {
-      this.rmAddress = conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
+    this.rmAddress = conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
           YarnConfiguration.DEFAULT_RM_ADDRESS,
           YarnConfiguration.DEFAULT_RM_PORT);
-    }
     client.init(conf);
     super.serviceInit(conf);
   }
@@ -301,6 +284,12 @@ public class ResourceMgrDelegate extends YarnClient {
   public ApplicationReport getApplicationReport(ApplicationId appId)
       throws YarnException, IOException {
     return client.getApplicationReport(appId);
+  }
+
+  @Override
+  public Token<AMRMTokenIdentifier> getAMRMToken(ApplicationId appId) 
+    throws YarnException, IOException {
+    throw new UnsupportedOperationException();
   }
 
   @Override

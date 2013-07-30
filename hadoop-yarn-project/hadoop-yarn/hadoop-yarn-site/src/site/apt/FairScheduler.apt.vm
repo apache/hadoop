@@ -257,3 +257,39 @@ Allocation file format
 ---
 
   Note that for backwards compatibility with the original FairScheduler, "queue" elements can instead be named as "pool" elements.
+  
+* {Administration}
+
+  The fair scheduler provides support for administration at runtime through two mechanisms:
+
+ * It is possible to modify minimum shares, limits, weights, preemption timeouts
+   and queue scheduling policies at runtime by editing the allocation file. The
+   scheduler will reload this file 10-15 seconds after it sees that it was
+   modified.
+
+ * Current applications, queues, and fair shares can be examined through the
+   ResourceManager's web interface, at
+   http://<ResourceManager URL>/cluster/scheduler.
+
+  The following fields can be seen for each queue on the web interface:
+  
+ * Used Resources - The sum of resources allocated to containers within the queue. 
+
+ * Num Active Applications - The number of applications in the queue that have
+   received at least one container.
+ 
+ * Num Pending Applications - The number of applications in the queue that have
+   not yet received any containers.
+
+ * Min Resources - The configured minimum resources that are guaranteed to the queue.
+  	
+ * Max Resources - The configured maximum resources that are allowed to the queue.
+ 
+ * Fair Share - The queue's fair share of resources.  Queues may be allocated
+   resources beyond their fair share when other queues aren't using them.  A
+   queue whose resource consumption lies at or below its fair share will never
+   have its containers preempted.  
+
+  In addition to the information that the ResourceManager normally displays
+  about each application, the web interface includes the application's fair share.
+

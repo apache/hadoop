@@ -112,6 +112,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -136,7 +137,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -449,7 +449,8 @@ public class DFSClient implements java.io.Closeable {
    * Create a new DFSClient connected to the given nameNodeUri or rpcNamenode.
    * Exactly one of nameNodeUri or rpcNamenode must be null.
    */
-  DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
+  @VisibleForTesting
+  public DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
       Configuration conf, FileSystem.Statistics stats)
     throws IOException {
     // Copy only the required DFSClient configuration
@@ -1038,7 +1039,8 @@ public class DFSClient implements java.io.Closeable {
       return namenode.recoverLease(src, clientName);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(FileNotFoundException.class,
-                                     AccessControlException.class);
+                                     AccessControlException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -2177,7 +2179,11 @@ public class DFSClient implements java.io.Closeable {
    */
   public void allowSnapshot(String snapshotRoot) throws IOException {
     checkOpen();
-    namenode.allowSnapshot(snapshotRoot);
+    try {
+      namenode.allowSnapshot(snapshotRoot);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
   }
   
   /**
@@ -2187,7 +2193,11 @@ public class DFSClient implements java.io.Closeable {
    */
   public void disallowSnapshot(String snapshotRoot) throws IOException {
     checkOpen();
-    namenode.disallowSnapshot(snapshotRoot);
+    try {
+      namenode.disallowSnapshot(snapshotRoot);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
   }
   
   /**

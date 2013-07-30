@@ -34,10 +34,9 @@ import "yarn_protos.proto";
 /////// AM_RM_Protocol ///////////////////////////////
 //////////////////////////////////////////////////////
 message RegisterApplicationMasterRequestProto {
-  optional ApplicationAttemptIdProto application_attempt_id = 1;
-  optional string host = 2;
-  optional int32 rpc_port = 3;
-  optional string tracking_url = 4;
+  optional string host = 1;
+  optional int32 rpc_port = 2;
+  optional string tracking_url = 3;
 }
 
 message RegisterApplicationMasterResponseProto {
@@ -47,22 +46,20 @@ message RegisterApplicationMasterResponseProto {
 }
 
 message FinishApplicationMasterRequestProto {
-  optional ApplicationAttemptIdProto application_attempt_id = 1;
-  optional string diagnostics = 2;
-  optional string tracking_url = 3;
-  optional FinalApplicationStatusProto final_application_status = 4;
+  optional string diagnostics = 1;
+  optional string tracking_url = 2;
+  optional FinalApplicationStatusProto final_application_status = 3;
 }
 
 message FinishApplicationMasterResponseProto {
 }
 
 message AllocateRequestProto {
-  optional ApplicationAttemptIdProto application_attempt_id = 1;
-  repeated ResourceRequestProto ask = 2;
-  repeated ContainerIdProto release = 3;
-  optional ResourceBlacklistRequestProto blacklist_request = 4;
-  optional int32 response_id = 5;
-  optional float progress = 6;
+  repeated ResourceRequestProto ask = 1;
+  repeated ContainerIdProto release = 2;
+  optional ResourceBlacklistRequestProto blacklist_request = 3;
+  optional int32 response_id = 4;
+  optional float progress = 5;
 }
 
 message NMTokenProto {
@@ -184,4 +181,38 @@ message GetContainerStatusRequestProto {
 
 message GetContainerStatusResponseProto {
   optional ContainerStatusProto status = 1;
+}
+
+//// bulk API records
+message StartContainersRequestProto {
+  repeated StartContainerRequestProto start_container_request = 1;
+}
+
+message ContainerExceptionMapProto {
+  optional ContainerIdProto container_id = 1;
+  optional SerializedExceptionProto exception = 2;
+}
+
+message StartContainersResponseProto {
+  repeated StringBytesMapProto services_meta_data = 1;
+  repeated ContainerIdProto succeeded_requests = 2;
+  repeated ContainerExceptionMapProto failed_requests = 3;
+}
+
+message StopContainersRequestProto {
+  repeated ContainerIdProto container_id = 1;
+}
+
+message StopContainersResponseProto {
+  repeated ContainerIdProto succeeded_requests = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
+message GetContainerStatusesRequestProto {
+  repeated ContainerIdProto container_id = 1;
+}
+
+message GetContainerStatusesResponseProto {
+  repeated ContainerStatusProto status = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
 }

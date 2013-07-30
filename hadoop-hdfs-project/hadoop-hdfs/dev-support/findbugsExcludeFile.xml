@@ -325,4 +325,9 @@
        <Field name="modification" />
        <Bug pattern="VO_VOLATILE_INCREMENT" />
      </Match>
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.datanode.ReplicaInfo" />
+       <Method name="setDirInternal" />
+       <Bug pattern="DM_STRING_CTOR" />
+     </Match>
  </FindBugsFilter>

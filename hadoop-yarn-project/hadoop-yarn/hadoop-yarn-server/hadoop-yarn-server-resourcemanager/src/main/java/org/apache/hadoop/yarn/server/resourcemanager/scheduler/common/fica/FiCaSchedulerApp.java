@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,11 +55,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerReservedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -84,17 +89,19 @@ public class FiCaSchedulerApp extends SchedulerApplication {
   private Resource resourceLimit = recordFactory
       .newRecordInstance(Resource.class);
 
-  private Map<ContainerId, RMContainer> liveContainers
-  = new HashMap<ContainerId, RMContainer>();
-  private List<RMContainer> newlyAllocatedContainers = 
-      new ArrayList<RMContainer>();
+  private Map<ContainerId, RMContainer> liveContainers =
+    new HashMap<ContainerId, RMContainer>();
+  private List<RMContainer> newlyAllocatedContainers =
+    new ArrayList<RMContainer>();
 
   final Map<Priority, Map<NodeId, RMContainer>> reservedContainers = 
       new HashMap<Priority, Map<NodeId, RMContainer>>();
 
   private boolean isStopped = false;
 
-  
+  private final Set<ContainerId> containersToPreempt =
+    new HashSet<ContainerId>();
+
   /**
    * Count how many times the application has been given an opportunity
    * to schedule a task at each priority. Each time the scheduler
@@ -218,12 +225,17 @@ public class FiCaSchedulerApp extends SchedulerApplication {
       RMContainerEventType.LAUNCHED));
   }
 
-  synchronized public void containerCompleted(RMContainer rmContainer,
+  synchronized public boolean containerCompleted(RMContainer rmContainer,
       ContainerStatus containerStatus, RMContainerEventType event) {
-    
+
+    // Remove from the list of containers
+    if (null == liveContainers.remove(rmContainer.getContainerId())) {
+      return false;
+    }
+
     Container container = rmContainer.getContainer();
     ContainerId containerId = container.getId();
-    
+
     // Inform the container
     rmContainer.handle(
         new RMContainerFinishedEvent(
@@ -233,9 +245,8 @@ public class FiCaSchedulerApp extends SchedulerApplication {
         );
     LOG.info("Completed container: " + rmContainer.getContainerId() + 
         " in state: " + rmContainer.getState() + " event:" + event);
-    
-    // Remove from the list of containers
-    liveContainers.remove(rmContainer.getContainerId());
+
+    containersToPreempt.remove(rmContainer.getContainerId());
 
     RMAuditLogger.logSuccess(getUser(), 
         AuditConstants.RELEASE_CONTAINER, "SchedulerApp", 
@@ -245,6 +256,8 @@ public class FiCaSchedulerApp extends SchedulerApplication {
     Resource containerResource = rmContainer.getContainer().getResource();
     queue.getMetrics().releaseResources(getUser(), 1, containerResource);
     Resources.subtractFrom(currentConsumption, containerResource);
+
+    return true;
   }
 
   synchronized public RMContainer allocate(NodeType type, FiCaSchedulerNode node,
@@ -344,7 +357,8 @@ public class FiCaSchedulerApp extends SchedulerApplication {
   }
   
   /**
-   * Return the number of times the application has been given an opportunity
+   * @param priority Target priority
+   * @return the number of times the application has been given an opportunity
    * to schedule a task at the given priority since the last time it
    * successfully did so.
    */
@@ -418,23 +432,36 @@ public class FiCaSchedulerApp extends SchedulerApplication {
     return rmContainer;
   }
 
-  public synchronized void unreserve(FiCaSchedulerNode node, Priority priority) {
-    Map<NodeId, RMContainer> reservedContainers = 
-        this.reservedContainers.get(priority);
-    RMContainer reservedContainer = reservedContainers.remove(node.getNodeID());
-    if (reservedContainers.isEmpty()) {
-      this.reservedContainers.remove(priority);
+  public synchronized boolean unreserve(FiCaSchedulerNode node, Priority priority) {
+    Map<NodeId, RMContainer> reservedContainers =
+      this.reservedContainers.get(priority);
+
+    if (reservedContainers != null) {
+      RMContainer reservedContainer = reservedContainers.remove(node.getNodeID());
+
+      // unreserve is now triggered in new scenarios (preemption)
+      // as a consequence reservedcontainer might be null, adding NP-checks
+      if (reservedContainer != null
+          && reservedContainer.getContainer() != null
+          && reservedContainer.getContainer().getResource() != null) {
+
+        if (reservedContainers.isEmpty()) {
+          this.reservedContainers.remove(priority);
+        }
+        // Reset the re-reservation count
+        resetReReservations(priority);
+
+        Resource resource = reservedContainer.getContainer().getResource();
+        Resources.subtractFrom(currentReservation, resource);
+
+        LOG.info("Application " + getApplicationId() + " unreserved "
+            + " on node " + node + ", currently has " + reservedContainers.size()
+            + " at priority " + priority + "; currentReservation "
+            + currentReservation);
+        return true;
+      }
     }
-    
-    // Reset the re-reservation count
-    resetReReservations(priority);
-
-    Resource resource = reservedContainer.getContainer().getResource();
-    Resources.subtractFrom(currentReservation, resource);
-
-    LOG.info("Application " + getApplicationId() + " unreserved " + " on node "
-        + node + ", currently has " + reservedContainers.size() + " at priority "
-        + priority + "; currentReservation " + currentReservation);
+    return false;
   }
 
   /**
@@ -498,4 +525,55 @@ public class FiCaSchedulerApp extends SchedulerApplication {
   public Queue getQueue() {
     return queue;
   }
+
+  public Resource getTotalPendingRequests() {
+    Resource ret = Resource.newInstance(0, 0);
+    for (ResourceRequest rr : appSchedulingInfo.getAllResourceRequests()) {
+      // to avoid double counting we count only "ANY" resource requests
+      if (ResourceRequest.isAnyLocation(rr.getResourceName())){
+        Resources.addTo(ret,
+            Resources.multiply(rr.getCapability(), rr.getNumContainers()));
+      }
+    }
+    return ret;
+  }
+
+  public synchronized void addPreemptContainer(ContainerId cont){
+    // ignore already completed containers
+    if (liveContainers.containsKey(cont)) {
+      containersToPreempt.add(cont);
+    }
+  }
+
+  /**
+   * This method produces an Allocation that includes the current view
+   * of the resources that will be allocated to and preempted from this
+   * application.
+   *
+   * @param rc
+   * @param clusterResource
+   * @param minimumAllocation
+   * @return an allocation
+   */
+  public synchronized Allocation getAllocation(ResourceCalculator rc,
+      Resource clusterResource, Resource minimumAllocation) {
+
+    Set<ContainerId> currentContPreemption = Collections.unmodifiableSet(
+        new HashSet<ContainerId>(containersToPreempt));
+    containersToPreempt.clear();
+    Resource tot = Resource.newInstance(0, 0);
+    for(ContainerId c : currentContPreemption){
+      Resources.addTo(tot,
+          liveContainers.get(c).getContainer().getResource());
+    }
+    int numCont = (int) Math.ceil(
+        Resources.divide(rc, clusterResource, tot, minimumAllocation));
+    ResourceRequest rr = ResourceRequest.newInstance(
+        Priority.UNDEFINED, ResourceRequest.ANY,
+        minimumAllocation, numCont);
+    return new Allocation(pullNewlyAllocatedContainers(), getHeadroom(),
+                          null, currentContPreemption,
+                          Collections.singletonList(rr));
+  }
+
 }

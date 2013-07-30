@@ -145,10 +145,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
 
   protected AllocateResponse makeRemoteRequest() throws IOException {
-    AllocateRequest allocateRequest = AllocateRequest.newInstance(
-        applicationAttemptId, lastResponseID, super.getApplicationProgress(),
-        new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
-            release), null);
+    AllocateRequest allocateRequest =
+        AllocateRequest.newInstance(lastResponseID,
+          super.getApplicationProgress(), new ArrayList<ResourceRequest>(ask),
+          new ArrayList<ContainerId>(release), null);
     AllocateResponse allocateResponse;
     try {
       allocateResponse = scheduler.allocate(allocateRequest);

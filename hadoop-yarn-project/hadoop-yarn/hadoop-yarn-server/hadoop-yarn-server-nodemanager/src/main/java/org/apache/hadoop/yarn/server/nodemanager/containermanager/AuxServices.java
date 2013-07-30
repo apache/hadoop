@@ -92,7 +92,7 @@ public class AuxServices extends AbstractService
               String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, sName), null,
               AuxiliaryService.class);
         if (null == sClass) {
-          throw new RuntimeException("No class defiend for " + sName);
+          throw new RuntimeException("No class defined for " + sName);
         }
         AuxiliaryService s = ReflectionUtils.newInstance(sClass, conf);
         // TODO better use s.getName()?
