@@ -292,7 +292,7 @@ public class TestFSEditLogLoader {
         long thisTxId = spyLog.getLastWrittenTxId() + 1;
         offsetToTxId.put(trueOffset, thisTxId);
         System.err.println("txid " + thisTxId + " at offset " + trueOffset);
-        spyLog.logDelete("path" + i, i);
+        spyLog.logDelete("path" + i, i, false);
         spyLog.logSync();
       }
     } finally {

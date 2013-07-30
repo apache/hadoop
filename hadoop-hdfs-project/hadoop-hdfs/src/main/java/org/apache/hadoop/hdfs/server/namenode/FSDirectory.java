@@ -381,12 +381,13 @@ public class FSDirectory implements Closeable {
   /**
    * Persist the block list for the inode.
    */
-  void persistBlocks(String path, INodeFileUnderConstruction file) {
+  void persistBlocks(String path, INodeFileUnderConstruction file,
+      boolean logRetryCache) {
     waitForReady();
 
     writeLock();
     try {
-      fsImage.getEditLog().logUpdateBlocks(path, file);
+      fsImage.getEditLog().logUpdateBlocks(path, file, logRetryCache);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
             +path+" with "+ file.getBlocks().length 
@@ -459,7 +460,7 @@ public class FSDirectory implements Closeable {
    * @deprecated Use {@link #renameTo(String, String, Rename...)} instead.
    */
   @Deprecated
-  boolean renameTo(String src, String dst) 
+  boolean renameTo(String src, String dst, boolean logRetryCache) 
       throws QuotaExceededException, UnresolvedLinkException, 
       FileAlreadyExistsException, SnapshotAccessControlException, IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -475,14 +476,15 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
-    fsImage.getEditLog().logRename(src, dst, now);
+    fsImage.getEditLog().logRename(src, dst, now, logRetryCache);
     return true;
   }
 
   /**
    * @see #unprotectedRenameTo(String, String, long, Options.Rename...)
    */
-  void renameTo(String src, String dst, Options.Rename... options)
+  void renameTo(String src, String dst, boolean logRetryCache, 
+      Options.Rename... options)
       throws FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, QuotaExceededException,
       UnresolvedLinkException, IOException {
@@ -500,7 +502,7 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
-    fsImage.getEditLog().logRename(src, dst, now, options);
+    fsImage.getEditLog().logRename(src, dst, now, logRetryCache, options);
   }
 
   /**
@@ -1176,7 +1178,7 @@ public class FSDirectory implements Closeable {
   /**
    * Concat all the blocks from srcs to trg and delete the srcs files
    */
-  void concat(String target, String [] srcs) 
+  void concat(String target, String [] srcs, boolean supportRetryCache) 
       throws UnresolvedLinkException, QuotaExceededException,
       SnapshotAccessControlException, SnapshotException {
     writeLock();
@@ -1186,7 +1188,8 @@ public class FSDirectory implements Closeable {
       long timestamp = now();
       unprotectedConcat(target, srcs, timestamp);
       // do the commit
-      fsImage.getEditLog().logConcat(target, srcs, timestamp);
+      fsImage.getEditLog().logConcat(target, srcs, timestamp, 
+          supportRetryCache);
     } finally {
       writeUnlock();
     }
@@ -1261,10 +1264,12 @@ public class FSDirectory implements Closeable {
    * @param src Path of a directory to delete
    * @param collectedBlocks Blocks under the deleted directory
    * @param removedINodes INodes that should be removed from {@link #inodeMap}
+   * @param logRetryCache Whether to record RPC IDs in editlog to support retry
+   *                      cache rebuilding.
    * @return true on successful deletion; else false
    */
   boolean delete(String src, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes) throws IOException {
+      List<INode> removedINodes, boolean logRetryCache) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
     }
@@ -1299,7 +1304,7 @@ public class FSDirectory implements Closeable {
     if (filesRemoved < 0) {
       return false;
     }
-    fsImage.getEditLog().logDelete(src, now);
+    fsImage.getEditLog().logDelete(src, now, logRetryCache);
     incrDeletedFileCount(filesRemoved);
     // Blocks/INodes will be handled later by the caller of this method
     getFSNamesystem().removePathAndBlocks(src, null, null);
@@ -2522,7 +2527,7 @@ public class FSDirectory implements Closeable {
   /**
    * Create FileStatus by file INode 
    */
-   private HdfsFileStatus createFileStatus(byte[] path, INode node,
+   HdfsFileStatus createFileStatus(byte[] path, INode node,
        Snapshot snapshot) {
      long size = 0;     // length is zero for directories
      short replication = 0;
@@ -2595,7 +2600,7 @@ public class FSDirectory implements Closeable {
    * Add the given symbolic link to the fs. Record it in the edits log.
    */
   INodeSymlink addSymlink(String path, String target,
-      PermissionStatus dirPerms, boolean createParent)
+      PermissionStatus dirPerms, boolean createParent, boolean logRetryCache)
       throws UnresolvedLinkException, FileAlreadyExistsException,
       QuotaExceededException, SnapshotAccessControlException {
     waitForReady();
@@ -2621,7 +2626,8 @@ public class FSDirectory implements Closeable {
       NameNode.stateChangeLog.info("DIR* addSymlink: failed to add " + path);
       return null;
     }
-    fsImage.getEditLog().logSymlink(path, target, modTime, modTime, newNode);
+    fsImage.getEditLog().logSymlink(path, target, modTime, modTime, newNode,
+        logRetryCache);
     
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* addSymlink: " + path + " is added");

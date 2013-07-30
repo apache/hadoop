@@ -2040,6 +2040,10 @@ public class MiniDFSCluster {
     NameNodeAdapter.setLeasePeriod(getNamesystem(), soft, hard);
   }
   
+  public void setLeasePeriod(long soft, long hard, int nnIndex) {
+    NameNodeAdapter.setLeasePeriod(getNamesystem(nnIndex), soft, hard);
+  }
+  
   public void setWaitSafeMode(boolean wait) {
     this.waitSafeMode = wait;
   }

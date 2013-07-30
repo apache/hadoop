@@ -57,8 +57,11 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -921,5 +924,103 @@ public class DFSTestUtil {
     public DFSTestUtil build() {
       return new DFSTestUtil(nFiles, maxLevels, maxSize, minSize);
     }
+  }
+  
+  /**
+   * Run a set of operations and generate all edit logs
+   */
+  public static void runOperations(MiniDFSCluster cluster,
+      DistributedFileSystem filesystem, Configuration conf, long blockSize, 
+      int nnIndex) throws IOException {
+    // create FileContext for rename2
+    FileContext fc = FileContext.getFileContext(cluster.getURI(0), conf);
+    
+    // OP_ADD 0
+    final Path pathFileCreate = new Path("/file_create");
+    FSDataOutputStream s = filesystem.create(pathFileCreate);
+    // OP_CLOSE 9
+    s.close();
+    // OP_RENAME_OLD 1
+    final Path pathFileMoved = new Path("/file_moved");
+    filesystem.rename(pathFileCreate, pathFileMoved);
+    // OP_DELETE 2
+    filesystem.delete(pathFileMoved, false);
+    // OP_MKDIR 3
+    Path pathDirectoryMkdir = new Path("/directory_mkdir");
+    filesystem.mkdirs(pathDirectoryMkdir);
+    // OP_ALLOW_SNAPSHOT 29
+    filesystem.allowSnapshot(pathDirectoryMkdir);
+    // OP_DISALLOW_SNAPSHOT 30
+    filesystem.disallowSnapshot(pathDirectoryMkdir);
+    // OP_CREATE_SNAPSHOT 26
+    String ssName = "snapshot1";
+    filesystem.allowSnapshot(pathDirectoryMkdir);
+    filesystem.createSnapshot(pathDirectoryMkdir, ssName);
+    // OP_RENAME_SNAPSHOT 28
+    String ssNewName = "snapshot2";
+    filesystem.renameSnapshot(pathDirectoryMkdir, ssName, ssNewName);
+    // OP_DELETE_SNAPSHOT 27
+    filesystem.deleteSnapshot(pathDirectoryMkdir, ssNewName);
+    // OP_SET_REPLICATION 4
+    s = filesystem.create(pathFileCreate);
+    s.close();
+    filesystem.setReplication(pathFileCreate, (short)1);
+    // OP_SET_PERMISSIONS 7
+    Short permission = 0777;
+    filesystem.setPermission(pathFileCreate, new FsPermission(permission));
+    // OP_SET_OWNER 8
+    filesystem.setOwner(pathFileCreate, new String("newOwner"), null);
+    // OP_CLOSE 9 see above
+    // OP_SET_GENSTAMP 10 see above
+    // OP_SET_NS_QUOTA 11 obsolete
+    // OP_CLEAR_NS_QUOTA 12 obsolete
+    // OP_TIMES 13
+    long mtime = 1285195527000L; // Wed, 22 Sep 2010 22:45:27 GMT
+    long atime = mtime;
+    filesystem.setTimes(pathFileCreate, mtime, atime);
+    // OP_SET_QUOTA 14
+    filesystem.setQuota(pathDirectoryMkdir, 1000L, 
+        HdfsConstants.QUOTA_DONT_SET);
+    // OP_RENAME 15
+    fc.rename(pathFileCreate, pathFileMoved, Rename.NONE);
+    // OP_CONCAT_DELETE 16
+    Path   pathConcatTarget = new Path("/file_concat_target");
+    Path[] pathConcatFiles  = new Path[2];
+    pathConcatFiles[0]      = new Path("/file_concat_0");
+    pathConcatFiles[1]      = new Path("/file_concat_1");
+
+    long length = blockSize * 3; // multiple of blocksize for concat
+    short replication = 1;
+    long seed = 1;
+    DFSTestUtil.createFile(filesystem, pathConcatTarget, length, replication,
+        seed);
+    DFSTestUtil.createFile(filesystem, pathConcatFiles[0], length, replication,
+        seed);
+    DFSTestUtil.createFile(filesystem, pathConcatFiles[1], length, replication,
+        seed);
+    filesystem.concat(pathConcatTarget, pathConcatFiles);
+    
+    // OP_SYMLINK 17
+    Path pathSymlink = new Path("/file_symlink");
+    fc.createSymlink(pathConcatTarget, pathSymlink, false);
+    
+    // OP_REASSIGN_LEASE 22
+    String filePath = "/hard-lease-recovery-test";
+    byte[] bytes = "foo-bar-baz".getBytes();
+    DFSClientAdapter.stopLeaseRenewer(filesystem);
+    FSDataOutputStream leaseRecoveryPath = filesystem.create(new Path(filePath));
+    leaseRecoveryPath.write(bytes);
+    leaseRecoveryPath.hflush();
+    // Set the hard lease timeout to 1 second.
+    cluster.setLeasePeriod(60 * 1000, 1000, nnIndex);
+    // wait for lease recovery to complete
+    LocatedBlocks locatedBlocks;
+    do {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {}
+      locatedBlocks = DFSClientAdapter.callGetBlockLocations(
+          cluster.getNameNodeRpc(nnIndex), filePath, 0L, bytes.length);
+    } while (locatedBlocks.isUnderConstruction());
   }
 }
