@@ -727,6 +727,9 @@ public class TestSaslRPC {
     final Configuration clientConf = new Configuration(conf);
     SecurityUtil.setAuthenticationMethod(clientAuth, clientConf);
     UserGroupInformation.setConfiguration(clientConf);
+    clientConf.setBoolean(
+        CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
+        true);
     
     final UserGroupInformation clientUgi =
         UserGroupInformation.createRemoteUser(currentUser + "-CLIENT");
