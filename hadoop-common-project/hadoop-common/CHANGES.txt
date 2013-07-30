@@ -363,6 +363,9 @@ Release 2.1.0-beta - 2013-08-06
     HADOOP-9507. LocalFileSystem rename() is broken in some cases when
     destination exists. (cnauroth)
 
+    HADOOP-9768. chown and chgrp reject users and groups with spaces on platforms
+    where spaces are otherwise acceptable. (cnauroth)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
