@@ -379,9 +379,6 @@ public class RawLocalFileSystem extends FileSystem {
       throw new FileNotFoundException("File " + f + " does not exist");
     }
     if (localf.isFile()) {
-      if (!Shell.WINDOWS) {
-        return new FileStatus[] { getFileStatus(f) };
-      }
       return new FileStatus[] {
         new RawLocalFileStatus(localf, getDefaultBlockSize(f), this) };
     }
@@ -513,10 +510,6 @@ public class RawLocalFileSystem extends FileSystem {
   
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
-    if (!Shell.WINDOWS) {
-      return getFileLinkStatusInternal(f, true);
-    }
-
     File path = pathToFile(f);
     if (path.exists()) {
       return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize(f), this);
@@ -525,7 +518,6 @@ public class RawLocalFileSystem extends FileSystem {
     }
   }
 
-  @Deprecated
   static class RawLocalFileStatus extends FileStatus {
     /* We can add extra fields here. It breaks at least CopyFiles.FilePair().
      * We recognize if the information is already loaded by check if
@@ -707,7 +699,6 @@ public class RawLocalFileSystem extends FileSystem {
    * the given path does not refer to a symlink or there is an error
    * accessing the symlink.
    */
-  @Deprecated
   private String readLink(Path p) {
     /* NB: Use readSymbolicLink in java.nio.file.Path once available. Could
      * use getCanonicalPath in File to get the target of the symlink but that
@@ -728,12 +719,7 @@ public class RawLocalFileSystem extends FileSystem {
    */
   @Override
   public FileStatus getFileLinkStatus(final Path f) throws IOException {
-    FileStatus fi;
-    if (!Shell.WINDOWS) {
-      fi = getFileLinkStatusInternal(f, false);
-    } else {
-      fi = getFileLinkStatusInternal(f);
-    }
+    FileStatus fi = getFileLinkStatusInternal(f);
     // getFileLinkStatus is supposed to return a symlink with a
     // qualified path
     if (fi.isSymlink()) {
@@ -744,12 +730,6 @@ public class RawLocalFileSystem extends FileSystem {
     return fi;
   }
 
-  /**
-   * Deprecated. Remains for windows support. Should be removed in favor of
-   * {@link #getFileLinkStatusInternal(Path, boolean)} when {@link Stat} gains
-   * support for windows.
-   */
-  @Deprecated
   private FileStatus getFileLinkStatusInternal(final Path f) throws IOException {
     String target = readLink(f);
 
@@ -787,17 +767,9 @@ public class RawLocalFileSystem extends FileSystem {
     }
   }
 
-  private FileStatus getFileLinkStatusInternal(final Path f,
-      boolean dereference) throws IOException {
-    checkPath(f);
-    Stat stat = new Stat(f, getDefaultBlockSize(f), dereference, this);
-    FileStatus status = stat.getFileStatus();
-    return status;
-  }
-
   @Override
   public Path getLinkTarget(Path f) throws IOException {
-    FileStatus fi = getFileLinkStatusInternal(f, false);
+    FileStatus fi = getFileLinkStatusInternal(f);
     // return an unqualified symlink target
     return fi.getSymlink();
   }

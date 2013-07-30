@@ -358,12 +358,12 @@ public class TestLocalFileSystem {
 
     FileStatus status = fileSys.getFileStatus(path);
     assertTrue("check we're actually changing something", newModTime != status.getModificationTime());
-    long accessTime = status.getAccessTime();
+    assertEquals(0, status.getAccessTime());
 
     fileSys.setTimes(path, newModTime, -1);
     status = fileSys.getFileStatus(path);
     assertEquals(newModTime, status.getModificationTime());
-    assertEquals(accessTime, status.getAccessTime());
+    assertEquals(0, status.getAccessTime());
   }
 
   /**
