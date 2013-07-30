@@ -6,10 +6,6 @@ Release 2.1.1-beta - UNRELEASED
 
   NEW FEATURES
 
-    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
-
-    HADOOP-9515. Add general interface for NFS and Mount. (brandonli)
-
   IMPROVEMENTS
 
   OPTIMIZATIONS
@@ -73,6 +69,10 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9792. Retry the methods that are tagged @AtMostOnce along 
     with @Idempotent. (suresh)
+
+    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
+
+    HADOOP-9515. Add general interface for NFS and Mount. (brandonli)
 
   IMPROVEMENTS
 
