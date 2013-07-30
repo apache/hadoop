@@ -500,6 +500,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9770. Make RetryCache#state non volatile. (suresh)
 
+    HADOOP-9786. RetryInvocationHandler#isRpcInvocation should support 
+    ProtocolTranslator. (suresh and jing9)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
