@@ -29,8 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.RetryCache.CacheEntryWithPayload;
-import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,7 +37,7 @@ import org.junit.Test;
  * Tests for {@link RetryCache}
  */
 public class TestRetryCache {
-  private static final byte[] CLIENT_ID = StringUtils.getUuidBytes();
+  private static final byte[] CLIENT_ID = ClientId.getClientId();
   private static int callId = 100;
   private static final Random r = new Random();
   private static final TestServer testServer = new TestServer();

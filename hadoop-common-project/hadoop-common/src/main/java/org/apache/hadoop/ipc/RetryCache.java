@@ -19,6 +19,7 @@ package org.apache.hadoop.ipc;
 
 
 import java.util.Arrays;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,6 +28,7 @@ import org.apache.hadoop.util.LightWeightCache;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -64,8 +66,9 @@ public class RetryCache {
 
     CacheEntry(byte[] clientId, int callId, long expirationTime) {
       // ClientId must be a UUID - that is 16 octets.
-      Preconditions.checkArgument(clientId.length == 16,
-          "Invalid clientId - must be UUID of size 16 octets");
+      Preconditions.checkArgument(clientId.length == ClientId.BYTE_LENGTH,
+          "Invalid clientId - length is " + clientId.length
+              + " expected length " + ClientId.BYTE_LENGTH);
       // Convert UUID bytes to two longs
       long tmp = 0;
       for (int i=0; i<8; i++) {
@@ -131,6 +134,12 @@ public class RetryCache {
     public long getExpirationTime() {
       return expirationTime;
     }
+    
+    @Override
+    public String toString() {
+      return (new UUID(this.clientIdMsb, this.clientIdLsb)).toString() + ":"
+          + this.callId + ":" + this.state;
+    }
   }
 
   /**
@@ -186,6 +195,11 @@ public class RetryCache {
     return !Server.isRpcInvocation() || Server.getCallId() < 0
         || Arrays.equals(Server.getClientId(), RpcConstants.DUMMY_CLIENT_ID);
   }
+  
+  @VisibleForTesting
+  public LightWeightGSet<CacheEntry, CacheEntry> getCacheSet() {
+    return set;
+  }
 
   /**
    * This method handles the following conditions:
@@ -239,6 +253,26 @@ public class RetryCache {
       }
     }
     return mapEntry;
+  }
+  
+  /** 
+   * Add a new cache entry into the retry cache. The cache entry consists of 
+   * clientId and callId extracted from editlog.
+   */
+  public void addCacheEntry(byte[] clientId, int callId) {
+    CacheEntry newEntry = new CacheEntry(clientId, callId, System.nanoTime()
+        + expirationTime);
+    newEntry.completed(true);
+    set.put(newEntry);
+  }
+  
+  public void addCacheEntryWithPayload(byte[] clientId, int callId,
+      Object payload) {
+    CacheEntry newEntry = new CacheEntryWithPayload(clientId, callId, payload,
+        System.nanoTime() + expirationTime);
+    // since the entry is loaded from editlog, we can assume it succeeded.    
+    newEntry.completed(true);
+    set.put(newEntry);
   }
 
   private static CacheEntry newEntry(long expirationTime) {

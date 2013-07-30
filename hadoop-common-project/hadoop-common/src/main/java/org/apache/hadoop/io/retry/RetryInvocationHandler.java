@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.Client.ConnectionId;
@@ -39,7 +40,12 @@ import org.apache.hadoop.util.ThreadUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 
-class RetryInvocationHandler implements RpcInvocationHandler {
+/**
+ * This class implements RpcInvocationHandler and supports retry on the client 
+ * side.
+ */
+@InterfaceAudience.Private
+public class RetryInvocationHandler implements RpcInvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
   private final FailoverProxyProvider proxyProvider;
 

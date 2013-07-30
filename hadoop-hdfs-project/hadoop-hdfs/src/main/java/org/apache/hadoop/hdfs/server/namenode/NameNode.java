@@ -735,7 +735,8 @@ public class NameNode implements NameNodeStatusMXBean {
   }
     
   /** get FSImage */
-  FSImage getFSImage() {
+  @VisibleForTesting
+  public FSImage getFSImage() {
     return namesystem.dir.fsImage;
   }
 

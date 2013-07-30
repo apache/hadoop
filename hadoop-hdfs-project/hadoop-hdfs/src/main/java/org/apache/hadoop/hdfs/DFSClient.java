@@ -455,7 +455,8 @@ public class DFSClient implements java.io.Closeable {
    * Create a new DFSClient connected to the given nameNodeUri or rpcNamenode.
    * Exactly one of nameNodeUri or rpcNamenode must be null.
    */
-  DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
+  @VisibleForTesting
+  public DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
       Configuration conf, FileSystem.Statistics stats)
     throws IOException {
     // Copy only the required DFSClient configuration
