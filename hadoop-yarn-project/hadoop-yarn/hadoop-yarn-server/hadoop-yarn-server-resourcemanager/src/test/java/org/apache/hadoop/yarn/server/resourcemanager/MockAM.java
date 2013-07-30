@@ -130,6 +130,9 @@ public class MockAM {
     return response;
   }
 
+  public void addContainerToBeReleased(ContainerId containerId) {
+    releases.add(containerId);
+  }
   public AllocateResponse allocate(
       String host, int memory, int numContainers,
       List<ContainerId> releases) throws Exception {
