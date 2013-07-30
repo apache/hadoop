@@ -60,6 +60,9 @@ Release 2.1.1-beta - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-5385. Fixed a bug with JobContext getCacheFiles API. (Omkar Vinit
+    Joshi via vinodkv)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
