@@ -99,6 +99,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceLocalizedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceReleaseEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRequestEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -126,6 +127,7 @@ public class ResourceLocalizationService extends CompositeService
   private LocalizerTracker localizerTracker;
   private RecordFactory recordFactory;
   private final ScheduledExecutorService cacheCleanup;
+  private LocalizerTokenSecretManager secretManager;
 
   private final LocalResourcesTracker publicRsrc;
 
@@ -238,7 +240,6 @@ public class ResourceLocalizationService extends CompositeService
   Server createServer() {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
-    LocalizerTokenSecretManager secretManager = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       secretManager = new LocalizerTokenSecretManager();
     }
@@ -897,6 +898,12 @@ public class ResourceLocalizationService extends CompositeService
               .getAllTokens()) {
             LOG.debug(tk.getService() + " : " + tk.encodeToUrlString());
           }
+        }
+        if (UserGroupInformation.isSecurityEnabled()) {
+          LocalizerTokenIdentifier id = secretManager.createIdentifier();
+          Token<LocalizerTokenIdentifier> localizerToken =
+              new Token<LocalizerTokenIdentifier>(id, secretManager);
+          credentials.addToken(id.getKind(), localizerToken);
         }
         credentials.writeTokenStorageToStream(tokenOut);
       } finally {

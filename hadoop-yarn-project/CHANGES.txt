@@ -12,6 +12,9 @@ Release 2.0.6-alpha - UNRELEASED
 
   BUG FIXES
 
+    YARN-854. Fixing YARN bugs that are failing applications in secure
+    environment. (Omkar Vinit Joshi and shv)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
