@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.fs.shell.FsCommand;
 import org.apache.hadoop.fs.shell.PathData;
-
+import org.apache.hadoop.util.Shell;
 
 /**
  * This class is the home for file permissions related commands.
@@ -111,7 +111,8 @@ public class FsShellPermissions extends FsCommand {
   }
   
   // used by chown/chgrp
-  static private String allowedChars = "[-_./@a-zA-Z0-9]";  
+  static private String allowedChars = Shell.WINDOWS ? "[-_./@a-zA-Z0-9 ]" :
+    "[-_./@a-zA-Z0-9]";
 
   /**
    * Used to change owner and/or group of files 
@@ -126,9 +127,8 @@ public class FsShellPermissions extends FsCommand {
       "\tcurrently supported.\n\n" +
       "\tIf only owner or group is specified then only owner or\n" +
       "\tgroup is modified.\n\n" +
-      "\tThe owner and group names may only cosists of digits, alphabet,\n"+
-      "\tand any of '-_.@/' i.e. [-_.@/a-zA-Z0-9]. The names are case\n" +
-      "\tsensitive.\n\n" +
+      "\tThe owner and group names may only consist of digits, alphabet,\n"+
+      "\tand any of " + allowedChars + ". The names are case sensitive.\n\n" +
       "\tWARNING: Avoid using '.' to separate user name and group though\n" +
       "\tLinux allows it. If user names have dots in them and you are\n" +
       "\tusing local file system, you might see surprising results since\n" +

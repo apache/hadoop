@@ -20,11 +20,13 @@ package org.apache.hadoop.fs;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -38,6 +40,7 @@ import org.apache.hadoop.fs.shell.FsCommand;
 import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.io.IOUtils;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import org.apache.hadoop.util.Shell;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -407,6 +410,65 @@ public class TestFsShellReturnCode {
     assertEquals(2, InterruptCommand.processed);
     assertEquals(130, exitCode);
   }
+
+  /**
+   * Tests combinations of valid and invalid user and group arguments to chown.
+   */
+  @Test
+  public void testChownUserAndGroupValidity() {
+    // This test only covers argument parsing, so override to skip processing.
+    FsCommand chown = new FsShellPermissions.Chown() {
+      @Override
+      protected void processArgument(PathData item) {
+      }
+    };
+    chown.setConf(new Configuration());
+
+    // The following are valid (no exception expected).
+    chown.run("user", "/path");
+    chown.run("user:group", "/path");
+    chown.run(":group", "/path");
+
+    // The following are valid only on Windows.
+    assertValidArgumentsOnWindows(chown, "User With Spaces", "/path");
+    assertValidArgumentsOnWindows(chown, "User With Spaces:group", "/path");
+    assertValidArgumentsOnWindows(chown, "User With Spaces:Group With Spaces",
+      "/path");
+    assertValidArgumentsOnWindows(chown, "user:Group With Spaces", "/path");
+    assertValidArgumentsOnWindows(chown, ":Group With Spaces", "/path");
+
+    // The following are invalid (exception expected).
+    assertIllegalArguments(chown, "us!er", "/path");
+    assertIllegalArguments(chown, "us^er", "/path");
+    assertIllegalArguments(chown, "user:gr#oup", "/path");
+    assertIllegalArguments(chown, "user:gr%oup", "/path");
+    assertIllegalArguments(chown, ":gr#oup", "/path");
+    assertIllegalArguments(chown, ":gr%oup", "/path");
+  }
+
+  /**
+   * Tests valid and invalid group arguments to chgrp.
+   */
+  @Test
+  public void testChgrpGroupValidity() {
+    // This test only covers argument parsing, so override to skip processing.
+    FsCommand chgrp = new FsShellPermissions.Chgrp() {
+      @Override
+      protected void processArgument(PathData item) {
+      }
+    };
+    chgrp.setConf(new Configuration());
+
+    // The following are valid (no exception expected).
+    chgrp.run("group", "/path");
+
+    // The following are valid only on Windows.
+    assertValidArgumentsOnWindows(chgrp, "Group With Spaces", "/path");
+
+    // The following are invalid (exception expected).
+    assertIllegalArguments(chgrp, ":gr#oup", "/path");
+    assertIllegalArguments(chgrp, ":gr%oup", "/path");
+  }
   
   static class LocalFileSystemExtn extends LocalFileSystem {
     public LocalFileSystemExtn() {
@@ -480,4 +542,37 @@ public class TestFsShellReturnCode {
       }
     }
   }  
+
+  /**
+   * Asserts that for the given command, the given arguments are considered
+   * invalid.  The expectation is that the command will throw
+   * IllegalArgumentException.
+   * 
+   * @param cmd FsCommand to check
+   * @param args String... arguments to check
+   */
+  private static void assertIllegalArguments(FsCommand cmd, String... args) {
+    try {
+      cmd.run(args);
+      fail("Expected IllegalArgumentException from args: " +
+        Arrays.toString(args));
+    } catch (IllegalArgumentException e) {
+    }
+  }
+
+  /**
+   * Asserts that for the given command, the given arguments are considered valid
+   * on Windows, but invalid elsewhere.
+   * 
+   * @param cmd FsCommand to check
+   * @param args String... arguments to check
+   */
+  private static void assertValidArgumentsOnWindows(FsCommand cmd,
+      String... args) {
+    if (Shell.WINDOWS) {
+      cmd.run(args);
+    } else {
+      assertIllegalArguments(cmd, args);
+    }
+  }
 }
