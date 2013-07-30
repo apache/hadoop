@@ -9,10 +9,6 @@ Trunk (Unreleased)
 
   NEW FEATURES
     
-    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
-
-    HADOOP-9515. Add general interface for NFS and Mount. (brandonli)
-
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
@@ -379,6 +375,10 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9792. Retry the methods that are tagged @AtMostOnce along 
     with @Idempotent. (suresh)
+
+    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
+
+    HADOOP-9515. Add general interface for NFS and Mount. (brandonli)
 
   IMPROVEMENTS
 
