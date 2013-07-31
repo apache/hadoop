@@ -40,6 +40,9 @@ Release 2.1.1-beta - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+ 
+    HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
+    (Karthik Kambatla via Sandy Ryza)
 
   OPTIMIZATIONS
 
