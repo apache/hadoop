@@ -243,6 +243,9 @@ Trunk (Unreleased)
 
     HDFS-4948. mvn site for hadoop-hdfs-nfs fails. (brandonli)
 
+    HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
+    instead of 0 to avoid confusing applications. (brandonli)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
