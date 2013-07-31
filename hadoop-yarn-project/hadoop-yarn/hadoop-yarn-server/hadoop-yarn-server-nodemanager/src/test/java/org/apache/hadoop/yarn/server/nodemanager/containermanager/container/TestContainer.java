@@ -19,6 +19,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -124,6 +126,7 @@ public class TestContainer {
 
       // all resources should be localized
       assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertNotNull(wc.c.getLocalizedResources());
       for (Entry<Path, List<String>> loc : wc.c.getLocalizedResources()
           .entrySet()) {
         assertEquals(localPaths.remove(loc.getKey()), loc.getValue());
@@ -161,6 +164,7 @@ public class TestContainer {
       wc.containerKilledOnRequest();
       assertEquals(ContainerState.EXITED_WITH_FAILURE, 
           wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
     }
     finally {
@@ -183,6 +187,7 @@ public class TestContainer {
       wc.containerFailed(ExitCode.FORCE_KILLED.getExitCode());
       assertEquals(ContainerState.EXITED_WITH_FAILURE, 
           wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
     }
     finally {
@@ -205,7 +210,7 @@ public class TestContainer {
       wc.containerSuccessful();
       assertEquals(ContainerState.EXITED_WITH_SUCCESS,
           wc.c.getContainerState());
-      
+      assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
     }
     finally {
@@ -228,10 +233,12 @@ public class TestContainer {
       wc.containerSuccessful();
       wc.containerResourcesCleanup();
       assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       // Now in DONE, issue INIT
       wc.initContainer();
       // Verify still in DONE
       assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
     }
     finally {
@@ -255,10 +262,12 @@ public class TestContainer {
       wc.containerSuccessful();
       wc.containerResourcesCleanup();
       assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       // Now in DONE, issue RESOURCE_FAILED as done by LocalizeRunner
       wc.resourceFailedContainer();
       // Verify still in DONE
       assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
     } finally {
       if (wc != null) {
@@ -279,6 +288,7 @@ public class TestContainer {
       reset(wc.localizerBus);
       wc.killContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       wc.containerKilledOnRequest();
       
       verifyCleanupCall(wc);
@@ -297,8 +307,10 @@ public class TestContainer {
       wc.initContainer();
       wc.failLocalizeResources(wc.getLocalResourceCount());
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       wc.killContainer();
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
     } finally {
       if (wc != null) {
@@ -319,8 +331,10 @@ public class TestContainer {
       }
       wc.failLocalizeResources(failCount);
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       wc.localizeResourcesFromInvalidState(failCount);
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
       Assert.assertTrue(wc.getDiagnostics().contains(FAKE_LOCALIZATION_ERROR));
     } finally {
@@ -342,8 +356,10 @@ public class TestContainer {
       String key2 = lRsrcKeys.next();
       wc.failLocalizeSpecificResource(key1);
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       wc.failLocalizeSpecificResource(key2);
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
     } finally {
       if (wc != null) {
@@ -363,8 +379,10 @@ public class TestContainer {
       String key1 = lRsrcKeys.next();
       wc.killContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       wc.failLocalizeSpecificResource(key1);
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
     } finally {
       if (wc != null) {
@@ -425,8 +443,10 @@ public class TestContainer {
       wc.localizeResources();
       wc.killContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       wc.launchContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
       wc.containerKilledOnRequest();
       verifyCleanupCall(wc);
     } finally {
