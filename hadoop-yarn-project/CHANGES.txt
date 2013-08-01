@@ -27,6 +27,9 @@ Release 2.3.0 - UNRELEASED
 
   BUG FIXES
 
+    YARN-758. Augment MockNM to use multiple cores (Karthik Kambatla via
+    Sandy Ryza)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES

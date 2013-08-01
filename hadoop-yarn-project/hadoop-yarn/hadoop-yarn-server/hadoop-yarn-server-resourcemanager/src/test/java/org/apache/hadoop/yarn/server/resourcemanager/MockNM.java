@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
@@ -45,14 +46,24 @@ public class MockNM {
   private int responseId;
   private NodeId nodeId;
   private final int memory;
-  private final int vCores = 1;
+  private final int vCores;
   private ResourceTrackerService resourceTracker;
   private final int httpPort = 2;
   private MasterKey currentContainerTokenMasterKey;
   private MasterKey currentNMTokenMasterKey;
 
   public MockNM(String nodeIdStr, int memory, ResourceTrackerService resourceTracker) {
+    // scale vcores based on the requested memory
+    this(nodeIdStr, memory,
+        Math.max(1, (memory * YarnConfiguration.DEFAULT_NM_VCORES) /
+            YarnConfiguration.DEFAULT_NM_PMEM_MB),
+        resourceTracker);
+  }
+
+  public MockNM(String nodeIdStr, int memory, int vcores,
+                ResourceTrackerService resourceTracker) {
     this.memory = memory;
+    this.vCores = vcores;
     this.resourceTracker = resourceTracker;
     String[] splits = nodeIdStr.split(":");
     nodeId = BuilderUtils.newNodeId(splits[0], Integer.parseInt(splits[1]));
