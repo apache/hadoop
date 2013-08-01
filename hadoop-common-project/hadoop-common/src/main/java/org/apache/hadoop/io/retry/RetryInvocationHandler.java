@@ -44,9 +44,9 @@ import com.google.common.annotations.VisibleForTesting;
  * side.
  */
 @InterfaceAudience.Private
-public class RetryInvocationHandler implements RpcInvocationHandler {
+public class RetryInvocationHandler<T> implements RpcInvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
-  private final FailoverProxyProvider proxyProvider;
+  private final FailoverProxyProvider<T> proxyProvider;
 
   /**
    * The number of times the associated proxyProvider has ever been failed over.
@@ -56,14 +56,14 @@ public class RetryInvocationHandler implements RpcInvocationHandler {
   
   private final RetryPolicy defaultPolicy;
   private final Map<String,RetryPolicy> methodNameToPolicyMap;
-  private Object currentProxy;
+  private T currentProxy;
 
-  protected RetryInvocationHandler(FailoverProxyProvider proxyProvider,
+  protected RetryInvocationHandler(FailoverProxyProvider<T> proxyProvider,
       RetryPolicy retryPolicy) {
     this(proxyProvider, retryPolicy, Collections.<String, RetryPolicy>emptyMap());
   }
 
-  RetryInvocationHandler(FailoverProxyProvider proxyProvider,
+  RetryInvocationHandler(FailoverProxyProvider<T> proxyProvider,
       RetryPolicy defaultPolicy,
       Map<String, RetryPolicy> methodNameToPolicyMap) {
     this.proxyProvider = proxyProvider;
