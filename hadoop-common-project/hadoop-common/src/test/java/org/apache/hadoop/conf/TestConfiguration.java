@@ -21,9 +21,11 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -44,6 +46,7 @@ import static org.junit.Assert.assertArrayEquals;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import org.codehaus.jackson.map.ObjectMapper; 
@@ -53,6 +56,10 @@ public class TestConfiguration extends TestCase {
   private Configuration conf;
   final static String CONFIG = new File("./test-config-TestConfiguration.xml").getAbsolutePath();
   final static String CONFIG2 = new File("./test-config2-TestConfiguration.xml").getAbsolutePath();
+  private static final String CONFIG_MULTI_BYTE = new File(
+    "./test-config-multi-byte-TestConfiguration.xml").getAbsolutePath();
+  private static final String CONFIG_MULTI_BYTE_SAVED = new File(
+    "./test-config-multi-byte-saved-TestConfiguration.xml").getAbsolutePath();
   final static Random RAN = new Random();
   final static String XMLHEADER = 
             IBM_JAVA?"<?xml version=\"1.0\" encoding=\"UTF-8\"?><configuration>":
@@ -69,6 +76,8 @@ public class TestConfiguration extends TestCase {
     super.tearDown();
     new File(CONFIG).delete();
     new File(CONFIG2).delete();
+    new File(CONFIG_MULTI_BYTE).delete();
+    new File(CONFIG_MULTI_BYTE_SAVED).delete();
   }
   
   private void startConfig() throws IOException{
@@ -99,6 +108,41 @@ public class TestConfiguration extends TestCase {
     InputStream in2 = new ByteArrayInputStream(writer.toString().getBytes());
     conf.addResource(in2);
     assertEquals("A", conf.get("prop"));
+  }
+
+  /**
+   * Tests use of multi-byte characters in property names and values.  This test
+   * round-trips multi-byte string literals through saving and loading of config
+   * and asserts that the same values were read.
+   */
+  public void testMultiByteCharacters() throws IOException {
+    String priorDefaultEncoding = System.getProperty("file.encoding");
+    try {
+      System.setProperty("file.encoding", "US-ASCII");
+      String name = "multi_byte_\u611b_name";
+      String value = "multi_byte_\u0641_value";
+      out = new BufferedWriter(new OutputStreamWriter(
+        new FileOutputStream(CONFIG_MULTI_BYTE), "UTF-8"));
+      startConfig();
+      declareProperty(name, value, value);
+      endConfig();
+
+      Configuration conf = new Configuration(false);
+      conf.addResource(new Path(CONFIG_MULTI_BYTE));
+      assertEquals(value, conf.get(name));
+      FileOutputStream fos = new FileOutputStream(CONFIG_MULTI_BYTE_SAVED);
+      try {
+        conf.writeXml(fos);
+      } finally {
+        IOUtils.closeStream(fos);
+      }
+
+      conf = new Configuration(false);
+      conf.addResource(new Path(CONFIG_MULTI_BYTE_SAVED));
+      assertEquals(value, conf.get(name));
+    } finally {
+      System.setProperty("file.encoding", priorDefaultEncoding);
+    }
   }
 
   public void testVariableSubstitution() throws IOException {
