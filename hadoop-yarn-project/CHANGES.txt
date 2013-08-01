@@ -51,6 +51,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-502. Fixed a state machine issue with RMNode inside ResourceManager
     which was crashing scheduler. (Mayank Bansal via vinodkv)
 
+    YARN-573. Shared data structures in Public Localizer and Private Localizer
+    are not Thread safe. (Omkar Vinit Joshi via jlowe)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
@@ -782,9 +785,6 @@ Release 2.1.0-beta - 2013-08-06
 
     YARN-945. Removed setting of AMRMToken's service from ResourceManager
     and changed client libraries do it all the time and correctly. (vinodkv)
-
-    YARN-573. Shared data structures in Public Localizer and Private Localizer
-    are not Thread safe. (Omkar Vinit Joshi via jlowe)
 
   BREAKDOWN OF HADOOP-8562/YARN-191 SUBTASKS AND RELATED JIRAS
 
