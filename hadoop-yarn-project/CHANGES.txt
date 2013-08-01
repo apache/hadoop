@@ -45,6 +45,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-966. Fixed ContainerLaunch to not fail quietly when there are no
     localized resources due to some other failure. (Zhijie Shen via vinodkv)
 
+    YARN-502. Fixed a state machine issue with RMNode inside ResourceManager
+    which was crashing scheduler. (Mayank Bansal via vinodkv)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
