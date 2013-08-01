@@ -39,12 +39,12 @@ public class TestRpcDeniedReply {
   
   @Test
   public void testConstructor() {
-    RpcDeniedReply reply = new RpcDeniedReply(0, RpcMessage.RPC_REPLY,
+    RpcDeniedReply reply = new RpcDeniedReply(0, RpcMessage.Type.RPC_REPLY,
         ReplyState.MSG_ACCEPTED, RejectState.AUTH_ERROR) {
       // Anonymous class
     };
     Assert.assertEquals(0, reply.getXid());
-    Assert.assertEquals(RpcMessage.RPC_REPLY, reply.getMessageType());
+    Assert.assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());
     Assert.assertEquals(ReplyState.MSG_ACCEPTED, reply.getState());
     Assert.assertEquals(RejectState.AUTH_ERROR, reply.getRejectState());
   }

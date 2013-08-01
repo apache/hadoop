@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.nfs.nfs3;
 
+
 /**
  * Some constants for NFSv3
  */
@@ -34,28 +35,58 @@ public class Nfs3Constant {
   public final static int VERSION = 3;
   
   // The procedures
-  public final static int NFSPROC3_NULL = 0;
-  public final static int NFSPROC3_GETATTR = 1;
-  public final static int NFSPROC3_SETATTR = 2;
-  public final static int NFSPROC3_LOOKUP = 3;
-  public final static int NFSPROC3_ACCESS = 4;
-  public final static int NFSPROC3_READLINK = 5;
-  public final static int NFSPROC3_READ = 6;
-  public final static int NFSPROC3_WRITE = 7;
-  public final static int NFSPROC3_CREATE = 8;
-  public final static int NFSPROC3_MKDIR = 9;
-  public final static int NFSPROC3_SYMLINK = 10;
-  public final static int NFSPROC3_MKNOD = 11;
-  public final static int NFSPROC3_REMOVE = 12;
-  public final static int NFSPROC3_RMDIR = 13;
-  public final static int NFSPROC3_RENAME = 14;
-  public final static int NFSPROC3_LINK = 15;
-  public final static int NFSPROC3_READDIR = 16;
-  public final static int NFSPROC3_READDIRPLUS = 17;
-  public final static int NFSPROC3_FSSTAT = 18;
-  public final static int NFSPROC3_FSINFO = 19;
-  public final static int NFSPROC3_PATHCONF = 20;
-  public final static int NFSPROC3_COMMIT = 21;
+  public static enum NFSPROC3 {
+    // the order of the values below are significant.
+    NULL,
+    GETATTR,
+    SETATTR,
+    LOOKUP,
+    ACCESS,
+    READLINK,
+    READ,
+    WRITE,
+    CREATE(false),
+    MKDIR(false),
+    SYMLINK(false),
+    MKNOD(false),
+    REMOVE(false),
+    RMDIR(false),
+    RENAME(false),
+    LINK(false),
+    READDIR,
+    READDIRPLUS,
+    FSSTAT,
+    FSINFO,
+    PATHCONF,
+    COMMIT;
+
+    private final boolean isIdempotent;
+
+    private NFSPROC3(boolean isIdempotent) {
+      this.isIdempotent = isIdempotent;
+    }
+
+    private NFSPROC3() {
+      this(true);
+    }
+
+    public boolean isIdempotent() {
+      return isIdempotent;
+    }
+
+    /** @return the int value representing the procedure. */
+    public int getValue() {
+      return ordinal();
+    }
+
+    /** @return the procedure corresponding to the value. */
+    public static NFSPROC3 fromValue(int value) {
+      if (value < 0 || value >= values().length) {
+        return null;
+      }
+      return values()[value];
+    }
+  }
   
   // The maximum size in bytes of the opaque file handle.
   public final static int NFS3_FHSIZE = 64;
@@ -125,16 +156,13 @@ public class Nfs3Constant {
 
   /** Write call flavors */
   public enum WriteStableHow {
-    UNSTABLE(0), DATA_SYNC(1), FILE_SYNC(2);
-
-    private final int id;
-
-    WriteStableHow(int id) {
-      this.id = id;
-    }
+    // the order of the values below are significant.
+    UNSTABLE,
+    DATA_SYNC,
+    FILE_SYNC;
 
     public int getValue() {
-      return id;
+      return ordinal();
     }
 
     public static WriteStableHow fromValue(int id) {
