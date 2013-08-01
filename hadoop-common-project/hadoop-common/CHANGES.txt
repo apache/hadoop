@@ -8,6 +8,24 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
+    (Karthik Kambatla via Sandy Ryza)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-9768. chown and chgrp reject users and groups with spaces on platforms
+    where spaces are otherwise acceptable. (cnauroth)
+
+Release 2.1.0-beta - 2013-08-06
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
   OPTIMIZATIONS
 
   BUG FIXES
