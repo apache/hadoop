@@ -269,6 +269,9 @@ Trunk (Unreleased)
     HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
     (Chris Nauroth via sanjay)
 
+    HADOOP-9806 PortmapInterface should check if the procedure is out-of-range
+    (brandonli)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
