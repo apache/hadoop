@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.io.DataInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.FileOutputStream;
 import java.io.DataOutputStream;
+import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,6 +36,7 @@ import java.util.Random;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 
@@ -42,6 +45,10 @@ public class TestConfiguration extends TestCase {
   private Configuration conf;
   final static String CONFIG = new File("./test-config.xml").getAbsolutePath();
   final static String CONFIG2 = new File("./test-config2.xml").getAbsolutePath();
+  private static final String CONFIG_MULTI_BYTE = new File(
+    "./test-config-multi-byte-TestConfiguration.xml").getAbsolutePath();
+  private static final String CONFIG_MULTI_BYTE_SAVED = new File(
+    "./test-config-multi-byte-saved-TestConfiguration.xml").getAbsolutePath();
   final static Random RAN = new Random();
 
   @Override
@@ -55,6 +62,8 @@ public class TestConfiguration extends TestCase {
     super.tearDown();
     new File(CONFIG).delete();
     new File(CONFIG2).delete();
+    new File(CONFIG_MULTI_BYTE).delete();
+    new File(CONFIG_MULTI_BYTE_SAVED).delete();
   }
   
   private void startConfig() throws IOException{
@@ -69,6 +78,41 @@ public class TestConfiguration extends TestCase {
 
   private void addInclude(String filename) throws IOException{
     out.write("<xi:include href=\"" + filename + "\" xmlns:xi=\"http://www.w3.org/2001/XInclude\"  />\n ");
+  }
+
+  /**
+   * Tests use of multi-byte characters in property names and values.  This test
+   * round-trips multi-byte string literals through saving and loading of config
+   * and asserts that the same values were read.
+   */
+  public void testMultiByteCharacters() throws IOException {
+    String priorDefaultEncoding = System.getProperty("file.encoding");
+    try {
+      System.setProperty("file.encoding", "US-ASCII");
+      String name = "multi_byte_\u611b_name";
+      String value = "multi_byte_\u0641_value";
+      out = new BufferedWriter(new OutputStreamWriter(
+        new FileOutputStream(CONFIG_MULTI_BYTE), "UTF-8"));
+      startConfig();
+      declareProperty(name, value, value);
+      endConfig();
+
+      Configuration conf = new Configuration(false);
+      conf.addResource(new Path(CONFIG_MULTI_BYTE));
+      assertEquals(value, conf.get(name));
+      FileOutputStream fos = new FileOutputStream(CONFIG_MULTI_BYTE_SAVED);
+      try {
+        conf.writeXml(fos);
+      } finally {
+        IOUtils.closeStream(fos);
+      }
+
+      conf = new Configuration(false);
+      conf.addResource(new Path(CONFIG_MULTI_BYTE_SAVED));
+      assertEquals(value, conf.get(name));
+    } finally {
+      System.setProperty("file.encoding", priorDefaultEncoding);
+    }
   }
 
   public void testVariableSubstitution() throws IOException {
