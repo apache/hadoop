@@ -120,6 +120,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   private Set<Path> deleteOnExit = new TreeSet<Path>();
   
+  boolean resolveSymlinks;
   /**
    * This method adds a file system for testing so that we can find it later. It
    * is only for testing.
@@ -196,6 +197,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public void initialize(URI name, Configuration conf) throws IOException {
     statistics = getStatistics(name.getScheme(), getClass());    
+    resolveSymlinks = conf.getBoolean(
+        CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY,
+        CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_DEFAULT);
   }
 
   /**
