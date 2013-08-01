@@ -25,16 +25,12 @@ import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
  */
 public class RpcDeniedReply extends RpcReply {
   public enum RejectState {
-    RPC_MISMATCH(0), AUTH_ERROR(1);
-
-    private final int value;
-
-    RejectState(int value) {
-      this.value = value;
-    }
+    // the order of the values below are significant.
+    RPC_MISMATCH,
+    AUTH_ERROR;
 
     int getValue() {
-      return value;
+      return ordinal();
     }
 
     static RejectState fromValue(int value) {
@@ -44,13 +40,13 @@ public class RpcDeniedReply extends RpcReply {
 
   private final RejectState rejectState;
 
-  RpcDeniedReply(int xid, int messageType, ReplyState replyState,
+  RpcDeniedReply(int xid, RpcMessage.Type messageType, ReplyState replyState,
       RejectState rejectState) {
     super(xid, messageType, replyState);
     this.rejectState = rejectState;
   }
 
-  public static RpcDeniedReply read(int xid, int messageType,
+  public static RpcDeniedReply read(int xid, RpcMessage.Type messageType,
       ReplyState replyState, XDR xdr) {
     RejectState rejectState = RejectState.fromValue(xdr.readInt());
     return new RpcDeniedReply(xid, messageType, replyState, rejectState);
@@ -70,7 +66,7 @@ public class RpcDeniedReply extends RpcReply {
   public static XDR voidReply(XDR xdr, int xid, ReplyState msgAccepted,
       RejectState rejectState) {
     xdr.writeInt(xid);
-    xdr.writeInt(RpcMessage.RPC_REPLY);
+    xdr.writeInt(RpcMessage.Type.RPC_REPLY.getValue());
     xdr.writeInt(msgAccepted.getValue());
     xdr.writeInt(AuthFlavor.AUTH_NONE.getValue());
     xdr.writeVariableOpaque(new byte[0]);

@@ -154,24 +154,25 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
   @Override
   public XDR handleInternal(RpcCall rpcCall, XDR xdr, XDR out,
       InetAddress client, Channel channel) {
-    int procedure = rpcCall.getProcedure();
+    final MNTPROC mntproc = MNTPROC.fromValue(rpcCall.getProcedure());
     int xid = rpcCall.getXid();
-    if (procedure == MNTPROC_NULL) {
+    if (mntproc == MNTPROC.NULL) {
       out = nullOp(out, xid, client);
-    } else if (procedure == MNTPROC_MNT) {
+    } else if (mntproc == MNTPROC.MNT) {
       out = mnt(xdr, out, xid, client);
-    } else if (procedure == MNTPROC_DUMP) {
+    } else if (mntproc == MNTPROC.DUMP) {
       out = dump(out, xid, client);
-    } else if (procedure == MNTPROC_UMNT) {      
+    } else if (mntproc == MNTPROC.UMNT) {      
       out = umnt(xdr, out, xid, client);
-    } else if (procedure == MNTPROC_UMNTALL) {
+    } else if (mntproc == MNTPROC.UMNTALL) {
       umntall(out, xid, client);
-    } else if (procedure == MNTPROC_EXPORT) {
+    } else if (mntproc == MNTPROC.EXPORT) {
       out = MountResponse.writeExportList(out, xid, exports);
     } else {
       // Invalid procedure
       RpcAcceptedReply.voidReply(out, xid,
-          RpcAcceptedReply.AcceptState.PROC_UNAVAIL);    }  
+          RpcAcceptedReply.AcceptState.PROC_UNAVAIL);
+    }  
     return out;
   }
   

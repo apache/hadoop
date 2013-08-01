@@ -28,38 +28,38 @@ import org.junit.Test;
 public class TestRpcProgramNfs3 {
   @Test(timeout=1000)
   public void testIdempotent() {
-    int[][] procedures = {
-        { Nfs3Constant.NFSPROC3_NULL, 1 },
-        { Nfs3Constant.NFSPROC3_GETATTR, 1 },
-        { Nfs3Constant.NFSPROC3_SETATTR, 1 },
-        { Nfs3Constant.NFSPROC3_LOOKUP, 1 },
-        { Nfs3Constant.NFSPROC3_ACCESS, 1 },
-        { Nfs3Constant.NFSPROC3_READLINK, 1 },
-        { Nfs3Constant.NFSPROC3_READ, 1 },
-        { Nfs3Constant.NFSPROC3_WRITE, 1 },
-        { Nfs3Constant.NFSPROC3_CREATE, 0 },
-        { Nfs3Constant.NFSPROC3_MKDIR, 0 },
-        { Nfs3Constant.NFSPROC3_SYMLINK, 0 },
-        { Nfs3Constant.NFSPROC3_MKNOD, 0 },
-        { Nfs3Constant.NFSPROC3_REMOVE, 0 },
-        { Nfs3Constant.NFSPROC3_RMDIR, 0 },
-        { Nfs3Constant.NFSPROC3_RENAME, 0 },
-        { Nfs3Constant.NFSPROC3_LINK, 0 },
-        { Nfs3Constant.NFSPROC3_READDIR, 1 },
-        { Nfs3Constant.NFSPROC3_READDIRPLUS, 1 },
-        { Nfs3Constant.NFSPROC3_FSSTAT, 1 },
-        { Nfs3Constant.NFSPROC3_FSINFO, 1 },
-        { Nfs3Constant.NFSPROC3_PATHCONF, 1 },
-        { Nfs3Constant.NFSPROC3_COMMIT, 1 } };
-    for (int[] procedure : procedures) {
-      boolean idempotent = procedure[1] == 1;
-      int proc = procedure[0];
+    Object[][] procedures = {
+        { Nfs3Constant.NFSPROC3.NULL, 1 },
+        { Nfs3Constant.NFSPROC3.GETATTR, 1 },
+        { Nfs3Constant.NFSPROC3.SETATTR, 1 },
+        { Nfs3Constant.NFSPROC3.LOOKUP, 1 },
+        { Nfs3Constant.NFSPROC3.ACCESS, 1 },
+        { Nfs3Constant.NFSPROC3.READLINK, 1 },
+        { Nfs3Constant.NFSPROC3.READ, 1 },
+        { Nfs3Constant.NFSPROC3.WRITE, 1 },
+        { Nfs3Constant.NFSPROC3.CREATE, 0 },
+        { Nfs3Constant.NFSPROC3.MKDIR, 0 },
+        { Nfs3Constant.NFSPROC3.SYMLINK, 0 },
+        { Nfs3Constant.NFSPROC3.MKNOD, 0 },
+        { Nfs3Constant.NFSPROC3.REMOVE, 0 },
+        { Nfs3Constant.NFSPROC3.RMDIR, 0 },
+        { Nfs3Constant.NFSPROC3.RENAME, 0 },
+        { Nfs3Constant.NFSPROC3.LINK, 0 },
+        { Nfs3Constant.NFSPROC3.READDIR, 1 },
+        { Nfs3Constant.NFSPROC3.READDIRPLUS, 1 },
+        { Nfs3Constant.NFSPROC3.FSSTAT, 1 },
+        { Nfs3Constant.NFSPROC3.FSINFO, 1 },
+        { Nfs3Constant.NFSPROC3.PATHCONF, 1 },
+        { Nfs3Constant.NFSPROC3.COMMIT, 1 } };
+    for (Object[] procedure : procedures) {
+      boolean idempotent = procedure[1].equals(Integer.valueOf(1));
+      Nfs3Constant.NFSPROC3 proc = (Nfs3Constant.NFSPROC3)procedure[0];
       if (idempotent) {
         Assert.assertTrue(("Procedure " + proc + " should be idempotent"),
-            RpcProgramNfs3.isIdempotent(proc));
+            proc.isIdempotent());
       } else {
         Assert.assertFalse(("Procedure " + proc + " should be non-idempotent"),
-            RpcProgramNfs3.isIdempotent(proc));
+            proc.isIdempotent());
       }
     }
   }
