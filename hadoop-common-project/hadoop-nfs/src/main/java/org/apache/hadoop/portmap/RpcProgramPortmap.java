@@ -131,29 +131,22 @@ public class RpcProgramPortmap extends RpcProgram implements PortmapInterface {
   @Override
   public XDR handleInternal(RpcCall rpcCall, XDR in, XDR out,
       InetAddress client, Channel channel) {
-    Procedure procedure = Procedure.fromValue(rpcCall.getProcedure());
+    final Procedure portmapProc = Procedure.fromValue(rpcCall.getProcedure());
     int xid = rpcCall.getXid();
-    switch (procedure) {
-    case PMAPPROC_NULL:
+    if (portmapProc == Procedure.PMAPPROC_NULL) {
       out = nullOp(xid, in, out);
-      break;
-    case PMAPPROC_SET:
+    } else if (portmapProc == Procedure.PMAPPROC_SET) {
       out = set(xid, in, out);
-      break;
-    case PMAPPROC_UNSET:
+    } else if (portmapProc == Procedure.PMAPPROC_UNSET) {
       out = unset(xid, in, out);
-      break;
-    case PMAPPROC_DUMP:
+    } else if (portmapProc == Procedure.PMAPPROC_DUMP) {
       out = dump(xid, in, out);
-      break;
-    case PMAPPROC_GETPORT:
+    } else if (portmapProc == Procedure.PMAPPROC_GETPORT) {
       out = getport(xid, in, out);
-      break;
-    case PMAPPROC_GETVERSADDR:
+    } else if (portmapProc == Procedure.PMAPPROC_GETVERSADDR) {
       out = getport(xid, in, out);
-      break;
-    default:
-      LOG.info("PortmapHandler unknown rpc procedure=" + procedure);
+    } else {
+      LOG.info("PortmapHandler unknown rpc procedure=" + portmapProc);
       RpcAcceptedReply.voidReply(out, xid,
           RpcAcceptedReply.AcceptState.PROC_UNAVAIL);
     }
