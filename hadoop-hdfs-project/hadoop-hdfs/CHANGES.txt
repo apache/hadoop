@@ -17,6 +17,9 @@ Release 2.1.1-beta - UNRELEASED
 
   BUG FIXES
 
+    HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
+    instead of 0 to avoid confusing applications. (brandonli)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
