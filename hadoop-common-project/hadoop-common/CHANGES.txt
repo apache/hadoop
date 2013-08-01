@@ -26,6 +26,9 @@ Release 2.1.0-beta - 2013-08-06
 
   IMPROVEMENTS
 
+    HADOOP-9803. Add a generic type parameter to RetryInvocationHandler.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

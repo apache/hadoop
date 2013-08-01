@@ -74,7 +74,7 @@ public class TestRetryCacheWithHA {
    * a boolean flag to control whether the method invocation succeeds or not. 
    */
   private static class DummyRetryInvocationHandler extends
-      RetryInvocationHandler {
+      RetryInvocationHandler<ClientProtocol> {
     static AtomicBoolean block = new AtomicBoolean(false);
 
     DummyRetryInvocationHandler(

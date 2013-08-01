@@ -58,7 +58,7 @@ public class RetryProxy {
     return Proxy.newProxyInstance(
         proxyProvider.getInterface().getClassLoader(),
         new Class<?>[] { iface },
-        new RetryInvocationHandler(proxyProvider, retryPolicy)
+        new RetryInvocationHandler<T>(proxyProvider, retryPolicy)
         );
   }
   
@@ -99,7 +99,7 @@ public class RetryProxy {
     return Proxy.newProxyInstance(
         proxyProvider.getInterface().getClassLoader(),
         new Class<?>[] { iface },
-        new RetryInvocationHandler(proxyProvider, defaultPolicy,
+        new RetryInvocationHandler<T>(proxyProvider, defaultPolicy,
             methodNameToPolicyMap)
         );
   }
