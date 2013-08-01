@@ -64,6 +64,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.ShutdownThreadsHelper;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -473,8 +474,8 @@ public class HistoryFileManager extends AbstractService {
   private Path intermediateDoneDirPath = null; // Intermediate Done Dir Path
   private FileContext intermediateDoneDirFc; // Intermediate Done Dir
                                              // FileContext
-
-  private ThreadPoolExecutor moveToDoneExecutor = null;
+  @VisibleForTesting
+  protected ThreadPoolExecutor moveToDoneExecutor = null;
   private long maxHistoryAge = 0;
   
   public HistoryFileManager() {
@@ -541,6 +542,12 @@ public class HistoryFileManager extends AbstractService {
         1, TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
 
     super.serviceInit(conf);
+  }
+
+  @Override
+  public void serviceStop() throws Exception {
+    ShutdownThreadsHelper.shutdownExecutorService(moveToDoneExecutor);
+    super.serviceStop();
   }
 
   protected JobListCache createJobListCache() {
