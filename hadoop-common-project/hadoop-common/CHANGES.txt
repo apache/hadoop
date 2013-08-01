@@ -47,6 +47,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
     (Karthik Kambatla via Sandy Ryza)
 
+    HADOOP-9803. Add a generic type parameter to RetryInvocationHandler.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
