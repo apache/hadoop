@@ -768,6 +768,9 @@ Release 2.1.0-beta - 2013-08-06
     YARN-945. Removed setting of AMRMToken's service from ResourceManager
     and changed client libraries do it all the time and correctly. (vinodkv)
 
+    YARN-573. Shared data structures in Public Localizer and Private Localizer
+    are not Thread safe. (Omkar Vinit Joshi via jlowe)
+
   BREAKDOWN OF HADOOP-8562/YARN-191 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
