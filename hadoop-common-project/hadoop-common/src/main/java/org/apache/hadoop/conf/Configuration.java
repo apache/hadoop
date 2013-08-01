@@ -2181,12 +2181,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /** 
    * Write out the non-default properties in this configuration to the given
-   * {@link OutputStream}.
+   * {@link OutputStream} using UTF-8 encoding.
    * 
    * @param out the output stream to write to.
    */
   public void writeXml(OutputStream out) throws IOException {
-    writeXml(new OutputStreamWriter(out));
+    writeXml(new OutputStreamWriter(out, "UTF-8"));
   }
 
   /** 
