@@ -111,6 +111,9 @@ Release 1.3.0 - unreleased
     HADOOP-9768. chown and chgrp reject users and groups with spaces on platforms
     where spaces are otherwise acceptable. (cnauroth)
 
+    HADOOP-9801. Configuration#writeXml uses platform defaulting encoding, which
+    may mishandle multi-byte characters. (cnauroth)
+
 Release 1.2.1 - 2013.07.06
 
   INCOMPATIBLE CHANGES
