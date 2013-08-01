@@ -281,6 +281,9 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
+    contain additional properties.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
