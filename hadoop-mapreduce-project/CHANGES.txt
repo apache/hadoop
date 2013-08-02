@@ -21,6 +21,9 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5428.  HistoryFileManager doesn't stop threads when service is
     stopped (Karthik Kambatla via jlowe)
 
+    MAPREDUCE-5251. Reducer should not implicate map attempt if it has
+    insufficient space to fetch map output (Ashwin Shankar via jlowe)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
