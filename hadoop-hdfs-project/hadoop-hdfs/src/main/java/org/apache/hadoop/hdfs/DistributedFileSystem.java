@@ -170,12 +170,11 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Checks that the passed URI belongs to this filesystem, resolves the path
-   * component against the current working directory if relative, and finally
-   * returns the absolute path component.
+   * Checks that the passed URI belongs to this filesystem and returns
+   * just the path component. Expects a URI with an absolute path.
    * 
-   * @param file URI to check and resolve
-   * @return resolved absolute path component of {file}
+   * @param file URI with absolute path
+   * @return path component of {file}
    * @throws IllegalArgumentException if URI does not belong to this DFS
    */
   private String getPathName(Path file) {
@@ -514,15 +513,10 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
     statistics.incrementWriteOps(1);
-    // Both Paths have to belong to this DFS
+
     final Path absSrc = fixRelativePart(src);
     final Path absDst = fixRelativePart(dst);
-    FileSystem srcFS = getFSofPath(absSrc, getConf());
-    FileSystem dstFS = getFSofPath(absDst, getConf());
-    if (!srcFS.getUri().equals(getUri()) ||
-        !dstFS.getUri().equals(getUri())) {
-      throw new IOException("Renames across FileSystems not supported");
-    }
+
     // Try the rename without resolving first
     try {
       return dfs.rename(getPathName(absSrc), getPathName(absDst));
@@ -539,7 +533,8 @@ public class DistributedFileSystem extends FileSystem {
         @Override
         public Boolean next(final FileSystem fs, final Path p)
             throws IOException {
-          return fs.rename(source, p);
+          // Should just throw an error in FileSystem#checkPath
+          return doCall(p);
         }
       }.resolve(this, absDst);
     }
@@ -553,15 +548,8 @@ public class DistributedFileSystem extends FileSystem {
   public void rename(Path src, Path dst, final Options.Rename... options)
       throws IOException {
     statistics.incrementWriteOps(1);
-    // Both Paths have to belong to this DFS
     final Path absSrc = fixRelativePart(src);
     final Path absDst = fixRelativePart(dst);
-    FileSystem srcFS = getFSofPath(absSrc, getConf());
-    FileSystem dstFS = getFSofPath(absDst, getConf());
-    if (!srcFS.getUri().equals(getUri()) ||
-        !dstFS.getUri().equals(getUri())) {
-      throw new IOException("Renames across FileSystems not supported");
-    }
     // Try the rename without resolving first
     try {
       dfs.rename(getPathName(absSrc), getPathName(absDst), options);
@@ -579,7 +567,7 @@ public class DistributedFileSystem extends FileSystem {
         @Override
         public Void next(final FileSystem fs, final Path p)
             throws IOException {
-          // Since we know it's this DFS for both, can just call doCall again
+          // Should just throw an error in FileSystem#checkPath
           return doCall(p);
         }
       }.resolve(this, absDst);
