@@ -449,8 +449,8 @@ class LeaseRenewer {
           LOG.warn("Failed to renew lease for " + clientsString() + " for "
               + (elapsed/1000) + " seconds.  Aborting ...", ie);
           synchronized (this) {
-            for(DFSClient c : dfsclients) {
-              c.abort();
+            while (!dfsclients.isEmpty()) {
+              dfsclients.get(0).abort();
             }
           }
           break;
