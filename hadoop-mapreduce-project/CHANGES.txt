@@ -30,23 +30,11 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
     task-state (Ashwin Shankar via jlowe)
 
-    MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
-    input path dir (Devaraj K via jlowe)
-
-    MAPREDUCE-5358. MRAppMaster throws invalid transitions for JobImpl
-    (Devaraj K via jlowe)
-
     MAPREDUCE-5380. Invalid mapred command should return non-zero exit code
     (Stephen Chu via jlowe)
 
     MAPREDUCE-5404. HSAdminServer does not use ephemeral ports in minicluster
     mode (Ted Yu via jlowe)
-
-    MAPREDUCE-5317. Stale files left behind for failed jobs (Ravi Prakash via
-    jlowe)
-
-    MAPREDUCE-5251. Reducer should not implicate map attempt if it has
-    insufficient space to fetch map output (Ashwin Shankar via jlowe)
 
 Release 2.1.1-beta - UNRELEASED
 
@@ -68,6 +56,18 @@ Release 2.1.1-beta - UNRELEASED
 
     MAPREDUCE-5428.  HistoryFileManager doesn't stop threads when service is
     stopped (Karthik Kambatla via jlowe)
+
+    MAPREDUCE-5251. Reducer should not implicate map attempt if it has
+    insufficient space to fetch map output (Ashwin Shankar via jlowe)
+
+    MAPREDUCE-5317. Stale files left behind for failed jobs (Ravi Prakash via
+    jlowe)
+
+    MAPREDUCE-5358. MRAppMaster throws invalid transitions for JobImpl
+    (Devaraj K via jlowe)
+
+    MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
+    input path dir (Devaraj K via jlowe)
 
 Release 2.1.0-beta - 2013-08-06
 
