@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
@@ -455,5 +456,11 @@ public class NodeManager extends CompositeService
     NodeManager nodeManager = new NodeManager();
     Configuration conf = new YarnConfiguration();
     nodeManager.initAndStartNodeManager(conf, false);
+  }
+  
+  @VisibleForTesting
+  @Private
+  public NodeStatusUpdater getNodeStatusUpdater() {
+    return nodeStatusUpdater;
   }
 }

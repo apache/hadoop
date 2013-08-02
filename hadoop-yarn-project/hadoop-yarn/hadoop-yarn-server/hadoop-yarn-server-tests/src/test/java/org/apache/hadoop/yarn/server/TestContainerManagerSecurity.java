@@ -43,6 +43,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -260,6 +262,11 @@ public class TestContainerManagerSecurity {
     Assert.assertTrue(testStartContainer(rpc, validAppAttemptId, validNode,
         validContainerToken, validNMToken, true).contains(sb.toString()));
     
+    // Container is removed from node manager's memory by this time.
+    // trying to stop the container. It should not throw any exception.
+    testStopContainer(rpc, validAppAttemptId, validNode, validContainerId,
+        validNMToken, false);
+    
     // Rolling over master key twice so that we can check whether older keys
     // are used for authentication.
     rollNMTokenMasterKey(nmTokenSecretManagerRM, nmTokenSecretManagerNM);
@@ -267,13 +274,25 @@ public class TestContainerManagerSecurity {
     rollNMTokenMasterKey(nmTokenSecretManagerRM, nmTokenSecretManagerNM);
     
     // trying get container status. Now saved nmToken should be used for
-    // authentication.
+    // authentication... It should complain saying container was recently
+    // stopped.
+    sb = new StringBuilder("Container ");
+    sb.append(validContainerId);
+    sb.append(" was recently stopped on node manager");
+    Assert.assertTrue(testGetContainer(rpc, validAppAttemptId, validNode,
+        validContainerId, validNMToken, true).contains(sb.toString()));
+    
+    // Now lets remove the container from nm-memory
+    nm.getNodeStatusUpdater().clearFinishedContainersFromCache();
+    
+    // This should fail as container is removed from recently tracked finished
+    // containers.
     sb = new StringBuilder("Container ");
     sb.append(validContainerId.toString());
     sb.append(" is not handled by this NodeManager");
     Assert.assertTrue(testGetContainer(rpc, validAppAttemptId, validNode,
         validContainerId, validNMToken, false).contains(sb.toString()));
-    
+
   }
 
   private void waitForContainerToFinishOnNM(ContainerId containerId) {
@@ -315,6 +334,23 @@ public class TestContainerManagerSecurity {
     Assert.assertTrue((nmTokenSecretManagerNM.getCurrentKey().getKeyId()
         == nmTokenSecretManagerRM.getCurrentKey().getKeyId()));
   }
+  
+  private String testStopContainer(YarnRPC rpc,
+      ApplicationAttemptId appAttemptId, NodeId nodeId,
+      ContainerId containerId, Token nmToken, boolean isExceptionExpected) {
+    try {
+      stopContainer(rpc, nmToken,
+          Arrays.asList(new ContainerId[] { containerId }), appAttemptId,
+          nodeId);
+      if (isExceptionExpected) {
+        fail("Exception was expected!!");
+      }
+      return "";
+    } catch (Exception e) {
+      e.printStackTrace();
+      return e.getMessage();
+    }
+  }
 
   private String testGetContainer(YarnRPC rpc,
       ApplicationAttemptId appAttemptId, NodeId nodeId,
@@ -334,7 +370,7 @@ public class TestContainerManagerSecurity {
     }
   }
 
-  protected String testStartContainer(YarnRPC rpc,
+  private String testStartContainer(YarnRPC rpc,
       ApplicationAttemptId appAttemptId, NodeId nodeId,
       org.apache.hadoop.yarn.api.records.Token containerToken,
       org.apache.hadoop.yarn.api.records.Token nmToken,
@@ -349,6 +385,29 @@ public class TestContainerManagerSecurity {
     } catch (Exception e) {
       e.printStackTrace();
       return e.getMessage();
+    }
+  }
+  
+  private void stopContainer(YarnRPC rpc, Token nmToken,
+      List<ContainerId> containerId, ApplicationAttemptId appAttemptId,
+      NodeId nodeId) throws Exception {
+    StopContainersRequest request =
+        StopContainersRequest.newInstance(containerId);
+    ContainerManagementProtocol proxy = null;
+    try {
+      proxy =
+          getContainerManagementProtocolProxy(rpc, nmToken, nodeId,
+              appAttemptId.toString());
+      StopContainersResponse response = proxy.stopContainers(request);
+      if (response.getFailedRequests() != null &&
+          response.getFailedRequests().containsKey(containerId)) {
+        parseAndThrowException(response.getFailedRequests().get(containerId)
+            .deSerialize());
+      }
+    } catch (Exception e) {
+      if (proxy != null) {
+        rpc.stopProxy(proxy, conf);
+      }
     }
   }
   
