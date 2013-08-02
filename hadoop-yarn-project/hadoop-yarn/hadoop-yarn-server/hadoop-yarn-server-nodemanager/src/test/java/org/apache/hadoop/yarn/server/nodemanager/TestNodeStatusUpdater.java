@@ -426,7 +426,7 @@ public class TestNodeStatusUpdater {
       return this.nodeStatusUpdater;
     }
 
-    protected MyNodeStatusUpdater3 getNodeStatusUpdater() {
+    public MyNodeStatusUpdater3 getNodeStatusUpdater() {
       return this.nodeStatusUpdater;
     }
   }
@@ -745,6 +745,40 @@ public class TestNodeStatusUpdater {
     lfs.delete(new Path(basedir.getPath()), true);
   }
 
+  @Test(timeout = 90000)                                                      
+  public void testRecentlyFinishedContainers() throws Exception {             
+    NodeManager nm = new NodeManager();                                       
+    YarnConfiguration conf = new YarnConfiguration();                         
+    conf.set(                                                                 
+        NodeStatusUpdaterImpl.YARN_NODEMANAGER_DURATION_TO_TRACK_STOPPED_CONTAINERS,
+        "10000");                                                             
+    nm.init(conf);                                                            
+    NodeStatusUpdaterImpl nodeStatusUpdater =                                 
+        (NodeStatusUpdaterImpl) nm.getNodeStatusUpdater();                    
+    ApplicationId appId = ApplicationId.newInstance(0, 0);                    
+    ApplicationAttemptId appAttemptId =                                       
+        ApplicationAttemptId.newInstance(appId, 0);                           
+    ContainerId cId = ContainerId.newInstance(appAttemptId, 0);               
+                                                                              
+                                                                              
+    nodeStatusUpdater.addStoppedContainersToCache(cId);                      
+    Assert.assertTrue(nodeStatusUpdater.isContainerRecentlyStopped(cId));     
+                                                                              
+    long time1 = System.currentTimeMillis();                                  
+    int waitInterval = 15;                                                    
+    while (waitInterval-- > 0                                                 
+        && nodeStatusUpdater.isContainerRecentlyStopped(cId)) {               
+      nodeStatusUpdater.removeVeryOldStoppedContainersFromCache();          
+      Thread.sleep(1000);                                                     
+    }                                                                         
+    long time2 = System.currentTimeMillis();                                  
+    // By this time the container will be removed from cache. need to verify.
+    Assert.assertFalse(nodeStatusUpdater.isContainerRecentlyStopped(cId));    
+    Assert.assertTrue((time2 - time1) >= 10000 && (time2 -time1) <= 250000);  
+  }                                                                           
+                                                                              
+
+  
   @Test
   public void testNMRegistration() throws InterruptedException {
     nm = new NodeManager() {
