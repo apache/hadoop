@@ -288,6 +288,9 @@ Release 2.1.1-beta - UNRELEASED
 
   BUG FIXES
 
+    HDFS-5028. LeaseRenewer throws ConcurrentModificationException when timeout.
+    (zhaoyunjiong via szetszwo)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
