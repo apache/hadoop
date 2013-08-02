@@ -30,6 +30,8 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-5419. TestSlive is getting FileNotFound Exception (Robert Parker
     via jlowe)
 
+    MAPREDUCE-5440. TestCopyCommitter Fails on JDK7 (Robert Parker via jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
