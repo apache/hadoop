@@ -114,6 +114,9 @@ Release 1.3.0 - unreleased
     HADOOP-9801. Configuration#writeXml uses platform defaulting encoding, which
     may mishandle multi-byte characters. (cnauroth)
 
+    HDFS-5028. LeaseRenewer throws ConcurrentModificationException when timeout.
+    (zhaoyunjiong via szetszwo)
+
 Release 1.2.1 - 2013.07.06
 
   INCOMPATIBLE CHANGES
