@@ -39,6 +39,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9806 PortmapInterface should check if the procedure is out-of-range
     (brandonli)
 
+    HADOOP-9761.  ViewFileSystem#rename fails when using DistributedFileSystem.
+    (Andrew Wang via Colin Patrick McCabe)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
