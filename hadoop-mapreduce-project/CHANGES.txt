@@ -206,6 +206,8 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
     input path dir (Devaraj K via jlowe)
 
+    MAPREDUCE-5440. TestCopyCommitter Fails on JDK7 (Robert Parker via jlowe)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
@@ -1272,6 +1274,8 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5419. TestSlive is getting FileNotFound Exception (Robert Parker
     via jlowe)
+
+    MAPREDUCE-5440. TestCopyCommitter Fails on JDK7 (Robert Parker via jlowe)
 
 Release 0.23.9 - 2013-07-08
 
