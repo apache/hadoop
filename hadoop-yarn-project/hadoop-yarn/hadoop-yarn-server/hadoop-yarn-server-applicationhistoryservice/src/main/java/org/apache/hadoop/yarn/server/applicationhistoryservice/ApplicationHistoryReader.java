@@ -94,4 +94,16 @@ public interface ApplicationHistoryReader {
    */
   ContainerHistoryData getAMContainer(ApplicationAttemptId appAttemptId)
       throws IOException;
+  
+  /**
+   * This method returns Map{@link ContainerId,@link ContainerHistoryData} for
+   * specified {@link ApplicationAttemptId}.
+   * 
+   * @param {@link ApplicationAttemptId}
+   * @return Map{@link ContainerId, @link ContainerHistoryData} for
+   *         ApplicationAttemptId
+   * @throws {@link IOException}
+   */
+  Map<ContainerId, ContainerHistoryData> getContainers(
+      ApplicationAttemptId appAttemptId) throws IOException;
 }

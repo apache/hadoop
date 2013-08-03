@@ -161,4 +161,17 @@ public class MemoryApplicationHistoryStore implements ApplicationHistoryStore {
       }
     }
   }
+
+  @Override
+  public Map<ContainerId, ContainerHistoryData> getContainers(
+      ApplicationAttemptId appAttemptId) throws IOException {
+    HashMap<ContainerId, ContainerHistoryData> containers =
+        new HashMap<ContainerId, ContainerHistoryData>();
+    for (ContainerId container : containerData.keySet()) {
+      if (container.getApplicationAttemptId().equals(appAttemptId)) {
+        containers.put(container, containerData.get(container));
+      }
+    }
+    return containers;
+  }
 }

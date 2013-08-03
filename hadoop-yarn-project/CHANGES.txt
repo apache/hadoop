@@ -51,6 +51,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-956. Added a testable in-memory HistoryStorage. (Mayank Bansal via
   vinodkv)
 
+  YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
+  devaraj)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
