@@ -57,6 +57,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-903. Changed ContainerManager to suppress unnecessary warnings when
     stopping already stopped containers. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-906. Fixed a bug in NodeManager where cancelling ContainerLaunch at
+    KILLING state causes that the container to hang. (Zhijie Shen via vinodkv)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
