@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -319,7 +320,7 @@ public class TestNMClient {
       if (++i < size) {
         // NodeManager may still need some time to make the container started
         testGetContainerStatus(container, i, ContainerState.RUNNING, "",
-            -1000);
+            Arrays.asList(new Integer[] {-1000}));
 
         try {
           nmClient.stopContainer(container.getId(), container.getNodeId());
@@ -330,8 +331,21 @@ public class TestNMClient {
         }
 
         // getContainerStatus can be called after stopContainer
-        testGetContainerStatus(container, i, ContainerState.COMPLETE,
-            "Container killed by the ApplicationMaster.", 143);
+        try {
+          // O is possible if CLEANUP_CONTAINER is executed too late
+          testGetContainerStatus(container, i, ContainerState.COMPLETE,
+              "Container killed by the ApplicationMaster.", Arrays.asList(
+                  new Integer[] {143, 0}));
+        } catch (YarnException e) {
+          // The exception is possible because, after the container is stopped,
+          // it may be removed from NM's context.
+          if (!e.getMessage()
+                .contains("was recently stopped on node manager")) {
+            throw (AssertionError)
+              (new AssertionError("Exception is not expected: " + e).initCause(
+                e));
+          }
+        }
       }
     }
   }
@@ -345,7 +359,7 @@ public class TestNMClient {
   }
 
   private void testGetContainerStatus(Container container, int index,
-      ContainerState state, String diagnostics, int exitStatus)
+      ContainerState state, String diagnostics, List<Integer> exitStatuses)
           throws YarnException, IOException {
     while (true) {
       try {
@@ -357,7 +371,7 @@ public class TestNMClient {
           assertEquals(container.getId(), status.getContainerId());
           assertTrue("" + index + ": " + status.getDiagnostics(),
               status.getDiagnostics().contains(diagnostics));
-          assertEquals(exitStatus, status.getExitStatus());
+          assertTrue(exitStatuses.contains(status.getExitStatus()));
           break;
         }
         Thread.sleep(100);

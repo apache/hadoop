@@ -18,9 +18,10 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -42,11 +43,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -60,10 +66,13 @@ import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
@@ -287,7 +296,8 @@ public class TestContainer {
       wc.launchContainer();
       reset(wc.localizerBus);
       wc.killContainer();
-      assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      assertEquals(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
+          wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       wc.containerKilledOnRequest();
       
@@ -310,6 +320,26 @@ public class TestContainer {
       assertNull(wc.c.getLocalizedResources());
       wc.killContainer();
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
+      verifyCleanupCall(wc);
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
+  @Test
+  public void testKillOnLocalized() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      wc.killContainer();
+      assertEquals(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
+          wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
     } finally {
@@ -442,10 +472,12 @@ public class TestContainer {
       wc.initContainer();
       wc.localizeResources();
       wc.killContainer();
-      assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      assertEquals(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
+          wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       wc.launchContainer();
-      assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      assertEquals(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
+          wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       wc.containerKilledOnRequest();
       verifyCleanupCall(wc);
@@ -583,6 +615,7 @@ public class TestContainer {
     final EventHandler<AuxServicesEvent> auxBus;
     final EventHandler<ApplicationEvent> appBus;
     final EventHandler<LogHandlerEvent> LogBus;
+    final ContainersLauncher launcher;
 
     final ContainerLaunchContext ctxt;
     final ContainerId cId;
@@ -595,6 +628,7 @@ public class TestContainer {
       this(appId, timestamp, id, user, true, false);
     }
 
+    @SuppressWarnings("rawtypes")
     WrappedContainer(int appId, long timestamp, int id, String user,
         boolean withLocalRes, boolean withServiceData) throws IOException {
       dispatcher = new DrainDispatcher();
@@ -612,6 +646,22 @@ public class TestContainer {
       dispatcher.register(AuxServicesEventType.class, auxBus);
       dispatcher.register(ApplicationEventType.class, appBus);
       dispatcher.register(LogHandlerEventType.class, LogBus);
+
+      Context context = mock(Context.class);
+      when(context.getApplications()).thenReturn(
+          new ConcurrentHashMap<ApplicationId, Application>());
+      launcher = new ContainersLauncher(context, dispatcher, null, null);
+      // create a mock ExecutorService, which will not really launch
+      // ContainerLaunch at all.
+      launcher.containerLauncher = mock(ExecutorService.class);
+      Future future = mock(Future.class);
+      when(launcher.containerLauncher.submit
+          (any(Callable.class))).thenReturn(future);
+      when(future.isDone()).thenReturn(false);
+      when(future.cancel(false)).thenReturn(true);
+      launcher.init(new Configuration());
+      launcher.start();
+      dispatcher.register(ContainersLauncherEventType.class, launcher);
 
       ctxt = mock(ContainerLaunchContext.class);
       org.apache.hadoop.yarn.api.records.Container mockContainer =
@@ -654,6 +704,13 @@ public class TestContainer {
       when(ctxt.getServiceData()).thenReturn(serviceData);
 
       c = new ContainerImpl(conf, dispatcher, ctxt, null, metrics, identifier);
+      dispatcher.register(ContainerEventType.class,
+          new EventHandler<ContainerEvent>() {
+            @Override
+            public void handle(ContainerEvent event) {
+                c.handle(event);
+            }
+      });
       dispatcher.start();
     }
 
