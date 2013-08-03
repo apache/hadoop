@@ -277,6 +277,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
       String appMessage, String appTrackingUrl) throws YarnException,
       IOException {
+    Preconditions.checkArgument(appStatus != null,
+        "AppStatus should not be null.");
     FinishApplicationMasterRequest request =
         FinishApplicationMasterRequest.newInstance(appStatus, appMessage,
           appTrackingUrl);
