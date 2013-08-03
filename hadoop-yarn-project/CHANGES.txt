@@ -60,6 +60,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-906. Fixed a bug in NodeManager where cancelling ContainerLaunch at
     KILLING state causes that the container to hang. (Zhijie Shen via vinodkv)
 
+    YARN-994. HeartBeat thread in AMRMClientAsync does not handle runtime
+    exception correctly (Xuan Gong via bikas)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
