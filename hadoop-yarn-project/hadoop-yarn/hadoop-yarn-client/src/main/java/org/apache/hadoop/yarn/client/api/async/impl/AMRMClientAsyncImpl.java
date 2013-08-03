@@ -65,7 +65,7 @@ extends AMRMClientAsync<T> {
   private volatile boolean keepRunning;
   private volatile float progress;
   
-  private volatile Exception savedException;
+  private volatile Throwable savedException;
   
   public AMRMClientAsyncImpl(int intervalMs, CallbackHandler callbackHandler) {
     this(new AMRMClientImpl<T>(), intervalMs, callbackHandler);
@@ -222,15 +222,9 @@ extends AMRMClientAsync<T> {
             
           try {
             response = client.allocate(progress);
-          } catch (YarnException ex) {
-            LOG.error("Yarn exception on heartbeat", ex);
+          } catch (Throwable ex) {
+            LOG.error("Exception on heartbeat", ex);
             savedException = ex;
-            // interrupt handler thread in case it waiting on the queue
-            handlerThread.interrupt();
-            return;
-          } catch (IOException e) {
-            LOG.error("IO exception on heartbeat", e);
-            savedException = e;
             // interrupt handler thread in case it waiting on the queue
             handlerThread.interrupt();
             return;
