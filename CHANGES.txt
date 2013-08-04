@@ -39,7 +39,7 @@ Release 1.2.1 - 2013.07.15
     DataNode.checkDiskError calls. (Chris Nauroth via kihwal)
 
     HDFS-4261. Fix bugs in Balaner causing infinite loop and
-    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
+    TestBalancerWithNodeGroup timing out.  (Junping Du via szetszwo)
 
     MAPREDUCE-5260. Fix JvmManager to deal better with corner-cases in
     shutting down. (zhaoyunjiong via acmurthy) 
