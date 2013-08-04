@@ -117,7 +117,7 @@ Release 1.3.0 - unreleased
     HDFS-5028. LeaseRenewer throws ConcurrentModificationException when timeout.
     (zhaoyunjiong via szetszwo)
 
-Release 1.2.1 - 2013.07.06
+Release 1.2.1 - 2013.07.15
 
   INCOMPATIBLE CHANGES
 
@@ -127,6 +127,9 @@ Release 1.2.1 - 2013.07.06
 
     HDFS-4880. Print the image and edits file loaded by the namenode in the
     logs. (Arpit Agarwal via suresh)
+
+    MAPREDUCE-4838. Addendum patch to fix TestRumenJobTraces.
+    (Arun C Murthy)
 
   BUG FIXES
 
@@ -175,6 +178,9 @@ Release 1.2.1 - 2013.07.06
     MAPREDUCE-5368. Reduce memory footprint of JobTracker by using non-default
     values for hash-tables to store Locality and Avataar for TaskAttempts.
     (zhaoyunjiong via acmurthy)
+
+    HADOOP-9730. Fix hadoop.spec to add task-log4j.properties. (Giridharan Kesavan
+    via mattf)
 
 Release 1.2.0 - 2013.05.05
 
