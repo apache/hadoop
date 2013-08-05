@@ -18,8 +18,6 @@ Release 2.3.0 - UNRELEASED
 
   NEW FEATURES
 
-    HDFS-4962 Use enum for nfs constants (Nicholas SZE via jing9)
-
   IMPROVEMENTS
 
     HDFS-4657.  Limit the number of blocks logged by the NN after a block
@@ -44,14 +42,13 @@ Release 2.3.0 - UNRELEASED
     HDFS-5035.  getFileLinkStatus and rename do not correctly check permissions
     of symlinks.  (Andrew Wang via Colin Patrick McCabe)
 
-    HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
-    instead of 0 to avoid confusing applications. (brandonli)
-
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+    HDFS-4962 Use enum for nfs constants (Nicholas SZE via jing9)
 
   IMPROVEMENTS
 
@@ -67,6 +64,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5028. LeaseRenewer throws ConcurrentModificationException when timeout.
     (zhaoyunjiong via szetszwo)
+
+    HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
+    instead of 0 to avoid confusing applications. (brandonli)
 
 Release 2.1.0-beta - 2013-08-06
 
