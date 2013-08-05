@@ -67,6 +67,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.util.ProtoUtil;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 /**
  * A utility class that encapsulates SASL logic for RPC client
@@ -104,6 +105,12 @@ public class SaslRpcClient {
     this.protocol = protocol;
     this.serverAddr = serverAddr;
     this.conf = conf;
+  }
+  
+  @VisibleForTesting
+  @InterfaceAudience.Private
+  public Object getNegotiatedProperty(String key) {
+    return (saslClient != null) ? saslClient.getNegotiatedProperty(key) : null;
   }
   
   /**

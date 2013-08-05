@@ -29,6 +29,7 @@ import java.lang.annotation.Annotation;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.security.Security;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -43,8 +44,6 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
-
-import junit.framework.Assert;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -62,11 +61,11 @@ import org.apache.hadoop.security.SaslPlainServer;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
+import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.TestUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
@@ -77,9 +76,28 @@ import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /** Unit tests for using Sasl over RPC. */
+@RunWith(Parameterized.class)
 public class TestSaslRPC {
+  @Parameters
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    for (QualityOfProtection qop : QualityOfProtection.values()) {
+      params.add(new Object[]{ qop });
+    }
+    return params;
+  }
+
+  QualityOfProtection expectedQop;
+  
+  public TestSaslRPC(QualityOfProtection qop) {
+    expectedQop = qop;
+  }
+  
   private static final String ADDRESS = "0.0.0.0";
 
   public static final Log LOG =
@@ -115,8 +133,12 @@ public class TestSaslRPC {
 
   @Before
   public void setup() {
+    LOG.info("---------------------------------");
+    LOG.info("Testing QOP:"+expectedQop);
+    LOG.info("---------------------------------");
     conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, KERBEROS.toString());
+    conf.set("hadoop.rpc.protection", expectedQop.name().toLowerCase());
     UserGroupInformation.setConfiguration(conf);
     enableSecretManager = null;
     forceSecretManager = null;
@@ -226,15 +248,16 @@ public class TestSaslRPC {
       serverPrincipal = SERVER_PRINCIPAL_KEY)
   @TokenInfo(TestTokenSelector.class)
   public interface TestSaslProtocol extends TestRPC.TestProtocol {
-    public AuthenticationMethod getAuthMethod() throws IOException;
+    public AuthMethod getAuthMethod() throws IOException;
     public String getAuthUser() throws IOException;
   }
   
   public static class TestSaslImpl extends TestRPC.TestImpl implements
       TestSaslProtocol {
     @Override
-    public AuthenticationMethod getAuthMethod() throws IOException {
-      return UserGroupInformation.getCurrentUser().getAuthenticationMethod();
+    public AuthMethod getAuthMethod() throws IOException {
+      return UserGroupInformation.getCurrentUser()
+          .getAuthenticationMethod().getAuthMethod();
     }
     @Override
     public String getAuthUser() throws IOException {
@@ -341,8 +364,11 @@ public class TestSaslRPC {
     try {
       proxy = RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, conf);
+      AuthMethod authMethod = proxy.getAuthMethod();
+      assertEquals(TOKEN, authMethod);
       //QOP must be auth
-      Assert.assertEquals(SaslRpcServer.SASL_PROPS.get(Sasl.QOP), "auth");
+      assertEquals(expectedQop.saslQop,
+                   RPC.getConnectionIdForProxy(proxy).getSaslQop());            
       proxy.ping();
     } finally {
       server.stop();
@@ -393,6 +419,7 @@ public class TestSaslRPC {
     newConf.set(CommonConfigurationKeysPublic.
         HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY, "");
 
+    Client client = null;
     TestSaslProtocol proxy1 = null;
     TestSaslProtocol proxy2 = null;
     TestSaslProtocol proxy3 = null;
@@ -402,7 +429,7 @@ public class TestSaslRPC {
       proxy1 = RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, newConf);
       proxy1.getAuthMethod();
-      Client client = WritableRpcEngine.getClient(conf);
+      client = WritableRpcEngine.getClient(newConf);
       Set<ConnectionId> conns = client.getConnectionIds();
       assertEquals("number of connections in cache is wrong", 1, conns.size());
       // same conf, connection should be re-used
@@ -428,9 +455,13 @@ public class TestSaslRPC {
       assertNotSame(connsArray[2].getMaxIdleTime(), timeouts[1]);
     } finally {
       server.stop();
-      RPC.stopProxy(proxy1);
-      RPC.stopProxy(proxy2);
-      RPC.stopProxy(proxy3);
+      // this is dirty, but clear out connection cache for next run
+      if (client != null) {
+        client.getConnectionIds().clear();
+      }
+      if (proxy1 != null) RPC.stopProxy(proxy1);
+      if (proxy2 != null) RPC.stopProxy(proxy2);
+      if (proxy3 != null) RPC.stopProxy(proxy3);
     }
   }
   
@@ -873,14 +904,13 @@ public class TestSaslRPC {
                 TestSaslProtocol.versionID, addr, clientConf);
             
             proxy.ping();
-            // verify sasl completed
-            if (serverAuth != SIMPLE) {
-              assertEquals(SaslRpcServer.SASL_PROPS.get(Sasl.QOP), "auth");
-            }
-            
             // make sure the other side thinks we are who we said we are!!!
             assertEquals(clientUgi.getUserName(), proxy.getAuthUser());
-            return proxy.getAuthMethod().toString();
+            AuthMethod authMethod = proxy.getAuthMethod();
+            // verify sasl completed with correct QOP
+            assertEquals((authMethod != SIMPLE) ? expectedQop.saslQop : null,
+                         RPC.getConnectionIdForProxy(proxy).getSaslQop());            
+            return authMethod.toString();
           } finally {
             if (proxy != null) {
               RPC.stopProxy(proxy);
