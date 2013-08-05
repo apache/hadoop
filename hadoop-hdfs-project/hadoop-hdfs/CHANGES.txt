@@ -10,8 +10,6 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-4962 Use enum for nfs constants (Nicholas SZE via jing9)
-
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -237,9 +235,6 @@ Trunk (Unreleased)
     HDFS-3934. duplicative dfs_hosts entries handled wrong. (Colin Patrick
     McCabe)
 
-    HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
-    instead of 0 to avoid confusing applications. (brandonli)
-
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -273,6 +268,8 @@ Release 2.1.1-beta - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-4962 Use enum for nfs constants (Nicholas SZE via jing9)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
@@ -287,6 +284,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5028. LeaseRenewer throws ConcurrentModificationException when timeout.
     (zhaoyunjiong via szetszwo)
+
+    HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
+    instead of 0 to avoid confusing applications. (brandonli)
 
 Release 2.1.0-beta - 2013-08-06
 

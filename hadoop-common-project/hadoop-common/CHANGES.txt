@@ -269,9 +269,6 @@ Trunk (Unreleased)
     HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
     (Chris Nauroth via sanjay)
 
-    HADOOP-9806 PortmapInterface should check if the procedure is out-of-range
-    (brandonli)
-
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -338,6 +335,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9801. Configuration#writeXml uses platform defaulting encoding, which
     may mishandle multi-byte characters. (cnauroth)
+
+    HADOOP-9806 PortmapInterface should check if the procedure is out-of-range
+    (brandonli)
 
 Release 2.1.0-beta - 2013-08-06
 
