@@ -45,6 +45,27 @@ bin/hadoop fs <args>
    Differences are described with each of the commands. Error information is
    sent to stderr and the output is sent to stdout.
 
+appendToFile
+
+      Usage: <<<hdfs dfs -appendToFile <localsrc> ... <dst> >>>
+
+      Append single src, or multiple srcs from local file system to the
+      destination file system. Also reads input from stdin and appends to
+      destination file system.
+
+        * <<<hdfs dfs -appendToFile localfile /user/hadoop/hadoopfile>>>
+
+        * <<<hdfs dfs -appendToFile localfile1 localfile2 /user/hadoop/hadoopfile>>>
+
+        * <<<hdfs dfs -appendToFile localfile hdfs://nn.example.com/hadoop/hadoopfile>>>
+
+        * <<<hdfs dfs -appendToFile - hdfs://nn.example.com/hadoop/hadoopfile>>>
+          Reads the input from stdin.
+
+      Exit Code:
+
+      Returns 0 on success and 1 on error.
+
 cat
 
    Usage: <<<hdfs dfs -cat URI [URI ...]>>>
@@ -76,7 +97,7 @@ chmod
 
    Change the permissions of files. With -R, make the change recursively
    through the directory structure. The user must be the owner of the file, or
-   else a super-user. Additional information is in the 
+   else a super-user. Additional information is in the
    {{{betterurl}Permissions Guide}}.
 
 chown
