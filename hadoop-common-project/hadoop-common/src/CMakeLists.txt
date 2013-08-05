@@ -170,6 +170,7 @@ add_dual_library(hadoop
     ${D}/io/compress/lz4/Lz4Compressor.c
     ${D}/io/compress/lz4/Lz4Decompressor.c
     ${D}/io/compress/lz4/lz4.c
+    ${D}/io/compress/lz4/lz4hc.c
     ${SNAPPY_SOURCE_FILES}
     ${D}/io/compress/zlib/ZlibCompressor.c
     ${D}/io/compress/zlib/ZlibDecompressor.c
