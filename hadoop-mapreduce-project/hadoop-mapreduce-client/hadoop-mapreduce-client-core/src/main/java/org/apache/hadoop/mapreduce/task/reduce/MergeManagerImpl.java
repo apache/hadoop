@@ -613,7 +613,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       fullSize -= size;
       Reader<K,V> reader = new InMemoryReader<K,V>(MergeManagerImpl.this, 
                                                    mo.getMapId(),
-                                                   data, 0, (int)size);
+                                                   data, 0, (int)size, jobConf);
       inMemorySegments.add(new Segment<K,V>(reader, true, 
                                             (mo.isPrimaryMapOutput() ? 
                                             mergedMapOutputsCounter : null)));
