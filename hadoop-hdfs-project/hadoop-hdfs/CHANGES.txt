@@ -25,6 +25,9 @@ Release 0.23.10 - UNRELEASED
     HDFS-4943. WebHdfsFileSystem does not work when original file path has
     encoded chars. (Jerry He and Robert Parker via kihwal)
 
+    HDFS-5028. LeaseRenewer throws ConcurrentModificationException when timeout.
+    (zhaoyunjiong via szetszwo)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
