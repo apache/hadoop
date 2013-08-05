@@ -774,7 +774,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (auditLoggers.isEmpty()) {
       auditLoggers.add(new DefaultAuditLogger());
     }
-    return auditLoggers;
+    return Collections.unmodifiableList(auditLoggers);
   }
 
   void loadFSImage(StartupOption startOpt, FSImage fsImage, boolean haEnabled)

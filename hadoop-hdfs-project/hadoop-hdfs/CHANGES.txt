@@ -284,6 +284,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
     contain additional properties.  (szetszwo)
 
+    HDFS-5061. Make FSNameSystem#auditLoggers an unmodifiable list. 
+    (Arpit Agarwal via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
