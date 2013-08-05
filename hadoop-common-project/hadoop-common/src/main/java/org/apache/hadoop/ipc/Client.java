@@ -50,6 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.net.SocketFactory;
+import javax.security.sasl.Sasl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -85,6 +86,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.CodedOutputStream;
@@ -656,6 +658,9 @@ public class Client {
               // Sasl connect is successful. Let's set up Sasl i/o streams.
               inStream = saslRpcClient.getInputStream(inStream);
               outStream = saslRpcClient.getOutputStream(outStream);
+              // for testing
+              remoteId.saslQop =
+                  (String)saslRpcClient.getNegotiatedProperty(Sasl.QOP);
             } else if (UserGroupInformation.isSecurityEnabled() &&
                        !fallbackAllowed) {
               throw new IOException("Server asks us to fall back to SIMPLE " +
@@ -1396,6 +1401,7 @@ public class Client {
     private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
     private final boolean doPing; //do we need to send ping message
     private final int pingInterval; // how often sends ping to the server in msecs
+    private String saslQop; // here for testing
     
     ConnectionId(InetSocketAddress address, Class<?> protocol, 
                  UserGroupInformation ticket, int rpcTimeout, int maxIdleTime, 
@@ -1448,6 +1454,11 @@ public class Client {
     
     int getPingInterval() {
       return pingInterval;
+    }
+    
+    @VisibleForTesting
+    String getSaslQop() {
+      return saslQop;
     }
     
     static ConnectionId getConnectionId(InetSocketAddress addr,
