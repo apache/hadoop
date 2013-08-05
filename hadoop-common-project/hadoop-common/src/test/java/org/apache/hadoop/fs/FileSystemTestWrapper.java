@@ -397,4 +397,10 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
       FileNotFoundException, UnsupportedFileSystemException, IOException {
     return fs.listStatus(f);
   }
+
+  @Override
+  public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+      throws IOException {
+    return fs.globStatus(pathPattern, filter);
+  }
 }
