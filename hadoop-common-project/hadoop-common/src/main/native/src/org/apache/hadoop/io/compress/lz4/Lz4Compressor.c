@@ -23,21 +23,9 @@
 #ifdef UNIX
 #include "config.h"
 #endif // UNIX
+#include "lz4.h"
+#include "lz4hc.h"
 
-//****************************
-// Simple Functions
-//****************************
-
-extern int LZ4_compress   (const char* source, char* dest, int isize);
-
-/*
-LZ4_compress() :
- return : the number of bytes in compressed buffer dest
- note : destination buffer must be already allocated.
-  To avoid any problem, size it to handle worst cases situations (input data not compressible)
-  Worst case size is : "inputsize + 0.4%", with "0.4%" being at least 8 bytes.
-
-*/
 
 static jfieldID Lz4Compressor_clazz;
 static jfieldID Lz4Compressor_uncompressedDirectBuf;
@@ -107,5 +95,45 @@ JNIEXPORT jstring JNICALL
 Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_getLibraryName(
  JNIEnv *env, jclass class
  ) {
-  return (*env)->NewStringUTF(env, "revision:43");
+  return (*env)->NewStringUTF(env, "revision:99");
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_compressBytesDirectHC
+(JNIEnv *env, jobject thisj){
+  const char* uncompressed_bytes = NULL;
+  char* compressed_bytes = NULL;
+
+  // Get members of Lz4Compressor
+  jobject clazz = (*env)->GetStaticObjectField(env, thisj, Lz4Compressor_clazz);
+  jobject uncompressed_direct_buf = (*env)->GetObjectField(env, thisj, Lz4Compressor_uncompressedDirectBuf);
+  jint uncompressed_direct_buf_len = (*env)->GetIntField(env, thisj, Lz4Compressor_uncompressedDirectBufLen);
+  jobject compressed_direct_buf = (*env)->GetObjectField(env, thisj, Lz4Compressor_compressedDirectBuf);
+  jint compressed_direct_buf_len = (*env)->GetIntField(env, thisj, Lz4Compressor_directBufferSize);
+
+  // Get the input direct buffer
+  LOCK_CLASS(env, clazz, "Lz4Compressor");
+  uncompressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
+  UNLOCK_CLASS(env, clazz, "Lz4Compressor");
+
+  if (uncompressed_bytes == 0) {
+    return (jint)0;
+  }
+
+  // Get the output direct buffer
+  LOCK_CLASS(env, clazz, "Lz4Compressor");
+  compressed_bytes = (char *)(*env)->GetDirectBufferAddress(env, compressed_direct_buf);
+  UNLOCK_CLASS(env, clazz, "Lz4Compressor");
+
+  if (compressed_bytes == 0) {
+    return (jint)0;
+  }
+
+  compressed_direct_buf_len = LZ4_compressHC(uncompressed_bytes, compressed_bytes, uncompressed_direct_buf_len);
+  if (compressed_direct_buf_len < 0){
+    THROW(env, "java/lang/InternalError", "LZ4_compressHC failed");
+  }
+
+  (*env)->SetIntField(env, thisj, Lz4Compressor_uncompressedDirectBufLen, 0);
+
+  return (jint)compressed_direct_buf_len;
 }

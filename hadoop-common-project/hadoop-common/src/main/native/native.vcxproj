@@ -72,6 +72,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\lz4.c" />
+    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\lz4hc.c" />
     <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Compressor.c" />
     <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Decompressor.c" />
     <ClCompile Include="src\org\apache\hadoop\io\nativeio\file_descriptor.c" />

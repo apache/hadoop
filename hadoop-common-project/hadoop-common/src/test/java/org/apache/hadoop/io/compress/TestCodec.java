@@ -134,6 +134,14 @@ public class TestCodec {
   public void testLz4Codec() throws IOException {
     if (NativeCodeLoader.isNativeCodeLoaded()) {
       if (Lz4Codec.isNativeCodeLoaded()) {
+        conf.setBoolean(
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
+            false);
+        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
+        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
+        conf.setBoolean(
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
+            true);
         codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
         codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
       } else {

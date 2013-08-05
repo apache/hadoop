@@ -52,6 +52,7 @@ public class Lz4Compressor implements Compressor {
   private long bytesRead = 0L;
   private long bytesWritten = 0L;
 
+  private final boolean useLz4HC;
 
   static {
     if (NativeCodeLoader.isNativeCodeLoaded()) {
@@ -72,13 +73,25 @@ public class Lz4Compressor implements Compressor {
    * Creates a new compressor.
    *
    * @param directBufferSize size of the direct buffer to be used.
+   * @param useLz4HC use high compression ratio version of lz4, 
+   *                 which trades CPU for compression ratio.
    */
-  public Lz4Compressor(int directBufferSize) {
+  public Lz4Compressor(int directBufferSize, boolean useLz4HC) {
+    this.useLz4HC = useLz4HC;
     this.directBufferSize = directBufferSize;
 
     uncompressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
     compressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
     compressedDirectBuf.position(directBufferSize);
+  }
+
+  /**
+   * Creates a new compressor.
+   *
+   * @param directBufferSize size of the direct buffer to be used.
+   */
+  public Lz4Compressor(int directBufferSize) {
+    this(directBufferSize, false);
   }
 
   /**
@@ -227,7 +240,7 @@ public class Lz4Compressor implements Compressor {
     }
 
     // Compress data
-    n = compressBytesDirect();
+    n = useLz4HC ? compressBytesDirectHC() : compressBytesDirect();
     compressedDirectBuf.limit(n);
     uncompressedDirectBuf.clear(); // lz4 consumes all buffer input
 
@@ -296,6 +309,8 @@ public class Lz4Compressor implements Compressor {
   private native static void initIDs();
 
   private native int compressBytesDirect();
+
+  private native int compressBytesDirectHC();
 
   public native static String getLibraryName();
 }
