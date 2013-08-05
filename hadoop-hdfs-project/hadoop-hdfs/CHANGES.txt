@@ -262,6 +262,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5035.  getFileLinkStatus and rename do not correctly check permissions
     of symlinks.  (Andrew Wang via Colin Patrick McCabe)
 
+    HDFS-4366. Block Replication Policy Implementation May Skip Higher-Priority
+    Blocks for Lower-Priority Blocks (Derek Dagit via kihwal)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
