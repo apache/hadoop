@@ -36,9 +36,6 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
     (Ashwin Shankar via jlowe)
 
-    HADOOP-9806 PortmapInterface should check if the procedure is out-of-range
-    (brandonli)
-
     HADOOP-9761.  ViewFileSystem#rename fails when using DistributedFileSystem.
     (Andrew Wang via Colin Patrick McCabe)
 
@@ -65,6 +62,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9801. Configuration#writeXml uses platform defaulting encoding, which
     may mishandle multi-byte characters. (cnauroth)
+
+    HADOOP-9806 PortmapInterface should check if the procedure is out-of-range
+    (brandonli)
 
 Release 2.1.0-beta - 2013-08-06
 
