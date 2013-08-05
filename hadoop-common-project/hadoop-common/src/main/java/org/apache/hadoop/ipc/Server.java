@@ -1276,8 +1276,8 @@ public abstract class Server {
       }
     }
 
-    private RpcSaslProto saslReadAndProcess(DataInputStream dis) throws
-        WrappedRpcServerException, InterruptedException {
+    private void saslReadAndProcess(DataInputStream dis) throws
+        WrappedRpcServerException, IOException, InterruptedException {
       if (saslContextEstablished) {
         throw new WrappedRpcServerException(
             RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
@@ -1310,8 +1310,6 @@ public abstract class Server {
             LOG.debug("SASL server context established. Negotiated QoP is "
                 + saslServer.getNegotiatedProperty(Sasl.QOP));
           }
-          String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
-          useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
           user = getAuthorizedUgi(saslServer.getAuthorizationID());
           if (LOG.isDebugEnabled()) {
             LOG.debug("SASL server successfully authenticated client: " + user);
@@ -1326,7 +1324,15 @@ public abstract class Server {
         throw new WrappedRpcServerException(
             RpcErrorCodeProto.FATAL_UNAUTHORIZED, ioe);
       }
-      return saslResponse; 
+      // send back response if any, may throw IOException
+      if (saslResponse != null) {
+        doSaslReply(saslResponse);
+      }
+      // do NOT enable wrapping until the last auth response is sent
+      if (saslContextEstablished) {
+        String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
+        useWrap = (qop != null && !"auth".equalsIgnoreCase(qop));        
+      }
     }
     
     private RpcSaslProto processSaslMessage(DataInputStream dis)
@@ -1906,11 +1912,7 @@ public abstract class Server {
               RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
               "SASL protocol not requested by client");
         }
-        RpcSaslProto response = saslReadAndProcess(dis);
-        // send back response if any, may throw IOException
-        if (response != null) {
-          doSaslReply(response);
-        }
+        saslReadAndProcess(dis);
       } else {
         throw new WrappedRpcServerException(
             RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
