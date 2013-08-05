@@ -281,6 +281,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5061. Make FSNameSystem#auditLoggers an unmodifiable list. 
     (Arpit Agarwal via suresh)
 
+    HDFS-4905. Add appendToFile command to "hdfs dfs". (Arpit Agarwal via
+    cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
