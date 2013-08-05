@@ -8,6 +8,9 @@ Release 0.23.10 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-1031. JQuery UI components reference external css in branch-23
+    (jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
