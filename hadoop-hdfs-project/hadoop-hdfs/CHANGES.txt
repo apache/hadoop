@@ -10,10 +10,6 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-4659 Support setting execution bit for regular files (Brandon Li via sanjay)
-
-    HDFS-4762 Provide HDFS based NFSv3 and Mountd implementation (brandonli)
-
     HDFS-4962 Use enum for nfs constants (Nicholas SZE via jing9)
 
   IMPROVEMENTS
@@ -241,8 +237,6 @@ Trunk (Unreleased)
     HDFS-3934. duplicative dfs_hosts entries handled wrong. (Colin Patrick
     McCabe)
 
-    HDFS-4948. mvn site for hadoop-hdfs-nfs fails. (brandonli)
-
     HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
     instead of 0 to avoid confusing applications. (brandonli)
 
@@ -344,6 +338,10 @@ Release 2.1.0-beta - 2013-08-06
 
     HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
     (Junping Du via szetszwo)
+
+    HDFS-4659 Support setting execution bit for regular files (Brandon Li via sanjay)
+
+    HDFS-4762 Provide HDFS based NFSv3 and Mountd implementation (brandonli)
 
     HDFS-4372. Track NameNode startup progress. (cnauroth)
 
@@ -724,6 +722,8 @@ Release 2.1.0-beta - 2013-08-06
 
     HDFS-4943. WebHdfsFileSystem does not work when original file path has
     encoded chars.  (Jerry He via szetszwo)
+
+    HDFS-4948. mvn site for hadoop-hdfs-nfs fails. (brandonli)
 
     HDFS-4887. TestNNThroughputBenchmark exits abruptly. (kihwal)
 
