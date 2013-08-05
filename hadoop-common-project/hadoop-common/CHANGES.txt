@@ -41,6 +41,8 @@ Release 2.1.0-beta - 2013-08-06
 
     HADOOP-9698. [RPC v9] Client must honor server's SASL negotiate response (daryn)
 
+    HADOOP-9832. [RPC v9] Add RPC header to client ping (daryn)
+
   NEW FEATURES
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
