@@ -118,7 +118,9 @@ public class LocalJobRunner implements JobSubmissionProtocol {
 
       this.localFs = FileSystem.getLocal(conf);
 
-      this.localJobDir = localFs.makeQualified(conf.getLocalPath(jobDir));
+      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      this.localJobDir = localFs.makeQualified(new Path(
+          new Path(conf.getLocalPath(jobDir), user), jobid.toString()));
       this.localJobFile = new Path(this.localJobDir, id + ".xml");
 
       // Manage the distributed cache.  If there are files to be copied,
