@@ -510,6 +510,9 @@ Release 2.1.0-beta - 2013-08-06
     MAPREDUCE-5419. TestSlive is getting FileNotFound Exception (Robert Parker
     via jlowe)
 
+    MAPREDUCE-5399. Unnecessary Configuration instantiation in IFileInputStream
+    slows down merge. (Stanislav Barton via Sandy Ryza)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
