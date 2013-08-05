@@ -211,6 +211,9 @@ Release 2.1.1-beta - UNRELEASED
 
     MAPREDUCE-5440. TestCopyCommitter Fails on JDK7 (Robert Parker via jlowe)
 
+    MAPREDUCE-5367. Local jobs all use same local working directory
+    (Sandy Ryza)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
