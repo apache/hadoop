@@ -76,7 +76,12 @@ public class TestUserGroupInformation {
     javax.security.auth.login.Configuration.setConfiguration(
         new DummyLoginConfiguration());
   }
-  
+
+  @After
+  public void resetUgi() {
+    UserGroupInformation.setLoginUser(null);
+  }
+
   /** Test login method */
   @Test
   public void testLogin() throws Exception {
