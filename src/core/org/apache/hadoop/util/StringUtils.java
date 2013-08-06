@@ -539,7 +539,20 @@ public class StringUtils {
    */
   public static void startupShutdownMessage(Class<?> clazz, String[] args,
                                      final org.apache.commons.logging.Log LOG) {
-    final String hostname = getHostname();
+    startupShutdownMessage(clazz, getHostname(), args, LOG);
+  }
+
+  /**
+   * Print a log message for starting up and shutting down
+   * @param clazz the class of the server
+   * @param hostname the hostname that the server is listening on.
+   * @param args arguments
+   * @param LOG the target log object
+   */
+  public static void startupShutdownMessage(Class<?> clazz,
+                                            final String hostname,
+                                            String[] args,
+                                            final org.apache.commons.logging.Log LOG) {
     final String classname = clazz.getSimpleName();
     LOG.info(
         toStartupShutdownString("STARTUP_MSG: ", new String[] {

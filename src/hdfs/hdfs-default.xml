@@ -439,6 +439,15 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.namenode.master.name</name>
+  <description>
+    The hostname that the NameNode will bind to. This setting should be used
+    when the NameNode is multihomed to force the NameNode to bind to a
+    specific hostname or IP address.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.delegation.key.update-interval</name>
   <value>86400000</value>
   <description>The update interval for master key for delegation tokens 

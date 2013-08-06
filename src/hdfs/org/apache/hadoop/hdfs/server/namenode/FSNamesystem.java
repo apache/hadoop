@@ -467,9 +467,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       dnsToSwitchMapping.resolve(new ArrayList<String>(hostsReader.getHosts()));
     }
     
-    InetSocketAddress socAddr = NameNode.getAddress(conf);
-    this.nameNodeHostName = socAddr.getHostName();
-    
+    this.nameNodeHostName = NameNode.getNamenodeHostName(conf);
     registerWith(DefaultMetricsSystem.INSTANCE);
   }
 

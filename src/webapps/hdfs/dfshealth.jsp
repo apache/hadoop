@@ -32,6 +32,7 @@
   import="java.lang.Math"
   import="java.net.URLEncoder"
 %>
+<%@ page import="org.apache.hadoop.conf.Configuration" %>
 <%!
   JspHelper jspHelper = new JspHelper();
 
@@ -248,9 +249,10 @@
   }%>
 
 <%
-  NameNode nn = (NameNode)application.getAttribute("name.node");
-  FSNamesystem fsn = nn.getNamesystem();
-  String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameNodeAddress().getPort();
+    NameNode nn = (NameNode)application.getAttribute("name.node");
+    Configuration conf = (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
+    FSNamesystem fsn = nn.getNamesystem();
+    String namenodeLabel = nn.getNamenodeHostName(conf) + ":" + nn.getNameNodeAddress().getPort();
 %>
 
 <!DOCTYPE html>

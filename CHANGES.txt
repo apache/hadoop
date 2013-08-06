@@ -31,6 +31,9 @@ Release 1.3.0 - unreleased
 
     MAPREDUCE-5408. Backport MAPREDUCE-336 to branch-1. (acmurthy)
 
+    HDFS-4963. Improve multihoming support in namenode. (Arpit Agarwal via
+    cnauroth)
+
   BUG FIXES
 
     MAPREDUCE-5047. keep.failed.task.files=true causes job failure on 

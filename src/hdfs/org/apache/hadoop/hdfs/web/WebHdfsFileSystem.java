@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenRenewer;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
@@ -144,6 +145,7 @@ public class WebHdfsFileSystem extends FileSystem
   private final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
   private RetryPolicy retryPolicy = null;
   private Path workingDir;
+  private String masterHostName = null;
 
   {
     try {
@@ -172,8 +174,18 @@ public class WebHdfsFileSystem extends FileSystem
             );
     this.workingDir = getHomeDirectory();
 
+    masterHostName = conf.get(DFSConfigKeys.DFS_NAMENODE_MASTER_NAME);
+
     if (UserGroupInformation.isSecurityEnabled()) {
       initDelegationToken();
+    }
+  }
+
+  String getMasterHostName() {
+    if (masterHostName == null || masterHostName.isEmpty()) {
+      return nnAddr.getHostName();
+    } else {
+      return masterHostName;
     }
   }
 
@@ -214,7 +226,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public URI getUri() {
     try {
-      return new URI(SCHEME, null, nnAddr.getHostName(), nnAddr.getPort(),
+      return new URI(SCHEME, null, getMasterHostName(), nnAddr.getPort(),
           null, null, null);
     } catch (URISyntaxException e) {
       return null;
@@ -337,7 +349,7 @@ public class WebHdfsFileSystem extends FileSystem
    * @throws IOException on error constructing the URL
    */
   private URL getNamenodeURL(String path, String query) throws IOException {
-    final URL url = new URL("http", nnAddr.getHostName(),
+    final URL url = new URL("http", getMasterHostName(),
           nnAddr.getPort(), path + '?' + query);
     if (LOG.isTraceEnabled()) {
       LOG.trace("url=" + url);
@@ -903,7 +915,10 @@ public class WebHdfsFileSystem extends FileSystem
         final Token<?> token, final Configuration conf) throws IOException {
       
       final InetSocketAddress nnAddr = SecurityUtil.getTokenServiceAddr(token);
-      final URI uri = DFSUtil.createUri(WebHdfsFileSystem.SCHEME, nnAddr);
+      final URI uri = DFSUtil.createUri(
+          WebHdfsFileSystem.SCHEME,
+          NameNode.getNamenodeHostName(conf, nnAddr),
+          nnAddr.getPort());
       return (WebHdfsFileSystem)FileSystem.get(uri, conf);
     }
 

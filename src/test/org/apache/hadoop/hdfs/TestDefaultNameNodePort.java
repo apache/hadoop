@@ -59,9 +59,10 @@ public class TestDefaultNameNodePort {
   }
 
   public void testGetUri() {
-    assertEquals(NameNode.getUri(new InetSocketAddress("foo", 555)),
+    Configuration conf = new Configuration();
+    assertEquals(NameNode.getUri(conf, new InetSocketAddress("foo", 555)),
                  URI.create("hdfs://foo:555"));
-    assertEquals(NameNode.getUri(new InetSocketAddress("foo",
+    assertEquals(NameNode.getUri(conf, new InetSocketAddress("foo",
                                                        NameNode.DEFAULT_PORT)),
                  URI.create("hdfs://foo"));
   }

@@ -200,7 +200,32 @@ public class DelegationTokenFetcher {
                                             String renewer,
                                             Configuration conf
                                             ) throws IOException {
-    final String renewAddress = getRenewAddress(protocol, nnAddr, conf);
+    return getDTfromRemote(
+        protocol,
+        nnAddr.getHostName(),
+        nnAddr,
+        renewer,
+        conf);
+  }
+
+  /**
+   * Utility method to obtain a delegation token over http
+   * @param protocol whether to use http or https
+   * @param hostname the NameNode's hostname. This may be different from the
+   *                 hostname looked up via in the address if the namenode is
+   *                 multihomed.
+   * @param nnAddr the address for the NameNode
+   * @param renewer User that is renewing the ticket in such a request
+   * @param conf the configuration
+   */
+  static public Credentials getDTfromRemote(String protocol,
+                                            String hostname,
+                                            final InetSocketAddress nnAddr,
+                                            String renewer,
+                                            Configuration conf
+                                            ) throws IOException {
+    final String renewAddress =
+        getRenewAddress(protocol, hostname, nnAddr, conf);
     final boolean https = "https".equals(protocol);
 
     try {
@@ -252,6 +277,7 @@ public class DelegationTokenFetcher {
    * https and the NN's https port.
    */
   protected static String getRenewAddress(String protocol,
+                                          String hostname,
                                           InetSocketAddress addr,
                                           Configuration conf) {
     if (SecurityUtil.useKsslAuth() && "http".equals(protocol)) {
@@ -261,12 +287,15 @@ public class DelegationTokenFetcher {
                     DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
       addr = new InetSocketAddress(addr.getAddress(), port);
     }
-    return DFSUtil.createUri(protocol, addr).toString();
+    return DFSUtil.createUri(protocol, hostname, addr.getPort()).toString();
   }
 
   /**
    * Renew a Delegation Token.
    * @param protocol The protocol to renew over (http or https)
+   * @param hostname the NameNode's hostname. This may be different from the
+   *                 hostname looked up via in the address if the namenode is
+   *                 multihomed.
    * @param addr the address of the NameNode
    * @param tok the token to renew
    * @param conf the configuration
@@ -274,11 +303,13 @@ public class DelegationTokenFetcher {
    * @throws IOException
    */
   static public long renewDelegationToken(String protocol,
+                                          String hostname,
                                           InetSocketAddress addr,
                                           Token<DelegationTokenIdentifier> tok,
                                           Configuration conf
                                           ) throws IOException {
-    final String renewAddress = getRenewAddress(protocol, addr, conf);
+    final String renewAddress =
+        getRenewAddress(protocol, hostname, addr, conf);
     final StringBuilder buf = new StringBuilder(renewAddress);
     final String service = tok.getService().toString();
     buf.append(RenewDelegationTokenServlet.PATH_SPEC);
@@ -353,16 +384,20 @@ public class DelegationTokenFetcher {
   
   /**
    * Cancel a Delegation Token.
-   * @param nnAddr the NameNode's address
+   * @param hostname the NameNode's hostname. This may be different from the
+   *                 hostname looked up via in the address if the namenode is
+   *                 multihomed.
+   * @param addr the NameNode's address
    * @param tok the token to cancel
    * @throws IOException
    */
   static public void cancelDelegationToken(String protocol,
+                                           String hostname,
                                            InetSocketAddress addr,
                                            Token<DelegationTokenIdentifier> tok,
                                            Configuration conf
                                            ) throws IOException {
-    final String renewAddress = getRenewAddress(protocol, addr, conf);
+    final String renewAddress = getRenewAddress(protocol, hostname, addr, conf);
     StringBuilder buf = new StringBuilder(renewAddress);
     buf.append(CancelDelegationTokenServlet.PATH_SPEC);
     buf.append("?");

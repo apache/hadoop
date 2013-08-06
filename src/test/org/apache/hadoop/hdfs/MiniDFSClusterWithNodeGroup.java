@@ -83,7 +83,8 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
         InetSocketAddress nnAddr = nameNode.getNameNodeAddress(); 
         int nameNodePort = nnAddr.getPort(); 
         FileSystem.setDefaultUri(conf, 
-                                 "hdfs://"+ nnAddr.getHostName() +
+                                 "hdfs://" +
+                                 nameNode.getNamenodeHostName(conf, nnAddr) +
                                  ":" + Integer.toString(nameNodePort));
       }
     if (racks != null && numDataNodes > racks.length ) {

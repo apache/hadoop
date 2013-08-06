@@ -79,7 +79,7 @@ public class DistributedFileSystem extends FileSystem {
   /** @deprecated */
   public DistributedFileSystem(InetSocketAddress namenode,
     Configuration conf) throws IOException {
-    initialize(NameNode.getUri(namenode), conf);
+    initialize(NameNode.getUri(conf, namenode), conf);
   }
 
   /** @deprecated */

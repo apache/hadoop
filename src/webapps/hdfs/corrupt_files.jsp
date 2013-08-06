@@ -25,14 +25,17 @@
 	import="org.apache.hadoop.fs.Path"
 	import="java.util.Collection"
 	import="java.util.Arrays" %>
+<%@ page import="org.apache.hadoop.hdfs.server.namenode.NameNode" %>
+<%@ page import="org.apache.hadoop.hdfs.server.namenode.FSNamesystem" %>
+<%@ page import="org.apache.hadoop.hdfs.server.namenode.JspHelper" %>
+<%@ page import="org.apache.hadoop.conf.Configuration" %>
 <%!//for java.io.Serializable
   private static final long serialVersionUID = 1L;%>
 <%
   NameNode nn = (NameNode) application.getAttribute("name.node");
   FSNamesystem fsn = nn.getNamesystem();
-  // String namenodeRole = nn.getRole().toString();
-  String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":"
-      + nn.getNameNodeAddress().getPort();
+  Configuration conf = (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
+  String namenodeLabel = nn.getNamenodeHostName(conf) + ":" + nn.getNameNodeAddress().getPort();
   Collection<FSNamesystem.CorruptFileBlockInfo> corruptFileBlocks = 
 	fsn.listCorruptFileBlocks();
   int corruptFileCount = corruptFileBlocks.size();

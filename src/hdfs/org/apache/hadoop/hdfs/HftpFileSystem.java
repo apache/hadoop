@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenRenewer;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
@@ -84,6 +85,7 @@ public class HftpFileSystem extends FileSystem
   }
 
   public static final Text TOKEN_KIND = new Text("HFTP delegation");
+  private String masterHostName = null;
   
   protected UserGroupInformation ugi; 
   private boolean remoteIsInsecure = false;
@@ -136,7 +138,17 @@ public class HftpFileSystem extends FileSystem
     super.initialize(name, conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.nnAddr = getNamenodeAddr(name);
-    this.hftpURI = DFSUtil.createUri(name.getScheme(), nnAddr);
+    this.masterHostName = conf.get(DFSConfigKeys.DFS_NAMENODE_MASTER_NAME);
+    this.hftpURI = DFSUtil.createUri(
+        name.getScheme(), getMasterHostName(), nnAddr.getPort());
+  }
+
+  String getMasterHostName() {
+    if (masterHostName == null || masterHostName.isEmpty()) {
+      return nnAddr.getHostName();
+    } else {
+      return masterHostName;
+    }
   }
   
   protected void initDelegationToken() throws IOException {
@@ -281,7 +293,7 @@ public class HftpFileSystem extends FileSystem
     try {
       query = updateQuery(query);
       final URL url = new URI(getUnderlyingProtocol(), null, 
-			      nnAddr.getHostName(),
+			      getMasterHostName(),
 			      nnAddr.getPort(), path, query, null).toURL();
       if (LOG.isTraceEnabled()) {
         LOG.trace("url=" + url);
@@ -680,6 +692,7 @@ public class HftpFileSystem extends FileSystem
       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
       return DelegationTokenFetcher.
         renewDelegationToken(getUnderlyingProtocol(),
+                             NameNode.getNamenodeHostName(conf, serviceAddr),
                              serviceAddr,
                              (Token<DelegationTokenIdentifier>) token,
                              conf);
@@ -694,6 +707,7 @@ public class HftpFileSystem extends FileSystem
       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
       DelegationTokenFetcher.
         cancelDelegationToken(getUnderlyingProtocol(),
+                              NameNode.getNamenodeHostName(conf, serviceAddr),
                               serviceAddr,
                               (Token<DelegationTokenIdentifier>) token,
                               conf);
