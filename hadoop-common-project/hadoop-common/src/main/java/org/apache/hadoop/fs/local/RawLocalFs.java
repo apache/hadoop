@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.local;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -28,12 +29,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.DelegateToFileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.Shell;
 
 /**
  * The RawLocalFs implementation of AbstractFileSystem.
@@ -75,47 +76,29 @@ public class RawLocalFs extends DelegateToFileSystem {
   @Override
   public boolean supportsSymlinks() {
     return true;
-  }  
-  
+  }
+
   @Override
-  public void createSymlink(Path target, Path link, boolean createParent) 
+  public void createSymlink(Path target, Path link, boolean createParent)
       throws IOException {
     final String targetScheme = target.toUri().getScheme();
     if (targetScheme != null && !"file".equals(targetScheme)) {
       throw new IOException("Unable to create symlink to non-local file "+
-                            "system: "+target.toString());
+          "system: "+target.toString());
     }
+
     if (createParent) {
       mkdir(link.getParent(), FsPermission.getDirDefault(), true);
     }
+
     // NB: Use createSymbolicLink in java.nio.file.Path once available
-    try {
-      Shell.execCommand(Shell.getSymlinkCommand(
-        Path.getPathWithoutSchemeAndAuthority(target).toString(),
-        Path.getPathWithoutSchemeAndAuthority(link).toString()));
-    } catch (IOException x) {
-      throw new IOException("Unable to create symlink: "+x.getMessage());
+    int result = FileUtil.symLink(target.toString(), link.toString());
+    if (result != 0) {
+      throw new IOException("Error " + result + " creating symlink " +
+          link + " to " + target);
     }
   }
 
-  /** 
-   * Returns the target of the given symlink. Returns the empty string if  
-   * the given path does not refer to a symlink or there is an error 
-   * acessing the symlink.
-   */
-  private String readLink(Path p) {
-    /* NB: Use readSymbolicLink in java.nio.file.Path once available. Could
-     * use getCanonicalPath in File to get the target of the symlink but that 
-     * does not indicate if the given path refers to a symlink.
-     */
-    try {
-      final String path = p.toUri().getPath();
-      return Shell.execCommand(Shell.READ_LINK_COMMAND, path).trim(); 
-    } catch (IOException x) {
-      return "";
-    }
-  }
-  
   /**
    * Return a FileStatus representing the given path. If the path refers 
    * to a symlink return a FileStatus representing the link rather than
@@ -123,7 +106,7 @@ public class RawLocalFs extends DelegateToFileSystem {
    */
   @Override
   public FileStatus getFileLinkStatus(final Path f) throws IOException {
-    String target = readLink(f);
+    String target = FileUtil.readLink(new File(f.toString()));
     try {
       FileStatus fs = getFileStatus(f);
       // If f refers to a regular file or directory      

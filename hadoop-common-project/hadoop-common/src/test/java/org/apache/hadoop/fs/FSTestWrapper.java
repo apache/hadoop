@@ -71,7 +71,8 @@ public abstract class FSTestWrapper implements FSWrapper {
 
   public String getAbsoluteTestRootDir() throws IOException {
     if (absTestRootDir == null) {
-      if (testRootDir.startsWith("/")) {
+      Path testRootPath = new Path(testRootDir);
+      if (testRootPath.isAbsolute()) {
         absTestRootDir = testRootDir;
       } else {
         absTestRootDir = getWorkingDirectory().toString() + "/"

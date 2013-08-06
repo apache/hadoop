@@ -30,6 +30,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Shell;
 import org.junit.Test;
 
 /**
@@ -59,6 +60,16 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     } catch (URISyntaxException e) {
       return null;
     }
+  }
+
+  @Override
+  protected boolean emulatingSymlinksOnWindows() {
+    // Java 6 on Windows has very poor symlink support. Specifically
+    // Specifically File#length and File#renameTo do not work as expected.
+    // (see HADOOP-9061 for additional details)
+    // Hence some symlink tests will be skipped.
+    //
+    return (Shell.WINDOWS && !Shell.isJava7OrAbove());
   }
 
   @Override
@@ -171,6 +182,7 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
    * file scheme (eg file://host/tmp/test).
    */  
   public void testGetLinkStatusPartQualTarget() throws IOException {
+    assumeTrue(!emulatingSymlinksOnWindows());
     Path fileAbs  = new Path(testBaseDir1()+"/file");
     Path fileQual = new Path(testURI().toString(), fileAbs);
     Path dir      = new Path(testBaseDir1());
@@ -203,6 +215,16 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
       fail("Created a local fs link to a non-local fs");
     } catch (IOException x) {
       // Excpected.
+    }
+  }
+
+  /** Test create symlink to . */
+  @Override
+  public void testCreateLinkToDot() throws IOException {
+    try {
+      super.testCreateLinkToDot();
+    } catch (IllegalArgumentException iae) {
+      // Expected.
     }
   }
 }

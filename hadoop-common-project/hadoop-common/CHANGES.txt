@@ -74,6 +74,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9806 PortmapInterface should check if the procedure is out-of-range
     (brandonli)
 
+    HADOOP-9527. Add symlink support to LocalFileSystem on Windows.
+    (Arpit Agarwal via cnauroth)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
