@@ -331,6 +331,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9803. Add a generic type parameter to RetryInvocationHandler.
     (szetszwo)
 
+    HADOOP-9821. ClientId should have getMsb/getLsb methods. 
+    (Tsuyoshi OZAWA via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
