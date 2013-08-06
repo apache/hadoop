@@ -242,6 +242,7 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
         delService.delete(getUser(), getPathToDelete(rsrc.getLocalPath()));
       }
       decrementFileCountForLocalCacheDirectory(rem.getRequest(), rsrc);
+      LOG.info("Removed " + rsrc.getLocalPath() + " from localized cache");
       return true;
     }
   }
