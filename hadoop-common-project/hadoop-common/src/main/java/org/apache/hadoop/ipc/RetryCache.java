@@ -70,16 +70,8 @@ public class RetryCache {
           "Invalid clientId - length is " + clientId.length
               + " expected length " + ClientId.BYTE_LENGTH);
       // Convert UUID bytes to two longs
-      long tmp = 0;
-      for (int i=0; i<8; i++) {
-        tmp = (tmp << 8) | (clientId[i] & 0xff);
-      }
-      clientIdMsb = tmp;
-      tmp = 0;
-      for (int i=8; i<16; i++) {
-        tmp = (tmp << 8) | (clientId[i] & 0xff);
-      }
-      clientIdLsb = tmp;
+      clientIdMsb = ClientId.getMsb(clientId);
+      clientIdLsb = ClientId.getLsb(clientId);
       this.callId = callId;
       this.expirationTime = expirationTime;
     }
