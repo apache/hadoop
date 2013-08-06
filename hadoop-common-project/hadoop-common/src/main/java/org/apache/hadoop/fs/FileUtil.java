@@ -142,7 +142,28 @@ public class FileUtil {
     }
     return deleteImpl(dir, true);
   }
-  
+
+  /**
+   * Returns the target of the given symlink. Returns the empty string if
+   * the given path does not refer to a symlink or there is an error
+   * accessing the symlink.
+   * @param f File representing the symbolic link.
+   * @return The target of the symbolic link, empty string on error or if not
+   *         a symlink.
+   */
+  public static String readLink(File f) {
+    /* NB: Use readSymbolicLink in java.nio.file.Path once available. Could
+     * use getCanonicalPath in File to get the target of the symlink but that
+     * does not indicate if the given path refers to a symlink.
+     */
+    try {
+      return Shell.execCommand(
+          Shell.getReadlinkCommand(f.toString())).trim();
+    } catch (IOException x) {
+      return "";
+    }
+  }
+
   /*
    * Pure-Java implementation of "chmod +rwx f".
    */
@@ -737,15 +758,18 @@ public class FileUtil {
    * On Windows, when symlink creation fails due to security
    * setting, we will log a warning. The return code in this
    * case is 2.
+   *
    * @param target the target for symlink 
    * @param linkname the symlink
-   * @return value returned by the command
+   * @return 0 on success
    */
   public static int symLink(String target, String linkname) throws IOException{
     // Run the input paths through Java's File so that they are converted to the
     // native OS form
-    File targetFile = new File(target);
-    File linkFile = new File(linkname);
+    File targetFile = new File(
+        Path.getPathWithoutSchemeAndAuthority(new Path(target)).toString());
+    File linkFile = new File(
+        Path.getPathWithoutSchemeAndAuthority(new Path(linkname)).toString());
 
     // If not on Java7+, copy a file instead of creating a symlink since
     // Java6 has close to no support for symlinks on Windows. Specifically
@@ -757,9 +781,16 @@ public class FileUtil {
     // is symlinked under userlogs and userlogs are generated afterwards).
     if (Shell.WINDOWS && !Shell.isJava7OrAbove() && targetFile.isFile()) {
       try {
-        LOG.info("FileUtil#symlink: On Java6, copying file instead "
-            + linkname + " -> " + target);
-        org.apache.commons.io.FileUtils.copyFile(targetFile, linkFile);
+        LOG.warn("FileUtil#symlink: On Windows+Java6, copying file instead " +
+            "of creating a symlink. Copying " + target + " -> " + linkname);
+
+        if (!linkFile.getParentFile().exists()) {
+          LOG.warn("Parent directory " + linkFile.getParent() +
+              " does not exist.");
+          return 1;
+        } else {
+          org.apache.commons.io.FileUtils.copyFile(targetFile, linkFile);
+        }
       } catch (IOException ex) {
         LOG.warn("FileUtil#symlink failed to copy the file with error: "
             + ex.getMessage());
@@ -769,10 +800,23 @@ public class FileUtil {
       return 0;
     }
 
-    String[] cmd = Shell.getSymlinkCommand(targetFile.getPath(),
-        linkFile.getPath());
-    ShellCommandExecutor shExec = new ShellCommandExecutor(cmd);
+    String[] cmd = Shell.getSymlinkCommand(
+        targetFile.toString(),
+        linkFile.toString());
+
+    ShellCommandExecutor shExec;
     try {
+      if (Shell.WINDOWS &&
+          linkFile.getParentFile() != null &&
+          !new Path(target).isAbsolute()) {
+        // Relative links on Windows must be resolvable at the time of
+        // creation. To ensure this we run the shell command in the directory
+        // of the link.
+        //
+        shExec = new ShellCommandExecutor(cmd, linkFile.getParentFile());
+      } else {
+        shExec = new ShellCommandExecutor(cmd);
+      }
       shExec.execute();
     } catch (Shell.ExitCodeException ec) {
       int returnVal = ec.getExitCode();
@@ -795,7 +839,7 @@ public class FileUtil {
     }
     return shExec.getExitCode();
   }
-  
+
   /**
    * Change the permissions on a filename.
    * @param filename the name of the file to change

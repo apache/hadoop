@@ -17,12 +17,19 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.util.Shell;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 public class TestSymlinkLocalFSFileSystem extends TestSymlinkLocalFS {
 
@@ -54,4 +61,36 @@ public class TestSymlinkLocalFSFileSystem extends TestSymlinkLocalFS {
   @Override
   @Test(timeout=1000)
   public void testAccessFileViaInterSymlinkAbsTarget() throws IOException {}
+
+  @Override
+  public void testRenameFileWithDestParentSymlink() throws IOException {
+    assumeTrue(!Shell.WINDOWS);
+    super.testRenameFileWithDestParentSymlink();
+  }
+
+  @Override
+  @Test(timeout=10000)
+  /** Rename a symlink to itself */
+  public void testRenameSymlinkToItself() throws IOException {
+    Path file = new Path(testBaseDir1(), "file");
+    createAndWriteFile(file);
+
+    Path link = new Path(testBaseDir1(), "linkToFile1");
+    wrapper.createSymlink(file, link, false);
+    try {
+      wrapper.rename(link, link);
+      fail("Failed to get expected IOException");
+    } catch (IOException e) {
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+    // Fails with overwrite as well
+    try {
+      wrapper.rename(link, link, Rename.OVERWRITE);
+      fail("Failed to get expected IOException");
+    } catch (IOException e) {
+      // Todo: Fix this test when HADOOP-9819 is fixed.
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException ||
+                 unwrapException(e) instanceof FileNotFoundException);
+    }
+  }
 }
