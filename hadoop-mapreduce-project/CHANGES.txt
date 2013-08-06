@@ -157,6 +157,9 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-434. LocalJobRunner limited to single reducer (Sandy Ryza and
+    Aaron Kimball via Sandy Ryza)
+
   OPTIMIZATIONS
 
     MAPREDUCE-1981. Improve getSplits performance by using listLocatedStatus
