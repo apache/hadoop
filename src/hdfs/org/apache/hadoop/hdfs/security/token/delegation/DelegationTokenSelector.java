@@ -52,11 +52,12 @@ public class DelegationTokenSelector
     
     int nnRpcPort = NameNode.DEFAULT_PORT;
     if (nnServiceName != null) {
-      nnRpcPort = NetUtils.createSocketAddr(nnServiceName, nnRpcPort).getPort(); 
+      nnRpcPort = NetUtils.createSocketAddr(nnServiceName, nnRpcPort).getPort();
     }
-    
+
+    final String nameNodeHostName = NameNode.getNamenodeHostName(conf, nnAddr);
     final Text serviceName = SecurityUtil.buildTokenService(
-        NetUtils.makeSocketAddr(nnAddr.getHostName(), nnRpcPort));
+        NetUtils.makeSocketAddr(nameNodeHostName, nnRpcPort));
     return INSTANCE.selectToken(serviceName, ugi.getTokens());
   }
 

@@ -336,7 +336,7 @@ public class TestMiniMRWithDFS extends TestCase {
       TestResult result;
       final Path inDir = new Path("./wc/input");
       final Path outDir = new Path("hdfs://" +
-          dfs.getNameNode().getNameNodeAddress().getHostName() +
+          dfs.getNameNode().getNamenodeHostName(conf) +
           ":" + NameNode.DEFAULT_PORT +"/./wc/output");
       String input = "The quick brown fox\nhas many silly\nred fox sox\n";
       result = launchWordCount(jobConf, inDir, outDir, input, 3, 1);

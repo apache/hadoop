@@ -116,7 +116,24 @@ public class DFSUtil {
     return blkLocations;
   }
 
-  /** Create a URI from the scheme and address */
+  /** Create a URI from the scheme, host and port */
+  public static URI createUri(String scheme,
+                              String hostName,
+                              int port) {
+    try {
+      return new URI(scheme, null, hostName, port, null, null, null);
+    } catch (URISyntaxException ue) {
+      throw new IllegalArgumentException(ue);
+    }
+  }
+
+  /** Create a URI from the scheme and address.
+   *
+   * Marked as deprecated because querying the hostname from the socket
+   * address does not work reliably when dealing with multi-homed hosts.
+   * Prefer using the hostname explicitly instead (when available).
+   */
+  @Deprecated
   public static URI createUri(String scheme, InetSocketAddress address) {
     try {
       return new URI(scheme, null, address.getHostName(), address.getPort(),

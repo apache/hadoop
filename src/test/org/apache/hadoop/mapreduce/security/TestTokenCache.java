@@ -129,6 +129,7 @@ public class TestTokenCache {
   }
   
   private static MiniMRCluster mrCluster;
+  private static Configuration conf;
   private static MiniDFSCluster dfsCluster;
   private static final Path TEST_DIR = 
     new Path(System.getProperty("test.build.data","/tmp"), "sleepTest");
@@ -141,7 +142,7 @@ public class TestTokenCache {
   
   @BeforeClass
   public static void setUp() throws Exception {
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     dfsCluster = new MiniDFSCluster(conf, numSlaves, true, null);
     jConf = new JobConf(conf);
     mrCluster = new MiniMRCluster(0, 0, numSlaves, 
@@ -215,7 +216,7 @@ public class TestTokenCache {
     // provide namenodes names for the job to get the delegation tokens for
     //String nnUri = dfsCluster.getNameNode().getUri(namenode).toString();
     NameNode nn = dfsCluster.getNameNode();
-    URI nnUri = NameNode.getUri(nn.getNameNodeAddress());
+    URI nnUri = NameNode.getUri(conf, nn.getNameNodeAddress());
     jConf.set(JobContext.JOB_NAMENODES, nnUri + "," + nnUri.toString());
     // job tracker principle id..
     jConf.set(JobTracker.JT_USER_NAME, "jt_id");

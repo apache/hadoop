@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -218,7 +219,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    */
   public static void setServiceAddress(Configuration conf,
                                            String address) {
-    LOG.info("Setting ADDRESS " + address);
+    LOG.info("Setting RPC Service address: " + address);
     conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, address);
   }
   
@@ -238,18 +239,50 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return getAddress(addr);
   }
 
-  public static InetSocketAddress getAddress(Configuration conf) {
+  private static String getAddressString(Configuration conf) {
     String addr = conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
     if (addr == null || addr.isEmpty()) {
-      return getAddress(FileSystem.getDefaultUri(conf).toString());
+      addr = FileSystem.getDefaultUri(conf).toString();
     }
-    return getAddress(addr);
+    return addr;
   }
 
-  public static URI getUri(InetSocketAddress namenode) {
+  public static InetSocketAddress getAddress(Configuration conf) {
+    return getAddress(getAddressString(conf));
+  }
+
+  /**
+   * If DFS_NAMENODE_MASTER_NAME is set then use that else query the
+   * hostname from the socket address. The latter behavior is legacy but
+   * wrong since it can behave unexpectedly when the namenode is multi-
+   * homed.
+   *
+   * @param conf configuration database
+   * @param address socket address for the local endpoint.
+   * @return The hostname to connect to the namenode.
+   */
+  public static String getNamenodeHostName(Configuration conf,
+      InetSocketAddress address) {
+    String masterHostName =
+        conf.get(DFSConfigKeys.DFS_NAMENODE_MASTER_NAME);
+
+    if (masterHostName == null || masterHostName.isEmpty()) {
+      return address.getHostName();
+    } else {
+      return masterHostName;
+    }
+  }
+
+  public static String getNamenodeHostName(Configuration conf) {
+    return getNamenodeHostName(conf, getAddress(conf));
+  }
+
+  public static URI getUri(Configuration conf,
+      InetSocketAddress namenode) {
     int port = namenode.getPort();
-    String portString = port == DEFAULT_PORT ? "" : (":"+port);
-    return URI.create("hdfs://"+ namenode.getHostName()+portString);
+    String portString = port == DEFAULT_PORT ? "" : (":" + port);
+    String hostname = getNamenodeHostName(conf, namenode);
+    return URI.create("hdfs://"+ hostname + portString);
   }
 
   /**
@@ -266,8 +299,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * Modifies the configuration passed to contain the service rpc address setting
    */
   protected void setRpcServiceServerAddress(Configuration conf) {
-    String address = serviceRPCAddress.getHostName() + ":"
-        + serviceRPCAddress.getPort();
+    String hostname = getNamenodeHostName(conf, serviceRPCAddress);
+    String address = hostname + ":" + serviceRPCAddress.getPort();
     setServiceAddress(conf, address);
   }
 
@@ -279,8 +312,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   private void initialize(Configuration conf) throws IOException {
     InetSocketAddress socAddr = NameNode.getAddress(conf);
     UserGroupInformation.setConfiguration(conf);
-    SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, 
-        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
+    SecurityUtil.login(conf,
+        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
+        getNamenodeHostName(conf, socAddr));
     int handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
     
     // set service-level authorization security policy
@@ -313,26 +348,29 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     InetSocketAddress dnSocketAddr = getServiceRpcServerAddress(conf);
     if (dnSocketAddr != null) {
       int serviceHandlerCount =
-        conf.getInt(DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
-                    DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
-      this.serviceRpcServer = RPC.getServer(this, dnSocketAddr.getHostName(), 
-          dnSocketAddr.getPort(), serviceHandlerCount,
-          false, conf, namesystem.getDelegationTokenSecretManager());
+          conf.getInt(DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
+              DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
+      this.serviceRpcServer = RPC.getServer(this,
+          getNamenodeHostName(conf, dnSocketAddr), dnSocketAddr.getPort(),
+          serviceHandlerCount, false, conf,
+          namesystem.getDelegationTokenSecretManager());
       this.serviceRPCAddress = this.serviceRpcServer.getListenerAddress();
       setRpcServiceServerAddress(conf);
     }
-    this.server = RPC.getServer(this, socAddr.getHostName(),
+    this.server = RPC.getServer(this, getNamenodeHostName(conf, socAddr),
         socAddr.getPort(), handlerCount, false, conf, namesystem
         .getDelegationTokenSecretManager());
     // Set terse exception whose stack trace won't be logged
     this.server.addTerseExceptions(SafeModeException.class);
-    
-    // The rpc-server port can be ephemeral... ensure we have the correct info
-    this.serverAddress = this.server.getListenerAddress(); 
-    FileSystem.setDefaultUri(conf, getUri(serverAddress));
-    LOG.info("Namenode up at: " + this.serverAddress);
 
-    
+    // The rpc-server port can be ephemeral... ensure we have the correct info
+    // The ephemeral port is primarily used when testing.
+    this.serverAddress = this.server.getListenerAddress();
+    URI serverUri = getUri(conf, serverAddress);
+    FileSystem.setDefaultUri(conf, serverUri);
+    LOG.info("Namenode up at: " + serverUri);
+
+
 
     startHttpServer(conf);
     this.server.start();  //start RPC server   
@@ -380,14 +418,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     final InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     
     if (SecurityUtil.useKsslAuth()) {
-      String httpsUser = SecurityUtil.getServerPrincipal(conf
-          .get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), infoSocAddr
-          .getHostName());
+      String httpsUser = SecurityUtil.getServerPrincipal(
+          conf.get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
+          getNamenodeHostName(conf, infoSocAddr));
       // Kerberized SSL servers must be run from the host principal...
       LOG.info("Logging in as " + httpsUser + " to start http server.");
       SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-          DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY, infoSocAddr
-              .getHostName());
+          DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY,
+              getNamenodeHostName(conf, infoSocAddr));
     }
 
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
@@ -395,7 +433,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       this.httpServer = ugi.doAs(new PrivilegedExceptionAction<HttpServer>() {
         @Override
         public HttpServer run() throws IOException, InterruptedException {
-          String infoHost = infoSocAddr.getHostName();
+          String infoHost = getNamenodeHostName(conf, infoSocAddr);
           int infoPort = infoSocAddr.getPort();
           httpServer = new HttpServer("hdfs", infoHost, infoPort, 
               infoPort == 0, conf, 
@@ -409,8 +447,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                     DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPENGO_USER_NAME_KEY);
                 if (principalInConf != null && !principalInConf.isEmpty()) {
                   params.put("kerberos.principal",
-                      SecurityUtil.getServerPrincipal(principalInConf,
-                          serverAddress.getHostName()));
+                      SecurityUtil.getServerPrincipal(
+                          principalInConf,
+                          getNamenodeHostName(conf, serverAddress)));
                 }
                 String httpKeytab = conf.get(
                   DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
@@ -455,7 +494,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                     .put(
                         DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
                         SecurityUtil.getServerPrincipal(principalInConf,
-                            serverAddress.getHostName()));
+                            getNamenodeHostName(conf, serverAddress)));
               }
               String httpKeytab = conf
                   .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
@@ -529,13 +568,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     } finally {
       if (SecurityUtil.useKsslAuth()) {
         // Go back to being the correct Namenode principal
-        LOG.info("Logging back in as "
-            + SecurityUtil.getServerPrincipal(conf
-                .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY), serverAddress
-                .getHostName()) + " following http server start.");
-        SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-            DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, serverAddress
-                .getHostName());
+        LOG.info("Logging back in as " +
+            SecurityUtil.getServerPrincipal(
+                conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
+                getNamenodeHostName(conf, serverAddress)) +
+            " following http server start.");
+        SecurityUtil.login(
+            conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
+            DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
+            getNamenodeHostName(conf, serverAddress));
       }
     }
   }
@@ -921,7 +962,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   @Override
   public DirectoryListing getListing(String src, byte[] startAfter)
-  throws IOException {
+      throws IOException {
     DirectoryListing files = namesystem.getListing(src, startAfter);
     myMetrics.incrNumGetListingOps();
     if (files != null) {
@@ -1481,10 +1522,32 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
     
   /**
+   * Get the hostname that the namenode is listening on.
+   *
+   * @return
+   */
+  private static String getHostname(Configuration conf) throws Exception {
+    if (conf == null) {
+      conf = new Configuration();
+    }
+
+    String masterHostName =
+        conf.get(DFSConfigKeys.DFS_NAMENODE_MASTER_NAME);
+
+    if (masterHostName == null || masterHostName.isEmpty()) {
+      return InetAddress.getLocalHost().toString();
+    } else {
+      InetAddress address = InetAddress.getByName(masterHostName);
+      return address.toString();
+    }
+  }
+
+  /**
    */
   public static void main(String argv[]) throws Exception {
     try {
-      StringUtils.startupShutdownMessage(NameNode.class, argv, LOG);
+      StringUtils.startupShutdownMessage(
+          NameNode.class, getHostname(null), argv, LOG);
       NameNode namenode = createNameNode(argv, null);
       if (namenode != null)
         namenode.join();

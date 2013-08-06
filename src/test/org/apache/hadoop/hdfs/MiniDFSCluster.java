@@ -344,7 +344,8 @@ public class MiniDFSCluster {
       InetSocketAddress nnAddr = nameNode.getNameNodeAddress(); 
       int nameNodePort = nnAddr.getPort(); 
       FileSystem.setDefaultUri(conf, 
-                               "hdfs://"+ nnAddr.getHostName() +
+                               "hdfs://" +
+                               nameNode.getNamenodeHostName(conf, nnAddr) +
                                ":" + Integer.toString(nameNodePort));
     }
     
