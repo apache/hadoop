@@ -107,6 +107,7 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       if (ResourceState.LOCALIZED.equals(rsrc.getState())) {
         delService.delete(getUser(), getPathToDelete(rsrc.getLocalPath()));
       }
+      LOG.info("Removed " + rsrc.getLocalPath() + " from localized cache");
       return true;
     }
   }
