@@ -56,7 +56,7 @@ public class TestMRKeyFieldBasedComparator extends HadoopTestCase {
     conf.set("mapreduce.partition.keypartitioner.options", "-k1.1,1.1");
     conf.set(MRJobConfig.MAP_OUTPUT_KEY_FIELD_SEPERATOR, " ");
 
-    Job job = MapReduceTestUtil.createJob(conf, inDir, outDir, 1, 2,
+    Job job = MapReduceTestUtil.createJob(conf, inDir, outDir, 1, 1,
                 line1 +"\n" + line2 + "\n"); 
     job.setMapperClass(InverseMapper.class);
     job.setReducerClass(Reducer.class);

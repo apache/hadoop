@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.Map;
+
 import org.apache.hadoop.mapred.Task.CombineOutputCollector;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -65,6 +67,7 @@ public interface ShuffleConsumerPlugin<K, V> {
     private final Progress mergePhase;
     private final Task reduceTask;
     private final MapOutputFile mapOutputFile;
+    private final Map<TaskAttemptID, MapOutputFile> localMapFiles;
 
     public Context(org.apache.hadoop.mapreduce.TaskAttemptID reduceId,
                    JobConf jobConf, FileSystem localFS,
@@ -80,7 +83,8 @@ public interface ShuffleConsumerPlugin<K, V> {
                    Counters.Counter failedShuffleCounter,
                    Counters.Counter mergedMapOutputsCounter,
                    TaskStatus status, Progress copyPhase, Progress mergePhase,
-                   Task reduceTask, MapOutputFile mapOutputFile) {
+                   Task reduceTask, MapOutputFile mapOutputFile,
+                   Map<TaskAttemptID, MapOutputFile> localMapFiles) {
       this.reduceId = reduceId;
       this.jobConf = jobConf;
       this.localFS = localFS;
@@ -101,6 +105,7 @@ public interface ShuffleConsumerPlugin<K, V> {
       this.mergePhase = mergePhase;
       this.reduceTask = reduceTask;
       this.mapOutputFile = mapOutputFile;
+      this.localMapFiles = localMapFiles;
     }
 
     public org.apache.hadoop.mapreduce.TaskAttemptID getReduceId() {
@@ -162,6 +167,9 @@ public interface ShuffleConsumerPlugin<K, V> {
     }
     public MapOutputFile getMapOutputFile() {
       return mapOutputFile;
+    }
+    public Map<TaskAttemptID, MapOutputFile> getLocalMapFiles() {
+      return localMapFiles;
     }
   } // end of public static class Context<K,V>
 

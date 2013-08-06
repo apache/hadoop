@@ -155,7 +155,7 @@ public class TestShufflePlugin<K, V> {
                                                 mockCounter, mockCounter, mockCounter,
                                                 mockCounter, mockCounter, mockCounter,
                                                 mockTaskStatus, mockProgress, mockProgress,
-                                                mockTask, mockMapOutputFile);
+                                                mockTask, mockMapOutputFile, null);
       shuffleConsumerPlugin.init(context);
       shuffleConsumerPlugin.run();
       shuffleConsumerPlugin.close();

@@ -39,6 +39,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapred.IFile.Reader;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.PriorityQueue;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
@@ -69,7 +70,8 @@ public class Merger {
   throws IOException {
     return 
       new MergeQueue<K, V>(conf, fs, inputs, deleteInputs, codec, comparator, 
-                           reporter, null).merge(keyClass, valueClass,
+                           reporter, null,
+                           TaskType.REDUCE).merge(keyClass, valueClass,
                                            mergeFactor, tmpDir,
                                            readsCounter, writesCounter, 
                                            mergePhase);
@@ -90,7 +92,8 @@ public class Merger {
   throws IOException {
     return 
       new MergeQueue<K, V>(conf, fs, inputs, deleteInputs, codec, comparator, 
-                           reporter, mergedMapOutputsCounter).merge(
+                           reporter, mergedMapOutputsCounter,
+                           TaskType.REDUCE).merge(
                                            keyClass, valueClass,
                                            mergeFactor, tmpDir,
                                            readsCounter, writesCounter,
@@ -124,7 +127,8 @@ public class Merger {
                             Progress mergePhase)
       throws IOException {
     return new MergeQueue<K, V>(conf, fs, segments, comparator, reporter,
-                           sortSegments).merge(keyClass, valueClass,
+                           sortSegments,
+                           TaskType.REDUCE).merge(keyClass, valueClass,
                                                mergeFactor, tmpDir,
                                                readsCounter, writesCounter,
                                                mergePhase);
@@ -140,10 +144,12 @@ public class Merger {
                             boolean sortSegments,
                             Counters.Counter readsCounter,
                             Counters.Counter writesCounter,
-                            Progress mergePhase)
+                            Progress mergePhase,
+                            TaskType taskType)
       throws IOException {
     return new MergeQueue<K, V>(conf, fs, segments, comparator, reporter,
-                           sortSegments, codec).merge(keyClass, valueClass,
+                           sortSegments, codec,
+                           taskType).merge(keyClass, valueClass,
                                                mergeFactor, tmpDir,
                                                readsCounter, writesCounter,
                                                mergePhase);
@@ -161,7 +167,8 @@ public class Merger {
                             Progress mergePhase)
       throws IOException {
     return new MergeQueue<K, V>(conf, fs, segments, comparator, reporter,
-                           sortSegments).merge(keyClass, valueClass,
+                           sortSegments,
+                           TaskType.REDUCE).merge(keyClass, valueClass,
                                                mergeFactor, inMemSegments,
                                                tmpDir,
                                                readsCounter, writesCounter,
@@ -182,7 +189,8 @@ public class Merger {
                           Progress mergePhase)
     throws IOException {
   return new MergeQueue<K, V>(conf, fs, segments, comparator, reporter,
-                         sortSegments, codec).merge(keyClass, valueClass,
+                         sortSegments, codec,
+                         TaskType.REDUCE).merge(keyClass, valueClass,
                                              mergeFactor, inMemSegments,
                                              tmpDir,
                                              readsCounter, writesCounter,
@@ -366,20 +374,7 @@ public class Merger {
       }
     }
   }
-  
-  // Boolean variable for including/considering final merge as part of sort
-  // phase or not. This is true in map task, false in reduce task. It is
-  // used in calculating mergeProgress.
-  static boolean includeFinalMerge = false;
-  
-  /**
-   * Sets the boolean variable includeFinalMerge to true. Called from
-   * map task before calling merge() so that final merge of map task
-   * is also considered as part of sort phase.
-   */
-  static void considerFinalMergeForProgress() {
-    includeFinalMerge = true;
-  }
+
   
   private static class MergeQueue<K extends Object, V extends Object> 
   extends PriorityQueue<Segment<K, V>> implements RawKeyValueIterator {
@@ -401,6 +396,21 @@ public class Merger {
     final DataInputBuffer value = new DataInputBuffer();
     final DataInputBuffer diskIFileValue = new DataInputBuffer();
     
+    
+    // Boolean variable for including/considering final merge as part of sort
+    // phase or not. This is true in map task, false in reduce task. It is
+    // used in calculating mergeProgress.
+    private boolean includeFinalMerge = false;
+    
+    /**
+     * Sets the boolean variable includeFinalMerge to true. Called from
+     * map task before calling merge() so that final merge of map task
+     * is also considered as part of sort phase.
+     */
+    private void considerFinalMergeForProgress() {
+      includeFinalMerge = true;
+    }    
+    
     Segment<K, V> minSegment;
     Comparator<Segment<K, V>> segmentComparator =   
       new Comparator<Segment<K, V>>() {
@@ -419,20 +429,26 @@ public class Merger {
                       CompressionCodec codec, RawComparator<K> comparator,
                       Progressable reporter) 
     throws IOException {
-      this(conf, fs, inputs, deleteInputs, codec, comparator, reporter, null);
+      this(conf, fs, inputs, deleteInputs, codec, comparator, reporter, null,
+          TaskType.REDUCE);
     }
     
     public MergeQueue(Configuration conf, FileSystem fs, 
                       Path[] inputs, boolean deleteInputs, 
                       CompressionCodec codec, RawComparator<K> comparator,
                       Progressable reporter, 
-                      Counters.Counter mergedMapOutputsCounter) 
+                      Counters.Counter mergedMapOutputsCounter,
+                      TaskType taskType) 
     throws IOException {
       this.conf = conf;
       this.fs = fs;
       this.codec = codec;
       this.comparator = comparator;
       this.reporter = reporter;
+      
+      if (taskType == TaskType.MAP) {
+        considerFinalMergeForProgress();
+      }
       
       for (Path file : inputs) {
         LOG.debug("MergeQ: adding: " + file);
@@ -449,17 +465,20 @@ public class Merger {
     public MergeQueue(Configuration conf, FileSystem fs,
         List<Segment<K, V>> segments, RawComparator<K> comparator,
         Progressable reporter) {
-      this(conf, fs, segments, comparator, reporter, false);
+      this(conf, fs, segments, comparator, reporter, false, TaskType.REDUCE);
     }
 
     public MergeQueue(Configuration conf, FileSystem fs, 
         List<Segment<K, V>> segments, RawComparator<K> comparator,
-        Progressable reporter, boolean sortSegments) {
+        Progressable reporter, boolean sortSegments, TaskType taskType) {
       this.conf = conf;
       this.fs = fs;
       this.comparator = comparator;
       this.segments = segments;
       this.reporter = reporter;
+      if (taskType == TaskType.MAP) {
+        considerFinalMergeForProgress();
+      }
       if (sortSegments) {
         Collections.sort(segments, segmentComparator);
       }
@@ -467,8 +486,10 @@ public class Merger {
 
     public MergeQueue(Configuration conf, FileSystem fs,
         List<Segment<K, V>> segments, RawComparator<K> comparator,
-        Progressable reporter, boolean sortSegments, CompressionCodec codec) {
-      this(conf, fs, segments, comparator, reporter, sortSegments);
+        Progressable reporter, boolean sortSegments, CompressionCodec codec,
+        TaskType taskType) {
+      this(conf, fs, segments, comparator, reporter, sortSegments,
+          taskType);
       this.codec = codec;
     }
 
