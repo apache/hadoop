@@ -217,6 +217,9 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5367. Local jobs all use same local working directory
     (Sandy Ryza)
 
+    MAPREDUCE-5425. Junit in TestJobHistoryServer failing in jdk 7 (Robert
+    Parker via jlowe)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
