@@ -57,7 +57,7 @@ case $COMMAND in
     ;;
 
   #hdfs commands
-  namenode|secondarynamenode|datanode|dfs|dfsadmin|fsck|balancer|fetchdt|oiv|dfsgroups)
+  namenode|secondarynamenode|datanode|dfs|dfsadmin|fsck|balancer|fetchdt|oiv|dfsgroups|portmap|nfs3)
     echo "DEPRECATED: Use of this script to execute hdfs command is deprecated." 1>&2
     echo "Instead use the hdfs command for it." 1>&2
     echo "" 1>&2
