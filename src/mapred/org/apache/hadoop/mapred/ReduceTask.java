@@ -674,7 +674,8 @@ public class ReduceTask extends Task {
   };
 
   public static class ReduceCopier<K, V> implements ShuffleConsumerPlugin, MRConstants {
-
+    private JobConf conf;
+    
     /** Reference to the umbilical object */
     private TaskUmbilicalProtocol umbilical;
     private TaskReporter reporter;
@@ -1944,7 +1945,7 @@ public class ReduceTask extends Task {
     @Override
     public void init (ShuffleConsumerPlugin.Context context)throws ClassNotFoundException, IOException {
       
-      JobConf conf = context.getConf();
+      conf = context.getConf();
       this.reporter = context.getReporter();
       this.umbilical = context.getUmbilical();
       this.reduceTask = context.getReduceTask();
@@ -2442,7 +2443,7 @@ public class ReduceTask extends Task {
           fullSize -= mo.data.length;
           Reader<K, V> reader = 
             new InMemoryReader<K, V>(ramManager, mo.mapAttemptId,
-                                     mo.data, 0, mo.data.length);
+                                     mo.data, 0, mo.data.length, conf);
           Segment<K, V> segment = 
             new Segment<K, V>(reader, true);
           inMemorySegments.add(segment);

@@ -123,6 +123,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5367. Local jobs all use same local working directory
     (Sandy Ryza)
 
+    MAPREDUCE-5450. Unnecessary Configuration instantiation in IFileInputStream
+    slows down merge. (Stanislav Barton and Ted Yu via Sandy Ryza)
+
 Release 1.2.1 - 2013.07.15
 
   INCOMPATIBLE CHANGES
