@@ -61,6 +61,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-4905. Add appendToFile command to "hdfs dfs". (Arpit Agarwal via
     cnauroth)
 
+    HDFS-4926. Namenode webserver's page has a tooltip that is inconsistent 
+    with the datanode HTML link. (Vivek Ganesan via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
