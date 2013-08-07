@@ -52,6 +52,8 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5071 Change hdfs-nfs parent project to hadoop-project (brandonli)
 
+    HDFS-4763 Add script changes/utility for starting NFS gateway (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
