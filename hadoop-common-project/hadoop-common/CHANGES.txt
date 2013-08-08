@@ -79,6 +79,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9527. Add symlink support to LocalFileSystem on Windows.
     (Arpit Agarwal via cnauroth)
 
+    HADOOP-9315. Port HADOOP-9249 hadoop-maven-plugins Clover fix to branch-2 to
+    fix build failures. (Dennis Y via cnauroth)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
