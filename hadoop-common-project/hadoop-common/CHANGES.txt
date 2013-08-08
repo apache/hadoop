@@ -11,6 +11,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
     (Karthik Kambatla via Sandy Ryza)
 
+    HADOOP-9435.  Support building the JNI code against the IBM JVM.
+    (Tian Hong Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
