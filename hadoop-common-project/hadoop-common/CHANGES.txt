@@ -110,6 +110,8 @@ Release 2.1.0-beta - 2013-08-06
 
     HADOOP-9832. [RPC v9] Add RPC header to client ping (daryn)
 
+    HADOOP-9820. [RPC v9] Wire protocol is insufficient to support multiplexing. (daryn via jitendra)
+
   NEW FEATURES
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
