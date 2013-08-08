@@ -90,12 +90,7 @@ class Child {
     // file name is passed thru env
     String jobTokenFile = 
       System.getenv().get(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
-    if(Shell.WINDOWS) {
-      if(jobTokenFile.charAt(0)=='"')
-        jobTokenFile = jobTokenFile.substring(1);
-      if(jobTokenFile.charAt(jobTokenFile.length()-1) == '"')
-        jobTokenFile = jobTokenFile.substring(0, jobTokenFile.length()-1);
-    }
+    jobTokenFile = Shell.preprocessEnvVar(jobTokenFile);
     Credentials credentials = 
       TokenCache.loadTokens(jobTokenFile, defaultConf);
     LOG.debug("loading token. # keys =" +credentials.numberOfSecretKeys() + 

@@ -67,6 +67,7 @@ import org.apache.hadoop.mapred.SequenceFileRecordReader;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -982,6 +983,7 @@ public class DistCp implements Tool {
     // Propagate delegation related props to DistCp job
     String tokenFile = System.getenv("HADOOP_TOKEN_FILE_LOCATION");
     if (tokenFile != null) {
+      tokenFile = Shell.preprocessEnvVar(tokenFile);
       LOG
         .info("Setting env property for mapreduce.job.credentials.binary to: "
           + tokenFile);

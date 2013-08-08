@@ -156,6 +156,14 @@ abstract public class Shell {
     return winUtilsPath;
   }
 
+  public static final String preprocessEnvVar(String env) {
+    /* trim leading and trailing quotes of an environment variable if the OS is Windows */
+    if (Shell.WINDOWS && env != null) {
+      env = env.replaceAll("^\"|\"$", "");
+    }
+    return env;
+  }
+
   /** a Unix command to get the current user's name */
   public final static String USER_NAME_COMMAND = "whoami";
 

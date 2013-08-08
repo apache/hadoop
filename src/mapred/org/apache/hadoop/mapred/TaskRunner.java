@@ -515,11 +515,7 @@ abstract class TaskRunner extends Thread {
 
     // if temp directory path is not absolute, prepend it with workDir.
     if (!tmpDir.isAbsolute()) {
-      if (Shell.WINDOWS)
-        // trim leading and trailing quotes on Windows
-        tmpDir = new Path(workDir.toString().replaceAll("^\"|\"$", ""), tmp);
-      else
-        tmpDir = new Path(workDir.toString(), tmp);
+      tmpDir =  new Path(Shell.preprocessEnvVar(workDir.toString()), tmp);
       if (createDir) {
         FileSystem localFs = FileSystem.getLocal(conf);
         if (!localFs.mkdirs(tmpDir) && 
@@ -808,11 +804,7 @@ abstract class TaskRunner extends Thread {
   private static void symlink(File workDir, String target, String link)
       throws IOException {
     if (link != null) {
-      if (Shell.WINDOWS)
-        // trim leading and trailing quotes on Windows
-        link = workDir.toString().replaceAll("^\"|\"$", "") + File.separator + link;
-      else
-        link = workDir.toString() + File.separator + link;
+      link = Shell.preprocessEnvVar(workDir.toString()) + File.separator + link;
       File flink = new File(link);
       if (!flink.exists()) {
         LOG.info(String.format("Creating symlink: %s <- %s", target, link));
