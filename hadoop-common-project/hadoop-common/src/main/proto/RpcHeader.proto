@@ -141,6 +141,7 @@ message RpcSaslProto {
     INITIATE  = 2;
     CHALLENGE = 3;
     RESPONSE  = 4;
+    WRAP = 5;
   }
   
   message SaslAuth {
