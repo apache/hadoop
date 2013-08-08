@@ -291,6 +291,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-4926. Namenode webserver's page has a tooltip that is inconsistent 
     with the datanode HTML link. (Vivek Ganesan via jing9)
 
+    HDFS-5047. Supress logging of full stack trace of quota and lease
+    exceptions. (Robert Parker via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
