@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
@@ -768,6 +769,40 @@ public class TestEditLog extends TestCase {
           "no journals successfully started", ioe);
     } finally {
       logDir.setWritable(true);
+      log.close();
+    }
+  }
+  
+  /**
+   * Regression test for HDFS-1112/HDFS-3020. Ensures that, even if
+   * logSync isn't called periodically, the edit log will sync itself.
+   */
+  public void testAutoSync() throws Exception {
+    File logDir = new File(TEST_DIR, "testAutoSync");
+    logDir.mkdirs();
+    FSEditLog log = FSImageTestUtil.createStandaloneEditLog(logDir);
+    
+    String oneKB = StringUtils.byteToHexString(
+        new byte[500]);
+    
+    try {
+      log.open();
+      NameNodeMetrics mockMetrics = Mockito.mock(NameNodeMetrics.class);
+      log.setMetricsForTests(mockMetrics);
+
+      for (int i = 0; i < 400; i++) {
+        log.logDelete(oneKB, 1L);
+      }
+      // After ~400KB, we're still within the 512KB buffer size
+      Mockito.verify(mockMetrics, Mockito.times(0)).addSync(Mockito.anyLong());
+      
+      // After ~400KB more, we should have done an automatic sync
+      for (int i = 0; i < 400; i++) {
+        log.logDelete(oneKB, 1L);
+      }
+      Mockito.verify(mockMetrics, Mockito.times(1)).addSync(Mockito.anyLong());
+
+    } finally {
       log.close();
     }
   }

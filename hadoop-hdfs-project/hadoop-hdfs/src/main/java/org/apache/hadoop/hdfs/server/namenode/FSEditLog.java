@@ -723,6 +723,14 @@ public class FSEditLog  {
   List<JournalAndStream> getJournals() {
     return journals;
   }
+
+  /**
+   * Used only by tests.
+   */
+  @VisibleForTesting
+  void setMetricsForTests(NameNodeMetrics metrics) {
+    this.metrics = metrics;
+  }
   
   /**
    * Return a manifest of what finalized edit logs are available
