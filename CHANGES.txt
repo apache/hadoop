@@ -1,5 +1,20 @@
 Hadoop Change Log
 
+Release 1.2.2 - unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+    MAPREDUCE-5450. Unnecessary Configuration instantiation in IFileInputStream
+    slows down merge. (Stanislav Barton and Ted Yu via Sandy Ryza)
+
 Release 1.2.1 - 2013.07.15
 
   INCOMPATIBLE CHANGES

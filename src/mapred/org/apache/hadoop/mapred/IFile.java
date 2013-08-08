@@ -462,9 +462,9 @@ class IFile {
     TaskAttemptID taskAttemptId;
     
     public InMemoryReader(RamManager ramManager, TaskAttemptID taskAttemptId,
-                          byte[] data, int start, int length)
+                          byte[] data, int start, int length, Configuration conf)
                           throws IOException {
-      super(null, null, length - start, null, null);
+      super(conf, null, length - start, null, null);
       this.ramManager = ramManager;
       this.taskAttemptId = taskAttemptId;
       
