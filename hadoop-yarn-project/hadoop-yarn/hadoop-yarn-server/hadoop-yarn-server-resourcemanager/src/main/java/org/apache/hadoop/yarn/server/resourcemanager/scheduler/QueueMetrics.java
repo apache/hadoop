@@ -126,18 +126,6 @@ public class QueueMetrics implements MetricsSource {
                     enableUserMetrics, conf);
   }
 
-  // this method is here because we want to make sure these metrics show up on
-  // queue registration.
-  public void initMetrics() {
-    appsSubmitted.incr(0);
-    appsRunning.incr(0);
-    appsPending.incr(0);
-    appsCompleted.incr(0);
-    appsKilled.incr(0);
-    appsFailed.incr(0);
-    reservedContainers.incr(0);
-  }
-
   /**
    * Helper method to clear cache - used only for unit tests.
    */
@@ -168,7 +156,6 @@ public class QueueMetrics implements MetricsSource {
             ms.register(
                 sourceName(queueName).toString(), 
                 "Metrics for queue: " + queueName, metrics);
-        metrics.initMetrics();
       }
       queueMetrics.put(queueName, metrics);
     }

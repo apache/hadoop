@@ -94,7 +94,6 @@ public class FSQueueMetrics extends QueueMetrics {
         metrics = ms.register(
                 sourceName(queueName).toString(), 
                 "Metrics for queue: " + queueName, metrics);
-        metrics.initMetrics();
       }
       queueMetrics.put(queueName, metrics);
     }
