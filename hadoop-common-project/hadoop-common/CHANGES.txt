@@ -17,6 +17,8 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9355.  Abstract symlink tests to use either FileContext or
     FileSystem.  (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9833 move slf4j to version 1.7.5 (Kousuke Saruta via stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
