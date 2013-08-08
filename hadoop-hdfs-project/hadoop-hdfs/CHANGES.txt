@@ -11,6 +11,10 @@ Release 0.23.10 - UNRELEASED
     HDFS-5010. Reduce the frequency of getCurrentUser() calls from namenode.
     (kihwal)
 
+    HDFS-5047. Supress logging of full stack trace of quota and lease
+    exceptions. (Robert Parker via kihwal)
+
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -58,6 +58,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
@@ -184,7 +186,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
         QuotaExceededException.class,
         RecoveryInProgressException.class,
         AccessControlException.class,
-        InvalidToken.class);
+        InvalidToken.class,
+        LeaseExpiredException.class,
+        NSQuotaExceededException.class,
+        DSQuotaExceededException.class);
   }
   
   /**
