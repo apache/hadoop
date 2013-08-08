@@ -713,6 +713,7 @@ public class Client {
                     }
                   });
             } catch (Exception ex) {
+              authMethod = saslRpcClient.getAuthMethod();
               if (rand == null) {
                 rand = new Random();
               }

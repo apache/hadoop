@@ -83,6 +83,7 @@ public class SaslRpcClient {
   private final Configuration conf;
 
   private SaslClient saslClient;
+  private AuthMethod authMethod;
   
   private static final RpcRequestHeaderProto saslHeader = ProtoUtil
       .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
@@ -111,6 +112,18 @@ public class SaslRpcClient {
   @InterfaceAudience.Private
   public Object getNegotiatedProperty(String key) {
     return (saslClient != null) ? saslClient.getNegotiatedProperty(key) : null;
+  }
+  
+
+  // the RPC Client has an inelegant way of handling expiration of TGTs
+  // acquired via a keytab.  any connection failure causes a relogin, so
+  // the Client needs to know what authMethod was being attempted if an
+  // exception occurs.  the SASL prep for a kerberos connection should
+  // ideally relogin if necessary instead of exposing this detail to the
+  // Client
+  @InterfaceAudience.Private
+  public AuthMethod getAuthMethod() {
+    return authMethod;
   }
   
   /**
@@ -319,8 +332,9 @@ public class SaslRpcClient {
     DataOutputStream outStream = new DataOutputStream(new BufferedOutputStream(
         outS));
     
-    // redefined if/when a SASL negotiation completes
-    AuthMethod authMethod = AuthMethod.SIMPLE;
+    // redefined if/when a SASL negotiation starts, can be queried if the
+    // negotiation fails
+    authMethod = AuthMethod.SIMPLE;
     
     sendSaslMessage(outStream, negotiateRequest);
     
@@ -357,6 +371,7 @@ public class SaslRpcClient {
         case NEGOTIATE: {
           // create a compatible SASL client, throws if no supported auths
           SaslAuth saslAuthType = selectSaslClient(saslMessage.getAuthsList());
+          // define auth being attempted, caller can query if connect fails
           authMethod = AuthMethod.valueOf(saslAuthType.getMethod());
           
           byte[] responseToken = null;
