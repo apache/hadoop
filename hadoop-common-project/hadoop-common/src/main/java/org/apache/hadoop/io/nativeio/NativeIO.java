@@ -23,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -145,6 +146,12 @@ public class NativeIO {
       return NativeCodeLoader.isNativeCodeLoaded() && nativeLoaded;
     }
 
+    private static void assertCodeLoaded() throws IOException {
+      if (!isAvailable()) {
+        throw new IOException("NativeIO was not loaded");
+      }
+    }
+
     /** Wrapper around open(2) */
     public static native FileDescriptor open(String path, int flags, int mode) throws IOException;
     /** Wrapper around fstat(2) */
@@ -223,6 +230,84 @@ public class NativeIO {
           syncFileRangePossible = false;
         }
       }
+    }
+
+    static native void mlock_native(
+        ByteBuffer buffer, long len) throws NativeIOException;
+    static native void munlock_native(
+        ByteBuffer buffer, long len) throws NativeIOException;
+
+    /**
+     * Locks the provided direct ByteBuffer into memory, preventing it from
+     * swapping out. After a buffer is locked, future accesses will not incur
+     * a page fault.
+     * 
+     * See the mlock(2) man page for more information.
+     * 
+     * @throws NativeIOException
+     */
+    public static void mlock(ByteBuffer buffer, long len)
+        throws IOException {
+      assertCodeLoaded();
+      if (!buffer.isDirect()) {
+        throw new IOException("Cannot mlock a non-direct ByteBuffer");
+      }
+      mlock_native(buffer, len);
+    }
+
+    /**
+     * Unlocks a locked direct ByteBuffer, allowing it to swap out of memory.
+     * This is a no-op if the ByteBuffer was not previously locked.
+     * 
+     * See the munlock(2) man page for more information.
+     * 
+     * @throws NativeIOException
+     */
+    public static void munlock(ByteBuffer buffer, long len)
+        throws IOException {
+      assertCodeLoaded();
+      if (!buffer.isDirect()) {
+        throw new IOException("Cannot munlock a non-direct ByteBuffer");
+      }
+      munlock_native(buffer, len);
+    }
+
+    /**
+     * Resource limit types copied from <sys/resource.h>
+     */
+    private static class ResourceLimit {
+      public static final int RLIMIT_CPU        = 0;
+      public static final int RLIMIT_FSIZE      = 1;
+      public static final int RLIMIT_DATA       = 2;
+      public static final int RLIMIT_STACK      = 3;
+      public static final int RLIMIT_CORE       = 4;
+      public static final int RLIMIT_RSS        = 5;
+      public static final int RLIMIT_NPROC      = 6;
+      public static final int RLIMIT_NOFILE     = 7;
+      public static final int RLIMIT_MEMLOCK    = 8;
+      public static final int RLIMIT_AS         = 9;
+      public static final int RLIMIT_LOCKS      = 10;
+      public static final int RLIMIT_SIGPENDING = 11;
+      public static final int RLIMIT_MSGQUEUE   = 12;
+      public static final int RLIMIT_NICE       = 13;
+      public static final int RLIMIT_RTPRIO     = 14;
+      public static final int RLIMIT_RTTIME     = 15;
+      public static final int RLIMIT_NLIMITS    = 16;
+    }
+
+    static native String getrlimit(int limit) throws NativeIOException;
+    /**
+     * Returns the soft limit on the number of bytes that may be locked by the
+     * process in bytes (RLIMIT_MEMLOCK).
+     * 
+     * See the getrlimit(2) man page for more information
+     *  
+     * @return maximum amount of locked memory in bytes
+     */
+    public static long getMemlockLimit() throws IOException {
+      assertCodeLoaded();
+      String strLimit = getrlimit(ResourceLimit.RLIMIT_MEMLOCK);
+      return Long.parseLong(strLimit);
     }
 
     /** Linux only methods used for getOwner() implementation */

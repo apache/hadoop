@@ -1,0 +1,14 @@
+Hadoop HDFS Change Log for HDFS-4949
+
+HDFS-4949 (Unreleased)
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+    HDFS-5049.  Add JNI mlock support.  (Andrew Wang via Colin Patrick McCabe)
+
+  OPTIMIZATIONS
+
+  BUG FIXES

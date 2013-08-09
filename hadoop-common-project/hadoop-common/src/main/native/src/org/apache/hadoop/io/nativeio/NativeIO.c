@@ -31,8 +31,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include "config.h"
@@ -358,6 +361,76 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_sync_1file_1range(
     }
   }
 #endif
+}
+
+/**
+ * public static native void mlock_native(
+ *   ByteBuffer buffer, long offset);
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mlock_1native(
+  JNIEnv *env, jclass clazz,
+  jobject buffer, jlong len)
+{
+  void* buf = (void*)(*env)->GetDirectBufferAddress(env, buffer);
+  PASS_EXCEPTIONS(env);
+
+  if (mlock(buf, len)) {
+    throw_ioe(env, errno);
+  }
+}
+
+/**
+ * public static native void munlock_native(
+ *   ByteBuffer buffer, long offset);
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_munlock_1native(
+  JNIEnv *env, jclass clazz,
+  jobject buffer, jlong len)
+{
+  void* buf = (void*)(*env)->GetDirectBufferAddress(env, buffer);
+  PASS_EXCEPTIONS(env);
+
+  if (munlock(buf, len)) {
+    throw_ioe(env, errno);
+  }
+}
+
+/**
+ * public static native String getrlimit(
+ *   int resource);
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT jstring JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_getrlimit(
+  JNIEnv *env, jclass clazz,
+  jint resource)
+{
+  jstring ret = NULL;
+
+  struct rlimit rlim;
+  int rc = getrlimit((int)resource, &rlim);
+  if (rc != 0) {
+    throw_ioe(env, errno);
+    goto cleanup;
+  }
+
+  // Convert soft limit into a string
+  char limit[17];
+  int len = snprintf(&limit, 17, "%d", rlim.rlim_cur);
+  ret = (*env)->NewStringUTF(env,&limit);
+
+cleanup:
+  return ret;
 }
 
 #ifdef __FreeBSD__
