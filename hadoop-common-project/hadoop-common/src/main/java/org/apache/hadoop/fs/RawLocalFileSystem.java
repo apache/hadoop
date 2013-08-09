@@ -525,7 +525,7 @@ public class RawLocalFileSystem extends FileSystem {
      * onwer.equals("").
      */
     private boolean isPermissionLoaded() {
-      return !super.getOwner().equals(""); 
+      return !super.getOwner().isEmpty(); 
     }
     
     RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) { 

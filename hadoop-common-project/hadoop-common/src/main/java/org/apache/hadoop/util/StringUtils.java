@@ -352,7 +352,7 @@ public class StringUtils {
    * @return an array of <code>String</code> values
    */
   public static String[] getTrimmedStrings(String str){
-    if (null == str || "".equals(str.trim())) {
+    if (null == str || str.trim().isEmpty()) {
       return emptyStringArray;
     }
 
@@ -412,7 +412,7 @@ public class StringUtils {
       String str, char separator) {
     // String.split returns a single empty result for splitting the empty
     // string.
-    if ("".equals(str)) {
+    if (str.isEmpty()) {
       return new String[]{""};
     }
     ArrayList<String> strList = new ArrayList<String>();

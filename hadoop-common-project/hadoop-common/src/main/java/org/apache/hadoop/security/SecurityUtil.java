@@ -217,7 +217,7 @@ public class SecurityUtil {
   private static String replacePattern(String[] components, String hostname)
       throws IOException {
     String fqdn = hostname;
-    if (fqdn == null || fqdn.equals("") || fqdn.equals("0.0.0.0")) {
+    if (fqdn == null || fqdn.isEmpty() || fqdn.equals("0.0.0.0")) {
       fqdn = getLocalHostName();
     }
     return components[0] + "/" + fqdn.toLowerCase(Locale.US) + "@" + components[2];

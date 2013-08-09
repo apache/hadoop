@@ -285,7 +285,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
     String pathParts[] = znodeWorkingDir.split("/");
     Preconditions.checkArgument(pathParts.length >= 1 &&
-        "".equals(pathParts[0]),
+        pathParts[0].isEmpty(),
         "Invalid path: %s", znodeWorkingDir);
     
     StringBuilder sb = new StringBuilder();

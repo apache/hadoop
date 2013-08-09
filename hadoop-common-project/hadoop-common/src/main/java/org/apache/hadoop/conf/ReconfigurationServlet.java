@@ -153,9 +153,9 @@ public class ReconfigurationServlet extends HttpServlet {
           StringEscapeUtils.unescapeHtml(req.getParameter(rawParam));
         if (value != null) {
           if (value.equals(newConf.getRaw(param)) || value.equals("default") ||
-              value.equals("null") || value.equals("")) {
+              value.equals("null") || value.isEmpty()) {
             if ((value.equals("default") || value.equals("null") || 
-                 value.equals("")) && 
+                 value.isEmpty()) && 
                 oldConf.getRaw(param) != null) {
               out.println("<p>Changed \"" + 
                           StringEscapeUtils.escapeHtml(param) + "\" from \"" +
@@ -163,7 +163,7 @@ public class ReconfigurationServlet extends HttpServlet {
                           "\" to default</p>");
               reconf.reconfigureProperty(param, null);
             } else if (!value.equals("default") && !value.equals("null") &&
-                       !value.equals("") && 
+                       !value.isEmpty() && 
                        (oldConf.getRaw(param) == null || 
                         !oldConf.getRaw(param).equals(value))) {
               // change from default or value to different value
