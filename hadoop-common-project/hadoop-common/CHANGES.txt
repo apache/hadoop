@@ -358,6 +358,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9831. Make checknative shell command accessible on Windows. (cnauroth)
 
+    HADOOP-9675. use svn:eol-style native for html to prevent line ending
+    issues (Colin Patrick McCabe)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
