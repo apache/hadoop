@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -51,6 +52,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.GlobPattern;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcRequestMessageWrapper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcResponseMessageWrapper;
 import org.apache.hadoop.ipc.RPC.RpcKind;
@@ -280,9 +282,8 @@ public class SaslRpcClient {
    * @return String of the server's principal
    * @throws IOException - error determining configured principal
    */
-
-  // try to get the configured principal for the remote server
-  private String getServerPrincipal(SaslAuth authType) throws IOException {
+  @VisibleForTesting
+  String getServerPrincipal(SaslAuth authType) throws IOException {
     KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
     LOG.debug("Get kerberos info proto:"+protocol+" info:"+krbInfo);
     if (krbInfo == null) { // protocol has no support for kerberos
@@ -294,28 +295,37 @@ public class SaslRpcClient {
           "Can't obtain server Kerberos config key from protocol="
               + protocol.getCanonicalName());
     }
-    // construct the expected principal from the config
-    String confPrincipal = SecurityUtil.getServerPrincipal(
-        conf.get(serverKey), serverAddr.getAddress());
-    if (confPrincipal == null || confPrincipal.isEmpty()) {
-      throw new IllegalArgumentException(
-          "Failed to specify server's Kerberos principal name");
+    // construct server advertised principal for comparision
+    String serverPrincipal = new KerberosPrincipal(
+        authType.getProtocol() + "/" + authType.getServerId()).getName();
+    boolean isPrincipalValid = false;
+
+    // use the pattern if defined
+    String serverKeyPattern = conf.get(serverKey + ".pattern");
+    if (serverKeyPattern != null && !serverKeyPattern.isEmpty()) {
+      Pattern pattern = GlobPattern.compile(serverKeyPattern);
+      isPrincipalValid = pattern.matcher(serverPrincipal).matches();
+    } else {
+      // check that the server advertised principal matches our conf
+      String confPrincipal = SecurityUtil.getServerPrincipal(
+          conf.get(serverKey), serverAddr.getAddress());
+      if (confPrincipal == null || confPrincipal.isEmpty()) {
+        throw new IllegalArgumentException(
+            "Failed to specify server's Kerberos principal name");
+      }
+      KerberosName name = new KerberosName(confPrincipal);
+      if (name.getHostName() == null) {
+        throw new IllegalArgumentException(
+            "Kerberos principal name does NOT have the expected hostname part: "
+                + confPrincipal);
+      }
+      isPrincipalValid = serverPrincipal.equals(confPrincipal);
     }
-    // ensure it looks like a host-based service principal
-    KerberosName name = new KerberosName(confPrincipal);
-    if (name.getHostName() == null) {
-      throw new IllegalArgumentException(
-          "Kerberos principal name does NOT have the expected hostname part: "
-              + confPrincipal);
-    }
-    // check that the server advertised principal matches our conf
-    KerberosPrincipal serverPrincipal = new KerberosPrincipal(
-        authType.getProtocol() + "/" + authType.getServerId());
-    if (!serverPrincipal.getName().equals(confPrincipal)) {
+    if (!isPrincipalValid) {
       throw new IllegalArgumentException(
           "Server has invalid Kerberos principal: " + serverPrincipal);
     }
-    return confPrincipal;
+    return serverPrincipal;
   }
   
 
