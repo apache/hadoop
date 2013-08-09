@@ -408,7 +408,8 @@ public class TestRMWebServices extends JerseyTest {
     ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
 
     long totalMBExpect = 
-        metrics.getAvailableMB() + metrics.getAllocatedMB();
+        metrics.getReservedMB()+ metrics.getAvailableMB() 
+        + metrics.getAllocatedMB();
 
     assertEquals("appsSubmitted doesn't match", 
         metrics.getAppsSubmitted(), submittedApps);
