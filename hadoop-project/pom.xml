@@ -57,6 +57,7 @@
     <!-- Used for building path to native library loaded by tests.  Projects -->
     <!-- at different nesting levels in the source tree may need to override. -->
     <hadoop.common.build.dir>${basedir}/../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
+    <java.security.egd>file:///dev/urandom</java.security.egd>
   </properties>
 
   <dependencyManagement>
@@ -831,7 +832,7 @@
 
             <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
             <java.security.krb5.conf>${basedir}/src/test/resources/krb5.conf</java.security.krb5.conf>
-            <java.security.egd>file:///dev/urandom</java.security.egd>
+            <java.security.egd>${java.security.egd}</java.security.egd>
             <require.test.libhadoop>${require.test.libhadoop}</require.test.libhadoop>
           </systemPropertyVariables>
           <includes>
@@ -885,6 +886,13 @@
           <family>Windows</family>
         </os>
       </activation>
+      <properties>
+        <!-- We must use this exact string for egd on Windows, because the -->
+        <!-- JVM will check for an exact string match on this.  If found, it -->
+        <!-- will use a native entropy provider.  This will not really -->
+        <!-- attempt to open a file at this path. -->
+        <java.security.egd>file:/dev/urandom</java.security.egd>
+      </properties>
       <build>
         <plugins>
           <plugin>

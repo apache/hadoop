@@ -363,6 +363,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9757. Har metadata cache can grow without limit (Cristina Abad via daryn)
 
+    HADOOP-9857. Tests block and sometimes timeout on Windows due to invalid
+    entropy source. (cnauroth)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
