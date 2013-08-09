@@ -514,6 +514,9 @@ Release 2.1.0-beta - 2013-08-06
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
 
+    YARN-1046. Disable mem monitoring by default in MiniYARNCluster. (Karthik
+    Kambatla via Sandy Ryza)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
