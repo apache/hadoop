@@ -19,6 +19,8 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9833 move slf4j to version 1.7.5 (Kousuke Saruta via stevel)
 
+    HADOOP-9672. Upgrade Avro dependency to 1.7.4. (sandy via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
