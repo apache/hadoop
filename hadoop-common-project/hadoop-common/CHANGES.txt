@@ -67,6 +67,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9789. Support server advertised kerberos principals (daryn)
 
+    HADOOP-8814. Replace string equals "" by String#isEmpty().
+    (Brandon Li via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

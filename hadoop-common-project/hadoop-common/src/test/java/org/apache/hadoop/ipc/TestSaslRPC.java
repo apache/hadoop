@@ -175,7 +175,7 @@ public class TestSaslRPC {
     }
     @Override
     public UserGroupInformation getUser() {
-      if ("".equals(realUser.toString())) {
+      if (realUser.toString().isEmpty()) {
         return UserGroupInformation.createRemoteUser(tokenid.toString());
       } else {
         UserGroupInformation realUgi = UserGroupInformation

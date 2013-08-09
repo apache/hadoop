@@ -1046,7 +1046,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation createRemoteUser(String user) {
-    if (user == null || "".equals(user)) {
+    if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
     Subject subject = new Subject();
@@ -1118,7 +1118,7 @@ public class UserGroupInformation {
   @InterfaceStability.Evolving
   public static UserGroupInformation createProxyUser(String user,
       UserGroupInformation realUser) {
-    if (user == null || "".equals(user)) {
+    if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
     if (realUser == null) {

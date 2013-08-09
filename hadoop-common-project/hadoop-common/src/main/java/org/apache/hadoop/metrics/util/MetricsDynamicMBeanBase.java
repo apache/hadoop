@@ -129,7 +129,7 @@ public abstract class MetricsDynamicMBeanBase implements DynamicMBean {
   @Override
   public Object getAttribute(String attributeName) throws AttributeNotFoundException,
       MBeanException, ReflectionException {
-    if (attributeName == null || attributeName.equals("")) 
+    if (attributeName == null || attributeName.isEmpty()) 
       throw new IllegalArgumentException();
     
     updateMbeanInfoIfMetricsListChanged();
@@ -197,7 +197,7 @@ public abstract class MetricsDynamicMBeanBase implements DynamicMBean {
   public Object invoke(String actionName, Object[] parms, String[] signature)
       throws MBeanException, ReflectionException {
     
-    if (actionName == null || actionName.equals("")) 
+    if (actionName == null || actionName.isEmpty()) 
       throw new IllegalArgumentException();
     
     
