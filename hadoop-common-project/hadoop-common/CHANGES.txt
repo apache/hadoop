@@ -32,6 +32,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9806 PortmapInterface should check if the procedure is out-of-range
     (brandonli)
 
+    HADOOP-9315. Port HADOOP-9249 hadoop-maven-plugins Clover fix to branch-2 to
+    fix build failures. (Dennis Y via cnauroth)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
@@ -52,9 +55,6 @@ Release 2.1.0-beta - 2013-08-06
 
     HADOOP-9768. chown and chgrp reject users and groups with spaces on platforms
     where spaces are otherwise acceptable. (cnauroth)
-
-    HADOOP-9315. Port HADOOP-9249 hadoop-maven-plugins Clover fix to branch-2 to
-    fix build failures. (Dennis Y via cnauroth)
 
 Release 2.1.0-beta - 2013-08-06
 
