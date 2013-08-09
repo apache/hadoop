@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -49,6 +50,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -68,6 +70,8 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
 import org.junit.Test;
+
+import static org.mockito.Mockito.*;
 
 /**
  * A JUnit test for doing fsck
@@ -633,6 +637,56 @@ public class TestFsck {
         cluster.shutdown();
       }
     }
+  }
+
+  /** Test fsck with FileNotFound */
+  @Test
+  public void testFsckFileNotFound() throws Exception {
+
+    // Number of replicas to actually start
+    final short NUM_REPLICAS = 1;
+
+    Configuration conf = new Configuration();
+    NameNode namenode = mock(NameNode.class);
+    NetworkTopology nettop = mock(NetworkTopology.class);
+    Map<String,String[]> pmap = new HashMap<String, String[]>();
+    Writer result = new StringWriter();
+    PrintWriter out = new PrintWriter(result, true);
+    InetAddress remoteAddress = InetAddress.getLocalHost();
+    FSNamesystem fsName = mock(FSNamesystem.class);
+    when(namenode.getNamesystem()).thenReturn(fsName);
+    when(fsName.getBlockLocations(anyString(), anyLong(), anyLong(),
+        anyBoolean(), anyBoolean())).
+        thenThrow(new FileNotFoundException()) ;
+
+    NamenodeFsck fsck = new NamenodeFsck(conf, namenode, nettop, pmap, out,
+        NUM_REPLICAS, (short)1, remoteAddress);
+
+    String pathString = "/tmp/testFile";
+
+    long length = 123L;
+    boolean isDir = false;
+    int blockReplication = 1;
+    long blockSize = 128 *1024L;
+    long modTime = 123123123L;
+    long accessTime = 123123120L;
+    FsPermission perms = FsPermission.getDefault();
+    String owner = "foo";
+    String group = "bar";
+    byte [] symlink = null;
+    byte [] path = new byte[128];
+    path = DFSUtil.string2Bytes(pathString);
+
+    HdfsFileStatus file = new HdfsFileStatus(length, isDir, blockReplication,
+        blockSize, modTime, accessTime, perms, owner, group, symlink, path);
+    Result res = new Result(conf);
+
+    try {
+      fsck.check(pathString, file, res);
+    } catch (Exception e) {
+      fail("Unexpected exception "+ e.getMessage());
+    }
+    assertTrue(res.toString().contains("HEALTHY"));
   }
 
   /** Test fsck with symlinks in the filesystem */

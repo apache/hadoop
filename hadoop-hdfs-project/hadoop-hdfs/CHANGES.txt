@@ -34,6 +34,9 @@ Release 0.23.10 - UNRELEASED
 
     HDFS-3020. Fix editlog to automatically sync when buffer is full. (todd)
 
+    HDFS-4993. Fsck can fail if a file is renamed or deleted. (Robert Parker
+    via kihwal)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES

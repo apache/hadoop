@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -123,7 +124,7 @@ public class NamenodeFsck {
   /**
    * Filesystem checker.
    * @param conf configuration (namenode config)
-   * @param nn namenode that this fsck is going to use
+   * @param namenode namenode that this fsck is going to use
    * @param pmap key=value[] map passed to the http servlet as url parameters
    * @param out output stream to write the fsck output
    * @param totalDatanodes number of live datanodes
@@ -276,8 +277,13 @@ public class NamenodeFsck {
     long fileLen = file.getLen();
     // Get block locations without updating the file access time 
     // and without block access tokens
-    LocatedBlocks blocks = namenode.getNamesystem().getBlockLocations(path, 0,
-        fileLen, false, false);
+    LocatedBlocks blocks;
+    try {
+      blocks = namenode.getNamesystem().getBlockLocations(path, 0,
+          fileLen, false, false);
+    } catch (FileNotFoundException fnfe) {
+      blocks = null;
+    }
     if (blocks == null) { // the file is deleted
       return;
     }
