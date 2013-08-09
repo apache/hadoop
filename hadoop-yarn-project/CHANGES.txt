@@ -8,6 +8,8 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-589. Expose a REST API for monitoring the fair scheduler (Sandy Ryza).
+
   OPTIMIZATIONS
 
   BUG FIXES

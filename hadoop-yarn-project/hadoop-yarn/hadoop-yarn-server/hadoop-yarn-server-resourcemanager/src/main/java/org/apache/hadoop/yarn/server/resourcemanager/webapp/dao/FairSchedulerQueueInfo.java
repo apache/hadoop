@@ -22,6 +22,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSeeAlso;
+import javax.xml.bind.annotation.XmlTransient;
+
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
@@ -29,39 +35,53 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlSeeAlso({FairSchedulerLeafQueueInfo.class})
 public class FairSchedulerQueueInfo {  
   private int maxApps;
   
+  @XmlTransient
   private float fractionMemUsed;
+  @XmlTransient
   private float fractionMemFairShare;
+  @XmlTransient
   private float fractionMemMinShare;
+  @XmlTransient
   private float fractionMemMaxShare;
   
-  private Resource minResources;
-  private Resource maxResources;
-  private Resource usedResources;
-  private Resource fairResources;
-  private Resource clusterResources;
+  private ResourceInfo minResources;
+  private ResourceInfo maxResources;
+  private ResourceInfo usedResources;
+  private ResourceInfo fairResources;
+  private ResourceInfo clusterResources;
   
   private String queueName;
+  private String schedulingPolicy;
   
-  private Collection<FairSchedulerQueueInfo> childInfos;
+  private Collection<FairSchedulerQueueInfo> childQueues;
+  
+  public FairSchedulerQueueInfo() {
+  }
   
   public FairSchedulerQueueInfo(FSQueue queue, FairScheduler scheduler) {
     QueueManager manager = scheduler.getQueueManager();
     
     queueName = queue.getName();
-        
-    clusterResources = scheduler.getClusterCapacity();
+    schedulingPolicy = queue.getPolicy().getName();
     
-    usedResources = queue.getResourceUsage();
+    clusterResources = new ResourceInfo(scheduler.getClusterCapacity());
+    
+    usedResources = new ResourceInfo(queue.getResourceUsage());
     fractionMemUsed = (float)usedResources.getMemory() /
         clusterResources.getMemory();
     
-    fairResources = queue.getFairShare();
-    minResources = queue.getMinShare();
-    maxResources = queue.getMaxShare();
-    maxResources = Resources.componentwiseMin(maxResources, clusterResources);
+    fairResources = new ResourceInfo(queue.getFairShare());
+    minResources = new ResourceInfo(queue.getMinShare());
+    maxResources = new ResourceInfo(queue.getMaxShare());
+    maxResources = new ResourceInfo(
+        Resources.componentwiseMin(queue.getMaxShare(),
+            scheduler.getClusterCapacity()));
     
     fractionMemFairShare = (float)fairResources.getMemory() / clusterResources.getMemory();
     fractionMemMinShare = (float)minResources.getMemory() / clusterResources.getMemory();
@@ -69,13 +89,13 @@ public class FairSchedulerQueueInfo {
     
     maxApps = manager.getQueueMaxApps(queueName);
     
-    Collection<FSQueue> childQueues = queue.getChildQueues();
-    childInfos = new ArrayList<FairSchedulerQueueInfo>();
-    for (FSQueue child : childQueues) {
+    Collection<FSQueue> children = queue.getChildQueues();
+    childQueues = new ArrayList<FairSchedulerQueueInfo>();
+    for (FSQueue child : children) {
       if (child instanceof FSLeafQueue) {
-        childInfos.add(new FairSchedulerLeafQueueInfo((FSLeafQueue)child, scheduler));
+        childQueues.add(new FairSchedulerLeafQueueInfo((FSLeafQueue)child, scheduler));
       } else {
-        childInfos.add(new FairSchedulerQueueInfo(child, scheduler));
+        childQueues.add(new FairSchedulerQueueInfo(child, scheduler));
       }
     }
   }
@@ -90,15 +110,15 @@ public class FairSchedulerQueueInfo {
   /**
    * Returns the fair share of this queue in megabytes.
    */
-  public Resource getFairShare() {
+  public ResourceInfo getFairShare() {
     return fairResources;
   }
     
-  public Resource getMinResources() {
+  public ResourceInfo getMinResources() {
     return minResources;
   }
   
-  public Resource getMaxResources() {
+  public ResourceInfo getMaxResources() {
     return maxResources;
   }
   
@@ -110,7 +130,7 @@ public class FairSchedulerQueueInfo {
     return queueName;
   }
   
-  public Resource getUsedResources() {
+  public ResourceInfo getUsedResources() {
     return usedResources;
   }
   
@@ -138,7 +158,14 @@ public class FairSchedulerQueueInfo {
     return fractionMemMaxShare;
   }
   
+  /**
+   * Returns the name of the scheduling policy used by this queue.
+   */
+  public String getSchedulingPolicy() {
+    return schedulingPolicy;
+  }
+  
   public Collection<FairSchedulerQueueInfo> getChildQueues() {
-    return childInfos;
+    return childQueues;
   }
 }
