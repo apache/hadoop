@@ -53,6 +53,8 @@ Release 2.1.0-beta - 2013-08-06
     HADOOP-9821. ClientId should have getMsb/getLsb methods. 
     (Tsuyoshi OZAWA via jing9)
 
+    HADOOP-9789. Support server advertised kerberos principals (daryn)
+
   OPTIMIZATIONS
 
   BUG FIXES
