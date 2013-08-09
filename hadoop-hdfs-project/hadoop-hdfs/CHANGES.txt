@@ -39,6 +39,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5028. LeaseRenewer throws ConcurrentModificationException when timeout.
     (zhaoyunjiong via szetszwo)
 
+    HDFS-4993. Fsck can fail if a file is renamed or deleted. (Robert Parker
+    via kihwal)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
