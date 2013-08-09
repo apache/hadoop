@@ -336,6 +336,8 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9821. ClientId should have getMsb/getLsb methods. 
     (Tsuyoshi OZAWA via jing9)
 
+    HADOOP-9672. Upgrade Avro dependency to 1.7.4. (sandy via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
