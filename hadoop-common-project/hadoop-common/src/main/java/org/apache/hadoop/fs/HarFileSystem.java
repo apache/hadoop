@@ -24,11 +24,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,10 +57,12 @@ public class HarFileSystem extends FilterFileSystem {
 
   private static final Log LOG = LogFactory.getLog(HarFileSystem.class);
 
+  public static final String METADATA_CACHE_ENTRIES_KEY = "fs.har.metadatacache.entries";
+  public static final int METADATA_CACHE_ENTRIES_DEFAULT = 10;
+
   public static final int VERSION = 3;
 
-  private static final Map<URI, HarMetaData> harMetaCache =
-      new ConcurrentHashMap<URI, HarMetaData>();
+  private static Map<URI, HarMetaData> harMetaCache;
 
   // uri representation of this Har filesystem
   private URI uri;
@@ -98,7 +101,14 @@ public class HarFileSystem extends FilterFileSystem {
   public HarFileSystem(FileSystem fs) {
     super(fs);
   }
-  
+ 
+  private synchronized void initializeMetadataCache(Configuration conf) {
+    if (harMetaCache == null) {
+      int cacheSize = conf.getInt(METADATA_CACHE_ENTRIES_KEY, METADATA_CACHE_ENTRIES_DEFAULT);
+      harMetaCache = Collections.synchronizedMap(new LruCache<URI, HarMetaData>(cacheSize));
+    }
+  }
+ 
   /**
    * Initialize a Har filesystem per har archive. The 
    * archive home directory is the top level directory
@@ -114,6 +124,9 @@ public class HarFileSystem extends FilterFileSystem {
    */
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
+    // initialize the metadata cache, if needed
+    initializeMetadataCache(conf);
+
     // decode the name
     URI underLyingURI = decodeHarURI(name, conf);
     // we got the right har Path- now check if this is 
@@ -1116,5 +1129,19 @@ public class HarFileSystem extends FilterFileSystem {
    */
   HarMetaData getMetadata() {
     return metadata;
+  }
+
+  private static class LruCache<K, V> extends LinkedHashMap<K, V> {
+    private final int MAX_ENTRIES;
+
+    public LruCache(int maxEntries) {
+        super(maxEntries + 1, 1.0f, true);
+        MAX_ENTRIES = maxEntries;
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+        return size() > MAX_ENTRIES;
+    }
   }
 }
