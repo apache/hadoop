@@ -824,14 +824,13 @@ public class TestSaslRPC {
       final AuthMethod serverAuth,
       final UseToken tokenType) throws Exception {
     
-    String currentUser = UserGroupInformation.getCurrentUser().getUserName();
-    
     final Configuration serverConf = new Configuration(conf);
     serverConf.set(HADOOP_SECURITY_AUTHENTICATION, serverAuth.toString());
     UserGroupInformation.setConfiguration(serverConf);
     
-    final UserGroupInformation serverUgi =
-        UserGroupInformation.createRemoteUser(currentUser + "-SERVER/localhost@NONE");
+    final UserGroupInformation serverUgi = (serverAuth == KERBEROS)
+        ? UserGroupInformation.createRemoteUser("server/localhost@NONE")
+        : UserGroupInformation.createRemoteUser("server");
     serverUgi.setAuthenticationMethod(serverAuth);
 
     final TestTokenSecretManager sm = new TestTokenSecretManager();
@@ -866,7 +865,7 @@ public class TestSaslRPC {
     UserGroupInformation.setConfiguration(clientConf);
     
     final UserGroupInformation clientUgi =
-        UserGroupInformation.createRemoteUser(currentUser + "-CLIENT");
+        UserGroupInformation.createRemoteUser("client");
     clientUgi.setAuthenticationMethod(clientAuth);    
 
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);

@@ -338,6 +338,8 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9672. Upgrade Avro dependency to 1.7.4. (sandy via kihwal)
 
+    HADOOP-9789. Support server advertised kerberos principals (daryn)
+
   OPTIMIZATIONS
 
   BUG FIXES
