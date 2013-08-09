@@ -56,9 +56,6 @@ Trunk (Unreleased)
     HADOOP-8719. Workaround for kerberos-related log errors upon running any
     hadoop command on OSX. (Jianbin Wei via harsh)
 
-    HADOOP-8814. Replace string equals "" by String#isEmpty().
-    (Brandon Li via suresh)
-
     HADOOP-8588. SerializationFactory shouldn't throw a
     NullPointerException if the serializations list is empty.
     (Sho Shimauchi via harsh)
@@ -339,6 +336,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9672. Upgrade Avro dependency to 1.7.4. (sandy via kihwal)
 
     HADOOP-9789. Support server advertised kerberos principals (daryn)
+
+    HADOOP-8814. Replace string equals "" by String#isEmpty().
+    (Brandon Li via suresh)
 
   OPTIMIZATIONS
 
