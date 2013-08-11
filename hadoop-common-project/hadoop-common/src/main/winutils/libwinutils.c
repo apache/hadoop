@@ -1709,3 +1709,51 @@ void ReportErrorCode(LPCWSTR func, DWORD err)
   }
   if (msg != NULL) LocalFree(msg);
 }
+
+//----------------------------------------------------------------------------
+// Function: GetLibraryName
+//
+// Description:
+//  Given an address, get the file name of the library from which it was loaded.
+//
+// Returns:
+//  None
+//
+// Notes:
+// - The function allocates heap memory and points the filename out parameter to
+//   the newly allocated memory, which will contain the name of the file.
+//
+// - If there is any failure, then the function frees the heap memory it
+//   allocated and sets the filename out parameter to NULL.
+//
+void GetLibraryName(LPCVOID lpAddress, LPWSTR *filename)
+{
+  SIZE_T ret = 0;
+  DWORD size = MAX_PATH;
+  HMODULE mod = NULL;
+  DWORD err = ERROR_SUCCESS;
+
+  MEMORY_BASIC_INFORMATION mbi;
+  ret = VirtualQuery(lpAddress, &mbi, sizeof(mbi));
+  if (ret == 0) goto cleanup;
+  mod = mbi.AllocationBase;
+
+  do {
+    *filename = (LPWSTR) realloc(*filename, size * sizeof(WCHAR));
+    if (*filename == NULL) goto cleanup;
+    GetModuleFileName(mod, *filename, size);
+    size <<= 1;
+    err = GetLastError();
+  } while (err == ERROR_INSUFFICIENT_BUFFER);
+
+  if (err != ERROR_SUCCESS) goto cleanup;
+
+  return;
+
+cleanup:
+  if (*filename != NULL)
+  {
+    free(*filename);
+    *filename = NULL;
+  }
+}
