@@ -70,6 +70,8 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-8814. Replace string equals "" by String#isEmpty().
     (Brandon Li via suresh)
 
+    HADOOP-9802. Support Snappy codec on Windows. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

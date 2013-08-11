@@ -154,3 +154,5 @@ DWORD GetLocalGroupsForUser(__in LPCWSTR user,
   __out LPLOCALGROUP_USERS_INFO_0 *groups, __out LPDWORD entries);
 
 BOOL EnablePrivilege(__in LPCWSTR privilegeName);
+
+void GetLibraryName(__in LPCVOID lpAddress, __out LPWSTR *filename);

@@ -21,7 +21,11 @@
 #define ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
 
 #include "org_apache_hadoop.h"
+
+#ifdef UNIX
 #include <dlfcn.h>
+#endif
+
 #include <jni.h>
 #include <snappy-c.h>
 #include <stddef.h>
