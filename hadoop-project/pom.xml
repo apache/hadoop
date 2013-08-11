@@ -929,6 +929,7 @@
         <!-- will use a native entropy provider.  This will not really -->
         <!-- attempt to open a file at this path. -->
         <java.security.egd>file:/dev/urandom</java.security.egd>
+        <bundle.snappy.in.bin>true</bundle.snappy.in.bin>
       </properties>
       <build>
         <plugins>
@@ -938,7 +939,7 @@
             <configuration>
               <environmentVariables>
                 <!-- Specify where to look for the native DLL on Windows -->
-                <PATH>${env.PATH};${hadoop.common.build.dir}/bin</PATH>
+                <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${snappy.lib}</PATH>
               </environmentVariables>
             </configuration>
           </plugin>
