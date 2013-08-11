@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.*;
 import org.apache.log4j.PropertyConfigurator;
+import org.apache.hadoop.fs.FileUtil;
 
 /**********************************************************
  * This class provides various methods for interaction with
@@ -171,7 +172,7 @@ public class Environment {
     if ("true".equalsIgnoreCase(tmp) && fnames[0] != null)
       for (String fname : fnames) {
         File f = new File(fname);
-        if (f.exists() && f.canRead()) {
+        if (f.exists() && FileUtil.canRead(f)) {
           monitors.add(new MonitorJob(new HadoopLogParser(fname), "hadoopLog", timeInt));
 	  logInfo("Created Monitor for Hadoop log file: " + f.getAbsolutePath());
 	} else if (!f.exists())
@@ -192,7 +193,7 @@ public class Environment {
     if ("true".equalsIgnoreCase(tmp))
       for (String fname : fnames) {
         File f = new File(fname);
-        if (f.exists() && f.canRead()) {
+        if (f.exists() && FileUtil.canRead(f)) {
           monitors.add(new MonitorJob(new SystemLogParser(fname), "systemLog", timeInt));
 	  logInfo("Created Monitor for System log file: " + f.getAbsolutePath());
         } else if (!f.exists())

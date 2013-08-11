@@ -567,7 +567,7 @@ static DWORD GetEffectiveRightsForSid(PSECURITY_DESCRIPTOR psd,
   PSID pSid,
   PACCESS_MASK pAccessRights)
 {
-  AUTHZ_RESOURCE_MANAGER_HANDLE hManager;
+  AUTHZ_RESOURCE_MANAGER_HANDLE hManager = NULL;
   LUID unusedId = { 0 };
   AUTHZ_CLIENT_CONTEXT_HANDLE hAuthzClientContext = NULL;
   DWORD dwRtnCode = ERROR_SUCCESS;
@@ -581,6 +581,10 @@ static DWORD GetEffectiveRightsForSid(PSECURITY_DESCRIPTOR psd,
     return GetLastError();
   }
 
+  // Pass AUTHZ_SKIP_TOKEN_GROUPS to the function to avoid querying user group
+  // information for access check. This allows us to model POSIX permissions
+  // on Windows, where a user can have less permissions than a group it
+  // belongs to.
   if(!AuthzInitializeContextFromSid(AUTHZ_SKIP_TOKEN_GROUPS,
     pSid, hManager, NULL, unusedId, NULL, &hAuthzClientContext))
   {
@@ -594,14 +598,113 @@ static DWORD GetEffectiveRightsForSid(PSECURITY_DESCRIPTOR psd,
     ret = dwRtnCode;
     goto GetEffectiveRightsForSidEnd;
   }
-  if (!AuthzFreeContext(hAuthzClientContext))
-  {
-    ret = GetLastError();
-    goto GetEffectiveRightsForSidEnd;
-  }
 
 GetEffectiveRightsForSidEnd:
+  if (hManager != NULL)
+  {
+    (void)AuthzFreeResourceManager(hManager);
+  }
+  if (hAuthzClientContext != NULL)
+  {
+    (void)AuthzFreeContext(hAuthzClientContext);
+  }
+
   return ret;
+}
+
+//----------------------------------------------------------------------------
+// Function: CheckAccessForCurrentUser
+//
+// Description:
+//   Checks if the current process has the requested access rights on the given
+//   path. Based on the following MSDN article:
+//   http://msdn.microsoft.com/en-us/library/windows/desktop/ff394771(v=vs.85).aspx
+//
+// Returns:
+//   ERROR_SUCCESS: on success
+//
+DWORD CheckAccessForCurrentUser(
+  __in PCWSTR pathName,
+  __in ACCESS_MASK requestedAccess,
+  __out BOOL *allowed)
+{
+  DWORD dwRtnCode = ERROR_SUCCESS;
+
+  LPWSTR longPathName = NULL;
+  HANDLE hProcessToken = NULL;
+  PSECURITY_DESCRIPTOR pSd = NULL;
+
+  AUTHZ_RESOURCE_MANAGER_HANDLE hManager = NULL;
+  AUTHZ_CLIENT_CONTEXT_HANDLE hAuthzClientContext = NULL;
+  LUID Luid = {0, 0};
+
+  ACCESS_MASK currentUserAccessRights = 0;
+
+  // Prepend the long path prefix if needed
+  dwRtnCode = ConvertToLongPath(pathName, &longPathName);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    goto CheckAccessEnd;
+  }
+
+  // Get SD of the given path. OWNER and DACL security info must be
+  // requested, otherwise, AuthzAccessCheck fails with invalid parameter
+  // error.
+  dwRtnCode = GetNamedSecurityInfo(longPathName, SE_FILE_OBJECT,
+    OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION |
+    DACL_SECURITY_INFORMATION,
+    NULL, NULL, NULL, NULL, &pSd);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    goto CheckAccessEnd;
+  }
+
+  // Get current process token
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hProcessToken))
+  {
+    dwRtnCode = GetLastError();
+    goto CheckAccessEnd;
+  }
+
+  if (!AuthzInitializeResourceManager(AUTHZ_RM_FLAG_NO_AUDIT, NULL, NULL,
+    NULL, NULL, &hManager))
+  {
+    dwRtnCode = GetLastError();
+    goto CheckAccessEnd;
+  }
+
+  if(!AuthzInitializeContextFromToken(0, hProcessToken, hManager, NULL,
+    Luid, NULL, &hAuthzClientContext))
+  {
+    dwRtnCode = GetLastError();
+    goto CheckAccessEnd;
+  }
+
+  dwRtnCode = GetAccess(hAuthzClientContext, pSd, &currentUserAccessRights);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    goto CheckAccessEnd;
+  }
+
+  *allowed = ((currentUserAccessRights & requestedAccess) == requestedAccess);
+
+CheckAccessEnd:
+  LocalFree(longPathName);
+  LocalFree(pSd);
+  if (hProcessToken != NULL)
+  {
+    CloseHandle(hProcessToken);
+  }
+  if (hManager != NULL)
+  {
+    (void)AuthzFreeResourceManager(hManager);
+  }
+  if (hAuthzClientContext != NULL)
+  {
+    (void)AuthzFreeContext(hAuthzClientContext);
+  }
+
+  return dwRtnCode;
 }
 
 //----------------------------------------------------------------------------

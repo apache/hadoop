@@ -111,7 +111,7 @@ public class TestJvmManager {
     // write the actual command it self.
     out.write(cmd.getBytes());
     out.close();
-    script.setExecutable(true);
+    FileUtil.setExecutable(script, true);
     return script;
   }
   
@@ -119,7 +119,7 @@ public class TestJvmManager {
   private File writeEmptyScript(String fileName) throws IOException {
     File script = new File(TEST_DIR, fileName);
     script.createNewFile();
-    script.setExecutable(true);
+    FileUtil.setExecutable(script, true);
     return script;
   }
   

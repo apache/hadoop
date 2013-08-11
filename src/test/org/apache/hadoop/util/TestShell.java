@@ -25,6 +25,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import org.apache.hadoop.fs.FileUtil;
+
 public class TestShell extends TestCase {
 
   private static class Command extends Shell {
@@ -90,7 +92,7 @@ public class TestShell extends TestCase {
     PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
     writer.println(timeoutCommand);
     writer.close();
-    shellFile.setExecutable(true);
+    FileUtil.setExecutable(shellFile, true);
     Shell.ShellCommandExecutor shexc 
     = new Shell.ShellCommandExecutor(new String[]{shellFile.getAbsolutePath()},
                                       null, null, 100);

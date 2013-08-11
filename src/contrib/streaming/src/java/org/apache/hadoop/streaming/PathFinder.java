@@ -22,6 +22,8 @@ import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.fs.FileUtil;
+
 /**
  * Maps a relative pathname to an absolute pathname using the
  * PATH enviroment.
@@ -94,7 +96,7 @@ public class PathFinder
         //
         // see if the filename matches and  we can read it
         //
-        if (f.isFile() && f.canRead()) {
+        if (f.isFile() && FileUtil.canRead(f)) {
           return f;
         }
       } catch (Exception exp){ }

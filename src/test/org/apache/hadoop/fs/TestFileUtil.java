@@ -155,7 +155,7 @@ public class TestFileUtil {
 
     xSubDir.mkdirs();
     file2.createNewFile();
-    xSubDir.setWritable(false);
+    FileUtil.setWritable(xSubDir, false);
     ySubDir.mkdirs();
     file3.createNewFile();
 
@@ -172,7 +172,7 @@ public class TestFileUtil {
   // Sets writable permissions for the non-deleted dir "xsubdir" so that it can
   // be deleted in tearDown().
   private void validateAndSetWritablePermissions(boolean ret) {
-    xSubDir.setWritable(true);
+    FileUtil.setWritable(xSubDir, true);
     Assert.assertFalse("The return value should have been false!", ret);
     Assert.assertTrue("The file file1 should not have been deleted!",
         new File(del, file1Name).exists());

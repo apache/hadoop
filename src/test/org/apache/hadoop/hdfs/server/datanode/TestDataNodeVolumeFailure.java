@@ -356,10 +356,10 @@ public class TestDataNodeVolumeFailure extends TestCase{
   //@After
   public void tearDown() throws Exception {
     if(data_fail != null) {
-      data_fail.setWritable(true);
+      FileUtil.setWritable(data_fail, true);
     }
     if(failedDir != null) {
-      failedDir.setWritable(true);
+      FileUtil.setWritable(failedDir, true);
     }
     if(cluster != null) {
       cluster.shutdown();

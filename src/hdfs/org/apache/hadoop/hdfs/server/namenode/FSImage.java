@@ -565,7 +565,7 @@ public class FSImage extends Storage {
   long readCheckpointTime(StorageDirectory sd) throws IOException {
     File timeFile = getImageFile(sd, NameNodeFile.TIME);
     long timeStamp = 0L;
-    if (timeFile.exists() && timeFile.canRead()) {
+    if (timeFile.exists() && FileUtil.canRead(timeFile)) {
       DataInputStream in = new DataInputStream(new FileInputStream(timeFile));
       try {
         timeStamp = in.readLong();

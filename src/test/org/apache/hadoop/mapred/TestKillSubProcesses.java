@@ -28,6 +28,7 @@ import java.util.StringTokenizer;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -452,7 +453,7 @@ public class TestKillSubProcesses extends TestCase {
       file.close();
 
       // Set executable permissions on the script.
-      new File(scriptPath.toUri().getPath()).setExecutable(true);
+      FileUtil.setExecutable(new File(scriptPath.toUri().getPath()), true);
 
       LOG.info("Calling script from map task : " + shellScript);
       

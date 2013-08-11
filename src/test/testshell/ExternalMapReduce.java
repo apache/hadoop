@@ -29,6 +29,7 @@ import java.util.jar.Manifest;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -167,7 +168,7 @@ public class ExternalMapReduce extends Configured implements Tool {
       verifyFilesExist(expectedFileList);
 
       File file = new File("./jarlink/test.txt");
-      if (!file.canExecute()) {
+      if (!FileUtil.canExecute(file)) {
         throw new IOException("jarlink/test.txt is not executable");
       }
     }

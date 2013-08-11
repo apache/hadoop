@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -51,7 +52,7 @@ public class TaskLogServlet extends HttpServlet {
   private boolean haveTaskLog(TaskAttemptID taskId, boolean isCleanup,
       TaskLog.LogName type) {
     File f = TaskLog.getTaskLogFile(taskId, isCleanup, type);
-    return f.canRead();
+    return FileUtil.canRead(f);
   }
 
   /**

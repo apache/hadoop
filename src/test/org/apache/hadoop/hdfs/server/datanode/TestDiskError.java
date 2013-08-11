@@ -24,6 +24,7 @@ import java.net.Socket;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -75,8 +76,8 @@ public class TestDiskError extends TestCase {
       }
     } finally {
       // restore its old permission
-      dir1.setWritable(true);
-      dir2.setWritable(true);
+      FileUtil.setWritable(dir1, true);
+      FileUtil.setWritable(dir2, true);
       cluster.shutdown();
     }
   }

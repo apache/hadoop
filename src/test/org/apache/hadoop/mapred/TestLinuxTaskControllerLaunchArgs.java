@@ -88,7 +88,7 @@ public class TestLinuxTaskControllerLaunchArgs extends TestCase {
     out.write("LTC_ARGS=$((LTC_ARG1+LTC_ARG2+LTC_ARG3+LTC_ARG4+LTC_ARG5))\n");
     out.write("if [ $LTC_ARGS -eq 5 ]; then exit 0; else exit 22; fi\n");
     out.close();
-    fakeTaskController.setExecutable(true);
+    FileUtil.setExecutable(fakeTaskController, true);
   }
 
   protected void initMyTest() throws Exception {

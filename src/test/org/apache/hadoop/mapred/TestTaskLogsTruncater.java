@@ -70,7 +70,7 @@ public class TestTaskLogsTruncater {
   public void tearDown() throws IOException {
     File logDir = TaskLog.getUserLogDir();
     for (File attemptDir : logDir.listFiles()) {
-      attemptDir.setWritable(true);
+      FileUtil.setWritable(attemptDir, true);
       FileUtil.fullyDelete(attemptDir);
     }
   }
@@ -605,7 +605,7 @@ public class TestTaskLogsTruncater {
       DataOutputStream scriptFile = fs.create(scriptPath);
       scriptFile.writeBytes(debugScriptContent);
       scriptFile.close();
-      new File(scriptPath.toUri().getPath()).setExecutable(true);
+      FileUtil.setExecutable(new File(scriptPath.toUri().getPath()), true);
 
       URI uri = scriptPath.toUri();
       DistributedCache.createSymlink(conf);

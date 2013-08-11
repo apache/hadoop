@@ -552,8 +552,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
       throws IOException {
     // All the files should have executable permissions on them.
     for (Path p : localCacheFiles) {
-      assertTrue("Cache file is not executable!", new File(p
-          .toUri().getPath()).canExecute());
+      assertTrue("Cache file is not executable!", FileUtil.canExecute(
+          new File(p.toUri().getPath())));
     }
   }
 

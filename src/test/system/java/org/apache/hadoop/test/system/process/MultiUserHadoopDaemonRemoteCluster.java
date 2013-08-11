@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.system.process.HadoopDaemonRemoteCluster.HadoopDaemonInfo;
 
 public abstract class MultiUserHadoopDaemonRemoteCluster
@@ -68,7 +69,7 @@ public abstract class MultiUserHadoopDaemonRemoteCluster
                 + MULTI_USER_BINARY_PATH_KEY + " correctly");
       }
       File binaryFile = new File(binaryPath);
-      if (!binaryFile.exists() || !binaryFile.canExecute()) {
+      if (!binaryFile.exists() || !FileUtil.canExecute(binaryFile)) {
         throw new IllegalArgumentException(
             "Binary file path is not configured correctly. Please set "
                 + MULTI_USER_BINARY_PATH_KEY

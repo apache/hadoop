@@ -192,6 +192,44 @@ public class TestNativeIO {
 
   }
 
+  /** Validate access checks on Windows */
+  @Test
+  public void testAccess() throws Exception {
+    if (!Shell.WINDOWS) {
+      return;
+    }
+
+    File testFile = new File(TEST_DIR, "testfileaccess");
+    assertTrue(testFile.createNewFile());
+
+    // Validate ACCESS_READ
+    FileUtil.setReadable(testFile, false);
+    assertFalse(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_READ));
+
+    FileUtil.setReadable(testFile, true);
+    assertTrue(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_READ));
+
+    // Validate ACCESS_WRITE
+    FileUtil.setWritable(testFile, false);
+    assertFalse(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_WRITE));
+
+    FileUtil.setWritable(testFile, true);
+    assertTrue(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_WRITE));
+
+    // Validate ACCESS_EXECUTE
+    FileUtil.setExecutable(testFile, false);
+    assertFalse(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_EXECUTE));
+
+    FileUtil.setExecutable(testFile, true);
+    assertTrue(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_EXECUTE));
+  }
+
   @Test
   public void testOpen() throws Exception {
     if (Shell.WINDOWS)

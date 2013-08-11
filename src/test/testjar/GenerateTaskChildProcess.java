@@ -29,6 +29,7 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -248,7 +249,7 @@ public class GenerateTaskChildProcess {
     file.writeBytes(script);
     file.close();
     File scriptFile = new File(scriptDirName,scriptName);
-    scriptFile.setExecutable(true);
+    FileUtil.setExecutable(scriptFile, true);
     LOG.info("script absolute path:" + scriptFile.getAbsolutePath());
     String [] cmd = new String[]{scriptFile.getAbsolutePath(), 
             String.valueOf(numOfChildProcesses)};
