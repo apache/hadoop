@@ -42,6 +42,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5035.  getFileLinkStatus and rename do not correctly check permissions
     of symlinks.  (Andrew Wang via Colin Patrick McCabe)
 
+    HDFS-5065. TestSymlinkHdfsDisable fails on Windows. (ivanmi)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
