@@ -20,7 +20,9 @@
 #if !defined ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
 #define ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
 
+#include "org_apache_hadoop.h"
 
+#ifdef UNIX
 #if defined HAVE_CONFIG_H
   #include <config.h>
 #endif
@@ -51,8 +53,12 @@
     #error 'jni.h not found'
   #endif
 
-  #include "org_apache_hadoop.h"
-
 #endif //define HADOOP_SNAPPY_LIBRARY
+#endif
+
+#ifdef WINDOWS
+#define HADOOP_SNAPPY_LIBRARY L"snappy.dll"
+#include <snappy-c.h>
+#endif
 
 #endif //ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H

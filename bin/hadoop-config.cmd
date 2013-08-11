@@ -183,7 +183,7 @@ if exist %HADOOP_CORE_HOME%\build\native (
 
 @rem For the disto case, check the lib\native folder
 if exist %HADOOP_CORE_HOME%\lib\native (
-  set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;%HADOOP_CORE_HOME%\lib\native\%JAVA_PLATFORM%
+  set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;%HADOOP_CORE_HOME%\lib\native\%JAVA_PLATFORM%;%HADOOP_CORE_HOME%\lib\native
 )
 
 set HADOOP_OPTS=%HADOOP_OPTS% -Dhadoop.log.dir=%HADOOP_LOG_DIR%

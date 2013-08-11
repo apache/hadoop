@@ -20,8 +20,12 @@
   #include <config.h>
 #endif
 
+#include "org_apache_hadoop_io_compress_snappy.h"
+#include "org_apache_hadoop_io_compress_snappy_SnappyCompressor.h"
+
 #if defined HADOOP_SNAPPY_LIBRARY
 
+#ifdef UNIX
 #if defined HAVE_STDIO_H
   #include <stdio.h>
 #else
@@ -45,9 +49,7 @@
 #else
   #error 'dlfcn.h not found'
 #endif
-
-#include "org_apache_hadoop_io_compress_snappy.h"
-#include "org_apache_hadoop_io_compress_snappy_SnappyCompressor.h"
+#endif
 
 static jfieldID SnappyCompressor_clazz;
 static jfieldID SnappyCompressor_uncompressedDirectBuf;
@@ -55,11 +57,18 @@ static jfieldID SnappyCompressor_uncompressedDirectBufLen;
 static jfieldID SnappyCompressor_compressedDirectBuf;
 static jfieldID SnappyCompressor_directBufferSize;
 
+#ifdef UNIX
 static snappy_status (*dlsym_snappy_compress)(const char*, size_t, char*, size_t*);
+#endif
+
+#ifdef WINDOWS
+typedef snappy_status (__cdecl *__dlsym_snappy_compress)(const char*, size_t, char*, size_t*);
+static __dlsym_snappy_compress dlsym_snappy_compress;
+#endif
 
 JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompressor_initIDs
 (JNIEnv *env, jclass clazz){
-
+#ifdef UNIX
   // Load libsnappy.so
   void *libsnappy = dlopen(HADOOP_SNAPPY_LIBRARY, RTLD_LAZY | RTLD_GLOBAL);
   if (!libsnappy) {
@@ -68,10 +77,25 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
     THROW(env, "java/lang/UnsatisfiedLinkError", msg);
     return;
   }
+#endif
+
+#ifdef WINDOWS
+  HMODULE libsnappy = LoadLibrary(HADOOP_SNAPPY_LIBRARY);
+  if (!libsnappy) {
+    THROW(env, "java/lang/UnsatisfiedLinkError", "Cannot load snappy.dll");
+    return;
+  }
+#endif
 
   // Locate the requisite symbols from libsnappy.so
+#ifdef UNIX
   dlerror();                                 // Clear any existing error
   LOAD_DYNAMIC_SYMBOL(dlsym_snappy_compress, env, libsnappy, "snappy_compress");
+#endif
+
+#ifdef WINDOWS
+  LOAD_DYNAMIC_SYMBOL(__dlsym_snappy_compress, dlsym_snappy_compress, env, libsnappy, "snappy_compress");
+#endif
 
   SnappyCompressor_clazz = (*env)->GetStaticFieldID(env, clazz, "clazz",
                                                  "Ljava/lang/Class;");
@@ -89,6 +113,9 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
 
 JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompressor_compressBytesDirect
 (JNIEnv *env, jobject thisj){
+  const char* uncompressed_bytes;
+  char* compressed_bytes;
+  snappy_status ret;
   // Get members of SnappyCompressor
   jobject clazz = (*env)->GetStaticObjectField(env, thisj, SnappyCompressor_clazz);
   jobject uncompressed_direct_buf = (*env)->GetObjectField(env, thisj, SnappyCompressor_uncompressedDirectBuf);
@@ -98,7 +125,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
 
   // Get the input direct buffer
   LOCK_CLASS(env, clazz, "SnappyCompressor");
-  const char* uncompressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
+  uncompressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
   UNLOCK_CLASS(env, clazz, "SnappyCompressor");
 
   if (uncompressed_bytes == 0) {
@@ -107,14 +134,14 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
 
   // Get the output direct buffer
   LOCK_CLASS(env, clazz, "SnappyCompressor");
-  char* compressed_bytes = (char *)(*env)->GetDirectBufferAddress(env, compressed_direct_buf);
+  compressed_bytes = (char *)(*env)->GetDirectBufferAddress(env, compressed_direct_buf);
   UNLOCK_CLASS(env, clazz, "SnappyCompressor");
 
   if (compressed_bytes == 0) {
     return (jint)0;
   }
 
-  snappy_status ret = dlsym_snappy_compress(uncompressed_bytes, uncompressed_direct_buf_len, compressed_bytes, &compressed_direct_buf_len);
+  ret = dlsym_snappy_compress(uncompressed_bytes, uncompressed_direct_buf_len, compressed_bytes, (size_t* ) &compressed_direct_buf_len);
   if (ret != SNAPPY_OK){
     THROW(env, "java/lang/InternalError", "Could not compress data. Buffer length is too small.");
   }

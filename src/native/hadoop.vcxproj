@@ -63,7 +63,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>$(JAVA_HOME)\include;$(JAVA_HOME)\include\win32;src;..\winutils\include;..\..\build\native\$(OS)-$(Platform)\src\org\apache\hadoop\io\nativeio;..\..\build\native\$(OS)-$(Platform)\src\org\apache\hadoop\io\compress\zlib;$(ZLIB_HOME);$(IncludePath)</IncludePath>
+    <IncludePath>$(JAVA_HOME)\include;$(JAVA_HOME)\include\win32;src;..\winutils\include;..\..\build\native\$(OS)-$(Platform)\src\org\apache\hadoop\io\nativeio;..\..\build\native\$(OS)-$(Platform)\src\org\apache\hadoop\io\compress\zlib;$(ZLIB_HOME);..\..\build\native\$(OS)-$(Platform)\src\org\apache\hadoop\io\compress\snappy;$(SNAPPY_HOME);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -115,6 +115,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\org\apache\hadoop\io\compress\snappy\SnappyCompressor.c" Condition="Exists('$(SNAPPY_HOME)')" />
+    <ClCompile Include="src\org\apache\hadoop\io\compress\snappy\SnappyDecompressor.c" Condition="Exists('$(SNAPPY_HOME)')" />
     <ClCompile Include="src\org\apache\hadoop\io\compress\zlib\ZlibCompressor.c" Condition="Exists('$(ZLIB_HOME)')" />
     <ClCompile Include="src\org\apache\hadoop\io\compress\zlib\ZlibDecompressor.c" Condition="Exists('$(ZLIB_HOME)')" />
     <ClCompile Include="src\org\apache\hadoop\io\nativeio\file_descriptor.c" />
@@ -128,6 +130,7 @@
     <ClInclude Include="..\..\build\native\$(OS)-$(Platform)\src\org\apache\hadoop\io\compress\zlib\org_apache_hadoop_io_compress_zlib_ZlibCompressor.h" />
     <ClInclude Include="..\..\build\native\$(OS)-$(Platform)\src\org\apache\hadoop\io\compress\zlib\org_apache_hadoop_io_compress_zlib_ZlibDecompressor.h" />
     <ClInclude Include="src\org\apache\hadoop\io\compress\zlib\org_apache_hadoop_io_compress_zlib.h" />
+    <ClInclude Include="src\org\apache\hadoop\io\compress\snappy\org_apache_hadoop_io_compress_snappy.h" />
     <ClInclude Include="src\org\apache\hadoop\io\nativeio\file_descriptor.h" />
     <ClInclude Include="src\org_apache_hadoop.h" />
   </ItemGroup>

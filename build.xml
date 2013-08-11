@@ -702,7 +702,18 @@
 
     <mkdir dir="${build.native}/lib"/>
     <mkdir dir="${build.native.win}/src/org/apache/hadoop/io/compress/zlib"/>
+    <mkdir dir="${build.native.win}/src/org/apache/hadoop/io/compress/snappy"/>
     <mkdir dir="${build.native.win}/src/org/apache/hadoop/io/nativeio"/>
+
+    <javah
+      classpath="${build.classes}"
+      destdir="${build.native.win}/src/org/apache/hadoop/io/compress/snappy"
+      force="yes"
+      verbose="yes"
+      >
+      <class name="org.apache.hadoop.io.compress.snappy.SnappyCompressor"/>
+      <class name="org.apache.hadoop.io.compress.snappy.SnappyDecompressor"/>
+    </javah>
 
     <javah
       classpath="${build.classes}"

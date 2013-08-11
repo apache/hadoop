@@ -328,6 +328,8 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     HADOOP-9551. Backport common utils introduced with HADOOP-9413
     to branch-1-win. (ivanmi)
 
+    HADOOP-9802. Support Snappy codec on Windows. (cnauroth)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a
