@@ -271,6 +271,9 @@ Trunk (Unreleased)
     HADOOP-9583. test-patch gives +1 despite build failure when running tests.
     (jlowe via kihwal)
 
+    HADOOP-9847. TestGlobPath symlink tests fail to cleanup properly.
+    (cmccabe via wang)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
