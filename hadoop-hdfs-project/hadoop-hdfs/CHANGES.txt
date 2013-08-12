@@ -120,6 +120,9 @@ Trunk (Unreleased)
     HDFS-5004. Add additional JMX bean for NameNode status data
     (Trevor Lorimer via cos)
 
+    HDFS-9847. TestGlobPath symlink tests fail to cleanup properly.
+    (cmccabe via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -405,6 +405,8 @@ public class TestGlobPaths {
 
     status = fs.globStatus(new Path("/x/x"), falseFilter);
     assertNull(status);
+
+    cleanupDFS();
   }
   
   private void checkStatus(FileStatus[] status, Path ... expectedMatches) {
@@ -783,8 +785,7 @@ public class TestGlobPaths {
     return globResults;
   }
   
-  @After
-  public void cleanupDFS() throws IOException {
+  private void cleanupDFS() throws IOException {
     fs.delete(new Path(USER_DIR), true);
   }
   
