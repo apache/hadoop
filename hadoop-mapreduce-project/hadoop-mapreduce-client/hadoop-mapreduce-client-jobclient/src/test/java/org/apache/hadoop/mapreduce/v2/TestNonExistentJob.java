@@ -22,22 +22,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 
+import java.io.IOException;
 import java.net.InetAddress;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.security.PrivilegedExceptionAction;
 
 public class TestNonExistentJob extends TestCase {
 
@@ -96,8 +89,13 @@ public class TestNonExistentJob extends TestCase {
   }
 
   public void testGetInvalidJob() throws Exception {
-    RunningJob runJob = new JobClient(getJobConf()).getJob(JobID.forName("job_0_0"));
-    assertNull(runJob);
+    try {
+      RunningJob runJob = new JobClient(getJobConf()).getJob(JobID.forName("job_0_0"));
+      fail("Exception is expected to thrown ahead!");
+    } catch (Exception e) {
+      assertTrue(e instanceof IOException);
+      assertTrue(e.getMessage().contains("ApplicationNotFoundException"));
+    }
   }
 
 }

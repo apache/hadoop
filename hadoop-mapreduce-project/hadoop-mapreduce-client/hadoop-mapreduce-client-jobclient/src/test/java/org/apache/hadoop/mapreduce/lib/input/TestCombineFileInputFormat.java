@@ -20,23 +20,31 @@ package org.apache.hadoop.mapreduce.lib.input;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
-import java.util.zip.GZIPOutputStream;
+import java.util.TreeMap;
 import java.util.concurrent.TimeoutException;
+import java.util.zip.GZIPOutputStream;
 
 import junit.framework.Assert;
 import junit.framework.TestCase;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.HdfsBlockLocation;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -715,6 +723,69 @@ public class TestCombineFileInputFormat extends TestCase {
     out.close();
     DFSTestUtil.waitReplication(fileSys, name, replication);
   }
+
+  public void testNodeDistribution() throws IOException, InterruptedException {
+    DummyInputFormat inFormat = new DummyInputFormat();
+    int numBlocks = 60;
+    long totLength = 0;
+    long blockSize = 100;
+    int numNodes = 10;
+
+    long minSizeNode = 50;
+    long minSizeRack = 50;
+    int maxSplitSize = 200; // 4 blocks per split.
+
+    String[] locations = new String[numNodes];
+    for (int i = 0; i < numNodes; i++) {
+      locations[i] = "h" + i;
+    }
+    String[] racks = new String[0];
+    Path path = new Path("hdfs://file");
+
+    OneBlockInfo[] blocks = new OneBlockInfo[numBlocks];
+
+    int hostCountBase = 0;
+    // Generate block list. Replication 3 per block.
+    for (int i = 0; i < numBlocks; i++) {
+      int localHostCount = hostCountBase;
+      String[] blockHosts = new String[3];
+      for (int j = 0; j < 3; j++) {
+        int hostNum = localHostCount % numNodes;
+        blockHosts[j] = "h" + hostNum;
+        localHostCount++;
+      }
+      hostCountBase++;
+      blocks[i] = new OneBlockInfo(path, i * blockSize, blockSize, blockHosts,
+          racks);
+      totLength += blockSize;
+    }
+
+    List<InputSplit> splits = new ArrayList<InputSplit>();
+    HashMap<String, Set<String>> rackToNodes = new HashMap<String, Set<String>>();
+    HashMap<String, List<OneBlockInfo>> rackToBlocks = new HashMap<String, List<OneBlockInfo>>();
+    HashMap<OneBlockInfo, String[]> blockToNodes = new HashMap<OneBlockInfo, String[]>();
+    Map<String, Set<OneBlockInfo>> nodeToBlocks = new TreeMap<String, Set<OneBlockInfo>>();
+
+    OneFileInfo.populateBlockInfo(blocks, rackToBlocks, blockToNodes,
+        nodeToBlocks, rackToNodes);
+    
+    inFormat.createSplits(nodeToBlocks, blockToNodes, rackToBlocks, totLength,
+        maxSplitSize, minSizeNode, minSizeRack, splits);
+
+    int expectedSplitCount = (int) (totLength / maxSplitSize);
+    Assert.assertEquals(expectedSplitCount, splits.size());
+
+    // Ensure 90+% of the splits have node local blocks.
+    // 100% locality may not always be achieved.
+    int numLocalSplits = 0;
+    for (InputSplit inputSplit : splits) {
+      Assert.assertEquals(maxSplitSize, inputSplit.getLength());
+      if (inputSplit.getLocations().length == 1) {
+        numLocalSplits++;
+      }
+    }
+    Assert.assertTrue(numLocalSplits >= 0.9 * splits.size());
+  }
   
   public void testNodeInputSplit() throws IOException, InterruptedException {
     // Regression test for MAPREDUCE-4892. There are 2 nodes with all blocks on 
@@ -744,8 +815,8 @@ public class TestCombineFileInputFormat extends TestCase {
                               new HashMap<String, List<OneBlockInfo>>();
     HashMap<OneBlockInfo, String[]> blockToNodes = 
                               new HashMap<OneBlockInfo, String[]>();
-    HashMap<String, List<OneBlockInfo>> nodeToBlocks = 
-                              new HashMap<String, List<OneBlockInfo>>();
+    HashMap<String, Set<OneBlockInfo>> nodeToBlocks = 
+                              new HashMap<String, Set<OneBlockInfo>>();
     
     OneFileInfo.populateBlockInfo(blocks, rackToBlocks, blockToNodes, 
                              nodeToBlocks, rackToNodes);

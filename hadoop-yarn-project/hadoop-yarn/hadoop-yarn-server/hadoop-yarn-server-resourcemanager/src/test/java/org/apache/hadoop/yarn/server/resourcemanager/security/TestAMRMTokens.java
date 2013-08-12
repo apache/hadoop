@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
+import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
+import java.util.Collection;
 
 import javax.crypto.SecretKey;
 
@@ -26,9 +29,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -42,21 +46,32 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class TestAMRMTokens {
 
   private static final Log LOG = LogFactory.getLog(TestAMRMTokens.class);
 
-  private static final Configuration confWithSecurityEnabled =
-      new Configuration();
-  static {
-    confWithSecurityEnabled.set(
+  private final Configuration conf;
+
+  @Parameters
+  public static Collection<Object[]> configs() {
+    Configuration conf = new Configuration();
+    Configuration confWithSecurity = new Configuration();
+    confWithSecurity.set(
       CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    UserGroupInformation.setConfiguration(confWithSecurityEnabled);
+    return Arrays.asList(new Object[][] {{ conf }, { confWithSecurity } });
+  }
+
+  public TestAMRMTokens(Configuration conf) {
+    this.conf = conf;
+    UserGroupInformation.setConfiguration(conf);
   }
 
   /**
@@ -69,8 +84,8 @@ public class TestAMRMTokens {
   public void testTokenExpiry() throws Exception {
 
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm =
-        new MockRMWithAMS(confWithSecurityEnabled, containerManager);
+    final MockRMWithAMS rm =
+        new MockRMWithAMS(conf, containerManager);
     rm.start();
 
     final Configuration conf = rm.getConfig();
@@ -85,11 +100,11 @@ public class TestAMRMTokens {
       nm1.nodeHeartbeat(true);
 
       int waitCount = 0;
-      while (containerManager.amTokens == null && waitCount++ < 20) {
+      while (containerManager.containerTokens == null && waitCount++ < 20) {
         LOG.info("Waiting for AM Launch to happen..");
         Thread.sleep(1000);
       }
-      Assert.assertNotNull(containerManager.amTokens);
+      Assert.assertNotNull(containerManager.containerTokens);
 
       RMAppAttempt attempt = app.getCurrentAppAttempt();
       ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -98,23 +113,21 @@ public class TestAMRMTokens {
       UserGroupInformation currentUser =
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
-      Credentials credentials = new Credentials();
-      DataInputByteBuffer buf = new DataInputByteBuffer();
-      containerManager.amTokens.rewind();
-      buf.reset(containerManager.amTokens);
-      credentials.readTokenStorageStream(buf);
-      currentUser.addCredentials(credentials);
-
+      Credentials credentials = containerManager.getContainerCredentials();
+      final InetSocketAddress rmBindAddress =
+          rm.getApplicationMasterService().getBindAddress();
+      Token<? extends TokenIdentifier> amRMToken =
+          MockRMWithAMS.setupAndReturnAMRMToken(rmBindAddress,
+            credentials.getAllTokens());
+      currentUser.addToken(amRMToken);
       rmClient = createRMClient(rm, conf, rpc, currentUser);
 
       RegisterApplicationMasterRequest request =
           Records.newRecord(RegisterApplicationMasterRequest.class);
-      request.setApplicationAttemptId(applicationAttemptId);
       rmClient.registerApplicationMaster(request);
 
       FinishApplicationMasterRequest finishAMRequest =
           Records.newRecord(FinishApplicationMasterRequest.class);
-      finishAMRequest.setAppAttemptId(applicationAttemptId);
       finishAMRequest
         .setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
       finishAMRequest.setDiagnostics("diagnostics");
@@ -125,11 +138,8 @@ public class TestAMRMTokens {
       // exception.
       rpc.stopProxy(rmClient, conf); // To avoid using cached client
       rmClient = createRMClient(rm, conf, rpc, currentUser);
-      request.setApplicationAttemptId(BuilderUtils.newApplicationAttemptId(
-        BuilderUtils.newApplicationId(12345, 78), 987));
       AllocateRequest allocateRequest =
           Records.newRecord(AllocateRequest.class);
-      allocateRequest.setApplicationAttemptId(applicationAttemptId);
       try {
         rmClient.allocate(allocateRequest);
         Assert.fail("You got to be kidding me! "
@@ -161,8 +171,8 @@ public class TestAMRMTokens {
   public void testMasterKeyRollOver() throws Exception {
 
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm =
-        new MockRMWithAMS(confWithSecurityEnabled, containerManager);
+    final MockRMWithAMS rm =
+        new MockRMWithAMS(conf, containerManager);
     rm.start();
 
     final Configuration conf = rm.getConfig();
@@ -177,11 +187,11 @@ public class TestAMRMTokens {
       nm1.nodeHeartbeat(true);
 
       int waitCount = 0;
-      while (containerManager.amTokens == null && waitCount++ < 20) {
+      while (containerManager.containerTokens == null && waitCount++ < 20) {
         LOG.info("Waiting for AM Launch to happen..");
         Thread.sleep(1000);
       }
-      Assert.assertNotNull(containerManager.amTokens);
+      Assert.assertNotNull(containerManager.containerTokens);
 
       RMAppAttempt attempt = app.getCurrentAppAttempt();
       ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -190,24 +200,22 @@ public class TestAMRMTokens {
       UserGroupInformation currentUser =
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
-      Credentials credentials = new Credentials();
-      DataInputByteBuffer buf = new DataInputByteBuffer();
-      containerManager.amTokens.rewind();
-      buf.reset(containerManager.amTokens);
-      credentials.readTokenStorageStream(buf);
-      currentUser.addCredentials(credentials);
-
+      Credentials credentials = containerManager.getContainerCredentials();
+      final InetSocketAddress rmBindAddress =
+          rm.getApplicationMasterService().getBindAddress();
+      Token<? extends TokenIdentifier> amRMToken =
+          MockRMWithAMS.setupAndReturnAMRMToken(rmBindAddress,
+            credentials.getAllTokens());
+      currentUser.addToken(amRMToken);
       rmClient = createRMClient(rm, conf, rpc, currentUser);
 
       RegisterApplicationMasterRequest request =
           Records.newRecord(RegisterApplicationMasterRequest.class);
-      request.setApplicationAttemptId(applicationAttemptId);
       rmClient.registerApplicationMaster(request);
 
       // One allocate call.
       AllocateRequest allocateRequest =
           Records.newRecord(AllocateRequest.class);
-      allocateRequest.setApplicationAttemptId(applicationAttemptId);
       Assert.assertTrue(
           rmClient.allocate(allocateRequest).getAMCommand() == null);
 
@@ -224,7 +232,6 @@ public class TestAMRMTokens {
       rpc.stopProxy(rmClient, conf); // To avoid using cached client
       rmClient = createRMClient(rm, conf, rpc, currentUser);
       allocateRequest = Records.newRecord(AllocateRequest.class);
-      allocateRequest.setApplicationAttemptId(applicationAttemptId);
       Assert.assertTrue(
           rmClient.allocate(allocateRequest).getAMCommand() == null);
     } finally {

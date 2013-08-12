@@ -93,9 +93,9 @@ public class LocalContainerAllocator extends RMCommunicator
   @SuppressWarnings("unchecked")
   @Override
   protected synchronized void heartbeat() throws Exception {
-    AllocateRequest allocateRequest = AllocateRequest.newInstance(
-        this.applicationAttemptId, this.lastResponseID, super
-            .getApplicationProgress(), new ArrayList<ResourceRequest>(),
+    AllocateRequest allocateRequest =
+        AllocateRequest.newInstance(this.lastResponseID,
+          super.getApplicationProgress(), new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>(), null);
     AllocateResponse allocateResponse;
     try {
@@ -143,7 +143,7 @@ public class LocalContainerAllocator extends RMCommunicator
       LOG.info("Processing the event " + event.toString());
       // Assign the same container ID as the AM
       ContainerId cID =
-          ContainerId.newInstance(applicationAttemptId,
+          ContainerId.newInstance(getContext().getApplicationAttemptId(),
             this.containerId.getId());
       Container container = recordFactory.newRecordInstance(Container.class);
       container.setId(cID);

@@ -169,6 +169,7 @@ public class TestCopyCommitter {
       Assert.fail("Preserve status failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp1");
+      conf.unset(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
     }
 
   }

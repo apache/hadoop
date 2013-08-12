@@ -179,7 +179,7 @@ message HdfsFileStatusProto {
 
   // Optional field for fileId
   optional uint64 fileId = 13 [default = 0]; // default as an invalid id
-  optional uint32 childrenNum = 14 [default = 0];
+  optional int32 childrenNum = 14 [default = -1];
 } 
 
 /**

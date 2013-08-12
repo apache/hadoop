@@ -24,34 +24,28 @@ import org.junit.Test;
  * Test for {@link RpcMessage}
  */
 public class TestRpcMessage {
-  private RpcMessage getRpcMessage(int xid, int msgType) {
+  private RpcMessage getRpcMessage(int xid, RpcMessage.Type msgType) {
     return new RpcMessage(xid, msgType) {
       // Anonymous class
     };
   }
   
-  @Test(expected=IllegalArgumentException.class)
-  public void testInvalidMessageType() {
-    int invalidMsgType = 2; // valid values are 0 and 1
-    getRpcMessage(0, invalidMsgType);
-  }
-  
   @Test
   public void testRpcMessage() {
-    RpcMessage msg = getRpcMessage(0, RpcMessage.RPC_CALL);
+    RpcMessage msg = getRpcMessage(0, RpcMessage.Type.RPC_CALL);
     Assert.assertEquals(0, msg.getXid());
-    Assert.assertEquals(RpcMessage.RPC_CALL, msg.getMessageType());
+    Assert.assertEquals(RpcMessage.Type.RPC_CALL, msg.getMessageType());
   }
   
   @Test
   public void testValidateMessage() {
-    RpcMessage msg = getRpcMessage(0, RpcMessage.RPC_CALL);
-    msg.validateMessageType(RpcMessage.RPC_CALL);
+    RpcMessage msg = getRpcMessage(0, RpcMessage.Type.RPC_CALL);
+    msg.validateMessageType(RpcMessage.Type.RPC_CALL);
   }
   
   @Test(expected = IllegalArgumentException.class)
   public void testValidateMessageException() {
-    RpcMessage msg = getRpcMessage(0, RpcMessage.RPC_CALL);
-    msg.validateMessageType(RpcMessage.RPC_REPLY);
+    RpcMessage msg = getRpcMessage(0, RpcMessage.Type.RPC_CALL);
+    msg.validateMessageType(RpcMessage.Type.RPC_REPLY);
   }
 }

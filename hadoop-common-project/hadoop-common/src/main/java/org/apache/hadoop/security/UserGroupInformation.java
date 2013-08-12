@@ -208,9 +208,13 @@ public class UserGroupInformation {
    * A method to initialize the fields that depend on a configuration.
    * Must be called before useKerberos or groups is used.
    */
-  private static synchronized void ensureInitialized() {
+  private static void ensureInitialized() {
     if (conf == null) {
-      initialize(new Configuration(), false);
+      synchronized(UserGroupInformation.class) {
+        if (conf == null) { // someone might have beat us
+          initialize(new Configuration(), false);
+        }
+      }
     }
   }
 
@@ -1042,7 +1046,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation createRemoteUser(String user) {
-    if (user == null || "".equals(user)) {
+    if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
     Subject subject = new Subject();
@@ -1114,7 +1118,7 @@ public class UserGroupInformation {
   @InterfaceStability.Evolving
   public static UserGroupInformation createProxyUser(String user,
       UserGroupInformation realUser) {
-    if (user == null || "".equals(user)) {
+    if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
     if (realUser == null) {

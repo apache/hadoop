@@ -82,13 +82,13 @@ public class HostsFileReader {
 
   public synchronized void refresh() throws IOException {
     LOG.info("Refreshing hosts (include/exclude) list");
-    if (!includesFile.equals("")) {
+    if (!includesFile.isEmpty()) {
       Set<String> newIncludes = new HashSet<String>();
       readFileToSet("included", includesFile, newIncludes);
       // switch the new hosts that are to be included
       includes = newIncludes;
     }
-    if (!excludesFile.equals("")) {
+    if (!excludesFile.isEmpty()) {
       Set<String> newExcludes = new HashSet<String>();
       readFileToSet("excluded", excludesFile, newExcludes);
       // switch the excluded hosts

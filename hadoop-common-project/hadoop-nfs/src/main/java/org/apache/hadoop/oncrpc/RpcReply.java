@@ -23,16 +23,12 @@ package org.apache.hadoop.oncrpc;
 public abstract class RpcReply extends RpcMessage {
   /** RPC reply_stat as defined in RFC 1831 */
   public enum ReplyState {
-    MSG_ACCEPTED(0),
-    MSG_DENIED(1);
-    
-    private final int value;
-    ReplyState(int value) {
-      this.value = value;
-    }
+    // the order of the values below are significant.
+    MSG_ACCEPTED,
+    MSG_DENIED;
     
     int getValue() {
-      return value;
+      return ordinal();
     }
     
     public static ReplyState fromValue(int value) {
@@ -42,15 +38,15 @@ public abstract class RpcReply extends RpcMessage {
   
   private final ReplyState state;
   
-  RpcReply(int xid, int messageType, ReplyState state) {
+  RpcReply(int xid, RpcMessage.Type messageType, ReplyState state) {
     super(xid, messageType);
     this.state = state;
-    validateMessageType(RPC_REPLY);
+    validateMessageType(RpcMessage.Type.RPC_REPLY);
   }
 
   public static RpcReply read(XDR xdr) {
     int xid = xdr.readInt();
-    int messageType = xdr.readInt();
+    final Type messageType = Type.fromValue(xdr.readInt());
     ReplyState stat = ReplyState.fromValue(xdr.readInt());
     switch (stat) {
     case MSG_ACCEPTED:

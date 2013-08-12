@@ -46,6 +46,7 @@ import org.apache.hadoop.nfs.NfsTime;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
+import org.apache.hadoop.nfs.nfs3.Nfs3Constant.NFSPROC3;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.Nfs3Interface;
@@ -1530,12 +1531,12 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   @Override
   public XDR handleInternal(RpcCall rpcCall, final XDR xdr, XDR out,
       InetAddress client, Channel channel) {
-    int procedure = rpcCall.getProcedure();
+    final NFSPROC3 nfsproc3 = NFSPROC3.fromValue(rpcCall.getProcedure());
     int xid = rpcCall.getXid();
     RpcAuthSys authSys = null;
     
     // Ignore auth only for NFSPROC3_NULL, especially for Linux clients.
-    if (procedure != Nfs3Constant.NFSPROC3_NULL) {
+    if (nfsproc3 != NFSPROC3.NULL) {
       if (rpcCall.getCredential().getFlavor() != AuthFlavor.AUTH_SYS) {
         LOG.info("Wrong RPC AUTH flavor, "
             + rpcCall.getCredential().getFlavor() + " is not AUTH_SYS.");
@@ -1549,49 +1550,49 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
     
     NFS3Response response = null;
-    if (procedure == Nfs3Constant.NFSPROC3_NULL) {
+    if (nfsproc3 == NFSPROC3.NULL) {
       response = nullProcedure();
-    } else if (procedure == Nfs3Constant.NFSPROC3_GETATTR) {
+    } else if (nfsproc3 == NFSPROC3.GETATTR) {
       response = getattr(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_SETATTR) {
+    } else if (nfsproc3 == NFSPROC3.SETATTR) {
       response = setattr(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_LOOKUP) {
+    } else if (nfsproc3 == NFSPROC3.LOOKUP) {
       response = lookup(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_ACCESS) {
+    } else if (nfsproc3 == NFSPROC3.ACCESS) {
       response = access(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_READLINK) {
+    } else if (nfsproc3 == NFSPROC3.READLINK) {
       response = readlink(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_READ) {
+    } else if (nfsproc3 == NFSPROC3.READ) {
       response = read(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_WRITE) {
+    } else if (nfsproc3 == NFSPROC3.WRITE) {
       response = write(xdr, channel, xid, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_CREATE) {
+    } else if (nfsproc3 == NFSPROC3.CREATE) {
       response = create(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_MKDIR) {      
+    } else if (nfsproc3 == NFSPROC3.MKDIR) {      
       response = mkdir(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_SYMLINK) {
+    } else if (nfsproc3 == NFSPROC3.SYMLINK) {
       response = symlink(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_MKNOD) {
+    } else if (nfsproc3 == NFSPROC3.MKNOD) {
       response = mknod(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_REMOVE) {
+    } else if (nfsproc3 == NFSPROC3.REMOVE) {
       response = remove(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_RMDIR) {
+    } else if (nfsproc3 == NFSPROC3.RMDIR) {
       response = rmdir(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_RENAME) {
+    } else if (nfsproc3 == NFSPROC3.RENAME) {
       response = rename(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_LINK) {
+    } else if (nfsproc3 == NFSPROC3.LINK) {
       response = link(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_READDIR) {
+    } else if (nfsproc3 == NFSPROC3.READDIR) {
       response = readdir(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_READDIRPLUS) {
+    } else if (nfsproc3 == NFSPROC3.READDIRPLUS) {
       response = readdirplus(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_FSSTAT) {
+    } else if (nfsproc3 == NFSPROC3.FSSTAT) {
       response = fsstat(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_FSINFO) {
+    } else if (nfsproc3 == NFSPROC3.FSINFO) {
       response = fsinfo(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_PATHCONF) {
+    } else if (nfsproc3 == NFSPROC3.PATHCONF) {
       response = pathconf(xdr, authSys);
-    } else if (procedure == Nfs3Constant.NFSPROC3_COMMIT) {
+    } else if (nfsproc3 == NFSPROC3.COMMIT) {
       response = commit(xdr, authSys);
     } else {
       // Invalid procedure
@@ -1606,17 +1607,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   
   @Override
   protected boolean isIdempotent(RpcCall call) {
-    return isIdempotent(call.getProcedure());
-  }
-  
-  public static boolean isIdempotent(int procedure) {
-    return !(procedure == Nfs3Constant.NFSPROC3_CREATE
-        || procedure == Nfs3Constant.NFSPROC3_REMOVE
-        || procedure == Nfs3Constant.NFSPROC3_MKDIR
-        || procedure == Nfs3Constant.NFSPROC3_MKNOD
-        || procedure == Nfs3Constant.NFSPROC3_LINK
-        || procedure == Nfs3Constant.NFSPROC3_RMDIR
-        || procedure == Nfs3Constant.NFSPROC3_SYMLINK
-        || procedure == Nfs3Constant.NFSPROC3_RENAME);
+    final NFSPROC3 nfsproc3 = NFSPROC3.fromValue(call.getProcedure()); 
+    return nfsproc3 == null || nfsproc3.isIdempotent();
   }
 }

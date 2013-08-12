@@ -72,6 +72,10 @@ public class TestProtoBufRpc {
     @Override
     public EmptyResponseProto ping(RpcController unused,
         EmptyRequestProto request) throws ServiceException {
+      // Ensure clientId is received
+      byte[] clientId = Server.getClientId();
+      Assert.assertNotNull(Server.getClientId());
+      Assert.assertEquals(16, clientId.length);
       return EmptyResponseProto.newBuilder().build();
     }
 
@@ -147,10 +151,8 @@ public class TestProtoBufRpc {
 
   private static TestRpcService getClient() throws IOException {
     // Set RPC engine to protobuf RPC engine
-    RPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
-        return RPC.getProxy(TestRpcService.class, 0, addr,
-        conf);
+    RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine.class);
+    return RPC.getProxy(TestRpcService.class, 0, addr, conf);
   }
   
   private static TestRpcService2 getClient2() throws IOException {
@@ -187,6 +189,7 @@ public class TestProtoBufRpc {
       RemoteException re = (RemoteException)e.getCause();
       RpcServerException rse = (RpcServerException) re
           .unwrapRemoteException(RpcServerException.class);
+      Assert.assertNotNull(rse);
       Assert.assertTrue(re.getErrorCode().equals(
           RpcErrorCodeProto.ERROR_RPC_SERVER));
     }
@@ -242,6 +245,7 @@ public class TestProtoBufRpc {
         .setMessage(shortString).build();
     // short message goes through
     EchoResponseProto echoResponse = client.echo2(null, echoRequest);
+    Assert.assertEquals(shortString, echoResponse.getMessage());
     
     final String longString = StringUtils.repeat("X", 4096);
     echoRequest = EchoRequestProto.newBuilder()

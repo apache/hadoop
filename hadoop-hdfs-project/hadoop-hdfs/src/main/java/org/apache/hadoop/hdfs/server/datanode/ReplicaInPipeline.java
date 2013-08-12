@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.StringUtils;
 
 /** 
  * This class defines a replica in a pipeline, which
@@ -150,11 +151,16 @@ public class ReplicaInPipeline extends ReplicaInfo
    * Interrupt the writing thread and wait until it dies
    * @throws IOException the waiting is interrupted
    */
-  public void stopWriter() throws IOException {
+  public void stopWriter(long xceiverStopTimeout) throws IOException {
     if (writer != null && writer != Thread.currentThread() && writer.isAlive()) {
       writer.interrupt();
       try {
-        writer.join();
+        writer.join(xceiverStopTimeout);
+        if (writer.isAlive()) {
+          final String msg = "Join on writer thread " + writer + " timed out";
+          DataNode.LOG.warn(msg + "\n" + StringUtils.getStackTrace(writer));
+          throw new IOException(msg);
+        }
       } catch (InterruptedException e) {
         throw new IOException("Waiting for writer thread is interrupted.");
       }

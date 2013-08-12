@@ -192,7 +192,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
       String[] parts = itemStr.split(SEPARATOR);
 
       for (String part : parts) {
-        if (!part.equals(""))
+        if (!part.isEmpty())
           list.add(stringifier.fromString(part));
       }
 

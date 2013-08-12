@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.util.Records;
  * necessary binaries/jar/shared-objects etc. via the 
  * {@link ContainerLaunchContext}.</p>
  *
- * @see ContainerManagementProtocol#startContainer(StartContainerRequest)
+ * @see ContainerManagementProtocol#startContainers(StartContainersRequest)
  */
 @Public
 @Stable
@@ -81,7 +81,7 @@ public abstract class StartContainerRequest {
    * @return the container token to be used for authorization during starting
    * container.
    * @see NMToken
-   * @see ContainerManagementProtocol#startContainer(StartContainerRequest)
+   * @see ContainerManagementProtocol#startContainers(StartContainersRequest)
    */
   @Public
   @Stable

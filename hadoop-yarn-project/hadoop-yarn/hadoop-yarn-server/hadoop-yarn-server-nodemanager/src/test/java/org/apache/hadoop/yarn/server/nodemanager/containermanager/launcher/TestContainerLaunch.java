@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,22 +30,26 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -57,10 +63,16 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.Event;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -98,7 +110,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       tempFile = Shell.appendScriptExtension(tmpDir, "temp");
       String timeoutCommand = Shell.WINDOWS ? "@echo \"hello\"" :
         "echo \"hello\"";
-      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));    
+      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
       FileUtil.setExecutable(shellFile, true);
       writer.println(timeoutCommand);
       writer.close();
@@ -132,7 +144,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       assertEquals(shexc.getExitCode(), 0);
       assert(shexc.getOutput().contains("hello"));
 
-      symLinkFile = new File(tmpDir, badSymlink);      
+      symLinkFile = new File(tmpDir, badSymlink);
     }
     finally {
       // cleanup
@@ -148,6 +160,173 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           && symLinkFile.exists()) {
         symLinkFile.delete();
       } 
+    }
+  }
+
+  // test the diagnostics are generated
+  @Test (timeout = 20000)
+  public void testInvalidSymlinkDiagnostics() throws IOException  {
+
+    File shellFile = null;
+    File tempFile = null;
+    String symLink = Shell.WINDOWS ? "test.cmd" :
+      "test";
+    File symLinkFile = null;
+
+    try {
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      tempFile = Shell.appendScriptExtension(tmpDir, "temp");
+      String timeoutCommand = Shell.WINDOWS ? "@echo \"hello\"" :
+        "echo \"hello\"";
+      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
+      FileUtil.setExecutable(shellFile, true);
+      writer.println(timeoutCommand);
+      writer.close();
+
+      Map<Path, List<String>> resources =
+          new HashMap<Path, List<String>>();
+      //This is an invalid path and should throw exception because of No such file.
+      Path invalidPath = new Path(shellFile.getAbsolutePath()+"randomPath");
+      resources.put(invalidPath, Arrays.asList(symLink));
+      FileOutputStream fos = new FileOutputStream(tempFile);
+
+      Map<String, String> env = new HashMap<String, String>();
+      List<String> commands = new ArrayList<String>();
+      if (Shell.WINDOWS) {
+        commands.add("cmd");
+        commands.add("/c");
+        commands.add("\"" + symLink + "\"");
+      } else {
+        commands.add("/bin/sh ./\\\"" + symLink + "\\\"");
+      }
+      ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
+      fos.flush();
+      fos.close();
+      FileUtil.setExecutable(tempFile, true);
+
+      Shell.ShellCommandExecutor shexc
+      = new Shell.ShellCommandExecutor(new String[]{tempFile.getAbsolutePath()}, tmpDir);
+      String diagnostics = null;
+      try {
+        shexc.execute();
+        Assert.fail("Should catch exception");
+      } catch(ExitCodeException e){
+        diagnostics = e.getMessage();
+      }
+      Assert.assertNotNull(diagnostics);
+      Assert.assertTrue(shexc.getExitCode() != 0);
+      symLinkFile = new File(tmpDir, symLink);
+    }
+    finally {
+      // cleanup
+      if (shellFile != null
+          && shellFile.exists()) {
+        shellFile.delete();
+      }
+      if (tempFile != null
+          && tempFile.exists()) {
+        tempFile.delete();
+      }
+      if (symLinkFile != null
+          && symLinkFile.exists()) {
+        symLinkFile.delete();
+      }
+    }
+  }
+
+  @Test (timeout = 20000)
+  public void testInvalidEnvSyntaxDiagnostics() throws IOException  {
+
+    File shellFile = null;
+    try {
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      String timeoutCommand = Shell.WINDOWS ? "@echo \"hello\"" :
+        "echo \"hello\"";
+      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
+      FileUtil.setExecutable(shellFile, true);
+      writer.println(timeoutCommand);
+      writer.close();
+      Map<Path, List<String>> resources =
+          new HashMap<Path, List<String>>();
+      FileOutputStream fos = new FileOutputStream(shellFile);
+
+      Map<String, String> env = new HashMap<String, String>();
+      // invalid env
+      env.put(
+          "APPLICATION_WORKFLOW_CONTEXT", "{\"workflowId\":\"609f91c5cd83\"," +
+          "\"workflowName\":\"\n\ninsert table " +
+          "\npartition (cd_education_status)\nselect cd_demo_sk, cd_gender, " );
+      List<String> commands = new ArrayList<String>();
+      ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
+      fos.flush();
+      fos.close();
+
+      Shell.ShellCommandExecutor shexc
+      = new Shell.ShellCommandExecutor(new String[]{shellFile.getAbsolutePath()}, tmpDir);
+      String diagnostics = null;
+      try {
+        shexc.execute();
+        Assert.fail("Should catch exception");
+      } catch(ExitCodeException e){
+        diagnostics = e.getMessage();
+      }
+      Assert.assertTrue(diagnostics.contains("command not found"));
+      Assert.assertTrue(shexc.getExitCode() != 0);
+    }
+    finally {
+      // cleanup
+      if (shellFile != null
+          && shellFile.exists()) {
+        shellFile.delete();
+      }
+    }
+  }
+
+  @Test (timeout = 20000)
+  public void testContainerLaunchStdoutAndStderrDiagnostics() throws IOException {
+
+    File shellFile = null;
+    try {
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      // echo "hello" to stdout and "error" to stderr and exit code with 2;
+      String command = Shell.WINDOWS ? "@echo \"hello\"; @echo \"error\" 1>&2; exit 2;" :
+        "echo \"hello\"; echo \"error\" 1>&2; exit 2;";
+      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
+      FileUtil.setExecutable(shellFile, true);
+      writer.println(command);
+      writer.close();
+      Map<Path, List<String>> resources =
+          new HashMap<Path, List<String>>();
+      FileOutputStream fos = new FileOutputStream(shellFile);
+
+      Map<String, String> env = new HashMap<String, String>();
+      List<String> commands = new ArrayList<String>();
+      commands.add(command);
+      ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
+      fos.flush();
+      fos.close();
+
+      Shell.ShellCommandExecutor shexc
+      = new Shell.ShellCommandExecutor(new String[]{shellFile.getAbsolutePath()}, tmpDir);
+      String diagnostics = null;
+      try {
+        shexc.execute();
+        Assert.fail("Should catch exception");
+      } catch(ExitCodeException e){
+        diagnostics = e.getMessage();
+      }
+      // test stderr
+      Assert.assertTrue(diagnostics.contains("error"));
+      // test stdout
+      Assert.assertTrue(shexc.getOutput().contains("hello"));
+      Assert.assertTrue(shexc.getExitCode() == 2);
+    }
+    finally {
+      // cleanup
+      if (shellFile != null
+          && shellFile.exists()) {
+        shellFile.delete();
+      }
     }
   }
 
@@ -231,10 +410,14 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     // set up the rest of the container
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
-    StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
-    startRequest.setContainerLaunchContext(containerLaunchContext);
-    startRequest.setContainerToken(createContainerToken(cId));
-    containerManager.startContainer(startRequest);
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(containerLaunchContext,
+          createContainerToken(cId));
+    List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
 
     int timeoutSecs = 0;
     while (!processStartFile.exists() && timeoutSecs++ < 20) {
@@ -297,18 +480,20 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertTrue("Process is not alive!",
       DefaultContainerExecutor.containerIsAlive(pid));
 
-    StopContainerRequest stopRequest = recordFactory.newRecordInstance(StopContainerRequest.class);
-    stopRequest.setContainerId(cId);
-    containerManager.stopContainer(stopRequest);
+    // Now test the stop functionality.
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(cId);
+    StopContainersRequest stopRequest =
+        StopContainersRequest.newInstance(containerIds);
+    containerManager.stopContainers(stopRequest);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cId,
         ContainerState.COMPLETE);
 
-    GetContainerStatusRequest gcsRequest = 
-        recordFactory.newRecordInstance(GetContainerStatusRequest.class);
-    gcsRequest.setContainerId(cId);
+    GetContainerStatusesRequest gcsRequest =
+        GetContainerStatusesRequest.newInstance(containerIds);
     ContainerStatus containerStatus = 
-        containerManager.getContainerStatus(gcsRequest).getStatus();
+        containerManager.getContainerStatuses(gcsRequest).getContainerStatuses().get(0);
     int expectedExitCode = Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() :
       ExitCode.TERMINATED.getExitCode();
     Assert.assertEquals(expectedExitCode, containerStatus.getExitStatus());
@@ -376,11 +561,15 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
     Token containerToken = createContainerToken(cId);
-    StartContainerRequest startRequest =
-        recordFactory.newRecordInstance(StartContainerRequest.class);
-    startRequest.setContainerLaunchContext(containerLaunchContext);
-    startRequest.setContainerToken(containerToken);
-    containerManager.startContainer(startRequest);
+
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(containerLaunchContext,
+          containerToken);
+    List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
 
     int timeoutSecs = 0;
     while (!processStartFile.exists() && timeoutSecs++ < 20) {
@@ -391,21 +580,25 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         processStartFile.exists());
 
     // Now test the stop functionality.
-    StopContainerRequest stopRequest = recordFactory.newRecordInstance(StopContainerRequest.class);
-    stopRequest.setContainerId(cId);
-    containerManager.stopContainer(stopRequest);
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(cId);
+    StopContainersRequest stopRequest =
+        StopContainersRequest.newInstance(containerIds);
+    containerManager.stopContainers(stopRequest);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cId,
         ContainerState.COMPLETE);
 
     // container stop sends a sigterm followed by a sigkill
-    GetContainerStatusRequest gcsRequest = 
-        recordFactory.newRecordInstance(GetContainerStatusRequest.class);
-    gcsRequest.setContainerId(cId);
+    GetContainerStatusesRequest gcsRequest =
+        GetContainerStatusesRequest.newInstance(containerIds);
+    
     ContainerStatus containerStatus = 
-        containerManager.getContainerStatus(gcsRequest).getStatus();
-    Assert.assertEquals(ExitCode.FORCE_KILLED.getExitCode(),
-        containerStatus.getExitStatus());
+        containerManager.getContainerStatuses(gcsRequest)
+          .getContainerStatuses().get(0);
+    int expectedExitCode = Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() :
+      ExitCode.TERMINATED.getExitCode();
+    Assert.assertEquals(expectedExitCode, containerStatus.getExitStatus());
 
     // Now verify the contents of the file.  Script generates a message when it
     // receives a sigterm so we look for that.  We cannot perform this check on
@@ -433,6 +626,32 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       Assert.assertTrue("Did not find sigterm message", foundSigTermMessage);
       reader.close();
     }
+  }
+
+  @SuppressWarnings("rawtypes")
+  @Test
+  public void testCallFailureWithNullLocalizedResources() {
+    Container container = mock(Container.class);
+    when(container.getContainerId()).thenReturn(ContainerId.newInstance(
+        ApplicationAttemptId.newInstance(ApplicationId.newInstance(
+            System.currentTimeMillis(), 1), 1), 1));
+    ContainerLaunchContext clc = mock(ContainerLaunchContext.class);
+    when(clc.getCommands()).thenReturn(Collections.<String>emptyList());
+    when(container.getLaunchContext()).thenReturn(clc);
+    when(container.getLocalizedResources()).thenReturn(null);
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler eventHandler = new EventHandler() {
+      public void handle(Event event) {
+        Assert.assertTrue(event instanceof ContainerExitEvent);
+        ContainerExitEvent exitEvent = (ContainerExitEvent) event;
+        Assert.assertEquals(ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
+            exitEvent.getType());
+      }
+    };
+    when(dispatcher.getEventHandler()).thenReturn(eventHandler);
+    ContainerLaunch launch = new ContainerLaunch(context, new Configuration(),
+        dispatcher, exec, null, container, dirsHandler);
+    launch.call();
   }
 
   protected Token createContainerToken(ContainerId cId) throws InvalidToken {

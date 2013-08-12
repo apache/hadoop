@@ -36,6 +36,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ByteBufferReadable;
+import org.apache.hadoop.fs.CanSetDropBehind;
+import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -50,6 +52,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
+import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -65,7 +68,8 @@ import com.google.common.annotations.VisibleForTesting;
  * negotiation of the namenode and various datanodes as necessary.
  ****************************************************************/
 @InterfaceAudience.Private
-public class DFSInputStream extends FSInputStream implements ByteBufferReadable {
+public class DFSInputStream extends FSInputStream
+implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
   @VisibleForTesting
   static boolean tcpReadsDisabledForTesting = false;
   private final PeerCache peerCache;
@@ -80,6 +84,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
   private LocatedBlock currentLocatedBlock = null;
   private long pos = 0;
   private long blockEnd = -1;
+  private CachingStrategy cachingStrategy;
   private final ReadStatistics readStatistics = new ReadStatistics();
 
   public static class ReadStatistics {
@@ -185,6 +190,8 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     this.fileInputStreamCache = new FileInputStreamCache(
         dfsClient.getConf().shortCircuitStreamsCacheSize,
         dfsClient.getConf().shortCircuitStreamsCacheExpiryMs);
+    this.cachingStrategy =
+        dfsClient.getDefaultReadCachingStrategy().duplicate();
     openInfo();
   }
 
@@ -1035,7 +1042,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
             dfsClient.getConf(), file, block, blockToken, startOffset,
             len, verifyChecksum, clientName, peer, chosenNode, 
             dsFactory, peerCache, fileInputStreamCache,
-            allowShortCircuitLocalReads);
+            allowShortCircuitLocalReads, cachingStrategy);
         return reader;
       } catch (IOException ex) {
         DFSClient.LOG.debug("Error making BlockReader with DomainSocket. " +
@@ -1058,7 +1065,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
             dfsClient.getConf(), file, block, blockToken, startOffset,
             len, verifyChecksum, clientName, peer, chosenNode,
             dsFactory, peerCache, fileInputStreamCache,
-            allowShortCircuitLocalReads);
+            allowShortCircuitLocalReads, cachingStrategy);
         return reader;
       } catch (IOException e) {
         DFSClient.LOG.warn("failed to connect to " + domSock, e);
@@ -1081,7 +1088,8 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
         reader = BlockReaderFactory.newBlockReader(
             dfsClient.getConf(), file, block, blockToken, startOffset,
             len, verifyChecksum, clientName, peer, chosenNode, 
-            dsFactory, peerCache, fileInputStreamCache, false);
+            dsFactory, peerCache, fileInputStreamCache, false,
+            cachingStrategy);
         return reader;
       } catch (IOException ex) {
         DFSClient.LOG.debug("Error making BlockReader. Closing stale " +
@@ -1100,7 +1108,8 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     return BlockReaderFactory.newBlockReader(
         dfsClient.getConf(), file, block, blockToken, startOffset,
         len, verifyChecksum, clientName, peer, chosenNode, 
-        dsFactory, peerCache, fileInputStreamCache, false);
+        dsFactory, peerCache, fileInputStreamCache, false,
+        cachingStrategy);
   }
 
 
@@ -1357,5 +1366,31 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
    */
   public synchronized ReadStatistics getReadStatistics() {
     return new ReadStatistics(readStatistics);
+  }
+
+  private synchronized void closeCurrentBlockReader() {
+    if (blockReader == null) return;
+    // Close the current block reader so that the new caching settings can 
+    // take effect immediately.
+    try {
+      blockReader.close();
+    } catch (IOException e) {
+      DFSClient.LOG.error("error closing blockReader", e);
+    }
+    blockReader = null;
+  }
+
+  @Override
+  public synchronized void setReadahead(Long readahead)
+      throws IOException {
+    this.cachingStrategy.setReadahead(readahead);
+    closeCurrentBlockReader();
+  }
+
+  @Override
+  public synchronized void setDropBehind(Boolean dropBehind)
+      throws IOException {
+    this.cachingStrategy.setDropBehind(dropBehind);
+    closeCurrentBlockReader();
   }
 }

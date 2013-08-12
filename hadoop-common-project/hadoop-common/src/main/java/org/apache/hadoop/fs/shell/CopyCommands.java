@@ -18,18 +18,16 @@
 
 package org.apache.hadoop.fs.shell;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.PathIsDirectoryException;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.IOUtils;
 
 /** Various commands for copy files */
@@ -44,6 +42,7 @@ class CopyCommands {
     factory.addClass(CopyToLocal.class, "-copyToLocal");
     factory.addClass(Get.class, "-get");
     factory.addClass(Put.class, "-put");
+    factory.addClass(AppendToFile.class, "-appendToFile");
   }
 
   /** merge multiple files together */
@@ -234,5 +233,94 @@ class CopyCommands {
     public static final String NAME = "copyToLocal";
     public static final String USAGE = Get.USAGE;
     public static final String DESCRIPTION = "Identical to the -get command.";
+  }
+
+  /**
+   *  Append the contents of one or more local files to a remote
+   *  file.
+   */
+  public static class AppendToFile extends CommandWithDestination {
+    public static final String NAME = "appendToFile";
+    public static final String USAGE = "<localsrc> ... <dst>";
+    public static final String DESCRIPTION =
+        "Appends the contents of all the given local files to the\n" +
+            "given dst file. The dst file will be created if it does\n" +
+            "not exist. If <localSrc> is -, then the input is read\n" +
+            "from stdin.";
+
+    private static final int DEFAULT_IO_LENGTH = 1024 * 1024;
+    boolean readStdin = false;
+
+    // commands operating on local paths have no need for glob expansion
+    @Override
+    protected List<PathData> expandArgument(String arg) throws IOException {
+      List<PathData> items = new LinkedList<PathData>();
+      if (arg.equals("-")) {
+        readStdin = true;
+      } else {
+        try {
+          items.add(new PathData(new URI(arg), getConf()));
+        } catch (URISyntaxException e) {
+          if (Path.WINDOWS) {
+            // Unlike URI, PathData knows how to parse Windows drive-letter paths.
+            items.add(new PathData(arg, getConf()));
+          } else {
+            throw new IOException("Unexpected URISyntaxException: " + e.toString());
+          }
+        }
+      }
+      return items;
+    }
+
+    @Override
+    protected void processOptions(LinkedList<String> args)
+        throws IOException {
+
+      if (args.size() < 2) {
+        throw new IOException("missing destination argument");
+      }
+
+      getRemoteDestination(args);
+      super.processOptions(args);
+    }
+
+    @Override
+    protected void processArguments(LinkedList<PathData> args)
+        throws IOException {
+
+      if (!dst.exists) {
+        dst.fs.create(dst.path, false).close();
+      }
+
+      InputStream is = null;
+      FSDataOutputStream fos = dst.fs.append(dst.path);
+
+      try {
+        if (readStdin) {
+          if (args.size() == 0) {
+            IOUtils.copyBytes(System.in, fos, DEFAULT_IO_LENGTH);
+          } else {
+            throw new IOException(
+                "stdin (-) must be the sole input argument when present");
+          }
+        }
+
+        // Read in each input file and write to the target.
+        for (PathData source : args) {
+          is = new FileInputStream(source.toFile());
+          IOUtils.copyBytes(is, fos, DEFAULT_IO_LENGTH);
+          IOUtils.closeStream(is);
+          is = null;
+        }
+      } finally {
+        if (is != null) {
+          IOUtils.closeStream(is);
+        }
+
+        if (fos != null) {
+          IOUtils.closeStream(fos);
+        }
+      }
+    }
   }
 }

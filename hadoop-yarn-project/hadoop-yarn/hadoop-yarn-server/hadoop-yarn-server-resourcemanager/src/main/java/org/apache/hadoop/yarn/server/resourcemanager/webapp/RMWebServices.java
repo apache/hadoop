@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.http.HttpServletRequest;
@@ -50,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
@@ -58,6 +61,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
@@ -143,6 +147,9 @@ public class RMWebServices {
       CapacityScheduler cs = (CapacityScheduler) rs;
       CSQueue root = cs.getRootQueue();
       sinfo = new CapacitySchedulerInfo(root);
+    } else if (rs instanceof FairScheduler) {
+      FairScheduler fs = (FairScheduler) rs;
+      sinfo = new FairSchedulerInfo(fs);
     } else if (rs instanceof FifoScheduler) {
       sinfo = new FifoSchedulerInfo(this.rm);
     } else {
@@ -231,11 +238,13 @@ public class RMWebServices {
       @QueryParam("startedTimeBegin") String startedBegin,
       @QueryParam("startedTimeEnd") String startedEnd,
       @QueryParam("finishedTimeBegin") String finishBegin,
-      @QueryParam("finishedTimeEnd") String finishEnd) {
+      @QueryParam("finishedTimeEnd") String finishEnd,
+      @QueryParam("applicationTypes") Set<String> applicationTypes) {
     long num = 0;
     boolean checkCount = false;
     boolean checkStart = false;
     boolean checkEnd = false;
+    boolean checkAppTypes = false;
     long countNum = 0;
 
     // set values suitable in case both of begin/end not specified
@@ -291,6 +300,27 @@ public class RMWebServices {
           "finishTimeEnd must be greater than finishTimeBegin");
     }
 
+    Set<String> appTypes = new HashSet<String>();
+    if (!applicationTypes.isEmpty()) {
+      for (String applicationType : applicationTypes) {
+        if (applicationType != null && !applicationType.trim().isEmpty()) {
+          if (applicationType.indexOf(",") == -1) {
+            appTypes.add(applicationType.trim());
+          } else {
+            String[] types = applicationType.split(",");
+            for (String type : types) {
+              if (!type.trim().isEmpty()) {
+                appTypes.add(type.trim());
+              }
+            }
+          }
+        }
+      }
+    }
+    if (!appTypes.isEmpty()) {
+      checkAppTypes = true;
+    }
+
     final ConcurrentMap<ApplicationId, RMApp> apps = rm.getRMContext()
         .getRMApps();
     AppsInfo allApps = new AppsInfo();
@@ -331,6 +361,10 @@ public class RMWebServices {
         if (!rmapp.getQueue().equals(queueQuery)) {
           continue;
         }
+      }
+      if (checkAppTypes
+          && !appTypes.contains(rmapp.getApplicationType())) {
+        continue;
       }
 
       if (checkStart

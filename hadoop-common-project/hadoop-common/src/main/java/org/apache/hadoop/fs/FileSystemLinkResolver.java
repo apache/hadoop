@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -72,12 +73,20 @@ public abstract class FileSystemLinkResolver<T> {
     int count = 0;
     T in = null;
     Path p = path;
-    FileSystem fs = FileSystem.getFSofPath(p, filesys.getConf());
+    // Assumes path belongs to this FileSystem.
+    // Callers validate this by passing paths through FileSystem#checkPath
+    FileSystem fs = filesys;
     for (boolean isLink = true; isLink;) {
       try {
         in = doCall(p);
         isLink = false;
       } catch (UnresolvedLinkException e) {
+        if (!filesys.resolveSymlinks) {
+          throw new IOException("Path " + path + " contains a symlink"
+              + " and symlink resolution is disabled ("
+              + CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY
+              + ").", e);
+        }
         if (count++ > FsConstants.MAX_PATH_LINKS) {
           throw new IOException("Possible cyclic loop while " +
                                 "following symbolic link " + path);

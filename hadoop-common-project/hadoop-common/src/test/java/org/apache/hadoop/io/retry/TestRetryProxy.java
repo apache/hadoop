@@ -35,6 +35,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.io.retry.UnreliableInterface.FatalException;
 import org.apache.hadoop.io.retry.UnreliableInterface.UnreliableException;
+import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RemoteException;
 
 public class TestRetryProxy extends TestCase {
@@ -56,6 +57,38 @@ public class TestRetryProxy extends TestCase {
     } catch (UnreliableException e) {
       // expected
     }
+  }
+  
+  /**
+   * Test for {@link RetryInvocationHandler#isRpcInvocation(Object)}
+   */
+  public void testRpcInvocation() throws Exception {
+    // For a proxy method should return true
+    final UnreliableInterface unreliable = (UnreliableInterface)
+      RetryProxy.create(UnreliableInterface.class, unreliableImpl, RETRY_FOREVER);
+    assertTrue(RetryInvocationHandler.isRpcInvocation(unreliable));
+    
+    // Embed the proxy in ProtocolTranslator
+    ProtocolTranslator xlator = new ProtocolTranslator() {
+      int count = 0;
+      @Override
+      public Object getUnderlyingProxyObject() {
+        count++;
+        return unreliable;
+      }
+      @Override
+      public String toString() {
+        return "" + count;
+      }
+    };
+    
+    // For a proxy wrapped in ProtocolTranslator method should return true
+    assertTrue(RetryInvocationHandler.isRpcInvocation(xlator));
+    // Ensure underlying proxy was looked at
+    assertEquals(xlator.toString(), "1");
+    
+    // For non-proxy the method must return false
+    assertFalse(RetryInvocationHandler.isRpcInvocation(new Object()));
   }
   
   public void testRetryForever() throws UnreliableException {
@@ -138,7 +171,7 @@ public class TestRetryProxy extends TestCase {
     }
   }
   
-  public void testRetryByRemoteException() throws UnreliableException {
+  public void testRetryByRemoteException() {
     Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
       Collections.<Class<? extends Exception>, RetryPolicy>singletonMap(FatalException.class, TRY_ONCE_THEN_FAIL);
     

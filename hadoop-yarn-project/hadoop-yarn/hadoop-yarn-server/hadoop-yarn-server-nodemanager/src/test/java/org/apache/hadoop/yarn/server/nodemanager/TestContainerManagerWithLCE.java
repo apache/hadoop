@@ -146,7 +146,7 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
 
   @Override
   public void testContainerLaunchFromPreviousRM() throws InterruptedException,
-      IOException {
+      IOException, YarnException {
     // Don't run the test if the binary is not available.
     if (!shouldRunTest()) {
       LOG.info("LCE binary path is not passed. Not running the test");
@@ -155,6 +155,29 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
     LOG.info("Running testContainerLaunchFromPreviousRM");
     super.testContainerLaunchFromPreviousRM();
   }
+
+  @Override
+  public void testMultipleContainersLaunch() throws Exception {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerLaunchFromPreviousRM");
+    super.testMultipleContainersLaunch();
+  }
+
+  @Override
+  public void testMultipleContainersStopAndGetStatus() throws Exception {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerLaunchFromPreviousRM");
+    super.testMultipleContainersStopAndGetStatus();
+  }
+
   private boolean shouldRunTest() {
     return System
         .getProperty(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH) != null;

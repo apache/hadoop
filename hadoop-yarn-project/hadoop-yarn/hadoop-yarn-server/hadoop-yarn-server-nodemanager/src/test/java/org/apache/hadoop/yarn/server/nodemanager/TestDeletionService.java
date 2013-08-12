@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,15 +33,10 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
-import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-
-
+import org.apache.hadoop.yarn.server.nodemanager.DeletionService.FileDeletionTask;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import static org.junit.Assert.*;
 
 public class TestDeletionService {
 
@@ -209,5 +209,80 @@ public class TestDeletionService {
       del.stop();
     }
     assertTrue(del.isTerminated());
+  }
+  
+  @Test (timeout=60000)
+  public void testFileDeletionTaskDependency() throws Exception {
+    FakeDefaultContainerExecutor exec = new FakeDefaultContainerExecutor();
+    Configuration conf = new Configuration();
+    exec.setConf(conf);
+    DeletionService del = new DeletionService(exec);
+    del.init(conf);
+    del.start();
+    
+    try {
+      Random r = new Random();
+      long seed = r.nextLong();
+      r.setSeed(seed);
+      System.out.println("SEED: " + seed);
+      List<Path> dirs = buildDirs(r, base, 2);
+      createDirs(new Path("."), dirs);
+      
+      // first we will try to delete sub directories which are present. This
+      // should then trigger parent directory to be deleted.
+      List<Path> subDirs = buildDirs(r, dirs.get(0), 2);
+      
+      FileDeletionTask dependentDeletionTask =
+          del.createFileDeletionTask(null, dirs.get(0), new Path[] {});
+      List<FileDeletionTask> deletionTasks = new ArrayList<FileDeletionTask>();
+      for (Path subDir : subDirs) {
+        FileDeletionTask deletionTask =
+            del.createFileDeletionTask(null, null, new Path[] { subDir });
+        deletionTask.addFileDeletionTaskDependency(dependentDeletionTask);
+        deletionTasks.add(deletionTask);
+      }
+      for (FileDeletionTask task : deletionTasks) {
+        del.scheduleFileDeletionTask(task);
+      }
+
+      int msecToWait = 20 * 1000;
+      while (msecToWait > 0 && (lfs.util().exists(dirs.get(0)))) {
+        Thread.sleep(100);
+        msecToWait -= 100;
+      }
+      assertFalse(lfs.util().exists(dirs.get(0)));
+      
+
+      // Now we will try to delete sub directories; one of the deletion task we
+      // will mark as failure and then parent directory should not be deleted.
+      subDirs = buildDirs(r, dirs.get(1), 2);
+      subDirs.add(new Path(dirs.get(1), "absentFile"));
+      
+      dependentDeletionTask =
+          del.createFileDeletionTask(null, dirs.get(1), new Path[] {});
+      deletionTasks = new ArrayList<FileDeletionTask>();
+      for (Path subDir : subDirs) {
+        FileDeletionTask deletionTask =
+            del.createFileDeletionTask(null, null, new Path[] { subDir });
+        deletionTask.addFileDeletionTaskDependency(dependentDeletionTask);
+        deletionTasks.add(deletionTask);
+      }
+      // marking one of the tasks as a failure.
+      deletionTasks.get(2).setSuccess(false);
+      for (FileDeletionTask task : deletionTasks) {
+        del.scheduleFileDeletionTask(task);
+      }
+
+      msecToWait = 20 * 1000;
+      while (msecToWait > 0
+          && (lfs.util().exists(subDirs.get(0)) || lfs.util().exists(
+            subDirs.get(1)))) {
+        Thread.sleep(100);
+        msecToWait -= 100;
+      }
+      assertTrue(lfs.util().exists(dirs.get(1)));
+    } finally {
+      del.stop();
+    }
   }
 }

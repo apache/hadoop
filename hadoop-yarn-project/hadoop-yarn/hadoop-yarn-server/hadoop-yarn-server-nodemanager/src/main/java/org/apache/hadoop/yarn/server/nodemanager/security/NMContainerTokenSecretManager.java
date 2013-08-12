@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.security;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -48,14 +48,15 @@ public class NMContainerTokenSecretManager extends
       .getLog(NMContainerTokenSecretManager.class);
   
   private MasterKeyData previousMasterKey;
+  private final TreeMap<Long, List<ContainerId>> recentlyStartedContainerTracker;
+
   
-  private final Map<ApplicationId, ConcurrentMap<ContainerId, MasterKeyData>> oldMasterKeys;
   private String nodeHostAddr;
   
   public NMContainerTokenSecretManager(Configuration conf) {
     super(conf);
-    this.oldMasterKeys =
-        new HashMap<ApplicationId, ConcurrentMap<ContainerId, MasterKeyData>>();
+    recentlyStartedContainerTracker =
+        new TreeMap<Long, List<ContainerId>>();
   }
 
   /**
@@ -93,9 +94,6 @@ public class NMContainerTokenSecretManager extends
   public synchronized byte[] retrievePassword(
       ContainerTokenIdentifier identifier) throws SecretManager.InvalidToken {
     int keyId = identifier.getMasterKeyId();
-    ContainerId containerId = identifier.getContainerID();
-    ApplicationId appId =
-        containerId.getApplicationAttemptId().getApplicationId();
 
     MasterKeyData masterKeyToUse = null;
     if (this.previousMasterKey != null
@@ -107,19 +105,6 @@ public class NMContainerTokenSecretManager extends
       // A container-launch has come in with a token generated off the current
       // master-key
       masterKeyToUse = super.currentMasterKey;
-    } else if (this.oldMasterKeys.containsKey(appId)
-        && this.oldMasterKeys.get(appId).containsKey(containerId)) {
-      // This means on the following happened:
-      // (1) a stopContainer() or a getStatus() happened for a container with
-      // token generated off a master-key that is neither current nor the
-      // previous one.
-      // (2) a container-relaunch has come in with a token generated off a
-      // master-key that is neither current nor the previous one.
-      // This basically lets stop and getStatus() calls with old-tokens to pass
-      // through without any issue, i.e. (1).
-      // Start-calls for repetitive launches (2) also pass through RPC here, but
-      // get thwarted at the app-layer as part of startContainer() call.
-      masterKeyToUse = this.oldMasterKeys.get(appId).get(containerId);
     }
 
     if (nodeHostAddr != null
@@ -143,61 +128,64 @@ public class NMContainerTokenSecretManager extends
   }
 
   /**
-   * Container start has gone through. Store the corresponding keys so that
-   * stopContainer() and getContainerStatus() can be authenticated long after
-   * the container-start went through.
+   * Container start has gone through. We need to store the containerId in order
+   * to block future container start requests with same container token. This
+   * container token needs to be saved till its container token expires.
    */
   public synchronized void startContainerSuccessful(
       ContainerTokenIdentifier tokenId) {
-    int keyId = tokenId.getMasterKeyId();
-    if (currentMasterKey.getMasterKey().getKeyId() == keyId) {
-      addKeyForContainerId(tokenId.getContainerID(), currentMasterKey);
-    } else if (previousMasterKey != null
-        && previousMasterKey.getMasterKey().getKeyId() == keyId) {
-      addKeyForContainerId(tokenId.getContainerID(), previousMasterKey);
+
+    removeAnyContainerTokenIfExpired();
+    
+    Long expTime = tokenId.getExpiryTimeStamp();
+    // We might have multiple containers with same expiration time.
+    if (!recentlyStartedContainerTracker.containsKey(expTime)) {
+      recentlyStartedContainerTracker
+        .put(expTime, new ArrayList<ContainerId>());
+    }
+    recentlyStartedContainerTracker.get(expTime).add(tokenId.getContainerID());
+
+  }
+
+  protected synchronized void removeAnyContainerTokenIfExpired() {
+    // Trying to remove any container if its container token has expired.
+    Iterator<Entry<Long, List<ContainerId>>> containersI =
+        this.recentlyStartedContainerTracker.entrySet().iterator();
+    Long currTime = System.currentTimeMillis();
+    while (containersI.hasNext()) {
+      Entry<Long, List<ContainerId>> containerEntry = containersI.next();
+      if (containerEntry.getKey() < currTime) {
+        containersI.remove();
+      } else {
+        break;
+      }
     }
   }
 
   /**
-   * Ensure the startContainer call is not using an older cached key. Will
-   * return false once startContainerSuccessful is called. Does not check
-   * the actual key being current since that is verified by the security layer
-   * via retrievePassword.
+   * Container will be remembered based on expiration time of the container
+   * token used for starting the container. It is safe to use expiration time
+   * as there is one to many mapping between expiration time and containerId.
+   * @return true if the current token identifier is not present in cache.
    */
   public synchronized boolean isValidStartContainerRequest(
-      ContainerId containerID) {
-    ApplicationId applicationId =
-        containerID.getApplicationAttemptId().getApplicationId();
-    return !this.oldMasterKeys.containsKey(applicationId)
-        || !this.oldMasterKeys.get(applicationId).containsKey(containerID);
-  }
+      ContainerTokenIdentifier containerTokenIdentifier) {
 
-  private synchronized void addKeyForContainerId(ContainerId containerId,
-      MasterKeyData masterKeyData) {
-    if (containerId != null) {
-      ApplicationId appId =
-          containerId.getApplicationAttemptId().getApplicationId();
-      if (!this.oldMasterKeys.containsKey(appId)) {
-        this.oldMasterKeys.put(appId,
-          new ConcurrentHashMap<ContainerId, MasterKeyData>());
-      }
-      ConcurrentMap<ContainerId, MasterKeyData> containerIdToKeysMapForThisApp =
-          this.oldMasterKeys.get(appId);
-      containerIdToKeysMapForThisApp.put(containerId, masterKeyData);
+    removeAnyContainerTokenIfExpired();
+
+    Long expTime = containerTokenIdentifier.getExpiryTimeStamp();
+    List<ContainerId> containers =
+        this.recentlyStartedContainerTracker.get(expTime);
+    if (containers == null
+        || !containers.contains(containerTokenIdentifier.getContainerID())) {
+      return true;
     } else {
-      LOG.warn("Not adding key for null containerId");
+      return false;
     }
   }
 
-  // Holding on to master-keys corresponding to containers until the app is
-  // finished due to the multiple ways a container can finish. Avoid
-  // stopContainer calls seeing unnecessary authorization exceptions.
-  public synchronized void appFinished(ApplicationId appId) {
-    this.oldMasterKeys.remove(appId);
-  }
-  
   public synchronized void setNodeId(NodeId nodeId) {
     nodeHostAddr = nodeId.toString();
     LOG.info("Updating node address : " + nodeHostAddr);
-  } 
+  }
 }

@@ -40,7 +40,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.util.Shell;
 
 import com.google.common.net.InetAddresses;
 
@@ -353,7 +352,7 @@ public class StringUtils {
    * @return an array of <code>String</code> values
    */
   public static String[] getTrimmedStrings(String str){
-    if (null == str || "".equals(str.trim())) {
+    if (null == str || str.trim().isEmpty()) {
       return emptyStringArray;
     }
 
@@ -413,7 +412,7 @@ public class StringUtils {
       String str, char separator) {
     // String.split returns a single empty result for splitting the empty
     // string.
-    if ("".equals(str)) {
+    if (str.isEmpty()) {
       return new String[]{""};
     }
     ArrayList<String> strList = new ArrayList<String>();
@@ -893,5 +892,17 @@ public class StringUtils {
     }
     matcher.appendTail(sb);
     return sb.toString();
+  }
+  
+  /**
+   * Get stack trace for a given thread.
+   */
+  public static String getStackTrace(Thread t) {
+    final StackTraceElement[] stackTrace = t.getStackTrace();
+    StringBuilder str = new StringBuilder();
+    for (StackTraceElement e : stackTrace) {
+      str.append(e.toString() + "\n");
+    }
+    return str.toString();
   }
 }

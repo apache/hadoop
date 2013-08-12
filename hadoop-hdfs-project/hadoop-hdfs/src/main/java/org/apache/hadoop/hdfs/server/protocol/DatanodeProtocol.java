@@ -25,6 +25,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.io.retry.AtMostOnce;
+import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.KerberosInfo;
 
 /**********************************************************************
@@ -81,6 +83,7 @@ public interface DatanodeProtocol {
    * @return the given {@link org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration} with
    *  updated registration information
    */
+  @Idempotent
   public DatanodeRegistration registerDatanode(DatanodeRegistration registration
       ) throws IOException;
   
@@ -98,6 +101,7 @@ public interface DatanodeProtocol {
    * @param failedVolumes number of failed volumes
    * @throws IOException on error
    */
+  @Idempotent
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
                                        StorageReport[] reports,
                                        int xmitsInProgress,
@@ -120,6 +124,7 @@ public interface DatanodeProtocol {
    * @return - the next command for DN to process.
    * @throws IOException
    */
+  @Idempotent
   public DatanodeCommand blockReport(DatanodeRegistration registration,
       String poolId, StorageBlockReport[] reports) throws IOException;
     
@@ -133,6 +138,7 @@ public interface DatanodeProtocol {
    * writes a new Block here, or another DataNode copies a Block to
    * this DataNode, it will call blockReceived().
    */
+  @Idempotent
   public void blockReceivedAndDeleted(DatanodeRegistration registration,
                             String poolId,
                             StorageReceivedDeletedBlocks[] rcvdAndDeletedBlocks)
@@ -142,21 +148,25 @@ public interface DatanodeProtocol {
    * errorReport() tells the NameNode about something that has gone
    * awry.  Useful for debugging.
    */
+  @Idempotent
   public void errorReport(DatanodeRegistration registration,
                           int errorCode, 
                           String msg) throws IOException;
     
+  @Idempotent
   public NamespaceInfo versionRequest() throws IOException;
 
   /**
    * same as {@link org.apache.hadoop.hdfs.protocol.ClientProtocol#reportBadBlocks(LocatedBlock[])}
    * }
    */
+  @Idempotent
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;
   
   /**
    * Commit block synchronization in lease recovery
    */
+  @Idempotent
   public void commitBlockSynchronization(ExtendedBlock block,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets,

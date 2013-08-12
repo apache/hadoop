@@ -26,15 +26,12 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceBlacklistRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
@@ -48,7 +45,6 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   AllocateRequestProto.Builder builder = null;
   boolean viaProto = false;
 
-  private ApplicationAttemptId applicationAttemptID = null;
   private List<ResourceRequest> ask = null;
   private List<ContainerId> release = null;
   private ResourceBlacklistRequest blacklistRequest = null;
@@ -91,9 +87,6 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationAttemptID != null) {
-      builder.setApplicationAttemptId(convertToProtoFormat(this.applicationAttemptID));
-    }
     if (this.ask != null) {
       addAsksToProto();
     }
@@ -118,27 +111,6 @@ public class AllocateRequestPBImpl extends AllocateRequest {
       builder = AllocateRequestProto.newBuilder(proto);
     }
     viaProto = false;
-  }
-
-  @Override
-  public ApplicationAttemptId getApplicationAttemptId() {
-    AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.applicationAttemptID != null) {
-      return this.applicationAttemptID;
-    }
-    if (!p.hasApplicationAttemptId()) {
-      return null;
-    }
-    this.applicationAttemptID = convertFromProtoFormat(p.getApplicationAttemptId());
-    return this.applicationAttemptID;
-  }
-
-  @Override
-  public void setApplicationAttemptId(ApplicationAttemptId appAttemptId) {
-    maybeInitBuilder();
-    if (appAttemptId == null) 
-      builder.clearApplicationAttemptId();
-    this.applicationAttemptID = appAttemptId;
   }
 
   @Override
@@ -309,14 +281,6 @@ public class AllocateRequestPBImpl extends AllocateRequest {
       }
     };
     builder.addAllRelease(iterable);
-  }
-
-  private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {
-    return new ApplicationAttemptIdPBImpl(p);
-  }
-
-  private ApplicationAttemptIdProto convertToProtoFormat(ApplicationAttemptId t) {
-    return ((ApplicationAttemptIdPBImpl)t).getProto();
   }
 
   private ResourceRequestPBImpl convertFromProtoFormat(ResourceRequestProto p) {

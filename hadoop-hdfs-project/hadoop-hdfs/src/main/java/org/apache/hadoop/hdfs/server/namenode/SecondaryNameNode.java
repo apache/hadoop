@@ -249,7 +249,7 @@ public class SecondaryNameNode implements Runnable {
     checkpointImage.recoverCreate(commandLineOpts.shouldFormat());
     checkpointImage.deleteTempEdits();
     
-    namesystem = new FSNamesystem(conf, checkpointImage);
+    namesystem = new FSNamesystem(conf, checkpointImage, true);
 
     // Initialize other scheduling parameters from the configuration
     checkpointConf = new CheckpointConf(conf);

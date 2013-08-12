@@ -793,6 +793,8 @@ public class TestFileUtil {
         }
       }
       List<String> actualClassPaths = Arrays.asList(classPathAttr.split(" "));
+      Collections.sort(expectedClassPaths);
+      Collections.sort(actualClassPaths);
       Assert.assertEquals(expectedClassPaths, actualClassPaths);
     } finally {
       if (jarFile != null) {

@@ -21,10 +21,12 @@ package org.apache.hadoop.yarn.client.api.async.impl;
 import static org.mockito.Matchers.anyFloat;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -54,6 +56,7 @@ import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -156,14 +159,26 @@ public class TestAMRMClientAsync {
 
   @Test(timeout=10000)
   public void testAMRMClientAsyncException() throws Exception {
+    String exStr = "TestException";
+    YarnException mockException = mock(YarnException.class);
+    when(mockException.getMessage()).thenReturn(exStr);
+    runHeartBeatThrowOutException(mockException);
+  }
+
+  @Test(timeout=10000)
+  public void testAMRMClientAsyncRunTimeException() throws Exception {
+    String exStr = "TestRunTimeException";
+    RuntimeException mockRunTimeException = mock(RuntimeException.class);
+    when(mockRunTimeException.getMessage()).thenReturn(exStr);
+    runHeartBeatThrowOutException(mockRunTimeException);
+  }
+
+  private void runHeartBeatThrowOutException(Exception ex) throws Exception{
     Configuration conf = new Configuration();
     TestCallbackHandler callbackHandler = new TestCallbackHandler();
     @SuppressWarnings("unchecked")
     AMRMClient<ContainerRequest> client = mock(AMRMClientImpl.class);
-    String exStr = "TestException";
-    YarnException mockException = mock(YarnException.class);
-    when(mockException.getMessage()).thenReturn(exStr);
-    when(client.allocate(anyFloat())).thenThrow(mockException);
+    when(client.allocate(anyFloat())).thenThrow(ex);
 
     AMRMClientAsync<ContainerRequest> asyncClient = 
         AMRMClientAsync.createAMRMClientAsync(client, 20, callbackHandler);
@@ -180,14 +195,14 @@ public class TestAMRMClientAsync {
         }
       }
     }
-    
-    Assert.assertTrue(callbackHandler.savedException.getMessage().contains(exStr));
+    Assert.assertTrue(callbackHandler.savedException.getMessage().contains(
+        ex.getMessage()));
     
     asyncClient.stop();
     // stopping should have joined all threads and completed all callbacks
     Assert.assertTrue(callbackHandler.callbackCount == 0);
   }
-  
+
   @Test//(timeout=10000)
   public void testAMRMClientAsyncReboot() throws Exception {
     Configuration conf = new Configuration();
@@ -264,13 +279,13 @@ public class TestAMRMClientAsync {
 
     AMRMClientAsync<ContainerRequest> asyncClient =
         AMRMClientAsync.createAMRMClientAsync(client, 20, callbackHandler);
-    callbackHandler.registerAsyncClient(asyncClient);
+    callbackHandler.asynClient = asyncClient;
     asyncClient.init(conf);
     asyncClient.start();
 
     synchronized (callbackHandler.notifier) {
       asyncClient.registerApplicationMaster("localhost", 1234, null);
-      while(callbackHandler.stop == false) {
+      while(callbackHandler.notify == false) {
         try {
           callbackHandler.notifier.wait();
         } catch (InterruptedException e) {
@@ -278,6 +293,65 @@ public class TestAMRMClientAsync {
         }
       }
     }
+  }
+
+  void runCallBackThrowOutException(TestCallbackHandler2 callbackHandler) throws
+        InterruptedException, YarnException, IOException {
+    Configuration conf = new Configuration();
+    @SuppressWarnings("unchecked")
+    AMRMClient<ContainerRequest> client = mock(AMRMClientImpl.class);
+
+    List<ContainerStatus> completed = Arrays.asList(
+        ContainerStatus.newInstance(newContainerId(0, 0, 0, 0),
+            ContainerState.COMPLETE, "", 0));
+    final AllocateResponse response = createAllocateResponse(completed,
+        new ArrayList<Container>(), null);
+
+    when(client.allocate(anyFloat())).thenReturn(response);
+    AMRMClientAsync<ContainerRequest> asyncClient =
+        AMRMClientAsync.createAMRMClientAsync(client, 20, callbackHandler);
+    callbackHandler.asynClient = asyncClient;
+    callbackHandler.throwOutException = true;
+    asyncClient.init(conf);
+    asyncClient.start();
+
+    // call register and wait for error callback and stop
+    synchronized (callbackHandler.notifier) {
+      asyncClient.registerApplicationMaster("localhost", 1234, null);
+      while(callbackHandler.notify == false) {
+        try {
+          callbackHandler.notifier.wait();
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+    // verify error invoked
+    verify(callbackHandler, times(0)).getProgress();
+    verify(callbackHandler, times(1)).onError(any(Exception.class));
+    // sleep to wait for a few heartbeat calls that can trigger callbacks
+    Thread.sleep(50);
+    // verify no more invocations after the first one.
+    // ie. callback thread has stopped
+    verify(callbackHandler, times(0)).getProgress();
+    verify(callbackHandler, times(1)).onError(any(Exception.class));
+  }
+
+  @Test (timeout = 5000)
+  public void testCallBackThrowOutException() throws YarnException,
+      IOException, InterruptedException {
+    // test exception in callback with app calling stop() on app.onError()
+    TestCallbackHandler2 callbackHandler = spy(new TestCallbackHandler2());
+    runCallBackThrowOutException(callbackHandler);
+  }
+
+  @Test (timeout = 5000)
+  public void testCallBackThrowOutExceptionNoStop() throws YarnException,
+      IOException, InterruptedException {
+    // test exception in callback with app not calling stop() on app.onError()
+    TestCallbackHandler2 callbackHandler = spy(new TestCallbackHandler2());
+    callbackHandler.stop = false;
+    runCallBackThrowOutException(callbackHandler);
   }
 
   private AllocateResponse createAllocateResponse(
@@ -378,8 +452,8 @@ public class TestAMRMClientAsync {
     }
 
     @Override
-    public void onError(Exception e) {
-      savedException = e;
+    public void onError(Throwable e) {
+      savedException = new Exception(e.getMessage());
       synchronized (notifier) {
         notifier.notifyAll();        
       }
@@ -390,10 +464,16 @@ public class TestAMRMClientAsync {
     Object notifier = new Object();
     @SuppressWarnings("rawtypes")
     AMRMClientAsync asynClient;
-    boolean stop = false;
+    boolean stop = true;
+    boolean notify = false;
+    boolean throwOutException = false;
 
     @Override
-    public void onContainersCompleted(List<ContainerStatus> statuses) {}
+    public void onContainersCompleted(List<ContainerStatus> statuses) {
+      if (throwOutException) {
+        throw new YarnRuntimeException("Exception from callback handler");
+      }
+    }
 
     @Override
     public void onContainersAllocated(List<Container> containers) {}
@@ -406,20 +486,24 @@ public class TestAMRMClientAsync {
 
     @Override
     public float getProgress() {
-      asynClient.stop();
-      stop = true;
-      synchronized (notifier) {
-        notifier.notifyAll();
-      }
+      callStopAndNotify();
       return 0;
     }
 
     @Override
-    public void onError(Exception e) {}
+    public void onError(Throwable e) {
+      Assert.assertEquals(e.getMessage(), "Exception from callback handler");
+      callStopAndNotify();
+    }
 
-    public void registerAsyncClient(
-        AMRMClientAsync<ContainerRequest> asyncClient) {
-      this.asynClient = asyncClient;
+    void callStopAndNotify() {
+      if(stop) {
+        asynClient.stop();
+      }
+      notify = true;
+      synchronized (notifier) {
+        notifier.notifyAll();
+      }
     }
   }
 }

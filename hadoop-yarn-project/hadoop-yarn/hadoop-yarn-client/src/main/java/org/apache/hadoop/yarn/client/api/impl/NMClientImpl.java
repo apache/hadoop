@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -30,9 +32,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -181,11 +188,23 @@ public class NMClientImpl extends NMClient {
         proxy =
             cmProxy.getProxy(container.getNodeId().toString(),
                 container.getId());
-        allServiceResponse =
+        StartContainerRequest scRequest =
+            StartContainerRequest.newInstance(containerLaunchContext,
+              container.getContainerToken());
+        List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+        list.add(scRequest);
+        StartContainersRequest allRequests =
+            StartContainersRequest.newInstance(list);
+        StartContainersResponse response =
             proxy
-                .getContainerManagementProtocol().startContainer(
-                    StartContainerRequest.newInstance(containerLaunchContext,
-                        container.getContainerToken())).getAllServicesMetaData();
+                .getContainerManagementProtocol().startContainers(allRequests);
+        if (response.getFailedRequests() != null
+            && response.getFailedRequests().containsKey(container.getId())) {
+          Throwable t =
+              response.getFailedRequests().get(container.getId()).deSerialize();
+          parseAndThrowException(t);
+        }
+        allServiceResponse = response.getAllServicesMetaData();
         startingContainer.state = ContainerState.RUNNING;
       } catch (YarnException e) {
         startingContainer.state = ContainerState.COMPLETE;
@@ -238,11 +257,20 @@ public class NMClientImpl extends NMClient {
       NodeId nodeId) throws YarnException, IOException {
 
     ContainerManagementProtocolProxyData proxy = null;
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(containerId);
     try {
       proxy = cmProxy.getProxy(nodeId.toString(), containerId);
-      ContainerStatus containerStatus =
-          proxy.getContainerManagementProtocol().getContainerStatus(
-              GetContainerStatusRequest.newInstance(containerId)).getStatus();
+      GetContainerStatusesResponse response =
+          proxy.getContainerManagementProtocol().getContainerStatuses(
+              GetContainerStatusesRequest.newInstance(containerIds));
+      if (response.getFailedRequests() != null
+          && response.getFailedRequests().containsKey(containerId)) {
+        Throwable t =
+            response.getFailedRequests().get(containerId).deSerialize();
+        parseAndThrowException(t);
+      }
+      ContainerStatus containerStatus = response.getContainerStatuses().get(0);
       return containerStatus;
     } finally {
       if (proxy != null) {
@@ -254,10 +282,19 @@ public class NMClientImpl extends NMClient {
   private void stopContainerInternal(ContainerId containerId, NodeId nodeId)
       throws IOException, YarnException {
     ContainerManagementProtocolProxyData proxy = null;
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(containerId);
     try {
       proxy = cmProxy.getProxy(nodeId.toString(), containerId);
-      proxy.getContainerManagementProtocol().stopContainer(
-          StopContainerRequest.newInstance(containerId));
+      StopContainersResponse response =
+          proxy.getContainerManagementProtocol().stopContainers(
+            StopContainersRequest.newInstance(containerIds));
+      if (response.getFailedRequests() != null
+          && response.getFailedRequests().containsKey(containerId)) {
+        Throwable t = response.getFailedRequests().get(containerId)
+          .deSerialize();
+        parseAndThrowException(t);
+      }
     } finally {
       if (proxy != null) {
         cmProxy.mayBeCloseProxy(proxy);
@@ -284,5 +321,16 @@ public class NMClientImpl extends NMClient {
 
   public AtomicBoolean getCleanupRunningContainers() {
     return cleanupRunningContainers;
+  }
+
+  private void parseAndThrowException(Throwable t) throws YarnException,
+      IOException {
+    if (t instanceof YarnException) {
+      throw (YarnException) t;
+    } else if (t instanceof InvalidToken) {
+      throw (InvalidToken) t;
+    } else {
+      throw (IOException) t;
+    }
   }
 }

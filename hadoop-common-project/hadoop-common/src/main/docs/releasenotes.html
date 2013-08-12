@@ -12,14 +12,132 @@ These release notes include new developer and user-facing incompatibilities, fea
 <a name="changes"/>
 <h2>Changes since Hadoop 2.0.5-alpha</h2>
 <ul>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-968">YARN-968</a>.
+     Blocker bug reported by Kihwal Lee and fixed by Vinod Kumar Vavilapalli <br>
+     <b>RM admin commands don't work</b><br>
+     <blockquote>If an RM admin command is issued using CLI, I get something like following:
+
+13/07/24 17:19:40 INFO client.RMProxy: Connecting to ResourceManager at xxxx.com/1.2.3.4:1234
+refreshQueues: Unknown protocol: org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocolPB
+
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-961">YARN-961</a>.
+     Blocker bug reported by Omkar Vinit Joshi and fixed by Omkar Vinit Joshi <br>
+     <b>ContainerManagerImpl should enforce token on server. Today it is [TOKEN, SIMPLE]</b><br>
+     <blockquote>We should only accept SecurityAuthMethod.TOKEN for ContainerManagementProtocol. Today it also accepts SIMPLE for unsecured environment.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-960">YARN-960</a>.
+     Blocker bug reported by Alejandro Abdelnur and fixed by Daryn Sharp <br>
+     <b>TestMRCredentials and  TestBinaryTokenFile are failing on trunk</b><br>
+     <blockquote>Not sure, but this may be a fallout from YARN-701 and/or related to YARN-945.
+
+Making it a blocker until full impact of the issue is scoped.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-945">YARN-945</a>.
+     Blocker bug reported by Bikas Saha and fixed by Vinod Kumar Vavilapalli <br>
+     <b>AM register failing after AMRMToken</b><br>
+     <blockquote>509 2013-07-19 15:53:55,569 INFO org.apache.hadoop.ipc.Server: IPC Server listener on 54313: readAndProcess from client 127.0.0.1       threw exception [org.apache.hadoop.security.AccessControlException: SIMPLE authentication is not enabled.  Available:[TOKEN]]
+510 org.apache.hadoop.security.AccessControlException: SIMPLE authentication is not enabled.  Available:[TOKEN]
+511   at org.apache.hadoop.ipc.Server$Connection.initializeAuthContext(Server.java:1531)
+512   at org.apache.hadoop.ipc.Server$Connection.readAndProcess(Server.java:1482)
+513   at org.apache.hadoop.ipc.Server$Listener.doRead(Server.java:788)
+514   at org.apache.hadoop.ipc.Server$Listener$Reader.doRunLoop(Server.java:587)
+515   at org.apache.hadoop.ipc.Server$Listener$Reader.run(Server.java:562)
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-937">YARN-937</a>.
+     Blocker bug reported by Arun C Murthy and fixed by Alejandro Abdelnur <br>
+     <b>Fix unmanaged AM in non-secure/secure setup post YARN-701</b><br>
+     <blockquote>Fix unmanaged AM in non-secure/secure setup post YARN-701 since app-tokens will be used in both scenarios.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-932">YARN-932</a>.
+     Major bug reported by Sandy Ryza and fixed by Karthik Kambatla <br>
+     <b>TestResourceLocalizationService.testLocalizationInit can fail on JDK7</b><br>
+     <blockquote>It looks like this is occurring when testLocalizationInit doesn't run first.  Somehow yarn.nodemanager.log-dirs is getting set by one of the other tests (to ${yarn.log.dir}/userlogs), but yarn.log.dir isn't being set.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-927">YARN-927</a>.
+     Major task reported by Bikas Saha and fixed by Bikas Saha <br>
+     <b>Change ContainerRequest to not have more than 1 container count and remove StoreContainerRequest</b><br>
+     <blockquote>The downside is having to use more than 1 container request when requesting more than 1 container at * priority. For most other use cases that have specific locations we anyways need to make multiple container requests. This will also remove unnecessary duplication caused by StoredContainerRequest. It will make the getMatchingRequest() always available and easy to use removeContainerRequest().</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-926">YARN-926</a>.
+     Blocker bug reported by Vinod Kumar Vavilapalli and fixed by Jian He <br>
+     <b>ContainerManagerProtcol APIs should take in requests for multiple containers</b><br>
+     <blockquote>AMs typically have to launch multiple containers on a node and the current single container APIs aren't helping. We should have all the APIs take in multiple requests and return multiple responses.
+
+The client libraries could expose both the single and multi-container requests.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-922">YARN-922</a>.
+     Major sub-task reported by Jian He and fixed by Jian He (resourcemanager)<br>
+     <b>Change FileSystemRMStateStore to use directories</b><br>
+     <blockquote>Store each app and its attempts in the same directory so that removing application state is only one operation</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-919">YARN-919</a>.
+     Minor bug reported by Mayank Bansal and fixed by Mayank Bansal <br>
+     <b>Document setting default heap sizes in yarn env</b><br>
+     <blockquote>Right now there are no defaults in yarn env scripts for resource manager nad node manager and if user wants to override that, then user has to go to documentation and find the variables and change the script.
+
+There is no straight forward way to change it in script. Just updating the variables with defaults.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-918">YARN-918</a>.
+     Blocker bug reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
+     <b>ApplicationMasterProtocol doesn't need ApplicationAttemptId in the payload after YARN-701</b><br>
+     <blockquote>Once we use AMRMToken irrespective of kerberos after YARN-701, we don't need ApplicationAttemptId in the RPC pay load. This is an API change, so doing it as a blocker for 2.1.0-beta.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-912">YARN-912</a>.
+     Major bug reported by Bikas Saha and fixed by Mayank Bansal <br>
+     <b>Create exceptions package in common/api for yarn and move client facing exceptions to them</b><br>
+     <blockquote>Exceptions like InvalidResourceBlacklistRequestException, InvalidResourceRequestException, InvalidApplicationMasterRequestException etc are currently inside ResourceManager and not visible to clients.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-909">YARN-909</a>.
+     Minor bug reported by Chuan Liu and fixed by Chuan Liu (nodemanager)<br>
+     <b>Disable TestLinuxContainerExecutorWithMocks on Windows</b><br>
+     <blockquote>This unit test tests a Linux specific feature. We should skip this unit test on Windows. A similar unit test 'TestLinuxContainerExecutor' was already skipped when running on Windows.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-897">YARN-897</a>.
+     Blocker bug reported by Djellel Eddine Difallah and fixed by Djellel Eddine Difallah (capacityscheduler)<br>
+     <b>CapacityScheduler wrongly sorted queues</b><br>
+     <blockquote>The childQueues of a ParentQueue are stored in a TreeSet where UsedCapacity defines the sort order. This ensures the queue with least UsedCapacity to receive resources next. On containerAssignment we correctly update the order, but we miss to do so on container completions. This corrupts the TreeSet structure, and under-capacity queues might starve for resources.
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-894">YARN-894</a>.
+     Minor bug reported by Chuan Liu and fixed by Chuan Liu (nodemanager)<br>
+     <b>NodeHealthScriptRunner timeout checking is inaccurate on Windows</b><br>
+     <blockquote>In {{NodeHealthScriptRunner}} method, we will set HealthChecker status based on the Shell execution results. Some status are based on the exception thrown during the Shell script execution.
+
+Currently, we will catch a non-ExitCodeException from ShellCommandExecutor, and if Shell has the timeout status set at the same time, we will also set HealthChecker status to timeout.
+
+We have following execution sequence in Shell:
+1) In main thread, schedule a delayed timer task that will kill the original process upon timeout.
+2) In main thread, open a buffered reader and feed in the process's standard input stream.
+3) When timeout happens, the timer task will call {{Process#destroy()}}
+ to kill the main process.
+
+On Linux, when timeout happened and process killed, the buffered reader will thrown an IOException with message: "Stream closed" in main thread.
+
+On Windows, we don't have the IOException. Only "-1" was returned from the reader that indicates the buffer is finished. As a result, the timeout status is not set on Windows, and {{TestNodeHealthService}} fails on Windows because of this.
+
+
+ </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-883">YARN-883</a>.
+     Major improvement reported by Sandy Ryza and fixed by Sandy Ryza (scheduler)<br>
+     <b>Expose Fair Scheduler-specific queue metrics</b><br>
+     <blockquote>When the Fair Scheduler is enabled, QueueMetrics should include fair share, minimum share, and maximum share.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-877">YARN-877</a>.
+     Major sub-task reported by Junping Du and fixed by Junping Du (scheduler)<br>
+     <b>Allow for black-listing resources in FifoScheduler</b><br>
+     <blockquote>YARN-750 already addressed black-list staff in YARN API and CS scheduler, this jira add implementation for FifoScheduler.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-875">YARN-875</a>.
+     Major bug reported by Bikas Saha and fixed by Xuan Gong <br>
+     <b>Application can hang if AMRMClientAsync callback thread has exception</b><br>
+     <blockquote>Currently that thread will die and then never callback. App can hang. Possible solution could be to catch Throwable in the callback and then call client.onError().</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-874">YARN-874</a>.
      Blocker bug reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
      <b>Tracking YARN/MR test failures after HADOOP-9421 and YARN-827</b><br>
      <blockquote>HADOOP-9421 and YARN-827 broke some YARN/MR tests. Tracking those..</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-873">YARN-873</a>.
+     Major sub-task reported by Bikas Saha and fixed by Xuan Gong <br>
+     <b>YARNClient.getApplicationReport(unknownAppId) returns a null report</b><br>
+     <blockquote>How can the client find out that app does not exist?</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-869">YARN-869</a>.
      Blocker bug reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
      <b>ResourceManagerAdministrationProtocol should neither be public(yet) nor in yarn.api</b><br>
      <blockquote>This is a admin only api that we don't know yet if people can or should write new tools against. I am going to move it to yarn.server.api and make it @Private..</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-866">YARN-866</a>.
+     Major test reported by Wei Yan and fixed by Wei Yan <br>
+     <b>Add test for class ResourceWeights</b><br>
+     <blockquote>Add test case for the class ResourceWeights</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-865">YARN-865</a>.
+     Major improvement reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>RM webservices can't query based on application Types</b><br>
+     <blockquote>The resource manager web service api to get the list of apps doesn't have a query parameter for appTypes.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-861">YARN-861</a>.
      Critical bug reported by Devaraj K and fixed by Vinod Kumar Vavilapalli (nodemanager)<br>
      <b>TestContainerManager is failing</b><br>
@@ -63,6 +181,10 @@ Caused by: org.apache.hadoop.ipc.RemoteException(javax.security.sasl.SaslExcepti
 .Failing this attempt.. Failing the application.
 
 {noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-853">YARN-853</a>.
+     Major bug reported by Devaraj K and fixed by Devaraj K (capacityscheduler)<br>
+     <b>maximum-am-resource-percent doesn't work after refreshQueues command</b><br>
+     <blockquote>If we update yarn.scheduler.capacity.maximum-am-resource-percent / yarn.scheduler.capacity.&lt;queue-path&gt;.maximum-am-resource-percent configuration and then do the refreshNodes, it uses the new config value to calculate Max Active Applications and Max Active Application Per User. If we add new node after issuing  'rmadmin -refreshQueues' command, it uses the old maximum-am-resource-percent config value to calculate Max Active Applications and Max Active Application Per User. </blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-852">YARN-852</a>.
      Minor bug reported by Chuan Liu and fixed by Chuan Liu <br>
      <b>TestAggregatedLogFormat.testContainerLogsFileAccess fails on Windows</b><br>
@@ -85,6 +207,52 @@ Furthermore, HDFS uses fully qualified hostnames which can end up affecting loca
      Major sub-task reported by Jian He and fixed by Jian He <br>
      <b>Move pb Impl from yarn-api to yarn-common</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-845">YARN-845</a>.
+     Major sub-task reported by Arpit Gupta and fixed by Mayank Bansal (resourcemanager)<br>
+     <b>RM crash with NPE on NODE_UPDATE</b><br>
+     <blockquote>the following stack trace is generated in rm
+
+{code}
+n, service: 68.142.246.147:45454 }, ] resource=&lt;memory:1536, vCores:1&gt; queue=default: capacity=1.0, absoluteCapacity=1.0, usedResources=&lt;memory:44544, vCores:29&gt;usedCapacity=0.90625, absoluteUsedCapacity=0.90625, numApps=1, numContainers=29 usedCapacity=0.90625 absoluteUsedCapacity=0.90625 used=&lt;memory:44544, vCores:29&gt; cluster=&lt;memory:49152, vCores:48&gt;
+2013-06-17 12:43:53,655 INFO  capacity.ParentQueue (ParentQueue.java:completedContainer(696)) - completedContainer queue=root usedCapacity=0.90625 absoluteUsedCapacity=0.90625 used=&lt;memory:44544, vCores:29&gt; cluster=&lt;memory:49152, vCores:48&gt;
+2013-06-17 12:43:53,656 INFO  capacity.CapacityScheduler (CapacityScheduler.java:completedContainer(832)) - Application appattempt_1371448527090_0844_000001 released container container_1371448527090_0844_01_000005 on node: host: hostXX:45454 #containers=4 available=2048 used=6144 with event: FINISHED
+2013-06-17 12:43:53,656 INFO  capacity.CapacityScheduler (CapacityScheduler.java:nodeUpdate(661)) - Trying to fulfill reservation for application application_1371448527090_0844 on node: hostXX:45454
+2013-06-17 12:43:53,656 INFO  fica.FiCaSchedulerApp (FiCaSchedulerApp.java:unreserve(435)) - Application application_1371448527090_0844 unreserved  on node host: hostXX:45454 #containers=4 available=2048 used=6144, currently has 4 at priority 20; currentReservation &lt;memory:6144, vCores:4&gt;
+2013-06-17 12:43:53,656 INFO  scheduler.AppSchedulingInfo (AppSchedulingInfo.java:updateResourceRequests(168)) - checking for deactivate...
+2013-06-17 12:43:53,657 FATAL resourcemanager.ResourceManager (ResourceManager.java:run(422)) - Error in handling event type NODE_UPDATE to the scheduler
+java.lang.NullPointerException
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp.unreserve(FiCaSchedulerApp.java:432)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue.unreserve(LeafQueue.java:1416)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue.assignContainer(LeafQueue.java:1346)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue.assignOffSwitchContainers(LeafQueue.java:1221)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue.assignContainersOnNode(LeafQueue.java:1180)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue.assignReservedContainer(LeafQueue.java:939)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue.assignContainers(LeafQueue.java:803)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler.nodeUpdate(CapacityScheduler.java:665)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler.handle(CapacityScheduler.java:727)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler.handle(CapacityScheduler.java:83)
+        at org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$SchedulerEventDispatcher$EventProcessor.run(ResourceManager.java:413)
+        at java.lang.Thread.run(Thread.java:662)
+2013-06-17 12:43:53,659 INFO  resourcemanager.ResourceManager (ResourceManager.java:run(426)) - Exiting, bbye..
+2013-06-17 12:43:53,665 INFO  mortbay.log (Slf4jLog.java:info(67)) - Stopped SelectChannelConnector@hostXX:8088
+2013-06-17 12:43:53,765 ERROR delegation.AbstractDelegationTokenSecretManager (AbstractDelegationTokenSecretManager.java:run(513)) - InterruptedExcpetion recieved for ExpiredTokenRemover thread java.lang.InterruptedException: sleep interrupted
+2013-06-17 12:43:53,766 INFO  impl.MetricsSystemImpl (MetricsSystemImpl.java:stop(200)) - Stopping ResourceManager metrics system...
+2013-06-17 12:43:53,767 INFO  impl.MetricsSystemImpl (MetricsSystemImpl.java:stop(206)) - ResourceManager metrics system stopped.
+2013-06-17 12:43:53,767 INFO  impl.MetricsSystemImpl (MetricsSystemImpl.java:shutdown(572)) - ResourceManager metrics system shutdown complete.
+2013-06-17 12:43:53,768 WARN  amlauncher.ApplicationMasterLauncher (ApplicationMasterLauncher.java:run(98)) - org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher$LauncherThread interrupted. Returning.
+2013-06-17 12:43:53,768 INFO  ipc.Server (Server.java:stop(2167)) - Stopping server on 8033
+2013-06-17 12:43:53,770 INFO  ipc.Server (Server.java:run(686)) - Stopping IPC Server listener on 8033
+2013-06-17 12:43:53,770 INFO  ipc.Server (Server.java:stop(2167)) - Stopping server on 8032
+2013-06-17 12:43:53,770 INFO  ipc.Server (Server.java:run(828)) - Stopping IPC Server Responder
+2013-06-17 12:43:53,771 INFO  ipc.Server (Server.java:run(686)) - Stopping IPC Server listener on 8032
+2013-06-17 12:43:53,771 INFO  ipc.Server (Server.java:run(828)) - Stopping IPC Server Responder
+2013-06-17 12:43:53,771 INFO  ipc.Server (Server.java:stop(2167)) - Stopping server on 8030
+2013-06-17 12:43:53,773 INFO  ipc.Server (Server.java:run(686)) - Stopping IPC Server listener on 8030
+2013-06-17 12:43:53,773 INFO  ipc.Server (Server.java:stop(2167)) - Stopping server on 8031
+2013-06-17 12:43:53,773 INFO  ipc.Server (Server.java:run(828)) - Stopping IPC Server Responder
+2013-06-17 12:43:53,774 INFO  ipc.Server (Server.java:run(686)) - Stopping IPC Server listener on 8031
+2013-06-17 12:43:53,775 INFO  ipc.Server (Server.java:run(828)) - Stopping IPC Server Responder
+{code}</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-841">YARN-841</a>.
      Major sub-task reported by Siddharth Seth and fixed by Vinod Kumar Vavilapalli <br>
      <b>Annotate and document AuxService APIs</b><br>
@@ -168,6 +336,18 @@ The purpose is not to expose impl</blockquote></li>
      Major sub-task reported by Jian He and fixed by Jian He <br>
      <b>Rename FinishApplicationMasterRequest.setFinishApplicationStatus to setFinalApplicationStatus to be consistent with getter</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-820">YARN-820</a>.
+     Major sub-task reported by Bikas Saha and fixed by Mayank Bansal <br>
+     <b>NodeManager has invalid state transition after error in resource localization</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-814">YARN-814</a>.
+     Major sub-task reported by Hitesh Shah and fixed by Jian He <br>
+     <b>Difficult to diagnose a failed container launch when error due to invalid environment variable</b><br>
+     <blockquote>The container's launch script sets up environment variables, symlinks etc. 
+
+If there is any failure when setting up the basic context ( before the actual user's process is launched ), nothing is captured by the NM. This makes it impossible to diagnose the reason for the failure. 
+
+To reproduce, set an env var where the value contains characters that throw syntax errors in bash. </blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-812">YARN-812</a>.
      Major bug reported by Ramya Sunil and fixed by Siddharth Seth <br>
      <b>Enabling app summary logs causes 'FileNotFound' errors</b><br>
@@ -328,6 +508,10 @@ This is happening because {code}QueueMetrics.getAllocateResources(){code} doesn'
      Major sub-task reported by Jian He and fixed by Jian He <br>
      <b>Move NodeHealthStatus from yarn.api.record to yarn.server.api.record</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-791">YARN-791</a>.
+     Blocker sub-task reported by Sandy Ryza and fixed by Sandy Ryza (api , resourcemanager)<br>
+     <b>Ensure that RM RPC APIs that return nodes are consistent with /nodes REST API</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-789">YARN-789</a>.
      Major improvement reported by Alejandro Abdelnur and fixed by Alejandro Abdelnur (scheduler)<br>
      <b>Enable zero capabilities resource requests in fair scheduler</b><br>
@@ -391,6 +575,10 @@ For now these metrics are created only when they are needed, we want to make the
      <b>blank Used Resources on Capacity Scheduler page </b><br>
      <blockquote>Even when there are jobs running,used resources is empty on Capacity Scheduler page for leaf queue.(I use google-chrome on windows 7.)
 After changing resource.java's toString method by replacing "&lt;&gt;" with "{}",this bug gets fixed.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-763">YARN-763</a>.
+     Major bug reported by Bikas Saha and fixed by Xuan Gong <br>
+     <b>AMRMClientAsync should stop heartbeating after receiving shutdown from RM</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-761">YARN-761</a>.
      Major bug reported by Vinod Kumar Vavilapalli and fixed by Zhijie Shen <br>
      <b>TestNMClientAsync fails sometimes</b><br>
@@ -458,6 +646,12 @@ This only affects a couple of production classes; {{Service.register()}} and is 
      Major sub-task reported by Jian He and fixed by Jian He <br>
      <b>Some Exceptions no longer need to be wrapped by YarnException and can be directly thrown out after YARN-142 </b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-736">YARN-736</a>.
+     Major improvement reported by Sandy Ryza and fixed by Sandy Ryza (scheduler)<br>
+     <b>Add a multi-resource fair sharing metric</b><br>
+     <blockquote>Currently, at a regular interval, the fair scheduler computes a fair memory share for each queue and application inside it.  This fair share is not used for scheduling decisions, but is displayed in the web UI, exposed as a metric, and used for preemption decisions.
+
+With DRF and multi-resource scheduling, assigning a memory share as the fair share metric to every queue no longer makes sense.  It's not obvious what the replacement should be, but probably something like fractional fairness within a queue, or distance from an ideal cluster state.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-735">YARN-735</a>.
      Major sub-task reported by Jian He and fixed by Jian He <br>
      <b>Make ApplicationAttemptID, ContainerID, NodeID immutable</b><br>
@@ -490,6 +684,10 @@ There will be the similar problem wrt NMClientImpl#startContainer.
      Major sub-task reported by Siddharth Seth and fixed by Zhijie Shen <br>
      <b>RPCUtil.unwrapAndThrowException should unwrap remote RuntimeExceptions</b><br>
      <blockquote>Will be required for YARN-662. Also, remote NPEs show up incorrectly for some unit tests.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-727">YARN-727</a>.
+     Blocker sub-task reported by Siddharth Seth and fixed by Xuan Gong <br>
+     <b>ClientRMProtocol.getAllApplications should accept ApplicationType as a parameter</b><br>
+     <blockquote>Now that an ApplicationType is registered on ApplicationSubmission, getAllApplications should be able to use this string to query for a specific application type.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-726">YARN-726</a>.
      Critical bug reported by Siddharth Seth and fixed by Mayank Bansal <br>
      <b>Queue, FinishTime fields broken on RM UI</b><br>
@@ -561,6 +759,11 @@ Some of the interfaces could use some cleanup as well - they shouldn't be declar
      <blockquote>See the test failure in YARN-695
 
 https://builds.apache.org/job/PreCommit-YARN-Build/957//testReport/org.apache.hadoop.yarn.util/TestFSDownload/testDownloadPatternJar/</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-701">YARN-701</a>.
+     Blocker sub-task reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
+     <b>ApplicationTokens should be used irrespective of kerberos</b><br>
+     <blockquote> - Single code path for secure and non-secure cases is useful for testing, coverage.
+ - Having this in non-secure mode will help us avoid accidental bugs in AMs DDos'ing and bringing down RM.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-700">YARN-700</a>.
      Major bug reported by Ivan Mitic and fixed by Ivan Mitic <br>
      <b>TestInfoBlock fails on Windows because of line ending missmatch</b><br>
@@ -624,6 +827,11 @@ AMRMClient should expose these NMToken to client. </blockquote></li>
      <blockquote>The DelegationTokenRenewer thread is critical to the RM.  When a non-IOException occurs, the thread calls System.exit to prevent the RM from running w/o the thread.  It should be exiting only on non-RuntimeExceptions.
 
 The problem is especially bad in 23 because the yarn protobuf layer converts IOExceptions into UndeclaredThrowableExceptions (RuntimeException) which causes the renewer to abort the process.  An UnknownHostException takes down the RM...</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-688">YARN-688</a>.
+     Major bug reported by Jian He and fixed by Jian He <br>
+     <b>Containers not cleaned up when NM received SHUTDOWN event from NodeStatusUpdater</b><br>
+     <blockquote>Currently, both SHUTDOWN event from nodeStatusUpdater and CleanupContainers event happens to be on the same dispatcher thread, CleanupContainers Event will not be processed until SHUTDOWN event is processed. see similar problem on YARN-495.
+On normal NM shutdown, this is not a problem since normal stop happens on shutdownHook thread.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-686">YARN-686</a>.
      Major sub-task reported by Sandy Ryza and fixed by Sandy Ryza (api)<br>
      <b>Flatten NodeReport</b><br>
@@ -636,6 +844,11 @@ The problem is especially bad in 23 because the yarn protobuf layer converts IOE
      Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
      <b>Change ResourceTracker API and LocalizationProtocol API to throw YarnRemoteException and IOException</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-661">YARN-661</a>.
+     Major bug reported by Jason Lowe and fixed by Omkar Vinit Joshi (nodemanager)<br>
+     <b>NM fails to cleanup local directories for users</b><br>
+     <blockquote>YARN-71 added deletion of local directories on startup, but in practice it fails to delete the directories because of permission problems.  The top-level usercache directory is owned by the user but is in a directory that is not writable by the user.  Therefore the deletion of the user's usercache directory, as the user, fails due to lack of permissions.
+</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-660">YARN-660</a>.
      Major sub-task reported by Bikas Saha and fixed by Bikas Saha <br>
      <b>Improve AMRMClient with matching requests</b><br>
@@ -644,6 +857,10 @@ The problem is especially bad in 23 because the yarn protobuf layer converts IOE
      Major bug reported by Sandy Ryza and fixed by Sandy Ryza (scheduler)<br>
      <b>Fair scheduler metrics should subtract allocated memory from available memory</b><br>
      <blockquote>In the scheduler web UI, cluster metrics reports that the "Memory Total" goes up when an application is allocated resources.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-654">YARN-654</a>.
+     Major bug reported by Bikas Saha and fixed by Xuan Gong <br>
+     <b>AMRMClient: Perform sanity checks for parameters of public methods</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-651">YARN-651</a>.
      Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
      <b>Change ContainerManagerPBClientImpl and RMAdminProtocolPBClientImpl to throw IOException and YarnRemoteException</b><br>
@@ -843,6 +1060,63 @@ gzip: 1: No such file or directory
 Solution would be to move the user information into either the Container object or directly into the ContainerToken which can then be used by the NM to launch the container. This user information would set into the container by the RM.
 
 </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-569">YARN-569</a>.
+     Major sub-task reported by Carlo Curino and fixed by Carlo Curino (capacityscheduler)<br>
+     <b>CapacityScheduler: support for preemption (using a capacity monitor)</b><br>
+     <blockquote>There is a tension between the fast-pace reactive role of the CapacityScheduler, which needs to respond quickly to 
+applications resource requests, and node updates, and the more introspective, time-based considerations 
+needed to observe and correct for capacity balance. To this purpose we opted instead of hacking the delicate
+mechanisms of the CapacityScheduler directly to add support for preemption by means of a "Capacity Monitor",
+which can be run optionally as a separate service (much like the NMLivelinessMonitor).
+
+The capacity monitor (similarly to equivalent functionalities in the fairness scheduler) operates running on intervals 
+(e.g., every 3 seconds), observe the state of the assignment of resources to queues from the capacity scheduler, 
+performs off-line computation to determine if preemption is needed, and how best to "edit" the current schedule to 
+improve capacity, and generates events that produce four possible actions:
+# Container de-reservations
+# Resource-based preemptions
+# Container-based preemptions
+# Container killing
+
+The actions listed above are progressively more costly, and it is up to the policy to use them as desired to achieve the rebalancing goals. 
+Note that due to the "lag" in the effect of these actions the policy should operate at the macroscopic level (e.g., preempt tens of containers
+from a queue) and not trying to tightly and consistently micromanage container allocations. 
+
+
+------------- Preemption policy  (ProportionalCapacityPreemptionPolicy): ------------- 
+
+Preemption policies are by design pluggable, in the following we present an initial policy (ProportionalCapacityPreemptionPolicy) we have been experimenting with.  The ProportionalCapacityPreemptionPolicy behaves as follows:
+# it gathers from the scheduler the state of the queues, in particular, their current capacity, guaranteed capacity and pending requests (*)
+# if there are pending requests from queues that are under capacity it computes a new ideal balanced state (**)
+# it computes the set of preemptions needed to repair the current schedule and achieve capacity balance (accounting for natural completion rates, and 
+respecting bounds on the amount of preemption we allow for each round)
+# it selects which applications to preempt from each over-capacity queue (the last one in the FIFO order)
+# it remove reservations from the most recently assigned app until the amount of resource to reclaim is obtained, or until no more reservations exits
+# (if not enough) it issues preemptions for containers from the same applications (reverse chronological order, last assigned container first) again until necessary or until no containers except the AM container are left,
+# (if not enough) it moves onto unreserve and preempt from the next application. 
+# containers that have been asked to preempt are tracked across executions. If a containers is among the one to be preempted for more than a certain time, the container is moved in a the list of containers to be forcibly killed. 
+
+Notes:
+(*) at the moment, in order to avoid double-counting of the requests, we only look at the "ANY" part of pending resource requests, which means we might not preempt on behalf of AMs that ask only for specific locations but not any. 
+(**) The ideal balance state is one in which each queue has at least its guaranteed capacity, and the spare capacity is distributed among queues (that wants some) as a weighted fair share. Where the weighting is based on the guaranteed capacity of a queue, and the function runs to a fix point.  
+
+Tunables of the ProportionalCapacityPreemptionPolicy:
+# 	observe-only mode (i.e., log the actions it would take, but behave as read-only)
+# how frequently to run the policy
+# how long to wait between preemption and kill of a container
+# which fraction of the containers I would like to obtain should I preempt (has to do with the natural rate at which containers are returned)
+# deadzone size, i.e., what % of over-capacity should I ignore (if we are off perfect balance by some small % we ignore it)
+# overall amount of preemption we can afford for each run of the policy (in terms of total cluster capacity)
+
+In our current experiments this set of tunables seem to be a good start to shape the preemption action properly. More sophisticated preemption policies could take into account different type of applications running, job priorities, cost of preemption, integral of capacity imbalance. This is very much a control-theory kind of problem, and some of the lessons on designing and tuning controllers are likely to apply.
+
+Generality:
+The monitor-based scheduler edit, and the preemption mechanisms we introduced here are designed to be more general than enforcing capacity/fairness, in fact, we are considering other monitors that leverage the same idea of "schedule edits" to target different global properties (e.g., allocate enough resources to guarantee deadlines for important jobs, or data-locality optimizations, IO-balancing among nodes, etc...).
+
+Note that by default the preemption policy we describe is disabled in the patch.
+
+Depends on YARN-45 and YARN-567, is related to YARN-568
+</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-568">YARN-568</a>.
      Major improvement reported by Carlo Curino and fixed by Carlo Curino (scheduler)<br>
      <b>FairScheduler: support for work-preserving preemption </b><br>
@@ -933,6 +1207,17 @@ At both the places the root cause of this is that all the threads try to acquire
      <blockquote>Today, the global AM max-attempts is set to 1 which is a bad choice. AM max-attempts accounts for both AM level failures as well as container crashes due to localization issue, lost nodes etc. To account for AM crashes due to problems that are not caused by user code, mainly lost nodes, we want to give AMs some retires.
 
 I propose we change it to atleast two. Can change it to 4 to match other retry-configs.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-541">YARN-541</a>.
+     Blocker bug reported by Krishna Kishore Bonagiri and fixed by Bikas Saha (resourcemanager)<br>
+     <b>getAllocatedContainers() is not returning all the allocated containers</b><br>
+     <blockquote>I am running an application that was written and working well with the hadoop-2.0.0-alpha but when I am running the same against 2.0.3-alpha, the getAllocatedContainers() method called on AMResponse is not returning all the containers allocated sometimes. For example, I request for 10 containers and this method gives me only 9 containers sometimes, and when I looked at the log of Resource Manager, the 10th container is also allocated. It happens only sometimes randomly and works fine all other times. If I send one more request for the remaining container to RM after it failed to give them the first time(and before releasing already acquired ones), it could allocate that container. I am running only one application at a time, but 1000s of them one after another.
+
+My main worry is, even though the RM's log is saying that all 10 requested containers are allocated,  the getAllocatedContainers() method is not returning me all of them, it returned only 9 surprisingly. I never saw this kind of issue in the previous version, i.e. hadoop-2.0.0-alpha.
+
+Thanks,
+Kishore
+
+ </blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-539">YARN-539</a>.
      Major sub-task reported by Omkar Vinit Joshi and fixed by Omkar Vinit Joshi <br>
      <b>LocalizedResources are leaked in memory in case resource localization fails</b><br>
@@ -972,6 +1257,14 @@ There's no that we need to perform this resolution on every page load.
      Major improvement reported by Thomas Graves and fixed by Thomas Graves (capacityscheduler)<br>
      <b>make CS node-locality-delay refreshable</b><br>
      <blockquote>the config yarn.scheduler.capacity.node-locality-delay doesn't change when you change the value in capacity_scheduler.xml and then run yarn rmadmin -refreshQueues.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-523">YARN-523</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Jian He <br>
+     <b>Container localization failures aren't reported from NM to RM</b><br>
+     <blockquote>This is mainly a pain on crashing AMs, but once we fix this, containers also can benefit - same fix for both.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-521">YARN-521</a>.
+     Major sub-task reported by Sandy Ryza and fixed by Sandy Ryza (api)<br>
+     <b>Augment AM - RM client module to be able to request containers only at specific locations</b><br>
+     <blockquote>When YARN-392 and YARN-398 are completed, it would be good for AMRMClient to offer an easy way to access their functionality</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-518">YARN-518</a>.
      Major improvement reported by Dapeng Sun and fixed by Sandy Ryza (documentation)<br>
      <b>Fair Scheduler's document link could be added to the hadoop 2.x main doc page</b><br>
@@ -1000,6 +1293,10 @@ The Null pointer exception just keeps repeating and all of the nodes end up bein
      Major sub-task reported by Bikas Saha and fixed by Zhijie Shen (resourcemanager)<br>
      <b>Delayed store operations should not result in RM unavailability for app submission</b><br>
      <blockquote>Currently, app submission is the only store operation performed synchronously because the app must be stored before the request returns with success. This makes the RM susceptible to blocking all client threads on slow store operations, resulting in RM being perceived as unavailable by clients.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-513">YARN-513</a>.
+     Major sub-task reported by Bikas Saha and fixed by Jian He (resourcemanager)<br>
+     <b>Create common proxy client for communicating with RM</b><br>
+     <blockquote>When the RM is restarting, the NM, AM and Clients should wait for some time for the RM to come back up.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-512">YARN-512</a>.
      Minor bug reported by Jason Lowe and fixed by Maysam Yabandeh (nodemanager)<br>
      <b>Log aggregation root directory check is more expensive than it needs to be</b><br>
@@ -1350,6 +1647,34 @@ Also, some methods were deprecated by HADOOP-9252.  The use of them should be re
      Blocker bug reported by Jason Lowe and fixed by Jason Lowe (resourcemanager)<br>
      <b>Apps that have completed can appear as RUNNING on the NM UI</b><br>
      <blockquote>On a busy cluster we've noticed a growing number of applications appear as RUNNING on a nodemanager web pages but the applications have long since finished.  Looking at the NM logs, it appears the RM never told the nodemanager that the application had finished.  This is also reflected in a jstack of the NM process, since many more log aggregation threads are running then one would expect from the number of actively running applications.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-369">YARN-369</a>.
+     Major sub-task reported by Hitesh Shah and fixed by Mayank Bansal (resourcemanager)<br>
+     <b>Handle ( or throw a proper error when receiving) status updates from application masters that have not registered</b><br>
+     <blockquote>Currently, an allocate call from an unregistered application is allowed and the status update for it throws a statemachine error that is silently dropped.
+
+org.apache.hadoop.yarn.state.InvalidStateTransitonException: Invalid event: STATUS_UPDATE at LAUNCHED
+       at org.apache.hadoop.yarn.state.StateMachineFactory.doTransition(StateMachineFactory.java:302)
+       at org.apache.hadoop.yarn.state.StateMachineFactory.access$300(StateMachineFactory.java:43)
+       at org.apache.hadoop.yarn.state.StateMachineFactory$InternalStateMachine.doTransition(StateMachineFactory.java:445)
+       at org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl.handle(RMAppAttemptImpl.java:588)
+       at org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl.handle(RMAppAttemptImpl.java:99)
+       at org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$ApplicationAttemptEventDispatcher.handle(ResourceManager.java:471)
+       at org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$ApplicationAttemptEventDispatcher.handle(ResourceManager.java:452)
+       at org.apache.hadoop.yarn.event.AsyncDispatcher.dispatch(AsyncDispatcher.java:130)
+       at org.apache.hadoop.yarn.event.AsyncDispatcher$1.run(AsyncDispatcher.java:77)
+       at java.lang.Thread.run(Thread.java:680)
+
+
+ApplicationMasterService should likely throw an appropriate error for applications' requests that should not be handled in such cases.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-368">YARN-368</a>.
+     Trivial bug reported by Albert Chu and fixed by Albert Chu <br>
+     <b>Fix typo "defiend" should be "defined" in error output</b><br>
+     <blockquote>Noticed the following in an error log output while doing some experiements
+
+./1066018/nodes/hyperion987/log/yarn-achu-nodemanager-hyperion987.out:java.lang.RuntimeException: No class defiend for uda.shuffle
+
+"defiend" should be "defined"
+</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-365">YARN-365</a>.
      Major sub-task reported by Siddharth Seth and fixed by Xuan Gong (resourcemanager , scheduler)<br>
      <b>Each NM heartbeat should not generate an event for the Scheduler</b><br>
@@ -1377,6 +1702,10 @@ java.io.FileNotFoundException: webapps/proxy not found in CLASSPATH
      <blockquote>When using the search box on the web UI to search for a specific task number (e.g.: "0831"), sometimes unexpected extra results are shown.  Using the web browser's built-in search-within-page does not show any hits, so these look like completely spurious results.
 
 It looks like the raw timestamp value for time columns, which is not shown in the table, is also being searched with the search box.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-347">YARN-347</a>.
+     Major improvement reported by Junping Du and fixed by Junping Du (client)<br>
+     <b>YARN CLI should show CPU info besides memory info in node status</b><br>
+     <blockquote>With YARN-2 checked in, CPU info are taken into consideration in resource scheduling. yarn node -status &lt;NodeID&gt; should show CPU used and capacity info as memory info.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-345">YARN-345</a>.
      Critical bug reported by Devaraj K and fixed by Robert Parker (nodemanager)<br>
      <b>Many InvalidStateTransitonException errors for ApplicationImpl in Node Manager</b><br>
@@ -1455,6 +1784,12 @@ org.apache.hadoop.yarn.state.InvalidStateTransitonException: Invalid event: INIT
 2013-01-17 10:56:36,026 INFO org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application: Application application_1358385982671_1304 transitioned from FINISHED to null
 {code}
 </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-333">YARN-333</a>.
+     Major bug reported by Sandy Ryza and fixed by Sandy Ryza <br>
+     <b>Schedulers cannot control the queue-name of an application</b><br>
+     <blockquote>Currently, if an app is submitted without a queue, RMAppManager sets the RMApp's queue to "default".
+
+A scheduler may wish to make its own decision on which queue to place an app in if none is specified. For example, when the fair scheduler user-as-default-queue config option is set to true, and an app is submitted with no queue specified, the fair scheduler should assign the app to a queue with the user's name.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-326">YARN-326</a>.
      Major new feature reported by Sandy Ryza and fixed by Sandy Ryza (scheduler)<br>
      <b>Add multi-resource scheduling to the fair scheduler</b><br>
@@ -1474,6 +1809,23 @@ More details to come on how the corner cases with fair scheduler configs such as
      Major improvement reported by Arun C Murthy and fixed by Xuan Gong <br>
      <b>Improve hashCode implementations for PB records</b><br>
      <blockquote>As [~hsn] pointed out in YARN-2, we use very small primes in all our hashCode implementations.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-295">YARN-295</a>.
+     Major sub-task reported by Devaraj K and fixed by Mayank Bansal (resourcemanager)<br>
+     <b>Resource Manager throws InvalidStateTransitonException: Invalid event: CONTAINER_FINISHED at ALLOCATED for RMAppAttemptImpl</b><br>
+     <blockquote>{code:xml}
+2012-12-28 14:03:56,956 ERROR org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl: Can't handle this event at current state
+org.apache.hadoop.yarn.state.InvalidStateTransitonException: Invalid event: CONTAINER_FINISHED at ALLOCATED
+	at org.apache.hadoop.yarn.state.StateMachineFactory.doTransition(StateMachineFactory.java:301)
+	at org.apache.hadoop.yarn.state.StateMachineFactory.access$300(StateMachineFactory.java:43)
+	at org.apache.hadoop.yarn.state.StateMachineFactory$InternalStateMachine.doTransition(StateMachineFactory.java:443)
+	at org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl.handle(RMAppAttemptImpl.java:490)
+	at org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl.handle(RMAppAttemptImpl.java:80)
+	at org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$ApplicationAttemptEventDispatcher.handle(ResourceManager.java:433)
+	at org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$ApplicationAttemptEventDispatcher.handle(ResourceManager.java:414)
+	at org.apache.hadoop.yarn.event.AsyncDispatcher.dispatch(AsyncDispatcher.java:126)
+	at org.apache.hadoop.yarn.event.AsyncDispatcher$1.run(AsyncDispatcher.java:75)
+	at java.lang.Thread.run(Thread.java:662)
+{code}</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-289">YARN-289</a>.
      Major bug reported by Sandy Ryza and fixed by Sandy Ryza <br>
      <b>Fair scheduler allows reservations that won't fit on node</b><br>
@@ -1834,12 +2186,22 @@ java.io.IOException: mkdir of /tmp/nm-local-dir/usercache/root/filecache/1701886
 {code}
 
 We should have a mechanism to clean the cache files if it crosses specified number of directories like cache size.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-84">YARN-84</a>.
+     Minor improvement reported by Brandon Li and fixed by Brandon Li <br>
+     <b>Use Builder to get RPC server in YARN</b><br>
+     <blockquote>In HADOOP-8736, a Builder is introduced to replace all the getServer() variants. This JIRA is the change in YARN.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-71">YARN-71</a>.
      Critical bug reported by Vinod Kumar Vavilapalli and fixed by Xuan Gong (nodemanager)<br>
      <b>Ensure/confirm that the NodeManager cleans up local-dirs on restart</b><br>
      <blockquote>We have to make sure that NodeManagers cleanup their local files on restart.
 
 It may already be working like that in which case we should have tests validating this.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-62">YARN-62</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Omkar Vinit Joshi <br>
+     <b>AM should not be able to abuse container tokens for repetitive container launches</b><br>
+     <blockquote>Clone of YARN-51.
+
+ApplicationMaster should not be able to store container tokens and use the same set of tokens for repetitive container launches. The possibility of such abuse is there in the current code, for a duration of 1d+10mins, we need to fix this.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-45">YARN-45</a>.
      Major sub-task reported by Chris Douglas and fixed by Carlo Curino (resourcemanager)<br>
      <b>Scheduler feedback to AM to release containers</b><br>
@@ -1850,13 +2212,65 @@ It may already be working like that in which case we should have tests validatin
      Major bug reported by Jason Lowe and fixed by Sandy Ryza (nodemanager)<br>
      <b>Nodemanager fails to start if log aggregation enabled and namenode unavailable</b><br>
      <blockquote>If log aggregation is enabled and the namenode is currently unavailable, the nodemanager fails to startup.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5421">MAPREDUCE-5421</a>.
+     Blocker bug reported by Junping Du and fixed by Junping Du (test)<br>
+     <b>TestNonExistentJob is failed due to recent changes in YARN</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5419">MAPREDUCE-5419</a>.
+     Major bug reported by Robert Parker and fixed by Robert Parker (mrv2)<br>
+     <b>TestSlive is getting FileNotFound Exception</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5412">MAPREDUCE-5412</a>.
+     Major bug reported by Jian He and fixed by Jian He <br>
+     <b>Change MR to use multiple containers API of ContainerManager after YARN-926</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5398">MAPREDUCE-5398</a>.
+     Major improvement reported by Bikas Saha and fixed by Jian He <br>
+     <b>MR changes for YARN-513</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5366">MAPREDUCE-5366</a>.
+     Minor bug reported by Chuan Liu and fixed by Chuan Liu (test)<br>
+     <b>TestMRAsyncDiskService fails on Windows</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5360">MAPREDUCE-5360</a>.
+     Minor bug reported by Chuan Liu and fixed by Chuan Liu (test)<br>
+     <b>TestMRJobClient fails on Windows due to path format</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5359">MAPREDUCE-5359</a>.
+     Minor bug reported by Chuan Liu and fixed by Chuan Liu <br>
+     <b>JobHistory should not use File.separator to match timestamp in path</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5357">MAPREDUCE-5357</a>.
+     Minor bug reported by Chuan Liu and fixed by Chuan Liu <br>
+     <b>Job staging directory owner checking could fail on Windows</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5355">MAPREDUCE-5355</a>.
+     Minor bug reported by Chuan Liu and fixed by Chuan Liu <br>
+     <b>MiniMRYarnCluster with localFs does not work on Windows</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5349">MAPREDUCE-5349</a>.
+     Minor bug reported by Chuan Liu and fixed by Chuan Liu <br>
+     <b>TestClusterMapReduceTestCase and TestJobName fail on Windows in branch-2</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5334">MAPREDUCE-5334</a>.
      Blocker bug reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
      <b>TestContainerLauncherImpl is failing</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5333">MAPREDUCE-5333</a>.
+     Major test reported by Alejandro Abdelnur and fixed by Wei Yan (mr-am)<br>
+     <b>Add test that verifies MRAM works correctly when sending requests with non-normalized capabilities</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5328">MAPREDUCE-5328</a>.
+     Major bug reported by Omkar Vinit Joshi and fixed by Omkar Vinit Joshi <br>
+     <b>ClientToken should not be set in the environment</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5326">MAPREDUCE-5326</a>.
      Blocker bug reported by Arun C Murthy and fixed by Zhijie Shen <br>
      <b>Add version to shuffle header</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5325">MAPREDUCE-5325</a>.
+     Major bug reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>ClientRMProtocol.getAllApplications should accept ApplicationType as a parameter---MR changes</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5319">MAPREDUCE-5319</a>.
      Major bug reported by yeshavora and fixed by Xuan Gong <br>
@@ -1887,7 +2301,7 @@ It may already be working like that in which case we should have tests validatin
      <b>Changes on MR after moving ProtoBase to package impl.pb on YARN-724</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5301">MAPREDUCE-5301</a>.
-     Major bug reported by Siddharth Seth and fixed by  <br>
+     Major bug reported by Siddharth Seth and fixed by Siddharth Seth <br>
      <b>Update MR code to work with YARN-635 changes</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5300">MAPREDUCE-5300</a>.
@@ -2034,6 +2448,10 @@ It may already be working like that in which case we should have tests validatin
      Major sub-task reported by Sandy Ryza and fixed by Zhijie Shen (client)<br>
      <b>Mapred API: TaskCompletionEvent incompatibility issues with MR1</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5213">MAPREDUCE-5213</a>.
+     Minor bug reported by Karthik Kambatla and fixed by Karthik Kambatla <br>
+     <b>Re-assess TokenCache methods marked @Private</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5212">MAPREDUCE-5212</a>.
      Major bug reported by Xuan Gong and fixed by Xuan Gong <br>
      <b>Handle exception related changes in YARN's ClientRMProtocol api after YARN-631</b><br>
@@ -2073,6 +2491,10 @@ It may already be working like that in which case we should have tests validatin
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5191">MAPREDUCE-5191</a>.
      Major bug reported by Ivan Mitic and fixed by Ivan Mitic <br>
      <b>TestQueue#testQueue fails with timeout on Windows</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5187">MAPREDUCE-5187</a>.
+     Major bug reported by Chuan Liu and fixed by Chuan Liu (mrv2)<br>
+     <b>Create mapreduce command scripts on Windows</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5184">MAPREDUCE-5184</a>.
      Major sub-task reported by Arun C Murthy and fixed by Zhijie Shen (documentation)<br>
@@ -2378,6 +2800,10 @@ It may already be working like that in which case we should have tests validatin
      Major bug reported by Thomas Graves and fixed by Thomas Graves (webapps)<br>
      <b>TestHsWebServicesJobs fails on jdk7</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4374">MAPREDUCE-4374</a>.
+     Minor bug reported by Chuan Liu and fixed by Chuan Liu (mrv2)<br>
+     <b>Fix child task environment variable config and add support for Windows</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4356">MAPREDUCE-4356</a>.
      Major bug reported by Ravi Gummadi and fixed by Ravi Gummadi (tools/rumen)<br>
      <b>Provide access to ParsedTask.obtainTaskAttempts()</b><br>
@@ -2446,6 +2872,118 @@ It may already be working like that in which case we should have tests validatin
      Major bug reported by Ravi Gummadi and fixed by Ravi Gummadi (contrib/gridmix)<br>
      <b>Gridmix simulated job's map's hdfsBytesRead counter is wrong when compressed input is used</b><br>
      <blockquote>Makes Gridmix use the uncompressed input data size while simulating map tasks in the case where compressed input data was used in original job.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5027">HDFS-5027</a>.
+     Major improvement reported by Aaron T. Myers and fixed by Aaron T. Myers (datanode)<br>
+     <b>On startup, DN should scan volumes in parallel</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5025">HDFS-5025</a>.
+     Major sub-task reported by Jing Zhao and fixed by Jing Zhao (ha , namenode)<br>
+     <b>Record ClientId and CallId in EditLog to enable rebuilding retry cache in case of HA failover</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5024">HDFS-5024</a>.
+     Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (namenode)<br>
+     <b>Make DatanodeProtocol#commitBlockSynchronization idempotent</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5020">HDFS-5020</a>.
+     Major improvement reported by Jing Zhao and fixed by Jing Zhao (namenode)<br>
+     <b>Make DatanodeProtocol#blockReceivedAndDeleted idempotent</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5018">HDFS-5018</a>.
+     Minor bug reported by Ted Yu and fixed by Ted Yu <br>
+     <b>Misspelled DFSConfigKeys#DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT in javadoc of DatanodeInfo#isStale()</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5016">HDFS-5016</a>.
+     Blocker bug reported by Devaraj Das and fixed by Suresh Srinivas <br>
+     <b>Deadlock in pipeline recovery causes Datanode to be marked dead</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5010">HDFS-5010</a>.
+     Major improvement reported by Kihwal Lee and fixed by Kihwal Lee (namenode , performance)<br>
+     <b>Reduce the frequency of getCurrentUser() calls from namenode</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5008">HDFS-5008</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Jing Zhao (namenode)<br>
+     <b>Make ClientProtocol#abandonBlock() idempotent</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5007">HDFS-5007</a>.
+     Minor improvement reported by Kousuke Saruta and fixed by Kousuke Saruta <br>
+     <b>Replace hard-coded property keys with DFSConfigKeys fields</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5005">HDFS-5005</a>.
+     Major bug reported by Jing Zhao and fixed by Jing Zhao <br>
+     <b>Move SnapshotException and SnapshotAccessControlException to o.a.h.hdfs.protocol</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5003">HDFS-5003</a>.
+     Minor bug reported by Xi Fang and fixed by Xi Fang (test)<br>
+     <b>TestNNThroughputBenchmark failed caused by existing directories</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4999">HDFS-4999</a>.
+     Major bug reported by Kihwal Lee and fixed by Colin Patrick McCabe <br>
+     <b>fix TestShortCircuitLocalRead on branch-2</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4998">HDFS-4998</a>.
+     Major bug reported by Kihwal Lee and fixed by Kihwal Lee (test)<br>
+     <b>TestUnderReplicatedBlocks fails intermittently</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4996">HDFS-4996</a>.
+     Minor improvement reported by Chris Nauroth and fixed by Chris Nauroth (namenode)<br>
+     <b>ClientProtocol#metaSave can be made idempotent by overwriting the output file instead of appending to it</b><br>
+     <blockquote>The dfsadmin -metasave command has been changed to overwrite the output file.  Previously, this command would append to the output file if it already existed.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4992">HDFS-4992</a>.
+     Major improvement reported by Max Lapan and fixed by Max Lapan (balancer)<br>
+     <b>Make balancer's thread count configurable</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4982">HDFS-4982</a>.
+     Major bug reported by Todd Lipcon and fixed by Todd Lipcon (journal-node , security)<br>
+     <b>JournalNode should relogin from keytab before fetching logs from other JNs</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4980">HDFS-4980</a>.
+     Major bug reported by Mark Grover and fixed by Mark Grover (build)<br>
+     <b>Incorrect logging.properties file for hadoop-httpfs</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4979">HDFS-4979</a>.
+     Major sub-task reported by Suresh Srinivas and fixed by Suresh Srinivas (namenode)<br>
+     <b>Implement retry cache on the namenode</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4978">HDFS-4978</a>.
+     Major improvement reported by Jing Zhao and fixed by Jing Zhao <br>
+     <b>Make disallowSnapshot idempotent</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4974">HDFS-4974</a>.
+     Major sub-task reported by Suresh Srinivas and fixed by Suresh Srinivas (ha , namenode)<br>
+     <b>Analyze and add annotations to Namenode protocol methods and enable retry</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4969">HDFS-4969</a>.
+     Blocker bug reported by Robert Kanter and fixed by Robert Kanter (test , webhdfs)<br>
+     <b>WebhdfsFileSystem expects non-standard WEBHDFS Json element</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4954">HDFS-4954</a>.
+     Major bug reported by Brandon Li and fixed by Brandon Li (nfs)<br>
+     <b>compile failure in branch-2: getFlushedOffset should catch or rethrow IOException</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4951">HDFS-4951</a>.
+     Major bug reported by Robert Kanter and fixed by Robert Kanter (security)<br>
+     <b>FsShell commands using secure httpfs throw exceptions due to missing TokenRenewer</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4948">HDFS-4948</a>.
+     Major bug reported by Robert Joseph Evans and fixed by Brandon Li <br>
+     <b>mvn site for hadoop-hdfs-nfs fails</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4944">HDFS-4944</a>.
+     Major bug reported by Chris Nauroth and fixed by Chris Nauroth (webhdfs)<br>
+     <b>WebHDFS cannot create a file path containing characters that must be URI-encoded, such as space.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4943">HDFS-4943</a>.
+     Minor bug reported by Jerry He and fixed by Jerry He (webhdfs)<br>
+     <b>WebHdfsFileSystem does not work when original file path has encoded chars </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4932">HDFS-4932</a>.
+     Minor improvement reported by Fengdong Yu and fixed by Fengdong Yu (ha , namenode)<br>
+     <b>Avoid a wide line on the name node webUI if we have more Journal nodes</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4927">HDFS-4927</a>.
+     Minor bug reported by Chris Nauroth and fixed by Chris Nauroth (test)<br>
+     <b>CreateEditsLog creates inodes with an invalid inode ID, which then cannot be loaded by a namenode.</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4917">HDFS-4917</a>.
      Major bug reported by Fengdong Yu and fixed by Fengdong Yu (datanode , namenode)<br>
      <b>Start-dfs.sh cannot pass the parameters correctly</b><br>
@@ -2454,17 +2992,37 @@ It may already be working like that in which case we should have tests validatin
      Minor improvement reported by Tsz Wo (Nicholas), SZE and fixed by Tsz Wo (Nicholas), SZE (hdfs-client)<br>
      <b>When possible, Use DFSClient.Conf instead of Configuration </b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4912">HDFS-4912</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Suresh Srinivas (namenode)<br>
+     <b>Cleanup FSNamesystem#startFileInternal</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4910">HDFS-4910</a>.
      Major bug reported by Chuan Liu and fixed by Chuan Liu <br>
      <b>TestPermission failed in branch-2</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4908">HDFS-4908</a>.
+     Major sub-task reported by Tsz Wo (Nicholas), SZE and fixed by Tsz Wo (Nicholas), SZE (namenode , snapshots)<br>
+     <b>Reduce snapshot inode memory usage</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4906">HDFS-4906</a>.
      Major bug reported by Aaron T. Myers and fixed by Aaron T. Myers (hdfs-client)<br>
      <b>HDFS Output streams should not accept writes after being closed</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4903">HDFS-4903</a>.
+     Minor improvement reported by Suresh Srinivas and fixed by Arpit Agarwal (namenode)<br>
+     <b>Print trash configuration and trash emptier state in namenode log</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4902">HDFS-4902</a>.
      Major bug reported by Binglin Chang and fixed by Binglin Chang (snapshots)<br>
      <b>DFSClient.getSnapshotDiffReport should use string path rather than o.a.h.fs.Path</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4888">HDFS-4888</a>.
+     Major bug reported by Ravi Prakash and fixed by Ravi Prakash <br>
+     <b>Refactor and fix FSNamesystem.getTurnOffTip to sanity</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4887">HDFS-4887</a>.
+     Blocker bug reported by Kihwal Lee and fixed by Kihwal Lee (benchmarks , test)<br>
+     <b>TestNNThroughputBenchmark exits abruptly</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4883">HDFS-4883</a>.
      Major bug reported by Konstantin Shvachko and fixed by Tao Luo (namenode)<br>
@@ -2538,6 +3096,10 @@ It may already be working like that in which case we should have tests validatin
      Major sub-task reported by Jing Zhao and fixed by Jing Zhao (snapshots)<br>
      <b>Snapshot: identify the correct prior snapshot when deleting a snapshot under a renamed subtree</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4841">HDFS-4841</a>.
+     Major bug reported by Stephen Chu and fixed by Robert Kanter (security , webhdfs)<br>
+     <b>FsShell commands using secure webhfds fail ClientFinalizer shutdown hook</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4840">HDFS-4840</a>.
      Major bug reported by Kihwal Lee and fixed by Kihwal Lee (namenode)<br>
      <b>ReplicationMonitor gets NPE during shutdown</b><br>
@@ -2602,6 +3164,10 @@ It may already be working like that in which case we should have tests validatin
      Blocker bug reported by Todd Lipcon and fixed by Todd Lipcon (namenode)<br>
      <b>Corrupt replica can be prematurely removed from corruptReplicas map</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4797">HDFS-4797</a>.
+     Minor bug reported by Tsz Wo (Nicholas), SZE and fixed by Tsz Wo (Nicholas), SZE (datanode)<br>
+     <b>BlockScanInfo does not override equals(..) and hashCode() consistently</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4787">HDFS-4787</a>.
      Major improvement reported by Tian Hong Wang and fixed by Tian Hong Wang <br>
      <b>Create a new HdfsConfiguration before each TestDFSClientRetries testcases</b><br>
@@ -2637,6 +3203,10 @@ It may already be working like that in which case we should have tests validatin
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4765">HDFS-4765</a>.
      Major bug reported by Andrew Wang and fixed by Andrew Wang (namenode)<br>
      <b>Permission check of symlink deletion incorrectly throws UnresolvedLinkException</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4762">HDFS-4762</a>.
+     Major sub-task reported by Brandon Li and fixed by Brandon Li (nfs)<br>
+     <b>Provide HDFS based NFSv3 and Mountd implementation</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4751">HDFS-4751</a>.
      Minor bug reported by Andrew Wang and fixed by Andrew Wang (test)<br>
@@ -2695,7 +3265,7 @@ It may already be working like that in which case we should have tests validatin
      <b>Speed up lease/block recovery when DN fails and a block goes into recovery</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4714">HDFS-4714</a>.
-     Major bug reported by Kihwal Lee and fixed by  (namenode)<br>
+     Major bug reported by Kihwal Lee and fixed by Kihwal Lee (namenode)<br>
      <b>Log short messages in Namenode RPC server for exceptions meant for clients</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4705">HDFS-4705</a>.
@@ -2717,6 +3287,10 @@ It may already be working like that in which case we should have tests validatin
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4693">HDFS-4693</a>.
      Minor bug reported by Arpit Agarwal and fixed by Arpit Agarwal (test)<br>
      <b>Some test cases in TestCheckpoint do not clean up after themselves</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4687">HDFS-4687</a>.
+     Minor bug reported by Andrew Wang and fixed by Andrew Wang (test)<br>
+     <b>TestDelegationTokenForProxyUser#testWebHdfsDoAs is flaky with JDK7</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4679">HDFS-4679</a>.
      Major improvement reported by Suresh Srinivas and fixed by Suresh Srinivas (namenode)<br>
@@ -2753,6 +3327,10 @@ It may already be working like that in which case we should have tests validatin
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4646">HDFS-4646</a>.
      Minor bug reported by Jagane Sundar and fixed by  (namenode)<br>
      <b>createNNProxyWithClientProtocol ignores configured timeout value</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4645">HDFS-4645</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Arpit Agarwal (namenode)<br>
+     <b>Move from randomly generated block ID to sequentially generated block ID</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4643">HDFS-4643</a>.
      Trivial bug reported by Todd Lipcon and fixed by Todd Lipcon (qjm , test)<br>
@@ -2809,6 +3387,10 @@ It may already be working like that in which case we should have tests validatin
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4603">HDFS-4603</a>.
      Major bug reported by Ivan Mitic and fixed by Ivan Mitic <br>
      <b>TestMiniDFSCluster fails on Windows</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4602">HDFS-4602</a>.
+     Major sub-task reported by Suresh Srinivas and fixed by Uma Maheswara Rao G <br>
+     <b>TestBookKeeperHACheckpoints fails</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4598">HDFS-4598</a>.
      Minor bug reported by Tsz Wo (Nicholas), SZE and fixed by Tsz Wo (Nicholas), SZE (webhdfs)<br>
@@ -2894,6 +3476,10 @@ It may already be working like that in which case we should have tests validatin
      Minor bug reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe <br>
      <b>LightWeightGSet expects incrementing a volatile to be atomic</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4521">HDFS-4521</a>.
+     Minor improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe <br>
+     <b>invalid network topologies should not be cached</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4519">HDFS-4519</a>.
      Major bug reported by Chris Nauroth and fixed by Chris Nauroth (datanode , scripts)<br>
      <b>Support override of jsvc binary and log file locations when launching secure datanode.</b><br>
@@ -2937,6 +3523,10 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Major bug reported by Chris Nauroth and fixed by Chris Nauroth <br>
      <b>several HDFS tests attempt file operations on invalid HDFS paths when running on Windows</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4465">HDFS-4465</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Aaron T. Myers (datanode)<br>
+     <b>Optimize datanode ReplicasMap and ReplicaInfo</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4461">HDFS-4461</a>.
      Minor improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe <br>
      <b>DirectoryScanner: volume path prefix takes up memory for every block that is scanned </b><br>
@@ -2949,6 +3539,18 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Major bug reported by Ted Yu and fixed by Ted Yu <br>
      <b>Fix typo MAX_NOT_CHANGED_INTERATIONS</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4374">HDFS-4374</a>.
+     Major sub-task reported by Chris Nauroth and fixed by Chris Nauroth (namenode)<br>
+     <b>Display NameNode startup progress in UI</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4373">HDFS-4373</a>.
+     Major sub-task reported by Chris Nauroth and fixed by Chris Nauroth (namenode)<br>
+     <b>Add HTTP API for querying NameNode startup progress</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4372">HDFS-4372</a>.
+     Major sub-task reported by Chris Nauroth and fixed by Chris Nauroth (namenode)<br>
+     <b>Track NameNode startup progress</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4346">HDFS-4346</a>.
      Minor sub-task reported by Tsz Wo (Nicholas), SZE and fixed by Tsz Wo (Nicholas), SZE (namenode)<br>
      <b>Refactor INodeId and GenerationStamp</b><br>
@@ -2960,6 +3562,10 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4340">HDFS-4340</a>.
      Major sub-task reported by Brandon Li and fixed by Brandon Li (hdfs-client , namenode)<br>
      <b>Update addBlock() to inculde inode id as additional argument</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4339">HDFS-4339</a>.
+     Major sub-task reported by Brandon Li and fixed by Brandon Li (namenode)<br>
+     <b>Persist inode id in fsimage and editlog</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4334">HDFS-4334</a>.
      Major sub-task reported by Brandon Li and fixed by Brandon Li (namenode)<br>
@@ -2992,6 +3598,10 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4261">HDFS-4261</a>.
      Major bug reported by Tsz Wo (Nicholas), SZE and fixed by Junping Du (balancer)<br>
      <b>TestBalancerWithNodeGroup times out</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4249">HDFS-4249</a>.
+     Major new feature reported by Suresh Srinivas and fixed by Chris Nauroth (namenode)<br>
+     <b>Add status NameNode startup to webUI </b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4246">HDFS-4246</a>.
      Minor improvement reported by Harsh J and fixed by Harsh J (hdfs-client)<br>
@@ -3065,6 +3675,10 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Minor bug reported by Andy Isaacson and fixed by Colin Patrick McCabe <br>
      <b>duplicative dfs_hosts entries handled wrong</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3880">HDFS-3880</a>.
+     Minor improvement reported by Brandon Li and fixed by Brandon Li (datanode , ha , namenode , security)<br>
+     <b>Use Builder to get RPC server in HDFS</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-3875">HDFS-3875</a>.
      Critical bug reported by Todd Lipcon and fixed by Kihwal Lee (datanode , hdfs-client)<br>
      <b>Issue handling checksum errors in write pipeline</b><br>
@@ -3084,6 +3698,10 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-3601">HDFS-3601</a>.
      Major new feature reported by Junping Du and fixed by Junping Du (namenode)<br>
      <b>Implementation of ReplicaPlacementPolicyNodeGroup to support 4-layer network topology</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3499">HDFS-3499</a>.
+     Major bug reported by Junping Du and fixed by Junping Du (datanode)<br>
+     <b>Make NetworkTopology support user specified topology class</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-3498">HDFS-3498</a>.
      Major improvement reported by Junping Du and fixed by Junping Du (namenode)<br>
@@ -3121,6 +3739,10 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Trivial improvement reported by Harsh J and fixed by Harsh J (datanode)<br>
      <b>Unnecessary double-check in DN#getHostName</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2042">HDFS-2042</a>.
+     Minor improvement reported by Eli Collins and fixed by  (libhdfs)<br>
+     <b>Require c99 when building libhdfs</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-1804">HDFS-1804</a>.
      Minor new feature reported by Harsh J and fixed by Aaron T. Myers (datanode)<br>
      <b>Add a new block-volume device choosing policy that looks at free space</b><br>
@@ -3129,6 +3751,118 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Major improvement reported by George Porter and fixed by Colin Patrick McCabe (datanode , hdfs-client , performance)<br>
      <b>DFS read performance suboptimal when client co-located on nodes with data</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9792">HADOOP-9792</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Suresh Srinivas (ipc)<br>
+     <b>Retry the methods that are tagged @AtMostOnce along with @Idempotent</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9786">HADOOP-9786</a>.
+     Major bug reported by Jing Zhao and fixed by Jing Zhao <br>
+     <b>RetryInvocationHandler#isRpcInvocation should support ProtocolTranslator </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9773">HADOOP-9773</a>.
+     Minor bug reported by Tsz Wo (Nicholas), SZE and fixed by Tsz Wo (Nicholas), SZE (test)<br>
+     <b>TestLightWeightCache fails</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9770">HADOOP-9770</a>.
+     Minor improvement reported by Suresh Srinivas and fixed by Suresh Srinivas (util)<br>
+     <b>Make RetryCache#state non volatile</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9763">HADOOP-9763</a>.
+     Major new feature reported by Tsz Wo (Nicholas), SZE and fixed by Tsz Wo (Nicholas), SZE (util)<br>
+     <b>Extends LightWeightGSet to support eviction of expired elements</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9762">HADOOP-9762</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Suresh Srinivas (util)<br>
+     <b>RetryCache utility for implementing RPC retries</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9760">HADOOP-9760</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Suresh Srinivas (util)<br>
+     <b>Move GSet and LightWeightGSet to hadoop-common</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9759">HADOOP-9759</a>.
+     Critical bug reported by Chuan Liu and fixed by Chuan Liu <br>
+     <b>Add support for NativeCodeLoader#getLibraryName on Windows</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9756">HADOOP-9756</a>.
+     Minor improvement reported by Junping Du and fixed by Junping Du (ipc)<br>
+     <b>Additional cleanup RPC code</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9754">HADOOP-9754</a>.
+     Minor improvement reported by Tsz Wo (Nicholas), SZE and fixed by Tsz Wo (Nicholas), SZE (ipc)<br>
+     <b>Clean up RPC code</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9751">HADOOP-9751</a>.
+     Major improvement reported by Tsz Wo (Nicholas), SZE and fixed by Tsz Wo (Nicholas), SZE (ipc)<br>
+     <b>Add clientId and retryCount to RpcResponseHeaderProto</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9738">HADOOP-9738</a>.
+     Major bug reported by Kihwal Lee and fixed by Jing Zhao (tools)<br>
+     <b>TestDistCh fails</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9734">HADOOP-9734</a>.
+     Minor improvement reported by Jason Lowe and fixed by Jason Lowe (ipc)<br>
+     <b>Common protobuf definitions for GetUserMappingsProtocol, RefreshAuthorizationPolicyProtocol and RefreshUserMappingsProtocol</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9720">HADOOP-9720</a>.
+     Major sub-task reported by Suresh Srinivas and fixed by Arpit Agarwal <br>
+     <b>Rename Client#uuid to Client#clientId</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9717">HADOOP-9717</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Jing Zhao (ipc)<br>
+     <b>Add retry attempt count to the RPC requests</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9716">HADOOP-9716</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Tsz Wo (Nicholas), SZE (ipc)<br>
+     <b>Move the Rpc request call ID generation to client side InvocationHandler</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9707">HADOOP-9707</a>.
+     Minor bug reported by Todd Lipcon and fixed by Todd Lipcon (util)<br>
+     <b>Fix register lists for crc32c inline assembly</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9701">HADOOP-9701</a>.
+     Minor bug reported by Steve Loughran and fixed by Karthik Kambatla (documentation)<br>
+     <b>mvn site ambiguous links in hadoop-common</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9698">HADOOP-9698</a>.
+     Blocker sub-task reported by Daryn Sharp and fixed by Daryn Sharp (ipc)<br>
+     <b>RPCv9 client must honor server's SASL negotiate response</b><br>
+     <blockquote>The RPC client now waits for the Server's SASL negotiate response before instantiating its SASL client.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9691">HADOOP-9691</a>.
+     Minor improvement reported by Chris Nauroth and fixed by Chris Nauroth (ipc)<br>
+     <b>RPC clients can generate call ID using AtomicInteger instead of synchronizing on the Client instance.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9688">HADOOP-9688</a>.
+     Blocker improvement reported by Suresh Srinivas and fixed by Suresh Srinivas (ipc)<br>
+     <b>Add globally unique Client ID to RPC requests</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9683">HADOOP-9683</a>.
+     Blocker sub-task reported by Luke Lu and fixed by Daryn Sharp (ipc)<br>
+     <b>Wrap IpcConnectionContext in RPC headers</b><br>
+     <blockquote>Connection context is now sent as a rpc header wrapped protobuf.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9681">HADOOP-9681</a>.
+     Minor bug reported by Chuan Liu and fixed by Chuan Liu <br>
+     <b>FileUtil.unTarUsingJava() should close the InputStream upon finishing</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9678">HADOOP-9678</a>.
+     Major bug reported by Ivan Mitic and fixed by Ivan Mitic <br>
+     <b>TestRPC#testStopsAllThreads intermittently fails on Windows</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9676">HADOOP-9676</a>.
+     Minor improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe <br>
+     <b>make maximum RPC buffer size configurable</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9673">HADOOP-9673</a>.
+     Trivial improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (net)<br>
+     <b>NetworkTopology: when a node can't be added, print out its location for diagnostic purposes</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9665">HADOOP-9665</a>.
+     Critical bug reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>BlockDecompressorStream#decompress will throw EOFException instead of return -1 when EOF</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9661">HADOOP-9661</a>.
+     Major improvement reported by Sandy Ryza and fixed by Sandy Ryza (metrics)<br>
+     <b>Allow metrics sources to be extended</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9656">HADOOP-9656</a>.
      Minor bug reported by Chuan Liu and fixed by Chuan Liu (test , tools)<br>
      <b>Gridmix unit tests fail on Windows and Linux</b><br>
@@ -3136,6 +3870,10 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9649">HADOOP-9649</a>.
      Blocker improvement reported by Zhijie Shen and fixed by Zhijie Shen <br>
      <b>Promote YARN service life-cycle libraries into Hadoop Common</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9643">HADOOP-9643</a>.
+     Minor bug reported by Mark Miller and fixed by Mark Miller (security)<br>
+     <b>org.apache.hadoop.security.SecurityUtil calls toUpperCase(Locale.getDefault()) as well as toLowerCase(Locale.getDefault()) on hadoop.security.authentication value.</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9638">HADOOP-9638</a>.
      Major bug reported by Chris Nauroth and fixed by Andrey Klochkov (test)<br>
@@ -3241,9 +3979,25 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Blocker bug reported by Arun C Murthy and fixed by Karthik Kambatla (documentation)<br>
      <b>Document Hadoop Compatibility</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9515">HADOOP-9515</a>.
+     Major new feature reported by Brandon Li and fixed by Brandon Li <br>
+     <b>Add general interface for NFS and Mount</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9511">HADOOP-9511</a>.
      Major improvement reported by Omkar Vinit Joshi and fixed by Omkar Vinit Joshi <br>
      <b>Adding support for additional input streams (FSDataInputStream and RandomAccessFile) in SecureIOUtils.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9509">HADOOP-9509</a>.
+     Major new feature reported by Brandon Li and fixed by Brandon Li <br>
+     <b>Implement ONCRPC and XDR</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9507">HADOOP-9507</a>.
+     Minor bug reported by Mostafa Elhemali and fixed by Chris Nauroth (fs)<br>
+     <b>LocalFileSystem rename() is broken in some cases when destination exists</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9504">HADOOP-9504</a>.
+     Critical bug reported by Liang Xie and fixed by Liang Xie (metrics)<br>
+     <b>MetricsDynamicMBeanBase has concurrency issues in createMBeanInfo</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9503">HADOOP-9503</a>.
      Minor improvement reported by Varun Sharma and fixed by Varun Sharma (ipc)<br>
@@ -3309,6 +4063,10 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Major bug reported by Chuan Liu and fixed by Chuan Liu <br>
      <b>Port winutils static code analysis change to trunk</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9439">HADOOP-9439</a>.
+     Minor bug reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (native)<br>
+     <b>JniBasedUnixGroupsMapping: fix some crash bugs</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9437">HADOOP-9437</a>.
      Major bug reported by Chris Nauroth and fixed by Chris Nauroth (test)<br>
      <b>TestNativeIO#testRenameTo fails on Windows due to assumption that POSIX errno is embedded in NativeIOException</b><br>
@@ -3331,6 +4089,18 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      <blockquote>Raw SASL protocol now uses protobufs wrapped with RPC headers.
 The negotiation sequence incorporates the state of the exchange.
 The server now has the ability to advertise its supported auth types.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9418">HADOOP-9418</a>.
+     Major sub-task reported by Andrew Wang and fixed by Andrew Wang (fs)<br>
+     <b>Add symlink resolution support to DistributedFileSystem</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9416">HADOOP-9416</a>.
+     Major sub-task reported by Andrew Wang and fixed by Andrew Wang (fs)<br>
+     <b>Add new symlink resolution methods in FileSystem and FileSystemLinkResolver</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9414">HADOOP-9414</a>.
+     Major sub-task reported by Andrew Wang and fixed by Andrew Wang (fs)<br>
+     <b>Refactor out FSLinkResolver and relevant helper methods</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9413">HADOOP-9413</a>.
      Major bug reported by Ivan Mitic and fixed by Ivan Mitic <br>
      <b>Introduce common utils for File#setReadable/Writable/Executable and File#canRead/Write/Execute that work cross-platform</b><br>
@@ -3395,6 +4165,10 @@ The server now has the ability to advertise its supported auth types.</blockquot
      Major bug reported by Todd Lipcon and fixed by Todd Lipcon (ipc , security)<br>
      <b>"Auth failed" log should include exception string</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9355">HADOOP-9355</a>.
+     Major sub-task reported by Andrew Wang and fixed by Andrew Wang (fs)<br>
+     <b>Abstract symlink tests to use either FileContext or FileSystem</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9353">HADOOP-9353</a>.
      Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (build)<br>
      <b>Activate native-win profile by default on Windows</b><br>
@@ -3446,6 +4220,10 @@ The server now has the ability to advertise its supported auth types.</blockquot
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9318">HADOOP-9318</a>.
      Minor improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe <br>
      <b>when exiting on a signal, print the signal name first</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9307">HADOOP-9307</a>.
+     Major bug reported by Todd Lipcon and fixed by Todd Lipcon (fs)<br>
+     <b>BufferedFSInputStream.read returns wrong results after certain seeks</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9305">HADOOP-9305</a>.
      Major bug reported by Aaron T. Myers and fixed by Aaron T. Myers (security)<br>
@@ -3539,6 +4317,10 @@ The server now has the ability to advertise its supported auth types.</blockquot
      Major new feature reported by Todd Lipcon and fixed by Todd Lipcon (fs , tools)<br>
      <b>Add shell command to dump file checksums</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9164">HADOOP-9164</a>.
+     Minor improvement reported by Binglin Chang and fixed by Binglin Chang (native)<br>
+     <b>Print paths of loaded native libraries in NativeLibraryChecker</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9163">HADOOP-9163</a>.
      Major sub-task reported by Sanjay Radia and fixed by Sanjay Radia (ipc)<br>
      <b>The rpc msg in  ProtobufRpcEngine.proto should be moved out to avoid an extra copy</b><br>
@@ -3626,6 +4408,10 @@ The server now has the ability to advertise its supported auth types.</blockquot
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8462">HADOOP-8462</a>.
      Major improvement reported by Govind Kamat and fixed by Govind Kamat (io)<br>
      <b>Native-code implementation of bzip2 codec</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8440">HADOOP-8440</a>.
+     Minor bug reported by Ivan Mitic and fixed by Ivan Mitic (fs)<br>
+     <b>HarFileSystem.decodeHarURI fails for URIs whose host contains numbers</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8415">HADOOP-8415</a>.
      Minor improvement reported by Jan van der Lugt and fixed by Jan van der Lugt (conf)<br>

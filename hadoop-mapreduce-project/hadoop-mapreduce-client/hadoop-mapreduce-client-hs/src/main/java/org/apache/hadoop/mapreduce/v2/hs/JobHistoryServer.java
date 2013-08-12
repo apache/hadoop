@@ -26,11 +26,13 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.v2.hs.server.HSAdminServer;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
@@ -59,6 +61,7 @@ public class JobHistoryServer extends CompositeService {
   private JobHistory jobHistoryService;
   private JHSDelegationTokenSecretManager jhsDTSecretManager;
   private AggregatedLogDeletionService aggLogDelService;
+  private HSAdminServer hsAdminServer;
 
   public JobHistoryServer() {
     super(JobHistoryServer.class.getName());
@@ -81,9 +84,11 @@ public class JobHistoryServer extends CompositeService {
     clientService = new HistoryClientService(historyContext, 
         this.jhsDTSecretManager);
     aggLogDelService = new AggregatedLogDeletionService();
+    hsAdminServer = new HSAdminServer(aggLogDelService, jobHistoryService);
     addService(jobHistoryService);
     addService(clientService);
     addService(aggLogDelService);
+    addService(hsAdminServer);
     super.serviceInit(config);
   }
 
@@ -135,11 +140,13 @@ public class JobHistoryServer extends CompositeService {
     return this.clientService;
   }
 
-  public static void main(String[] args) {
-    Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
+  static JobHistoryServer launchJobHistoryServer(String[] args) {
+    Thread.
+        setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(JobHistoryServer.class, args, LOG);
+    JobHistoryServer jobHistoryServer = null;
     try {
-      JobHistoryServer jobHistoryServer = new JobHistoryServer();
+      jobHistoryServer = new JobHistoryServer();
       ShutdownHookManager.get().addShutdownHook(
           new CompositeServiceShutdownHook(jobHistoryServer),
           SHUTDOWN_HOOK_PRIORITY);
@@ -148,7 +155,12 @@ public class JobHistoryServer extends CompositeService {
       jobHistoryServer.start();
     } catch (Throwable t) {
       LOG.fatal("Error starting JobHistoryServer", t);
-      System.exit(-1);
+      ExitUtil.terminate(-1, "Error starting JobHistoryServer");
     }
+    return jobHistoryServer;
+  }
+
+  public static void main(String[] args) {
+    launchJobHistoryServer(args);
   }
 }

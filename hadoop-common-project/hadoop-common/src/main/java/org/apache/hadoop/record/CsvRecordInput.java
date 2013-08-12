@@ -144,7 +144,7 @@ public class CsvRecordInput implements RecordInput {
     
   @Override
   public void startRecord(String tag) throws IOException {
-    if (tag != null && !"".equals(tag)) {
+    if (tag != null && !tag.isEmpty()) {
       char c1 = (char) stream.read();
       char c2 = (char) stream.read();
       if (c1 != 's' || c2 != '{') {
@@ -156,7 +156,7 @@ public class CsvRecordInput implements RecordInput {
   @Override
   public void endRecord(String tag) throws IOException {
     char c = (char) stream.read();
-    if (tag == null || "".equals(tag)) {
+    if (tag == null || tag.isEmpty()) {
       if (c != '\n' && c != '\r') {
         throw new IOException("Error deserializing record.");
       } else {

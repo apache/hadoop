@@ -131,6 +131,11 @@
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.resource.Priority$Comparator" />
     <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
   </Match>
+  <!-- Ignore some irrelevant class name warning -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.api.records.SerializedException" />
+    <Bug pattern="NM_CLASS_NOT_EXCEPTION" />
+  </Match>
 
   <!-- Inconsistent sync warning - only start() is synchronized-->
   <Match>
@@ -151,6 +156,7 @@
       <Field name="state" />
       <Field name="userLimit" />
       <Field name="userLimitFactor" />
+      <Field name="maxAMResourcePerQueuePercent" />
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>

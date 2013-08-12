@@ -33,7 +33,7 @@ public class MountResponse {
   private MountResponse() {
   }
   
-  /** Response for RPC call {@link MountInterface#MNTPROC_MNT} */
+  /** Response for RPC call {@link MountInterface.MNTPROC#MNT} */
   public static XDR writeMNTResponse(int status, XDR xdr, int xid,
       byte[] handle) {
     RpcAcceptedReply.voidReply(xdr, xid);
@@ -48,7 +48,7 @@ public class MountResponse {
     return xdr;
   }
 
-  /** Response for RPC call {@link MountInterface#MNTPROC_DUMP} */
+  /** Response for RPC call {@link MountInterface.MNTPROC#DUMP} */
   public static XDR writeMountList(XDR xdr, int xid, List<MountEntry> mounts) {
     RpcAcceptedReply.voidReply(xdr, xid);
     for (MountEntry mountEntry : mounts) {
@@ -60,7 +60,7 @@ public class MountResponse {
     return xdr;
   }
 
-  /** Response for RPC call {@link MountInterface#MNTPROC_EXPORT} */
+  /** Response for RPC call {@link MountInterface.MNTPROC#EXPORT} */
   public static XDR writeExportList(XDR xdr, int xid, List<String> exports) {
     RpcAcceptedReply.voidReply(xdr, xid);
     for (String export : exports) {

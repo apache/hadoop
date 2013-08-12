@@ -18,9 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -31,6 +33,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -47,6 +50,7 @@ public class TestMetaSave {
   static final int blockSize = 8192;
   private static MiniDFSCluster cluster = null;
   private static FileSystem fileSys = null;
+  private static FSNamesystem namesystem = null;
 
   private void createFile(FileSystem fileSys, Path name) throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
@@ -72,6 +76,7 @@ public class TestMetaSave {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
+    namesystem = cluster.getNamesystem();
   }
 
   /**
@@ -79,9 +84,6 @@ public class TestMetaSave {
    */
   @Test
   public void testMetaSave() throws IOException, InterruptedException {
-
-    final FSNamesystem namesystem = cluster.getNamesystem();
-
     for (int i = 0; i < 2; i++) {
       Path file = new Path("/filestatus" + i);
       createFile(fileSys, file);
@@ -95,9 +97,8 @@ public class TestMetaSave {
     namesystem.metaSave("metasave.out.txt");
 
     // Verification
-    String logFile = System.getProperty("hadoop.log.dir") + "/"
-        + "metasave.out.txt";
-    FileInputStream fstream = new FileInputStream(logFile);
+    FileInputStream fstream = new FileInputStream(getLogFile(
+      "metasave.out.txt"));
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = null;
     try {
@@ -124,9 +125,6 @@ public class TestMetaSave {
   @Test
   public void testMetasaveAfterDelete()
       throws IOException, InterruptedException {
-
-    final FSNamesystem namesystem = cluster.getNamesystem();
-
     for (int i = 0; i < 2; i++) {
       Path file = new Path("/filestatus" + i);
       createFile(fileSys, file);
@@ -142,11 +140,10 @@ public class TestMetaSave {
     namesystem.metaSave("metasaveAfterDelete.out.txt");
 
     // Verification
-    String logFile = System.getProperty("hadoop.log.dir") + "/"
-        + "metasaveAfterDelete.out.txt";
     BufferedReader reader = null;
     try {
-      FileInputStream fstream = new FileInputStream(logFile);
+      FileInputStream fstream = new FileInputStream(getLogFile(
+        "metasaveAfterDelete.out.txt"));
       DataInputStream in = new DataInputStream(fstream);
       reader = new BufferedReader(new InputStreamReader(in));
       reader.readLine();
@@ -166,11 +163,57 @@ public class TestMetaSave {
     }
   }
 
+  /**
+   * Tests that metasave overwrites the output file (not append).
+   */
+  @Test
+  public void testMetaSaveOverwrite() throws Exception {
+    // metaSave twice.
+    namesystem.metaSave("metaSaveOverwrite.out.txt");
+    namesystem.metaSave("metaSaveOverwrite.out.txt");
+
+    // Read output file.
+    FileInputStream fis = null;
+    InputStreamReader isr = null;
+    BufferedReader rdr = null;
+    try {
+      fis = new FileInputStream(getLogFile("metaSaveOverwrite.out.txt"));
+      isr = new InputStreamReader(fis);
+      rdr = new BufferedReader(isr);
+
+      // Validate that file was overwritten (not appended) by checking for
+      // presence of only one "Live Datanodes" line.
+      boolean foundLiveDatanodesLine = false;
+      String line = rdr.readLine();
+      while (line != null) {
+        if (line.startsWith("Live Datanodes")) {
+          if (foundLiveDatanodesLine) {
+            fail("multiple Live Datanodes lines, output file not overwritten");
+          }
+          foundLiveDatanodesLine = true;
+        }
+        line = rdr.readLine();
+      }
+    } finally {
+      IOUtils.cleanup(null, rdr, isr, fis);
+    }
+  }
+
   @AfterClass
   public static void tearDown() throws IOException {
     if (fileSys != null)
       fileSys.close();
     if (cluster != null)
       cluster.shutdown();
+  }
+
+  /**
+   * Returns a File for the given name inside the log directory.
+   * 
+   * @param name String file name
+   * @return File for given name inside log directory
+   */
+  private static File getLogFile(String name) {
+    return new File(System.getProperty("hadoop.log.dir"), name);
   }
 }

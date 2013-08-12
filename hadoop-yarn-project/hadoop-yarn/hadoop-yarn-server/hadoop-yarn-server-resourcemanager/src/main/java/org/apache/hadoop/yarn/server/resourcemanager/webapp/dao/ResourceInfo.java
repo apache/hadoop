@@ -45,4 +45,9 @@ public class ResourceInfo {
   public int getvCores() {
     return vCores;
   }
+  
+  @Override
+  public String toString() {
+    return "<memory:" + memory + ", vCores:" + vCores + ">";
+  }
 }

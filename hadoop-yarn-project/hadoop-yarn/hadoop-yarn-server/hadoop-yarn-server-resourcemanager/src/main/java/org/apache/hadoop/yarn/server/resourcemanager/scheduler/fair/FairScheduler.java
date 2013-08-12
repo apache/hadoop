@@ -604,6 +604,15 @@ public class FairScheduler implements ResourceScheduler {
    */
   protected synchronized void addApplication(
       ApplicationAttemptId applicationAttemptId, String queueName, String user) {
+    if (queueName == null || queueName.isEmpty()) {
+      String message = "Reject application " + applicationAttemptId +
+              " submitted by user " + user + " with an empty queue name.";
+      LOG.info(message);
+      rmContext.getDispatcher().getEventHandler().handle(
+              new RMAppAttemptRejectedEvent(applicationAttemptId, message));
+      return;
+    }
+
     RMApp rmApp = rmContext.getRMApps().get(applicationAttemptId);
     FSLeafQueue queue = assignToQueue(rmApp, queueName, user);
 

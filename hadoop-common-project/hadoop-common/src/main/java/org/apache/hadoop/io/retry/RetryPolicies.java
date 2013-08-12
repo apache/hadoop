@@ -153,7 +153,7 @@ public class RetryPolicies {
   static class TryOnceThenFail implements RetryPolicy {
     @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
-        boolean isMethodIdempotent) throws Exception {
+        boolean isIdempotentOrAtMostOnce) throws Exception {
       return RetryAction.FAIL;
     }
   }
@@ -161,7 +161,7 @@ public class RetryPolicies {
   static class RetryForever implements RetryPolicy {
     @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
-        boolean isMethodIdempotent) throws Exception {
+        boolean isIdempotentOrAtMostOnce) throws Exception {
       return RetryAction.RETRY;
     }
   }
@@ -196,7 +196,7 @@ public class RetryPolicies {
 
     @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
-        boolean isMethodIdempotent) throws Exception {
+        boolean isIdempotentOrAtMostOnce) throws Exception {
       if (retries >= maxRetries) {
         return RetryAction.FAIL;
       }
@@ -305,7 +305,7 @@ public class RetryPolicies {
 
     @Override
     public RetryAction shouldRetry(Exception e, int curRetry, int failovers,
-        boolean isMethodIdempotent) throws Exception {
+        boolean isIdempotentOrAtMostOnce) throws Exception {
       final Pair p = searchPair(curRetry);
       if (p == null) {
         //no more retries.
@@ -435,12 +435,12 @@ public class RetryPolicies {
 
     @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
-        boolean isMethodIdempotent) throws Exception {
+        boolean isIdempotentOrAtMostOnce) throws Exception {
       RetryPolicy policy = exceptionToPolicyMap.get(e.getClass());
       if (policy == null) {
         policy = defaultPolicy;
       }
-      return policy.shouldRetry(e, retries, failovers, isMethodIdempotent);
+      return policy.shouldRetry(e, retries, failovers, isIdempotentOrAtMostOnce);
     }
     
   }
@@ -463,7 +463,7 @@ public class RetryPolicies {
 
     @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
-        boolean isMethodIdempotent) throws Exception {
+        boolean isIdempotentOrAtMostOnce) throws Exception {
       RetryPolicy policy = null;
       if (e instanceof RemoteException) {
         policy = exceptionNameToPolicyMap.get(
@@ -472,7 +472,7 @@ public class RetryPolicies {
       if (policy == null) {
         policy = defaultPolicy;
       }
-      return policy.shouldRetry(e, retries, failovers, isMethodIdempotent);
+      return policy.shouldRetry(e, retries, failovers, isIdempotentOrAtMostOnce);
     }
   }
   
@@ -533,7 +533,7 @@ public class RetryPolicies {
 
     @Override
     public RetryAction shouldRetry(Exception e, int retries,
-        int failovers, boolean isMethodIdempotent) throws Exception {
+        int failovers, boolean isIdempotentOrAtMostOnce) throws Exception {
       if (failovers >= maxFailovers) {
         return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
             "failovers (" + failovers + ") exceeded maximum allowed ("
@@ -553,7 +553,7 @@ public class RetryPolicies {
                 calculateExponentialTime(delayMillis, failovers, maxDelayBase));
       } else if (e instanceof SocketException ||
                  (e instanceof IOException && !(e instanceof RemoteException))) {
-        if (isMethodIdempotent) {
+        if (isIdempotentOrAtMostOnce) {
           return RetryAction.FAILOVER_AND_RETRY;
         } else {
           return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
@@ -562,7 +562,7 @@ public class RetryPolicies {
         }
       } else {
         return fallbackPolicy.shouldRetry(e, retries, failovers,
-            isMethodIdempotent);
+            isIdempotentOrAtMostOnce);
       }
     }
     

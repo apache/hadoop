@@ -30,8 +30,6 @@ import java.io.RandomAccessFile;
 import java.util.HashSet;
 import java.util.Set;
 
-import junit.framework.Assert;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -273,7 +271,7 @@ public class TestNameNodeRecovery {
     } 
     
     public int getMaxOpSize() {
-      return 30;
+      return 36;
     }
   }
 

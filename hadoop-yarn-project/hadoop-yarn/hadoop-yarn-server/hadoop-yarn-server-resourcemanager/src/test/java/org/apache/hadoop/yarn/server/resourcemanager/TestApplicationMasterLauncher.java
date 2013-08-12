@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -27,16 +29,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -69,9 +73,10 @@ public class TestApplicationMasterLauncher {
     int maxAppAttempts;
 
     @Override
-    public StartContainerResponse
-        startContainer(StartContainerRequest request)
+    public StartContainersResponse
+        startContainers(StartContainersRequest requests)
             throws YarnException {
+      StartContainerRequest request = requests.getStartContainerRequests().get(0);
       LOG.info("Container started by MyContainerManager: " + request);
       launched = true;
       Map<String, String> env =
@@ -95,11 +100,13 @@ public class TestApplicationMasterLauncher {
           Long.parseLong(env.get(ApplicationConstants.APP_SUBMIT_TIME_ENV));
       maxAppAttempts =
           Integer.parseInt(env.get(ApplicationConstants.MAX_APP_ATTEMPTS_ENV));
-      return null;
+      return StartContainersResponse.newInstance(
+        new HashMap<String, ByteBuffer>(), new ArrayList<ContainerId>(),
+        new HashMap<ContainerId, SerializedException>());
     }
 
     @Override
-    public StopContainerResponse stopContainer(StopContainerRequest request)
+    public StopContainersResponse stopContainers(StopContainersRequest request)
         throws YarnException {
       LOG.info("Container cleaned up by MyContainerManager");
       cleanedup = true;
@@ -107,11 +114,10 @@ public class TestApplicationMasterLauncher {
     }
 
     @Override
-    public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnException {
+    public GetContainerStatusesResponse getContainerStatuses(
+        GetContainerStatusesRequest request) throws YarnException {
       return null;
     }
-
   }
 
   @Test

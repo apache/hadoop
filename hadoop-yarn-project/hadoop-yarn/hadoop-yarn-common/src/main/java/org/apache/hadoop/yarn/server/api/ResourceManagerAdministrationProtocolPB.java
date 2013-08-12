@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.proto.ResourceManagerAdministrationProtocol.Resour
 @Private
 @Unstable
 @ProtocolInfo(
-    protocolName = "org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocolPB",
+    protocolName = "org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocolPB",
     protocolVersion = 1)
 public interface ResourceManagerAdministrationProtocolPB extends ResourceManagerAdministrationProtocolService.BlockingInterface {
 

@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -28,6 +29,8 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -155,6 +158,9 @@ public class SchedulerUtils {
   /**
    * Utility method to validate a resource request, by insuring that the
    * requested memory/vcore is non-negative and not greater than max
+   * 
+   * @throws <code>InvalidResourceRequestException</code> when there is invalid
+   *         request
    */
   public static void validateResourceRequest(ResourceRequest resReq,
       Resource maximumResource) throws InvalidResourceRequestException {
@@ -175,28 +181,6 @@ public class SchedulerUtils {
           + ", requestedVirtualCores="
           + resReq.getCapability().getVirtualCores()
           + ", maxVirtualCores=" + maximumResource.getVirtualCores());
-    }
-  }
-
-  /**
-   * Utility method to validate a list resource requests, by insuring that the
-   * requested memory/vcore is non-negative and not greater than max
-   */
-  public static void validateResourceRequests(List<ResourceRequest> ask,
-      Resource maximumResource) throws InvalidResourceRequestException {
-    for (ResourceRequest resReq : ask) {
-      validateResourceRequest(resReq, maximumResource);
-    }
-  }
-
-  public static void validateBlacklistRequest(ResourceBlacklistRequest blacklistRequest) 
-  throws InvalidResourceBlacklistRequestException {
-    if (blacklistRequest != null) {
-      List<String> plus = blacklistRequest.getBlacklistAdditions();
-      if (plus != null && plus.contains(ResourceRequest.ANY)) {
-        throw new InvalidResourceBlacklistRequestException(
-            "Cannot add " + ResourceRequest.ANY + " to the blacklist!");
-      }
     }
   }
 }

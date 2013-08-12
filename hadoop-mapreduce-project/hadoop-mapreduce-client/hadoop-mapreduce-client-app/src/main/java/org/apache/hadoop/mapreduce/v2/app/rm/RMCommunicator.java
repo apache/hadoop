@@ -21,7 +21,6 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -46,16 +45,14 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
 
 /**
  * Registers/unregisters to RM and sends heartbeats to RM.
@@ -65,7 +62,6 @@ public abstract class RMCommunicator extends AbstractService
   private static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
   private int rmPollInterval;//millis
   protected ApplicationId applicationId;
-  protected ApplicationAttemptId applicationAttemptId;
   private final AtomicBoolean stopped;
   protected Thread allocatorThread;
   @SuppressWarnings("rawtypes")
@@ -93,7 +89,6 @@ public abstract class RMCommunicator extends AbstractService
     this.context = context;
     this.eventHandler = context.getEventHandler();
     this.applicationId = context.getApplicationID();
-    this.applicationAttemptId = context.getApplicationAttemptId();
     this.stopped = new AtomicBoolean(false);
     this.heartbeatCallbacks = new ConcurrentLinkedQueue<Runnable>();
   }
@@ -144,7 +139,6 @@ public abstract class RMCommunicator extends AbstractService
     try {
       RegisterApplicationMasterRequest request =
         recordFactory.newRecordInstance(RegisterApplicationMasterRequest.class);
-      request.setApplicationAttemptId(applicationAttemptId);
       if (serviceAddr != null) {
         request.setHost(serviceAddr.getHostName());
         request.setRpcPort(serviceAddr.getPort());
@@ -195,11 +189,8 @@ public abstract class RMCommunicator extends AbstractService
       LOG.info("History url is " + historyUrl);
 
       FinishApplicationMasterRequest request =
-          recordFactory.newRecordInstance(FinishApplicationMasterRequest.class);
-      request.setAppAttemptId(this.applicationAttemptId);
-      request.setFinalApplicationStatus(finishState);
-      request.setDiagnostics(sb.toString());
-      request.setTrackingUrl(historyUrl);
+          FinishApplicationMasterRequest.newInstance(finishState,
+            sb.toString(), historyUrl);
       scheduler.finishApplicationMaster(request);
     } catch(Exception are) {
       LOG.error("Exception while unregistering ", are);
@@ -265,27 +256,12 @@ public abstract class RMCommunicator extends AbstractService
 
   protected ApplicationMasterProtocol createSchedulerProxy() {
     final Configuration conf = getConfig();
-    final YarnRPC rpc = YarnRPC.create(conf);
-    final InetSocketAddress serviceAddr = conf.getSocketAddr(
-        YarnConfiguration.RM_SCHEDULER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
 
-    UserGroupInformation currentUser;
     try {
-      currentUser = UserGroupInformation.getCurrentUser();
+      return ClientRMProxy.createRMProxy(conf, ApplicationMasterProtocol.class);
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }
-
-    // CurrentUser should already have AMToken loaded.
-    return currentUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
-      @Override
-      public ApplicationMasterProtocol run() {
-        return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class,
-            serviceAddr, conf);
-      }
-    });
   }
 
   protected abstract void heartbeat() throws Exception;

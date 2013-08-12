@@ -71,6 +71,8 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -87,6 +89,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -1392,6 +1395,18 @@ public class TestRMContainerAllocator {
 
     @Override
     protected void register() {
+      ApplicationAttemptId attemptId = getContext().getApplicationAttemptId();
+      UserGroupInformation ugi =
+          UserGroupInformation.createRemoteUser(attemptId.toString());
+      Token<AMRMTokenIdentifier> token =
+          rm.getRMContext().getRMApps().get(attemptId.getApplicationId())
+            .getRMAppAttempt(attemptId).getAMRMToken();
+      try {
+        ugi.addTokenIdentifier(token.decodeIdentifier());
+      } catch (IOException e) {
+        throw new YarnRuntimeException(e);
+      }
+      UserGroupInformation.setLoginUser(ugi);
       super.register();
     }
 

@@ -130,21 +130,21 @@ public class NameNodeHttpServer {
       }
     };
 
-    boolean certSSL = conf.getBoolean("dfs.https.enable", false);
+    boolean certSSL = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY, false);
     if (certSSL) {
       boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
       InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(infoHost + ":" + conf.get(
-        "dfs.https.port", infoHost + ":" + 0));
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, infoHost + ":" + 0));
       Configuration sslConf = new Configuration(false);
       if (certSSL) {
-        sslConf.addResource(conf.get("dfs.https.server.keystore.resource",
+        sslConf.addResource(conf.get(DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
                                      "ssl-server.xml"));
       }
       httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth);
       // assume same ssl port for all datanodes
       InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.get(
-        "dfs.datanode.https.address", infoHost + ":" + 50475));
-      httpServer.setAttribute("datanode.https.port", datanodeSslPort
+        DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, infoHost + ":" + 50475));
+      httpServer.setAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY, datanodeSslPort
         .getPort());
     }
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);

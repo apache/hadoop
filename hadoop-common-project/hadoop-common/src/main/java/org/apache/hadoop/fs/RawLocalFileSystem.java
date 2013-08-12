@@ -319,8 +319,34 @@ public class RawLocalFileSystem extends FileSystem {
 
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
-    if (pathToFile(src).renameTo(pathToFile(dst))) {
+    // Attempt rename using Java API.
+    File srcFile = pathToFile(src);
+    File dstFile = pathToFile(dst);
+    if (srcFile.renameTo(dstFile)) {
       return true;
+    }
+
+    // Enforce POSIX rename behavior that a source directory replaces an existing
+    // destination if the destination is an empty directory.  On most platforms,
+    // this is already handled by the Java API call above.  Some platforms
+    // (notably Windows) do not provide this behavior, so the Java API call above
+    // fails.  Delete destination and attempt rename again.
+    if (this.exists(dst)) {
+      FileStatus sdst = this.getFileStatus(dst);
+      if (sdst.isDirectory() && dstFile.list().length == 0) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Deleting empty destination and renaming " + src + " to " +
+            dst);
+        }
+        if (this.delete(dst, false) && srcFile.renameTo(dstFile)) {
+          return true;
+        }
+      }
+    }
+
+    // The fallback behavior accomplishes the rename by a full copy.
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Falling through to a copy of " + src + " to " + dst);
     }
     return FileUtil.copy(this, src, this, dst, true, getConf());
   }
@@ -498,7 +524,7 @@ public class RawLocalFileSystem extends FileSystem {
      * onwer.equals("").
      */
     private boolean isPermissionLoaded() {
-      return !super.getOwner().equals(""); 
+      return !super.getOwner().isEmpty(); 
     }
     
     RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) { 
@@ -611,7 +637,7 @@ public class RawLocalFileSystem extends FileSystem {
         FileUtil.makeShellPath(pathToFile(p), true)));
     }
   }
-
+ 
   /**
    * Sets the {@link Path}'s last modified time <em>only</em> to the given
    * valid time.
@@ -634,14 +660,6 @@ public class RawLocalFileSystem extends FileSystem {
     }
   }
 
-  private static String execCommand(File f, String... cmd) throws IOException {
-    String[] args = new String[cmd.length + 1];
-    System.arraycopy(cmd, 0, args, 0, cmd.length);
-    args[cmd.length] = FileUtil.makeShellPath(f, true);
-    String output = Shell.execCommand(args);
-    return output;
-  }
-
   @Override
   public boolean supportsSymlinks() {
     return true;
@@ -658,31 +676,13 @@ public class RawLocalFileSystem extends FileSystem {
     if (createParent) {
       mkdirs(link.getParent());
     }
-    // NB: Use createSymbolicLink in java.nio.file.Path once available
-    try {
-      Shell.execCommand(Shell.getSymlinkCommand(
-        Path.getPathWithoutSchemeAndAuthority(target).toString(),
-        Path.getPathWithoutSchemeAndAuthority(makeAbsolute(link)).toString()));
-    } catch (IOException x) {
-      throw new IOException("Unable to create symlink: "+x.getMessage());
-    }
-  }
 
-  /**
-   * Returns the target of the given symlink. Returns the empty string if
-   * the given path does not refer to a symlink or there is an error
-   * accessing the symlink.
-   */
-  private String readLink(Path p) {
-    /* NB: Use readSymbolicLink in java.nio.file.Path once available. Could
-     * use getCanonicalPath in File to get the target of the symlink but that
-     * does not indicate if the given path refers to a symlink.
-     */
-    try {
-      final String path = p.toUri().getPath();
-      return Shell.execCommand(Shell.READ_LINK_COMMAND, path).trim();
-    } catch (IOException x) {
-      return "";
+    // NB: Use createSymbolicLink in java.nio.file.Path once available
+    int result = FileUtil.symLink(target.toString(),
+        makeAbsolute(link).toString());
+    if (result != 0) {
+      throw new IOException("Error " + result + " creating symlink " +
+          link + " to " + target);
     }
   }
 
@@ -705,7 +705,7 @@ public class RawLocalFileSystem extends FileSystem {
   }
 
   private FileStatus getFileLinkStatusInternal(final Path f) throws IOException {
-    String target = readLink(f);
+    String target = FileUtil.readLink(new File(f.toString()));
 
     try {
       FileStatus fs = getFileStatus(f);

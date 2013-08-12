@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -30,10 +29,6 @@ import org.apache.hadoop.yarn.util.Records;
  * 
  * <p>The registration includes details such as:
  *   <ul>
- *     <li>
- *         {@link ApplicationAttemptId} being managed by the 
- *         <code>ApplicationMaster</code>
- *     </li>
  *     <li>Hostname on which the AM is running.</li>
  *     <li>RPC Port</li>
  *     <li>Tracking URL</li>
@@ -57,37 +52,15 @@ public abstract class RegisterApplicationMasterRequest {
    */
   @Public
   @Stable
-  public static RegisterApplicationMasterRequest newInstance(
-      ApplicationAttemptId applicationAttemptId, String host, int port,
-      String trackingUrl) {
+  public static RegisterApplicationMasterRequest newInstance(String host,
+      int port, String trackingUrl) {
     RegisterApplicationMasterRequest request =
         Records.newRecord(RegisterApplicationMasterRequest.class);
-    request.setApplicationAttemptId(applicationAttemptId);
     request.setHost(host);
     request.setRpcPort(port);
     request.setTrackingUrl(trackingUrl);
     return request;
   }
-
-  /**
-   * Get the <code>ApplicationAttemptId</code> being managed by the 
-   * <code>ApplicationMaster</code>.
-   * @return <code>ApplicationAttemptId</code> being managed by the 
-   *         <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public abstract ApplicationAttemptId getApplicationAttemptId();
-  
-  /**
-   * Set the <code>ApplicationAttemptId</code> being managed by the 
-   * <code>ApplicationMaster</code>.
-   * @param applicationAttemptId <code>ApplicationAttemptId</code> being managed  
-   *                             by the <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public abstract void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
 
   /**
    * Get the <em>host</em> on which the <code>ApplicationMaster</code> is 

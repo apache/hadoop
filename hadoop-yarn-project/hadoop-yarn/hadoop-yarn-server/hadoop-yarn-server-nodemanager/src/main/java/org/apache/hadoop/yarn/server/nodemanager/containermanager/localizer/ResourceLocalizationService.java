@@ -29,6 +29,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -82,6 +83,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.DeletionService.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
 import org.apache.hadoop.yarn.server.nodemanager.api.ResourceLocalizationSpec;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalResourceStatus;
@@ -629,23 +631,16 @@ public class ResourceLocalizationService extends CompositeService
     final Configuration conf;
     final ExecutorService threadPool;
     final CompletionService<Path> queue;
+    // Its shared between public localizer and dispatcher thread.
     final Map<Future<Path>,LocalizerResourceRequestEvent> pending;
 
     PublicLocalizer(Configuration conf) {
-      this(conf, getLocalFileContext(conf),
-           createLocalizerExecutor(conf),
-           new HashMap<Future<Path>,LocalizerResourceRequestEvent>());
-    }
-    
-    PublicLocalizer(Configuration conf, FileContext lfs,
-        ExecutorService threadPool,
-        Map<Future<Path>,LocalizerResourceRequestEvent> pending) {
       super("Public Localizer");
-      this.lfs = lfs;
+      this.lfs = getLocalFileContext(conf);
       this.conf = conf;
-      this.pending = pending;
-
-      this.threadPool = threadPool;
+      this.pending =
+          new ConcurrentHashMap<Future<Path>, LocalizerResourceRequestEvent>();
+      this.threadPool = createLocalizerExecutor(conf);
       this.queue = new ExecutorCompletionService<Path>(threadPool);
     }
 
@@ -747,6 +742,7 @@ public class ResourceLocalizationService extends CompositeService
     final LocalizerContext context;
     final String localizerId;
     final Map<LocalResourceRequest,LocalizerResourceRequestEvent> scheduled;
+    // Its a shared list between Private Localizer and dispatcher thread.
     final List<LocalizerResourceRequestEvent> pending;
 
     // TODO: threadsafe, use outer?
@@ -757,13 +753,14 @@ public class ResourceLocalizationService extends CompositeService
       super("LocalizerRunner for " + localizerId);
       this.context = context;
       this.localizerId = localizerId;
-      this.pending = new ArrayList<LocalizerResourceRequestEvent>();
+      this.pending =
+          Collections
+            .synchronizedList(new ArrayList<LocalizerResourceRequestEvent>());
       this.scheduled =
           new HashMap<LocalResourceRequest, LocalizerResourceRequestEvent>();
     }
 
     public void addResource(LocalizerResourceRequestEvent request) {
-      // TDOO: Synchronization
       pending.add(request);
     }
 
@@ -773,43 +770,44 @@ public class ResourceLocalizationService extends CompositeService
      * @return
      */
     private LocalResource findNextResource() {
-      // TODO: Synchronization
-      for (Iterator<LocalizerResourceRequestEvent> i = pending.iterator();
-           i.hasNext();) {
-        LocalizerResourceRequestEvent evt = i.next();
-        LocalizedResource nRsrc = evt.getResource();
-        // Resource download should take place ONLY if resource is in
-        // Downloading state
-        if (!ResourceState.DOWNLOADING.equals(nRsrc.getState())) {
-          i.remove();
-          continue;
-        }
-        /*
-         * Multiple containers will try to download the same resource. So the
-         * resource download should start only if
-         * 1) We can acquire a non blocking semaphore lock on resource
-         * 2) Resource is still in DOWNLOADING state
-         */
-        if (nRsrc.tryAcquire()) {
-          if (nRsrc.getState().equals(ResourceState.DOWNLOADING)) {
-            LocalResourceRequest nextRsrc = nRsrc.getRequest();
-            LocalResource next =
-                recordFactory.newRecordInstance(LocalResource.class);
-            next.setResource(ConverterUtils.getYarnUrlFromPath(nextRsrc
-              .getPath()));
-            next.setTimestamp(nextRsrc.getTimestamp());
-            next.setType(nextRsrc.getType());
-            next.setVisibility(evt.getVisibility());
-            next.setPattern(evt.getPattern());
-            scheduled.put(nextRsrc, evt);
-            return next;
-          } else {
-            // Need to release acquired lock
-            nRsrc.unlock();
-          }
-        }
+      synchronized (pending) {
+        for (Iterator<LocalizerResourceRequestEvent> i = pending.iterator();
+            i.hasNext();) {
+         LocalizerResourceRequestEvent evt = i.next();
+         LocalizedResource nRsrc = evt.getResource();
+         // Resource download should take place ONLY if resource is in
+         // Downloading state
+         if (!ResourceState.DOWNLOADING.equals(nRsrc.getState())) {
+           i.remove();
+           continue;
+         }
+         /*
+          * Multiple containers will try to download the same resource. So the
+          * resource download should start only if
+          * 1) We can acquire a non blocking semaphore lock on resource
+          * 2) Resource is still in DOWNLOADING state
+          */
+         if (nRsrc.tryAcquire()) {
+           if (nRsrc.getState().equals(ResourceState.DOWNLOADING)) {
+             LocalResourceRequest nextRsrc = nRsrc.getRequest();
+             LocalResource next =
+                 recordFactory.newRecordInstance(LocalResource.class);
+             next.setResource(ConverterUtils.getYarnUrlFromPath(nextRsrc
+               .getPath()));
+             next.setTimestamp(nextRsrc.getTimestamp());
+             next.setType(nextRsrc.getType());
+             next.setVisibility(evt.getVisibility());
+             next.setPattern(evt.getPattern());
+             scheduled.put(nextRsrc, evt);
+             return next;
+           } else {
+             // Need to release acquired lock
+             nRsrc.unlock();
+           }
+         }
+       }
+       return null;
       }
-      return null;
     }
 
     LocalizerHeartbeatResponse update(
@@ -1094,7 +1092,8 @@ public class ResourceLocalizationService extends CompositeService
         try {
           if (status.getPath().getName().matches(".*" +
               ContainerLocalizer.USERCACHE + "_DEL_.*")) {
-            cleanUpFilesFromSubDir(lfs, del, status.getPath());
+            LOG.info("usercache path : " + status.getPath().toString());
+            cleanUpFilesPerUserDir(lfs, del, status.getPath());
           } else if (status.getPath().getName()
               .matches(".*" + NM_PRIVATE_DIR + "_DEL_.*")
               ||
@@ -1111,17 +1110,28 @@ public class ResourceLocalizationService extends CompositeService
     }
   }
 
-  private void cleanUpFilesFromSubDir(FileContext lfs, DeletionService del,
-      Path dirPath) throws IOException {
-    RemoteIterator<FileStatus> fileStatus = lfs.listStatus(dirPath);
-    if (fileStatus != null) {
-      while (fileStatus.hasNext()) {
-        FileStatus status = fileStatus.next();
+  private void cleanUpFilesPerUserDir(FileContext lfs, DeletionService del,
+      Path userDirPath) throws IOException {
+    RemoteIterator<FileStatus> userDirStatus = lfs.listStatus(userDirPath);
+    FileDeletionTask dependentDeletionTask =
+        del.createFileDeletionTask(null, userDirPath, new Path[] {});
+    if (userDirStatus != null) {
+      List<FileDeletionTask> deletionTasks = new ArrayList<FileDeletionTask>();
+      while (userDirStatus.hasNext()) {
+        FileStatus status = userDirStatus.next();
         String owner = status.getOwner();
-        del.delete(owner, status.getPath(), new Path[] {});
+        FileDeletionTask deletionTask =
+            del.createFileDeletionTask(owner, null,
+              new Path[] { status.getPath() });
+        deletionTask.addFileDeletionTaskDependency(dependentDeletionTask);
+        deletionTasks.add(deletionTask);
       }
+      for (FileDeletionTask task : deletionTasks) {
+        del.scheduleFileDeletionTask(task);
+      }
+    } else {
+      del.scheduleFileDeletionTask(dependentDeletionTask);
     }
-    del.delete(null, dirPath, new Path[] {});
   }
 
 }

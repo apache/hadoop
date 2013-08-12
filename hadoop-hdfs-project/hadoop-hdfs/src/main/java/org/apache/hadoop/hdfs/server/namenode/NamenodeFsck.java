@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
@@ -141,7 +142,7 @@ public class NamenodeFsck {
   /**
    * Filesystem checker.
    * @param conf configuration (namenode config)
-   * @param nn namenode that this fsck is going to use
+   * @param namenode namenode that this fsck is going to use
    * @param pmap key=value[] map passed to the http servlet as url parameters
    * @param out output stream to write the fsck output
    * @param totalDatanodes number of live datanodes
@@ -301,8 +302,13 @@ public class NamenodeFsck {
     long fileLen = file.getLen();
     // Get block locations without updating the file access time 
     // and without block access tokens
-    LocatedBlocks blocks = namenode.getNamesystem().getBlockLocations(path, 0,
-        fileLen, false, false, false);
+    LocatedBlocks blocks;
+    try {
+      blocks = namenode.getNamesystem().getBlockLocations(path, 0,
+          fileLen, false, false, false);
+    } catch (FileNotFoundException fnfe) {
+      blocks = null;
+    }
     if (blocks == null) { // the file is deleted
       return;
     }
@@ -569,8 +575,8 @@ public class NamenodeFsck {
         blockReader = BlockReaderFactory.newBlockReader(dfs.getConf(),
             file, block, lblock.getBlockToken(), 0, -1, true, "fsck",
             TcpPeerServer.peerFromSocketAndKey(s, namenode.getRpcServer().
-                getDataEncryptionKey()),
-            chosenNode, null, null, null, false);
+                getDataEncryptionKey()), chosenNode, null, null, null, 
+                false, CachingStrategy.newDropBehind());
         
       }  catch (IOException ex) {
         // Put chosen node into dead list, continue

@@ -381,6 +381,7 @@ Administration Commands
 *-----------------+-----------------------------------------------------------+
 | -metasave filename | Save Namenode's primary data structures to <filename> in
                   | the directory specified by hadoop.log.dir property.
+                  | <filename> is overwritten if it exists.
                   | <filename> will contain one line for each of the following\
                   | 1. Datanodes heart beating with Namenode\
                   | 2. Blocks waiting to be replicated\

@@ -120,6 +120,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   private Set<Path> deleteOnExit = new TreeSet<Path>();
   
+  boolean resolveSymlinks;
   /**
    * This method adds a file system for testing so that we can find it later. It
    * is only for testing.
@@ -196,6 +197,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public void initialize(URI name, Configuration conf) throws IOException {
     statistics = getStatistics(name.getScheme(), getClass());    
+    resolveSymlinks = conf.getBoolean(
+        CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY,
+        CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_DEFAULT);
   }
 
   /**
@@ -1615,7 +1619,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @throws IOException
    */
   public FileStatus[] globStatus(Path pathPattern) throws IOException {
-    return globStatus(pathPattern, DEFAULT_FILTER);
+    return new Globber(this, pathPattern, DEFAULT_FILTER).glob();
   }
   
   /**
@@ -1634,126 +1638,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
       throws IOException {
-    String filename = pathPattern.toUri().getPath();
-    List<FileStatus> allMatches = null;
-    
-    List<String> filePatterns = GlobExpander.expand(filename);
-    for (String filePattern : filePatterns) {
-      Path path = new Path(filePattern.isEmpty() ? Path.CUR_DIR : filePattern);
-      List<FileStatus> matches = globStatusInternal(path, filter);
-      if (matches != null) {
-        if (allMatches == null) {
-          allMatches = matches;
-        } else {
-          allMatches.addAll(matches);
-        }
-      }
-    }
-    
-    FileStatus[] results = null;
-    if (allMatches != null) {
-      results = allMatches.toArray(new FileStatus[allMatches.size()]);
-    } else if (filePatterns.size() > 1) {
-      // no matches with multiple expansions is a non-matching glob 
-      results = new FileStatus[0];
-    }
-    return results;
-  }
-
-  // sort gripes because FileStatus Comparable isn't parameterized...
-  @SuppressWarnings("unchecked") 
-  private List<FileStatus> globStatusInternal(Path pathPattern,
-      PathFilter filter) throws IOException {
-    boolean patternHasGlob = false;       // pathPattern has any globs
-    List<FileStatus> matches = new ArrayList<FileStatus>();
-
-    // determine starting point
-    int level = 0;
-    String baseDir = Path.CUR_DIR;
-    if (pathPattern.isAbsolute()) {
-      level = 1; // need to skip empty item at beginning of split list
-      baseDir = Path.SEPARATOR;
-    }
-    
-    // parse components and determine if it's a glob
-    String[] components = null;
-    GlobFilter[] filters = null;
-    String filename = pathPattern.toUri().getPath();
-    if (!filename.isEmpty() && !Path.SEPARATOR.equals(filename)) {
-      components = filename.split(Path.SEPARATOR);
-      filters = new GlobFilter[components.length];
-      for (int i=level; i < components.length; i++) {
-        filters[i] = new GlobFilter(components[i]);
-        patternHasGlob |= filters[i].hasPattern();
-      }
-      if (!patternHasGlob) {
-        baseDir = unquotePathComponent(filename);
-        components = null; // short through to filter check
-      }
-    }
-    
-    // seed the parent directory path, return if it doesn't exist
-    try {
-      matches.add(getFileStatus(new Path(baseDir)));
-    } catch (FileNotFoundException e) {
-      return patternHasGlob ? matches : null;
-    }
-    
-    // skip if there are no components other than the basedir
-    if (components != null) {
-      // iterate through each path component
-      for (int i=level; (i < components.length) && !matches.isEmpty(); i++) {
-        List<FileStatus> children = new ArrayList<FileStatus>();
-        for (FileStatus match : matches) {
-          // don't look for children in a file matched by a glob
-          if (!match.isDirectory()) {
-            continue;
-          }
-          try {
-            if (filters[i].hasPattern()) {
-              // get all children matching the filter
-              FileStatus[] statuses = listStatus(match.getPath(), filters[i]);
-              children.addAll(Arrays.asList(statuses));
-            } else {
-              // the component does not have a pattern
-              String component = unquotePathComponent(components[i]);
-              Path child = new Path(match.getPath(), component);
-              children.add(getFileStatus(child));
-            }
-          } catch (FileNotFoundException e) {
-            // don't care
-          }
-        }
-        matches = children;
-      }
-    }
-    // remove anything that didn't match the filter
-    if (!matches.isEmpty()) {
-      Iterator<FileStatus> iter = matches.iterator();
-      while (iter.hasNext()) {
-        if (!filter.accept(iter.next().getPath())) {
-          iter.remove();
-        }
-      }
-    }
-    // no final paths, if there were any globs return empty list
-    if (matches.isEmpty()) {
-      return patternHasGlob ? matches : null;
-    }
-    Collections.sort(matches);
-    return matches;
-  }
-
-  /**
-   * The glob filter builds a regexp per path component.  If the component
-   * does not contain a shell metachar, then it falls back to appending the
-   * raw string to the list of built up paths.  This raw path needs to have
-   * the quoting removed.  Ie. convert all occurances of "\X" to "X"
-   * @param name of the path component
-   * @return the unquoted path component
-   */
-  private String unquotePathComponent(String name) {
-    return name.replaceAll("\\\\(.)", "$1");
+    return new Globber(this, pathPattern, filter).glob();
   }
   
   /**

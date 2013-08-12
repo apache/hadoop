@@ -121,7 +121,7 @@ public class NNThroughputBenchmark {
     File excludeFile = new File(config.get(DFSConfigKeys.DFS_HOSTS_EXCLUDE,
       "exclude"));
     if(!excludeFile.exists()) {
-      if(!excludeFile.getParentFile().mkdirs())
+      if(!excludeFile.getParentFile().exists() && !excludeFile.getParentFile().mkdirs())
         throw new IOException("NNThroughputBenchmark: cannot mkdir " + excludeFile);
     }
     new FileOutputStream(excludeFile).close();

@@ -18,6 +18,10 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.io.DataOutputStream;
+import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -26,8 +30,9 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FSDataOutputStream extends DataOutputStream implements Syncable {
-  private OutputStream wrappedStream;
+public class FSDataOutputStream extends DataOutputStream
+    implements Syncable, CanSetDropBehind {
+  private final OutputStream wrappedStream;
 
   private static class PositionCache extends FilterOutputStream {
     private FileSystem.Statistics statistics;
@@ -131,6 +136,16 @@ public class FSDataOutputStream extends DataOutputStream implements Syncable {
       ((Syncable)wrappedStream).hsync();
     } else {
       wrappedStream.flush();
+    }
+  }
+
+  @Override
+  public void setDropBehind(Boolean dropBehind) throws IOException {
+    try {
+      ((CanSetDropBehind)wrappedStream).setDropBehind(dropBehind);
+    } catch (ClassCastException e) {
+      throw new UnsupportedOperationException("the wrapped stream does " +
+          "not support setting the drop-behind caching setting.");
     }
   }
 }

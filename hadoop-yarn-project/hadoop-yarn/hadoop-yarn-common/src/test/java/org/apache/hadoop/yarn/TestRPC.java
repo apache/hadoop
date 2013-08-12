@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 import junit.framework.Assert;
 
@@ -33,13 +35,14 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -122,9 +125,6 @@ public class TestRPC {
         ApplicationAttemptId.newInstance(applicationId, 0);
     ContainerId containerId =
         ContainerId.newInstance(applicationAttemptId, 100);
-    StartContainerRequest scRequest =
-        recordFactory.newRecordInstance(StartContainerRequest.class);
-    scRequest.setContainerLaunchContext(containerLaunchContext);
     NodeId nodeId = NodeId.newInstance("localhost", 1234);
     Resource resource = Resource.newInstance(1234, 2);
     ContainerTokenIdentifier containerTokenIdentifier =
@@ -132,22 +132,32 @@ public class TestRPC {
           resource, System.currentTimeMillis() + 10000, 42, 42);
     Token containerToken = newContainerToken(nodeId, "password".getBytes(),
           containerTokenIdentifier);
-    scRequest.setContainerToken(containerToken);
-    proxy.startContainer(scRequest);
-    
-    GetContainerStatusRequest gcsRequest = 
-        recordFactory.newRecordInstance(GetContainerStatusRequest.class);
-    gcsRequest.setContainerId(containerId);
-    GetContainerStatusResponse response =  proxy.getContainerStatus(gcsRequest);
-    ContainerStatus status = response.getStatus();
-    
+
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(containerLaunchContext,
+          containerToken);
+    List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    proxy.startContainers(allRequests);
+
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(containerId);
+    GetContainerStatusesRequest gcsRequest =
+        GetContainerStatusesRequest.newInstance(containerIds);
+    GetContainerStatusesResponse response =
+        proxy.getContainerStatuses(gcsRequest);
+    List<ContainerStatus> statuses = response.getContainerStatuses();
+
     //test remote exception
     boolean exception = false;
     try {
-      StopContainerRequest stopRequest = recordFactory.newRecordInstance(StopContainerRequest.class);
-      stopRequest.setContainerId(containerId);
-      proxy.stopContainer(stopRequest);
-    } catch (YarnException e) {
+      StopContainersRequest stopRequest =
+          recordFactory.newRecordInstance(StopContainersRequest.class);
+      stopRequest.setContainerIds(containerIds);
+      proxy.stopContainers(stopRequest);
+      } catch (YarnException e) {
       exception = true;
       Assert.assertTrue(e.getMessage().contains(EXCEPTION_MSG));
       Assert.assertTrue(e.getMessage().contains(EXCEPTION_CAUSE));
@@ -158,46 +168,51 @@ public class TestRPC {
     Assert.assertTrue(exception);
     
     server.stop();
-    Assert.assertNotNull(status);
-    Assert.assertEquals(ContainerState.RUNNING, status.getState());
+    Assert.assertNotNull(statuses.get(0));
+    Assert.assertEquals(ContainerState.RUNNING, statuses.get(0).getState());
   }
 
   public class DummyContainerManager implements ContainerManagementProtocol {
 
-    private ContainerStatus status = null;    
-    
+    private List<ContainerStatus> statuses = new ArrayList<ContainerStatus>();
+
     @Override
-    public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request)
+    public GetContainerStatusesResponse getContainerStatuses(
+        GetContainerStatusesRequest request)
     throws YarnException {
-      GetContainerStatusResponse response = 
-          recordFactory.newRecordInstance(GetContainerStatusResponse.class);
-      response.setStatus(status);
+      GetContainerStatusesResponse response = 
+          recordFactory.newRecordInstance(GetContainerStatusesResponse.class);
+      response.setContainerStatuses(statuses);
       return response;
     }
 
     @Override
-    public StartContainerResponse startContainer(StartContainerRequest request) 
-        throws YarnException {
-      Token containerToken = request.getContainerToken();
-      ContainerTokenIdentifier tokenId = null;
+    public StartContainersResponse startContainers(
+        StartContainersRequest requests) throws YarnException {
+      StartContainersResponse response =
+          recordFactory.newRecordInstance(StartContainersResponse.class);
+      for (StartContainerRequest request : requests.getStartContainerRequests()) {
+        Token containerToken = request.getContainerToken();
+        ContainerTokenIdentifier tokenId = null;
 
-      try {
-        tokenId = newContainerTokenIdentifier(containerToken);
-      } catch (IOException e) {
-        throw RPCUtil.getRemoteException(e);
+        try {
+          tokenId = newContainerTokenIdentifier(containerToken);
+        } catch (IOException e) {
+          throw RPCUtil.getRemoteException(e);
+        }
+        ContainerStatus status =
+            recordFactory.newRecordInstance(ContainerStatus.class);
+        status.setState(ContainerState.RUNNING);
+        status.setContainerId(tokenId.getContainerID());
+        status.setExitStatus(0);
+        statuses.add(status);
+
       }
-      StartContainerResponse response = 
-          recordFactory.newRecordInstance(StartContainerResponse.class);
-      status = recordFactory.newRecordInstance(ContainerStatus.class);
-      status.setState(ContainerState.RUNNING);
-      status.setContainerId(tokenId.getContainerID());
-      status.setExitStatus(0);
       return response;
     }
 
     @Override
-    public StopContainerResponse stopContainer(StopContainerRequest request) 
+    public StopContainersResponse stopContainers(StopContainersRequest request) 
     throws YarnException {
       Exception e = new Exception(EXCEPTION_MSG, 
           new Exception(EXCEPTION_CAUSE));

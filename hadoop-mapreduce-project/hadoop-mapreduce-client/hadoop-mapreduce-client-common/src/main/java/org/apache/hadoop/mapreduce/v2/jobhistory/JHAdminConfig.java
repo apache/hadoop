@@ -37,6 +37,17 @@ public class JHAdminConfig {
   public static final String DEFAULT_MR_HISTORY_ADDRESS = "0.0.0.0:" +
       DEFAULT_MR_HISTORY_PORT;
   
+  /** The address of the History server admin interface. */
+  public static final String JHS_ADMIN_ADDRESS = MR_HISTORY_PREFIX
+      + "admin.address";
+  public static final int DEFAULT_JHS_ADMIN_PORT = 10033;
+  public static final String DEFAULT_JHS_ADMIN_ADDRESS = "0.0.0.0:"
+      + DEFAULT_JHS_ADMIN_PORT;
+
+  /** ACL of who can be admin of Job history server. */
+  public static final String JHS_ADMIN_ACL = MR_HISTORY_PREFIX + "admin.acl";
+  public static final String DEFAULT_JHS_ADMIN_ACL = "*";
+  
   /** If history cleaning should be enabled or not.*/
   public static final String MR_HISTORY_CLEANER_ENABLE = 
     MR_HISTORY_PREFIX + "cleaner.enable";

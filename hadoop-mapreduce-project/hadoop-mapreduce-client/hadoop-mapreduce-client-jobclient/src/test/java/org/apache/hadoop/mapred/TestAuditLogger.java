@@ -137,11 +137,12 @@ public class TestAuditLogger extends TestCase {
   /**
    * Test {@link AuditLogger} with IP set.
    */
-  @SuppressWarnings("deprecation")
   public void testAuditLoggerWithIP() throws Exception {
     Configuration conf = new Configuration();
     // start the IPC server
-    Server server = RPC.getServer(new MyTestRPCServer(), "0.0.0.0", 0, conf);
+    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+            .setInstance(new MyTestRPCServer()).setBindAddress("0.0.0.0")
+            .setPort(0).build();
     server.start();
 
     InetSocketAddress addr = NetUtils.getConnectAddress(server);

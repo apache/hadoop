@@ -21,14 +21,29 @@ package org.apache.hadoop.oncrpc;
  * Represent an RPC message as defined in RFC 1831.
  */
 public abstract class RpcMessage {
-  public static final int RPC_CALL = 0;
-  public static final int RPC_REPLY = 1;
+  /** Message type */
+  public static enum Type {
+    // the order of the values below are significant.
+    RPC_CALL,
+    RPC_REPLY;
+    
+    public int getValue() {
+      return ordinal();
+    }
+
+    public static Type fromValue(int value) {
+      if (value < 0 || value >= values().length) {
+        return null;
+      }
+      return values()[value];
+    }
+  }
 
   protected final int xid;
-  protected final int messageType;
+  protected final Type messageType;
   
-  RpcMessage(int xid, int messageType) {
-    if (messageType != RPC_CALL && messageType != RPC_REPLY) {
+  RpcMessage(int xid, Type messageType) {
+    if (messageType != Type.RPC_CALL && messageType != Type.RPC_REPLY) {
       throw new IllegalArgumentException("Invalid message type " + messageType);
     }
     this.xid = xid;
@@ -39,11 +54,11 @@ public abstract class RpcMessage {
     return xid;
   }
 
-  public int getMessageType() {
+  public Type getMessageType() {
     return messageType;
   }
   
-  protected void validateMessageType(int expected) {
+  protected void validateMessageType(Type expected) {
     if (expected != messageType) {
       throw new IllegalArgumentException("Message type is expected to be "
           + expected + " but got " + messageType);

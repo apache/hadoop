@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -33,11 +35,15 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -46,17 +52,16 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The launch of the AM itself.
@@ -69,8 +74,6 @@ public class AMLauncher implements Runnable {
 
   private final RMAppAttempt application;
   private final Configuration conf;
-  private final RecordFactory recordFactory = 
-      RecordFactoryProvider.getRecordFactory(null);
   private final AMLauncherEventType eventType;
   private final RMContext rmContext;
   private final Container masterContainer;
@@ -103,22 +106,42 @@ public class AMLauncher implements Runnable {
         + " for AM " + application.getAppAttemptId());  
     ContainerLaunchContext launchContext =
         createAMContainerLaunchContext(applicationContext, masterContainerID);
-    StartContainerRequest request = 
-        recordFactory.newRecordInstance(StartContainerRequest.class);
-    request.setContainerLaunchContext(launchContext);
-    request.setContainerToken(masterContainer.getContainerToken());
-    containerMgrProxy.startContainer(request);
-    LOG.info("Done launching container " + masterContainer
-        + " for AM " + application.getAppAttemptId());
+
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(launchContext,
+          masterContainer.getContainerToken());
+    List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+
+    StartContainersResponse response =
+        containerMgrProxy.startContainers(allRequests);
+    if (response.getFailedRequests() != null
+        && response.getFailedRequests().containsKey(masterContainerID)) {
+      Throwable t =
+          response.getFailedRequests().get(masterContainerID).deSerialize();
+      parseAndThrowException(t);
+    } else {
+      LOG.info("Done launching container " + masterContainer + " for AM "
+          + application.getAppAttemptId());
+    }
   }
   
   private void cleanup() throws IOException, YarnException {
     connect();
     ContainerId containerId = masterContainer.getId();
-    StopContainerRequest stopRequest = 
-        recordFactory.newRecordInstance(StopContainerRequest.class);
-    stopRequest.setContainerId(containerId);
-    containerMgrProxy.stopContainer(stopRequest);
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(containerId);
+    StopContainersRequest stopRequest =
+        StopContainersRequest.newInstance(containerIds);
+    StopContainersResponse response =
+        containerMgrProxy.stopContainers(stopRequest);
+    if (response.getFailedRequests() != null
+        && response.getFailedRequests().containsKey(containerId)) {
+      Throwable t = response.getFailedRequests().get(containerId).deSerialize();
+      parseAndThrowException(t);
+    }
   }
 
   // Protected. For tests.
@@ -193,30 +216,28 @@ public class AMLauncher implements Runnable {
     environment.put(ApplicationConstants.MAX_APP_ATTEMPTS_ENV,
         String.valueOf(rmContext.getRMApps().get(
             applicationId).getMaxAppAttempts()));
- 
-    if (UserGroupInformation.isSecurityEnabled()) {
-      // TODO: Security enabled/disabled info should come from RM.
 
-      Credentials credentials = new Credentials();
-
-      DataInputByteBuffer dibb = new DataInputByteBuffer();
-      if (container.getTokens() != null) {
-        // TODO: Don't do this kind of checks everywhere.
-        dibb.reset(container.getTokens());
-        credentials.readTokenStorageStream(dibb);
-      }
-
-      // Add application token
-      Token<AMRMTokenIdentifier> amrmToken =
-          application.getAMRMToken();
-      if(amrmToken != null) {
-        credentials.addToken(amrmToken.getService(), amrmToken);
-      }
-      DataOutputBuffer dob = new DataOutputBuffer();
-      credentials.writeTokenStorageToStream(dob);
-      container.setTokens(ByteBuffer.wrap(dob.getData(), 0,
-        dob.getLength()));
+    Credentials credentials = new Credentials();
+    DataInputByteBuffer dibb = new DataInputByteBuffer();
+    if (container.getTokens() != null) {
+      // TODO: Don't do this kind of checks everywhere.
+      dibb.reset(container.getTokens());
+      credentials.readTokenStorageStream(dibb);
     }
+
+    // Add AMRMToken
+    Token<AMRMTokenIdentifier> amrmToken = getAMRMToken();
+    if (amrmToken != null) {
+      credentials.addToken(amrmToken.getService(), amrmToken);
+    }
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    container.setTokens(ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
+  }
+
+  @VisibleForTesting
+  protected Token<AMRMTokenIdentifier> getAMRMToken() {
+    return application.getAMRMToken();
   }
   
   @SuppressWarnings("unchecked")
@@ -255,6 +276,17 @@ public class AMLauncher implements Runnable {
     default:
       LOG.warn("Received unknown event-type " + eventType + ". Ignoring.");
       break;
+    }
+  }
+
+  private void parseAndThrowException(Throwable t) throws YarnException,
+      IOException {
+    if (t instanceof YarnException) {
+      throw (YarnException) t;
+    } else if (t instanceof InvalidToken) {
+      throw (InvalidToken) t;
+    } else {
+      throw (IOException) t;
     }
   }
 }

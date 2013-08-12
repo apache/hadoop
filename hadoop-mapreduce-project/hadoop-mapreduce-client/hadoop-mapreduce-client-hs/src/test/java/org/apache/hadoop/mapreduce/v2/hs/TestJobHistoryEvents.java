@@ -70,12 +70,15 @@ public class TestJobHistoryEvents {
     ((JobHistory)context).start();
     Assert.assertTrue( context.getStartTime()>0);
     Assert.assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STARTED);
-    
-    
+
+    // get job before stopping JobHistory
+    Job parsedJob = context.getJob(jobId);
+
+    // stop JobHistory
     ((JobHistory)context).stop();
     Assert.assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STOPPED);
-      Job parsedJob = context.getJob(jobId);
-    
+
+
     Assert.assertEquals("CompletedMaps not correct", 2,
         parsedJob.getCompletedMaps());
     Assert.assertEquals(System.getProperty("user.name"), parsedJob.getUserName());

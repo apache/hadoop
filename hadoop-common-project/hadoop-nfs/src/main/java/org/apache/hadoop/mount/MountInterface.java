@@ -26,14 +26,31 @@ import org.apache.hadoop.oncrpc.XDR;
  * requests. See RFC 1094 for more details.
  */
 public interface MountInterface {
-  public static int MNTPROC_NULL = 0;
-  public static int MNTPROC_MNT = 1;
-  public static int MNTPROC_DUMP = 2;
-  public static int MNTPROC_UMNT = 3;
-  public static int MNTPROC_UMNTALL = 4;
-  public static int MNTPROC_EXPORT = 5;
-  public static int MNTPROC_EXPORTALL = 6;
-  public static int MNTPROC_PATHCONF = 7;
+  /** Mount procedures */
+  public static enum MNTPROC {
+    // the order of the values below are significant.
+    NULL,
+    MNT,
+    DUMP,
+    UMNT,
+    UMNTALL,
+    EXPORT,
+    EXPORTALL,
+    PATHCONF;
+
+    /** @return the int value representing the procedure. */
+    public int getValue() {
+      return ordinal();
+    }
+
+    /** @return the procedure corresponding to the value. */
+    public static MNTPROC fromValue(int value) {
+      if (value < 0 || value >= values().length) {
+        return null;
+      }
+      return values()[value];
+    }
+  }
 
   /** MNTPROC_NULL - Do Nothing */
   public XDR nullOp(XDR out, int xid, InetAddress client);

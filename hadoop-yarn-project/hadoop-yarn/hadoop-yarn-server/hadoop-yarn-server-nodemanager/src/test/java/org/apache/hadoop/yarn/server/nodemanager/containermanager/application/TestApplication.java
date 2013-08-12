@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import junit.framework.Assert;
 
@@ -265,9 +266,12 @@ public class TestApplication {
               AuxServicesEventType.APPLICATION_STOP, wa.appId)));
 
       wa.appResourcesCleanedup();
-      for ( Container container : wa.containers) {
+      for (Container container : wa.containers) {
+        ContainerTokenIdentifier identifier =
+            wa.getContainerTokenIdentifier(container.getContainerId());
+        waitForContainerTokenToExpire(identifier);
         Assert.assertTrue(wa.context.getContainerTokenSecretManager()
-          .isValidStartContainerRequest(container.getContainerId()));
+          .isValidStartContainerRequest(identifier));
       }
       assertEquals(ApplicationState.FINISHED, wa.app.getApplicationState());
 
@@ -275,6 +279,18 @@ public class TestApplication {
       if (wa != null)
         wa.finished();
     }
+  }
+
+  protected ContainerTokenIdentifier waitForContainerTokenToExpire(
+      ContainerTokenIdentifier identifier) {
+    int attempts = 5;
+    while (System.currentTimeMillis() < identifier.getExpiryTimeStamp()
+        && attempts-- > 0) {
+      try {
+        Thread.sleep(1000);
+      } catch (Exception e) {}
+    }
+    return identifier;
   }
 
   @Test
@@ -306,8 +322,11 @@ public class TestApplication {
 
       wa.appResourcesCleanedup();
       for ( Container container : wa.containers) {
+        ContainerTokenIdentifier identifier =
+            wa.getContainerTokenIdentifier(container.getContainerId());
+        waitForContainerTokenToExpire(identifier);
         Assert.assertTrue(wa.context.getContainerTokenSecretManager()
-          .isValidStartContainerRequest(container.getContainerId()));
+          .isValidStartContainerRequest(identifier));
       }
       assertEquals(ApplicationState.FINISHED, wa.app.getApplicationState());
     } finally {
@@ -440,7 +459,8 @@ public class TestApplication {
     final String user;
     final List<Container> containers;
     final Context context;
-
+    final Map<ContainerId, ContainerTokenIdentifier> containerTokenIdentifierMap;
+    
     final ApplicationId appId;
     final Application app;
 
@@ -448,6 +468,8 @@ public class TestApplication {
       Configuration conf = new Configuration();
       
       dispatcher = new DrainDispatcher();
+      containerTokenIdentifierMap =
+          new HashMap<ContainerId, ContainerTokenIdentifier>();
       dispatcher.init(conf);
 
       localizerBus = mock(EventHandler.class);
@@ -486,11 +508,15 @@ public class TestApplication {
         Container container = createMockedContainer(this.appId, i);
         containers.add(container);
         long currentTime = System.currentTimeMillis();
+        ContainerTokenIdentifier identifier =
+            new ContainerTokenIdentifier(container.getContainerId(), "", "",
+              null, currentTime + 2000, masterKey.getKeyId(), currentTime);
+        containerTokenIdentifierMap
+          .put(identifier.getContainerID(), identifier);
         context.getContainerTokenSecretManager().startContainerSuccessful(
-          new ContainerTokenIdentifier(container.getContainerId(), "",
-            "", null, currentTime + 1000, masterKey.getKeyId(), currentTime));
+          identifier);
         Assert.assertFalse(context.getContainerTokenSecretManager()
-          .isValidStartContainerRequest(container.getContainerId()));
+          .isValidStartContainerRequest(identifier));
       }
 
       dispatcher.start();
@@ -541,6 +567,11 @@ public class TestApplication {
       app.handle(new ApplicationEvent(appId,
           ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP));
       drainDispatcherEvents();
+    }
+    
+    public ContainerTokenIdentifier getContainerTokenIdentifier(
+        ContainerId containerId) {
+      return this.containerTokenIdentifierMap.get(containerId);
     }
   }
 

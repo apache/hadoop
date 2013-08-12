@@ -33,6 +33,17 @@ import org.jboss.netty.channel.Channel;
  */
 class WriteCtx {
   public static final Log LOG = LogFactory.getLog(WriteCtx.class);
+  
+  /**
+   * In memory write data has 3 states. ALLOW_DUMP: not sequential write, still
+   * wait for prerequisit writes. NO_DUMP: sequential write, no need to dump
+   * since it will be written to HDFS soon. DUMPED: already dumped to a file.
+   */
+  public static enum DataState {
+    ALLOW_DUMP,
+    NO_DUMP,
+    DUMPED;
+  }
 
   private final FileHandle handle;
   private final long offset;
@@ -43,22 +54,14 @@ class WriteCtx {
   private final Channel channel;
   private final int xid;
   private boolean replied;
-  
-  /**
-   * In memory write data has 3 states. ALLOW_DUMP: not sequential write, still
-   * wait for prerequisit writes. NO_DUMP: sequential write, no need to dump
-   * since it will be written to HDFS soon. DUMPED: already dumped to a file.
-   */
-  public final static int ALLOW_DUMP = 0;
-  public final static int NO_DUMP = 1;
-  public final static int DUMPED = 2;
-  private int dataState;
 
-  public int getDataState() {
+  private DataState dataState;
+
+  public DataState getDataState() {
     return dataState;
   }
 
-  public void setDataState(int dataState) {
+  public void setDataState(DataState dataState) {
     this.dataState = dataState;
   }
 
@@ -68,7 +71,7 @@ class WriteCtx {
   // Return the dumped data size
   public long dumpData(FileOutputStream dumpOut, RandomAccessFile raf)
       throws IOException {
-    if (dataState != ALLOW_DUMP) {
+    if (dataState != DataState.ALLOW_DUMP) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("No need to dump with status(replied,dataState):" + "("
             + replied + "," + dataState + ")");
@@ -82,7 +85,7 @@ class WriteCtx {
       LOG.debug("After dump, new dumpFileOffset:" + dumpFileOffset);
     }
     data = null;
-    dataState = DUMPED;
+    dataState = DataState.DUMPED;
     return count;
   }
 
@@ -103,7 +106,7 @@ class WriteCtx {
   }
 
   public byte[] getData() throws IOException {
-    if (dataState != DUMPED) {
+    if (dataState != DataState.DUMPED) {
       if (data == null) {
         throw new IOException("Data is not dumpted but has null:" + this);
       }
@@ -140,7 +143,7 @@ class WriteCtx {
   }
   
   WriteCtx(FileHandle handle, long offset, int count, WriteStableHow stableHow,
-      byte[] data, Channel channel, int xid, boolean replied, int dataState) {
+      byte[] data, Channel channel, int xid, boolean replied, DataState dataState) {
     this.handle = handle;
     this.offset = offset;
     this.count = count;

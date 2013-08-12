@@ -118,7 +118,7 @@ public class TestServer {
   }
   
   @Test
-  public void testExceptionsHandler() throws IOException {
+  public void testExceptionsHandler() {
     Server.ExceptionsHandler handler = new Server.ExceptionsHandler();
     handler.addTerseExceptions(IOException.class);
     handler.addTerseExceptions(RpcServerException.class, IpcException.class);

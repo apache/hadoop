@@ -61,6 +61,10 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
   protected ResourceTracker getRMClient() {
     return resourceTracker;
   }
+  @Override
+  protected void stopRMProxy() {
+    return;
+  }
   
   private static class MockResourceTracker implements ResourceTracker {
     private int heartBeatID;

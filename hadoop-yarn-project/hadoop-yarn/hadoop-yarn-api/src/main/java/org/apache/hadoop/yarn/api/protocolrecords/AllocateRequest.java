@@ -23,10 +23,9 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -36,10 +35,6 @@ import org.apache.hadoop.yarn.util.Records;
  *
  * <p>The request includes:
  *   <ul>
- *     <li>
- *         {@link ApplicationAttemptId} being managed by the 
- *         <code>ApplicationMaster</code>
- *     </li>
  *     <li>A response id to track duplicate responses.</li>
  *     <li>Progress information.</li>
  *     <li>
@@ -61,13 +56,11 @@ public abstract class AllocateRequest {
 
   @Public
   @Stable
-  public static AllocateRequest newInstance(
-      ApplicationAttemptId applicationAttemptId, int responseID,
-      float appProgress, List<ResourceRequest> resourceAsk,
-      List<ContainerId> containersToBeReleased, 
+  public static AllocateRequest newInstance(int responseID, float appProgress,
+      List<ResourceRequest> resourceAsk,
+      List<ContainerId> containersToBeReleased,
       ResourceBlacklistRequest resourceBlacklistRequest) {
     AllocateRequest allocateRequest = Records.newRecord(AllocateRequest.class);
-    allocateRequest.setApplicationAttemptId(applicationAttemptId);
     allocateRequest.setResponseId(responseID);
     allocateRequest.setProgress(appProgress);
     allocateRequest.setAskList(resourceAsk);
@@ -75,27 +68,7 @@ public abstract class AllocateRequest {
     allocateRequest.setResourceBlacklistRequest(resourceBlacklistRequest);
     return allocateRequest;
   }
-
-  /**
-   * Get the <code>ApplicationAttemptId</code> being managed by the 
-   * <code>ApplicationMaster</code>.
-   * @return <code>ApplicationAttemptId</code> being managed by the 
-   *         <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public abstract ApplicationAttemptId getApplicationAttemptId();
   
-  /**
-   * Set the <code>ApplicationAttemptId</code> being managed by the 
-   * <code>ApplicationMaster</code>.
-   * @param applicationAttemptId <code>ApplicationAttemptId</code> being managed 
-   *                             by the <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public abstract void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
-
   /**
    * Get the <em>response id</em> used to track duplicate responses.
    * @return <em>response id</em>

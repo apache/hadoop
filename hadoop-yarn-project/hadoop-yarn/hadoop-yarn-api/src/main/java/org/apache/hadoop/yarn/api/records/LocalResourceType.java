@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
  * @see LocalResource
  * @see ContainerLaunchContext
  * @see ApplicationSubmissionContext
- * @see ContainerManagementProtocol#startContainer(org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest)
+ * @see ContainerManagementProtocol#startContainers(org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest)
  */
 @Public
 @Stable

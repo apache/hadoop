@@ -49,7 +49,7 @@ import org.apache.hadoop.yarn.util.Records;
  *   </ul>
  * </p>
  * 
- * @see ContainerManagementProtocol#startContainer(org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest)
+ * @see ContainerManagementProtocol#startContainers(org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest)
  */
 @Public
 @Stable
@@ -132,7 +132,7 @@ public abstract class ContainerLaunchContext {
   
   /**
    * <p>
-   * Get application-specific binary <em>service data</em>. This is a map keyed
+   * Set application-specific binary <em>service data</em>. This is a map keyed
    * by the name of each {@link AuxiliaryService} that is configured on a
    * NodeManager and value correspond to the application specific data targeted
    * for the keyed {@link AuxiliaryService}. All pre-existing Map entries are

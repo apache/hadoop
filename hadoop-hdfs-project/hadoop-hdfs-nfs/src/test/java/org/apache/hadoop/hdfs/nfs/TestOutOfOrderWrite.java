@@ -59,7 +59,7 @@ public class TestOutOfOrderWrite {
   static XDR create() {
     XDR request = new XDR();
     RpcCall.write(request, 0x8000004c, Nfs3Constant.PROGRAM,
-        Nfs3Constant.VERSION, Nfs3Constant.NFSPROC3_CREATE);
+        Nfs3Constant.VERSION, Nfs3Constant.NFSPROC3.CREATE.getValue());
 
     // credentials
     request.writeInt(0); // auth null
@@ -79,7 +79,7 @@ public class TestOutOfOrderWrite {
       byte[] data) {
     XDR request = new XDR();
     RpcCall.write(request, xid, Nfs3Constant.PROGRAM, Nfs3Constant.VERSION,
-        Nfs3Constant.NFSPROC3_WRITE);
+        Nfs3Constant.NFSPROC3.WRITE.getValue());
 
     // credentials
     request.writeInt(0); // auth null

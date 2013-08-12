@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,6 +35,7 @@ import java.util.Set;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
@@ -44,15 +46,20 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
-import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
+import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -237,7 +244,7 @@ public class TestYarnClient {
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,
           YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-          FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN");
+          FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
       List<ApplicationReport> applicationReports =
           new ArrayList<ApplicationReport>();
       applicationReports.add(newApplicationReport);
@@ -247,7 +254,8 @@ public class TestYarnClient {
           applicationId2, ApplicationAttemptId.newInstance(applicationId2, 2),
           "user2", "queue2", "appname2", "host2", 125, null,
           YarnApplicationState.FINISHED, "diagnostics2", "url2", 2, 2,
-          FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.63789f, "NON-YARN");
+          FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.63789f, "NON-YARN", 
+        null);
       applicationReports.add(newApplicationReport2);
 
       ApplicationId applicationId3 = ApplicationId.newInstance(1234, 7);
@@ -255,7 +263,8 @@ public class TestYarnClient {
           applicationId3, ApplicationAttemptId.newInstance(applicationId3, 3),
           "user3", "queue3", "appname3", "host3", 126, null,
           YarnApplicationState.FINISHED, "diagnostics3", "url3", 3, 3,
-          FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f, "MAPREDUCE");
+          FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f, "MAPREDUCE", 
+        null);
       applicationReports.add(newApplicationReport3);
       return applicationReports;
     }
@@ -278,6 +287,109 @@ public class TestYarnClient {
       GetApplicationsResponse response =
           GetApplicationsResponse.newInstance(appReports);
       return response;
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testAMMRTokens() throws Exception {
+    MiniYARNCluster cluster = new MiniYARNCluster("testMRAMTokens", 1, 1, 1);
+    YarnClient rmClient = null;
+    try {
+      cluster.init(new YarnConfiguration());
+      cluster.start();
+      final Configuration yarnConf = cluster.getConfig();
+      rmClient = YarnClient.createYarnClient();
+      rmClient.init(yarnConf);
+      rmClient.start();
+
+      ApplicationId appId = createApp(rmClient, false);
+      waitTillAccepted(rmClient, appId);
+      //managed AMs don't return AMRM token
+      Assert.assertNull(rmClient.getAMRMToken(appId));
+
+      appId = createApp(rmClient, true);
+      waitTillAccepted(rmClient, appId);
+      //unmanaged AMs do return AMRM token
+      Assert.assertNotNull(rmClient.getAMRMToken(appId));
+      
+      UserGroupInformation other =
+        UserGroupInformation.createUserForTesting("foo", new String[]{});
+      appId = other.doAs(
+        new PrivilegedExceptionAction<ApplicationId>() {
+          @Override
+          public ApplicationId run() throws Exception {
+            YarnClient rmClient = YarnClient.createYarnClient();
+            rmClient.init(yarnConf);
+            rmClient.start();
+            ApplicationId appId = createApp(rmClient, true);
+            waitTillAccepted(rmClient, appId);
+            //unmanaged AMs do return AMRM token
+            Assert.assertNotNull(rmClient.getAMRMToken(appId));
+            return appId;
+          }
+        });
+      //other users don't get AMRM token
+      Assert.assertNull(rmClient.getAMRMToken(appId));
+    } finally {
+      if (rmClient != null) {
+        rmClient.stop();
+      }
+      cluster.stop();
+    }
+  }
+
+  private ApplicationId createApp(YarnClient rmClient, boolean unmanaged) 
+    throws Exception {
+    YarnClientApplication newApp = rmClient.createApplication();
+
+    ApplicationId appId = newApp.getNewApplicationResponse().getApplicationId();
+
+    // Create launch context for app master
+    ApplicationSubmissionContext appContext
+      = Records.newRecord(ApplicationSubmissionContext.class);
+
+    // set the application id
+    appContext.setApplicationId(appId);
+
+    // set the application name
+    appContext.setApplicationName("test");
+
+    // Set the priority for the application master
+    Priority pri = Records.newRecord(Priority.class);
+    pri.setPriority(1);
+    appContext.setPriority(pri);
+
+    // Set the queue to which this application is to be submitted in the RM
+    appContext.setQueue("default");
+
+    // Set up the container launch context for the application master
+    ContainerLaunchContext amContainer
+      = Records.newRecord(ContainerLaunchContext.class);
+    appContext.setAMContainerSpec(amContainer);
+    appContext.setResource(Resource.newInstance(1024, 1));
+    appContext.setUnmanagedAM(unmanaged);
+
+    // Submit the application to the applications manager
+    rmClient.submitApplication(appContext);
+
+    return appId;
+  }
+  
+  private void waitTillAccepted(YarnClient rmClient, ApplicationId appId)
+    throws Exception {
+    try {
+      long start = System.currentTimeMillis();
+      ApplicationReport report = rmClient.getApplicationReport(appId);
+      while (YarnApplicationState.ACCEPTED != report.getYarnApplicationState()) {
+        if (System.currentTimeMillis() - start > 20 * 1000) {
+          throw new Exception("App '" + appId + 
+            "' time out, failed to reach ACCEPTED state");
+        }
+        Thread.sleep(200);
+        report = rmClient.getApplicationReport(appId);
+      }
+    } catch (Exception ex) {
+      throw new Exception(ex);
     }
   }
 

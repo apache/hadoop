@@ -642,104 +642,6 @@ public class RPC {
             + proxy.getClass());
   }
 
-  /** Construct a server for a protocol implementation instance listening on a
-   * port and address.
-   * @deprecated Please use {@link Builder} to build the {@link Server}
-   */
-  @Deprecated
-  public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf) 
-    throws IOException {
-    return getServer(instance, bindAddress, port, 1, false, conf);
-  }
-
-  /** Construct a server for a protocol implementation instance listening on a
-   * port and address.
-   * @deprecated Please use {@link Builder} to build the {@link Server}
-   */
-  @Deprecated
-  public static Server getServer(final Object instance, final String bindAddress, final int port,
-                                 final int numHandlers,
-                                 final boolean verbose, Configuration conf) 
-    throws IOException {
-    return getServer(instance.getClass(),         // use impl class for protocol
-                     instance, bindAddress, port, numHandlers, false, conf, null,
-                     null);
-  }
-
-  /** Construct a server for a protocol implementation instance.
-   *  @deprecated Please use {@link Builder} to build the {@link Server}
-   */
-  @Deprecated
-  public static Server getServer(Class<?> protocol,
-                                 Object instance, String bindAddress,
-                                 int port, Configuration conf) 
-    throws IOException {
-    return getServer(protocol, instance, bindAddress, port, 1, false, conf, null,
-        null);
-  }
-
-  /** Construct a server for a protocol implementation instance.
-   * @deprecated Please use {@link Builder} to build the {@link Server}
-   */
-  @Deprecated
-  public static Server getServer(Class<?> protocol,
-                                 Object instance, String bindAddress, int port,
-                                 int numHandlers,
-                                 boolean verbose, Configuration conf) 
-    throws IOException {
-    
-    return getServer(protocol, instance, bindAddress, port, numHandlers, verbose,
-                 conf, null, null);
-  }
-  
-  /** Construct a server for a protocol implementation instance. 
-   *  @deprecated Please use {@link Builder} to build the {@link Server}
-   */
-  @Deprecated
-  public static Server getServer(Class<?> protocol,
-                                 Object instance, String bindAddress, int port,
-                                 int numHandlers,
-                                 boolean verbose, Configuration conf,
-                                 SecretManager<? extends TokenIdentifier> secretManager) 
-    throws IOException {
-    return getServer(protocol, instance, bindAddress, port, numHandlers, verbose,
-        conf, secretManager, null);
-  }
-  
-  /**
-   *  @deprecated Please use {@link Builder} to build the {@link Server}
-   */
-  @Deprecated
-  public static Server getServer(Class<?> protocol,
-      Object instance, String bindAddress, int port,
-      int numHandlers,
-      boolean verbose, Configuration conf,
-      SecretManager<? extends TokenIdentifier> secretManager,
-      String portRangeConfig) 
-  throws IOException {
-    return getProtocolEngine(protocol, conf)
-      .getServer(protocol, instance, bindAddress, port, numHandlers, -1, -1,
-                 verbose, conf, secretManager, portRangeConfig);
-  }
-
-  /** Construct a server for a protocol implementation instance.
-   *  @deprecated Please use {@link Builder} to build the {@link Server}
-   */
-  @Deprecated
-  public static <PROTO extends VersionedProtocol, IMPL extends PROTO> 
-        Server getServer(Class<PROTO> protocol,
-                                 IMPL instance, String bindAddress, int port,
-                                 int numHandlers, int numReaders, int queueSizePerHandler,
-                                 boolean verbose, Configuration conf,
-                                 SecretManager<? extends TokenIdentifier> secretManager) 
-    throws IOException {
-    
-    return getProtocolEngine(protocol, conf)
-      .getServer(protocol, instance, bindAddress, port, numHandlers,
-                 numReaders, queueSizePerHandler, verbose, conf, secretManager,
-                 null);
-  }
-
   /**
    * Class to construct instances of RPC server with specific options.
    */
@@ -913,7 +815,7 @@ public class RPC {
    
    // Register  protocol and its impl for rpc calls
    void registerProtocolAndImpl(RpcKind rpcKind, Class<?> protocolClass, 
-       Object protocolImpl) throws IOException {
+       Object protocolImpl) {
      String protocolName = RPC.getProtocolName(protocolClass);
      long version;
      
@@ -943,8 +845,6 @@ public class RPC {
      }
    }
    
-   
-   @SuppressWarnings("unused") // will be useful later.
    VerProtocolImpl[] getSupportedProtocolVersions(RPC.RpcKind rpcKind,
        String protocolName) {
      VerProtocolImpl[] resultk = 
@@ -999,8 +899,7 @@ public class RPC {
       initProtocolMetaInfo(conf);
     }
     
-    private void initProtocolMetaInfo(Configuration conf)
-        throws IOException {
+    private void initProtocolMetaInfo(Configuration conf) {
       RPC.setProtocolEngine(conf, ProtocolMetaInfoPB.class,
           ProtobufRpcEngine.class);
       ProtocolMetaInfoServerSideTranslatorPB xlator = 
@@ -1018,7 +917,7 @@ public class RPC {
      * @return the server (for convenience)
      */
     public Server addProtocol(RpcKind rpcKind, Class<?> protocolClass,
-        Object protocolImpl) throws IOException {
+        Object protocolImpl) {
       registerProtocolAndImpl(rpcKind, protocolClass, protocolImpl);
       return this;
     }

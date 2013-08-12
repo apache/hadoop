@@ -35,7 +35,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -212,9 +213,11 @@ public class Application {
     NodeManager nodeManager = task.getNodeManager();
     ContainerId containerId = task.getContainerId();
     task.stop();
-    StopContainerRequest stopRequest = recordFactory.newRecordInstance(StopContainerRequest.class);
-    stopRequest.setContainerId(containerId);
-    nodeManager.stopContainer(stopRequest);
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(containerId);
+    StopContainersRequest stopRequest =
+        StopContainersRequest.newInstance(containerIds);
+    nodeManager.stopContainers(stopRequest);
     
     Resources.subtractFrom(used, requestSpec.get(task.getPriority()));
     
@@ -339,10 +342,15 @@ public class Application {
             updateResourceRequests(requests.get(priority), type, task);
 
             // Launch the container
-            StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
-            startRequest.setContainerLaunchContext(createCLC());
-            startRequest.setContainerToken(container.getContainerToken());
-            nodeManager.startContainer(startRequest);
+            StartContainerRequest scRequest =
+                StartContainerRequest.newInstance(createCLC(),
+                  container.getContainerToken());
+            List<StartContainerRequest> list =
+                new ArrayList<StartContainerRequest>();
+            list.add(scRequest);
+            StartContainersRequest allRequests =
+                StartContainersRequest.newInstance(list);
+            nodeManager.startContainers(allRequests);
             break;
           }
         }

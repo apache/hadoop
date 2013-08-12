@@ -221,7 +221,7 @@ Single Node Setup
 * Fully-Distributed Operation
 
    For information on setting up fully-distributed, non-trivial clusters
-   see {{{Cluster Setup}}}.
+   see {{{./ClusterSetup.html}Cluster Setup}}.
 
    Java and JNI are trademarks or registered trademarks of Sun
    Microsystems, Inc. in the United States and other countries.

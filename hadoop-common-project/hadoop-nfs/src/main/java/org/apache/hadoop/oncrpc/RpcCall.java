@@ -33,7 +33,7 @@ public class RpcCall extends RpcMessage {
   private final RpcAuthInfo credential;
   private final RpcAuthInfo verifier;
 
-  protected RpcCall(int xid, int messageType, int rpcVersion, int program,
+  protected RpcCall(int xid, RpcMessage.Type messageType, int rpcVersion, int program,
       int version, int procedure, RpcAuthInfo credential, RpcAuthInfo verifier) {
     super(xid, messageType);
     this.rpcVersion = rpcVersion;
@@ -56,7 +56,7 @@ public class RpcCall extends RpcMessage {
   }
   
   public void validate() {
-    validateMessageType(RPC_CALL);
+    validateMessageType(RpcMessage.Type.RPC_CALL);
     validateRpcVersion();
     // Validate other members
     // Throw exception if validation fails
@@ -88,7 +88,8 @@ public class RpcCall extends RpcMessage {
   }
   
   public static RpcCall read(XDR xdr) {
-    return new RpcCall(xdr.readInt(), xdr.readInt(), xdr.readInt(), xdr.readInt(),
+    return new RpcCall(xdr.readInt(), RpcMessage.Type.fromValue(xdr.readInt()),
+        xdr.readInt(), xdr.readInt(),
         xdr.readInt(), xdr.readInt(), RpcAuthInfo.read(xdr),
         RpcAuthInfo.read(xdr));
   }
@@ -96,7 +97,7 @@ public class RpcCall extends RpcMessage {
   public static void write(XDR out, int xid, int program, int progVersion,
       int procedure) {
     out.writeInt(xid);
-    out.writeInt(RpcMessage.RPC_CALL);
+    out.writeInt(RpcMessage.Type.RPC_CALL.getValue());
     out.writeInt(2);
     out.writeInt(program);
     out.writeInt(progVersion);
@@ -105,7 +106,7 @@ public class RpcCall extends RpcMessage {
   
   @Override
   public String toString() {
-    return String.format("Xid:%d, messageType:%d, rpcVersion:%d, program:%d,"
+    return String.format("Xid:%d, messageType:%s, rpcVersion:%d, program:%d,"
         + " version:%d, procedure:%d, credential:%s, verifier:%s", xid,
         messageType, rpcVersion, program, version, procedure,
         credential.toString(), verifier.toString());

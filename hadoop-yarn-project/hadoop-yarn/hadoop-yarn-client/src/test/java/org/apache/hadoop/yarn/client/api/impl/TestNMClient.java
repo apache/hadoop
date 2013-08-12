@@ -26,14 +26,15 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
@@ -52,16 +53,17 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.client.api.YarnClient;
-import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Before;
@@ -124,11 +126,20 @@ public class TestNMClient {
 
     // wait for app to start
     int iterationsLeft = 30;
+    RMAppAttempt appAttempt = null;
     while (iterationsLeft > 0) {
       ApplicationReport appReport = yarnClient.getApplicationReport(appId);
       if (appReport.getYarnApplicationState() ==
           YarnApplicationState.ACCEPTED) {
         attemptId = appReport.getCurrentApplicationAttemptId();
+        appAttempt =
+            yarnCluster.getResourceManager().getRMContext().getRMApps()
+              .get(attemptId.getApplicationId()).getCurrentAppAttempt();
+        while (true) {
+          if (appAttempt.getAppAttemptState() == RMAppAttemptState.LAUNCHED) {
+            break;
+          }
+        }
         break;
       }
       sleep(1000);
@@ -138,10 +149,16 @@ public class TestNMClient {
       fail("Application hasn't bee started");
     }
 
+    // Just dig into the ResourceManager and get the AMRMToken just for the sake
+    // of testing.
+    UserGroupInformation.setLoginUser(UserGroupInformation
+      .createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
+    UserGroupInformation.getCurrentUser().addToken(appAttempt.getAMRMToken());
+
     // start am rm client
     rmClient =
         (AMRMClientImpl<ContainerRequest>) AMRMClient
-          .<ContainerRequest> createAMRMClient(attemptId);
+          .<ContainerRequest> createAMRMClient();
     rmClient.init(conf);
     rmClient.start();
     assertNotNull(rmClient);
@@ -220,7 +237,7 @@ public class TestNMClient {
 
     for (int i = 0; i < num; ++i) {
       rmClient.addContainerRequest(new ContainerRequest(capability, nodes,
-          racks, priority, 1));
+          racks, priority));
     }
 
     int containersRequestedAny = rmClient.remoteRequestsTable.get(priority)
@@ -303,7 +320,7 @@ public class TestNMClient {
       if (++i < size) {
         // NodeManager may still need some time to make the container started
         testGetContainerStatus(container, i, ContainerState.RUNNING, "",
-            -1000);
+            Arrays.asList(new Integer[] {-1000}));
 
         try {
           nmClient.stopContainer(container.getId(), container.getNodeId());
@@ -314,8 +331,21 @@ public class TestNMClient {
         }
 
         // getContainerStatus can be called after stopContainer
-        testGetContainerStatus(container, i, ContainerState.COMPLETE,
-            "Container killed by the ApplicationMaster.", 143);
+        try {
+          // O is possible if CLEANUP_CONTAINER is executed too late
+          testGetContainerStatus(container, i, ContainerState.COMPLETE,
+              "Container killed by the ApplicationMaster.", Arrays.asList(
+                  new Integer[] {143, 0}));
+        } catch (YarnException e) {
+          // The exception is possible because, after the container is stopped,
+          // it may be removed from NM's context.
+          if (!e.getMessage()
+                .contains("was recently stopped on node manager")) {
+            throw (AssertionError)
+              (new AssertionError("Exception is not expected: " + e).initCause(
+                e));
+          }
+        }
       }
     }
   }
@@ -329,7 +359,7 @@ public class TestNMClient {
   }
 
   private void testGetContainerStatus(Container container, int index,
-      ContainerState state, String diagnostics, int exitStatus)
+      ContainerState state, String diagnostics, List<Integer> exitStatuses)
           throws YarnException, IOException {
     while (true) {
       try {
@@ -341,7 +371,7 @@ public class TestNMClient {
           assertEquals(container.getId(), status.getContainerId());
           assertTrue("" + index + ": " + status.getDiagnostics(),
               status.getDiagnostics().contains(diagnostics));
-          assertEquals(exitStatus, status.getExitStatus());
+          assertTrue(exitStatuses.contains(status.getExitStatus()));
           break;
         }
         Thread.sleep(100);

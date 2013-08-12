@@ -109,4 +109,7 @@ public interface FSWrapper {
   abstract public FileStatus[] listStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnsupportedFileSystemException, IOException;
+  
+  abstract public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+      throws IOException;
 }

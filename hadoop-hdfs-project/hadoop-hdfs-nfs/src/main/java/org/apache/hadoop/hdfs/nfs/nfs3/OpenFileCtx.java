@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.hdfs.nfs.nfs3.WriteCtx.DataState;
 import org.apache.hadoop.io.BytesWritable.Comparator;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
@@ -345,7 +346,7 @@ class OpenFileCtx {
           + " nextOffset:" + nextOffset);
       WriteCtx writeCtx = new WriteCtx(request.getHandle(),
           request.getOffset(), request.getCount(), request.getStableHow(),
-          request.getData().array(), channel, xid, false, WriteCtx.NO_DUMP);
+          request.getData().array(), channel, xid, false, DataState.NO_DUMP);
       addWrite(writeCtx);
       
       // Create an async task and change openFileCtx status to indicate async
@@ -373,7 +374,7 @@ class OpenFileCtx {
           + nextOffset);
       WriteCtx writeCtx = new WriteCtx(request.getHandle(),
           request.getOffset(), request.getCount(), request.getStableHow(),
-          request.getData().array(), channel, xid, false, WriteCtx.ALLOW_DUMP);
+          request.getData().array(), channel, xid, false, DataState.ALLOW_DUMP);
       addWrite(writeCtx);
 
       // Check if need to dump some pending requests to file
@@ -699,7 +700,7 @@ class OpenFileCtx {
       nextOffset = fos.getPos();
 
       // Reduce memory occupation size if request was allowed dumped
-      if (writeCtx.getDataState() == WriteCtx.ALLOW_DUMP) {
+      if (writeCtx.getDataState() == DataState.ALLOW_DUMP) {
         updateNonSequentialWriteInMemory(-count);
       }
       

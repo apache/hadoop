@@ -20,7 +20,9 @@ package org.apache.hadoop.util;
 
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.compress.Lz4Codec;
 import org.apache.hadoop.io.compress.SnappyCodec;
+import org.apache.hadoop.io.compress.bzip2.Bzip2Factory;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,7 +37,7 @@ public class NativeLibraryChecker {
     String usage = "NativeLibraryChecker [-a|-h]\n"
         + "  -a  use -a to check all libraries are available\n"
         + "      by default just check hadoop library is available\n"
-        + "      exit with error code if check failed\n"
+        + "      exit with error code 1 if check failed\n"
         + "  -h  print this message\n";
     if (args.length > 1 ||
         (args.length == 1 &&
@@ -51,23 +53,44 @@ public class NativeLibraryChecker {
       }
       checkAll = true;
     }
+    Configuration conf = new Configuration();
     boolean nativeHadoopLoaded = NativeCodeLoader.isNativeCodeLoaded();
     boolean zlibLoaded = false;
     boolean snappyLoaded = false;
     // lz4 is linked within libhadoop
     boolean lz4Loaded = nativeHadoopLoaded;
+    boolean bzip2Loaded = Bzip2Factory.isNativeBzip2Loaded(conf);
+    String hadoopLibraryName = "";
+    String zlibLibraryName = "";
+    String snappyLibraryName = "";
+    String lz4LibraryName = "";
+    String bzip2LibraryName = "";
     if (nativeHadoopLoaded) {
-      zlibLoaded = ZlibFactory.isNativeZlibLoaded(new Configuration());
+      hadoopLibraryName = NativeCodeLoader.getLibraryName();
+      zlibLoaded = ZlibFactory.isNativeZlibLoaded(conf);
+      if (zlibLoaded) {
+        zlibLibraryName = ZlibFactory.getLibraryName();
+      }
       snappyLoaded = NativeCodeLoader.buildSupportsSnappy() &&
           SnappyCodec.isNativeCodeLoaded();
+      if (snappyLoaded && NativeCodeLoader.buildSupportsSnappy()) {
+        snappyLibraryName = SnappyCodec.getLibraryName();
+      }
+      if (lz4Loaded) {
+        lz4LibraryName = Lz4Codec.getLibraryName();
+      }
+      if (bzip2Loaded) {
+        bzip2LibraryName = Bzip2Factory.getLibraryName(conf);
+      }
     }
     System.out.println("Native library checking:");
-    System.out.printf("hadoop: %b\n", nativeHadoopLoaded);
-    System.out.printf("zlib:   %b\n", zlibLoaded);
-    System.out.printf("snappy: %b\n", snappyLoaded);
-    System.out.printf("lz4:    %b\n", lz4Loaded);
+    System.out.printf("hadoop: %b %s\n", nativeHadoopLoaded, hadoopLibraryName);
+    System.out.printf("zlib:   %b %s\n", zlibLoaded, zlibLibraryName);
+    System.out.printf("snappy: %b %s\n", snappyLoaded, snappyLibraryName);
+    System.out.printf("lz4:    %b %s\n", lz4Loaded, lz4LibraryName);
+    System.out.printf("bzip2:  %b %s\n", bzip2Loaded, bzip2LibraryName);
     if ((!nativeHadoopLoaded) ||
-        (checkAll && !(zlibLoaded && snappyLoaded && lz4Loaded))) {
+        (checkAll && !(zlibLoaded && snappyLoaded && lz4Loaded && bzip2Loaded))) {
       // return 1 to indicated check failed
       ExitUtil.terminate(1);
     }

@@ -14,5 +14,6 @@
 *.sh     text eol=lf
 
 *.bat    text eol=crlf
+*.cmd    text eol=crlf
 *.csproj text merge=union eol=crlf
 *.sln    text merge=union eol=crlf

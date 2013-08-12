@@ -45,12 +45,12 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher.EventType;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -162,8 +162,8 @@ public class TestContainerLauncherImpl {
     try {
       ContainerId contId = makeContainerId(0l, 0, 0, 1);
       TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
-      StartContainerResponse startResp = 
-        recordFactory.newRecordInstance(StartContainerResponse.class);
+      StartContainersResponse startResp =
+        recordFactory.newRecordInstance(StartContainersResponse.class);
       startResp.setAllServicesMetaData(serviceResponse);
       
 
@@ -176,14 +176,14 @@ public class TestContainerLauncherImpl {
         .thenReturn(contId);
       when(mockLaunchEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockLaunchEvent.getContainerMgrAddress()).thenReturn(cmAddress);
-      when(mockCM.startContainer(any(StartContainerRequest.class))).thenReturn(startResp);
+      when(mockCM.startContainers(any(StartContainersRequest.class))).thenReturn(startResp);
       when(mockLaunchEvent.getContainerToken()).thenReturn(
           createNewContainerToken(contId, cmAddress));
       ut.handle(mockLaunchEvent);
       
       ut.waitForPoolToIdle();
       
-      verify(mockCM).startContainer(any(StartContainerRequest.class));
+      verify(mockCM).startContainers(any(StartContainersRequest.class));
       
       LOG.info("inserting cleanup event");
       ContainerLauncherEvent mockCleanupEvent = 
@@ -198,7 +198,7 @@ public class TestContainerLauncherImpl {
       
       ut.waitForPoolToIdle();
       
-      verify(mockCM).stopContainer(any(StopContainerRequest.class));
+      verify(mockCM).stopContainers(any(StopContainersRequest.class));
     } finally {
       ut.stop();
     }
@@ -224,8 +224,8 @@ public class TestContainerLauncherImpl {
       ContainerId contId = makeContainerId(0l, 0, 0, 1);
       TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
-      StartContainerResponse startResp = 
-        recordFactory.newRecordInstance(StartContainerResponse.class);
+      StartContainersResponse startResp =
+        recordFactory.newRecordInstance(StartContainersResponse.class);
       startResp.setAllServicesMetaData(serviceResponse);
 
       LOG.info("inserting cleanup event");
@@ -241,7 +241,7 @@ public class TestContainerLauncherImpl {
       
       ut.waitForPoolToIdle();
       
-      verify(mockCM, never()).stopContainer(any(StopContainerRequest.class));
+      verify(mockCM, never()).stopContainers(any(StopContainersRequest.class));
 
       LOG.info("inserting launch event");
       ContainerRemoteLaunchEvent mockLaunchEvent = 
@@ -252,14 +252,14 @@ public class TestContainerLauncherImpl {
         .thenReturn(contId);
       when(mockLaunchEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockLaunchEvent.getContainerMgrAddress()).thenReturn(cmAddress);
-      when(mockCM.startContainer(any(StartContainerRequest.class))).thenReturn(startResp);
+      when(mockCM.startContainers(any(StartContainersRequest.class))).thenReturn(startResp);
       when(mockLaunchEvent.getContainerToken()).thenReturn(
           createNewContainerToken(contId, cmAddress));
       ut.handle(mockLaunchEvent);
       
       ut.waitForPoolToIdle();
       
-      verify(mockCM, never()).startContainer(any(StartContainerRequest.class));
+      verify(mockCM, never()).startContainers(any(StartContainersRequest.class));
     } finally {
       ut.stop();
     }
@@ -286,8 +286,8 @@ public class TestContainerLauncherImpl {
       ContainerId contId = makeContainerId(0l, 0, 0, 1);
       TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
-      StartContainerResponse startResp =
-        recordFactory.newRecordInstance(StartContainerResponse.class);
+      StartContainersResponse startResp =
+        recordFactory.newRecordInstance(StartContainersResponse.class);
       startResp.setAllServicesMetaData(serviceResponse);
 
       LOG.info("inserting launch event");
@@ -299,20 +299,20 @@ public class TestContainerLauncherImpl {
         .thenReturn(contId);
       when(mockLaunchEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockLaunchEvent.getContainerMgrAddress()).thenReturn(cmAddress);
-      when(mockCM.startContainer(any(StartContainerRequest.class))).thenReturn(startResp);
+      when(mockCM.startContainers(any(StartContainersRequest.class))).thenReturn(startResp);
       when(mockLaunchEvent.getContainerToken()).thenReturn(
           createNewContainerToken(contId, cmAddress));
       ut.handle(mockLaunchEvent);
 
       ut.waitForPoolToIdle();
 
-      verify(mockCM).startContainer(any(StartContainerRequest.class));
+      verify(mockCM).startContainers(any(StartContainersRequest.class));
 
       // skip cleanup and make sure stop kills the container
 
     } finally {
       ut.stop();
-      verify(mockCM).stopContainer(any(StopContainerRequest.class));
+      verify(mockCM).stopContainers(any(StopContainersRequest.class));
     }
   }
   
@@ -341,8 +341,8 @@ public class TestContainerLauncherImpl {
       ContainerId contId = makeContainerId(0l, 0, 0, 1);
       TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
-      StartContainerResponse startResp = 
-        recordFactory.newRecordInstance(StartContainerResponse.class);
+      StartContainersResponse startResp =
+        recordFactory.newRecordInstance(StartContainersResponse.class);
       startResp.setAllServicesMetaData(serviceResponse);
       
      
@@ -415,7 +415,7 @@ public class TestContainerLauncherImpl {
       this.completeLaunchBarrier = completeLaunchBarrier;
     }
     @Override
-    public StartContainerResponse startContainer(StartContainerRequest request)
+    public StartContainersResponse startContainers(StartContainersRequest request)
         throws IOException {
       try {
         startLaunchBarrier.await();
@@ -433,16 +433,14 @@ public class TestContainerLauncherImpl {
     }
 
     @Override
-    public StopContainerResponse stopContainer(StopContainerRequest request)
+    public StopContainersResponse stopContainers(StopContainersRequest request)
         throws IOException {
-    
       return null;
     }
 
     @Override
-    public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws IOException {
-    
+    public GetContainerStatusesResponse getContainerStatuses(
+        GetContainerStatusesRequest request) throws IOException {
       return null;
     }
   }

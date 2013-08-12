@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottab
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
@@ -80,6 +81,7 @@ public class FSImageSerialization {
   static private final class TLData {
     final DeprecatedUTF8 U_STR = new DeprecatedUTF8();
     final ShortWritable U_SHORT = new ShortWritable();
+    final IntWritable U_INT = new IntWritable();
     final LongWritable U_LONG = new LongWritable();
     final FsPermission FILE_PERM = new FsPermission((short) 0);
   }
@@ -350,9 +352,9 @@ public class FSImageSerialization {
   
   /** read the long value */
   static long readLong(DataInput in) throws IOException {
-    LongWritable ustr = TL_DATA.get().U_LONG;
-    ustr.readFields(in);
-    return ustr.get();
+    LongWritable uLong = TL_DATA.get().U_LONG;
+    uLong.readFields(in);
+    return uLong.get();
   }
 
   /** write the long value */
@@ -360,6 +362,20 @@ public class FSImageSerialization {
     LongWritable uLong = TL_DATA.get().U_LONG;
     uLong.set(value);
     uLong.write(out);
+  }
+  
+  /** read the int value */
+  static int readInt(DataInput in) throws IOException {
+    IntWritable uInt = TL_DATA.get().U_INT;
+    uInt.readFields(in);
+    return uInt.get();
+  }
+  
+  /** write the int value */
+  static void writeInt(int value, DataOutputStream out) throws IOException {
+    IntWritable uInt = TL_DATA.get().U_INT;
+    uInt.set(value);
+    uInt.write(out);
   }
 
   /** read short value */
@@ -414,8 +430,13 @@ public class FSImageSerialization {
   private static void writeLocalName(INodeAttributes inode, DataOutput out)
       throws IOException {
     final byte[] name = inode.getLocalNameBytes();
-    out.writeShort(name.length);
-    out.write(name);
+    writeBytes(name, out);
+  }
+  
+  public static void writeBytes(byte[] data, DataOutput out)
+      throws IOException {
+    out.writeShort(data.length);
+    out.write(data);
   }
 
   /**

@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.KerberosInfo;
 
 /**
@@ -42,5 +43,6 @@ public interface RefreshAuthorizationPolicyProtocol {
    * Refresh the service-level authorization policy in-effect.
    * @throws IOException
    */
+  @Idempotent
   void refreshServiceAcl() throws IOException;
 }

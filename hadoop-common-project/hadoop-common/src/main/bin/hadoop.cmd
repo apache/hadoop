@@ -119,7 +119,7 @@ call :updatepath %HADOOP_BIN_PATH%
     goto :eof
   )
   
-  set corecommands=fs version jar distcp daemonlog archive
+  set corecommands=fs version jar checknative distcp daemonlog archive
   for %%i in ( %corecommands% ) do (
     if %hadoop-command% == %%i set corecommand=true  
   )
@@ -155,6 +155,10 @@ call :updatepath %HADOOP_BIN_PATH%
 
 :jar
   set CLASS=org.apache.hadoop.util.RunJar
+  goto :eof
+
+:checknative
+  set CLASS=org.apache.hadoop.util.NativeLibraryChecker
   goto :eof
 
 :distcp
@@ -222,6 +226,7 @@ call :updatepath %HADOOP_BIN_PATH%
   @echo   fs                   run a generic filesystem user client
   @echo   version              print the version
   @echo   jar ^<jar^>            run a jar file
+  @echo   checknative [-a^|-h]  check native hadoop and compression libraries availability
   @echo   distcp ^<srcurl^> ^<desturl^> copy file or directories recursively
   @echo   archive -archiveName NAME -p ^<parent path^> ^<src^>* ^<dest^> create a hadoop archive
   @echo   classpath            prints the class path needed to get the

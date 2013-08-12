@@ -239,6 +239,21 @@ Java_org_apache_hadoop_io_compress_bzip2_Bzip2Compressor_end(
     }
 }
 
+JNIEXPORT jstring JNICALL
+Java_org_apache_hadoop_io_compress_bzip2_Bzip2Compressor_getLibraryName(JNIEnv *env, jclass class) {
+#ifdef UNIX
+  if (dlsym_BZ2_bzCompress) {
+    Dl_info dl_info;
+    if(dladdr(
+        dlsym_BZ2_bzCompress,
+        &dl_info)) {
+      return (*env)->NewStringUTF(env, dl_info.dli_fname);
+    }
+  }
+#endif
+  return (*env)->NewStringUTF(env, HADOOP_BZIP2_LIBRARY);
+}
+
 /**
  * vim: sw=2: ts=2: et:
  */

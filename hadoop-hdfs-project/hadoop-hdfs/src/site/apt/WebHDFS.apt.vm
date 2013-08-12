@@ -185,6 +185,10 @@ curl -i --negotiate -u : "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=..."
 curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?delegation=<TOKEN>&op=..."
 +---------------------------------
 
+  []
+ 
+  See also: {{{../hadoop-common/HttpAuthentication.html}Authentication for Hadoop HTTP web-consoles}}
+
 * {Proxy Users}
 
   When the proxy user feature is enabled, a proxy user <P> may submit a request on behalf of another user <U>.
@@ -971,6 +975,12 @@ Transfer-Encoding: chunked
   See {{{http://tools.ietf.org/id/draft-zyp-json-schema-03.html}draft-zyp-json-schema-03}}
   for the syntax definitions of the JSON schemas.
 
+  <<Note>> that the default value of
+  {{{http://tools.ietf.org/id/draft-zyp-json-schema-03.html#additionalProperties}<<<additionalProperties>>>}}
+  is an empty schema which allows any value for additional properties.
+  Therefore, all WebHDFS JSON responses allow any additional property.
+  However, if additional properties are included in the responses, they are
+  considered as optional properties in order to maintain compatibility.
 
 ** {Boolean JSON Schema}
 

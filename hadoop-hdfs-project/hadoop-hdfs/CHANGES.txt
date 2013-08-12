@@ -12,7 +12,7 @@ Release 2.3.0 - UNRELEASED
 
   BUG FIXES
 
-Release 2.2.0 - UNRELEASED
+Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -20,9 +20,29 @@ Release 2.2.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-4657.  Limit the number of blocks logged by the NN after a block
+    report to a configurable value.  (Aaron T. Myers via Colin Patrick
+    McCabe)
+
+    HDFS-4278. Log an ERROR when DFS_BLOCK_ACCESS_TOKEN_ENABLE config is
+    disabled but security is turned on. (Kousuke Saruta via harsh)
+
+    HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
+    (Colin Patrick McCabe)
+
+    HDFS-5004. Add additional JMX bean for NameNode status data. Contributed
+    by Trevor Lorimer.
+
   OPTIMIZATIONS
 
   BUG FIXES
+    HDFS-5034.  Remove debug prints from GetFileLinkInfo (Andrew Wang via Colin
+    Patrick McCabe)
+
+    HDFS-5035.  getFileLinkStatus and rename do not correctly check permissions
+    of symlinks.  (Andrew Wang via Colin Patrick McCabe)
+
+    HDFS-5065. TestSymlinkHdfsDisable fails on Windows. (ivanmi)
 
 Release 2.1.1-beta - UNRELEASED
 
@@ -30,19 +50,43 @@ Release 2.1.1-beta - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-4962 Use enum for nfs constants (Nicholas SZE via jing9)
+
+    HDFS-5071 Change hdfs-nfs parent project to hadoop-project (brandonli)
+
+    HDFS-4763 Add script changes/utility for starting NFS gateway (brandonli)
+
   IMPROVEMENTS
 
-    HADOOP-9418.  Add symlink resolution support to DistributedFileSystem.
-    (Andrew Wang via Colin Patrick McCabe)
+    HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
+    contain additional properties.  (szetszwo)
+
+    HDFS-5061. Make FSNameSystem#auditLoggers an unmodifiable list. 
+    (Arpit Agarwal via suresh)
+
+    HDFS-4905. Add appendToFile command to "hdfs dfs". (Arpit Agarwal via
+    cnauroth)
+
+    HDFS-4926. Namenode webserver's page has a tooltip that is inconsistent 
+    with the datanode HTML link. (Vivek Ganesan via jing9)
+
+    HDFS-5047. Supress logging of full stack trace of quota and lease
+    exceptions. (Robert Parker via kihwal)
 
   OPTIMIZATIONS
 
   BUG FIXES
 
-    HDFS-4982. JournalNode should relogin from keytab before fetching logs
-    from other JNs (todd)
+    HDFS-5028. LeaseRenewer throws ConcurrentModificationException when timeout.
+    (zhaoyunjiong via szetszwo)
 
-Release 2.1.0-beta - 2013-07-02
+    HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
+    instead of 0 to avoid confusing applications. (brandonli)
+
+    HDFS-4993. Fsck can fail if a file is renamed or deleted. (Robert Parker
+    via kihwal)
+
+Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
 
@@ -58,6 +102,8 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4866. Protocol buffer support cannot compile under C. (Arpit Agarwal via
     cnauroth)
+
+    HDFS-5083. Update the HDFS compatibility version range. (kihwal)
 
   NEW FEATURES
 
@@ -102,6 +148,14 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4373. Add HTTP API for querying NameNode startup progress. (cnauroth)
 
     HDFS-4374. Display NameNode startup progress in UI. (cnauroth)
+
+    HDFS-4974. Add Idempotent and AtMostOnce annotations to namenode
+    protocol methods. (suresh)
+
+    HDFS-4979. Implement retry cache on Namenode. (suresh)
+
+    HDFS-5025. Record ClientId and CallId in EditLog to enable rebuilding 
+    retry cache in case of HA failover. (Jing Zhao via suresh)
     
   IMPROVEMENTS
 
@@ -226,9 +280,34 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4992. Make balancer's mover thread count and dispatcher thread count
     configurable.  (Max Lapan via szetszwo)
 
+    HDFS-4996. ClientProtocol#metaSave can be made idempotent by overwriting the
+    output file instead of appending to it. (cnauroth)
+
+    HADOOP-9418.  Add symlink support to DistributedFileSystem (Andrew Wang via
+    Colin Patrick McCabe)
+
+    HDFS-5007. Replace hard-coded property keys with DFSConfigKeys fields. 
+    (Kousuke Saruta via jing9)
+
+    HDFS-5008. Make ClientProtocol#abandonBlock() idempotent. (jing9)
+
+    HADOOP-9760. Move GSet and related classes to common from HDFS.
+    (suresh)
+
+    HDFS-5020. Make DatanodeProtocol#blockReceivedAndDeleted idempotent. 
+    (jing9)
+
+    HDFS-5024. Make DatanodeProtocol#commitBlockSynchronization idempotent. 
+    (Arpit Agarwal via jing9)
+
+    HDFS-3880. Use Builder to build RPC server in HDFS.
+    (Brandon Li and Junping Du via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-4465. Optimize datanode ReplicasMap and ReplicaInfo. (atm)
+
+    HDFS-5027. On startup, DN should scan volumes in parallel. (atm)
 
   BUG FIXES
 
@@ -473,6 +552,22 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4980. Incorrect logging.properties file for hadoop-httpfs.
     (Mark Grover via suresh)
+
+    HDFS-4999. Fix TestShortCircuitLocalRead on branch-2. (cmccabe via kihwal)
+
+    HDFS-4687. TestDelegationTokenForProxyUser#testWebHdfsDoAs is flaky with
+    JDK7. (Andrew Wang via atm)
+
+    HDFS-5003. TestNNThroughputBenchmark failed caused by existing directories.
+    (Xi Fang via cnauroth)
+
+    HDFS-5018. Misspelled DFSConfigKeys#DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT
+    in javadoc of DatanodeInfo#isStale(). (Ted Yu via jing9)
+
+    HDFS-4602. TestBookKeeperHACheckpoints fails. (umamahesh)
+
+    HDFS-5016. Deadlock in pipeline recovery causes Datanode to be marked dead.
+    (suresh)
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
@@ -1003,6 +1098,12 @@ Release 2.1.0-beta - 2013-07-02
     consistently.  (szetszwo)
 
     HDFS-4978. Make disallowSnapshot idempotent. (jing9)
+
+    HDFS-5005. Move SnapshotException and SnapshotAccessControlException 
+    to o.a.h.hdfs.protocol. (jing9)
+
+    HDFS-4982. JournalNode should relogin from keytab before fetching logs
+    from other JNs (todd)
 
 Release 2.0.5-alpha - 06/06/2013
 
@@ -3081,9 +3182,14 @@ Release 0.23.10 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-5010. Reduce the frequency of getCurrentUser() calls from namenode
+    (kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-4998. TestUnderReplicatedBlocks fails intermittently (kihwal)
 
 Release 0.23.9 - 2013-07-08
 

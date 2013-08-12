@@ -58,6 +58,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.junit.Test;
 
 import org.mockito.invocation.InvocationOnMock;
@@ -112,6 +113,36 @@ public class TestFetcher {
   @After
   public void teardown() {
     LOG.info("<<<< " + name.getMethodName());
+  }
+  
+  @Test
+  public void testReduceOutOfDiskSpace() throws Throwable {
+    LOG.info("testReduceOutOfDiskSpace");
+    
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
+        r, metrics, except, key, connection);
+
+    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 10, 10, 1);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    header.write(new DataOutputStream(bout));
+
+    ByteArrayInputStream in = new ByteArrayInputStream(bout.toByteArray());
+    
+    when(connection.getResponseCode()).thenReturn(200);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+    .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+    .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+    when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
+    .thenReturn(replyHash);
+    when(connection.getInputStream()).thenReturn(in);
+    
+    when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
+    .thenThrow(new DiskErrorException("No disk space available"));
+  
+    underTest.copyFromHost(host);
+    verify(ss).reportLocalError(any(IOException.class));
   }
   
   @Test(timeout=30000)

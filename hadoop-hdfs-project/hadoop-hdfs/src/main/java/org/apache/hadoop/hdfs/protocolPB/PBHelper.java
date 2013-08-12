@@ -1056,7 +1056,7 @@ public class PBHelper {
         fs.getPath().toByteArray(),
         fs.hasFileId()? fs.getFileId(): INodeId.GRANDFATHER_INODE_ID,
         fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null,
-        fs.hasChildrenNum() ? fs.getChildrenNum() : 0);
+        fs.hasChildrenNum() ? fs.getChildrenNum() : -1);
   }
 
   public static SnapshottableDirectoryStatus convert(

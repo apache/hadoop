@@ -81,6 +81,8 @@ public class BackupStore<K,V> {
   private boolean inReset = false;
   private boolean clearMarkFlag = false;
   private boolean lastSegmentEOF = false;
+  
+  private Configuration conf;
 
   public BackupStore(Configuration conf, TaskAttemptID taskid)
   throws IOException {
@@ -105,6 +107,8 @@ public class BackupStore<K,V> {
     memCache = new MemoryCache(maxSize);
     fileCache = new FileCache(conf);
     tid = taskid;
+    
+    this.conf = conf;
     
     LOG.info("Created a new BackupStore with a memory of " + maxSize);
 
@@ -500,7 +504,7 @@ public class BackupStore<K,V> {
       Reader<K, V> reader = 
         new org.apache.hadoop.mapreduce.task.reduce.InMemoryReader<K, V>(null, 
             (org.apache.hadoop.mapred.TaskAttemptID) tid, 
-            dataOut.getData(), 0, usedSize);
+            dataOut.getData(), 0, usedSize, conf);
       Segment<K, V> segment = new Segment<K, V>(reader, false);
       segmentList.add(segment);
       LOG.debug("Added Memory Segment to List. List Size is " + 

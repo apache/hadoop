@@ -202,4 +202,11 @@ public interface NameNodeMXBean {
    * @return the compilation information, as a JSON string.
    */
   public String getCompileInfo();
+
+  /**
+   * Get the list of corrupt files
+   *
+   * @return the list of corrupt files, as a JSON string.
+   */
+  public String getCorruptFiles();
 }

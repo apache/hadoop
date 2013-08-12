@@ -51,6 +51,9 @@
     <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\lz4.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\lz4hc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Compressor.c">
       <Filter>Source Files</Filter>
     </ClCompile>

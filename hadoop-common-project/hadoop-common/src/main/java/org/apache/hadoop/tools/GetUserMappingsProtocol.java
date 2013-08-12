@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.retry.Idempotent;
 
 /**
  * Protocol implemented by the Name Node and Job Tracker which maps users to
@@ -41,5 +42,6 @@ public interface GetUserMappingsProtocol {
    * @return The set of groups the user belongs to.
    * @throws IOException
    */
+  @Idempotent
   public String[] getGroupsForUser(String user) throws IOException;
 }

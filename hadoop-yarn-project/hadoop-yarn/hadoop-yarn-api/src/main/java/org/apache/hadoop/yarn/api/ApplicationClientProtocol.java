@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -113,6 +114,9 @@ public interface ApplicationClientProtocol {
    * @return (empty) response on accepting the submission
    * @throws YarnException
    * @throws IOException
+   * @throws InvalidResourceRequestException
+   *           The exception is thrown when a {@link ResourceRequest} is out of
+   *           the range of the configured lower and upper resource boundaries.
    * @see #getNewApplication(GetNewApplicationRequest)
    */
   @Public

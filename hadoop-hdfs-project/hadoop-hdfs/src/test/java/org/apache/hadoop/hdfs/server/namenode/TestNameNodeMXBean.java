@@ -126,6 +126,10 @@ public class TestNameNodeMXBean {
       // get attribute "CompileInfo"
       String compileInfo = (String) mbs.getAttribute(mxbeanName, "CompileInfo");
       assertEquals("Bad value for CompileInfo", fsn.getCompileInfo(), compileInfo);
+      // get attribute CorruptFiles
+      String corruptFiles = (String) (mbs.getAttribute(mxbeanName,
+          "CorruptFiles"));
+      assertEquals("Bad value for CorruptFiles", fsn.getCorruptFiles(), corruptFiles);
       // get attribute NameDirStatuses
       String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));

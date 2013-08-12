@@ -155,7 +155,7 @@ public class TestEditLog {
         INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
             namesystem.allocateNewInodeId(), p, replication, blockSize, 0, "",
             "", null);
-        editLog.logOpenFile("/filename" + (startIndex + i), inode);
+        editLog.logOpenFile("/filename" + (startIndex + i), inode, false);
         editLog.logCloseFile("/filename" + (startIndex + i), inode);
         editLog.logSync();
       }
@@ -912,14 +912,14 @@ public class TestEditLog {
       log.setMetricsForTests(mockMetrics);
 
       for (int i = 0; i < 400; i++) {
-        log.logDelete(oneKB, 1L);
+        log.logDelete(oneKB, 1L, false);
       }
       // After ~400KB, we're still within the 512KB buffer size
       Mockito.verify(mockMetrics, Mockito.times(0)).addSync(Mockito.anyLong());
       
       // After ~400KB more, we should have done an automatic sync
       for (int i = 0; i < 400; i++) {
-        log.logDelete(oneKB, 1L);
+        log.logDelete(oneKB, 1L, false);
       }
       Mockito.verify(mockMetrics, Mockito.times(1)).addSync(Mockito.anyLong());
 

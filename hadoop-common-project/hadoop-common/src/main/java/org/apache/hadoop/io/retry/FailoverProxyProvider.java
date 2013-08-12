@@ -51,8 +51,8 @@ public interface FailoverProxyProvider<T> extends Closeable {
   /**
    * Return a reference to the interface this provider's proxy objects actually
    * implement. If any of the methods on this interface are annotated as being
-   * {@link Idempotent}, then this fact will be passed to the
-   * {@link RetryPolicy#shouldRetry(Exception, int, int, boolean)} method on
+   * {@link Idempotent} or {@link AtMostOnce}, then this fact will be passed to
+   * the {@link RetryPolicy#shouldRetry(Exception, int, int, boolean)} method on
    * error, for use in determining whether or not failover should be attempted.
    * 
    * @return the interface implemented by the proxy objects returned by

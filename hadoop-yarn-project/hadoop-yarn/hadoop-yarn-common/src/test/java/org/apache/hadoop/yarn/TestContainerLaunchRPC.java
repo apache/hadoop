@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.List;
 
 import junit.framework.Assert;
 
@@ -31,12 +33,13 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -104,12 +107,15 @@ public class TestContainerLaunchRPC {
           TestRPC.newContainerToken(nodeId, "password".getBytes(),
             containerTokenIdentifier);
 
-      StartContainerRequest scRequest = recordFactory
-          .newRecordInstance(StartContainerRequest.class);
-      scRequest.setContainerLaunchContext(containerLaunchContext);
-      scRequest.setContainerToken(containerToken);
+      StartContainerRequest scRequest =
+          StartContainerRequest.newInstance(containerLaunchContext,
+            containerToken);
+      List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+      list.add(scRequest);
+      StartContainersRequest allRequests =
+          StartContainersRequest.newInstance(list);
       try {
-        proxy.startContainer(scRequest);
+        proxy.startContainers(allRequests);
       } catch (Exception e) {
         LOG.info(StringUtils.stringifyException(e));
         Assert.assertEquals("Error, exception is not: "
@@ -129,17 +135,8 @@ public class TestContainerLaunchRPC {
     private ContainerStatus status = null;
 
     @Override
-    public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnException {
-      GetContainerStatusResponse response = recordFactory
-          .newRecordInstance(GetContainerStatusResponse.class);
-      response.setStatus(status);
-      return response;
-    }
-
-    @Override
-    public StartContainerResponse startContainer(StartContainerRequest request)
-        throws YarnException, IOException {
+    public StartContainersResponse startContainers(
+        StartContainersRequest requests) throws YarnException, IOException {
       try {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(10000);
@@ -151,11 +148,22 @@ public class TestContainerLaunchRPC {
     }
 
     @Override
-    public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnException {
+    public StopContainersResponse
+        stopContainers(StopContainersRequest requests) throws YarnException,
+            IOException {
       Exception e = new Exception("Dummy function", new Exception(
           "Dummy function cause"));
       throw new YarnException(e);
+    }
+
+    @Override
+    public GetContainerStatusesResponse getContainerStatuses(
+        GetContainerStatusesRequest request) throws YarnException, IOException {
+      List<ContainerStatus> list = new ArrayList<ContainerStatus>();
+      list.add(status);
+      GetContainerStatusesResponse response =
+          GetContainerStatusesResponse.newInstance(list, null);
+      return null;
     }
   }
 }

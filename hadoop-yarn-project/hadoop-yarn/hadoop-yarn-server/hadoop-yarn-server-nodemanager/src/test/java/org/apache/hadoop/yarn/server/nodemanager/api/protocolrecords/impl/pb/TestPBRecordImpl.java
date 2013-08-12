@@ -21,8 +21,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+
+import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -30,7 +33,9 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalResourceStatusProto;
@@ -42,7 +47,6 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerAc
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHeartbeatResponse;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceStatusType;
-import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 
@@ -80,7 +84,7 @@ public class TestPBRecordImpl {
     e.setStackTrace(new StackTraceElement[] {
         new StackTraceElement("foo", "bar", "baz", 10),
         new StackTraceElement("sbb", "one", "onm", 10) });
-    ret.setException(YarnServerBuilderUtils.newSerializedException(e));
+    ret.setException(SerializedException.newInstance(e));
     return ret;
   }
 
@@ -176,4 +180,33 @@ public class TestPBRecordImpl {
     assertEquals(createResource(), rsrcD.getResourceSpecs().get(0).getResource());
   }
 
+
+  @Test(timeout=10000)
+  public void testSerializedExceptionDeSer() throws Exception{
+    // without cause
+    YarnException yarnEx = new YarnException("Yarn_Exception");
+    SerializedException serEx = SerializedException.newInstance(yarnEx);
+    Throwable throwable = serEx.deSerialize();
+    Assert.assertEquals(yarnEx.getClass(), throwable.getClass());
+    Assert.assertEquals(yarnEx.getMessage(), throwable.getMessage());
+
+    // with cause
+    IOException ioe = new IOException("Test_IOException");
+    RuntimeException runtimeException =
+        new RuntimeException("Test_RuntimeException", ioe);
+    YarnException yarnEx2 =
+        new YarnException("Test_YarnException", runtimeException);
+
+    SerializedException serEx2 = SerializedException.newInstance(yarnEx2);
+    Throwable throwable2 = serEx2.deSerialize();
+    throwable2.printStackTrace();
+    Assert.assertEquals(yarnEx2.getClass(), throwable2.getClass());
+    Assert.assertEquals(yarnEx2.getMessage(), throwable2.getMessage());
+
+    Assert.assertEquals(runtimeException.getClass(), throwable2.getCause().getClass());
+    Assert.assertEquals(runtimeException.getMessage(), throwable2.getCause().getMessage());
+
+    Assert.assertEquals(ioe.getClass(), throwable2.getCause().getCause().getClass());
+    Assert.assertEquals(ioe.getMessage(), throwable2.getCause().getCause().getMessage());
+  }
 }

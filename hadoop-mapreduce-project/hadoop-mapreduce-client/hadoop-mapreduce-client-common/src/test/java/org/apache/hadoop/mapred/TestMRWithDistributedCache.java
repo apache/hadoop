@@ -89,22 +89,26 @@ public class TestMRWithDistributedCache extends TestCase {
     @Override
     public void setup(Context context) throws IOException {
       Configuration conf = context.getConfiguration();
-      Path[] files = context.getLocalCacheFiles();
-      Path[] archives = context.getLocalCacheArchives();
+      Path[] localFiles = context.getLocalCacheFiles();
+      URI[] files = context.getCacheFiles();
+      Path[] localArchives = context.getLocalCacheArchives();
+      URI[] archives = context.getCacheArchives();
       FileSystem fs = LocalFileSystem.get(conf);
 
       // Check that 2 files and 2 archives are present
+      TestCase.assertEquals(2, localFiles.length);
+      TestCase.assertEquals(2, localArchives.length);
       TestCase.assertEquals(2, files.length);
       TestCase.assertEquals(2, archives.length);
 
       // Check lengths of the files
-      TestCase.assertEquals(1, fs.getFileStatus(files[0]).getLen());
-      TestCase.assertTrue(fs.getFileStatus(files[1]).getLen() > 1);
+      TestCase.assertEquals(1, fs.getFileStatus(localFiles[0]).getLen());
+      TestCase.assertTrue(fs.getFileStatus(localFiles[1]).getLen() > 1);
 
       // Check extraction of the archive
-      TestCase.assertTrue(fs.exists(new Path(archives[0],
+      TestCase.assertTrue(fs.exists(new Path(localArchives[0],
           "distributed.jar.inside3")));
-      TestCase.assertTrue(fs.exists(new Path(archives[1],
+      TestCase.assertTrue(fs.exists(new Path(localArchives[1],
           "distributed.jar.inside4")));
 
       // Check the class loaders

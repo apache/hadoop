@@ -33,10 +33,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -59,11 +59,14 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -81,16 +84,7 @@ public class YarnClientImpl extends YarnClient {
   private static final String ROOT = "root";
 
   public YarnClientImpl() {
-    this(null);
-  }
-  
-  public YarnClientImpl(InetSocketAddress rmAddress) {
-    this(YarnClientImpl.class.getName(), rmAddress);
-  }
-
-  public YarnClientImpl(String name, InetSocketAddress rmAddress) {
-    super(name);
-    this.rmAddress = rmAddress;
+    super(YarnClientImpl.class.getName());
   }
 
   private static InetSocketAddress getRmAddress(Configuration conf) {
@@ -100,9 +94,7 @@ public class YarnClientImpl extends YarnClient {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    if (this.rmAddress == null) {
-      this.rmAddress = getRmAddress(conf);
-    }
+    this.rmAddress = getRmAddress(conf);
     statePollIntervalMillis = conf.getLong(
         YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS,
         YarnConfiguration.DEFAULT_YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS);
@@ -111,12 +103,11 @@ public class YarnClientImpl extends YarnClient {
 
   @Override
   protected void serviceStart() throws Exception {
-    YarnRPC rpc = YarnRPC.create(getConfig());
-
-    this.rmClient = (ApplicationClientProtocol) rpc.getProxy(
-        ApplicationClientProtocol.class, rmAddress, getConfig());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Connecting to ResourceManager at " + rmAddress);
+    try {
+      rmClient = ClientRMProxy.createRMProxy(getConfig(),
+            ApplicationClientProtocol.class);
+    } catch (IOException e) {
+      throw new YarnRuntimeException(e);
     }
     super.serviceStart();
   }
@@ -204,6 +195,17 @@ public class YarnClientImpl extends YarnClient {
     GetApplicationReportResponse response =
         rmClient.getApplicationReport(request);
     return response.getApplicationReport();
+  }
+
+  public org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>
+      getAMRMToken(ApplicationId appId) throws YarnException, IOException {
+    Token token = getApplicationReport(appId).getAMRMToken();
+    org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken =
+        null;
+    if (token != null) {
+      amrmToken = ConverterUtils.convertFromYarn(token, null);
+    }
+    return amrmToken;
   }
 
   @Override

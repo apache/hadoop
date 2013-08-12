@@ -30,8 +30,11 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
  * <p>The protocol between a live instance of <code>ApplicationMaster</code> 
@@ -44,23 +47,33 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 @Public
 @Stable
 public interface ApplicationMasterProtocol {
-  
+
   /**
-   * <p>The interface used by a new <code>ApplicationMaster</code> to register 
-   * with the <code>ResourceManager</code>.</p> 
+   * <p>
+   * The interface used by a new <code>ApplicationMaster</code> to register with
+   * the <code>ResourceManager</code>.
+   * </p>
    * 
-   * <p>The <code>ApplicationMaster</code> needs to provide details such
-   * as RPC Port, HTTP tracking url etc. as specified in 
-   * {@link RegisterApplicationMasterRequest}.</p>
+   * <p>
+   * The <code>ApplicationMaster</code> needs to provide details such as RPC
+   * Port, HTTP tracking url etc. as specified in
+   * {@link RegisterApplicationMasterRequest}.
+   * </p>
    * 
-   * <p>The <code>ResourceManager</code> responds with critical details such 
-   * as maximum resource capabilities in the cluster as specified in
-   * {@link RegisterApplicationMasterResponse}.</p>
-   *  
-   * @param request registration request
+   * <p>
+   * The <code>ResourceManager</code> responds with critical details such as
+   * maximum resource capabilities in the cluster as specified in
+   * {@link RegisterApplicationMasterResponse}.
+   * </p>
+   * 
+   * @param request
+   *          registration request
    * @return registration respose
    * @throws YarnException
    * @throws IOException
+   * @throws InvalidApplicationMasterRequestException
+   *           The exception is thrown when an ApplicationMaster tries to
+   *           register more then once.
    * @see RegisterApplicationMasterRequest
    * @see RegisterApplicationMasterResponse
    */
@@ -93,36 +106,57 @@ public interface ApplicationMasterProtocol {
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request) 
   throws YarnException, IOException;
-  
+
   /**
-   * <p>The main interface between an <code>ApplicationMaster</code> 
-   * and the <code>ResourceManager</code>.</p>
+   * <p>
+   * The main interface between an <code>ApplicationMaster</code> and the
+   * <code>ResourceManager</code>.
+   * </p>
    * 
-   * <p>The <code>ApplicationMaster</code> uses this interface to provide a list  
-   * of {@link ResourceRequest} and returns unused {@link Container} allocated 
-   * to it via {@link AllocateRequest}. Optionally, the 
-   * <code>ApplicationMaster</code> can also <em>blacklist</em> resources
-   * which it doesn't want to use.</p>
+   * <p>
+   * The <code>ApplicationMaster</code> uses this interface to provide a list of
+   * {@link ResourceRequest} and returns unused {@link Container} allocated to
+   * it via {@link AllocateRequest}. Optionally, the
+   * <code>ApplicationMaster</code> can also <em>blacklist</em> resources which
+   * it doesn't want to use.
+   * </p>
    * 
-   * <p>This also doubles up as a <em>heartbeat</em> to let the 
+   * <p>
+   * This also doubles up as a <em>heartbeat</em> to let the
    * <code>ResourceManager</code> know that the <code>ApplicationMaster</code>
    * is alive. Thus, applications should periodically make this call to be kept
-   * alive. The frequency depends on 
+   * alive. The frequency depends on
    * {@link YarnConfiguration#RM_AM_EXPIRY_INTERVAL_MS} which defaults to
-   * {@link YarnConfiguration#DEFAULT_RM_AM_EXPIRY_INTERVAL_MS}.</p>
+   * {@link YarnConfiguration#DEFAULT_RM_AM_EXPIRY_INTERVAL_MS}.
+   * </p>
    * 
-   * <p>The <code>ResourceManager</code> responds with list of allocated 
-   * {@link Container}, status of completed containers and headroom information 
-   * for the application.</p> 
+   * <p>
+   * The <code>ResourceManager</code> responds with list of allocated
+   * {@link Container}, status of completed containers and headroom information
+   * for the application.
+   * </p>
    * 
-   * <p>The <code>ApplicationMaster</code> can use the available headroom 
-   * (resources) to decide how to utilized allocated resources and make 
-   * informed decisions about future resource requests.</p>
+   * <p>
+   * The <code>ApplicationMaster</code> can use the available headroom
+   * (resources) to decide how to utilized allocated resources and make informed
+   * decisions about future resource requests.
+   * </p>
    * 
-   * @param request allocation request
+   * @param request
+   *          allocation request
    * @return allocation response
    * @throws YarnException
    * @throws IOException
+   * @throws InvalidApplicationMasterRequestException
+   *           This exception is thrown when an ApplicationMaster calls allocate
+   *           without registering first.
+   * @throws InvalidResourceBlacklistRequestException
+   *           This exception is thrown when an application provides an invalid
+   *           specification for blacklist of resources.
+   * @throws InvalidResourceRequestException
+   *           This exception is thrown when a {@link ResourceRequest} is out of
+   *           the range of the configured lower and upper limits on the
+   *           resources.
    * @see AllocateRequest
    * @see AllocateResponse
    */

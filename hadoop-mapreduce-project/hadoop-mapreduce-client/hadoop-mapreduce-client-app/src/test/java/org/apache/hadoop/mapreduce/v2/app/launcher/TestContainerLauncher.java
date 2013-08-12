@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,12 +54,13 @@ import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -393,18 +396,18 @@ public class TestContainerLauncher {
     private ContainerStatus status = null;
 
     @Override
-    public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws IOException {
-      GetContainerStatusResponse response = recordFactory
-          .newRecordInstance(GetContainerStatusResponse.class);
-      response.setStatus(status);
-      return response;
+    public GetContainerStatusesResponse getContainerStatuses(
+        GetContainerStatusesRequest request) throws IOException {
+      List<ContainerStatus> statuses = new ArrayList<ContainerStatus>();
+      statuses.add(status);
+      return GetContainerStatusesResponse.newInstance(statuses, null);
     }
 
     @Override
-    public StartContainerResponse startContainer(StartContainerRequest request)
+    public StartContainersResponse startContainers(StartContainersRequest requests)
         throws IOException {
 
+      StartContainerRequest request = requests.getStartContainerRequests().get(0);
       ContainerTokenIdentifier containerTokenIdentifier =
           MRApp.newContainerTokenIdentifier(request.getContainerToken());
 
@@ -412,8 +415,8 @@ public class TestContainerLauncher {
       Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_PORT,
         containerTokenIdentifier.getNmHostAddress());
 
-      StartContainerResponse response = recordFactory
-          .newRecordInstance(StartContainerResponse.class);
+      StartContainersResponse response = recordFactory
+          .newRecordInstance(StartContainersResponse.class);
       status = recordFactory.newRecordInstance(ContainerStatus.class);
       try {
         // make the thread sleep to look like its not going to respond
@@ -429,7 +432,7 @@ public class TestContainerLauncher {
     }
 
     @Override
-    public StopContainerResponse stopContainer(StopContainerRequest request)
+    public StopContainersResponse stopContainers(StopContainersRequest request)
         throws IOException {
       Exception e = new Exception("Dummy function", new Exception(
           "Dummy function cause"));

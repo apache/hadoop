@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -50,6 +52,8 @@ import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -158,6 +162,9 @@ public class TestClientToAMTokens {
 
     ContainerManagementProtocol containerManager =
         mock(ContainerManagementProtocol.class);
+    StartContainersResponse mockResponse = mock(StartContainersResponse.class);
+    when(containerManager.startContainers((StartContainersRequest) any()))
+      .thenReturn(mockResponse);
     final DrainDispatcher dispatcher = new DrainDispatcher();
 
     MockRM rm = new MockRMWithCustomAMLauncher(conf, containerManager) {

@@ -34,12 +34,46 @@ fi
 JAVA=$JAVA_HOME/bin/java
 JAVA_HEAP_MAX=-Xmx1000m 
 
+# For setting YARN specific HEAP sizes please use this
+# Parameter and set appropriately
+# YARN_HEAPSIZE=1000
+
 # check envvars which might override default args
 if [ "$YARN_HEAPSIZE" != "" ]; then
-  #echo "run with heapsize $YARN_HEAPSIZE"
   JAVA_HEAP_MAX="-Xmx""$YARN_HEAPSIZE""m"
-  #echo $JAVA_HEAP_MAX
 fi
+
+# Resource Manager specific parameters
+
+# Specify the max Heapsize for the ResourceManager using a numerical value
+# in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
+# the value to 1000.
+# This value will be overridden by an Xmx setting specified in either YARN_OPTS
+# and/or YARN_RESOURCEMANAGER_OPTS.
+# If not specified, the default value will be picked from either YARN_HEAPMAX
+# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+#export YARN_RESOURCEMANAGER_HEAPSIZE=1000
+
+# Specify the JVM options to be used when starting the ResourceManager.
+# These options will be appended to the options specified as YARN_OPTS
+# and therefore may override any similar flags set in YARN_OPTS
+#export YARN_RESOURCEMANAGER_OPTS=
+
+# Node Manager specific parameters
+
+# Specify the max Heapsize for the NodeManager using a numerical value
+# in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
+# the value to 1000.
+# This value will be overridden by an Xmx setting specified in either YARN_OPTS
+# and/or YARN_NODEMANAGER_OPTS.
+# If not specified, the default value will be picked from either YARN_HEAPMAX
+# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+#export YARN_NODEMANAGER_HEAPSIZE=1000
+
+# Specify the JVM options to be used when starting the NodeManager.
+# These options will be appended to the options specified as YARN_OPTS
+# and therefore may override any similar flags set in YARN_OPTS
+#export YARN_NODEMANAGER_OPTS=
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=

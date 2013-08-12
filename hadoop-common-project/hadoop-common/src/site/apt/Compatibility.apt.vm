@@ -517,7 +517,7 @@ hand-in-hand to address this.
   * Annotations for interfaces as per interface classification
     schedule -
     {{{https://issues.apache.org/jira/browse/HADOOP-7391}HADOOP-7391}}
-    {{{InterfaceClassification.html}Hadoop Interface Classification}}
+    {{{./InterfaceClassification.html}Hadoop Interface Classification}}
 
   * Compatibility for Hadoop 1.x releases -
     {{{https://issues.apache.org/jira/browse/HADOOP-5071}HADOOP-5071}}

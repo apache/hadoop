@@ -25,39 +25,34 @@ import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
  */
 public class RpcAcceptedReply extends RpcReply {
   public enum AcceptState {
-    SUCCESS(0), /* RPC executed successfully */
-    PROG_UNAVAIL(1), /* remote hasn't exported program */
-    PROG_MISMATCH(2), /* remote can't support version # */
-    PROC_UNAVAIL(3), /* program can't support procedure */
-    GARBAGE_ARGS(4), /* procedure can't decode params */
-    SYSTEM_ERR(5); /* e.g. memory allocation failure */
+    // the order of the values below are significant.
+    SUCCESS, /* RPC executed successfully */
+    PROG_UNAVAIL, /* remote hasn't exported program */
+    PROG_MISMATCH, /* remote can't support version # */
+    PROC_UNAVAIL, /* program can't support procedure */
+    GARBAGE_ARGS, /* procedure can't decode params */
+    SYSTEM_ERR; /* e.g. memory allocation failure */
     
-    private final int value;
-
-    AcceptState(int value) {
-      this.value = value;
-    }
-
     public static AcceptState fromValue(int value) {
       return values()[value];
     }
 
     public int getValue() {
-      return value;
+      return ordinal();
     }
   };
 
   private final RpcAuthInfo verifier;
   private final AcceptState acceptState;
 
-  RpcAcceptedReply(int xid, int messageType, ReplyState state,
+  RpcAcceptedReply(int xid, RpcMessage.Type messageType, ReplyState state,
       RpcAuthInfo verifier, AcceptState acceptState) {
     super(xid, messageType, state);
     this.verifier = verifier;
     this.acceptState = acceptState;
   }
 
-  public static RpcAcceptedReply read(int xid, int messageType,
+  public static RpcAcceptedReply read(int xid, RpcMessage.Type messageType,
       ReplyState replyState, XDR xdr) {
     RpcAuthInfo verifier = RpcAuthInfo.read(xdr);
     AcceptState acceptState = AcceptState.fromValue(xdr.readInt());
@@ -79,7 +74,7 @@ public class RpcAcceptedReply extends RpcReply {
   
   public static XDR voidReply(XDR xdr, int xid, AcceptState acceptState) {
     xdr.writeInt(xid);
-    xdr.writeInt(RpcMessage.RPC_REPLY);
+    xdr.writeInt(RpcMessage.Type.RPC_REPLY.getValue());
     xdr.writeInt(ReplyState.MSG_ACCEPTED.getValue());
     xdr.writeInt(AuthFlavor.AUTH_NONE.getValue());
     xdr.writeVariableOpaque(new byte[0]);

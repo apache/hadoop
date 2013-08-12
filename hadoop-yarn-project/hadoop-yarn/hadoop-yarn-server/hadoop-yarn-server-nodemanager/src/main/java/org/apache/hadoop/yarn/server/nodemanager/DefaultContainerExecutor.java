@@ -41,6 +41,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -203,11 +204,23 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         return -1;
       }
       int exitCode = shExec.getExitCode();
-      LOG.warn("Exit code from task is : " + exitCode);
-      String message = shExec.getOutput();
-      logOutput(message);
-      container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
-          message));
+      LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
+      // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
+      // terminated/killed forcefully. In all other cases, log the
+      // container-executor's output
+      if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
+          && exitCode != ExitCode.TERMINATED.getExitCode()) {
+        LOG.warn("Exception from container-launch with container ID: "
+            + containerId + " and exit code: " + exitCode , e);
+        logOutput(shExec.getOutput());
+        String diagnostics = "Exception from container-launch: \n"
+            + StringUtils.stringifyException(e) + "\n" + shExec.getOutput();
+        container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+            diagnostics));
+      } else {
+        container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+            "Container killed on request. Exit code is " + exitCode));
+      }
       return exitCode;
     } finally {
       ; //

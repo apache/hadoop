@@ -60,7 +60,7 @@ class Fetcher<K,V> extends Thread {
   /* Default read timeout (in milliseconds) */
   private final static int DEFAULT_READ_TIMEOUT = 3 * 60 * 1000;
 
-  private final Reporter reporter;
+  protected final Reporter reporter;
   private static enum ShuffleErrors{IO_ERROR, WRONG_LENGTH, BAD_ID, WRONG_MAP,
                                     CONNECTION, WRONG_REDUCE}
   
@@ -71,13 +71,13 @@ class Fetcher<K,V> extends Thread {
   private final Counters.Counter badIdErrs;
   private final Counters.Counter wrongMapErrs;
   private final Counters.Counter wrongReduceErrs;
-  private final MergeManager<K,V> merger;
-  private final ShuffleSchedulerImpl<K,V> scheduler;
-  private final ShuffleClientMetrics metrics;
-  private final ExceptionReporter exceptionReporter;
-  private final int id;
+  protected final MergeManager<K,V> merger;
+  protected final ShuffleSchedulerImpl<K,V> scheduler;
+  protected final ShuffleClientMetrics metrics;
+  protected final ExceptionReporter exceptionReporter;
+  protected final int id;
   private static int nextId = 0;
-  private final int reduce;
+  protected final int reduce;
   
   private final int connectionTimeout;
   private final int readTimeout;
@@ -407,7 +407,14 @@ class Fetcher<K,V> extends Thread {
       }
       
       // Get the location for the map output - either in-memory or on-disk
-      mapOutput = merger.reserve(mapId, decompressedLength, id);
+      try {
+        mapOutput = merger.reserve(mapId, decompressedLength, id);
+      } catch (IOException ioe) {
+        // kill this reduce attempt
+        ioErrs.increment(1);
+        scheduler.reportLocalError(ioe);
+        return EMPTY_ATTEMPT_ID_ARRAY;
+      }
       
       // Check if we can shuffle *now* ...
       if (mapOutput == null) {

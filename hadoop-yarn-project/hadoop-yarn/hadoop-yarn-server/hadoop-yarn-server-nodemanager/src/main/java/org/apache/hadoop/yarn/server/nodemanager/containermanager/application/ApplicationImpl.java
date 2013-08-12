@@ -392,9 +392,6 @@ public class ApplicationImpl implements Application {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
 
-      // Inform the ContainerTokenSecretManager
-      app.context.getContainerTokenSecretManager().appFinished(app.appId);
-
       // Inform the logService
       app.dispatcher.getEventHandler().handle(
           new LogHandlerAppFinishedEvent(app.appId));

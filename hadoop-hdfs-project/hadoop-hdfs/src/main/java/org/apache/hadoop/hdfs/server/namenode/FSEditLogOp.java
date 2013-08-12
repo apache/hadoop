@@ -17,54 +17,87 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.zip.CheckedInputStream;
-import java.util.zip.Checksum;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ALLOCATE_BLOCK_ID;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ALLOW_SNAPSHOT;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_CANCEL_DELEGATION_TOKEN;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_CLEAR_NS_QUOTA;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_CLOSE;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_CONCAT_DELETE;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_CREATE_SNAPSHOT;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_DELETE;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_DELETE_SNAPSHOT;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_DISALLOW_SNAPSHOT;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_END_LOG_SEGMENT;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_GET_DELEGATION_TOKEN;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_INVALID;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_MKDIR;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REASSIGN_LEASE;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_OLD;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_SNAPSHOT;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENEW_DELEGATION_TOKEN;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_GENSTAMP_V1;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_GENSTAMP_V2;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_NS_QUOTA;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_OWNER;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_PERMISSIONS;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_QUOTA;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_REPLICATION;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_START_LOG_SEGMENT;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SYMLINK;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_TIMES;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_BLOCKS;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_MASTER_KEY;
+
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.zip.CheckedInputStream;
+import java.util.zip.Checksum;
 
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.util.PureJavaCrc32;
-
-import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.*;
-import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.util.XMLUtils;
+import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
+import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
+import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
-import org.apache.hadoop.hdfs.util.XMLUtils;
-import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
-import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DeprecatedUTF8;
+import org.apache.hadoop.ipc.ClientId;
+import org.apache.hadoop.ipc.RpcConstants;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.util.PureJavaCrc32;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
 import com.google.common.base.Preconditions;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.EOFException;
 
 /**
  * Helper classes for reading the ops from an InputStream.
@@ -76,6 +109,8 @@ import java.io.EOFException;
 public abstract class FSEditLogOp {
   public final FSEditLogOpCodes opCode;
   long txid;
+  byte[] rpcClientId = RpcConstants.DUMMY_CLIENT_ID;
+  int rpcCallId = RpcConstants.INVALID_CALL_ID;
 
   @SuppressWarnings("deprecation")
   final public static class OpInstanceCache {
@@ -150,6 +185,31 @@ public abstract class FSEditLogOp {
   public void setTransactionId(long txid) {
     this.txid = txid;
   }
+  
+  public boolean hasRpcIds() {
+    return rpcClientId != RpcConstants.DUMMY_CLIENT_ID
+        && rpcCallId != RpcConstants.INVALID_CALL_ID;
+  }
+  
+  /** this has to be called after calling {@link #hasRpcIds()} */
+  public byte[] getClientId() {
+    Preconditions.checkState(rpcClientId != RpcConstants.DUMMY_CLIENT_ID);
+    return rpcClientId;
+  }
+  
+  public void setRpcClientId(byte[] clientId) {
+    this.rpcClientId = clientId;
+  }
+  
+  /** this has to be called after calling {@link #hasRpcIds()} */
+  public int getCallId() {
+    Preconditions.checkState(rpcCallId != RpcConstants.INVALID_CALL_ID);
+    return rpcCallId;
+  }
+  
+  public void setRpcCallId(int callId) {
+    this.rpcCallId = callId;
+  }
 
   abstract void readFields(DataInputStream in, int logVersion)
       throws IOException;
@@ -161,6 +221,46 @@ public abstract class FSEditLogOp {
     Block[] getBlocks();
     String getPath();
     boolean shouldCompleteLastBlock();
+  }
+  
+  private static void writeRpcIds(final byte[] clientId, final int callId,
+      DataOutputStream out) throws IOException {
+    FSImageSerialization.writeBytes(clientId, out);
+    FSImageSerialization.writeInt(callId, out);
+  }
+  
+  void readRpcIds(DataInputStream in, int logVersion)
+      throws IOException {
+    if (LayoutVersion.supports(Feature.EDITLOG_SUPPORT_RETRYCACHE,
+        logVersion)) {
+      this.rpcClientId = FSImageSerialization.readBytes(in);
+      this.rpcCallId = FSImageSerialization.readInt(in);
+    }
+  }
+  
+  void readRpcIdsFromXml(Stanza st) {
+    this.rpcClientId = st.hasChildren("RPC_CLIENTID") ? 
+        ClientId.toBytes(st.getValue("RPC_CLIENTID"))
+        : RpcConstants.DUMMY_CLIENT_ID;
+    this.rpcCallId = st.hasChildren("RPC_CALLID") ? 
+        Integer.valueOf(st.getValue("RPC_CALLID"))
+        : RpcConstants.INVALID_CALL_ID;
+  }
+  
+  private static void appendRpcIdsToString(final StringBuilder builder,
+      final byte[] clientId, final int callId) {
+    builder.append(", RpcClientId=");
+    builder.append(ClientId.toString(clientId));
+    builder.append(", RpcCallId=");
+    builder.append(callId);
+  }
+  
+  private static void appendRpcIdsToXml(ContentHandler contentHandler,
+      final byte[] clientId, final int callId) throws SAXException {
+    XMLUtils.addSaxString(contentHandler, "RPC_CLIENTID",
+        ClientId.toString(clientId));
+    XMLUtils.addSaxString(contentHandler, "RPC_CALLID", 
+        Integer.valueOf(callId).toString());
   }
   
   @SuppressWarnings("unchecked")
@@ -176,7 +276,7 @@ public abstract class FSEditLogOp {
     PermissionStatus permissions;
     String clientName;
     String clientMachine;
-
+    
     private AddCloseOp(FSEditLogOpCodes opCode) {
       super(opCode);
       assert(opCode == OP_ADD || opCode == OP_CLOSE);
@@ -247,8 +347,7 @@ public abstract class FSEditLogOp {
     }
 
     @Override
-    public 
-    void writeFields(DataOutputStream out) throws IOException {
+    public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeLong(inodeId, out);
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeShort(replication, out);
@@ -261,6 +360,8 @@ public abstract class FSEditLogOp {
       if (this.opCode == OP_ADD) {
         FSImageSerialization.writeString(clientName,out);
         FSImageSerialization.writeString(clientMachine,out);
+        // write clientId and callId
+        writeRpcIds(rpcClientId, rpcCallId, out);
       }
     }
 
@@ -317,6 +418,8 @@ public abstract class FSEditLogOp {
       if (this.opCode == OP_ADD) {
         this.clientName = FSImageSerialization.readString(in);
         this.clientMachine = FSImageSerialization.readString(in);
+        // read clientId and callId
+        readRpcIds(in, logVersion);
       } else {
         this.clientName = "";
         this.clientMachine = "";
@@ -368,6 +471,9 @@ public abstract class FSEditLogOp {
       builder.append(clientName);
       builder.append(", clientMachine=");
       builder.append(clientMachine);
+      if (this.opCode == OP_ADD) {
+        appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      }
       builder.append(", opCode=");
       builder.append(opCode);
       builder.append(", txid=");
@@ -397,9 +503,13 @@ public abstract class FSEditLogOp {
         FSEditLogOp.blockToXml(contentHandler, b);
       }
       FSEditLogOp.permissionStatusToXml(contentHandler, permissions);
+      if (this.opCode == OP_ADD) {
+        appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
+      }
     }
 
-    @Override void fromXml(Stanza st) throws InvalidXmlException {
+    @Override 
+    void fromXml(Stanza st) throws InvalidXmlException {
       this.length = Integer.valueOf(st.getValue("LENGTH"));
       this.inodeId = Long.valueOf(st.getValue("INODEID"));
       this.path = st.getValue("PATH");
@@ -420,9 +530,14 @@ public abstract class FSEditLogOp {
       }
       this.permissions =
           permissionStatusFromXml(st.getChildren("PERMISSION_STATUS").get(0));
+      readRpcIdsFromXml(st);
     }
   }
 
+  /**
+   * {@literal @AtMostOnce} for {@link ClientProtocol#startFile} and
+   * {@link ClientProtocol#appendFile}
+   */
   static class AddOp extends AddCloseOp {
     private AddOp() {
       super(OP_ADD);
@@ -446,6 +561,11 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /**
+   * Although {@link ClientProtocol#appendFile} may also log a close op, we do
+   * not need to record the rpc ids here since a successful appendFile op will
+   * finally log an AddOp.
+   */
   static class CloseOp extends AddCloseOp {
     private CloseOp() {
       super(OP_CLOSE);
@@ -469,6 +589,10 @@ public abstract class FSEditLogOp {
     }
   }
   
+  /**
+   * {@literal @AtMostOnce} for {@link ClientProtocol#updatePipeline}, but 
+   * {@literal @Idempotent} for some other ops.
+   */
   static class UpdateBlocksOp extends FSEditLogOp implements BlockListUpdatingOp {
     String path;
     Block[] blocks;
@@ -480,7 +604,6 @@ public abstract class FSEditLogOp {
     static UpdateBlocksOp getInstance(OpInstanceCache cache) {
       return (UpdateBlocksOp)cache.get(OP_UPDATE_BLOCKS);
     }
-    
     
     UpdateBlocksOp setPath(String path) {
       this.path = path;
@@ -507,6 +630,8 @@ public abstract class FSEditLogOp {
     void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeCompactBlockArray(blocks, out);
+      // clientId and callId
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
     
     @Override
@@ -514,6 +639,7 @@ public abstract class FSEditLogOp {
       path = FSImageSerialization.readString(in);
       this.blocks = FSImageSerialization.readCompactBlockArray(
           in, logVersion);
+      readRpcIds(in, logVersion);
     }
 
     @Override
@@ -527,8 +653,9 @@ public abstract class FSEditLogOp {
       sb.append("UpdateBlocksOp [path=")
         .append(path)
         .append(", blocks=")
-        .append(Arrays.toString(blocks))
-        .append("]");
+        .append(Arrays.toString(blocks));
+      appendRpcIdsToString(sb, rpcClientId, rpcCallId);
+      sb.append("]");
       return sb.toString();
     }
     
@@ -538,6 +665,7 @@ public abstract class FSEditLogOp {
       for (Block b : blocks) {
         FSEditLogOp.blockToXml(contentHandler, b);
       }
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
     
     @Override void fromXml(Stanza st) throws InvalidXmlException {
@@ -547,9 +675,11 @@ public abstract class FSEditLogOp {
       for (int i = 0; i < blocks.size(); i++) {
         this.blocks[i] = FSEditLogOp.blockFromXml(blocks.get(i));
       }
+      readRpcIdsFromXml(st);
     }
   }
 
+  /** {@literal @Idempotent} for {@link ClientProtocol#setReplication} */
   static class SetReplicationOp extends FSEditLogOp {
     String path;
     short replication;
@@ -618,6 +748,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#concat} */
   static class ConcatDeleteOp extends FSEditLogOp {
     int length;
     String trg;
@@ -654,8 +785,7 @@ public abstract class FSEditLogOp {
     }
 
     @Override
-    public 
-    void writeFields(DataOutputStream out) throws IOException {
+    public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeString(trg, out);
             
       DeprecatedUTF8 info[] = new DeprecatedUTF8[srcs.length];
@@ -666,6 +796,9 @@ public abstract class FSEditLogOp {
       new ArrayWritable(DeprecatedUTF8.class, info).write(out);
 
       FSImageSerialization.writeLong(timestamp, out);
+      
+      // rpc ids
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
@@ -704,6 +837,8 @@ public abstract class FSEditLogOp {
       } else {
         this.timestamp = readLong(in);
       }
+      // read RPC ids if necessary
+      readRpcIds(in, logVersion);
     }
 
     @Override
@@ -717,6 +852,7 @@ public abstract class FSEditLogOp {
       builder.append(Arrays.toString(srcs));
       builder.append(", timestamp=");
       builder.append(timestamp);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append(", opCode=");
       builder.append(opCode);
       builder.append(", txid=");
@@ -738,6 +874,7 @@ public abstract class FSEditLogOp {
             "SOURCE" + (i + 1), srcs[i]);
       }
       contentHandler.endElement("", "", "SOURCES");
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
     
     @Override void fromXml(Stanza st) throws InvalidXmlException {
@@ -755,9 +892,11 @@ public abstract class FSEditLogOp {
       for (i = 0; i < srcs.length; i++) {
         srcs[i] = sources.get(0).getValue("SOURCE" + (i + 1));
       }
+      readRpcIdsFromXml(st);
     }
   }
 
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#rename} */
   static class RenameOldOp extends FSEditLogOp {
     int length;
     String src;
@@ -793,6 +932,7 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeString(src, out);
       FSImageSerialization.writeString(dst, out);
       FSImageSerialization.writeLong(timestamp, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
@@ -812,6 +952,9 @@ public abstract class FSEditLogOp {
       } else {
         this.timestamp = readLong(in);
       }
+      
+      // read RPC ids if necessary
+      readRpcIds(in, logVersion);
     }
 
     @Override
@@ -825,6 +968,7 @@ public abstract class FSEditLogOp {
       builder.append(dst);
       builder.append(", timestamp=");
       builder.append(timestamp);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append(", opCode=");
       builder.append(opCode);
       builder.append(", txid=");
@@ -841,16 +985,21 @@ public abstract class FSEditLogOp {
       XMLUtils.addSaxString(contentHandler, "DST", dst);
       XMLUtils.addSaxString(contentHandler, "TIMESTAMP",
           Long.valueOf(timestamp).toString());
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
     
-    @Override void fromXml(Stanza st) throws InvalidXmlException {
+    @Override 
+    void fromXml(Stanza st) throws InvalidXmlException {
       this.length = Integer.valueOf(st.getValue("LENGTH"));
       this.src = st.getValue("SRC");
       this.dst = st.getValue("DST");
       this.timestamp = Long.valueOf(st.getValue("TIMESTAMP"));
+      
+      readRpcIdsFromXml(st);
     }
   }
 
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#delete} */
   static class DeleteOp extends FSEditLogOp {
     int length;
     String path;
@@ -879,6 +1028,7 @@ public abstract class FSEditLogOp {
     void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeLong(timestamp, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
@@ -896,6 +1046,8 @@ public abstract class FSEditLogOp {
       } else {
         this.timestamp = readLong(in);
       }
+      // read RPC ids if necessary
+      readRpcIds(in, logVersion);
     }
 
     @Override
@@ -907,6 +1059,7 @@ public abstract class FSEditLogOp {
       builder.append(path);
       builder.append(", timestamp=");
       builder.append(timestamp);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append(", opCode=");
       builder.append(opCode);
       builder.append(", txid=");
@@ -922,15 +1075,19 @@ public abstract class FSEditLogOp {
       XMLUtils.addSaxString(contentHandler, "PATH", path);
       XMLUtils.addSaxString(contentHandler, "TIMESTAMP",
           Long.valueOf(timestamp).toString());
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
     
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.length = Integer.valueOf(st.getValue("LENGTH"));
       this.path = st.getValue("PATH");
       this.timestamp = Long.valueOf(st.getValue("TIMESTAMP"));
+      
+      readRpcIdsFromXml(st);
     }
   }
-    
+
+  /** {@literal @Idempotent} for {@link ClientProtocol#mkdirs} */
   static class MkdirOp extends FSEditLogOp {
     int length;
     long inodeId;
@@ -1056,6 +1213,13 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /**
+   * The corresponding operations are either {@literal @Idempotent} (
+   * {@link ClientProtocol#updateBlockForPipeline},
+   * {@link ClientProtocol#recoverLease}, {@link ClientProtocol#addBlock}) or
+   * already bound with other editlog op which records rpc ids (
+   * {@link ClientProtocol#startFile}). Thus no need to record rpc ids here.
+   */
   static class SetGenstampV1Op extends FSEditLogOp {
     long genStampV1;
 
@@ -1108,6 +1272,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** Similar with {@link SetGenstampV1Op} */
   static class SetGenstampV2Op extends FSEditLogOp {
     long genStampV2;
 
@@ -1160,6 +1325,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** {@literal @Idempotent} for {@link ClientProtocol#addBlock} */
   static class AllocateBlockIdOp extends FSEditLogOp {
     long blockId;
 
@@ -1212,6 +1378,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** {@literal @Idempotent} for {@link ClientProtocol#setPermission} */
   static class SetPermissionsOp extends FSEditLogOp {
     String src;
     FsPermission permissions;
@@ -1277,6 +1444,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** {@literal @Idempotent} for {@link ClientProtocol#setOwner} */
   static class SetOwnerOp extends FSEditLogOp {
     String src;
     String username;
@@ -1357,7 +1525,7 @@ public abstract class FSEditLogOp {
           st.getValue("GROUPNAME") : null;
     }
   }
-
+  
   static class SetNSQuotaOp extends FSEditLogOp {
     String src;
     long nsQuota;
@@ -1457,6 +1625,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** {@literal @Idempotent} for {@link ClientProtocol#setQuota} */
   static class SetQuotaOp extends FSEditLogOp {
     String src;
     long nsQuota;
@@ -1534,6 +1703,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** {@literal @Idempotent} for {@link ClientProtocol#setTimes} */
   static class TimesOp extends FSEditLogOp {
     int length;
     String path;
@@ -1629,6 +1799,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#createSymlink} */
   static class SymlinkOp extends FSEditLogOp {
     int length;
     long inodeId;
@@ -1677,14 +1848,14 @@ public abstract class FSEditLogOp {
     }
 
     @Override
-    public 
-    void writeFields(DataOutputStream out) throws IOException {
+    public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeLong(inodeId, out);      
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeString(value, out);
       FSImageSerialization.writeLong(mtime, out);
       FSImageSerialization.writeLong(atime, out);
       permissionStatus.write(out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
@@ -1714,6 +1885,9 @@ public abstract class FSEditLogOp {
         this.atime = readLong(in);
       }
       this.permissionStatus = PermissionStatus.read(in);
+      
+      // read RPC ids if necessary
+      readRpcIds(in, logVersion);
     }
 
     @Override
@@ -1733,6 +1907,7 @@ public abstract class FSEditLogOp {
       builder.append(atime);
       builder.append(", permissionStatus=");
       builder.append(permissionStatus);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append(", opCode=");
       builder.append(opCode);
       builder.append(", txid=");
@@ -1754,9 +1929,11 @@ public abstract class FSEditLogOp {
       XMLUtils.addSaxString(contentHandler, "ATIME",
           Long.valueOf(atime).toString());
       FSEditLogOp.permissionStatusToXml(contentHandler, permissionStatus);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
-    @Override void fromXml(Stanza st) throws InvalidXmlException {
+    @Override 
+    void fromXml(Stanza st) throws InvalidXmlException {
       this.length = Integer.valueOf(st.getValue("LENGTH"));
       this.inodeId = Long.valueOf(st.getValue("INODEID"));
       this.path = st.getValue("PATH");
@@ -1765,9 +1942,12 @@ public abstract class FSEditLogOp {
       this.atime = Long.valueOf(st.getValue("ATIME"));
       this.permissionStatus =
           permissionStatusFromXml(st.getChildren("PERMISSION_STATUS").get(0));
+      
+      readRpcIdsFromXml(st);
     }
   }
 
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#rename2} */
   static class RenameOp extends FSEditLogOp {
     int length;
     String src;
@@ -1810,6 +1990,7 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeString(dst, out);
       FSImageSerialization.writeLong(timestamp, out);
       toBytesWritable(options).write(out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
@@ -1830,6 +2011,9 @@ public abstract class FSEditLogOp {
         this.timestamp = readLong(in);
       }
       this.options = readRenameOptions(in);
+      
+      // read RPC ids if necessary
+      readRpcIds(in, logVersion);
     }
 
     private static Rename[] readRenameOptions(DataInputStream in) throws IOException {
@@ -1866,6 +2050,7 @@ public abstract class FSEditLogOp {
       builder.append(timestamp);
       builder.append(", options=");
       builder.append(Arrays.toString(options));
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append(", opCode=");
       builder.append(opCode);
       builder.append(", txid=");
@@ -1889,6 +2074,7 @@ public abstract class FSEditLogOp {
         prefix = "|";
       }
       XMLUtils.addSaxString(contentHandler, "OPTIONS", bld.toString());
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
     
     @Override void fromXml(Stanza st) throws InvalidXmlException {
@@ -1910,9 +2096,15 @@ public abstract class FSEditLogOp {
           }
         }
       }
+      readRpcIdsFromXml(st);
     }
   }
-
+ 
+  /**
+   * {@literal @Idempotent} for {@link ClientProtocol#recoverLease}. In the
+   * meanwhile, startFile and appendFile both have their own corresponding
+   * editlog op.
+   */
   static class ReassignLeaseOp extends FSEditLogOp {
     String leaseHolder;
     String path;
@@ -1988,6 +2180,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** {@literal @Idempotent} for {@link ClientProtocol#getDelegationToken} */
   static class GetDelegationTokenOp extends FSEditLogOp {
     DelegationTokenIdentifier token;
     long expiryTime;
@@ -2059,6 +2252,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** {@literal @Idempotent} for {@link ClientProtocol#renewDelegationToken} */
   static class RenewDelegationTokenOp extends FSEditLogOp {
     DelegationTokenIdentifier token;
     long expiryTime;
@@ -2130,6 +2324,7 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /** {@literal @Idempotent} for {@link ClientProtocol#cancelDelegationToken} */
   static class CancelDelegationTokenOp extends FSEditLogOp {
     DelegationTokenIdentifier token;
 
@@ -2323,7 +2518,8 @@ public abstract class FSEditLogOp {
   }
 
   /**
-   * Operation corresponding to creating a snapshot
+   * Operation corresponding to creating a snapshot.
+   * {@literal @AtMostOnce} for {@link ClientProtocol#createSnapshot}.
    */
   static class CreateSnapshotOp extends FSEditLogOp {
     String snapshotRoot;
@@ -2351,24 +2547,31 @@ public abstract class FSEditLogOp {
     void readFields(DataInputStream in, int logVersion) throws IOException {
       snapshotRoot = FSImageSerialization.readString(in);
       snapshotName = FSImageSerialization.readString(in);
+      
+      // read RPC ids if necessary
+      readRpcIds(in, logVersion);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeString(snapshotRoot, out);
       FSImageSerialization.writeString(snapshotName, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTNAME", snapshotName);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
       snapshotRoot = st.getValue("SNAPSHOTROOT");
       snapshotName = st.getValue("SNAPSHOTNAME");
+      
+      readRpcIdsFromXml(st);
     }
     
     @Override
@@ -2378,13 +2581,15 @@ public abstract class FSEditLogOp {
       builder.append(snapshotRoot);
       builder.append(", snapshotName=");
       builder.append(snapshotName);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
     }
   }
   
   /**
-   * Operation corresponding to delete a snapshot
+   * Operation corresponding to delete a snapshot.
+   * {@literal @AtMostOnce} for {@link ClientProtocol#deleteSnapshot}.
    */
   static class DeleteSnapshotOp extends FSEditLogOp {
     String snapshotRoot;
@@ -2412,24 +2617,31 @@ public abstract class FSEditLogOp {
     void readFields(DataInputStream in, int logVersion) throws IOException {
       snapshotRoot = FSImageSerialization.readString(in);
       snapshotName = FSImageSerialization.readString(in);
+      
+      // read RPC ids if necessary
+      readRpcIds(in, logVersion);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeString(snapshotRoot, out);
       FSImageSerialization.writeString(snapshotName, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTNAME", snapshotName);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
       snapshotRoot = st.getValue("SNAPSHOTROOT");
       snapshotName = st.getValue("SNAPSHOTNAME");
+      
+      readRpcIdsFromXml(st);
     }
     
     @Override
@@ -2439,13 +2651,15 @@ public abstract class FSEditLogOp {
       builder.append(snapshotRoot);
       builder.append(", snapshotName=");
       builder.append(snapshotName);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
     }
   }
   
   /**
-   * Operation corresponding to rename a snapshot
+   * Operation corresponding to rename a snapshot.
+   * {@literal @AtMostOnce} for {@link ClientProtocol#renameSnapshot}.
    */
   static class RenameSnapshotOp extends FSEditLogOp {
     String snapshotRoot;
@@ -2480,6 +2694,9 @@ public abstract class FSEditLogOp {
       snapshotRoot = FSImageSerialization.readString(in);
       snapshotOldName = FSImageSerialization.readString(in);
       snapshotNewName = FSImageSerialization.readString(in);
+      
+      // read RPC ids if necessary
+      readRpcIds(in, logVersion);
     }
 
     @Override
@@ -2487,6 +2704,8 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeString(snapshotRoot, out);
       FSImageSerialization.writeString(snapshotOldName, out);
       FSImageSerialization.writeString(snapshotNewName, out);
+      
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
@@ -2494,6 +2713,7 @@ public abstract class FSEditLogOp {
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTOLDNAME", snapshotOldName);
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTNEWNAME", snapshotNewName);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
@@ -2501,6 +2721,8 @@ public abstract class FSEditLogOp {
       snapshotRoot = st.getValue("SNAPSHOTROOT");
       snapshotOldName = st.getValue("SNAPSHOTOLDNAME");
       snapshotNewName = st.getValue("SNAPSHOTNEWNAME");
+      
+      readRpcIdsFromXml(st);
     }
     
     @Override
@@ -2512,6 +2734,7 @@ public abstract class FSEditLogOp {
       builder.append(snapshotOldName);
       builder.append(", snapshotNewName=");
       builder.append(snapshotNewName);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
     }
@@ -2520,7 +2743,7 @@ public abstract class FSEditLogOp {
   /**
    * Operation corresponding to allow creating snapshot on a directory
    */
-  static class AllowSnapshotOp extends FSEditLogOp {
+  static class AllowSnapshotOp extends FSEditLogOp { // @Idempotent
     String snapshotRoot;
 
     public AllowSnapshotOp() {
@@ -2574,7 +2797,7 @@ public abstract class FSEditLogOp {
   /**
    * Operation corresponding to disallow creating snapshot on a directory
    */
-  static class DisallowSnapshotOp extends FSEditLogOp {
+  static class DisallowSnapshotOp extends FSEditLogOp { // @Idempotent
     String snapshotRoot;
 
     public DisallowSnapshotOp() {

@@ -166,9 +166,11 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
       SecretManager<? extends TokenIdentifier> secretManager, int numHandlers, 
       BlockingService blockingService, String portRangeConfig) throws IOException {
     RPC.setProtocolEngine(conf, pbProtocol, ProtobufRpcEngine.class);
-    RPC.Server server = RPC.getServer(pbProtocol, blockingService, 
-        addr.getHostName(), addr.getPort(), numHandlers, false, conf, 
-        secretManager, portRangeConfig);
+    RPC.Server server = new RPC.Builder(conf).setProtocol(pbProtocol)
+        .setInstance(blockingService).setBindAddress(addr.getHostName())
+        .setPort(addr.getPort()).setNumHandlers(numHandlers).setVerbose(false)
+        .setSecretManager(secretManager).setPortRangeConfig(portRangeConfig)
+        .build();
     LOG.info("Adding protocol "+pbProtocol.getCanonicalName()+" to the server");
     server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, pbProtocol, blockingService);
     return server;

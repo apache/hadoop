@@ -78,6 +78,14 @@ public class Bzip2Factory {
     return nativeBzip2Loaded;
   }
 
+  public static String getLibraryName(Configuration conf) {
+    if (isNativeBzip2Loaded(conf)) {
+      return Bzip2Compressor.getLibraryName();
+    } else {
+      return bzip2LibraryName;
+    }
+  }
+
   /**
    * Return the appropriate type of the bzip2 compressor. 
    * 

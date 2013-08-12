@@ -22,9 +22,6 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterRequestProtoOrBuilder;
 
@@ -34,9 +31,6 @@ public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationM
   RegisterApplicationMasterRequestProto proto = RegisterApplicationMasterRequestProto.getDefaultInstance();
   RegisterApplicationMasterRequestProto.Builder builder = null;
   boolean viaProto = false;
-  
-  private ApplicationAttemptId applicationAttemptId = null;
-  
   
   public RegisterApplicationMasterRequestPBImpl() {
     builder = RegisterApplicationMasterRequestProto.newBuilder();
@@ -75,9 +69,6 @@ public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationM
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationAttemptId != null && !((ApplicationAttemptIdPBImpl)this.applicationAttemptId).getProto().equals(builder.getApplicationAttemptId())) {
-      builder.setApplicationAttemptId(convertToProtoFormat(this.applicationAttemptId));
-    }
   }
 
   private void mergeLocalToProto() {
@@ -94,28 +85,6 @@ public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationM
     }
     viaProto = false;
   }
-    
-  
-  @Override
-  public ApplicationAttemptId getApplicationAttemptId() {
-    RegisterApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.applicationAttemptId != null) {
-      return this.applicationAttemptId;
-    }
-    if (!p.hasApplicationAttemptId()) {
-      return null;
-    }
-    this.applicationAttemptId = convertFromProtoFormat(p.getApplicationAttemptId());
-    return this.applicationAttemptId;
-  }
-
-  @Override
-  public void setApplicationAttemptId(ApplicationAttemptId applicationMaster) {
-    maybeInitBuilder();
-    if (applicationMaster == null) 
-      builder.clearApplicationAttemptId();
-    this.applicationAttemptId = applicationMaster;
-  }
 
   @Override
   public String getHost() {
@@ -126,6 +95,10 @@ public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationM
   @Override
   public void setHost(String host) {
     maybeInitBuilder();
+    if (host == null) {
+      builder.clearHost();
+      return;
+    }
     builder.setHost(host);
   }
 
@@ -150,15 +123,10 @@ public class RegisterApplicationMasterRequestPBImpl extends RegisterApplicationM
   @Override
   public void setTrackingUrl(String url) {
     maybeInitBuilder();
+    if (url == null) {
+      builder.clearTrackingUrl();
+      return;
+    }
     builder.setTrackingUrl(url);
   }
-
-  private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {
-    return new ApplicationAttemptIdPBImpl(p);
-  }
-
-  private ApplicationAttemptIdProto convertToProtoFormat(ApplicationAttemptId t) {
-    return ((ApplicationAttemptIdPBImpl)t).getProto();
-  }
-
 }  

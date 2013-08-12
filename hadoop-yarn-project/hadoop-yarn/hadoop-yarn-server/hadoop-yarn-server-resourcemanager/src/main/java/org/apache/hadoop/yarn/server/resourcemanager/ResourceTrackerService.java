@@ -253,7 +253,7 @@ public class ResourceTrackerService extends AbstractService implements
     RMNode rmNode = this.rmContext.getRMNodes().get(nodeId);
     if (rmNode == null) {
       /* node does not exist */
-      String message = "Node not found rebooting " + remoteNodeStatus.getNodeId();
+      String message = "Node not found resyncing " + remoteNodeStatus.getNodeId();
       LOG.info(message);
       resync.setDiagnosticsMessage(message);
       return resync;

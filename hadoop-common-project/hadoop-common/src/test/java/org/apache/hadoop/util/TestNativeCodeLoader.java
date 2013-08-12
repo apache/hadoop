@@ -22,6 +22,9 @@ import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.compress.Lz4Codec;
+import org.apache.hadoop.io.compress.SnappyCodec;
+import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 public class TestNativeCodeLoader {
@@ -44,6 +47,14 @@ public class TestNativeCodeLoader {
       fail("TestNativeCodeLoader: libhadoop.so testing was required, but " +
           "libhadoop.so was not loaded.");
     }
+    assertFalse(NativeCodeLoader.getLibraryName().isEmpty());
+    // library names are depended on platform and build envs
+    // so just check names are available
+    assertFalse(ZlibFactory.getLibraryName().isEmpty());
+    if (NativeCodeLoader.buildSupportsSnappy()) {
+      assertFalse(SnappyCodec.getLibraryName().isEmpty());
+    }
+    assertFalse(Lz4Codec.getLibraryName().isEmpty());
     LOG.info("TestNativeCodeLoader: libhadoop.so is loaded.");
   }
 }
