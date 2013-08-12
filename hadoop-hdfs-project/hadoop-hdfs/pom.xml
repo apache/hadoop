@@ -417,6 +417,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>protoc</goal>
             </goals>
             <configuration>
+              <protocVersion>2.5.0</protocVersion>
               <imports>
                 <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
@@ -441,6 +442,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>protoc</goal>
             </goals>
             <configuration>
+              <protocVersion>2.5.0</protocVersion>
               <imports>
                 <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
@@ -462,6 +464,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>protoc</goal>
             </goals>
             <configuration>
+              <protocVersion>2.5.0</protocVersion>
               <imports>
                 <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
@@ -483,6 +486,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>protoc</goal>
             </goals>
             <configuration>
+              <protocVersion>2.5.0</protocVersion>
               <imports>
                 <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>

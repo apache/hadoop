@@ -48,16 +48,41 @@ public class ProtocMojo extends AbstractMojo {
   @Parameter(defaultValue="protoc")
   private String protocCommand;
 
+  @Parameter(required=true)
+  private String protocVersion;
 
   public void execute() throws MojoExecutionException {
     try {
+      List<String> command = new ArrayList<String>();
+      command.add(protocCommand);
+      command.add("--version");
+      Exec exec = new Exec(this);
+      List<String> out = new ArrayList<String>();
+      if (exec.run(command, out) != 0) {
+        getLog().error("protoc, could not get version");
+        for (String s : out) {
+          getLog().error(s);
+        }
+        throw new MojoExecutionException("protoc failure");        
+      } else {
+        if (out.size() == 0) {
+          throw new MojoExecutionException(
+              "'protoc -version' did not return a version");
+        } else {
+          if (!out.get(0).endsWith(protocVersion)) {
+            throw new MojoExecutionException(
+                "protoc version is '" + out.get(0) + "', expected version is '" 
+                    + protocVersion + "'");            
+          }
+        }
+      }
       if (!output.mkdirs()) {
         if (!output.exists()) {
           throw new MojoExecutionException("Could not create directory: " + 
             output);
         }
       }
-      List<String> command = new ArrayList<String>();
+      command = new ArrayList<String>();
       command.add(protocCommand);
       command.add("--java_out=" + output.getCanonicalPath());
       if (imports != null) {
@@ -68,8 +93,8 @@ public class ProtocMojo extends AbstractMojo {
       for (File f : FileSetUtils.convertFileSetToFiles(source)) {
         command.add(f.getCanonicalPath());
       }
-      Exec exec = new Exec(this);
-      List<String> out = new ArrayList<String>();
+      exec = new Exec(this);
+      out = new ArrayList<String>();
       if (exec.run(command, out) != 0) {
         getLog().error("protoc compiler error");
         for (String s : out) {
