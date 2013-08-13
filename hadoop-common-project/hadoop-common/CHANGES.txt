@@ -276,6 +276,9 @@ Trunk (Unreleased)
     HADOOP-9847. TestGlobPath symlink tests fail to cleanup properly.
     (cmccabe via wang)
 
+    HADOOP-9740. Fix FsShell '-text' command to be able to read Avro
+    files stored in HDFS and other filesystems. (Allan Yan via cutting)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
