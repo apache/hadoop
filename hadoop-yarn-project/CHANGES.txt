@@ -14,6 +14,9 @@ Release 0.23.10 - UNRELEASED
     YARN-985. Nodemanager should log where a resource was localized (Ravi
     Prakash via jeagles)
 
+    YARN-1036. Distributed Cache gives inconsistent result if cache files get
+    deleted from task tracker (Mayank Bansal and Ravi Prakash via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
