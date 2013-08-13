@@ -22,31 +22,33 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * A helper class for getting build-info of the java-vm. 
- * 
+ * A helper class for getting build-info of the java-vm.
+ *
  */
 @InterfaceAudience.LimitedPrivate({"HBase"})
 @InterfaceStability.Unstable
 public class PlatformName {
   /**
-   * The complete platform 'name' to identify the platform as 
+   * The complete platform 'name' to identify the platform as
    * per the java-vm.
    */
-  private static final String PLATFORM_NAME = System.getProperty("os.name") + "-" + 
-    System.getProperty("os.arch") + "-" +
-    System.getProperty("sun.arch.data.model");
-  
+  public static final String PLATFORM_NAME =
+      (System.getProperty("os.name").startsWith("Windows")
+      ? System.getenv("os") : System.getProperty("os.name"))
+      + "-" + System.getProperty("os.arch")
+      + "-" + System.getProperty("sun.arch.data.model");
+
   /**
-   * The java vendor name used in this platform. 
+   * The java vendor name used in this platform.
    */
   public static final String JAVA_VENDOR_NAME = System.getProperty("java.vendor");
 
   /**
-   * A public static variable to indicate the current java vendor is 
-   * IBM java or not. 
+   * A public static variable to indicate the current java vendor is
+   * IBM java or not.
    */
   public static final boolean IBM_JAVA = JAVA_VENDOR_NAME.contains("IBM");
-  
+
   public static void main(String[] args) {
     System.out.println(PLATFORM_NAME);
   }
