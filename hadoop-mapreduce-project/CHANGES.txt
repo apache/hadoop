@@ -83,6 +83,9 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5425. Junit in TestJobHistoryServer failing in jdk 7 (Robert
     Parker via jlowe)
 
+    MAPREDUCE-5454. TestDFSIO fails intermittently on JDK7 (Karthik Kambatla
+    via Sandy Ryza)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
