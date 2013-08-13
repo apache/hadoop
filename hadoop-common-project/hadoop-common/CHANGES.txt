@@ -52,6 +52,8 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
  
+    HADOOP-9446. Support Kerberos SPNEGO for IBM JDK. (Yu Gao via llu)
+
     HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
     (Karthik Kambatla via Sandy Ryza)
 
