@@ -72,8 +72,9 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import static org.apache.hadoop.ipc.RpcConstants.CURRENT_VERSION;
-import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
+import static org.apache.hadoop.ipc.RpcConstants.*;
+
+import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcResponseMessageWrapper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcResponseWrapper;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
@@ -1177,9 +1178,7 @@ public abstract class Server {
     public UserGroupInformation attemptingUser = null; // user name before auth
 
     // Fake 'call' for failed authorization response
-    private static final int AUTHORIZATION_FAILED_CALLID = -1;
-    
-    private final Call authFailedCall = new Call(AUTHORIZATION_FAILED_CALLID,
+    private final Call authFailedCall = new Call(AUTHORIZATION_FAILED_CALL_ID,
         RpcConstants.INVALID_RETRY_COUNT, null, this);
     private ByteArrayOutputStream authFailedResponse = new ByteArrayOutputStream();
     
@@ -1276,8 +1275,28 @@ public abstract class Server {
       }
     }
 
-    private RpcSaslProto saslReadAndProcess(DataInputStream dis) throws
-        WrappedRpcServerException, InterruptedException {
+    private void saslReadAndProcess(DataInputStream dis) throws
+    WrappedRpcServerException, IOException, InterruptedException {
+      final RpcSaslProto saslMessage =
+          decodeProtobufFromStream(RpcSaslProto.newBuilder(), dis);
+      switch (saslMessage.getState()) {
+        case WRAP: {
+          if (!saslContextEstablished || !useWrap) {
+            throw new WrappedRpcServerException(
+                RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
+                new SaslException("Server is not wrapping data"));
+          }
+          // loops over decoded data and calls processOneRpc
+          unwrapPacketAndProcessRpcs(saslMessage.getToken().toByteArray());
+          break;
+        }
+        default:
+          saslProcess(saslMessage);
+      }
+    }
+
+    private void saslProcess(RpcSaslProto saslMessage)
+        throws WrappedRpcServerException, IOException, InterruptedException {
       if (saslContextEstablished) {
         throw new WrappedRpcServerException(
             RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
@@ -1286,7 +1305,7 @@ public abstract class Server {
       RpcSaslProto saslResponse = null;
       try {
         try {
-          saslResponse = processSaslMessage(dis);
+          saslResponse = processSaslMessage(saslMessage);
         } catch (IOException e) {
           IOException sendToClient = e;
           Throwable cause = e;
@@ -1310,8 +1329,6 @@ public abstract class Server {
             LOG.debug("SASL server context established. Negotiated QoP is "
                 + saslServer.getNegotiatedProperty(Sasl.QOP));
           }
-          String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
-          useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
           user = getAuthorizedUgi(saslServer.getAuthorizationID());
           if (LOG.isDebugEnabled()) {
             LOG.debug("SASL server successfully authenticated client: " + user);
@@ -1326,13 +1343,21 @@ public abstract class Server {
         throw new WrappedRpcServerException(
             RpcErrorCodeProto.FATAL_UNAUTHORIZED, ioe);
       }
-      return saslResponse; 
+      // send back response if any, may throw IOException
+      if (saslResponse != null) {
+        doSaslReply(saslResponse);
+      }
+      // do NOT enable wrapping until the last auth response is sent
+      if (saslContextEstablished) {
+        String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
+        // SASL wrapping is only used if the connection has a QOP, and
+        // the value is not auth.  ex. auth-int & auth-priv
+        useWrap = (qop != null && !"auth".equalsIgnoreCase(qop));        
+      }
     }
     
-    private RpcSaslProto processSaslMessage(DataInputStream dis)
+    private RpcSaslProto processSaslMessage(RpcSaslProto saslMessage)
         throws IOException, InterruptedException {
-      final RpcSaslProto saslMessage =
-          decodeProtobufFromStream(RpcSaslProto.newBuilder(), dis);
       RpcSaslProto saslResponse = null;
       final SaslState state = saslMessage.getState(); // required      
       switch (state) {
@@ -1517,11 +1542,6 @@ public abstract class Server {
         if (data == null) {
           dataLengthBuffer.flip();
           dataLength = dataLengthBuffer.getInt();
-          if ((dataLength == RpcConstants.PING_CALL_ID) && (!useWrap)) {
-            // covers the !useSasl too
-            dataLengthBuffer.clear();
-            return 0; // ping message
-          }
           checkDataLength(dataLength);
           data = ByteBuffer.allocate(dataLength);
         }
@@ -1532,7 +1552,7 @@ public abstract class Server {
           dataLengthBuffer.clear();
           data.flip();
           boolean isHeaderRead = connectionContextRead;
-          processRpcRequestPacket(data.array());
+          processOneRpc(data.array());
           data = null;
           if (!isHeaderRead) {
             continue;
@@ -1695,29 +1715,19 @@ public abstract class Server {
     }
     
     /**
-     * Process a RPC Request - if SASL wrapping is enabled, unwrap the
-     * requests and process each one, else directly process the request 
-     * @param buf - single request or SASL wrapped requests
-     * @throws IOException - connection failed to authenticate or authorize,
-     *   or the request could not be decoded into a Call
+     * Process a wrapped RPC Request - unwrap the SASL packet and process
+     * each embedded RPC request 
+     * @param buf - SASL wrapped request of one or more RPCs
+     * @throws IOException - SASL packet cannot be unwrapped
      * @throws InterruptedException
      */    
-    private void processRpcRequestPacket(byte[] buf)
-        throws WrappedRpcServerException, IOException, InterruptedException {
-      if (saslContextEstablished && useWrap) {
-        if (LOG.isDebugEnabled())
-          LOG.debug("Have read input token of size " + buf.length
-              + " for processing by saslServer.unwrap()");        
-        final byte[] plaintextData = saslServer.unwrap(buf, 0, buf.length);
-        // loops over decoded data and calls processOneRpc
-        unwrapPacketAndProcessRpcs(plaintextData);
-      } else {
-        processOneRpc(buf);
-      }
-    }
-    
     private void unwrapPacketAndProcessRpcs(byte[] inBuf)
         throws WrappedRpcServerException, IOException, InterruptedException {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Have read input token of size " + inBuf.length
+            + " for processing by saslServer.unwrap()");
+      }
+      inBuf = saslServer.unwrap(inBuf, 0, inBuf.length);
       ReadableByteChannel ch = Channels.newChannel(new ByteArrayInputStream(
           inBuf));
       // Read all RPCs contained in the inBuf, even partial ones
@@ -1732,13 +1742,6 @@ public abstract class Server {
         if (unwrappedData == null) {
           unwrappedDataLengthBuffer.flip();
           int unwrappedDataLength = unwrappedDataLengthBuffer.getInt();
-
-          if (unwrappedDataLength == RpcConstants.PING_CALL_ID) {
-            if (LOG.isDebugEnabled())
-              LOG.debug("Received ping message");
-            unwrappedDataLengthBuffer.clear();
-            continue; // ping message
-          }
           unwrappedData = ByteBuffer.allocate(unwrappedDataLength);
         }
 
@@ -1906,11 +1909,9 @@ public abstract class Server {
               RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
               "SASL protocol not requested by client");
         }
-        RpcSaslProto response = saslReadAndProcess(dis);
-        // send back response if any, may throw IOException
-        if (response != null) {
-          doSaslReply(response);
-        }
+        saslReadAndProcess(dis);
+      } else if (callId == PING_CALL_ID) {
+        LOG.debug("Received ping message");
       } else {
         throw new WrappedRpcServerException(
             RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
@@ -1924,7 +1925,7 @@ public abstract class Server {
      */
     private void authorizeConnection() throws WrappedRpcServerException {
       try {
-        // If auth method is DIGEST, the token was obtained by the
+        // If auth method is TOKEN, the token was obtained by the
         // real user for the effective user, therefore not required to
         // authorize real user. doAs is allowed only for simple or kerberos
         // authentication
@@ -2389,9 +2390,21 @@ public abstract class Server {
         LOG.debug("Adding saslServer wrapped token of size " + token.length
             + " as call response.");
       response.reset();
-      DataOutputStream saslOut = new DataOutputStream(response);
-      saslOut.writeInt(token.length);
-      saslOut.write(token, 0, token.length);
+      // rebuild with sasl header and payload
+      RpcResponseHeaderProto saslHeader = RpcResponseHeaderProto.newBuilder()
+          .setCallId(AuthProtocol.SASL.callId)
+          .setStatus(RpcStatusProto.SUCCESS)
+          .build();
+      RpcSaslProto saslMessage = RpcSaslProto.newBuilder()
+          .setState(SaslState.WRAP)
+          .setToken(ByteString.copyFrom(token, 0, token.length))
+          .build();
+      RpcResponseMessageWrapper saslResponse =
+          new RpcResponseMessageWrapper(saslHeader, saslMessage);
+
+      DataOutputStream out = new DataOutputStream(response);
+      out.writeInt(saslResponse.getLength());
+      saslResponse.write(out);
     }
   }
   

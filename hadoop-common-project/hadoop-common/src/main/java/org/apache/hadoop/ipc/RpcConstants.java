@@ -27,13 +27,13 @@ public class RpcConstants {
     // Hidden Constructor
   }
   
-  public static final int PING_CALL_ID = -1;
+  public static final int AUTHORIZATION_FAILED_CALL_ID = -1;
+  public static final int INVALID_CALL_ID = -2;
+  public static final int CONNECTION_CONTEXT_CALL_ID = -3;
+  public static final int PING_CALL_ID = -4;
   
   public static final byte[] DUMMY_CLIENT_ID = new byte[0];
   
-  public static final int INVALID_CALL_ID = -2;
-
-  public static final int CONNECTION_CONTEXT_CALL_ID = -3;
   
   public static final int INVALID_RETRY_COUNT = -1;
   

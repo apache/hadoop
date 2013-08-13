@@ -159,14 +159,26 @@ public class TestAMRMClientAsync {
 
   @Test(timeout=10000)
   public void testAMRMClientAsyncException() throws Exception {
+    String exStr = "TestException";
+    YarnException mockException = mock(YarnException.class);
+    when(mockException.getMessage()).thenReturn(exStr);
+    runHeartBeatThrowOutException(mockException);
+  }
+
+  @Test(timeout=10000)
+  public void testAMRMClientAsyncRunTimeException() throws Exception {
+    String exStr = "TestRunTimeException";
+    RuntimeException mockRunTimeException = mock(RuntimeException.class);
+    when(mockRunTimeException.getMessage()).thenReturn(exStr);
+    runHeartBeatThrowOutException(mockRunTimeException);
+  }
+
+  private void runHeartBeatThrowOutException(Exception ex) throws Exception{
     Configuration conf = new Configuration();
     TestCallbackHandler callbackHandler = new TestCallbackHandler();
     @SuppressWarnings("unchecked")
     AMRMClient<ContainerRequest> client = mock(AMRMClientImpl.class);
-    String exStr = "TestException";
-    YarnException mockException = mock(YarnException.class);
-    when(mockException.getMessage()).thenReturn(exStr);
-    when(client.allocate(anyFloat())).thenThrow(mockException);
+    when(client.allocate(anyFloat())).thenThrow(ex);
 
     AMRMClientAsync<ContainerRequest> asyncClient = 
         AMRMClientAsync.createAMRMClientAsync(client, 20, callbackHandler);
@@ -183,14 +195,14 @@ public class TestAMRMClientAsync {
         }
       }
     }
-    
-    Assert.assertTrue(callbackHandler.savedException.getMessage().contains(exStr));
+    Assert.assertTrue(callbackHandler.savedException.getMessage().contains(
+        ex.getMessage()));
     
     asyncClient.stop();
     // stopping should have joined all threads and completed all callbacks
     Assert.assertTrue(callbackHandler.callbackCount == 0);
   }
-  
+
   @Test//(timeout=10000)
   public void testAMRMClientAsyncReboot() throws Exception {
     Configuration conf = new Configuration();

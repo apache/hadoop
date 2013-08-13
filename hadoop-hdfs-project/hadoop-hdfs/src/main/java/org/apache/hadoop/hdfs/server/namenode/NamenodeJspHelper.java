@@ -709,10 +709,10 @@ class NamenodeJspHelper {
       int idx = (suffix != null && name.endsWith(suffix)) ? name
           .indexOf(suffix) : -1;
 
-      out.print(rowTxt() + "<td class=\"name\"><a title=\"" + d.getXferAddr()
+      out.print(rowTxt() + "<td class=\"name\"> <a title=\"" + url
           + "\" href=\"" + url + "\">"
           + ((idx > 0) ? name.substring(0, idx) : name) + "</a>"
-          + ((alive) ? "" : "\n"));
+          + ((alive) ? "" : "\n") + "<td class=\"address\">" + d.getXferAddr());
     }
 
     void generateDecommissioningNodeData(JspWriter out, DatanodeDescriptor d,
@@ -746,10 +746,10 @@ class NamenodeJspHelper {
       /*
        * Say the datanode is dn1.hadoop.apache.org with ip 192.168.0.5 we use:
        * 1) d.getHostName():d.getPort() to display. Domain and port are stripped
-       *    if they are common across the nodes. i.e. "dn1"
-       * 2) d.getHost():d.Port() for "title". i.e. "192.168.0.5:50010"
-       * 3) d.getHostName():d.getInfoPort() for url.
+       *    if they are common across the nodes. i.e. "dn1" 
+       * 2) d.getHostName():d.getInfoPort() for url and title.
        *    i.e. "http://dn1.hadoop.apache.org:50075/..."
+       * 3) d.getXferAddr() for "Transferring Address". i.e. "192.168.0.5:50010"
        * Note that "d.getHost():d.getPort()" is what DFS clients use to
        * interact with datanodes.
        */
@@ -880,7 +880,9 @@ class NamenodeJspHelper {
             }
 
             out.print("<tr class=\"headerRow\"> <th " + nodeHeaderStr("name")
-                + "> Node <th " + nodeHeaderStr("lastcontact")
+                + "> Node <th " + nodeHeaderStr("address")
+                + "> Transferring<br>Address <th "
+                + nodeHeaderStr("lastcontact")
                 + "> Last <br>Contact <th " + nodeHeaderStr("adminstate")
                 + "> Admin State <th " + nodeHeaderStr("capacity")
                 + "> Configured <br>Capacity (" + diskByteStr + ") <th "
@@ -896,8 +898,8 @@ class NamenodeJspHelper {
                 + nodeHeaderStr("bpused") + "> Block Pool<br>Used (" 
                 + diskByteStr + ") <th "
                 + nodeHeaderStr("pcbpused")
-                + "> Block Pool<br>Used (%)"
-                + "> Blocks <th " + nodeHeaderStr("volfails")
+                + "> Block Pool<br>Used (%)" + " <th "
+                + nodeHeaderStr("volfails")
                 +"> Failed Volumes\n");
 
             JspHelper.sortNodeList(live, sorterField, sorterOrder);
@@ -915,7 +917,9 @@ class NamenodeJspHelper {
           if (dead.size() > 0) {
             out.print("<table border=1 cellspacing=0> <tr id=\"row1\"> "
                 + "<th " + nodeHeaderStr("node")
-                + "> Node <th " + nodeHeaderStr("decommissioned")
+                + "> Node <th " + nodeHeaderStr("address")
+                + "> Transferring<br>Address <th "
+                + nodeHeaderStr("decommissioned")
                 + "> Decommissioned\n");
 
             JspHelper.sortNodeList(dead, sorterField, sorterOrder);
@@ -935,7 +939,9 @@ class NamenodeJspHelper {
           if (decommissioning.size() > 0) {
             out.print("<table border=1 cellspacing=0> <tr class=\"headRow\"> "
                 + "<th " + nodeHeaderStr("name") 
-                + "> Node <th " + nodeHeaderStr("lastcontact")
+                + "> Node <th " + nodeHeaderStr("address")
+                + "> Transferring<br>Address <th "
+                + nodeHeaderStr("lastcontact")
                 + "> Last <br>Contact <th "
                 + nodeHeaderStr("underreplicatedblocks")
                 + "> Under Replicated Blocks <th "

@@ -85,6 +85,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
+import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -581,17 +582,24 @@ public class ContainerManagerImpl extends CompositeService implements
     authorizeGetAndStopContainerRequest(containerID, container, true,
       nmTokenIdentifier);
 
-    dispatcher.getEventHandler().handle(
-      new ContainerKillEvent(containerID,
-        "Container killed by the ApplicationMaster."));
+    if (container == null) {
+      if (!nodeStatusUpdater.isContainerRecentlyStopped(containerID)) {
+        throw RPCUtil.getRemoteException("Container " + containerIDStr
+          + " is not handled by this NodeManager");
+      }
+    } else {
+      dispatcher.getEventHandler().handle(
+        new ContainerKillEvent(containerID,
+          "Container killed by the ApplicationMaster."));
 
-    NMAuditLogger.logSuccess(container.getUser(),
-      AuditConstants.STOP_CONTAINER, "ContainerManageImpl", containerID
-        .getApplicationAttemptId().getApplicationId(), containerID);
+      NMAuditLogger.logSuccess(container.getUser(),    
+        AuditConstants.STOP_CONTAINER, "ContainerManageImpl", containerID
+          .getApplicationAttemptId().getApplicationId(), containerID);
 
-    // TODO: Move this code to appropriate place once kill_container is
-    // implemented.
-    nodeStatusUpdater.sendOutofBandHeartBeat();
+      // TODO: Move this code to appropriate place once kill_container is
+      // implemented.
+      nodeStatusUpdater.sendOutofBandHeartBeat();
+    }
   }
 
   /**
@@ -627,6 +635,15 @@ public class ContainerManagerImpl extends CompositeService implements
     authorizeGetAndStopContainerRequest(containerID, container, false,
       nmTokenIdentifier);
 
+    if (container == null) {
+      if (nodeStatusUpdater.isContainerRecentlyStopped(containerID)) {
+        throw RPCUtil.getRemoteException("Container " + containerIDStr
+          + " was recently stopped on node manager.");
+      } else {
+        throw RPCUtil.getRemoteException("Container " + containerIDStr
+          + " is not handled by this NodeManager");
+      }
+    }
     ContainerStatus containerStatus = container.cloneAndGetContainerStatus();
     LOG.info("Returning " + containerStatus);
     return containerStatus;
@@ -658,17 +675,11 @@ public class ContainerManagerImpl extends CompositeService implements
           container.getContainerId());
       } else {
         LOG.warn(identifier.getApplicationAttemptId()
-            + " attempted to get get status for non-application container : "
+            + " attempted to get status for non-application container : "
             + container.getContainerId().toString());
       }
-      throw RPCUtil.getRemoteException("Container " + containerId.toString()
-          + " is not started by this application attempt.");
     }
 
-    if (container == null) {
-      throw RPCUtil.getRemoteException("Container " + containerId.toString()
-          + " is not handled by this NodeManager");
-    }
   }
 
   class ContainerEventDispatcher implements EventHandler<ContainerEvent> {

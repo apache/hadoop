@@ -10,12 +10,6 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-4659 Support setting execution bit for regular files (Brandon Li via sanjay)
-
-    HDFS-4762 Provide HDFS based NFSv3 and Mountd implementation (brandonli)
-
-    HDFS-4962 Use enum for nfs constants (Nicholas SZE via jing9)
-
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -241,10 +235,8 @@ Trunk (Unreleased)
     HDFS-3934. duplicative dfs_hosts entries handled wrong. (Colin Patrick
     McCabe)
 
-    HDFS-4948. mvn site for hadoop-hdfs-nfs fails. (brandonli)
-
-    HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
-    instead of 0 to avoid confusing applications. (brandonli)
+    HDFS-4366. Block Replication Policy Implementation May Skip Higher-Priority
+    Blocks for Lower-Priority Blocks (Derek Dagit via kihwal)
 
 Release 2.3.0 - UNRELEASED
 
@@ -279,14 +271,38 @@ Release 2.1.1-beta - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-4962 Use enum for nfs constants (Nicholas SZE via jing9)
+
+    HDFS-5071 Change hdfs-nfs parent project to hadoop-project (brandonli)
+
+    HDFS-4763 Add script changes/utility for starting NFS gateway (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
     contain additional properties.  (szetszwo)
 
+    HDFS-5061. Make FSNameSystem#auditLoggers an unmodifiable list. 
+    (Arpit Agarwal via suresh)
+
+    HDFS-4905. Add appendToFile command to "hdfs dfs". (Arpit Agarwal via
+    cnauroth)
+
+    HDFS-4926. Namenode webserver's page has a tooltip that is inconsistent 
+    with the datanode HTML link. (Vivek Ganesan via jing9)
+
+    HDFS-5047. Supress logging of full stack trace of quota and lease
+    exceptions. (Robert Parker via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-5028. LeaseRenewer throws ConcurrentModificationException when timeout.
+    (zhaoyunjiong via szetszwo)
+
+    HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
+    instead of 0 to avoid confusing applications. (brandonli)
 
 Release 2.1.0-beta - 2013-08-06
 
@@ -338,6 +354,10 @@ Release 2.1.0-beta - 2013-08-06
 
     HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
     (Junping Du via szetszwo)
+
+    HDFS-4659 Support setting execution bit for regular files (Brandon Li via sanjay)
+
+    HDFS-4762 Provide HDFS based NFSv3 and Mountd implementation (brandonli)
 
     HDFS-4372. Track NameNode startup progress. (cnauroth)
 
@@ -718,6 +738,8 @@ Release 2.1.0-beta - 2013-08-06
 
     HDFS-4943. WebHdfsFileSystem does not work when original file path has
     encoded chars.  (Jerry He via szetszwo)
+
+    HDFS-4948. mvn site for hadoop-hdfs-nfs fails. (brandonli)
 
     HDFS-4887. TestNNThroughputBenchmark exits abruptly. (kihwal)
 

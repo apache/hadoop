@@ -57,6 +57,8 @@ function print_usage(){
   echo "                       current directory contents with a snapshot"
   echo "  lsSnapshottableDir   list all snapshottable dirs owned by the current user"
   echo "						Use -help to see options"
+  echo "  portmap              run a portmap service"
+  echo "  nfs3                 run an NFS version 3 gateway"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
@@ -149,6 +151,10 @@ elif [ "$COMMAND" = "snapshotDiff" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
 elif [ "$COMMAND" = "lsSnapshottableDir" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
+elif [ "$COMMAND" = "portmap" ] ; then
+  CLASS=org.apache.hadoop.portmap.Portmap
+elif [ "$COMMAND" = "nfs3" ] ; then
+  CLASS=org.apache.hadoop.hdfs.nfs.nfs3.Nfs3
 else
   CLASS="$COMMAND"
 fi

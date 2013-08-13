@@ -682,31 +682,13 @@ public class RawLocalFileSystem extends FileSystem {
     if (createParent) {
       mkdirs(link.getParent());
     }
-    // NB: Use createSymbolicLink in java.nio.file.Path once available
-    try {
-      Shell.execCommand(Shell.getSymlinkCommand(
-        Path.getPathWithoutSchemeAndAuthority(target).toString(),
-        Path.getPathWithoutSchemeAndAuthority(makeAbsolute(link)).toString()));
-    } catch (IOException x) {
-      throw new IOException("Unable to create symlink: "+x.getMessage());
-    }
-  }
 
-  /**
-   * Returns the target of the given symlink. Returns the empty string if
-   * the given path does not refer to a symlink or there is an error
-   * accessing the symlink.
-   */
-  private String readLink(Path p) {
-    /* NB: Use readSymbolicLink in java.nio.file.Path once available. Could
-     * use getCanonicalPath in File to get the target of the symlink but that
-     * does not indicate if the given path refers to a symlink.
-     */
-    try {
-      final String path = p.toUri().getPath();
-      return Shell.execCommand(Shell.READ_LINK_COMMAND, path).trim();
-    } catch (IOException x) {
-      return "";
+    // NB: Use createSymbolicLink in java.nio.file.Path once available
+    int result = FileUtil.symLink(target.toString(),
+        makeAbsolute(link).toString());
+    if (result != 0) {
+      throw new IOException("Error " + result + " creating symlink " +
+          link + " to " + target);
     }
   }
 
@@ -729,7 +711,7 @@ public class RawLocalFileSystem extends FileSystem {
   }
 
   private FileStatus getFileLinkStatusInternal(final Path f) throws IOException {
-    String target = readLink(f);
+    String target = FileUtil.readLink(new File(f.toString()));
 
     try {
       FileStatus fs = getFileStatus(f);

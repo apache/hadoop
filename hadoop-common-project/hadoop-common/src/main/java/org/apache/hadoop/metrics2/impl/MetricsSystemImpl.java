@@ -381,7 +381,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   private void snapshotMetrics(MetricsSourceAdapter sa,
                                MetricsBufferBuilder bufferBuilder) {
     long startTime = Time.now();
-    bufferBuilder.add(sa.name(), sa.getMetrics(collector, false));
+    bufferBuilder.add(sa.name(), sa.getMetrics(collector, true));
     collector.clear();
     snapshotStat.add(Time.now() - startTime);
     LOG.debug("Snapshotted source "+ sa.name());

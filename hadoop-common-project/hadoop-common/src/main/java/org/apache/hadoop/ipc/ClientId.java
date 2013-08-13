@@ -33,6 +33,7 @@ public class ClientId {
   
   /** The byte array of a UUID should be 16 */ 
   public static final int BYTE_LENGTH = 16;
+  private static final int shiftWidth = 8;
   
   /**
    * Return clientId as byte[]
@@ -53,15 +54,25 @@ public class ClientId {
     }
     // otherwise should be 16 bytes
     Preconditions.checkArgument(clientId.length == BYTE_LENGTH);
-    long msb = 0;
-    long lsb = 0;
-    for (int i = 0; i < 8; i++) {
-      msb = (msb << 8) | (clientId[i] & 0xff);
-    }
-    for (int i = 8; i < 16; i++) {
-      lsb = (lsb << 8) | (clientId[i] & 0xff);
-    }
+    long msb = getMsb(clientId);
+    long lsb = getLsb(clientId);
     return (new UUID(msb, lsb)).toString();
+  }
+  
+  public static long getMsb(byte[] clientId) {
+    long msb = 0;
+    for (int i = 0; i < BYTE_LENGTH/2; i++) {
+      msb = (msb << shiftWidth) | (clientId[i] & 0xff);
+    }
+    return msb;
+  }
+  
+  public static long getLsb(byte[] clientId) {
+    long lsb = 0;
+    for (int i = BYTE_LENGTH/2; i < BYTE_LENGTH; i++) {
+      lsb = (lsb << shiftWidth) | (clientId[i] & 0xff);
+    }
+    return lsb;
   }
   
   /** Convert from clientId string byte[] representation of clientId */

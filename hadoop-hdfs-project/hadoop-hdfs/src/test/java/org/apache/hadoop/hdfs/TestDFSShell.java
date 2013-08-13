@@ -17,17 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.security.Permission;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -42,10 +32,7 @@ import java.util.zip.GZIPOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSInputChecker;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -63,6 +50,9 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.*;
 
 /**
  * This class tests commands from DFSShell.
@@ -98,6 +88,18 @@ public class TestDFSShell {
     out.close();
     assertTrue(f.exists());
     assertTrue(f.isFile());
+    return f;
+  }
+
+  static File createLocalFileWithRandomData(int fileLength, File f)
+      throws IOException {
+    assertTrue(!f.exists());
+    f.createNewFile();
+    FileOutputStream out = new FileOutputStream(f.toString());
+    byte[] buffer = new byte[fileLength];
+    out.write(buffer);
+    out.flush();
+    out.close();
     return f;
   }
 
@@ -1745,6 +1747,85 @@ public class TestDFSShell {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+
+  @Test (timeout = 300000)
+  public void testAppendToFile() throws Exception {
+    final int inputFileLength = 1024 * 1024;
+    File testRoot = new File(TEST_ROOT_DIR, "testAppendtoFileDir");
+    testRoot.mkdirs();
+
+    File file1 = new File(testRoot, "file1");
+    File file2 = new File(testRoot, "file2");
+    createLocalFileWithRandomData(inputFileLength, file1);
+    createLocalFileWithRandomData(inputFileLength, file2);
+
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+
+    try {
+      FileSystem dfs = cluster.getFileSystem();
+      assertTrue("Not a HDFS: " + dfs.getUri(),
+                 dfs instanceof DistributedFileSystem);
+
+      // Run appendToFile once, make sure that the target file is
+      // created and is of the right size.
+      Path remoteFile = new Path("/remoteFile");
+      FsShell shell = new FsShell();
+      shell.setConf(conf);
+      String[] argv = new String[] {
+          "-appendToFile", file1.toString(), file2.toString(), remoteFile.toString() };
+      int res = ToolRunner.run(shell, argv);
+      assertThat(res, is(0));
+      assertThat(dfs.getFileStatus(remoteFile).getLen(), is((long) inputFileLength * 2));
+
+      // Run the command once again and make sure that the target file
+      // size has been doubled.
+      res = ToolRunner.run(shell, argv);
+      assertThat(res, is(0));
+      assertThat(dfs.getFileStatus(remoteFile).getLen(), is((long) inputFileLength * 4));
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test (timeout = 300000)
+  public void testAppendToFileBadArgs() throws Exception {
+    final int inputFileLength = 1024 * 1024;
+    File testRoot = new File(TEST_ROOT_DIR, "testAppendToFileBadArgsDir");
+    testRoot.mkdirs();
+
+    File file1 = new File(testRoot, "file1");
+    createLocalFileWithRandomData(inputFileLength, file1);
+
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+
+    try {
+      FileSystem dfs = cluster.getFileSystem();
+      assertTrue("Not a HDFS: " + dfs.getUri(),
+                 dfs instanceof DistributedFileSystem);
+
+      // Run appendToFile with insufficient arguments.
+      FsShell shell = new FsShell();
+      shell.setConf(conf);
+      String[] argv = new String[] {
+          "-appendToFile", file1.toString() };
+      int res = ToolRunner.run(shell, argv);
+      assertThat(res, not(0));
+
+      // Mix stdin with other input files. Must fail.
+      Path remoteFile = new Path("/remoteFile");
+      argv = new String[] {
+          "-appendToFile", file1.toString(), "-", remoteFile.toString() };
+      res = ToolRunner.run(shell, argv);
+      assertThat(res, not(0));
+    } finally {
+      cluster.shutdown();
     }
   }
 

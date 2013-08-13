@@ -18,11 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -82,16 +79,12 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   static final int QUEUE_WITH_CORRUPT_BLOCKS = 4;
   /** the queues themselves */
   private List<LightWeightLinkedSet<Block>> priorityQueues
-      = new ArrayList<LightWeightLinkedSet<Block>>();
+      = new ArrayList<LightWeightLinkedSet<Block>>(LEVEL);
 
-  /** Stores the replication index for each priority */
-  private Map<Integer, Integer> priorityToReplIdx = new HashMap<Integer, Integer>(LEVEL);
-  
   /** Create an object. */
   UnderReplicatedBlocks() {
     for (int i = 0; i < LEVEL; i++) {
       priorityQueues.add(new LightWeightLinkedSet<Block>());
-      priorityToReplIdx.put(i, 0);
     }
   }
 
@@ -310,13 +303,15 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   
   /**
    * Get a list of block lists to be replicated. The index of block lists
-   * represents its replication priority. Replication index will be tracked for
-   * each priority list separately in priorityToReplIdx map. Iterates through
-   * all priority lists and find the elements after replication index. Once the
-   * last priority lists reaches to end, all replication indexes will be set to
-   * 0 and start from 1st priority list to fulfill the blockToProces count.
-   * 
-   * @param blocksToProcess - number of blocks to fetch from underReplicated blocks.
+   * represents its replication priority. Iterates each block list in priority
+   * order beginning with the highest priority list. Iterators use a bookmark to
+   * resume where the previous iteration stopped. Returns when the block count
+   * is met or iteration reaches the end of the lowest priority list, in which
+   * case bookmarks for each block list are reset to the heads of their
+   * respective lists.
+   *
+   * @param blocksToProcess - number of blocks to fetch from underReplicated
+   *          blocks.
    * @return Return a list of block lists to be replicated. The block list index
    *         represents its replication priority.
    */
@@ -336,12 +331,8 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     for (int priority = 0; priority < LEVEL; priority++) { 
       // Go through all blocks that need replications with current priority.
       BlockIterator neededReplicationsIterator = iterator(priority);
-      Integer replIndex = priorityToReplIdx.get(priority);
-      
-      // skip to the first unprocessed block, which is at replIndex
-      for (int i = 0; i < replIndex && neededReplicationsIterator.hasNext(); i++) {
-        neededReplicationsIterator.next();
-      }
+      // Set the iterator to the first unprocessed block at this priority level.
+      neededReplicationsIterator.setToBookmark();
 
       blocksToProcess = Math.min(blocksToProcess, size());
       
@@ -354,20 +345,18 @@ class UnderReplicatedBlocks implements Iterable<Block> {
           && neededReplicationsIterator.hasNext()) {
         Block block = neededReplicationsIterator.next();
         blocksToReplicate.get(priority).add(block);
-        replIndex++;
         blockCount++;
       }
       
       if (!neededReplicationsIterator.hasNext()
           && neededReplicationsIterator.getPriority() == LEVEL - 1) {
-        // reset all priorities replication index to 0 because there is no
-        // recently added blocks in any list.
+        // Reset all priorities' bookmarks to the beginning because there were
+        // no recently added blocks in any list.
         for (int i = 0; i < LEVEL; i++) {
-          priorityToReplIdx.put(i, 0);
+          this.priorityQueues.get(i).resetBookmark();
         }
         break;
       }
-      priorityToReplIdx.put(priority, replIndex); 
     }
     return blocksToReplicate;
   }
@@ -450,15 +439,19 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     int getPriority() {
       return level;
     }
-  }
 
-  /**
-   * This method is to decrement the replication index for the given priority
-   * 
-   * @param priority  - int priority level
-   */
-  public void decrementReplicationIndex(int priority) {
-    Integer replIdx = priorityToReplIdx.get(priority);
-    priorityToReplIdx.put(priority, --replIdx); 
+    /**
+     * Sets iterator(s) to bookmarked elements.
+     */
+    private synchronized void setToBookmark() {
+      if (this.isIteratorForLevel) {
+        this.iterators.set(0, priorityQueues.get(this.level)
+            .getBookmark());
+      } else {
+        for(int i=0; i<LEVEL; i++) {
+          this.iterators.set(i, priorityQueues.get(i).getBookmark());
+        }
+      }
+    }
   }
 }

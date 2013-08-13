@@ -100,6 +100,7 @@ public class TestRPC {
     
     void ping() throws IOException;
     void slowPing(boolean shouldSlow) throws IOException;
+    void sleep(long delay) throws IOException, InterruptedException;
     String echo(String value) throws IOException;
     String[] echo(String[] value) throws IOException;
     Writable echo(Writable value) throws IOException;
@@ -143,6 +144,11 @@ public class TestRPC {
         fastPingCounter++;
         notify();
       }
+    }
+    
+    @Override
+    public void sleep(long delay) throws InterruptedException {
+      Thread.sleep(delay);
     }
     
     @Override
@@ -929,6 +935,28 @@ public class TestRPC {
       assertTrue("rpc got exception " + error.get(), error.get() == null);
     } finally {
       server.stop();
+    }
+  }
+
+  @Test
+  public void testConnectionPing() throws Exception {
+    Configuration conf = new Configuration();
+    int pingInterval = 50;
+    conf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, true);
+    conf.setInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY, pingInterval);
+    final Server server = new RPC.Builder(conf)
+        .setProtocol(TestProtocol.class).setInstance(new TestImpl())
+        .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5).setVerbose(true)
+        .build();
+    server.start();
+
+    final TestProtocol proxy = RPC.getProxy(TestProtocol.class,
+        TestProtocol.versionID, server.getListenerAddress(), conf);
+    try {
+      // this call will throw exception if server couldn't decode the ping
+      proxy.sleep(pingInterval*4);
+    } finally {
+      if (proxy != null) RPC.stopProxy(proxy);
     }
   }
 

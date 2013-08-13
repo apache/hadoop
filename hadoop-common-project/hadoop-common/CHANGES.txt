@@ -106,6 +106,8 @@ Trunk (Unreleased)
     HADOOP-9186.  test-patch.sh should report build failure to JIRA.
     (Binglin Chang via Colin Patrick McCabe)
 
+    HADOOP-9833 move slf4j to version 1.7.5 (Kousuke Saruta via stevel)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -269,9 +271,6 @@ Trunk (Unreleased)
     HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
     (Chris Nauroth via sanjay)
 
-    HADOOP-9806 PortmapInterface should check if the procedure is out-of-range
-    (brandonli)
-
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -285,6 +284,8 @@ Release 2.3.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-9319. Update bundled LZ4 source to r99. (Binglin Chang via llu)
 
     HADOOP-9241. DU refresh interval is not configurable (harsh)
 
@@ -312,6 +313,12 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
     (Ashwin Shankar via jlowe)
 
+    HADOOP-9761.  ViewFileSystem#rename fails when using DistributedFileSystem.
+    (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9817. FileSystem#globStatus and FileContext#globStatus need to work
+    with symlinks. (Colin Patrick McCabe via Andrew Wang)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -326,6 +333,13 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9803. Add a generic type parameter to RetryInvocationHandler.
     (szetszwo)
 
+    HADOOP-9821. ClientId should have getMsb/getLsb methods. 
+    (Tsuyoshi OZAWA via jing9)
+
+    HADOOP-9672. Upgrade Avro dependency to 1.7.4. (sandy via kihwal)
+
+    HADOOP-9789. Support server advertised kerberos principals (daryn)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -335,6 +349,17 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9801. Configuration#writeXml uses platform defaulting encoding, which
     may mishandle multi-byte characters. (cnauroth)
+
+    HADOOP-9806 PortmapInterface should check if the procedure is out-of-range
+    (brandonli)
+
+    HADOOP-9527. Add symlink support to LocalFileSystem on Windows.
+    (Arpit Agarwal via cnauroth)
+
+    HADOOP-9831. Make checknative shell command accessible on Windows. (cnauroth)
+
+    HADOOP-9675. use svn:eol-style native for html to prevent line ending
+    issues (Colin Patrick McCabe)
 
 Release 2.1.0-beta - 2013-08-06
 
@@ -364,6 +389,10 @@ Release 2.1.0-beta - 2013-08-06
     HADOOP-9683. [RPC v9] Wrap IpcConnectionContext in RPC headers (daryn)
 
     HADOOP-9698. [RPC v9] Client must honor server's SASL negotiate response (daryn)
+
+    HADOOP-9832. [RPC v9] Add RPC header to client ping (daryn)
+
+    HADOOP-9820. [RPC v9] Wire protocol is insufficient to support multiplexing. (daryn via jitendra)
 
   NEW FEATURES
 
@@ -680,6 +709,10 @@ Release 2.1.0-beta - 2013-08-06
 
     HADOOP-9507. LocalFileSystem rename() is broken in some cases when
     destination exists. (cnauroth)
+
+    HADOOP-9816. RPC Sasl QOP is broken (daryn)
+
+    HADOOP-9850. RPC kerberos errors don't trigger relogin. (daryn via kihwal)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 

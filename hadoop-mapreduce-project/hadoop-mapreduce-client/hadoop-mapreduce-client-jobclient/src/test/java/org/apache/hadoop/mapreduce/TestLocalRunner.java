@@ -31,9 +31,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.mapred.LocalJobRunner;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
@@ -410,6 +410,7 @@ public class TestLocalRunner extends TestCase {
   }
 
   /** Test case for zero mappers */
+  @Test
   public void testEmptyMaps() throws Exception {
     Job job = Job.getInstance();
     Path outputPath = getOutputPath();
@@ -428,5 +429,145 @@ public class TestLocalRunner extends TestCase {
     boolean success = job.waitForCompletion(true);
     assertTrue("Empty job should work", success);
   }
+
+  /** @return the directory where numberfiles are written (mapper inputs)  */
+  private Path getNumberDirPath() {
+    return new Path(getInputPath(), "numberfiles");
+  }
+
+  /**
+   * Write out an input file containing an integer.
+   *
+   * @param fileNum the file number to write to.
+   * @param value the value to write to the file
+   * @return the path of the written file.
+   */
+  private Path makeNumberFile(int fileNum, int value) throws IOException {
+    Path workDir = getNumberDirPath();
+    Path filePath = new Path(workDir, "file" + fileNum);
+
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.getLocal(conf);
+
+    OutputStream os = fs.create(filePath);
+    BufferedWriter w = new BufferedWriter(new OutputStreamWriter(os));
+    w.write("" + value);
+    w.close();
+
+    return filePath;
+  }
+
+  /**
+   * Each record received by this mapper is a number 'n'.
+   * Emit the values [0..n-1]
+   */
+  public static class SequenceMapper
+      extends Mapper<LongWritable, Text, Text, NullWritable> {
+
+    public void map(LongWritable k, Text v, Context c)
+        throws IOException, InterruptedException {
+      int max = Integer.valueOf(v.toString());
+      for (int i = 0; i < max; i++) {
+        c.write(new Text("" + i), NullWritable.get());
+      }
+    }
+  }
+
+  private final static int NUMBER_FILE_VAL = 100;
+
+  /**
+   * Tally up the values and ensure that we got as much data
+   * out as we put in.
+   * Each mapper generated 'NUMBER_FILE_VAL' values (0..NUMBER_FILE_VAL-1).
+   * Verify that across all our reducers we got exactly this much
+   * data back.
+   */
+  private void verifyNumberJob(int numMaps) throws Exception {
+    Path outputDir = getOutputPath();
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.getLocal(conf);
+
+    FileStatus [] stats = fs.listStatus(outputDir);
+    int valueSum = 0;
+    for (FileStatus f : stats) {
+      FSDataInputStream istream = fs.open(f.getPath());
+      BufferedReader r = new BufferedReader(new InputStreamReader(istream));
+      String line = null;
+      while ((line = r.readLine()) != null) {
+        valueSum += Integer.valueOf(line.trim());
+      }
+      r.close();
+    }
+
+    int maxVal = NUMBER_FILE_VAL - 1;
+    int expectedPerMapper = maxVal * (maxVal + 1) / 2;
+    int expectedSum = expectedPerMapper * numMaps;
+    LOG.info("expected sum: " + expectedSum + ", got " + valueSum);
+    assertEquals("Didn't get all our results back", expectedSum, valueSum);
+  }
+
+  /**
+   * Run a test which creates a SequenceMapper / IdentityReducer
+   * job over a set of generated number files.
+   */
+  private void doMultiReducerTest(int numMaps, int numReduces,
+      int parallelMaps, int parallelReduces) throws Exception {
+
+    Path in = getNumberDirPath();
+    Path out = getOutputPath();
+
+    // Clear data from any previous tests.
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.getLocal(conf);
+    if (fs.exists(out)) {
+      fs.delete(out, true);
+    }
+
+    if (fs.exists(in)) {
+      fs.delete(in, true);
+    }
+
+    for (int i = 0; i < numMaps; i++) {
+      makeNumberFile(i, 100);
+    }
+
+    Job job = Job.getInstance();
+    job.setNumReduceTasks(numReduces);
+
+    job.setMapperClass(SequenceMapper.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(NullWritable.class);
+    FileInputFormat.addInputPath(job, in);
+    FileOutputFormat.setOutputPath(job, out);
+
+    LocalJobRunner.setLocalMaxRunningMaps(job, parallelMaps);
+    LocalJobRunner.setLocalMaxRunningReduces(job, parallelReduces);
+
+    boolean result = job.waitForCompletion(true);
+    assertTrue("Job failed!!", result);
+
+    verifyNumberJob(numMaps);
+  }
+  
+  @Test
+  public void testOneMapMultiReduce() throws Exception {
+    doMultiReducerTest(1, 2, 1, 1);
+  }
+
+  @Test
+  public void testOneMapMultiParallelReduce() throws Exception {
+    doMultiReducerTest(1, 2, 1, 2);
+  }
+
+  @Test
+  public void testMultiMapOneReduce() throws Exception {
+    doMultiReducerTest(4, 1, 2, 1);
+  }
+
+  @Test
+  public void testMultiMapMultiReduce() throws Exception {
+    doMultiReducerTest(4, 4, 2, 2);
+  }
+
 }
 

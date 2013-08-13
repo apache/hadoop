@@ -18,10 +18,12 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.Task;
@@ -56,6 +58,7 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
   private Progress copyPhase;
   private TaskStatus taskStatus;
   private Task reduceTask; //Used for status updates
+  private Map<TaskAttemptID, MapOutputFile> localMapFiles;
 
   @Override
   public void init(ShuffleConsumerPlugin.Context context) {
@@ -69,6 +72,7 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     this.copyPhase = context.getCopyPhase();
     this.taskStatus = context.getStatus();
     this.reduceTask = context.getReduceTask();
+    this.localMapFiles = context.getLocalMapFiles();
     
     scheduler = new ShuffleSchedulerImpl<K, V>(jobConf, taskStatus, reduceId,
         this, copyPhase, context.getShuffledMapsCounter(),
@@ -103,13 +107,22 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     eventFetcher.start();
     
     // Start the map-output fetcher threads
-    final int numFetchers = jobConf.getInt(MRJobConfig.SHUFFLE_PARALLEL_COPIES, 5);
+    boolean isLocal = localMapFiles != null;
+    final int numFetchers = isLocal ? 1 :
+      jobConf.getInt(MRJobConfig.SHUFFLE_PARALLEL_COPIES, 5);
     Fetcher<K,V>[] fetchers = new Fetcher[numFetchers];
-    for (int i=0; i < numFetchers; ++i) {
-      fetchers[i] = new Fetcher<K,V>(jobConf, reduceId, scheduler, merger, 
-                                     reporter, metrics, this, 
-                                     reduceTask.getShuffleSecret());
-      fetchers[i].start();
+    if (isLocal) {
+      fetchers[0] = new LocalFetcher<K, V>(jobConf, reduceId, scheduler,
+          merger, reporter, metrics, this, reduceTask.getShuffleSecret(),
+          localMapFiles);
+      fetchers[0].start();
+    } else {
+      for (int i=0; i < numFetchers; ++i) {
+        fetchers[i] = new Fetcher<K,V>(jobConf, reduceId, scheduler, merger, 
+                                       reporter, metrics, this, 
+                                       reduceTask.getShuffleSecret());
+        fetchers[i].start();
+      }
     }
     
     // Wait for shuffle to complete successfully

@@ -22,18 +22,7 @@
 #ifdef UNIX
 #include "config.h"
 #endif // UNIX
-
-int LZ4_uncompress_unknownOutputSize(const char* source, char* dest, int isize, int maxOutputSize);
-
-/*
-LZ4_uncompress_unknownOutputSize() :
- isize  : is the input size, therefore the compressed size
- maxOutputSize : is the size of the destination buffer (which must be already allocated)
- return : the number of bytes decoded in the destination buffer (necessarily <= maxOutputSize)
-    If the source stream is malformed, the function will stop decoding and return a negative result, indicating the byte position of the faulty instruction
-    This version never writes beyond dest + maxOutputSize, and is therefore protected against malicious data packets
- note   : This version is a bit slower than LZ4_uncompress
-*/
+#include "lz4.h"
 
 
 static jfieldID Lz4Decompressor_clazz;
@@ -89,7 +78,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Decompressor_de
     return (jint)0;
   }
 
-  uncompressed_direct_buf_len = LZ4_uncompress_unknownOutputSize(compressed_bytes, uncompressed_bytes, compressed_direct_buf_len, uncompressed_direct_buf_len);
+  uncompressed_direct_buf_len = LZ4_decompress_safe(compressed_bytes, uncompressed_bytes, compressed_direct_buf_len, uncompressed_direct_buf_len);
   if (uncompressed_direct_buf_len < 0) {
     THROW(env, "java/lang/InternalError", "LZ4_uncompress_unknownOutputSize failed.");
   }

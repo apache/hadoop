@@ -357,15 +357,20 @@ public class MRApp extends MRAppMaster {
   }
 
   public void waitForState(Service.STATE finalState) throws Exception {
-    int timeoutSecs = 0;
-    while (!finalState.equals(getServiceState()) && timeoutSecs++ < 20) {
-      System.out.println("MRApp State is : " + getServiceState()
-          + " Waiting for state : " + finalState);
-      Thread.sleep(500);
+    if (finalState == Service.STATE.STOPPED) {
+       Assert.assertTrue("Timeout while waiting for MRApp to stop",
+           waitForServiceToStop(20 * 1000));
+    } else {
+      int timeoutSecs = 0;
+      while (!finalState.equals(getServiceState()) && timeoutSecs++ < 20) {
+        System.out.println("MRApp State is : " + getServiceState()
+            + " Waiting for state : " + finalState);
+        Thread.sleep(500);
+      }
+      System.out.println("MRApp State is : " + getServiceState());
+      Assert.assertEquals("MRApp state is not correct (timedout)", finalState,
+          getServiceState());
     }
-    System.out.println("MRApp State is : " + getServiceState());
-    Assert.assertEquals("MRApp state is not correct (timedout)", finalState,
-        getServiceState());
   }
 
   public void verifyCompleted() {

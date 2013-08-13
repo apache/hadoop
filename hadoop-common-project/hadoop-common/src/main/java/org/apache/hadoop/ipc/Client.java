@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
+import static org.apache.hadoop.ipc.RpcConstants.*;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FilterInputStream;
@@ -52,6 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.net.SocketFactory;
+import javax.security.sasl.Sasl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,6 +89,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.CodedOutputStream;
@@ -380,6 +383,7 @@ public class Client {
     private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
     private boolean doPing; //do we need to send ping message
     private int pingInterval; // how often sends ping to the server in msecs
+    private ByteArrayOutputStream pingRequest; // ping message
     
     // currently active calls
     private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
@@ -405,6 +409,15 @@ public class Client {
       this.maxRetriesOnSocketTimeouts = remoteId.getMaxRetriesOnSocketTimeouts();
       this.tcpNoDelay = remoteId.getTcpNoDelay();
       this.doPing = remoteId.getDoPing();
+      if (doPing) {
+        // construct a RPC header with the callId as the ping callId
+        pingRequest = new ByteArrayOutputStream();
+        RpcRequestHeaderProto pingHeader = ProtoUtil
+            .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
+                OperationProto.RPC_FINAL_PACKET, PING_CALL_ID,
+                RpcConstants.INVALID_RETRY_COUNT, clientId);
+        pingHeader.writeDelimitedTo(pingRequest);
+      }
       this.pingInterval = remoteId.getPingInterval();
       this.serviceClass = serviceClass;
       if (LOG.isDebugEnabled()) {
@@ -700,6 +713,7 @@ public class Client {
                     }
                   });
             } catch (Exception ex) {
+              authMethod = saslRpcClient.getAuthMethod();
               if (rand == null) {
                 rand = new Random();
               }
@@ -711,6 +725,9 @@ public class Client {
               // Sasl connect is successful. Let's set up Sasl i/o streams.
               inStream = saslRpcClient.getInputStream(inStream);
               outStream = saslRpcClient.getOutputStream(outStream);
+              // for testing
+              remoteId.saslQop =
+                  (String)saslRpcClient.getNegotiatedProperty(Sasl.QOP);
             } else if (UserGroupInformation.isSecurityEnabled() &&
                        !fallbackAllowed) {
               throw new IOException("Server asks us to fall back to SIMPLE " +
@@ -720,12 +737,16 @@ public class Client {
           }
         
           if (doPing) {
-            this.in = new DataInputStream(new BufferedInputStream(
-                new PingInputStream(inStream)));
-          } else {
-            this.in = new DataInputStream(new BufferedInputStream(inStream));
+            inStream = new PingInputStream(inStream);
           }
-          this.out = new DataOutputStream(new BufferedOutputStream(outStream));
+          this.in = new DataInputStream(new BufferedInputStream(inStream));
+
+          // SASL may have already buffered the stream
+          if (!(outStream instanceof BufferedOutputStream)) {
+            outStream = new BufferedOutputStream(outStream);
+          }
+          this.out = new DataOutputStream(outStream);
+          
           writeConnectionContext(remoteId, authMethod);
 
           // update last activity time
@@ -905,7 +926,8 @@ public class Client {
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
         synchronized (out) {
-          out.writeInt(RpcConstants.PING_CALL_ID);
+          out.writeInt(pingRequest.size());
+          pingRequest.writeTo(out);
           out.flush();
         }
       }
@@ -1455,6 +1477,7 @@ public class Client {
     private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
     private final boolean doPing; //do we need to send ping message
     private final int pingInterval; // how often sends ping to the server in msecs
+    private String saslQop; // here for testing
     
     ConnectionId(InetSocketAddress address, Class<?> protocol, 
                  UserGroupInformation ticket, int rpcTimeout, int maxIdleTime, 
@@ -1507,6 +1530,11 @@ public class Client {
     
     int getPingInterval() {
       return pingInterval;
+    }
+    
+    @VisibleForTesting
+    String getSaslQop() {
+      return saslQop;
     }
     
     static ConnectionId getConnectionId(InetSocketAddress addr,

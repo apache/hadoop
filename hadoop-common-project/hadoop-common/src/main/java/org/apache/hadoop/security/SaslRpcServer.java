@@ -47,7 +47,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.Server.Connection;
-import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -104,12 +103,12 @@ public class SaslRpcServer {
         String fullName = UserGroupInformation.getCurrentUser().getUserName();
         if (LOG.isDebugEnabled())
           LOG.debug("Kerberos principal name is " + fullName);
-        KerberosName krbName = new KerberosName(fullName);
-        serverId = krbName.getHostName();
-        if (serverId == null) {
-          serverId = "";
-        }
-        protocol = krbName.getServiceName();
+        // don't use KerberosName because we don't want auth_to_local
+        String[] parts = fullName.split("[/@]", 2);
+        protocol = parts[0];
+        // should verify service host is present here rather than in create()
+        // but lazy tests are using a UGI that isn't a SPN...
+        serverId = (parts.length < 2) ? "" : parts[1];
         break;
       }
       default:
