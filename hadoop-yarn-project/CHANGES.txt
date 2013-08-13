@@ -14,15 +14,18 @@ Release 0.23.10 - UNRELEASED
     YARN-985. Nodemanager should log where a resource was localized (Ravi
     Prakash via jeagles)
 
-    YARN-1036. Distributed Cache gives inconsistent result if cache files get
-    deleted from task tracker (Mayank Bansal and Ravi Prakash via jlowe)
-
   OPTIMIZATIONS
 
   BUG FIXES
 
     YARN-949. Failed log aggregation can leave a file open. (Kihwal Lee via
     jlowe)
+
+    YARN-1036. Distributed Cache gives inconsistent result if cache files get
+    deleted from task tracker (Mayank Bansal and Ravi Prakash via jlowe)
+
+    YARN-543. Shared data structures in Public Localizer and Private
+    Localizer are not Thread safe. (Omkar Vinit Joshi and Mit Desai via jlowe)
 
 Release 0.23.9 - 2013-07-08
 
