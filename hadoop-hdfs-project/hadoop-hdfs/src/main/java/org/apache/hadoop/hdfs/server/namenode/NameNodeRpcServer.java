@@ -951,6 +951,18 @@ class NameNodeRpcServer implements NamenodeProtocols {
     return null;
   }
 
+  @Override
+  public DatanodeCommand cacheReport(DatanodeRegistration nodeReg,
+      String poolId, long[] blocks) throws IOException {
+    verifyRequest(nodeReg);
+    BlockListAsLongs blist = new BlockListAsLongs(blocks);
+    namesystem.getBlockManager().processCacheReport(nodeReg, poolId, blist);
+    if (nn.getFSImage().isUpgradeFinalized() && !nn.isStandbyState()) {
+      return new FinalizeCommand(poolId);
+    }
+    return null;
+  }
+
   @Override // DatanodeProtocol
   public void blockReceivedAndDeleted(DatanodeRegistration nodeReg, String poolId,
       StorageReceivedDeletedBlocks[] receivedAndDeletedBlocks) throws IOException {

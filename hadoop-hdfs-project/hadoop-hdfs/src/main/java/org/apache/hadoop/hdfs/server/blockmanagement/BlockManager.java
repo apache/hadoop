@@ -1665,6 +1665,15 @@ public class BlockManager {
   }
 
   /**
+   * The given datanode is reporting all of its cached blocks.
+   * Update the cache state of blocks in the block map.
+   */
+  public void processCacheReport(final DatanodeID nodeID, final String poolId,
+      final BlockListAsLongs newReport) throws IOException {
+    // TODO: Implement me!
+  }
+
+  /**
    * Rescan the list of blocks which were previously postponed.
    */
   private void rescanPostponedMisreplicatedBlocks() {

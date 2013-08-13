@@ -205,9 +205,11 @@ message HeartbeatResponseProto {
 /**
  * registration - datanode registration information
  * blockPoolID  - block pool ID of the reported blocks
- * blocks       - each block is represented as two longs in the array.
+ * blocks       - each block is represented as multiple longs in the array.
  *                first long represents block ID
  *                second long represents length
+ *                third long represents gen stamp
+ *                fourth long (if under construction) represents replica state
  */
 message BlockReportRequestProto {
   required DatanodeRegistrationProto registration = 1;
@@ -229,6 +231,21 @@ message StorageBlockReportProto {
 message BlockReportResponseProto {
   optional DatanodeCommandProto cmd = 1;
 } 
+
+/**
+ * registration - datanode registration information
+ * blockPoolId  - block pool ID of the reported blocks
+ * blocks       - representation of blocks as longs for efficiency reasons
+ */
+message CacheReportRequestProto {
+  required DatanodeRegistrationProto registration = 1;
+  required string blockPoolId = 2;
+  repeated uint64 blocks = 3 [packed=true];
+}
+
+message CacheReportResponseProto {
+  optional DatanodeCommandProto cmd = 1;
+}
 
 /**
  * Data structure to send received or deleted block information
@@ -346,6 +363,11 @@ service DatanodeProtocolService {
    * Report blocks at a given datanode to the namenode
    */
   rpc blockReport(BlockReportRequestProto) returns(BlockReportResponseProto);
+
+  /**
+   * Report cached blocks at a datanode to the namenode
+   */
+  rpc cacheReport(CacheReportRequestProto) returns(CacheReportResponseProto);
 
   /**
    * Incremental block report from the DN. This contains info about recently

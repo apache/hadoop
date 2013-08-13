@@ -70,6 +70,7 @@ public class DNConf {
   final long blockReportInterval;
   final long deleteReportInterval;
   final long initialBlockReportDelay;
+  final long cacheReportInterval;
   final int writePacketSize;
   
   final String minimumNameNodeVersion;
@@ -114,6 +115,8 @@ public class DNConf {
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
     this.blockReportInterval = conf.getLong(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
     DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT);
+    this.cacheReportInterval = conf.getLong(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+        DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT);
     
     long initBRDelay = conf.getLong(
         DFS_BLOCKREPORT_INITIAL_DELAY_KEY,

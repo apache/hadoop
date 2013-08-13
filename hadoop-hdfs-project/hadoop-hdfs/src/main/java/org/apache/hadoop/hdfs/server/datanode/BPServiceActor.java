@@ -84,6 +84,8 @@ class BPServiceActor implements Runnable {
 
   boolean resetBlockReportTime = true;
 
+  volatile long lastCacheReport = 0;
+
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
   private volatile long lastHeartbeat = 0;
@@ -237,6 +239,17 @@ class BPServiceActor implements Runnable {
       lastBlockReport = lastHeartbeat - dnConf.blockReportInterval;
     }
     resetBlockReportTime = true; // reset future BRs for randomness
+  }
+
+  void scheduleCacheReport(long delay) {
+    if (delay > 0) {
+      // Uniform random jitter by the delay
+      lastCacheReport = Time.monotonicNow()
+          - dnConf.cacheReportInterval
+          + DFSUtil.getRandom().nextInt(((int)delay));
+    } else { // send at next heartbeat
+      lastCacheReport = lastCacheReport - dnConf.cacheReportInterval;
+    }
   }
 
   void reportBadBlocks(ExtendedBlock block) {
@@ -430,6 +443,15 @@ class BPServiceActor implements Runnable {
     return cmd;
   }
   
+  DatanodeCommand cacheReport() throws IOException {
+    // send cache report if timer has expired.
+    DatanodeCommand cmd = null;
+    long startTime = Time.monotonicNow();
+    if (startTime - lastCacheReport > dnConf.cacheReportInterval) {
+      // TODO: Implement me!
+    }
+    return cmd;
+  }
   
   HeartbeatResponse sendHeartBeat() throws IOException {
     if (LOG.isDebugEnabled()) {
@@ -496,11 +518,12 @@ class BPServiceActor implements Runnable {
    * forever calling remote NameNode functions.
    */
   private void offerService() throws Exception {
-    LOG.info("For namenode " + nnAddr + " using DELETEREPORT_INTERVAL of "
-        + dnConf.deleteReportInterval + " msec " + " BLOCKREPORT_INTERVAL of "
-        + dnConf.blockReportInterval + "msec" + " Initial delay: "
-        + dnConf.initialBlockReportDelay + "msec" + "; heartBeatInterval="
-        + dnConf.heartBeatInterval);
+    LOG.info("For namenode " + nnAddr + " using"
+        + " DELETEREPORT_INTERVAL of " + dnConf.deleteReportInterval + " msec "
+        + " BLOCKREPORT_INTERVAL of " + dnConf.blockReportInterval + "msec"
+        + " CACHEREPORT_INTERVAL of " + dnConf.cacheReportInterval + "msec"
+        + " Initial delay: " + dnConf.initialBlockReportDelay + "msec"
+        + "; heartBeatInterval=" + dnConf.heartBeatInterval);
 
     //
     // Now loop for a long time....
@@ -553,6 +576,9 @@ class BPServiceActor implements Runnable {
         }
 
         DatanodeCommand cmd = blockReport();
+        processCommand(new DatanodeCommand[]{ cmd });
+
+        cmd = cacheReport();
         processCommand(new DatanodeCommand[]{ cmd });
 
         // Now safe to start scanning the block pool.

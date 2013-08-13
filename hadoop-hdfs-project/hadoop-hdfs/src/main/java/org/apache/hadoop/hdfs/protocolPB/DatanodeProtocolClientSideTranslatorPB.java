@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReceivedAndDeletedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CacheReportRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CacheReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto;
@@ -200,6 +203,29 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       throw ProtobufHelper.getRemoteException(se);
     }
     return resp.hasCmd() ? PBHelper.convert(resp.getCmd()) : null;
+  }
+
+  @Override
+  public DatanodeCommand cacheReport(DatanodeRegistration registration,
+      String poolId, long[] blocks) throws IOException {
+    CacheReportRequestProto.Builder builder =
+        CacheReportRequestProto.newBuilder()
+        .setRegistration(PBHelper.convert(registration))
+        .setBlockPoolId(poolId);
+    for (int i=0; i<blocks.length; i++) {
+      builder.addBlocks(blocks[i]);
+    }
+    
+    CacheReportResponseProto resp;
+    try {
+      resp = rpcProxy.cacheReport(NULL_CONTROLLER, builder.build());
+    } catch (ServiceException se) {
+      throw ProtobufHelper.getRemoteException(se);
+    }
+    if (resp.hasCmd()) {
+      return PBHelper.convert(resp.getCmd());
+    }
+    return null;
   }
 
   @Override

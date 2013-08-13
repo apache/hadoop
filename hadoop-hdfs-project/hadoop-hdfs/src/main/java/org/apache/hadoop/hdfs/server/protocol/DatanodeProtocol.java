@@ -22,10 +22,10 @@ import java.io.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.io.retry.AtMostOnce;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -128,6 +128,25 @@ public interface DatanodeProtocol {
   public DatanodeCommand blockReport(DatanodeRegistration registration,
       String poolId, StorageBlockReport[] reports) throws IOException;
     
+
+  /**
+   * Communicates the complete list of locally cached blocks to the NameNode.
+   * 
+   * This method is similar to
+   * {@link #blockReport(DatanodeRegistration, String, StorageBlockReport[])},
+   * which is used to communicated blocks stored on disk.
+   *
+   * @param registration
+   * @param poolId block pool ID for the blocks
+   * @param blocks a Long[] array from {@link BlockListAsLongs} that describes 
+   * the list of cached blocks. This is more memory-efficient than a Block[].
+   * @return
+   * @throws IOException
+   */
+  @Idempotent
+  public DatanodeCommand cacheReport(DatanodeRegistration registration,
+      String poolId, long[] blocks) throws IOException;
+
   /**
    * blockReceivedAndDeleted() allows the DataNode to tell the NameNode about
    * recently-received and -deleted block data. 

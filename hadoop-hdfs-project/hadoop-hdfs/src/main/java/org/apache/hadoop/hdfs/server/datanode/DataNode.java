@@ -1916,6 +1916,7 @@ public class DataNode extends Configured
   public void scheduleAllBlockReport(long delay) {
     for(BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
       bpos.scheduleBlockReport(delay);
+      bpos.scheduleCacheReport(delay);
     }
   }
 
