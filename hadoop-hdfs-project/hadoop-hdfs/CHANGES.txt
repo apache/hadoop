@@ -44,6 +44,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5065. TestSymlinkHdfsDisable fails on Windows. (ivanmi)
 
+    HDFS-4816. transitionToActive blocks if the SBN is doing checkpoint image
+    transfer. (Andrew Wang)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
