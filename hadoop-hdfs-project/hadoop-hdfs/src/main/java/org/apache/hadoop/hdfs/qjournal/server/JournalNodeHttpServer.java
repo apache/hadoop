@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
@@ -74,7 +75,7 @@ public class JournalNodeHttpServer {
       {
         if (UserGroupInformation.isSecurityEnabled()) {
           initSpnego(conf, DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY,
-              DFS_JOURNALNODE_KEYTAB_FILE_KEY);
+              DFSUtil.getSpnegoKeytabKey(conf, DFS_JOURNALNODE_KEYTAB_FILE_KEY));
         }
       }
     };
