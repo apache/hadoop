@@ -27,6 +27,8 @@ Release 0.23.10 - UNRELEASED
     YARN-543. Shared data structures in Public Localizer and Private
     Localizer are not Thread safe. (Omkar Vinit Joshi and Mit Desai via jlowe)
 
+    YARN-337. RM handles killed application tracking URL poorly (jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES

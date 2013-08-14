@@ -678,6 +678,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
         break;
         case KILLED:
         {
+          // don't leave the tracking URL pointing to a non-existent AM
+          appAttempt.setTrackingUrlToRMAppPage();
           appEvent =
               new RMAppFailedAttemptEvent(applicationId,
                   RMAppEventType.ATTEMPT_KILLED,
@@ -686,6 +688,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
         break;
         case FAILED:
         {
+          // don't leave the tracking URL pointing to a non-existent AM
+          appAttempt.setTrackingUrlToRMAppPage();
           appEvent =
               new RMAppFailedAttemptEvent(applicationId,
                   RMAppEventType.ATTEMPT_FAILED,
@@ -849,7 +853,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
         RMAppAttemptEvent event) {
       appAttempt.diagnostics.append("ApplicationMaster for attempt " +
         appAttempt.getAppAttemptId() + " timed out");
-      appAttempt.setTrackingUrlToRMAppPage();
       super.transition(appAttempt, event);
     }
   }
@@ -929,11 +932,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
             " exitCode: " + containerStatus.getExitStatus() +
             " due to: " +  containerStatus.getDiagnostics() + "." +
             "Failing this attempt.");
-
-        // When the AM dies, the trackingUrl is left pointing to the AM's URL,
-        // which shows up in the scheduler UI as a broken link.  Direct the
-        // user to the app page on the RM so they can see the status and logs.
-        appAttempt.setTrackingUrlToRMAppPage();
 
         new FinalTransition(RMAppAttemptState.FAILED).transition(
             appAttempt, containerFinishedEvent);
