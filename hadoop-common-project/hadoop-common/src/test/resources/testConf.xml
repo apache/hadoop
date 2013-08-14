@@ -296,7 +296,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*modification times, ownership and the mode.( )*</expected-output>
+          <expected-output>^( |\t)*modification times, ownership and the mode. Passing -f( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*overwrites the destination if it already exists.( )*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -400,7 +404,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*ownership and the mode.( )*</expected-output>
+          <expected-output>^( |\t)*ownership and the mode. Passing -f overwrites( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*the destination if it already exists.( )*</expected-output>
         </comparator>
       </comparators>
     </test>
