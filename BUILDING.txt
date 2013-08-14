@@ -7,7 +7,7 @@ Requirements:
 * JDK 1.6
 * Maven 3.0
 * Findbugs 1.3.9 (if running findbugs)
-* ProtocolBuffer 2.4.1+ (for MapReduce and HDFS)
+* ProtocolBuffer 2.5.0
 * CMake 2.6 or newer (if compiling native code)
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
@@ -99,6 +99,16 @@ level once; and then work from the submodule. Keep in mind that SNAPSHOTs
 time out after a while, using the Maven '-nsu' will stop Maven from trying
 to update SNAPSHOTs from external repos.
 
+----------------------------------------------------------------------------------
+Protocol Buffer compiler
+
+The version of Protocol Buffer compiler, protoc, must match the version of the
+protobuf JAR.
+
+If you have multiple versions of protoc in your system, you can set in your 
+build shell the HADOOP_PROTOC_PATH environment variable to point to the one you 
+want to use for the Hadoop build. If you don't define this environment variable,
+protoc is looked up in the PATH.
 ----------------------------------------------------------------------------------
 Importing projects to eclipse
 

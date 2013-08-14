@@ -8,15 +8,9 @@ Maven: Maven 3
 
 Setup
 -----
-Install protobuf 2.4.0a or higher (Download from http://code.google.com/p/protobuf/downloads/list)
+Install protobuf 2.5.0 (Download from http://code.google.com/p/protobuf/downloads/list)
  - install the protoc executable (configure, make, make install)
  - install the maven artifact (cd java; mvn install)
-Installing protoc requires gcc 4.1.x or higher.
-If the make step fails with (Valid until a fix is released for protobuf 2.4.0a)
-    ./google/protobuf/descriptor.h:1152: error:
-    `google::protobuf::internal::Mutex*google::protobuf::DescriptorPool::mutex_'
-    is private
-  Replace descriptor.cc with http://protobuf.googlecode.com/svn-history/r380/trunk/src/google/protobuf/descriptor.cc
 
 
 Quick Maven Tips
