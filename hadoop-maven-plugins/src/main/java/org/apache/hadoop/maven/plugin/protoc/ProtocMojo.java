@@ -45,7 +45,7 @@ public class ProtocMojo extends AbstractMojo {
   @Parameter(required=true)
   private FileSet source;
 
-  @Parameter(defaultValue="protoc")
+  @Parameter
   private String protocCommand;
 
   @Parameter(required=true)
@@ -53,21 +53,22 @@ public class ProtocMojo extends AbstractMojo {
 
   public void execute() throws MojoExecutionException {
     try {
+      if (protocCommand == null || protocCommand.trim().isEmpty()) {
+        protocCommand = "protoc";
+      }
       List<String> command = new ArrayList<String>();
       command.add(protocCommand);
       command.add("--version");
       Exec exec = new Exec(this);
       List<String> out = new ArrayList<String>();
-      if (exec.run(command, out) != 0) {
-        getLog().error("protoc, could not get version");
-        for (String s : out) {
-          getLog().error(s);
-        }
+      if (exec.run(command, out) == 127) {
+        getLog().error("protoc, not found at: " + protocCommand);
         throw new MojoExecutionException("protoc failure");        
       } else {
-        if (out.size() == 0) {
+        if (out.isEmpty()) {
+          getLog().error("stdout: " + out);
           throw new MojoExecutionException(
-              "'protoc -version' did not return a version");
+              "'protoc --version' did not return a version");
         } else {
           if (!out.get(0).endsWith(protocVersion)) {
             throw new MojoExecutionException(

@@ -315,6 +315,10 @@ Release 2.1.0-beta - 2013-08-06
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
     (todd)
 
+    HADOOP-9845. Update protobuf to 2.5 from 2.4.x. (tucu)
+
+    HADOOP-9872. Improve protoc version handling and detection. (tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
