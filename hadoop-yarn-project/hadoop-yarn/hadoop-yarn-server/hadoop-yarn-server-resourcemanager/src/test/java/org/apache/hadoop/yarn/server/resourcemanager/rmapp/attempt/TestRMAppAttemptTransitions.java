@@ -691,6 +691,26 @@ public class TestRMAppAttemptTransitions {
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
   }
 
+  @Test
+  public void testRunningToKilled() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl");
+    applicationAttempt.handle(
+        new RMAppAttemptEvent(
+            applicationAttempt.getAppAttemptId(),
+            RMAppAttemptEventType.KILL));
+    assertEquals(RMAppAttemptState.KILLED,
+        applicationAttempt.getAppAttemptState());
+    assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
+    assertEquals(amContainer, applicationAttempt.getMasterContainer());
+    assertEquals(0, applicationAttempt.getRanNodes().size());
+    String rmAppPageUrl = pjoin(RM_WEBAPP_ADDR, "cluster", "app",
+        applicationAttempt.getAppAttemptId().getApplicationId());
+    assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
+    assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
+  }
+
   @Test(timeout=10000)
   public void testLaunchedExpire() {
     Container amContainer = allocateApplicationAttempt();

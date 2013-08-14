@@ -35,6 +35,8 @@ Release 2.1.1-beta - UNRELEASED
     YARN-994. HeartBeat thread in AMRMClientAsync does not handle runtime
     exception correctly (Xuan Gong via bikas)
 
+    YARN-337. RM handles killed application tracking URL poorly (jlowe)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
