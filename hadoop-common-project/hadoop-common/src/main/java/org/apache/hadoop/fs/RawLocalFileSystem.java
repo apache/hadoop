@@ -51,6 +51,7 @@ import org.apache.hadoop.util.StringUtils;
 public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");
   private Path workingDir;
+  private static final boolean useDeprecatedFileStatus = !Stat.isAvailable();
   
   public RawLocalFileSystem() {
     workingDir = getInitialWorkingDirectory();
@@ -379,8 +380,11 @@ public class RawLocalFileSystem extends FileSystem {
       throw new FileNotFoundException("File " + f + " does not exist");
     }
     if (localf.isFile()) {
+      if (!useDeprecatedFileStatus) {
+        return new FileStatus[] { getFileStatus(f) };
+      }
       return new FileStatus[] {
-        new RawLocalFileStatus(localf, getDefaultBlockSize(f), this) };
+        new DeprecatedRawLocalFileStatus(localf, getDefaultBlockSize(f), this)};
     }
 
     File[] names = localf.listFiles();
@@ -510,15 +514,22 @@ public class RawLocalFileSystem extends FileSystem {
   
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
+    return getFileLinkStatusInternal(f, true);
+  }
+
+  @Deprecated
+  private FileStatus deprecatedGetFileStatus(Path f) throws IOException {
     File path = pathToFile(f);
     if (path.exists()) {
-      return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize(f), this);
+      return new DeprecatedRawLocalFileStatus(pathToFile(f),
+          getDefaultBlockSize(f), this);
     } else {
       throw new FileNotFoundException("File " + f + " does not exist");
     }
   }
 
-  static class RawLocalFileStatus extends FileStatus {
+  @Deprecated
+  static class DeprecatedRawLocalFileStatus extends FileStatus {
     /* We can add extra fields here. It breaks at least CopyFiles.FilePair().
      * We recognize if the information is already loaded by check if
      * onwer.equals("").
@@ -527,7 +538,7 @@ public class RawLocalFileSystem extends FileSystem {
       return !super.getOwner().isEmpty(); 
     }
     
-    RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) { 
+    DeprecatedRawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) {
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
           f.lastModified(), new Path(f.getPath()).makeQualified(fs.getUri(),
             fs.getWorkingDirectory()));
@@ -693,7 +704,7 @@ public class RawLocalFileSystem extends FileSystem {
    */
   @Override
   public FileStatus getFileLinkStatus(final Path f) throws IOException {
-    FileStatus fi = getFileLinkStatusInternal(f);
+    FileStatus fi = getFileLinkStatusInternal(f, false);
     // getFileLinkStatus is supposed to return a symlink with a
     // qualified path
     if (fi.isSymlink()) {
@@ -704,7 +715,35 @@ public class RawLocalFileSystem extends FileSystem {
     return fi;
   }
 
-  private FileStatus getFileLinkStatusInternal(final Path f) throws IOException {
+  /**
+   * Public {@link FileStatus} methods delegate to this function, which in turn
+   * either call the new {@link Stat} based implementation or the deprecated
+   * methods based on platform support.
+   * 
+   * @param f Path to stat
+   * @param dereference whether to dereference the final path component if a
+   *          symlink
+   * @return FileStatus of f
+   * @throws IOException
+   */
+  private FileStatus getFileLinkStatusInternal(final Path f,
+      boolean dereference) throws IOException {
+    if (!useDeprecatedFileStatus) {
+      return getNativeFileLinkStatus(f, dereference);
+    } else if (dereference) {
+      return deprecatedGetFileStatus(f);
+    } else {
+      return deprecatedGetFileLinkStatusInternal(f);
+    }
+  }
+
+  /**
+   * Deprecated. Remains for legacy support. Should be removed when {@link Stat}
+   * gains support for Windows and other operating systems.
+   */
+  @Deprecated
+  private FileStatus deprecatedGetFileLinkStatusInternal(final Path f)
+      throws IOException {
     String target = FileUtil.readLink(new File(f.toString()));
 
     try {
@@ -740,10 +779,31 @@ public class RawLocalFileSystem extends FileSystem {
       throw e;
     }
   }
+  /**
+   * Calls out to platform's native stat(1) implementation to get file metadata
+   * (permissions, user, group, atime, mtime, etc). This works around the lack
+   * of lstat(2) in Java 6.
+   * 
+   *  Currently, the {@link Stat} class used to do this only supports Linux
+   *  and FreeBSD, so the old {@link #deprecatedGetFileLinkStatusInternal(Path)}
+   *  implementation (deprecated) remains further OS support is added.
+   *
+   * @param f File to stat
+   * @param dereference whether to dereference symlinks
+   * @return FileStatus of f
+   * @throws IOException
+   */
+  private FileStatus getNativeFileLinkStatus(final Path f,
+      boolean dereference) throws IOException {
+    checkPath(f);
+    Stat stat = new Stat(f, getDefaultBlockSize(f), dereference, this);
+    FileStatus status = stat.getFileStatus();
+    return status;
+  }
 
   @Override
   public Path getLinkTarget(Path f) throws IOException {
-    FileStatus fi = getFileLinkStatusInternal(f);
+    FileStatus fi = getFileLinkStatusInternal(f, false);
     // return an unqualified symlink target
     return fi.getSymlink();
   }
