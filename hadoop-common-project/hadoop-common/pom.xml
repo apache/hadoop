@@ -308,6 +308,7 @@
               <goal>protoc</goal>
             </goals>
             <configuration>
+              <protocVersion>${protobuf.version}</protocVersion>
               <imports>
                 <param>${basedir}/src/main/proto</param>
               </imports>
@@ -336,6 +337,7 @@
               <goal>protoc</goal>
             </goals>
             <configuration>
+              <protocVersion>${protobuf.version}</protocVersion>
               <imports>
                 <param>${basedir}/src/test/proto</param>
               </imports>
