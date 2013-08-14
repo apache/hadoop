@@ -90,6 +90,10 @@ public class VersionInfo {
       " source checksum " + _getSrcChecksum();
   }
 
+  protected String _getProtocVersion() {
+    return info.getProperty("protocVersion", "Unknown");
+  }
+
   private static VersionInfo COMMON_VERSION_INFO = new VersionInfo("common");
   /**
    * Get the Hadoop version.
@@ -153,12 +157,20 @@ public class VersionInfo {
   public static String getBuildVersion(){
     return COMMON_VERSION_INFO._getBuildVersion();
   }
-  
+
+  /**
+   * Returns the protoc version used for the build.
+   */
+  public static String getProtocVersion(){
+    return COMMON_VERSION_INFO._getProtocVersion();
+  }
+
   public static void main(String[] args) {
     LOG.debug("version: "+ getVersion());
     System.out.println("Hadoop " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());
     System.out.println("Compiled by " + getUser() + " on " + getDate());
+    System.out.println("Compiled with protoc " + getProtocVersion());
     System.out.println("From source with checksum " + getSrcChecksum());
     System.out.println("This command was run using " + 
         ClassUtil.findContainingJar(VersionInfo.class));
