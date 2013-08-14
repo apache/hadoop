@@ -73,6 +73,7 @@
               <goal>protoc</goal>
             </goals>
             <configuration>
+              <protocVersion>2.5.0</protocVersion>
               <imports>
                 <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
