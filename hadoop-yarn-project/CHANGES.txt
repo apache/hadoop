@@ -15,6 +15,9 @@ Release 2.3.0 - UNRELEASED
     YARN-758. Augment MockNM to use multiple cores (Karthik Kambatla via
     Sandy Ryza)
 
+    YARN-1060. Two tests in TestFairScheduler are missing @Test annotation
+    (Niranjan Singh via Sandy Ryza)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES

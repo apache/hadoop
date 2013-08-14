@@ -1991,6 +1991,7 @@ public class TestFairScheduler {
     assertEquals(0, app.getReservedContainers().size());
   }
   
+  @Test
   public void testNoMoreCpuOnNode() {
     RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(2048, 1),
         1, "127.0.0.1");
@@ -2009,6 +2010,7 @@ public class TestFairScheduler {
     assertEquals(1, app.getLiveContainers().size());
   }
 
+  @Test
   public void testBasicDRFAssignment() throws Exception {
     RMNode node = MockNodes.newNodeInfo(1, BuilderUtils.newResource(8192, 5));
     NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
