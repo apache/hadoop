@@ -293,6 +293,9 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP 9871. Fix intermittent findbugs warnings in DefaultMetricsSystem.
+    (Junping Du via llu)
+
     HADOOP-9319. Update bundled LZ4 source to r99. (Binglin Chang via llu)
 
     HADOOP-9241. DU refresh interval is not configurable (harsh)
