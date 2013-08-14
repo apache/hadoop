@@ -62,6 +62,7 @@
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
     <protobuf.version>2.5.0</protobuf.version>
+    <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
   </properties>
 
   <dependencyManagement>
