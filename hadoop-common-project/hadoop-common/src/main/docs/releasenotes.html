@@ -12,6 +12,29 @@ These release notes include new developer and user-facing incompatibilities, fea
 <a name="changes"/>
 <h2>Changes since Hadoop 2.0.5-alpha</h2>
 <ul>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1056">YARN-1056</a>.
+     Trivial bug reported by Karthik Kambatla and fixed by Karthik Kambatla <br>
+     <b>Fix configs yarn.resourcemanager.resourcemanager.connect.{max.wait.secs|retry_interval.secs}</b><br>
+     <blockquote>Fix configs yarn.resourcemanager.resourcemanager.connect.{max.wait.secs|retry_interval.secs} to have a *resourcemanager* only once, make them consistent with other such yarn configs and add entries in yarn-default.xml</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1046">YARN-1046</a>.
+     Major bug reported by Karthik Kambatla and fixed by Karthik Kambatla <br>
+     <b>Disable mem monitoring by default in MiniYARNCluster</b><br>
+     <blockquote>Have been running into this frequently inspite of MAPREDUCE-3709 on centos6 machines. However, when I try to run it independently on the machines, I have not been able to reproduce it.
+
+{noformat}
+2013-08-07 19:17:35,048 WARN  [Container Monitor] monitor.ContainersMonitorImpl (ContainersMonitorImpl.java:run(444)) - Container [pid=16556,containerID=container_1375928243488_0001_01_000001] is running beyond virtual memory limits. Current usage: 132.4 MB of 512 MB physical memory used; 1.2 GB of 1.0 GB virtual memory used. Killing container.
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1045">YARN-1045</a>.
+     Major improvement reported by Siddharth Seth and fixed by Jian He <br>
+     <b>Improve toString implementation for PBImpls</b><br>
+     <blockquote>The generic toString implementation that is used in most of the PBImpls {code}getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");{code} is rather inefficient - replacing "\n" and "\s" to generate a one line string. Instead, we can use {code}TextFormat.shortDebugString(getProto());{code}.
+
+If we can get this into 2.1.0 - great, otherwise the next release.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1043">YARN-1043</a>.
+     Major bug reported by Yusaku Sako and fixed by Jian He <br>
+     <b>YARN Queue metrics are getting pushed to neither file nor Ganglia</b><br>
+     <blockquote>YARN Queue metrics are not getting pushed to file or Ganglia via Hadoop Metrics 2. 
+QueueMetrics are still accessible via JMX and RM REST API (&lt;hostname&gt;:8088/ws/v1/cluster/scheduler).</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-968">YARN-968</a>.
      Blocker bug reported by Kihwal Lee and fixed by Vinod Kumar Vavilapalli <br>
      <b>RM admin commands don't work</b><br>
@@ -853,6 +876,10 @@ On normal NM shutdown, this is not a problem since normal stop happens on shutdo
      Major sub-task reported by Bikas Saha and fixed by Bikas Saha <br>
      <b>Improve AMRMClient with matching requests</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-656">YARN-656</a>.
+     Major bug reported by Sandy Ryza and fixed by Sandy Ryza (resourcemanager , scheduler)<br>
+     <b>In scheduler UI, including reserved memory in "Memory Total" can make it exceed cluster capacity.</b><br>
+     <blockquote>"Memory Total" is currently a sum of availableMB, allocatedMB, and reservedMB.  Including reservedMB in this sum can make the total exceed the capacity of the cluster. </blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-655">YARN-655</a>.
      Major bug reported by Sandy Ryza and fixed by Sandy Ryza (scheduler)<br>
      <b>Fair scheduler metrics should subtract allocated memory from available memory</b><br>
@@ -2224,6 +2251,10 @@ ApplicationMaster should not be able to store container tokens and use the same 
      Major bug reported by Jian He and fixed by Jian He <br>
      <b>Change MR to use multiple containers API of ContainerManager after YARN-926</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5399">MAPREDUCE-5399</a>.
+     Blocker bug reported by Stanislav Barton and fixed by Stanislav Barton (mrv1 , mrv2)<br>
+     <b>Unnecessary Configuration instantiation in IFileInputStream slows down merge</b><br>
+     <blockquote>Fixes blank Configuration object creation overhead by reusing the Job configuration in InMemoryReader.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5398">MAPREDUCE-5398</a>.
      Major improvement reported by Bikas Saha and fixed by Jian He <br>
      <b>MR changes for YARN-513</b><br>
@@ -2247,6 +2278,10 @@ ApplicationMaster should not be able to store container tokens and use the same 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5355">MAPREDUCE-5355</a>.
      Minor bug reported by Chuan Liu and fixed by Chuan Liu <br>
      <b>MiniMRYarnCluster with localFs does not work on Windows</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5352">MAPREDUCE-5352</a>.
+     Major improvement reported by Siddharth Seth and fixed by Siddharth Seth <br>
+     <b>Optimize node local splits generated by CombineFileInputFormat </b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5349">MAPREDUCE-5349</a>.
      Minor bug reported by Chuan Liu and fixed by Chuan Liu <br>
@@ -2872,6 +2907,10 @@ ApplicationMaster should not be able to store container tokens and use the same 
      Major bug reported by Ravi Gummadi and fixed by Ravi Gummadi (contrib/gridmix)<br>
      <b>Gridmix simulated job's map's hdfsBytesRead counter is wrong when compressed input is used</b><br>
      <blockquote>Makes Gridmix use the uncompressed input data size while simulating map tasks in the case where compressed input data was used in original job.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5083">HDFS-5083</a>.
+     Blocker bug reported by Kihwal Lee and fixed by Kihwal Lee <br>
+     <b>Update the HDFS compatibility version range</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-5027">HDFS-5027</a>.
      Major improvement reported by Aaron T. Myers and fixed by Aaron T. Myers (datanode)<br>
      <b>On startup, DN should scan volumes in parallel</b><br>
@@ -3203,6 +3242,10 @@ ApplicationMaster should not be able to store container tokens and use the same 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4765">HDFS-4765</a>.
      Major bug reported by Andrew Wang and fixed by Andrew Wang (namenode)<br>
      <b>Permission check of symlink deletion incorrectly throws UnresolvedLinkException</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4763">HDFS-4763</a>.
+     Major sub-task reported by Brandon Li and fixed by Brandon Li (nfs)<br>
+     <b>Add script changes/utility for starting NFS gateway</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4762">HDFS-4762</a>.
      Major sub-task reported by Brandon Li and fixed by Brandon Li (nfs)<br>
@@ -3751,9 +3794,37 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Major improvement reported by George Porter and fixed by Colin Patrick McCabe (datanode , hdfs-client , performance)<br>
      <b>DFS read performance suboptimal when client co-located on nodes with data</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9872">HADOOP-9872</a>.
+     Blocker bug reported by Alejandro Abdelnur and fixed by Alejandro Abdelnur (build)<br>
+     <b>Improve protoc version handling and detection</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9850">HADOOP-9850</a>.
+     Blocker bug reported by Daryn Sharp and fixed by Daryn Sharp (ipc)<br>
+     <b>RPC kerberos errors don't trigger relogin</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9845">HADOOP-9845</a>.
+     Blocker improvement reported by stack and fixed by Alejandro Abdelnur (performance)<br>
+     <b>Update protobuf to 2.5 from 2.4.x</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9832">HADOOP-9832</a>.
+     Blocker sub-task reported by Daryn Sharp and fixed by Daryn Sharp (ipc)<br>
+     <b>Add RPC header to client ping</b><br>
+     <blockquote>Client ping will be sent as a RPC header with a reserved callId instead of as a sentinel RPC packet length.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9820">HADOOP-9820</a>.
+     Blocker bug reported by Daryn Sharp and fixed by Daryn Sharp (ipc , security)<br>
+     <b>RPCv9 wire protocol is insufficient to support multiplexing</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9816">HADOOP-9816</a>.
+     Blocker bug reported by Daryn Sharp and fixed by Daryn Sharp (ipc , security)<br>
+     <b>RPC Sasl QOP is broken</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9792">HADOOP-9792</a>.
      Major improvement reported by Suresh Srinivas and fixed by Suresh Srinivas (ipc)<br>
      <b>Retry the methods that are tagged @AtMostOnce along with @Idempotent</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9787">HADOOP-9787</a>.
+     Major bug reported by Karthik Kambatla and fixed by Karthik Kambatla (util)<br>
+     <b>ShutdownHelper util to shutdown threads and threadpools</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9786">HADOOP-9786</a>.
      Major bug reported by Jing Zhao and fixed by Jing Zhao <br>
@@ -3962,6 +4033,10 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9532">HADOOP-9532</a>.
      Minor bug reported by Chris Nauroth and fixed by Chris Nauroth (bin)<br>
      <b>HADOOP_CLIENT_OPTS is appended twice by Windows cmd scripts</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9527">HADOOP-9527</a>.
+     Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (fs , test)<br>
+     <b>Add symlink support to LocalFileSystem on Windows</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9526">HADOOP-9526</a>.
      Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (test)<br>
