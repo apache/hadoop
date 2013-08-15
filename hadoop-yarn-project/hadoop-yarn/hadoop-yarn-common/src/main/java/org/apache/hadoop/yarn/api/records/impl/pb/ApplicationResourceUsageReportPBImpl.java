@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportPro
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class ApplicationResourceUsageReportPBImpl 
@@ -73,7 +75,7 @@ extends ApplicationResourceUsageReport {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

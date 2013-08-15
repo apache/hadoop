@@ -30,6 +30,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceVisibilityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.URLProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class LocalResourcePBImpl extends LocalResource {
@@ -72,7 +74,7 @@ public class LocalResourcePBImpl extends LocalResource {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private synchronized void mergeLocalToBuilder() {
