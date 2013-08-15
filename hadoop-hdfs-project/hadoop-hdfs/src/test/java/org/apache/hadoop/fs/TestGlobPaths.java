@@ -622,21 +622,7 @@ public class TestGlobPaths {
       cleanupDFS();
     }
   }
-  
-  @Test
-  public void pTestRelativePath() throws IOException {
-    try {
-      String [] files = new String[] {"a", "abc", "abc.p", "bacd"};
-      Path[] matchedPath = prepareTesting("a*", files);
-      assertEquals(matchedPath.length, 3);
-      assertEquals(matchedPath[0], new Path(USER_DIR, path[0]));
-      assertEquals(matchedPath[1], new Path(USER_DIR, path[1]));
-      assertEquals(matchedPath[2], new Path(USER_DIR, path[2]));
-    } finally {
-      cleanupDFS();
-    }
-  }
-  
+
   /* Test {xx,yy} */
   @Test
   public void pTestCurlyBracket() throws IOException {
@@ -1060,5 +1046,44 @@ public class TestGlobPaths {
   @Test
   public void testGlobFillsInSchemeOnFC() throws Exception {
     testOnFileContext(new TestGlobFillsInScheme());
+  }
+
+  /**
+   * Test that globStatus works with relative paths.
+   **/
+  private static class TestRelativePath implements FSTestWrapperGlobTest {
+    public void run(FSTestWrapper wrap, FileSystem fs, FileContext fc)
+      throws Exception {
+      String[] files = new String[] { "a", "abc", "abc.p", "bacd" };
+
+      Path[] path = new Path[files.length];
+      for(int i=0; i <  files.length; i++) {
+        path[i] = wrap.makeQualified(new Path(files[i]));
+        wrap.mkdir(path[i], FsPermission.getDirDefault(), true);
+      }
+
+      Path patternPath = new Path("a*");
+      Path[] globResults = FileUtil.stat2Paths(wrap.globStatus(patternPath,
+            new AcceptAllPathFilter()),
+          patternPath);
+
+      for(int i=0; i < globResults.length; i++) {
+        globResults[i] = wrap.makeQualified(globResults[i]);
+      }
+
+      assertEquals(globResults.length, 3);
+      assertEquals(USER_DIR + "/a;" + USER_DIR + "/abc;" + USER_DIR + "/abc.p",
+                    TestPath.mergeStatuses(globResults));
+    }
+  }
+
+  @Test
+  public void testRelativePathOnFS() throws Exception {
+    testOnFileSystem(new TestRelativePath());
+  }
+
+  @Test
+  public void testRelativePathOnFC() throws Exception {
+    testOnFileContext(new TestRelativePath());
   }
 }

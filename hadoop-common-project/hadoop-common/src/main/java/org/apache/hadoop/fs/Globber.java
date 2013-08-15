@@ -99,24 +99,24 @@ class Globber {
   }
 
   private String schemeFromPath(Path path) throws IOException {
-    String scheme = pathPattern.toUri().getScheme();
+    String scheme = path.toUri().getScheme();
     if (scheme == null) {
       if (fs != null) {
         scheme = fs.getUri().getScheme();
       } else {
-        scheme = fc.getFSofPath(path).getUri().getScheme();
+        scheme = fc.getDefaultFileSystem().getUri().getScheme();
       }
     }
     return scheme;
   }
 
   private String authorityFromPath(Path path) throws IOException {
-    String authority = pathPattern.toUri().getAuthority();
+    String authority = path.toUri().getAuthority();
     if (authority == null) {
       if (fs != null) {
         authority = fs.getUri().getAuthority();
       } else {
-        authority = fc.getFSofPath(path).getUri().getAuthority();
+        authority = fc.getDefaultFileSystem().getUri().getAuthority();
       }
     }
     return authority ;
