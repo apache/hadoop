@@ -113,6 +113,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5080. BootstrapStandby not working with QJM when the existing NN is 
     active. (jing9)
 
+    HDFS-5099. Namenode#copyEditLogSegmentsToSharedDir should close
+    EditLogInputStreams upon finishing. (Chuan Liu via cnauroth)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
