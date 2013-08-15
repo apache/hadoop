@@ -101,6 +101,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-4898. BlockPlacementPolicyWithNodeGroup.chooseRemoteRack() fails to
     properly fallback to local rack. (szetszwo)
 
+    HDFS-4632. globStatus using backslash for escaping does not work on Windows.
+    (Chuan Liu via cnauroth)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
