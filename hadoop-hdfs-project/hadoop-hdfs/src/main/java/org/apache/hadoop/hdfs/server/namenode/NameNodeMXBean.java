@@ -174,4 +174,10 @@ public interface NameNodeMXBean {
    * @return the name dir status information, as a JSON string.
    */
   public String getNameDirStatuses();
+  
+  /**
+   * Get information about the transaction ID, including the last applied 
+   * transaction ID and the most recent checkpoint's transaction ID
+   */
+  public String getJournalTransactionInfo();
 }

@@ -112,6 +112,11 @@ public class TestNameNodeMXBean {
       String deadnodeinfo = (String) (mbs.getAttribute(mxbeanName,
           "DeadNodes"));
       assertEquals(fsn.getDeadNodes(), deadnodeinfo);
+      // get attribute JournalTransactionInfo
+      String journalTxnInfo = (String) mbs.getAttribute(mxbeanName,
+          "JournalTransactionInfo");
+      assertEquals("Bad value for NameTxnIds", fsn.getJournalTransactionInfo(),
+          journalTxnInfo);
       // get attribute NameDirStatuses
       String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
