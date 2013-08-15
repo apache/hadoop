@@ -18,8 +18,10 @@
 package org.apache.hadoop.hdfs.qjournal.server;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -34,11 +36,13 @@ import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.mortbay.util.ajax.JSON;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
@@ -51,7 +55,7 @@ import com.google.common.collect.Maps;
  * in the quorum protocol.
  */
 @InterfaceAudience.Private
-public class JournalNode implements Tool, Configurable {
+public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   public static final Log LOG = LogFactory.getLog(JournalNode.class);
   private Configuration conf;
   private JournalNodeRpcServer rpcServer;
@@ -127,6 +131,8 @@ public class JournalNode implements Tool, Configurable {
     InetSocketAddress socAddr = JournalNodeRpcServer.getAddress(conf);
     SecurityUtil.login(conf, DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY,
         DFSConfigKeys.DFS_JOURNALNODE_USER_NAME_KEY, socAddr.getHostName());
+    
+    registerJNMXBean();
     
     httpServer = new JournalNodeHttpServer(conf, this);
     httpServer.start();
@@ -208,6 +214,50 @@ public class JournalNode implements Tool, Configurable {
     return new File(new File(dir), jid);
   }
 
+  @Override // JournalNodeMXBean
+  public String getJournalsStatus() {
+    // jid:{Formatted:True/False}
+    Map<String, Map<String, String>> status = 
+        new HashMap<String, Map<String, String>>();
+    synchronized (this) {
+      for (Map.Entry<String, Journal> entry : journalsById.entrySet()) {
+        Map<String, String> jMap = new HashMap<String, String>();
+        jMap.put("Formatted", Boolean.toString(entry.getValue().isFormatted()));
+        status.put(entry.getKey(), jMap);
+      }
+    }
+    
+    // It is possible that some journals have been formatted before, while the 
+    // corresponding journals are not in journalsById yet (because of restarting
+    // JN, e.g.). For simplicity, let's just assume a journal is formatted if
+    // there is a directory for it. We can also call analyzeStorage method for
+    // these directories if necessary.
+    // Also note that we do not need to check localDir here since
+    // validateAndCreateJournalDir has been called before we register the
+    // MXBean.
+    File[] journalDirs = localDir.listFiles(new FileFilter() {
+      @Override
+      public boolean accept(File file) {
+        return file.isDirectory();
+      }
+    });
+    for (File journalDir : journalDirs) {
+      String jid = journalDir.getName();
+      if (!status.containsKey(jid)) {
+        Map<String, String> jMap = new HashMap<String, String>();
+        jMap.put("Formatted", "true");
+        status.put(jid, jMap);
+      }
+    }
+    return JSON.toString(status);
+  }
+  
+  /**
+   * Register JournalNodeMXBean
+   */
+  private void registerJNMXBean() {
+    MBeans.register("JournalNode", "JournalNodeInfo", this);
+  }
   
   private class ErrorReporter implements StorageErrorReporter {
     @Override
