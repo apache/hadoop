@@ -860,6 +860,10 @@ Release 2.1.0-beta - 2013-08-06
 
     YARN-1043. Push all metrics consistently. (Jian He via acmurthy) 
 
+    YARN-1056. Remove dual use of string 'resourcemanager' in
+    yarn.resourcemanager.connect.{max.wait.secs|retry_interval.secs}
+    (Karthik Kambatla via acmurthy)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
