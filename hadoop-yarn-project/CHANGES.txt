@@ -28,8 +28,6 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-589. Expose a REST API for monitoring the fair scheduler (Sandy Ryza).
     
-    YARN-1045. Improve toString implementation for PBImpls. (Jian He via sseth)  
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -508,6 +506,8 @@ Release 2.1.0-beta - 2013-08-06
 
     YARN-1046. Disable mem monitoring by default in MiniYARNCluster. (Karthik
     Kambatla via Sandy Ryza)
+
+    YARN-1045. Improve toString implementation for PBImpls. (Jian He via sseth)  
 
   OPTIMIZATIONS
 
