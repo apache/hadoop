@@ -14,7 +14,7 @@ Release 2.1.1-beta - UNRELEASED
 
   BUG FIXES
 
-Release 2.1.0-beta - 2013-08-06
+Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
 
