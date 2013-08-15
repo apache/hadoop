@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class RefreshServiceAclsRequestPBImpl extends RefreshServiceAclsRequest {
@@ -65,6 +67,6 @@ public class RefreshServiceAclsRequestPBImpl extends RefreshServiceAclsRequest {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }

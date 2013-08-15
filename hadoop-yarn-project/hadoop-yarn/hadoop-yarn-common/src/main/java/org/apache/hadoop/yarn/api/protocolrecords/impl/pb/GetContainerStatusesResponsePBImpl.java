@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerExceptionMapProto
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusesResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusesResponseProtoOrBuilder;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class GetContainerStatusesResponsePBImpl extends
@@ -85,8 +87,7 @@ public class GetContainerStatusesResponsePBImpl extends
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ")
-      .replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

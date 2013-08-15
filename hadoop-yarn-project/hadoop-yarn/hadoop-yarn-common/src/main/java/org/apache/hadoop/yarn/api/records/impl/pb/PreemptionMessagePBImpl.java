@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionMessageProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionMessageProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.StrictPreemptionContractProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class PreemptionMessagePBImpl extends PreemptionMessage {
@@ -71,7 +73,7 @@ public class PreemptionMessagePBImpl extends PreemptionMessage {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToProto() {

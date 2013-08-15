@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class RenewDelegationTokenRequestPBImpl extends
@@ -89,7 +91,7 @@ public class RenewDelegationTokenRequestPBImpl extends
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {
