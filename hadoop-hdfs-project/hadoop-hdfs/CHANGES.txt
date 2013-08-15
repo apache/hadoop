@@ -104,6 +104,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-4632. globStatus using backslash for escaping does not work on Windows.
     (Chuan Liu via cnauroth)
 
+    HDFS-5093. TestGlobPaths should re-use the MiniDFSCluster to avoid failure
+    on Windows. (Chuan Liu via cnauroth)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
