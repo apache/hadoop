@@ -121,6 +121,8 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9381. Document dfs cp -f option. (Keegan Witt, suresh via suresh)
 
+    HADOOP-9868. Server must not advertise kerberos realm. (daryn via kihwal)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
