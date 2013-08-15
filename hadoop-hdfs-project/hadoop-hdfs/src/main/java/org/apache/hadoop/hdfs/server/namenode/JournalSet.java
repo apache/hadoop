@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.util.ExitUtil.terminate;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,14 +33,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-
-import static org.apache.hadoop.util.ExitUtil.terminate;
-
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
@@ -257,13 +255,12 @@ public class JournalSet implements JournalManager {
             ". Skipping.", ioe);
       }
     }
-    chainAndMakeRedundantStreams(streams, allStreams, fromTxId, inProgressOk);
+    chainAndMakeRedundantStreams(streams, allStreams, fromTxId);
   }
   
   public static void chainAndMakeRedundantStreams(
       Collection<EditLogInputStream> outStreams,
-      PriorityQueue<EditLogInputStream> allStreams,
-      long fromTxId, boolean inProgressOk) {
+      PriorityQueue<EditLogInputStream> allStreams, long fromTxId) {
     // We want to group together all the streams that start on the same start
     // transaction ID.  To do this, we maintain an accumulator (acc) of all
     // the streams we've seen at a given start transaction ID.  When we see a
@@ -598,7 +595,7 @@ public class JournalSet implements JournalManager {
       if (j.getManager() instanceof FileJournalManager) {
         FileJournalManager fjm = (FileJournalManager)j.getManager();
         try {
-          allLogs.addAll(fjm.getRemoteEditLogs(fromTxId, forReading));
+          allLogs.addAll(fjm.getRemoteEditLogs(fromTxId, forReading, false));
         } catch (Throwable t) {
           LOG.warn("Cannot list edit logs in " + fjm, t);
         }
