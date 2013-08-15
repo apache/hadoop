@@ -53,6 +53,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9875.  TestDoAsEffectiveUser can fail on JDK 7.  (Aaron T. Myers via
     Colin Patrick McCabe)
 
+    HADOOP-9865.  FileContext#globStatus has a regression with respect to
+    relative path.  (Chuan Lin via Colin Patrick McCabe)
+
 
 Release 2.1.1-beta - UNRELEASED
 
