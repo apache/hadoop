@@ -466,6 +466,9 @@ public class TestGlobPaths {
   
   @Test
   public void pTestEscape() throws IOException {
+    // Skip the test case on Windows because backslash will be treated as a
+    // path separator instead of an escaping character on Windows.
+    org.junit.Assume.assumeTrue(!Path.WINDOWS);
     try {
       String [] files = new String[] {USER_DIR+"/ab\\[c.d"};
       Path[] matchedPath = prepareTesting(USER_DIR+"/ab\\[c.d", files);
