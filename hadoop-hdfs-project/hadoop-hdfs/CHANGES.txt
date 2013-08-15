@@ -256,6 +256,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
     (Colin Patrick McCabe)
 
+    HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
+    (shv)
+
   OPTIMIZATIONS
 
   BUG FIXES

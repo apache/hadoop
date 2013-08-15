@@ -61,6 +61,8 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -100,7 +102,7 @@ import org.apache.log4j.LogManager;
  * Then the benchmark executes the specified number of operations using 
  * the specified number of threads and outputs the resulting stats.
  */
-public class NNThroughputBenchmark {
+public class NNThroughputBenchmark implements Tool {
   private static final Log LOG = LogFactory.getLog(NNThroughputBenchmark.class);
   private static final int BLOCK_SIZE = 16;
   private static final String GENERAL_OPTIONS_USAGE = 
@@ -115,6 +117,8 @@ public class NNThroughputBenchmark {
     // We do not need many handlers, since each thread simulates a handler
     // by calling name-node methods directly
     config.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 1);
+    // Turn off minimum block size verification
+    config.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 0);
     // set exclude file
     config.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE,
       "${hadoop.tmp.dir}/dfs/hosts/exclude");
@@ -129,14 +133,11 @@ public class NNThroughputBenchmark {
     config.set(DFSConfigKeys.DFS_HOSTS, "${hadoop.tmp.dir}/dfs/hosts/include");
     File includeFile = new File(config.get(DFSConfigKeys.DFS_HOSTS, "include"));
     new FileOutputStream(includeFile).close();
-    // Start the NameNode
-    String[] argv = new String[] {};
-    nameNode = NameNode.createNameNode(argv, config);
-    nameNodeProto = nameNode.getRpcServer();
   }
 
   void close() {
-    nameNode.stop();
+    if(nameNode != null)
+      nameNode.stop();
   }
 
   static void setNameNodeLoggingLevel(Level logLevel) {
@@ -1290,52 +1291,69 @@ public class NNThroughputBenchmark {
     System.exit(-1);
   }
 
+  public static void runBenchmark(Configuration conf, List<String> args)
+      throws Exception {
+    NNThroughputBenchmark bench = null;
+    try {
+      bench = new NNThroughputBenchmark(conf);
+      bench.run(args.toArray(new String[]{}));
+    } finally {
+      if(bench != null)
+        bench.close();
+    }
+  }
+
   /**
    * Main method of the benchmark.
    * @param args command line parameters
    */
-  public static void runBenchmark(Configuration conf, List<String> args) throws Exception {
+  @Override // Tool
+  public int run(String[] aArgs) throws Exception {
+    List<String> args = new ArrayList<String>(Arrays.asList(aArgs));
     if(args.size() < 2 || ! args.get(0).startsWith("-op"))
       printUsage();
 
     String type = args.get(1);
     boolean runAll = OperationStatsBase.OP_ALL_NAME.equals(type);
 
-    NNThroughputBenchmark bench = null;
+    // Start the NameNode
+    String[] argv = new String[] {};
+    nameNode = NameNode.createNameNode(argv, config);
+    nameNodeProto = nameNode.getRpcServer();
+
     List<OperationStatsBase> ops = new ArrayList<OperationStatsBase>();
     OperationStatsBase opStat = null;
     try {
-      bench = new NNThroughputBenchmark(conf);
       if(runAll || CreateFileStats.OP_CREATE_NAME.equals(type)) {
-        opStat = bench.new CreateFileStats(args);
+        opStat = new CreateFileStats(args);
         ops.add(opStat);
       }
       if(runAll || OpenFileStats.OP_OPEN_NAME.equals(type)) {
-        opStat = bench.new OpenFileStats(args);
+        opStat = new OpenFileStats(args);
         ops.add(opStat);
       }
       if(runAll || DeleteFileStats.OP_DELETE_NAME.equals(type)) {
-        opStat = bench.new DeleteFileStats(args);
+        opStat = new DeleteFileStats(args);
         ops.add(opStat);
       }
       if(runAll || FileStatusStats.OP_FILE_STATUS_NAME.equals(type)) {
-        opStat = bench.new FileStatusStats(args);
+        opStat = new FileStatusStats(args);
         ops.add(opStat);
       }
       if(runAll || RenameFileStats.OP_RENAME_NAME.equals(type)) {
-        opStat = bench.new RenameFileStats(args);
+        opStat = new RenameFileStats(args);
         ops.add(opStat);
       }
       if(runAll || BlockReportStats.OP_BLOCK_REPORT_NAME.equals(type)) {
-        opStat = bench.new BlockReportStats(args);
+        opStat = new BlockReportStats(args);
         ops.add(opStat);
       }
       if(runAll || ReplicationStats.OP_REPLICATION_NAME.equals(type)) {
-        opStat = bench.new ReplicationStats(args);
+        opStat = new ReplicationStats(args);
         ops.add(opStat);
       }
       if(runAll || CleanAllStats.OP_CLEAN_NAME.equals(type)) {
-        opStat = bench.new CleanAllStats(args);
+        opStat = new CleanAllStats(args);
         ops.add(opStat);
       }
       if(ops.size() == 0)
@@ -1354,14 +1372,28 @@ public class NNThroughputBenchmark {
     } catch(Exception e) {
       LOG.error(StringUtils.stringifyException(e));
       throw e;
+    }
+    return 0;
+  }
+
+  public static void main(String[] args) throws Exception {
+    NNThroughputBenchmark bench = null;
+    try {
+      bench = new NNThroughputBenchmark(new HdfsConfiguration());
+      ToolRunner.run(bench, args);
     } finally {
       if(bench != null)
         bench.close();
     }
   }
 
-  public static void main(String[] args) throws Exception {
-    runBenchmark(new HdfsConfiguration(), 
-                  new ArrayList<String>(Arrays.asList(args)));
+  @Override // Configurable
+  public void setConf(Configuration conf) {
+    config = conf;
+  }
+
+  @Override // Configurable
+  public Configuration getConf() {
+    return config;
   }
 }
