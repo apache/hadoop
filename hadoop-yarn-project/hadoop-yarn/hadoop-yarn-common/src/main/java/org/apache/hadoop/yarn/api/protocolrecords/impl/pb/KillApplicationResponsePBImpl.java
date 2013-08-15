@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.KillApplicationResponseProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class KillApplicationResponsePBImpl extends KillApplicationResponse {
@@ -63,6 +65,6 @@ public class KillApplicationResponsePBImpl extends KillApplicationResponse {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }  

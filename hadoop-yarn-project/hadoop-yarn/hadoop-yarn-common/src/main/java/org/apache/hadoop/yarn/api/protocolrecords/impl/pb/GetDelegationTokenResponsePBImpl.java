@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class GetDelegationTokenResponsePBImpl extends GetDelegationTokenResponse {
@@ -94,7 +96,7 @@ public class GetDelegationTokenResponsePBImpl extends GetDelegationTokenResponse
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainersResponsePro
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainersResponseProtoOrBuilder;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.TextFormat;
 
 @Private
 @Unstable
@@ -87,8 +88,7 @@ public class StartContainersResponsePBImpl extends StartContainersResponse {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ")
-      .replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

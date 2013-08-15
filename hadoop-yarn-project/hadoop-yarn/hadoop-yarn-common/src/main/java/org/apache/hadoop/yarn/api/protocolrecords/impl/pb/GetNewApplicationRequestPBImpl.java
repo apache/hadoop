@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNewApplicationRequestProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class GetNewApplicationRequestPBImpl extends GetNewApplicationRequest {
@@ -63,6 +65,6 @@ public class GetNewApplicationRequestPBImpl extends GetNewApplicationRequest {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }  
