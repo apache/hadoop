@@ -126,6 +126,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5367. Local jobs all use same local working directory
     (Sandy Ryza)
 
+    HDFS-4898. BlockPlacementPolicyWithNodeGroup.chooseRemoteRack() fails to
+    properly fallback to local rack. (szetszwo)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES
