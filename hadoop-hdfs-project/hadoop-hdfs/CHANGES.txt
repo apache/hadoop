@@ -116,6 +116,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5099. Namenode#copyEditLogSegmentsToSharedDir should close
     EditLogInputStreams upon finishing. (Chuan Liu via cnauroth)
 
+    HDFS-2994. If lease soft limit is recovered successfully
+    the append can fail. (Tao Luo via shv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

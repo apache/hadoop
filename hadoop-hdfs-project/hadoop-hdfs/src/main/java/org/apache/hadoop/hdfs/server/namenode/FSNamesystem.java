@@ -2136,10 +2136,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new FileNotFoundException("failed to append to non-existent file "
           + src + " on client " + clientMachine);
       }
-      final INodeFile myFile = INodeFile.valueOf(inode, src, true);
+      INodeFile myFile = INodeFile.valueOf(inode, src, true);
       // Opening an existing file for write - may need to recover lease.
       recoverLeaseInternal(myFile, src, holder, clientMachine, false);
-
+      
+      // recoverLeaseInternal may create a new InodeFile via 
+      // finalizeINodeFileUnderConstruction so we need to refresh 
+      // the referenced file.  
+      myFile = INodeFile.valueOf(dir.getINode(src), src, true);
+      
       final DatanodeDescriptor clientNode = 
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
       return prepareFileForWrite(src, myFile, holder, clientMachine, clientNode,
