@@ -6347,6 +6347,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return JSON.toString(jasList);
   }
 
+  @Override // NameNodeMxBean
+  public String getJournalTransactionInfo() {
+    Map<String, String> txnIdMap = new HashMap<String, String>();
+    txnIdMap.put("LastAppliedOrWrittenTxId",
+        Long.toString(this.getFSImage().getLastAppliedOrWrittenTxId()));
+    txnIdMap.put("MostRecentCheckpointTxId",
+        Long.toString(this.getFSImage().getMostRecentCheckpointTxId()));
+    return JSON.toString(txnIdMap);
+  }
+  
   @Override  // NameNodeMXBean
   public String getNNStarted() {
     return getStartTime().toString();
