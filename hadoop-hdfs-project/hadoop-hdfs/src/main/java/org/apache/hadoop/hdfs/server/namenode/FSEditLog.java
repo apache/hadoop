@@ -1231,6 +1231,7 @@ public class FSEditLog implements LogsPurgeable {
     }
   }
   
+  @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
       long fromTxId, boolean inProgressOk, boolean forReading) throws IOException {
     journalSet.selectInputStreams(streams, fromTxId, inProgressOk, forReading);
@@ -1241,18 +1242,27 @@ public class FSEditLog implements LogsPurgeable {
     return selectInputStreams(fromTxId, toAtLeastTxId, null, true);
   }
 
+  /** Select a list of input streams to load */
+  public Collection<EditLogInputStream> selectInputStreams(
+      long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,
+      boolean inProgressOk) throws IOException {
+    return selectInputStreams(fromTxId, toAtLeastTxId, recovery, inProgressOk,
+        true);
+  }
+  
   /**
-   * Select a list of input streams to load.
+   * Select a list of input streams.
    * 
    * @param fromTxId first transaction in the selected streams
    * @param toAtLeast the selected streams must contain this transaction
    * @param inProgessOk set to true if in-progress streams are OK
+   * @param forReading whether or not to use the streams to load the edit log
    */
   public synchronized Collection<EditLogInputStream> selectInputStreams(
       long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,
-      boolean inProgressOk) throws IOException {
+      boolean inProgressOk, boolean forReading) throws IOException {
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    selectInputStreams(streams, fromTxId, inProgressOk, true);
+    selectInputStreams(streams, fromTxId, inProgressOk, forReading);
 
     try {
       checkForGaps(streams, fromTxId, toAtLeastTxId, inProgressOk);

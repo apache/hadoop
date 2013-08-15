@@ -169,18 +169,26 @@ public class FileJournalManager implements JournalManager {
    * @param fromTxId the txnid which to start looking
    * @param forReading whether or not the caller intends to read from the edit
    *        logs
+   * @param inProgressOk whether or not to include the in-progress edit log 
+   *        segment       
    * @return a list of remote edit logs
    * @throws IOException if edit logs cannot be listed.
    */
   public List<RemoteEditLog> getRemoteEditLogs(long firstTxId,
-      boolean forReading) throws IOException {
+      boolean forReading, boolean inProgressOk) throws IOException {
+    // make sure not reading in-progress edit log, i.e., if forReading is true,
+    // we should ignore the in-progress edit log.
+    Preconditions.checkArgument(!(forReading && inProgressOk));
+    
     File currentDir = sd.getCurrentDir();
     List<EditLogFile> allLogFiles = matchEditLogs(currentDir);
     List<RemoteEditLog> ret = Lists.newArrayListWithCapacity(
         allLogFiles.size());
 
     for (EditLogFile elf : allLogFiles) {
-      if (elf.hasCorruptHeader() || elf.isInProgress()) continue;
+      if (elf.hasCorruptHeader() || (!inProgressOk && elf.isInProgress())) {
+        continue;
+      }
       if (elf.getFirstTxId() >= firstTxId) {
         ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId));
       } else if (elf.getFirstTxId() < firstTxId && firstTxId <= elf.getLastTxId()) {

@@ -480,6 +480,6 @@ public class TestFileJournalManager {
 
   private static String getLogsAsString(
       FileJournalManager fjm, long firstTxId) throws IOException {
-    return Joiner.on(",").join(fjm.getRemoteEditLogs(firstTxId, true));
+    return Joiner.on(",").join(fjm.getRemoteEditLogs(firstTxId, true, false));
   }
 }
