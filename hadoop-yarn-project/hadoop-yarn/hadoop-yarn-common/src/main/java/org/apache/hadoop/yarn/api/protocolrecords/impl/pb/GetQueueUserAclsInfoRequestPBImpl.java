@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetQueueUserAclsInfoRequestProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class GetQueueUserAclsInfoRequestPBImpl extends GetQueueUserAclsInfoRequest {
@@ -64,6 +66,6 @@ public class GetQueueUserAclsInfoRequestPBImpl extends GetQueueUserAclsInfoReque
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }

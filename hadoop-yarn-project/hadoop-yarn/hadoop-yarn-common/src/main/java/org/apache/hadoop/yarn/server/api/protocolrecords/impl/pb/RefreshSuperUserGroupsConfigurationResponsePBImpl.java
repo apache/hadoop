@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshSuperUserGroupsConfigurationResponseProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class RefreshSuperUserGroupsConfigurationResponsePBImpl extends RefreshSuperUserGroupsConfigurationResponse {
@@ -63,6 +65,6 @@ public class RefreshSuperUserGroupsConfigurationResponsePBImpl extends RefreshSu
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }

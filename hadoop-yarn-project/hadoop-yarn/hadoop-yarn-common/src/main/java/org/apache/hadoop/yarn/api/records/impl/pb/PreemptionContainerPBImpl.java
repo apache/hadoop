@@ -25,6 +25,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionContainerProtoOrBuilder;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class PreemptionContainerPBImpl extends PreemptionContainer {
@@ -69,7 +71,7 @@ public class PreemptionContainerPBImpl extends PreemptionContainer {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToProto() {

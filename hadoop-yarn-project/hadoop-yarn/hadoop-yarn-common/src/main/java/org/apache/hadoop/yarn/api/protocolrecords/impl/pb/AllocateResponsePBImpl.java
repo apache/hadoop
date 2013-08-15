@@ -49,6 +49,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.NMTokenProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class AllocateResponsePBImpl extends AllocateResponse {
@@ -99,7 +101,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private synchronized void mergeLocalToBuilder() {

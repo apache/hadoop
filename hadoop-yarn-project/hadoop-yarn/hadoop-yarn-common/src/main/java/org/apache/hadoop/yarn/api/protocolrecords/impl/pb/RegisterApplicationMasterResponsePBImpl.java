@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterR
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProtoOrBuilder;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.TextFormat;
 
 
 @Private
@@ -85,7 +86,7 @@ public class RegisterApplicationMasterResponsePBImpl extends
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToProto() {
