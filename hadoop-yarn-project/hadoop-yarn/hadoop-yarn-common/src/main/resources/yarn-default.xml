@@ -141,6 +141,20 @@
   </property>
 
   <property>
+    <description>Maximum time to wait to establish connection to
+    ResourceManager.</description>
+    <name>yarn.resourcemanager.connect.max-wait.ms</name>
+    <value>900000</value>
+  </property>
+
+  <property>
+    <description>How often to try connecting to the
+    ResourceManager.</description>
+    <name>yarn.resourcemanager.connect.retry-interval.ms</name>
+    <value>30000</value>
+  </property>
+
+  <property>
     <description>The maximum number of application attempts. It's a global
     setting for all application masters. Each application master can specify
     its individual maximum number of application attempts via the API, but the
@@ -249,7 +263,7 @@
     RM state will be stored. This must be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore
     as the value for yarn.resourcemanager.store.class</description>
-    <name>yarn.resourcemanager.fs.rm-state-store.uri</name>
+    <name>yarn.resourcemanager.fs.state-store.uri</name>
     <value>${hadoop.tmp.dir}/yarn/system/rmstore</value>
     <!--value>hdfs://localhost:9000/rmstore</value-->
   </property>
