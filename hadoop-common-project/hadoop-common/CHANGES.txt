@@ -56,6 +56,8 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9527. Add symlink support to LocalFileSystem on Windows.
     (Arpit Agarwal)
 
+    HADOOP-9381. Document dfs cp -f option. (Keegan Witt, suresh via suresh)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
