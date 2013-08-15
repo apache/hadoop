@@ -92,6 +92,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5091. Support for spnego keytab separate from the JournalNode keytab 
     for secure HA. (jing9)
 
+    HDFS-5051. nn fails to download checkpointed image from snn in some
+    setups. (Vinay and suresh via suresh)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
