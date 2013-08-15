@@ -11,6 +11,12 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
     (Karthik Kambatla via Sandy Ryza)
 
+    HADOOP-9803. Add a generic type parameter to RetryInvocationHandler.
+    (szetszwo)
+
+    HADOOP-9821. ClientId should have getMsb/getLsb methods.
+    (Tsuyoshi OZAWA via jing9)
+
     HADOOP-9435.  Support building the JNI code against the IBM JVM.
     (Tian Hong Wang via Colin Patrick McCabe)
 
@@ -23,6 +29,8 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-8814. Replace string equals "" by String#isEmpty().
     (Brandon Li via suresh)
+
+    HADOOP-9789. Support server advertised kerberos principals (daryn)
 
     HADOOP-9802. Support Snappy codec on Windows. (cnauroth)
 
@@ -47,6 +55,8 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9675. use svn:eol-style native for html to prevent line ending
     issues (Colin Patrick McCabe)
 
+    HADOOP-9757. Har metadata cache can grow without limit (Cristina Abad via daryn)
+
     HADOOP-9858. Remove unused private RawLocalFileSystem#execCommand method from
     branch-2. (cnauroth)
 
@@ -58,30 +68,7 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9381. Document dfs cp -f option. (Keegan Witt, suresh via suresh)
 
-Release 2.1.0-beta - 2013-08-06
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-    HADOOP-9803. Add a generic type parameter to RetryInvocationHandler.
-    (szetszwo)
-
-    HADOOP-9821. ClientId should have getMsb/getLsb methods. 
-    (Tsuyoshi OZAWA via jing9)
-
-    HADOOP-9789. Support server advertised kerberos principals (daryn)
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    HADOOP-9768. chown and chgrp reject users and groups with spaces on platforms
-    where spaces are otherwise acceptable. (cnauroth)
-
-    HADOOP-9757. Har metadata cache can grow without limit (Cristina Abad via daryn)
+    HADOOP-9868. Server must not advertise kerberos realm. (daryn via kihwal)
 
 Release 2.1.0-beta - 2013-08-06
 
