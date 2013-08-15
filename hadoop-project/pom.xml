@@ -57,6 +57,12 @@
     <!-- Used for building path to native library loaded by tests.  Projects -->
     <!-- at different nesting levels in the source tree may need to override. -->
     <hadoop.common.build.dir>${basedir}/../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
+    <java.security.egd>file:///dev/urandom</java.security.egd>
+
+    <!-- ProtocolBuffer version, used to verify the protoc version and -->
+    <!-- define the protobuf JAR version                               -->
+    <protobuf.version>2.5.0</protobuf.version>
+    <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
   </properties>
 
   <dependencyManagement>
@@ -285,6 +291,12 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-minicluster</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-minikdc</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -608,7 +620,7 @@
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
-        <version>2.4.0a</version>
+        <version>${protobuf.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-daemon</groupId>
@@ -831,7 +843,7 @@
 
             <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
             <java.security.krb5.conf>${basedir}/src/test/resources/krb5.conf</java.security.krb5.conf>
-            <java.security.egd>file:///dev/urandom</java.security.egd>
+            <java.security.egd>${java.security.egd}</java.security.egd>
             <require.test.libhadoop>${require.test.libhadoop}</require.test.libhadoop>
           </systemPropertyVariables>
           <includes>
@@ -885,6 +897,14 @@
           <family>Windows</family>
         </os>
       </activation>
+      <properties>
+        <!-- We must use this exact string for egd on Windows, because the -->
+        <!-- JVM will check for an exact string match on this.  If found, it -->
+        <!-- will use a native entropy provider.  This will not really -->
+        <!-- attempt to open a file at this path. -->
+        <java.security.egd>file:/dev/urandom</java.security.egd>
+        <bundle.snappy.in.bin>true</bundle.snappy.in.bin>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -893,7 +913,7 @@
             <configuration>
               <environmentVariables>
                 <!-- Specify where to look for the native DLL on Windows -->
-                <PATH>${env.PATH};${hadoop.common.build.dir}/bin</PATH>
+                <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${snappy.lib}</PATH>
               </environmentVariables>
             </configuration>
           </plugin>

@@ -711,6 +711,14 @@ public class YarnConfiguration extends Configuration {
    */
   public static boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
 
+  /**
+   * Whether users are explicitly trying to control resource monitoring
+   * configuration for the MiniYARNCluster. Disabled by default.
+   */
+  public static final String YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING =
+      YARN_PREFIX + "minicluster.control-resource-monitoring";
+  public static final boolean
+      DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING = false;
 
   /** The log directory for the containers */
   public static final String YARN_APP_CONTAINER_LOG_DIR =

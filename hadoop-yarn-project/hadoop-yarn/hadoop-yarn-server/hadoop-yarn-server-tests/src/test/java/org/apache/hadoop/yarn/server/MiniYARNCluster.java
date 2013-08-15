@@ -304,6 +304,16 @@ public class MiniYARNCluster extends CompositeService {
                         MiniYARNCluster.getHostname() + ":0");
         getConfig().set(YarnConfiguration.NM_WEBAPP_ADDRESS,
                         MiniYARNCluster.getHostname() + ":0");
+
+        // Disable resource checks by default
+        if (!getConfig().getBoolean(
+            YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
+            YarnConfiguration.
+                DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING)) {
+          getConfig().setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
+          getConfig().setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
+        }
+
         LOG.info("Starting NM: " + index);
         nodeManagers[index].init(getConfig());
         new Thread() {

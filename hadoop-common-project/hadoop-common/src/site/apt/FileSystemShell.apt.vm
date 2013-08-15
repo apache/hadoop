@@ -86,10 +86,13 @@ chgrp
 
    Usage: <<<hdfs dfs -chgrp [-R] GROUP URI [URI ...]>>>
 
-   Change group association of files. With -R, make the change recursively
-   through the directory structure. The user must be the owner of files, or
+   Change group association of files. The user must be the owner of files, or
    else a super-user. Additional information is in the
    {{{betterurl}Permissions Guide}}.
+
+   Options
+
+     * The -R option will make the change recursively through the directory structure.
 
 chmod
 
@@ -100,13 +103,20 @@ chmod
    else a super-user. Additional information is in the
    {{{betterurl}Permissions Guide}}.
 
+   Options
+
+     * The -R option will make the change recursively through the directory structure.
+
 chown
 
    Usage: <<<hdfs dfs -chown [-R] [OWNER][:[GROUP]] URI [URI ]>>>
 
-   Change the owner of files. With -R, make the change recursively through the
-   directory structure. The user must be a super-user. Additional information
+   Change the owner of files. The user must be a super-user. Additional information
    is in the {{{betterurl}Permissions Guide}}.
+
+   Options
+
+     * The -R option will make the change recursively through the directory structure.
 
 copyFromLocal
 
@@ -114,6 +124,10 @@ copyFromLocal
 
    Similar to put command, except that the source is restricted to a local
    file reference.
+
+   Options:
+
+     * The -f option will overwrite the destination if it already exists.
 
 copyToLocal
 
@@ -145,10 +159,14 @@ count
 
 cp
 
-   Usage: <<<hdfs dfs -cp URI [URI ...] <dest> >>>
+   Usage: <<<hdfs dfs -cp [-f] URI [URI ...] <dest> >>>
 
    Copy files from source to destination. This command allows multiple sources
    as well in which case the destination must be a directory.
+
+    Options:
+
+      * The -f option will overwrite the destination if it already exists.
 
    Example:
 
@@ -232,7 +250,7 @@ ls
 permissions number_of_replicas userid groupid filesize modification_date modification_time filename
 +---+
 
-   For a directory it returns list of its direct children as in unix.A directory is listed as:
+   For a directory it returns list of its direct children as in Unix. A directory is listed as:
 
 +---+
 permissions userid groupid modification_date modification_time dirname
@@ -256,8 +274,11 @@ mkdir
 
    Usage: <<<hdfs dfs -mkdir [-p] <paths> >>>
 
-   Takes path uri's as argument and creates directories.  With -p the behavior
-   is much like unix mkdir -p creating parent directories along the path.
+   Takes path uri's as argument and creates directories.
+
+   Options:
+
+     * The -p option behavior is much like Unix mkdir -p, creating parent directories along the path.
 
    Example:
 
@@ -362,8 +383,11 @@ setrep
 
    Usage: <<<hdfs dfs -setrep [-R] <path> >>>
 
-   Changes the replication factor of a file. -R option is for recursively
-   increasing the replication factor of files within a directory.
+   Changes the replication factor of a file.
+
+   Options:
+
+     * The -R option will recursively increase the replication factor of files within a directory.
 
    Example:
 
@@ -390,8 +414,11 @@ tail
 
    Usage: <<<hdfs dfs -tail [-f] URI>>>
 
-   Displays last kilobyte of the file to stdout. -f option can be used as in
-   Unix.
+   Displays last kilobyte of the file to stdout.
+
+   Options:
+
+     * The -f option will output appended data as the file grows, as in Unix.
 
    Example:
 
@@ -406,13 +433,9 @@ test
 
    Options:
 
-*----+------------+
-| -e | check to see if the file exists. Return 0 if true.
-*----+------------+
-| -z | check to see if the file is zero length. Return 0 if true.
-*----+------------+
-| -d | check to see if the path is directory. Return 0 if true.
-*----+------------+
+     * The -e option will check to see if the file exists, returning 0 if true.
+     * The -z option will check to see if the file is zero length, returning 0 if true.
+     * The -d option will check to see if the path is directory, returning 0 if true.
 
    Example:
 

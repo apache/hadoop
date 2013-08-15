@@ -35,8 +35,10 @@ import org.apache.avro.Schema;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AvroFSInput;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsDirectoryException;
@@ -259,8 +261,9 @@ class Display extends FsCommand {
       pos = 0;
       buffer = new byte[0];
       GenericDatumReader<Object> reader = new GenericDatumReader<Object>();
+      FileContext fc = FileContext.getFileContext(new Configuration());
       fileReader =
-        DataFileReader.openReader(new File(status.getPath().toUri()), reader);
+        DataFileReader.openReader(new AvroFSInput(fc, status.getPath()),reader);
       Schema schema = fileReader.getSchema();
       writer = new GenericDatumWriter<Object>(schema);
       output = new ByteArrayOutputStream();

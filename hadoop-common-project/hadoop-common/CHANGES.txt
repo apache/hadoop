@@ -56,9 +56,6 @@ Trunk (Unreleased)
     HADOOP-8719. Workaround for kerberos-related log errors upon running any
     hadoop command on OSX. (Jianbin Wei via harsh)
 
-    HADOOP-8814. Replace string equals "" by String#isEmpty().
-    (Brandon Li via suresh)
-
     HADOOP-8588. SerializationFactory shouldn't throw a
     NullPointerException if the serializations list is empty.
     (Sho Shimauchi via harsh)
@@ -271,6 +268,15 @@ Trunk (Unreleased)
     HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
     (Chris Nauroth via sanjay)
 
+    HADOOP-9583. test-patch gives +1 despite build failure when running tests.
+    (jlowe via kihwal)
+
+    HADOOP-9847. TestGlobPath symlink tests fail to cleanup properly.
+    (cmccabe via wang)
+
+    HADOOP-9740. Fix FsShell '-text' command to be able to read Avro
+    files stored in HDFS and other filesystems. (Allan Yan via cutting)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -284,6 +290,9 @@ Release 2.3.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP 9871. Fix intermittent findbugs warnings in DefaultMetricsSystem.
+    (Junping Du via llu)
 
     HADOOP-9319. Update bundled LZ4 source to r99. (Binglin Chang via llu)
 
@@ -304,6 +313,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9758.  Provide configuration option for FileSystem/FileContext
     symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9848. Create a MiniKDC for use with security testing. 
+    (ywskycn via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -319,6 +331,10 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9817. FileSystem#globStatus and FileContext#globStatus need to work
     with symlinks. (Colin Patrick McCabe via Andrew Wang)
 
+    HADOOP-9652.  RawLocalFs#getFileLinkStatus does not fill in the link owner
+    and mode.  (Andrew Wang via Colin Patrick McCabe)
+
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -326,6 +342,8 @@ Release 2.1.1-beta - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-9446. Support Kerberos SPNEGO for IBM JDK. (Yu Gao via llu)
  
     HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
     (Karthik Kambatla via Sandy Ryza)
@@ -339,6 +357,11 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9672. Upgrade Avro dependency to 1.7.4. (sandy via kihwal)
 
     HADOOP-9789. Support server advertised kerberos principals (daryn)
+
+    HADOOP-8814. Replace string equals "" by String#isEmpty().
+    (Brandon Li via suresh)
+
+    HADOOP-9802. Support Snappy codec on Windows. (cnauroth)
 
   OPTIMIZATIONS
 
@@ -360,6 +383,13 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9675. use svn:eol-style native for html to prevent line ending
     issues (Colin Patrick McCabe)
+
+    HADOOP-9757. Har metadata cache can grow without limit (Cristina Abad via daryn)
+
+    HADOOP-9857. Tests block and sometimes timeout on Windows due to invalid
+    entropy source. (cnauroth)
+
+    HADOOP-9381. Document dfs cp -f option. (Keegan Witt, suresh via suresh)
 
 Release 2.1.0-beta - 2013-08-06
 
@@ -557,6 +587,10 @@ Release 2.1.0-beta - 2013-08-06
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
     (todd)
+
+    HADOOP-9845. Update protobuf to 2.5 from 2.4.x. (tucu)
+
+    HADOOP-9872. Improve protoc version handling and detection. (tucu)
 
   BUG FIXES
 
