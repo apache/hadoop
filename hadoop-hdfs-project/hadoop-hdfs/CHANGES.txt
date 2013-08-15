@@ -98,6 +98,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5051. nn fails to download checkpointed image from snn in some
     setups. (Vinay and suresh via suresh)
 
+    HDFS-4898. BlockPlacementPolicyWithNodeGroup.chooseRemoteRack() fails to
+    properly fallback to local rack. (szetszwo)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
