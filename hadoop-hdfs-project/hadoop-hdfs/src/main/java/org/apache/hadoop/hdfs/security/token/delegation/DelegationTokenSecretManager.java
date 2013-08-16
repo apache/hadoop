@@ -81,6 +81,28 @@ public class DelegationTokenSecretManager
     return new DelegationTokenIdentifier();
   }
   
+  @Override
+  public synchronized byte[] retrievePassword(
+      DelegationTokenIdentifier identifier) throws InvalidToken {
+    try {
+      // this check introduces inconsistency in the authentication to a
+      // HA standby NN.  non-token auths are allowed into the namespace which
+      // decides whether to throw a StandbyException.  tokens are a bit
+      // different in that a standby may be behind and thus not yet know
+      // of all tokens issued by the active NN.  the following check does
+      // not allow ANY token auth, however it should allow known tokens in
+      checkAvailableForRead();
+    } catch (StandbyException se) {
+      // FIXME: this is a hack to get around changing method signatures by
+      // tunneling a non-InvalidToken exception as the cause which the
+      // RPC server will unwrap before returning to the client
+      InvalidToken wrappedStandby = new InvalidToken("StandbyException");
+      wrappedStandby.initCause(se);
+      throw wrappedStandby;
+    }
+    return super.retrievePassword(identifier);
+  }
+  
   @Override //SecretManager
   public void checkAvailableForRead() throws StandbyException {
     namesystem.checkOperation(OperationCategory.READ);
