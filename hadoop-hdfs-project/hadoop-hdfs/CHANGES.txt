@@ -129,6 +129,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5105. TestFsck fails on Windows. (Chuan Liu via arp)
 
+    HDFS-5106. TestDatanodeBlockScanner fails on Windows due to incorrect path
+    format. (Chuan Liu via cnauroth)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

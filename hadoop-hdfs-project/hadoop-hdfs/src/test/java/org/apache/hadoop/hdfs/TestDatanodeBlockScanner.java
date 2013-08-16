@@ -440,7 +440,8 @@ public class TestDatanodeBlockScanner {
     }
   }
   
-  private static final String BASE_PATH = "/data/current/finalized";
+  private static final String BASE_PATH = (new File("/data/current/finalized"))
+      .getAbsolutePath();
   
   @Test
   public void testReplicaInfoParsing() throws Exception {
