@@ -127,6 +127,8 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5102. Snapshot names should not be allowed to contain slash characters.
     (jing9)
 
+    HDFS-5105. TestFsck fails on Windows. (Chuan Liu via arp)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
