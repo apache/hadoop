@@ -15,13 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapreduce.lib.input;
+package org.apache.hadoop.mapred;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
-
-import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -32,67 +29,26 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Job;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestFileInputFormat {
 
   @Test
-  public void testNumInputFilesRecursively() throws Exception {
-    Configuration conf = getConfiguration();
-    conf.set(FileInputFormat.INPUT_DIR_RECURSIVE, "true");
-    Job job = Job.getInstance(conf);
-    FileInputFormat<?, ?> fileInputFormat = new TextInputFormat();
-    List<InputSplit> splits = fileInputFormat.getSplits(job);
-    Assert.assertEquals("Input splits are not correct", 3, splits.size());
-    Assert.assertEquals("test:/a1/a2/file2", ((FileSplit) splits.get(0))
-        .getPath().toString());
-    Assert.assertEquals("test:/a1/a2/file3", ((FileSplit) splits.get(1))
-        .getPath().toString());
-    Assert.assertEquals("test:/a1/file1", ((FileSplit) splits.get(2)).getPath()
-        .toString());
-    
-    // Using the deprecated configuration
-    conf = getConfiguration();
-    conf.set("mapred.input.dir.recursive", "true");
-    job = Job.getInstance(conf);
-    splits = fileInputFormat.getSplits(job);
-    Assert.assertEquals("Input splits are not correct", 3, splits.size());
-    Assert.assertEquals("test:/a1/a2/file2", ((FileSplit) splits.get(0))
-        .getPath().toString());
-    Assert.assertEquals("test:/a1/a2/file3", ((FileSplit) splits.get(1))
-        .getPath().toString());
-    Assert.assertEquals("test:/a1/file1", ((FileSplit) splits.get(2)).getPath()
-        .toString());
-  }
-
-  @Test
-  public void testNumInputFilesWithoutRecursively() throws Exception {
-    Configuration conf = getConfiguration();
-    Job job = Job.getInstance(conf);
-    FileInputFormat<?, ?> fileInputFormat = new TextInputFormat();
-    List<InputSplit> splits = fileInputFormat.getSplits(job);
-    Assert.assertEquals("Input splits are not correct", 2, splits.size());
-    Assert.assertEquals("test:/a1/a2", ((FileSplit) splits.get(0)).getPath()
-        .toString());
-    Assert.assertEquals("test:/a1/file1", ((FileSplit) splits.get(1)).getPath()
-        .toString());
-  }
-
-  @Test
   public void testListLocatedStatus() throws Exception {
     Configuration conf = getConfiguration();
     conf.setBoolean("fs.test.impl.disable.cache", false);
-    conf.set(FileInputFormat.INPUT_DIR, "test:///a1/a2");
+    conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
+        "test:///a1/a2");
     MockFileSystem mockFs =
         (MockFileSystem) new Path("test:///").getFileSystem(conf);
     Assert.assertEquals("listLocatedStatus already called",
         0, mockFs.numListLocatedStatusCalls);
-    Job job = Job.getInstance(conf);
-    FileInputFormat<?, ?> fileInputFormat = new TextInputFormat();
-    List<InputSplit> splits = fileInputFormat.getSplits(job);
-    Assert.assertEquals("Input splits are not correct", 2, splits.size());
+    JobConf job = new JobConf(conf);
+    TextInputFormat fileInputFormat = new TextInputFormat();
+    fileInputFormat.configure(job);
+    InputSplit[] splits = fileInputFormat.getSplits(job, 1);
+    Assert.assertEquals("Input splits are not correct", 2, splits.length);
     Assert.assertEquals("listLocatedStatuss calls",
         1, mockFs.numListLocatedStatusCalls);
   }
@@ -101,7 +57,8 @@ public class TestFileInputFormat {
     Configuration conf = new Configuration();
     conf.set("fs.test.impl.disable.cache", "true");
     conf.setClass("fs.test.impl", MockFileSystem.class, FileSystem.class);
-    conf.set(FileInputFormat.INPUT_DIR, "test:///a1");
+    conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
+        "test:///a1");
     return conf;
   }
 

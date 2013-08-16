@@ -36,8 +36,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
@@ -169,13 +171,17 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
   protected void addInputPathRecursively(List<FileStatus> result,
       FileSystem fs, Path path, PathFilter inputFilter) 
       throws IOException {
-    for(FileStatus stat: fs.listStatus(path, inputFilter)) {
-      if (stat.isDirectory()) {
-        addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
-      } else {
-        result.add(stat);
+    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(path);
+    while (iter.hasNext()) {
+      LocatedFileStatus stat = iter.next();
+      if (inputFilter.accept(stat.getPath())) {
+        if (stat.isDirectory()) {
+          addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
+        } else {
+          result.add(stat);
+        }
       }
-    }          
+    }
   }
   
   /** List input directories.
@@ -221,14 +227,19 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
       } else {
         for (FileStatus globStat: matches) {
           if (globStat.isDirectory()) {
-            for(FileStatus stat: fs.listStatus(globStat.getPath(),
-                inputFilter)) {
-              if (recursive && stat.isDirectory()) {
-                addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
-              } else {
-                result.add(stat);
+            RemoteIterator<LocatedFileStatus> iter =
+                fs.listLocatedStatus(globStat.getPath());
+            while (iter.hasNext()) {
+              LocatedFileStatus stat = iter.next();
+              if (inputFilter.accept(stat.getPath())) {
+                if (recursive && stat.isDirectory()) {
+                  addInputPathRecursively(result, fs, stat.getPath(),
+                      inputFilter);
+                } else {
+                  result.add(stat);
+                }
               }
-            }          
+            }
           } else {
             result.add(globStat);
           }
@@ -254,7 +265,6 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
   /** Splits files returned by {@link #listStatus(JobConf)} when
    * they're too big.*/ 
-  @SuppressWarnings("deprecation")
   public InputSplit[] getSplits(JobConf job, int numSplits)
     throws IOException {
     FileStatus[] files = listStatus(job);
@@ -278,31 +288,38 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
     NetworkTopology clusterMap = new NetworkTopology();
     for (FileStatus file: files) {
       Path path = file.getPath();
-      FileSystem fs = path.getFileSystem(job);
       long length = file.getLen();
-      BlockLocation[] blkLocations = fs.getFileBlockLocations(file, 0, length);
-      if ((length != 0) && isSplitable(fs, path)) { 
-        long blockSize = file.getBlockSize();
-        long splitSize = computeSplitSize(goalSize, minSize, blockSize);
+      if (length != 0) {
+        FileSystem fs = path.getFileSystem(job);
+        BlockLocation[] blkLocations;
+        if (file instanceof LocatedFileStatus) {
+          blkLocations = ((LocatedFileStatus) file).getBlockLocations();
+        } else {
+          blkLocations = fs.getFileBlockLocations(file, 0, length);
+        }
+        if (isSplitable(fs, path)) {
+          long blockSize = file.getBlockSize();
+          long splitSize = computeSplitSize(goalSize, minSize, blockSize);
 
-        long bytesRemaining = length;
-        while (((double) bytesRemaining)/splitSize > SPLIT_SLOP) {
-          String[] splitHosts = getSplitHosts(blkLocations, 
-              length-bytesRemaining, splitSize, clusterMap);
-          splits.add(makeSplit(path, length-bytesRemaining, splitSize, 
-                               splitHosts));
-          bytesRemaining -= splitSize;
+          long bytesRemaining = length;
+          while (((double) bytesRemaining)/splitSize > SPLIT_SLOP) {
+            String[] splitHosts = getSplitHosts(blkLocations,
+                length-bytesRemaining, splitSize, clusterMap);
+            splits.add(makeSplit(path, length-bytesRemaining, splitSize,
+                splitHosts));
+            bytesRemaining -= splitSize;
+          }
+
+          if (bytesRemaining != 0) {
+            String[] splitHosts = getSplitHosts(blkLocations, length
+                - bytesRemaining, bytesRemaining, clusterMap);
+            splits.add(makeSplit(path, length - bytesRemaining, bytesRemaining,
+                splitHosts));
+          }
+        } else {
+          String[] splitHosts = getSplitHosts(blkLocations,0,length,clusterMap);
+          splits.add(makeSplit(path, 0, length, splitHosts));
         }
-        
-        if (bytesRemaining != 0) {
-          String[] splitHosts = getSplitHosts(blkLocations, length
-              - bytesRemaining, bytesRemaining, clusterMap);
-          splits.add(makeSplit(path, length - bytesRemaining, bytesRemaining,
-              splitHosts));
-        }
-      } else if (length != 0) {
-        String[] splitHosts = getSplitHosts(blkLocations,0,length,clusterMap);
-        splits.add(makeSplit(path, 0, length, splitHosts));
       } else { 
         //Create empty hosts array for zero length files
         splits.add(makeSplit(path, 0, length, new String[0]));

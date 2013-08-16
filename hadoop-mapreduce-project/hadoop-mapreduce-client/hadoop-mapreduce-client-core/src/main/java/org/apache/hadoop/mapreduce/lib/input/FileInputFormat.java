@@ -29,9 +29,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -259,14 +261,19 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
       } else {
         for (FileStatus globStat: matches) {
           if (globStat.isDirectory()) {
-            for(FileStatus stat: fs.listStatus(globStat.getPath(),
-                inputFilter)) {
-              if (recursive && stat.isDirectory()) {
-                addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
-              } else {
-                result.add(stat);
+            RemoteIterator<LocatedFileStatus> iter =
+                fs.listLocatedStatus(globStat.getPath());
+            while (iter.hasNext()) {
+              LocatedFileStatus stat = iter.next();
+              if (inputFilter.accept(stat.getPath())) {
+                if (recursive && stat.isDirectory()) {
+                  addInputPathRecursively(result, fs, stat.getPath(),
+                      inputFilter);
+                } else {
+                  result.add(stat);
+                }
               }
-            }          
+            }
           } else {
             result.add(globStat);
           }
@@ -296,13 +303,17 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   protected void addInputPathRecursively(List<FileStatus> result,
       FileSystem fs, Path path, PathFilter inputFilter) 
       throws IOException {
-    for(FileStatus stat: fs.listStatus(path, inputFilter)) {
-      if (stat.isDirectory()) {
-        addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
-      } else {
-        result.add(stat);
+    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(path);
+    while (iter.hasNext()) {
+      LocatedFileStatus stat = iter.next();
+      if (inputFilter.accept(stat.getPath())) {
+        if (stat.isDirectory()) {
+          addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
+        } else {
+          result.add(stat);
+        }
       }
-    }          
+    }
   }
   
   
@@ -331,8 +342,13 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
       Path path = file.getPath();
       long length = file.getLen();
       if (length != 0) {
-        FileSystem fs = path.getFileSystem(job.getConfiguration());
-        BlockLocation[] blkLocations = fs.getFileBlockLocations(file, 0, length);
+        BlockLocation[] blkLocations;
+        if (file instanceof LocatedFileStatus) {
+          blkLocations = ((LocatedFileStatus) file).getBlockLocations();
+        } else {
+          FileSystem fs = path.getFileSystem(job.getConfiguration());
+          blkLocations = fs.getFileBlockLocations(file, 0, length);
+        }
         if (isSplitable(job, path)) {
           long blockSize = file.getBlockSize();
           long splitSize = computeSplitSize(blockSize, minSize, maxSize);
