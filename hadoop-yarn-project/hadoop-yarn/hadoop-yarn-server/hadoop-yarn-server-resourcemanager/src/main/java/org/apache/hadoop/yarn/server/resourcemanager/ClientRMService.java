@@ -353,9 +353,8 @@ public class ClientRMService extends AbstractService implements
       RMAuditLogger.logFailure(callerUGI.getUserName(),
           AuditConstants.KILL_APP_REQUEST, "UNKNOWN", "ClientRMService",
           "Trying to kill an absent application", applicationId);
-      throw RPCUtil
-          .getRemoteException("Trying to kill an absent application "
-              + applicationId);
+      throw new ApplicationNotFoundException("Trying to kill an absent"
+          + " application " + applicationId);
     }
 
     if (!checkAccess(callerUGI, application.getUser(),
