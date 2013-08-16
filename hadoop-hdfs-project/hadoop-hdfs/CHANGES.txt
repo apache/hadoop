@@ -120,9 +120,6 @@ Trunk (Unreleased)
 
     HDFS-4904. Remove JournalService. (Arpit Agarwal via cnauroth)
 
-    HDFS-5004. Add additional JMX bean for NameNode status data
-    (Trevor Lorimer via cos)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -258,6 +255,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
     (Colin Patrick McCabe)
+
+    HDFS-5004. Add additional JMX bean for NameNode status data
+    (Trevor Lorimer via cos)
 
     HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
     (shv)
