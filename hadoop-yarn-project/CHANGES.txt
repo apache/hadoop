@@ -55,6 +55,10 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-337. RM handles killed application tracking URL poorly (jlowe)
 
+    YARN-107. Fixed ResourceManager and clients to better handle
+    forceKillApplication on non-running and finished applications. (Xuan Gong
+    via vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
