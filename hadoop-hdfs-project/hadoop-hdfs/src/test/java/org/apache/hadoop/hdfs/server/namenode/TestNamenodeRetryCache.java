@@ -96,7 +96,7 @@ public class TestNamenodeRetryCache {
    * @throws AccessControlException */
   @After
   public void cleanup() throws IOException {
-    namesystem.delete("/", true);
+    cluster.shutdown();
   }
   
   public static void incrementCallId() {
