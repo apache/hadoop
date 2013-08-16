@@ -127,7 +127,6 @@ public class SaslRpcServer {
     final CallbackHandler callback;
     switch (authMethod) {
       case TOKEN: {
-        secretManager.checkAvailableForRead();
         callback = new SaslDigestCallbackHandler(secretManager, connection);
         break;
       }
