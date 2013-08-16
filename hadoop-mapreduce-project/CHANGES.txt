@@ -25,9 +25,6 @@ Release 2.3.0 - UNRELEASED
 
   OPTIMIZATIONS
 
-    MAPREDUCE-1981. Improve getSplits performance by using listLocatedStatus
-    (Hairong Kuang and Jason Lowe via jlowe)
-
   BUG FIXES
 
     MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
@@ -54,6 +51,9 @@ Release 2.1.1-beta - UNRELEASED
 
     MAPREDUCE-5462. In map-side sort, swap entire meta entries instead of
     indexes for better cache performance. (Sandy Ryza)
+
+    MAPREDUCE-1981. Improve getSplits performance by using listLocatedStatus
+    (Hairong Kuang and Jason Lowe via jlowe)
 
   BUG FIXES
 
