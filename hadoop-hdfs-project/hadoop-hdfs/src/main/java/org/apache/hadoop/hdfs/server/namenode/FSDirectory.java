@@ -2093,6 +2093,10 @@ public class FSDirectory implements Closeable {
   /** Verify if the snapshot name is legal. */
   void verifySnapshotName(String snapshotName, String path)
       throws PathComponentTooLongException {
+    if (snapshotName.contains(Path.SEPARATOR)) {
+      throw new HadoopIllegalArgumentException(
+          "Snapshot name cannot contain \"" + Path.SEPARATOR + "\"");
+    }
     final byte[] bytes = DFSUtil.string2Bytes(snapshotName);
     verifyINodeName(bytes);
     verifyMaxComponentLength(bytes, path, 0);

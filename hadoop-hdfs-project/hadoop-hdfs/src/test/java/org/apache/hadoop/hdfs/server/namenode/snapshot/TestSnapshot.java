@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDi
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree.Node;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.XmlImageVisitor;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
@@ -339,6 +341,37 @@ public class TestSnapshot {
     assertEquals(oldStatus.getModificationTime(),
         snapshotStatus.getModificationTime());
     assertEquals(oldStatus.getAccessTime(), snapshotStatus.getAccessTime());
+  }
+  
+  /**
+   * Test creating a snapshot with illegal name
+   */
+  @Test
+  public void testCreateSnapshotWithIllegalName() throws Exception {
+    final Path dir = new Path("/dir");
+    hdfs.mkdirs(dir);
+    
+    final String name1 = HdfsConstants.DOT_SNAPSHOT_DIR;
+    try {
+      hdfs.createSnapshot(dir, name1);
+      fail("Exception expected when an illegal name is given");
+    } catch (RemoteException e) {
+      String errorMsg = "\"" + HdfsConstants.DOT_SNAPSHOT_DIR
+          + "\" is a reserved name.";
+      GenericTestUtils.assertExceptionContains(errorMsg, e);
+    }
+    
+    String errorMsg = "Snapshot name cannot contain \"" + Path.SEPARATOR + "\"";
+    final String[] badNames = new String[] { "foo" + Path.SEPARATOR,
+        Path.SEPARATOR + "foo", Path.SEPARATOR, "foo" + Path.SEPARATOR + "bar" };
+    for (String badName : badNames) {
+      try {
+        hdfs.createSnapshot(dir, badName);
+        fail("Exception expected when an illegal name is given");
+      } catch (RemoteException e) {
+        GenericTestUtils.assertExceptionContains(errorMsg, e);
+      }
+    }
   }
   
   /**
