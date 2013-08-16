@@ -122,6 +122,8 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5100. TestNamenodeRetryCache fails on Windows due to incorrect cleanup.
     (Chuan Liu via cnauroth)
 
+    HDFS-5103. TestDirectoryScanner fails on Windows. (Chuan Liu via cnauroth)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
