@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -197,6 +198,27 @@ public class TestClientRMService {
     }
   }
   
+  @Test
+  public void testForceKillApplication() throws YarnException {
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getRMApps()).thenReturn(
+        new ConcurrentHashMap<ApplicationId, RMApp>());
+    ClientRMService rmService = new ClientRMService(rmContext, null, null,
+        null, null);
+    ApplicationId applicationId =
+        BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
+    KillApplicationRequest request =
+        KillApplicationRequest.newInstance(applicationId);
+    try {
+      rmService.forceKillApplication(request);
+      Assert.fail();
+    } catch (ApplicationNotFoundException ex) {
+      Assert.assertEquals(ex.getMessage(),
+          "Trying to kill an absent " +
+              "application " + request.getApplicationId());
+    }
+  }
+
   @Test
   public void testGetQueueInfo() throws Exception {
     YarnScheduler yarnScheduler = mock(YarnScheduler.class);

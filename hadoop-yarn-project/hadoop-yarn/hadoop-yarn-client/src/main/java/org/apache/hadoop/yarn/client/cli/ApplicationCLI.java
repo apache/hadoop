@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
@@ -164,8 +165,15 @@ public class ApplicationCLI extends YarnCLI {
   private void killApplication(String applicationId)
       throws YarnException, IOException {
     ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
-    sysout.println("Killing application " + applicationId);
-    client.killApplication(appId);
+    ApplicationReport appReport = client.getApplicationReport(appId);
+    if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED
+        || appReport.getYarnApplicationState() == YarnApplicationState.KILLED
+        || appReport.getYarnApplicationState() == YarnApplicationState.FAILED) {
+      sysout.println("Application " + applicationId + " has already finished ");
+    } else {
+      sysout.println("Killing application " + applicationId);
+      client.killApplication(appId);
+    }
   }
 
   /**

@@ -26,6 +26,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -320,10 +321,44 @@ public class TestYarnCLI {
   public void testKillApplication() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+
+    ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
+        "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
+    when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
+        newApplicationReport2);
     int result = cli.run(new String[] { "-kill", applicationId.toString() });
+    assertEquals(0, result);
+    verify(client, times(0)).killApplication(any(ApplicationId.class));
+    verify(sysOut).println(
+        "Application " + applicationId + " has already finished ");
+
+    ApplicationReport newApplicationReport = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
+        "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
+    when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
+        newApplicationReport);
+    result = cli.run(new String[] { "-kill", applicationId.toString() });
     assertEquals(0, result);
     verify(client).killApplication(any(ApplicationId.class));
     verify(sysOut).println("Killing application application_1234_0005");
+
+    doThrow(new ApplicationNotFoundException("Application with id '"
+        + applicationId + "' doesn't exist in RM.")).when(client)
+        .getApplicationReport(applicationId);
+    cli = createAndGetAppCLI();
+    try {
+      cli.run(new String[] { "-kill", applicationId.toString() });
+      Assert.fail();
+    } catch (Exception ex) {
+      Assert.assertTrue(ex instanceof ApplicationNotFoundException);
+      Assert.assertEquals("Application with id '" + applicationId +
+          "' doesn't exist in RM.", ex.getMessage());
+    }
   }
 
   @Test
