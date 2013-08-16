@@ -52,6 +52,9 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5446. TestJobHistoryEvents and TestJobHistoryParsing have race
     conditions (jlowe via kihwal)
 
+    MAPREDUCE-5462. In map-side sort, swap entire meta entries instead of
+    indexes for better cache performance. (Sandy Ryza)
+
   BUG FIXES
 
     MAPREDUCE-5385. Fixed a bug with JobContext getCacheFiles API. (Omkar Vinit
