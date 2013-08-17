@@ -2731,6 +2731,19 @@ public class FSDirectory implements Closeable {
       throw new FileNotFoundException(
           "File for given inode path does not exist: " + src);
     }
+    
+    // Handle single ".." for NFS lookup support.
+    if ((pathComponents.length > 4)
+        && DFSUtil.bytes2String(pathComponents[4]).equals("..")) {
+      INode parent = inode.getParent();
+      if (parent == null || parent.getId() == INodeId.ROOT_INODE_ID) {
+        // inode is root, or its parent is root.
+        return Path.SEPARATOR;
+      } else {
+        return parent.getFullPathName();
+      }
+    }
+
     StringBuilder path = id == INodeId.ROOT_INODE_ID ? new StringBuilder()
         : new StringBuilder(inode.getFullPathName());
     for (int i = 4; i < pathComponents.length; i++) {

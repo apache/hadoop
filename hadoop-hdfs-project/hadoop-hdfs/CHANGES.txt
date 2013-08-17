@@ -65,6 +65,8 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5076 Add MXBean methods to query NN's transaction information and 
     JournalNode's journal status. (jing9)
 
+    HDFS-5104 Support dotdot name in NFS LOOKUP operation (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may

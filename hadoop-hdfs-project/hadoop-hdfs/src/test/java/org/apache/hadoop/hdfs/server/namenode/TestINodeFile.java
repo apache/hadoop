@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -890,6 +891,36 @@ public class TestINodeFile {
       fail("Path should not be resolved:" + realPath);
     } catch (IOException e) {
       assertTrue(e instanceof FileNotFoundException);
+    }
+  }
+  
+  @Test
+  public void testDotdotInodePath() throws Exception {
+    final Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      final DistributedFileSystem hdfs = cluster.getFileSystem();
+      final FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
+
+      final Path dir = new Path("/dir");
+      hdfs.mkdirs(dir);
+      long dirId = fsdir.getINode(dir.toString()).getId();
+      long parentId = fsdir.getINode("/").getId();
+      String testPath = "/.reserved/.inodes/" + dirId + "/..";
+
+      DFSClient client = new DFSClient(NameNode.getAddress(conf), conf);
+      HdfsFileStatus status = client.getFileInfo(testPath);
+      assertTrue(parentId == status.getFileId());
+      
+      // Test root's parent is still root
+      testPath = "/.reserved/.inodes/" + parentId + "/..";
+      status = client.getFileInfo(testPath);
+      assertTrue(parentId == status.getFileId());
+      
+    } finally {
+      cluster.shutdown();
     }
   }
 }
