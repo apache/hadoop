@@ -12,6 +12,9 @@ Release 1.2.2 - unreleased
 
   BUG FIXES 
 
+    HADOOP-9863. Backport HADOOP-8686 to support BigEndian on ppc64. 
+    (Yu Li via eyang)
+
     MAPREDUCE-5450. Unnecessary Configuration instantiation in IFileInputStream
     slows down merge. (Stanislav Barton and Ted Yu via Sandy Ryza)
 
