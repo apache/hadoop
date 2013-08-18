@@ -67,6 +67,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5104 Support dotdot name in NFS LOOKUP operation (brandonli)
 
+    HDFS-5107 Fix array copy error in Readdir and Readdirplus responses
+    (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may

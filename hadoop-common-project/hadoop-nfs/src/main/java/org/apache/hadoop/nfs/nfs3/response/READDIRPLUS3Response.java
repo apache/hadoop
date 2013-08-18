@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.nfs.nfs3.response;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.XDR;
-
-import com.google.common.collect.ObjectArrays;
 
 /**
  * READDIRPLUS3 Response
@@ -60,16 +62,15 @@ public class READDIRPLUS3Response  extends NFS3Response {
   }
 
   public static class DirListPlus3 {
-    EntryPlus3 entries[];
+    List<EntryPlus3> entries;
     boolean eof;
     
     public DirListPlus3(EntryPlus3[] entries, boolean eof) {
-      this.entries = ObjectArrays.newArray(entries, entries.length);
-      System.arraycopy(this.entries, 0, entries, 0, entries.length);
+      this.entries = Collections.unmodifiableList(Arrays.asList(entries));
       this.eof = eof;
     }
 
-    EntryPlus3[] getEntries() {
+    List<EntryPlus3> getEntries() {
       return entries;
     }
     
@@ -101,10 +102,9 @@ public class READDIRPLUS3Response  extends NFS3Response {
     
     if (getStatus() == Nfs3Status.NFS3_OK) {
       out.writeLongAsHyper(cookieVerf);
-      EntryPlus3[] f = dirListPlus.getEntries();
-      for (int i = 0; i < f.length; i++) {
+      for (EntryPlus3 f : dirListPlus.getEntries()) {
         out.writeBoolean(true); // next
-        f[i].seralize(out);
+        f.seralize(out);
       }
 
       out.writeBoolean(false);
