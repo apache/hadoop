@@ -39,6 +39,9 @@ Release 1.3.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-9863. Backport HADOOP-8686 to support BigEndian on ppc64. 
+    (Yu Li via eyang)
+
     MAPREDUCE-5047. keep.failed.task.files=true causes job failure on 
     secure clusters. (sandyr via tucu)
 
