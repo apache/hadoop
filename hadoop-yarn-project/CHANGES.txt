@@ -59,6 +59,9 @@ Release 2.1.1-beta - UNRELEASED
     forceKillApplication on non-running and finished applications. (Xuan Gong
     via vinodkv)
 
+    YARN-643. Fixed ResourceManager to remove all tokens consistently on app
+    finish. (Xuan Gong via vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
