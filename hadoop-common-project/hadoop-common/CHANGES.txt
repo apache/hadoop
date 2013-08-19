@@ -32,6 +32,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9848. Create a MiniKDC for use with security testing. 
     (ywskycn via tucu)
 
+    HADOOP-9860. Remove class HackedKeytab and HackedKeytabEncoder from 
+    hadoop-minikdc once jira DIRSERVER-1882 solved. (ywskycn via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
