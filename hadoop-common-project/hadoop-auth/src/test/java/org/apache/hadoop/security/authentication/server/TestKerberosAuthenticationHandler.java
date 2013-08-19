@@ -13,25 +13,31 @@
  */
 package org.apache.hadoop.security.authentication.server;
 
+import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
-import junit.framework.TestCase;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mockito;
 import org.ietf.jgss.Oid;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.File;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
-public class TestKerberosAuthenticationHandler extends TestCase {
+public class TestKerberosAuthenticationHandler
+    extends KerberosSecurityTestcase {
 
   protected KerberosAuthenticationHandler handler;
 
@@ -54,9 +60,16 @@ public class TestKerberosAuthenticationHandler extends TestCase {
     return props;
   }
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setup() throws Exception {
+    // create keytab
+    File keytabFile = new File(KerberosTestUtils.getKeytabFile());
+    String clientPrincipal = KerberosTestUtils.getClientPrincipal();
+    String serverPrincipal = KerberosTestUtils.getServerPrincipal();
+    clientPrincipal = clientPrincipal.substring(0, clientPrincipal.lastIndexOf("@"));
+    serverPrincipal = serverPrincipal.substring(0, serverPrincipal.lastIndexOf("@"));
+    getKdc().createPrincipal(keytabFile, clientPrincipal, serverPrincipal);
+    // handler
     handler = getNewAuthenticationHandler();
     Properties props = getDefaultProperties();
     try {
@@ -67,18 +80,10 @@ public class TestKerberosAuthenticationHandler extends TestCase {
     }
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    if (handler != null) {
-      handler.destroy();
-      handler = null;
-    }
-    super.tearDown();
-  }
-
+  @Test(timeout=60000)
   public void testNameRules() throws Exception {
     KerberosName kn = new KerberosName(KerberosTestUtils.getServerPrincipal());
-    assertEquals(KerberosTestUtils.getRealm(), kn.getRealm());
+    Assert.assertEquals(KerberosTestUtils.getRealm(), kn.getRealm());
 
     //destroy handler created in setUp()
     handler.destroy();
@@ -93,30 +98,32 @@ public class TestKerberosAuthenticationHandler extends TestCase {
     } catch (Exception ex) {
     }
     kn = new KerberosName("bar@BAR");
-    assertEquals("bar", kn.getShortName());
+    Assert.assertEquals("bar", kn.getShortName());
     kn = new KerberosName("bar@FOO");
     try {
       kn.getShortName();
-      fail();
+      Assert.fail();
     }
     catch (Exception ex) {      
     }
   }
-  
+
+  @Test(timeout=60000)
   public void testInit() throws Exception {
-    assertEquals(KerberosTestUtils.getServerPrincipal(), handler.getPrincipal());
-    assertEquals(KerberosTestUtils.getKeytabFile(), handler.getKeytab());
+    Assert.assertEquals(KerberosTestUtils.getServerPrincipal(), handler.getPrincipal());
+    Assert.assertEquals(KerberosTestUtils.getKeytabFile(), handler.getKeytab());
   }
 
+  @Test(timeout=60000)
   public void testType() throws Exception {
-    assertEquals(getExpectedType(), handler.getType());
+    Assert.assertEquals(getExpectedType(), handler.getType());
   }
 
   public void testRequestWithoutAuthorization() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-    assertNull(handler.authenticate(request, response));
+    Assert.assertNull(handler.authenticate(request, response));
     Mockito.verify(response).setHeader(KerberosAuthenticator.WWW_AUTHENTICATE, KerberosAuthenticator.NEGOTIATE);
     Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
   }
@@ -126,11 +133,12 @@ public class TestKerberosAuthenticationHandler extends TestCase {
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
     Mockito.when(request.getHeader(KerberosAuthenticator.AUTHORIZATION)).thenReturn("invalid");
-    assertNull(handler.authenticate(request, response));
+    Assert.assertNull(handler.authenticate(request, response));
     Mockito.verify(response).setHeader(KerberosAuthenticator.WWW_AUTHENTICATE, KerberosAuthenticator.NEGOTIATE);
     Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
   }
 
+  @Test(timeout=60000)
   public void testRequestWithIncompleteAuthorization() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -139,14 +147,13 @@ public class TestKerberosAuthenticationHandler extends TestCase {
       .thenReturn(KerberosAuthenticator.NEGOTIATE);
     try {
       handler.authenticate(request, response);
-      fail();
+      Assert.fail();
     } catch (AuthenticationException ex) {
       // Expected
     } catch (Exception ex) {
-      fail();
+      Assert.fail();
     }
   }
-
 
   public void testRequestWithAuthorization() throws Exception {
     String token = KerberosTestUtils.doAsClient(new Callable<String>() {
@@ -191,9 +198,9 @@ public class TestKerberosAuthenticationHandler extends TestCase {
                                          Mockito.matches(KerberosAuthenticator.NEGOTIATE + " .*"));
       Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
 
-      assertEquals(KerberosTestUtils.getClientPrincipal(), authToken.getName());
-      assertTrue(KerberosTestUtils.getClientPrincipal().startsWith(authToken.getUserName()));
-      assertEquals(getExpectedType(), authToken.getType());
+      Assert.assertEquals(KerberosTestUtils.getClientPrincipal(), authToken.getName());
+      Assert.assertTrue(KerberosTestUtils.getClientPrincipal().startsWith(authToken.getUserName()));
+      Assert.assertEquals(getExpectedType(), authToken.getType());
     } else {
       Mockito.verify(response).setHeader(Mockito.eq(KerberosAuthenticator.WWW_AUTHENTICATE),
                                          Mockito.matches(KerberosAuthenticator.NEGOTIATE + " .*"));
@@ -213,12 +220,19 @@ public class TestKerberosAuthenticationHandler extends TestCase {
 
     try {
       handler.authenticate(request, response);
-      fail();
+      Assert.fail();
     } catch (AuthenticationException ex) {
       // Expected
     } catch (Exception ex) {
-      fail();
+      Assert.fail();
     }
   }
 
+  @After
+  public void tearDown() throws Exception {
+    if (handler != null) {
+      handler.destroy();
+      handler = null;
+    }
+  }
 }

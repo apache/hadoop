@@ -13,7 +13,6 @@
  */
 package org.apache.hadoop.security.authentication;
 
-
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
@@ -26,6 +25,7 @@ import java.io.File;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.UUID;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -36,32 +36,23 @@ import java.util.concurrent.Callable;
  * Test helper class for Java Kerberos setup.
  */
 public class KerberosTestUtils {
-  private static final String PREFIX = "hadoop-auth.test.";
-
-  public static final String REALM = PREFIX + "kerberos.realm";
-
-  public static final String CLIENT_PRINCIPAL = PREFIX + "kerberos.client.principal";
-
-  public static final String SERVER_PRINCIPAL = PREFIX + "kerberos.server.principal";
-
-  public static final String KEYTAB_FILE = PREFIX + "kerberos.keytab.file";
+  private static String keytabFile = new File(System.getProperty("test.dir", "target"),
+          UUID.randomUUID().toString()).toString();
 
   public static String getRealm() {
-    return System.getProperty(REALM, "LOCALHOST");
+    return "EXAMPLE.COM";
   }
 
   public static String getClientPrincipal() {
-    return System.getProperty(CLIENT_PRINCIPAL, "client") + "@" + getRealm();
+    return "client@EXAMPLE.COM";
   }
 
   public static String getServerPrincipal() {
-    return System.getProperty(SERVER_PRINCIPAL, "HTTP/localhost") + "@" + getRealm();
+    return "HTTP/localhost@EXAMPLE.COM";
   }
 
   public static String getKeytabFile() {
-    String keytabFile =
-      new File(System.getProperty("user.home"), System.getProperty("user.name") + ".keytab").toString();
-    return System.getProperty(KEYTAB_FILE, keytabFile);
+    return keytabFile;
   }
 
   private static class KerberosConfiguration extends Configuration {

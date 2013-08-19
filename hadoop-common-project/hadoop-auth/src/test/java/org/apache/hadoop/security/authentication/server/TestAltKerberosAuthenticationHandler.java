@@ -18,6 +18,8 @@ import java.util.Properties;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.junit.Assert;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestAltKerberosAuthenticationHandler
@@ -45,6 +47,7 @@ public class TestAltKerberosAuthenticationHandler
     return AltKerberosAuthenticationHandler.TYPE;
   }
 
+  @Test(timeout=60000)
   public void testAlternateAuthenticationAsBrowser() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -54,11 +57,12 @@ public class TestAltKerberosAuthenticationHandler
     Mockito.when(request.getHeader("User-Agent")).thenReturn("Some Browser");
 
     AuthenticationToken token = handler.authenticate(request, response);
-    assertEquals("A", token.getUserName());
-    assertEquals("B", token.getName());
-    assertEquals(getExpectedType(), token.getType());
+    Assert.assertEquals("A", token.getUserName());
+    Assert.assertEquals("B", token.getName());
+    Assert.assertEquals(getExpectedType(), token.getType());
   }
 
+  @Test(timeout=60000)
   public void testNonDefaultNonBrowserUserAgentAsBrowser() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -81,11 +85,12 @@ public class TestAltKerberosAuthenticationHandler
     Mockito.when(request.getHeader("User-Agent")).thenReturn("blah");
     // Should use alt authentication
     AuthenticationToken token = handler.authenticate(request, response);
-    assertEquals("A", token.getUserName());
-    assertEquals("B", token.getName());
-    assertEquals(getExpectedType(), token.getType());
+    Assert.assertEquals("A", token.getUserName());
+    Assert.assertEquals("B", token.getName());
+    Assert.assertEquals(getExpectedType(), token.getType());
   }
 
+  @Test(timeout=60000)
   public void testNonDefaultNonBrowserUserAgentAsNonBrowser() throws Exception {
     if (handler != null) {
       handler.destroy();
