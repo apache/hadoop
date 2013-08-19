@@ -38,6 +38,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9866. convert hadoop-auth testcases requiring kerberos to 
     use minikdc. (ywskycn via tucu)
 
+    HADOOP-9487 Deprecation warnings in Configuration should go to their
+    own log or otherwise be suppressible (Chu Tong via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
