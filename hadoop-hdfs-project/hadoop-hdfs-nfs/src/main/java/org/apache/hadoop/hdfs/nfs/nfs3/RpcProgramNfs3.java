@@ -29,7 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.FileUtil;
@@ -629,7 +629,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return new CREATE3Response(Nfs3Status.NFS3ERR_INVAL);
     }
 
-    FSDataOutputStream fos = null;
+    HdfsDataOutputStream fos = null;
     String dirFileIdPath = Nfs3Utils.getFileIdPath(dirHandle);
     WccAttr preOpDirAttr = null;
     Nfs3FileAttributes postOpObjAttr = null;
@@ -652,7 +652,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       EnumSet<CreateFlag> flag = (createMode != Nfs3Constant.CREATE_EXCLUSIVE) ? EnumSet
           .of(CreateFlag.CREATE, CreateFlag.OVERWRITE) : EnumSet
           .of(CreateFlag.CREATE);
-      fos = new FSDataOutputStream(dfsClient.create(fileIdPath, permission,
+      
+      fos = new HdfsDataOutputStream(dfsClient.create(fileIdPath, permission,
           flag, false, replication, blockSize, null, bufferSize, null),
           statistics);
       
