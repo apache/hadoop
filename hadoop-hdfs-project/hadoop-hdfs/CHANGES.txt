@@ -70,6 +70,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5107 Fix array copy error in Readdir and Readdirplus responses
     (brandonli)
 
+    HDFS-5110 Change FSDataOutputStream to HdfsDataOutputStream for opened
+    streams to fix type cast error. (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
