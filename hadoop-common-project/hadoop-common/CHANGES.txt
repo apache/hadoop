@@ -35,6 +35,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9860. Remove class HackedKeytab and HackedKeytabEncoder from 
     hadoop-minikdc once jira DIRSERVER-1882 solved. (ywskycn via tucu)
 
+    HADOOP-9866. convert hadoop-auth testcases requiring kerberos to 
+    use minikdc. (ywskycn via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)

@@ -16,11 +16,10 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import static org.junit.Assert.*;
+import org.junit.Assert;
 
 import java.io.IOException;
 
-import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.junit.Test;
 
 public class TestKerberosUtil {
@@ -32,23 +31,23 @@ public class TestKerberosUtil {
     String testHost = "FooBar";
 
     // send null hostname
-    assertEquals("When no hostname is sent",
+    Assert.assertEquals("When no hostname is sent",
         service + "/" + localHostname.toLowerCase(),
         KerberosUtil.getServicePrincipal(service, null));
     // send empty hostname
-    assertEquals("When empty hostname is sent",
+    Assert.assertEquals("When empty hostname is sent",
         service + "/" + localHostname.toLowerCase(),
         KerberosUtil.getServicePrincipal(service, ""));
     // send 0.0.0.0 hostname
-    assertEquals("When 0.0.0.0 hostname is sent",
+    Assert.assertEquals("When 0.0.0.0 hostname is sent",
         service + "/" + localHostname.toLowerCase(),
         KerberosUtil.getServicePrincipal(service, "0.0.0.0"));
     // send uppercase hostname
-    assertEquals("When uppercase hostname is sent",
+    Assert.assertEquals("When uppercase hostname is sent",
         service + "/" + testHost.toLowerCase(),
         KerberosUtil.getServicePrincipal(service, testHost));
     // send lowercase hostname
-    assertEquals("When lowercase hostname is sent",
+    Assert.assertEquals("When lowercase hostname is sent",
         service + "/" + testHost.toLowerCase(),
         KerberosUtil.getServicePrincipal(service, testHost.toLowerCase()));
   }

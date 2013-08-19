@@ -15,12 +15,14 @@ package org.apache.hadoop.security.authentication.client;
 
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Properties;
 
-public class TestPseudoAuthenticator extends AuthenticatorTestCase {
+public class TestPseudoAuthenticator {
 
   private Properties getAuthenticationHandlerConfiguration(boolean anonymousAllowed) {
     Properties props = new Properties();
@@ -29,55 +31,74 @@ public class TestPseudoAuthenticator extends AuthenticatorTestCase {
     return props;
   }
 
+  @Test
   public void testGetUserName() throws Exception {
     PseudoAuthenticator authenticator = new PseudoAuthenticator();
-    assertEquals(System.getProperty("user.name"), authenticator.getUserName());
+    Assert.assertEquals(System.getProperty("user.name"), authenticator.getUserName());
   }
 
+  @Test
   public void testAnonymousAllowed() throws Exception {
-    setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(true));
-    start();
+    AuthenticatorTestCase auth = new AuthenticatorTestCase();
+    auth.setAuthenticationHandlerConfig(
+            getAuthenticationHandlerConfiguration(true));
+    auth.start();
     try {
-      URL url = new URL(getBaseURL());
+      URL url = new URL(auth.getBaseURL());
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.connect();
-      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     } finally {
-      stop();
+      auth.stop();
     }
   }
 
+  @Test
   public void testAnonymousDisallowed() throws Exception {
-    setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(false));
-    start();
+    AuthenticatorTestCase auth = new AuthenticatorTestCase();
+    auth.setAuthenticationHandlerConfig(
+            getAuthenticationHandlerConfiguration(false));
+    auth.start();
     try {
-      URL url = new URL(getBaseURL());
+      URL url = new URL(auth.getBaseURL());
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.connect();
-      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
+      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
     } finally {
-      stop();
+      auth.stop();
     }
   }
 
+  @Test
   public void testAuthenticationAnonymousAllowed() throws Exception {
-    setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(true));
-    _testAuthentication(new PseudoAuthenticator(), false);
+    AuthenticatorTestCase auth = new AuthenticatorTestCase();
+    auth.setAuthenticationHandlerConfig(
+            getAuthenticationHandlerConfiguration(true));
+    auth._testAuthentication(new PseudoAuthenticator(), false);
   }
 
+  @Test
   public void testAuthenticationAnonymousDisallowed() throws Exception {
-    setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(false));
-    _testAuthentication(new PseudoAuthenticator(), false);
+    AuthenticatorTestCase auth = new AuthenticatorTestCase();
+    auth.setAuthenticationHandlerConfig(
+            getAuthenticationHandlerConfiguration(false));
+    auth._testAuthentication(new PseudoAuthenticator(), false);
   }
 
+  @Test
   public void testAuthenticationAnonymousAllowedWithPost() throws Exception {
-    setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(true));
-    _testAuthentication(new PseudoAuthenticator(), true);
+    AuthenticatorTestCase auth = new AuthenticatorTestCase();
+    auth.setAuthenticationHandlerConfig(
+            getAuthenticationHandlerConfiguration(true));
+    auth._testAuthentication(new PseudoAuthenticator(), true);
   }
 
+  @Test
   public void testAuthenticationAnonymousDisallowedWithPost() throws Exception {
-    setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(false));
-    _testAuthentication(new PseudoAuthenticator(), true);
+    AuthenticatorTestCase auth = new AuthenticatorTestCase();
+    auth.setAuthenticationHandlerConfig(
+            getAuthenticationHandlerConfiguration(false));
+    auth._testAuthentication(new PseudoAuthenticator(), true);
   }
 
 }
