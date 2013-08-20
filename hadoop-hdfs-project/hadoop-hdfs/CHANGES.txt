@@ -93,6 +93,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-2933. Improve DataNode Web UI Index Page. (Vivek Ganesan via
     Arpit Agarwal)
 
+    HDFS-5111. Remove duplicated error message for snapshot commands when 
+    processing invalid arguments. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
