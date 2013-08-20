@@ -32,6 +32,9 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5440. TestCopyCommitter Fails on JDK7 (Robert Parker via jlowe)
 
+    MAPREDUCE-5001. LocalJobRunner has race condition resulting in job
+    failures (Sandy Ryza via jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
