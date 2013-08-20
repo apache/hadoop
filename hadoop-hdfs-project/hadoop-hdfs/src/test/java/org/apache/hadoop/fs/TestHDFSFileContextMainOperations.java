@@ -59,9 +59,6 @@ public class TestHDFSFileContextMainOperations extends
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
-    // Make defaultWorkingDirectory snapshottable to enable 
-    // testGlobStatusFilterWithHiddenPathTrivialFilter
-    cluster.getFileSystem().allowSnapshot(defaultWorkingDirectory);
   }
 
   private static void restartCluster() throws IOException, LoginException {
@@ -76,9 +73,6 @@ public class TestHDFSFileContextMainOperations extends
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
-    // Make defaultWorkingDirectory snapshottable to enable 
-    // testGlobStatusFilterWithHiddenPathTrivialFilter
-    cluster.getFileSystem().allowSnapshot(defaultWorkingDirectory);
   }
       
   @AfterClass
@@ -98,11 +92,6 @@ public class TestHDFSFileContextMainOperations extends
     super.tearDown();
   }
 
-  @Override
-  protected Path getHiddenPathForTest() {
-    return new Path(defaultWorkingDirectory, ".snapshot");
-  }
-  
   @Override
   protected Path getDefaultWorkingDirectory() {
     return defaultWorkingDirectory;

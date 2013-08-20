@@ -521,25 +521,5 @@ public class TestFsShellReturnCode {
     } else {
       assertIllegalArguments(cmd, args);
     }
-
-    @Override
-    public FileStatus getFileLinkStatus(Path p) throws IOException {
-      String f = makeQualified(p).toString();
-      FileStatus stat = super.getFileLinkStatus(p);
-      
-      stat.getPermission();
-      if (owners.containsKey(f)) {
-        stat.setOwner("STUB-"+owners.get(f));      
-      } else {
-        stat.setOwner("REAL-"+stat.getOwner());
-      }
-      if (groups.containsKey(f)) {
-        stat.setGroup("STUB-"+groups.get(f));      
-      } else {
-        stat.setGroup("REAL-"+stat.getGroup());
-      }
-      return stat;
-    }
-
   }
 }

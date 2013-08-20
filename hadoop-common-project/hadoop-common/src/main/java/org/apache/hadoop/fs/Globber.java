@@ -62,18 +62,6 @@ class Globber {
     }
   }
 
-  private FileStatus getFileLinkStatus(Path path) {
-    try {
-      if (fs != null) {
-        return fs.getFileLinkStatus(path);
-      } else {
-        return fc.getFileLinkStatus(path);
-      }
-    } catch (IOException e) {
-      return null;
-    }
-  }
-
   private FileStatus[] listStatus(Path path) {
     try {
       if (fs != null) {
@@ -134,18 +122,6 @@ class Globber {
     return authority ;
   }
 
-  /**
-   * The glob filter builds a regexp per path component.  If the component
-   * does not contain a shell metachar, then it falls back to appending the
-   * raw string to the list of built up paths.  This raw path needs to have
-   * the quoting removed.  Ie. convert all occurrences of "\X" to "X"
-   * @param name of the path component
-   * @return the unquoted path component
-   */
-  private static String unquotePathComponent(String name) {
-    return name.replaceAll("\\\\(.)", "$1");
-  }
-
   public FileStatus[] glob() throws IOException {
     // First we get the scheme and authority of the pattern that was passed
     // in.
@@ -200,30 +176,14 @@ class Globber {
               resolvedCandidate.isDirectory() == false) {
             continue;
           }
-          // For components without pattern, we get its FileStatus directly
-          // using getFileLinkStatus for two reasons:
-          // 1. It should be faster to only get FileStatus needed rather than
-          //    get all children.
-          // 2. Some special filesystem directories (e.g. HDFS snapshot
-          //    directories) are not returned by listStatus, but do exist if
-          //    checked explicitly via getFileLinkStatus.
-          if (globFilter.hasPattern()) {
-            FileStatus[] children = listStatus(candidate.getPath());
-            for (FileStatus child : children) {
-              // Set the child path based on the parent path.
-              // This keeps the symlinks in our path.
-              child.setPath(new Path(candidate.getPath(),
-                      child.getPath().getName()));
-              if (globFilter.accept(child.getPath())) {
-                newCandidates.add(child);
-              }
-            }
-          } else {
-            Path p = new Path(candidate.getPath(), unquotePathComponent(component));
-            FileStatus s = getFileLinkStatus(p);
-            if (s != null) {
-              s.setPath(p);
-              newCandidates.add(s);
+          FileStatus[] children = listStatus(candidate.getPath());
+          for (FileStatus child : children) {
+            // Set the child path based on the parent path.
+            // This keeps the symlinks in our path.
+            child.setPath(new Path(candidate.getPath(),
+                    child.getPath().getName()));
+            if (globFilter.accept(child.getPath())) {
+              newCandidates.add(child);
             }
           }
         }
