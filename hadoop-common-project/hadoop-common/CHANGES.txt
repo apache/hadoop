@@ -1808,6 +1808,9 @@ Release 0.23.10 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9686. Easy access to final parameters in Configuration (Jason Lowe
+    via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES

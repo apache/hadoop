@@ -1910,6 +1910,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
+  /**
+   * Get the set of parameters marked final.
+   *
+   * @return final parameter set.
+   */
+  public Set<String> getFinalParameters() {
+    return new HashSet<String>(finalParameters);
+  }
+
   protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
