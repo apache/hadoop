@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
@@ -181,7 +182,18 @@ public class Cluster {
   public Job getJob(JobID jobId) throws IOException, InterruptedException {
     JobStatus status = client.getJobStatus(jobId);
     if (status != null) {
-      return Job.getInstance(this, status, new JobConf(status.getJobFile()));
+      JobConf conf;
+      try {
+        conf = new JobConf(status.getJobFile());
+      } catch (RuntimeException ex) {
+        // If job file doesn't exist it means we can't find the job
+        if (ex.getCause() instanceof FileNotFoundException) {
+          return null;
+        } else {
+          throw ex;
+        }
+      }
+      return Job.getInstance(this, status, conf);
     }
     return null;
   }
