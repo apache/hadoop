@@ -120,6 +120,9 @@ Trunk (Unreleased)
     HDFS-5004. Add additional JMX bean for NameNode status data
     (Trevor Lorimer via cos)
 
+    HDFS-4953. Enable HDFS local reads via mmap.
+    (Colin Patrick McCabe via wang).
+
   OPTIMIZATIONS
 
   BUG FIXES
