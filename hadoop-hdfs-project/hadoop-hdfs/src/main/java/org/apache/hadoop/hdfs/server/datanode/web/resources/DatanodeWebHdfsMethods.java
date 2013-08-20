@@ -410,8 +410,9 @@ public class DatanodeWebHdfsMethods {
         throw ioe;
       }
       
-      final long n = length.getValue() != null? length.getValue()
-        : in.getVisibleLength() - offset.getValue();
+      final long n = length.getValue() != null ?
+        Math.min(length.getValue(), in.getVisibleLength() - offset.getValue()) :
+        in.getVisibleLength() - offset.getValue();
       return Response.ok(new OpenEntity(in, n, dfsclient)).type(
           MediaType.APPLICATION_OCTET_STREAM).build();
     }
