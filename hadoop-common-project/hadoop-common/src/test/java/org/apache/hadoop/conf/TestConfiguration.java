@@ -1272,7 +1272,23 @@ public class TestConfiguration extends TestCase {
    Class<?> clazz = config.getClassByNameOrNull("java.lang.Object");
    assertNotNull(clazz);
   }
-  
+
+  public void testGetFinalParameters() throws Exception {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    declareProperty("my.var", "x", "x", true);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    Configuration conf = new Configuration();
+    Set<String> finalParameters = conf.getFinalParameters();
+    assertFalse("my.var already exists", finalParameters.contains("my.var"));
+    conf.addResource(fileResource);
+    assertEquals("my.var is undefined", "x", conf.get("my.var"));
+    assertFalse("finalparams not copied", finalParameters.contains("my.var"));
+    finalParameters = conf.getFinalParameters();
+    assertTrue("my.var is not final", finalParameters.contains("my.var"));
+  }
+
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()
