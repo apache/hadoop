@@ -40,6 +40,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5047. Supress logging of full stack trace of quota and lease
     exceptions. (Robert Parker via kihwal)
 
+    HDFS-5111. Remove duplicated error message for snapshot commands when 
+    processing invalid arguments. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
