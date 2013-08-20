@@ -101,6 +101,8 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9879. Move the version info of zookeeper dependencies to
     hadoop-project/pom (Karthik Kambatla via Sandy Ryza)
+    
+    HADOOP-9886. Turn warning message in RetryInvocationHandler to debug (arpit)
 
   OPTIMIZATIONS
 
