@@ -90,6 +90,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5047. Supress logging of full stack trace of quota and lease
     exceptions. (Robert Parker via kihwal)
 
+    HDFS-2933. Improve DataNode Web UI Index Page. (Vivek Ganesan via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
