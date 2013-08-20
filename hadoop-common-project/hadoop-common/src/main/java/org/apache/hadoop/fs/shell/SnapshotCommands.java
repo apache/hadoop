@@ -79,7 +79,7 @@ class SnapshotCommands extends FsCommand {
     protected void processArguments(LinkedList<PathData> items)
     throws IOException {
       super.processArguments(items);
-      if (exitCode != 0) { // check for error collecting paths
+      if (numErrors != 0) { // check for error collecting paths
         return;
       }
       assert(items.size() == 1);
@@ -119,7 +119,7 @@ class SnapshotCommands extends FsCommand {
     protected void processArguments(LinkedList<PathData> items)
         throws IOException {
       super.processArguments(items);
-      if (exitCode != 0) { // check for error collecting paths
+      if (numErrors != 0) { // check for error collecting paths
         return;
       }
       assert (items.size() == 1);
@@ -160,7 +160,7 @@ class SnapshotCommands extends FsCommand {
     protected void processArguments(LinkedList<PathData> items)
         throws IOException {
       super.processArguments(items);
-      if (exitCode != 0) { // check for error collecting paths
+      if (numErrors != 0) { // check for error collecting paths
         return;
       }
       Preconditions.checkArgument(items.size() == 1);
