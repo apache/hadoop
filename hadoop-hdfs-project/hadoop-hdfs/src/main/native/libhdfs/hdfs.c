@@ -39,6 +39,7 @@
 #define JAVA_NET_ISA    "java/net/InetSocketAddress"
 #define JAVA_NET_URI    "java/net/URI"
 #define JAVA_STRING     "java/lang/String"
+#define HADOOP_ZERO_COPY_CURSOR "org/apache/hadoop/fs/ZeroCopyCursor"
 
 #define JAVA_VOID       "V"
 
@@ -143,6 +144,15 @@ int hdfsFileGetReadStatistics(hdfsFile file,
         goto done;
     }
     s->totalShortCircuitBytesRead = jVal.j;
+    jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
+                  "org/apache/hadoop/hdfs/DFSInputStream$ReadStatistics",
+                  "getTotalZeroCopyBytesRead", "()J");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsFileGetReadStatistics: getTotalZeroCopyBytesRead failed");
+        goto done;
+    }
+    s->totalZeroCopyBytesRead = jVal.j;
     *stats = s;
     s = NULL;
     ret = 0;
@@ -183,6 +193,25 @@ void hdfsFileDisableDirectRead(hdfsFile file)
     file->flags &= ~HDFS_FILE_SUPPORTS_DIRECT_READ;
 }
 
+int hdfsDisableDomainSocketSecurity(void)
+{
+    jthrowable jthr;
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+    jthr = invokeMethod(env, NULL, STATIC, NULL,
+            "org/apache/hadoop/net/unix/DomainSocket",
+            "disableBindPathValidation", "()V");
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "DomainSocket#disableBindPathValidation");
+        return -1;
+    }
+    return 0;
+}
+
 /**
  * hdfsJniEnv: A wrapper struct to be used as 'value'
  * while saving thread -> JNIEnv* mappings
@@ -218,40 +247,6 @@ static jthrowable constructNewObjectOfPath(JNIEnv *env, const char *path,
         return jthr;
     *out = jPath;
     return NULL;
-}
-
-/**
- * Set a configuration value.
- *
- * @param env               The JNI environment
- * @param jConfiguration    The configuration object to modify
- * @param key               The key to modify
- * @param value             The value to set the key to
- *
- * @return                  NULL on success; exception otherwise
- */
-static jthrowable hadoopConfSetStr(JNIEnv *env, jobject jConfiguration,
-        const char *key, const char *value)
-{
-    jthrowable jthr;
-    jstring jkey = NULL, jvalue = NULL;
-
-    jthr = newJavaStr(env, key, &jkey);
-    if (jthr)
-        goto done;
-    jthr = newJavaStr(env, value, &jvalue);
-    if (jthr)
-        goto done;
-    jthr = invokeMethod(env, NULL, INSTANCE, jConfiguration,
-            HADOOP_CONF, "set", JMETHOD2(JPARAM(JAVA_STRING),
-                                         JPARAM(JAVA_STRING), JAVA_VOID),
-            jkey, jvalue);
-    if (jthr)
-        goto done;
-done:
-    destroyLocalReference(env, jkey);
-    destroyLocalReference(env, jvalue);
-    return jthr;
 }
 
 static jthrowable hadoopConfGetStr(JNIEnv *env, jobject jConfiguration,
@@ -2106,6 +2101,248 @@ int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime)
         return -1;
     }
     return 0;
+}
+
+struct hadoopZeroCopyCursor* hadoopZeroCopyCursorAlloc(hdfsFile file)
+{
+    int ret;
+    jobject zcursor = NULL;
+    jvalue jVal;
+    jthrowable jthr;
+    JNIEnv* env;
+
+    env = getJNIEnv();
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return NULL;
+    }
+    if (file->type != INPUT) {
+        ret = EINVAL;
+        goto done;
+    }
+    jthr = invokeMethod(env, &jVal, INSTANCE, (jobject)file->file, HADOOP_ISTRM,
+                     "createZeroCopyCursor", "()L"HADOOP_ZERO_COPY_CURSOR";");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hadoopZeroCopyCursorAlloc: createZeroCopyCursor");
+        goto done;
+    }
+    zcursor = (*env)->NewGlobalRef(env, jVal.l);
+    if (!zcursor) {
+        ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "hadoopZeroCopyCursorAlloc: NewGlobalRef"); 
+    }
+    ret = 0;
+done:
+    if (ret) {
+        errno = ret;
+    }
+    return (struct hadoopZeroCopyCursor*)zcursor;
+}
+
+int hadoopZeroCopyCursorSetFallbackBuffer(struct hadoopZeroCopyCursor* zcursor,
+                                          void *cbuf, uint32_t size)
+{
+    int ret;
+    jobject buffer = NULL;
+    jthrowable jthr;
+    JNIEnv* env;
+
+    env = getJNIEnv();
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return -1;
+    }
+    buffer = (*env)->NewDirectByteBuffer(env, cbuf, size);
+    if (!buffer) {
+        ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "hadoopZeroCopyCursorSetFallbackBuffer: NewDirectByteBuffer("
+            "size=%"PRId32"):", size);
+        goto done;
+    }
+    jthr = invokeMethod(env, NULL, INSTANCE, (jobject)zcursor, 
+                    HADOOP_ZERO_COPY_CURSOR, "setFallbackBuffer",
+                    "(Ljava/nio/ByteBuffer;)V", buffer);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                      "hadoopZeroCopyCursorSetFallbackBuffer: "
+                      "FileSystem#setFallbackBuffer");
+        goto done;
+    }
+    ret = 0;
+done:
+    if (ret) {
+        (*env)->DeleteLocalRef(env, buffer);
+        errno = ret;
+        return -1;
+    }
+    return 0;
+}
+
+int hadoopZeroCopyCursorSetSkipChecksums(struct hadoopZeroCopyCursor* zcursor,
+                                         int skipChecksums)
+{
+    JNIEnv* env;
+    jthrowable jthr;
+    jboolean shouldSkipChecksums = skipChecksums ? JNI_TRUE : JNI_FALSE; 
+
+    env = getJNIEnv();
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return -1;
+    }
+    jthr = invokeMethod(env, NULL, INSTANCE, (jobject)zcursor,
+        HADOOP_ZERO_COPY_CURSOR, "setSkipChecksums", "(Z)V",
+        shouldSkipChecksums);
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hadoopZeroCopyCursorSetSkipChecksums(): setSkipChecksums failed");
+        return -1;
+    }
+    return 0;
+}
+
+int hadoopZeroCopyCursorSetAllowShortReads(
+            struct hadoopZeroCopyCursor* zcursor, int allowShort)
+{
+    JNIEnv* env;
+    jthrowable jthr;
+    jboolean shouldAllowShort = allowShort ? JNI_TRUE : JNI_FALSE;
+
+    env = getJNIEnv();
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return -1;
+    }
+    jthr = invokeMethod(env, NULL, INSTANCE, (jobject)zcursor,
+        HADOOP_ZERO_COPY_CURSOR, "setAllowShortReads", "(Z)V",
+        shouldAllowShort);
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hadoopZeroCopyCursorSetAllowShortReads(): setAllowShortReads "
+            "failed");
+        return -1;
+    }
+    return 0;
+}
+
+void hadoopZeroCopyCursorFree(struct hadoopZeroCopyCursor *zcursor)
+{
+    JNIEnv* env;
+    jthrowable jthr;
+
+    env = getJNIEnv();
+    if (env == NULL) {
+        return;
+    }
+    jthr = invokeMethod(env, NULL, INSTANCE, (jobject)zcursor,
+                     HADOOP_ZERO_COPY_CURSOR, "close", "()V");
+    if (jthr) {
+        printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hadoopZeroCopyCursorFree(): close failed");
+    }
+    (*env)->DeleteGlobalRef(env, (jobject)zcursor);
+}
+
+/**
+ *  Translate an exception from ZeroCopyCursor#read, translate it into a return
+ *  code.
+ */
+static int translateZCRException(JNIEnv *env, jthrowable exc)
+{
+    int ret;
+    char *className = NULL;
+    jthrowable jthr = classNameOfObject(exc, env, &className);
+
+    if (jthr) {
+        fprintf(stderr, "hadoopZeroCopyRead: unknown "
+                "exception from read().\n");
+        destroyLocalReference(env, jthr);
+        destroyLocalReference(env, jthr);
+        ret = EIO;
+        goto done;
+    } 
+    if (!strcmp(className, "java.io.EOFException")) {
+        ret = 0; // EOF
+        goto done;
+    }
+    if (!strcmp(className, "java.lang.UnsupportedOperationException")) {
+        ret = EPROTONOSUPPORT;
+        goto done;
+    }
+    ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hadoopZeroCopyRead: ZeroCopyCursor#read failed");
+done:
+    free(className);
+    return ret;
+}
+
+int32_t hadoopZeroCopyRead(struct hadoopZeroCopyCursor *zcursor,
+                           int32_t toRead, const void **data)
+{
+    int32_t ret, nRead = -1;
+    JNIEnv* env;
+    jthrowable jthr;
+    jobject byteBuffer = NULL;
+    uint8_t *addr;
+    jint position;
+    jvalue jVal;
+    
+    env = getJNIEnv();
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return -1;
+    }
+    jthr = invokeMethod(env, NULL, INSTANCE, (jobject)zcursor,
+                     HADOOP_ZERO_COPY_CURSOR, "read", "(I)V", toRead);
+    if (jthr) {
+        ret = translateZCRException(env, jthr);
+        goto done;
+    }
+    jthr = invokeMethod(env, &jVal, INSTANCE, (jobject)zcursor,
+                     HADOOP_ZERO_COPY_CURSOR, "getData",
+                     "()Ljava/nio/ByteBuffer;");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hadoopZeroCopyRead(toRead=%"PRId32"): getData failed",
+                toRead);
+        goto done;
+    }
+    byteBuffer = jVal.l;
+    addr = (*env)->GetDirectBufferAddress(env, byteBuffer);
+    if (!addr) {
+        fprintf(stderr, "hadoopZeroCopyRead(toRead=%"PRId32"): "
+                    "failed to get direct buffer address.\n", toRead);
+        ret = EIO;
+        goto done;
+    }
+    jthr = invokeMethod(env, &jVal, INSTANCE, byteBuffer,
+                     "java/nio/ByteBuffer", "position", "()I");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hadoopZeroCopyRead(toRead=%"PRId32"): ByteBuffer#position "
+                "failed", toRead);
+        goto done;
+    }
+    position = jVal.i;
+    jthr = invokeMethod(env, &jVal, INSTANCE, byteBuffer,
+                     "java/nio/ByteBuffer", "remaining", "()I");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hadoopZeroCopyRead(toRead=%"PRId32"): ByteBuffer#remaining "
+                "failed", toRead);
+        goto done;
+    }
+    ret = 0;
+    nRead = jVal.i;
+    *data = addr + position;
+done:
+    (*env)->DeleteLocalRef(env, byteBuffer);
+    if (nRead == -1) {
+        errno = ret;
+        return -1;
+    }
+    return nRead;
 }
 
 char***

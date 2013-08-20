@@ -18,9 +18,11 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.ZeroCopyUnavailableException;
 
 /****************************************************************
  * FSInputStream is a generic old InputStream with a little bit
@@ -30,7 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 @InterfaceStability.Unstable
 public abstract class FSInputStream extends InputStream
-    implements Seekable, PositionedReadable {
+    implements Seekable, PositionedReadable, SupportsZeroCopy {
   /**
    * Seek to the given offset from the start of the file.
    * The next read() will be from that location.  Can't
@@ -85,5 +87,12 @@ public abstract class FSInputStream extends InputStream
   public void readFully(long position, byte[] buffer)
     throws IOException {
     readFully(position, buffer, 0, buffer.length);
+  }
+
+  @Override
+  public ZeroCopyCursor createZeroCopyCursor() 
+      throws IOException, ZeroCopyUnavailableException {
+    throw new ZeroCopyUnavailableException("zero copy is not implemented " +
+                                           "for this filesystem type.");
   }
 }

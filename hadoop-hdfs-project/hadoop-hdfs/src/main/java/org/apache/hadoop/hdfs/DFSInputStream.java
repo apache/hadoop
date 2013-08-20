@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.ZeroCopyCursor;
 import org.apache.hadoop.hdfs.net.DomainPeer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
@@ -92,12 +93,14 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
       this.totalBytesRead = 0;
       this.totalLocalBytesRead = 0;
       this.totalShortCircuitBytesRead = 0;
+      this.totalZeroCopyBytesRead = 0;
     }
 
     public ReadStatistics(ReadStatistics rhs) {
       this.totalBytesRead = rhs.getTotalBytesRead();
       this.totalLocalBytesRead = rhs.getTotalLocalBytesRead();
       this.totalShortCircuitBytesRead = rhs.getTotalShortCircuitBytesRead();
+      this.totalZeroCopyBytesRead = rhs.getTotalZeroCopyBytesRead();
     }
 
     /**
@@ -123,6 +126,13 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
     public long getTotalShortCircuitBytesRead() {
       return totalShortCircuitBytesRead;
     }
+    
+    /**
+     * @return The total number of zero-copy bytes read.
+     */
+    public long getTotalZeroCopyBytesRead() {
+      return totalZeroCopyBytesRead;
+    }
 
     /**
      * @return The total number of bytes read which were not local.
@@ -145,12 +155,21 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
       this.totalLocalBytesRead += amt;
       this.totalShortCircuitBytesRead += amt;
     }
+
+    void addZeroCopyBytes(long amt) {
+      this.totalBytesRead += amt;
+      this.totalLocalBytesRead += amt;
+      this.totalShortCircuitBytesRead += amt;
+      this.totalZeroCopyBytesRead += amt;
+    }
     
     private long totalBytesRead;
 
     private long totalLocalBytesRead;
 
     private long totalShortCircuitBytesRead;
+
+    private long totalZeroCopyBytesRead;
   }
   
   private final FileInputStreamCache fileInputStreamCache;
@@ -1392,5 +1411,68 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
       throws IOException {
     this.cachingStrategy.setDropBehind(dropBehind);
     closeCurrentBlockReader();
+  }
+
+  synchronized void readZeroCopy(HdfsZeroCopyCursor zcursor, int toRead)
+      throws IOException {
+    assert(toRead > 0);
+    if (((blockReader == null) || (blockEnd == -1)) &&
+          (pos < getFileLength())) {
+      /*
+       * If we don't have a blockReader, or the one we have has no more bytes
+       * left to read, we call seekToBlockSource to get a new blockReader and
+       * recalculate blockEnd.  Note that we assume we're not at EOF here
+       * (we check this above).
+       */
+      if ((!seekToBlockSource(pos)) || (blockReader == null)) {
+        throw new IOException("failed to allocate new BlockReader " +
+            "at position " + pos);
+      }
+    }
+    long curPos = pos;
+    boolean canSkipChecksums = zcursor.getSkipChecksums();
+    long blockLeft = blockEnd - curPos + 1;
+    if (zcursor.getAllowShortReads()) {
+      if (blockLeft < toRead) {
+        toRead = (int)blockLeft;
+      }
+    }
+    if (canSkipChecksums && (toRead <= blockLeft)) {
+      long blockStartInFile = currentLocatedBlock.getStartOffset();
+      long blockPos = curPos - blockStartInFile;
+      if (blockReader.readZeroCopy(zcursor,
+            currentLocatedBlock, blockPos, toRead,
+            dfsClient.getMmapManager())) {
+        if (DFSClient.LOG.isDebugEnabled()) {
+          DFSClient.LOG.debug("readZeroCopy read " + toRead + " bytes from " +
+              "offset " + curPos + " via the zero-copy read path.  " +
+              "blockEnd = " + blockEnd);
+        }
+        readStatistics.addZeroCopyBytes(toRead);
+        seek(pos + toRead);
+        return;
+      }
+    }
+    /*
+     * Slow path reads.
+     *
+     * readStatistics will be updated when we call back into this
+     * stream's read methods.
+     */
+    long prevBlockEnd = blockEnd;
+    int slowReadAmount = zcursor.readViaSlowPath(toRead);
+    if (DFSClient.LOG.isDebugEnabled()) {
+      DFSClient.LOG.debug("readZeroCopy read " + slowReadAmount + " bytes " +
+          "from offset " + curPos + " via the fallback read path.  " +
+          "prevBlockEnd = " + prevBlockEnd + ", blockEnd = " + blockEnd +
+          ", canSkipChecksums = " + canSkipChecksums);
+    }
+  }
+
+  @Override
+  public ZeroCopyCursor createZeroCopyCursor() 
+      throws IOException, UnsupportedOperationException {
+    return new HdfsZeroCopyCursor(this,
+        dfsClient.getConf().skipShortCircuitChecksums);
   }
 }

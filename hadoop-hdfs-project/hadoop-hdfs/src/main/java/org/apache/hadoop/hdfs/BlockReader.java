@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.ByteBufferReadable;
+import org.apache.hadoop.hdfs.client.ClientMmapManager;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 
 /**
  * A BlockReader is responsible for reading a single block
@@ -81,4 +83,21 @@ public interface BlockReader extends ByteBufferReadable {
    *                      All short-circuit reads are also local.
    */
   boolean isShortCircuit();
+
+  /**
+   * Do a zero-copy read with the current block reader.
+   *
+   * We assume that the calling code has done bounds checking, and won't ask 
+   * us for more bytes than are supposed to be visible (or are in the file).
+   *
+   * @param buffers       The zero-copy buffers object.
+   * @param curBlock      The current block.
+   * @param blockPos      Position in the current block to start reading at.
+   * @param toRead        The number of bytes to read from the block.
+   * 
+   * @return              true if the read was done, false otherwise.
+   */
+  boolean readZeroCopy(HdfsZeroCopyCursor buffers,
+        LocatedBlock curBlock, long blockPos, int toRead,
+        ClientMmapManager mmapManager);
 }

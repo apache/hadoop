@@ -22,11 +22,15 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import org.apache.hadoop.conf.Configuration;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.client.ClientMmap;
+import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.util.DirectBufferPool;
 import org.apache.hadoop.io.IOUtils;
@@ -87,6 +91,8 @@ class BlockReaderLocal implements BlockReader {
   private final ExtendedBlock block;
   
   private final FileInputStreamCache fisCache;
+  private ClientMmap clientMmap;
+  private boolean mmapDisabled;
   
   private static int getSlowReadBufferNumChunks(int bufSize,
       int bytesPerChecksum) {
@@ -113,6 +119,8 @@ class BlockReaderLocal implements BlockReader {
     this.datanodeID = datanodeID;
     this.block = block;
     this.fisCache = fisCache;
+    this.clientMmap = null;
+    this.mmapDisabled = false;
 
     // read and handle the common header here. For now just a version
     checksumIn.getChannel().position(0);
@@ -487,6 +495,10 @@ class BlockReaderLocal implements BlockReader {
 
   @Override
   public synchronized void close() throws IOException {
+    if (clientMmap != null) {
+      clientMmap.unref();
+      clientMmap = null;
+    }
     if (fisCache != null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("putting FileInputStream for " + filename +
@@ -532,6 +544,50 @@ class BlockReaderLocal implements BlockReader {
   
   @Override
   public boolean isShortCircuit() {
+    return true;
+  }
+
+  @Override
+  public boolean readZeroCopy(HdfsZeroCopyCursor cursor,
+        LocatedBlock curBlock, long blockPos, int toRead,
+        ClientMmapManager mmapManager) {
+    if (clientMmap == null) {
+      if (mmapDisabled) {
+        return false;
+      }
+      try {
+        clientMmap = mmapManager.fetch(datanodeID, block, dataIn);
+        if (clientMmap == null) {
+          mmapDisabled = true;
+          return false;
+        }
+      } catch (InterruptedException e) {
+        LOG.error("Interrupted while setting up mmap for " + filename, e);
+        Thread.currentThread().interrupt();
+        return false;
+      } catch (IOException e) {
+        LOG.error("unable to set up mmap for " + filename, e);
+        mmapDisabled = true;
+        return false;
+      }
+    }
+    long limit = blockPos + toRead;
+    if (limit > Integer.MAX_VALUE) {
+      /*
+       * In Java, ByteBuffers use a 32-bit length, capacity, offset, etc.
+       * This limits our mmap'ed regions to 2 GB in length.
+       * TODO: we can implement zero-copy for larger blocks by doing multiple
+       * mmaps.
+       */
+      mmapDisabled = true;
+      clientMmap.unref();
+      clientMmap = null;
+      return false;
+    }
+    ByteBuffer mmapBuffer = clientMmap.getMappedByteBuffer().duplicate();
+    mmapBuffer.position((int)blockPos);
+    mmapBuffer.limit((int)limit);
+    cursor.setMmap(clientMmap, mmapBuffer);
     return true;
   }
 }

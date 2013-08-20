@@ -142,9 +142,20 @@ target_link_libraries(test_native_mini_dfs
 )
 
 add_executable(test_libhdfs_threaded
+    main/native/libhdfs/expect.c
     main/native/libhdfs/test_libhdfs_threaded.c
 )
 target_link_libraries(test_libhdfs_threaded
+    hdfs
+    native_mini_dfs
+    pthread
+)
+
+add_executable(test_libhdfs_zerocopy
+    main/native/libhdfs/expect.c
+    main/native/libhdfs/test/test_libhdfs_zerocopy.c
+)
+target_link_libraries(test_libhdfs_zerocopy
     hdfs
     native_mini_dfs
     pthread

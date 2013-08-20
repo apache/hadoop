@@ -608,3 +608,42 @@ JNIEnv* getJNIEnv(void)
     return env;
 }
 
+int javaObjectIsOfClass(JNIEnv *env, jobject obj, const char *name)
+{
+    jclass clazz;
+    int ret;
+
+    clazz = (*env)->FindClass(env, name);
+    if (!clazz) {
+        printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "javaObjectIsOfClass(%s)", name);
+        return -1;
+    }
+    ret = (*env)->IsInstanceOf(env, obj, clazz);
+    (*env)->DeleteLocalRef(env, clazz);
+    return ret == JNI_TRUE ? 1 : 0;
+}
+
+jthrowable hadoopConfSetStr(JNIEnv *env, jobject jConfiguration,
+        const char *key, const char *value)
+{
+    jthrowable jthr;
+    jstring jkey = NULL, jvalue = NULL;
+
+    jthr = newJavaStr(env, key, &jkey);
+    if (jthr)
+        goto done;
+    jthr = newJavaStr(env, value, &jvalue);
+    if (jthr)
+        goto done;
+    jthr = invokeMethod(env, NULL, INSTANCE, jConfiguration,
+            "org/apache/hadoop/conf/Configuration", "set", 
+            "(Ljava/lang/String;Ljava/lang/String;)V",
+            jkey, jvalue);
+    if (jthr)
+        goto done;
+done:
+    (*env)->DeleteLocalRef(env, jkey);
+    (*env)->DeleteLocalRef(env, jvalue);
+    return jthr;
+}

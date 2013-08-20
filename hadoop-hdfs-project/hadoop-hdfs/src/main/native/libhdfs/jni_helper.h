@@ -114,6 +114,32 @@ jthrowable classNameOfObject(jobject jobj, JNIEnv *env, char **name);
  * */
 JNIEnv* getJNIEnv(void);
 
+/**
+ * Figure out if a Java object is an instance of a particular class.
+ *
+ * @param env  The Java environment.
+ * @param obj  The object to check.
+ * @param name The class name to check.
+ *
+ * @return     -1 if we failed to find the referenced class name.
+ *             0 if the object is not of the given class.
+ *             1 if the object is of the given class.
+ */
+int javaObjectIsOfClass(JNIEnv *env, jobject obj, const char *name);
+
+/**
+ * Set a value in a configuration object.
+ *
+ * @param env               The JNI environment
+ * @param jConfiguration    The configuration object to modify
+ * @param key               The key to modify
+ * @param value             The value to set the key to
+ *
+ * @return                  NULL on success; exception otherwise
+ */
+jthrowable hadoopConfSetStr(JNIEnv *env, jobject jConfiguration,
+        const char *key, const char *value);
+
 #endif /*LIBHDFS_JNI_HELPER_H*/
 
 /**

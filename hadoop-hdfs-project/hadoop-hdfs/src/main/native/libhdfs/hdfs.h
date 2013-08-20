@@ -85,6 +85,7 @@ extern  "C" {
       uint64_t totalBytesRead;
       uint64_t totalLocalBytesRead;
       uint64_t totalShortCircuitBytesRead;
+      uint64_t totalZeroCopyBytesRead;
     };
 
     /**
@@ -680,7 +681,89 @@ extern  "C" {
      * @return 0 on success else -1
      */
     int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime);
-    
+
+    /**
+     * Create a zero-copy cursor object.
+     *
+     * @param file        The file to use for zero-copy reads.
+     *
+     * @return            The zero-copy cursor, or NULL + errno on failure.
+     */
+    struct hadoopZeroCopyCursor* hadoopZeroCopyCursorAlloc(hdfsFile file);
+
+    /**
+     * Set the fallback buffer which will be used by the zero copy object.
+     *
+     * You are responsible for ensuring that this buffer stays valid until you
+     * either set a different buffer by calling this function again, or free the
+     * zero-copy cursor.
+     *
+     * @param zcursor     The zero-copy cursor.
+     * @param cbuf        The buffer to use.
+     * @param size        Size of the buffer.
+     *
+     * @return            0 on success.  -1 on error.  Errno will be set on
+     *                    error. 
+     */
+    int hadoopZeroCopyCursorSetFallbackBuffer(
+              struct hadoopZeroCopyCursor* zcursor, void *cbuf, uint32_t size);
+
+    /**
+     * Set whether our cursor should skip checksums or not.
+     *
+     * @param zcursor        The cursor
+     * @param skipChecksums  Nonzero to skip checksums.
+     *
+     * @return               -1 on error, 0 otherwise.
+     */
+    int hadoopZeroCopyCursorSetSkipChecksums(
+            struct hadoopZeroCopyCursor* zcursor, int skipChecksums);
+
+    /**
+     * Set whether our cursor should allow short reads to occur.
+     * Short reads will always occur if there is not enough data to read
+     * (i.e., at EOF), but normally we don't return them when reading other
+     * parts of the file.
+     *
+     * @param zcursor        The cursor
+     * @param skipChecksums  Nonzero to skip checksums.
+     *
+     * @return               -1 on error, 0 otherwise.
+     */
+    int hadoopZeroCopyCursorSetAllowShortReads(
+                struct hadoopZeroCopyCursor* zcursor, int allowShort);
+
+    /**
+     * Free zero-copy cursor.
+     *
+     * This will dispose of the cursor allocated by hadoopZeroCopyCursorAlloc, as
+     * well as any memory map that we have created.  You must be done with the
+     * data returned from hadoopZeroCopyRead before calling this.
+     *
+     * @param zcursor     The zero-copy cursor.
+     */
+    void hadoopZeroCopyCursorFree(struct hadoopZeroCopyCursor *zcursor);
+
+    /*
+     * Perform a zero-copy read.
+     *
+     * @param zcursor     The zero-copy cursor object.
+     * @param toRead      The maximum amount to read.
+     * @param data        (out param) on succesful return, a pointer to the
+     *                    data.  This pointer will remain valid until the next
+     *                    call to hadoopZeroCopyRead, or until
+     *                    hadoopZeroCopyCursorFree is called on zcursor.
+     *
+     * @return            -2 if zero-copy is unavailable, and 
+     *                    -1 if there was an error.  errno will be the error.
+     *                    0 if we hit end-of-file without reading anything.
+     *                    The positive number of bytes read otherwise.  Short
+     *                        reads will happen only if EOF is reached.
+     *                    The amount read otherwise.
+     */
+    int32_t hadoopZeroCopyRead(struct hadoopZeroCopyCursor *zcursor,
+                             int32_t toRead, const void **data);
+
 #ifdef __cplusplus
 }
 #endif

@@ -28,9 +28,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataInputStream extends DataInputStream
-    implements Seekable, PositionedReadable, Closeable,
-    ByteBufferReadable, HasFileDescriptor, CanSetDropBehind, CanSetReadahead {
-
+    implements Seekable, PositionedReadable, Closeable, 
+      ByteBufferReadable, HasFileDescriptor, CanSetDropBehind, CanSetReadahead,
+      SupportsZeroCopy {
   public FSDataInputStream(InputStream in)
     throws IOException {
     super(in);
@@ -165,6 +165,17 @@ public class FSDataInputStream extends DataInputStream
     } catch (ClassCastException e) {
       throw new UnsupportedOperationException("this stream does not " +
           "support setting the drop-behind caching setting.");
+    }
+  }
+
+  @Override
+  public ZeroCopyCursor createZeroCopyCursor()
+      throws IOException, ZeroCopyUnavailableException {
+    try {
+      return ((SupportsZeroCopy)in).createZeroCopyCursor();
+    }
+    catch (ClassCastException e) {
+      throw new ZeroCopyUnavailableException(e);
     }
   }
 }
