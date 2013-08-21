@@ -862,5 +862,10 @@ public class TestRuntimeEstimators {
     public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
       return null;
     }
+
+    @Override
+    public boolean isLastAMRetry() {
+      return false;
+    }
   }
 }
