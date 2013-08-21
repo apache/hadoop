@@ -36,6 +36,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
     (shv)
 
+    HDFS-4994. Audit log getContentSummary() calls. (Robert Parker via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
