@@ -65,6 +65,8 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1006. Fixed broken rendering in the Nodes list web page on the RM web
     UI. (Xuan Gong via vinodkv)
 
+    YARN-881. Priority#compareTo method seems to be wrong. (Jian He via bikas)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

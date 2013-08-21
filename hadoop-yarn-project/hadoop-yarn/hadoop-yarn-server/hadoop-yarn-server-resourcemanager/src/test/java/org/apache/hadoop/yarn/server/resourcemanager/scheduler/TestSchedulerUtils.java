@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
@@ -351,4 +352,10 @@ public class TestSchedulerUtils {
         RMAppAttemptState.LAUNCHED);
   }
 
+  @Test
+  public void testComparePriorities(){
+    Priority high = Priority.newInstance(1);
+    Priority low = Priority.newInstance(2);
+    assertTrue(high.compareTo(low) > 0);
+  }
 }

@@ -81,7 +81,7 @@ public abstract class Priority implements Comparable<Priority> {
 
   @Override
   public int compareTo(Priority other) {
-    return this.getPriority() - other.getPriority();
+    return other.getPriority() - this.getPriority();
   }
 
   @Override
