@@ -520,7 +520,7 @@ public class JobHistoryEventHandler extends AbstractService
         mi.getJobIndexInfo().setSubmitTime(jobSubmittedEvent.getSubmitTime());
         mi.getJobIndexInfo().setQueueName(jobSubmittedEvent.getJobQueueName());
       }
-     
+
       // If this is JobFinishedEvent, close the writer and setup the job-index
       if (event.getHistoryEvent().getEventType() == EventType.JOB_FINISHED) {
         try {
@@ -532,6 +532,24 @@ public class JobHistoryEventHandler extends AbstractService
               jFinishedEvent.getFinishedReduces());
           mi.getJobIndexInfo().setJobStatus(JobState.SUCCEEDED.toString());
           closeEventWriter(event.getJobID());
+          processDoneFiles(event.getJobID());
+        } catch (IOException e) {
+          throw new YarnRuntimeException(e);
+        }
+      }
+      // In case of JOB_ERROR, only process all the Done files(e.g. job
+      // summary, job history file etc.) if it is last AM retry.
+      if (event.getHistoryEvent().getEventType() == EventType.JOB_ERROR) {
+        try {
+          JobUnsuccessfulCompletionEvent jucEvent =
+              (JobUnsuccessfulCompletionEvent) event.getHistoryEvent();
+          mi.getJobIndexInfo().setFinishTime(jucEvent.getFinishTime());
+          mi.getJobIndexInfo().setNumMaps(jucEvent.getFinishedMaps());
+          mi.getJobIndexInfo().setNumReduces(jucEvent.getFinishedReduces());
+          mi.getJobIndexInfo().setJobStatus(jucEvent.getStatus());
+          closeEventWriter(event.getJobID());
+          if(context.isLastAMRetry())
+            processDoneFiles(event.getJobID());
         } catch (IOException e) {
           throw new YarnRuntimeException(e);
         }
@@ -548,6 +566,7 @@ public class JobHistoryEventHandler extends AbstractService
           mi.getJobIndexInfo().setNumReduces(jucEvent.getFinishedReduces());
           mi.getJobIndexInfo().setJobStatus(jucEvent.getStatus());
           closeEventWriter(event.getJobID());
+          processDoneFiles(event.getJobID());
         } catch (IOException e) {
           throw new YarnRuntimeException(e);
         }
@@ -634,7 +653,6 @@ public class JobHistoryEventHandler extends AbstractService
   }
 
   protected void closeEventWriter(JobId jobId) throws IOException {
-
     final MetaInfo mi = fileMap.get(jobId);
     if (mi == null) {
       throw new IOException("No MetaInfo found for JobId: [" + jobId + "]");
@@ -654,7 +672,15 @@ public class JobHistoryEventHandler extends AbstractService
       LOG.error("Error closing writer for JobID: " + jobId);
       throw e;
     }
-     
+  }
+
+  protected void processDoneFiles(JobId jobId) throws IOException {
+
+    final MetaInfo mi = fileMap.get(jobId);
+    if (mi == null) {
+      throw new IOException("No MetaInfo found for JobId: [" + jobId + "]");
+    }
+
     if (mi.getHistoryFile() == null) {
       LOG.warn("No file for job-history with " + jobId + " found in cache!");
     }

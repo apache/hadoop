@@ -130,4 +130,9 @@ public class MockAppContext implements AppContext {
     // Not implemented
     return null;
   }
+
+  @Override
+  public boolean isLastAMRetry() {
+    return false;
+  }
 }

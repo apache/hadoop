@@ -952,6 +952,11 @@ public class MRAppMaster extends CompositeService {
     public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
       return clientToAMTokenSecretManager;
     }
+
+    @Override
+    public boolean isLastAMRetry(){
+      return isLastAMRetry;
+    }
   }
 
   @SuppressWarnings("unchecked")
