@@ -100,7 +100,7 @@ public class RMContextImpl implements RMContext {
           containerTokenSecretManager, nmTokenSecretManager,
           clientToAMTokenSecretManager);
     RMStateStore nullStore = new NullRMStateStore();
-    nullStore.setDispatcher(rmDispatcher);
+    nullStore.setRMDispatcher(rmDispatcher);
     try {
       nullStore.init(new YarnConfiguration());
       setStateStore(nullStore);
