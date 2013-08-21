@@ -67,18 +67,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
@@ -186,16 +186,17 @@ public class ResourceManager extends CompositeService implements Recoverable {
       recoveryEnabled = false;
       rmStore = new NullRMStateStore();
     }
+
     try {
       rmStore.init(conf);
-      rmStore.setDispatcher(rmDispatcher);
+      rmStore.setRMDispatcher(rmDispatcher);
     } catch (Exception e) {
       // the Exception from stateStore.init() needs to be handled for 
       // HA and we need to give up master status if we got fenced
       LOG.error("Failed to init state store", e);
       ExitUtil.terminate(1, e);
     }
-    
+
     this.rmContext =
         new RMContextImpl(this.rmDispatcher, rmStore,
           this.containerAllocationExpirer, amLivelinessMonitor,
@@ -275,7 +276,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   
   @VisibleForTesting
   protected void setRMStateStore(RMStateStore rmStore) {
-    rmStore.setDispatcher(rmDispatcher);
+    rmStore.setRMDispatcher(rmDispatcher);
     ((RMContextImpl) rmContext).setStateStore(rmStore);
   }
 
@@ -601,9 +602,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.containerTokenSecretManager.start();
     this.nmTokenSecretManager.start();
 
+    RMStateStore rmStore = rmContext.getStateStore();
+    // The state store needs to start irrespective of recoveryEnabled as apps
+    // need events to move to further states.
+    rmStore.start();
+
     if(recoveryEnabled) {
       try {
-        RMStateStore rmStore = rmContext.getStateStore();
         RMState state = rmStore.loadState();
         recover(state);
       } catch (Exception e) {

@@ -70,7 +70,7 @@ public class FileSystemRMStateStore extends RMStateStore {
   private static final String DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX =
       "RMDTSequenceNumber_";
 
-  private FileSystem fs;
+  protected FileSystem fs;
 
   private Path rootDirPath;
   private Path rmDTSecretManagerRoot;
@@ -80,6 +80,7 @@ public class FileSystemRMStateStore extends RMStateStore {
   @VisibleForTesting
   Path fsWorkingPath;
 
+  @Override
   public synchronized void initInternal(Configuration conf)
       throws Exception{
 
@@ -87,9 +88,14 @@ public class FileSystemRMStateStore extends RMStateStore {
     rootDirPath = new Path(fsWorkingPath, ROOT_DIR_NAME);
     rmDTSecretManagerRoot = new Path(rootDirPath, RM_DT_SECRET_MANAGER_ROOT);
     rmAppRoot = new Path(rootDirPath, RM_APP_ROOT);
+  }
 
-    // create filesystem
-    fs = fsWorkingPath.getFileSystem(conf);
+  @Override
+  protected void startInternal() throws Exception {
+    // create filesystem only now, as part of service-start. By this time, RM is
+    // authenticated with kerberos so we are good to create a file-system
+    // handle.
+    fs = fsWorkingPath.getFileSystem(getConfig());
     fs.mkdirs(rmDTSecretManagerRoot);
     fs.mkdirs(rmAppRoot);
   }

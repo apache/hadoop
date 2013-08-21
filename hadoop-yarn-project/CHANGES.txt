@@ -67,6 +67,9 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-881. Priority#compareTo method seems to be wrong. (Jian He via bikas)
 
+    YARN-1082. Create base directories on HDFS after RM login to ensure RM
+    recovery doesn't fail in secure mode. (vinodkv via acmurthy)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
