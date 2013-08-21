@@ -37,7 +37,7 @@ import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
 import org.apache.directory.server.core.partition.ldif.LdifPartition;
 import org.apache.directory.server.kerberos.kdc.KdcServer;
 import org.apache.directory.server.kerberos.shared.crypto.encryption.KerberosKeyFactory;
-import org.apache.directory.server.kerberos.shared.keytab.HackedKeytab;
+import org.apache.directory.server.kerberos.shared.keytab.Keytab;
 import org.apache.directory.server.kerberos.shared.keytab.KeytabEntry;
 import org.apache.directory.server.protocol.shared.transport.TcpTransport;
 import org.apache.directory.server.protocol.shared.transport.UdpTransport;
@@ -514,7 +514,7 @@ public class MiniKdc {
   public void createPrincipal(File keytabFile, String ... principals)
           throws Exception {
     String generatedPassword = UUID.randomUUID().toString();
-    HackedKeytab keytab = new HackedKeytab();
+    Keytab keytab = new Keytab();
     List<KeytabEntry> entries = new ArrayList<KeytabEntry>();
     for (String principal : principals) {
       createPrincipal(principal, generatedPassword);
@@ -529,6 +529,6 @@ public class MiniKdc {
       }
     }
     keytab.setEntries(entries);
-    keytab.write(keytabFile, principals.length);
+    keytab.write(keytabFile);
   }
 }

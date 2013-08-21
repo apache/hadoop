@@ -16,7 +16,8 @@ package org.apache.hadoop.security.authentication.server;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.util.Signer;
-import junit.framework.TestCase;
+import org.junit.Assert;
+import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -34,8 +35,9 @@ import java.util.Arrays;
 import java.util.Properties;
 import java.util.Vector;
 
-public class TestAuthenticationFilter extends TestCase {
+public class TestAuthenticationFilter {
 
+  @Test
   public void testGetConfiguration() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     FilterConfig config = Mockito.mock(FilterConfig.class);
@@ -43,27 +45,28 @@ public class TestAuthenticationFilter extends TestCase {
     Mockito.when(config.getInitParameter("a")).thenReturn("A");
     Mockito.when(config.getInitParameterNames()).thenReturn(new Vector<String>(Arrays.asList("a")).elements());
     Properties props = filter.getConfiguration("", config);
-    assertEquals("A", props.getProperty("a"));
+    Assert.assertEquals("A", props.getProperty("a"));
 
     config = Mockito.mock(FilterConfig.class);
     Mockito.when(config.getInitParameter(AuthenticationFilter.CONFIG_PREFIX)).thenReturn("foo");
     Mockito.when(config.getInitParameter("foo.a")).thenReturn("A");
     Mockito.when(config.getInitParameterNames()).thenReturn(new Vector<String>(Arrays.asList("foo.a")).elements());
     props = filter.getConfiguration("foo.", config);
-    assertEquals("A", props.getProperty("a"));
+    Assert.assertEquals("A", props.getProperty("a"));
   }
 
+  @Test
   public void testInitEmpty() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
       FilterConfig config = Mockito.mock(FilterConfig.class);
       Mockito.when(config.getInitParameterNames()).thenReturn(new Vector<String>().elements());
       filter.init(config);
-      fail();
+      Assert.fail();
     } catch (ServletException ex) {
       // Expected
     } catch (Exception ex) {
-      fail();
+      Assert.fail();
     } finally {
       filter.destroy();
     }
@@ -126,6 +129,7 @@ public class TestAuthenticationFilter extends TestCase {
     }
   }
 
+  @Test
   public void testInit() throws Exception {
 
     // minimal configuration & simple auth handler (Pseudo)
@@ -138,11 +142,11 @@ public class TestAuthenticationFilter extends TestCase {
         new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                  AuthenticationFilter.AUTH_TOKEN_VALIDITY)).elements());
       filter.init(config);
-      assertEquals(PseudoAuthenticationHandler.class, filter.getAuthenticationHandler().getClass());
-      assertTrue(filter.isRandomSecret());
-      assertNull(filter.getCookieDomain());
-      assertNull(filter.getCookiePath());
-      assertEquals(1000, filter.getValidity());
+      Assert.assertEquals(PseudoAuthenticationHandler.class, filter.getAuthenticationHandler().getClass());
+      Assert.assertTrue(filter.isRandomSecret());
+      Assert.assertNull(filter.getCookieDomain());
+      Assert.assertNull(filter.getCookiePath());
+      Assert.assertEquals(1000, filter.getValidity());
     } finally {
       filter.destroy();
     }
@@ -157,7 +161,7 @@ public class TestAuthenticationFilter extends TestCase {
         new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                  AuthenticationFilter.SIGNATURE_SECRET)).elements());
       filter.init(config);
-      assertFalse(filter.isRandomSecret());
+      Assert.assertFalse(filter.isRandomSecret());
     } finally {
       filter.destroy();
     }
@@ -174,12 +178,11 @@ public class TestAuthenticationFilter extends TestCase {
                                  AuthenticationFilter.COOKIE_DOMAIN,
                                  AuthenticationFilter.COOKIE_PATH)).elements());
       filter.init(config);
-      assertEquals(".foo.com", filter.getCookieDomain());
-      assertEquals("/bar", filter.getCookiePath());
+      Assert.assertEquals(".foo.com", filter.getCookieDomain());
+      Assert.assertEquals("/bar", filter.getCookiePath());
     } finally {
       filter.destroy();
     }
-
 
     // authentication handler lifecycle, and custom impl
     DummyAuthenticationHandler.reset();
@@ -195,10 +198,10 @@ public class TestAuthenticationFilter extends TestCase {
           Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                         "management.operation.return")).elements());
       filter.init(config);
-      assertTrue(DummyAuthenticationHandler.init);
+      Assert.assertTrue(DummyAuthenticationHandler.init);
     } finally {
       filter.destroy();
-      assertTrue(DummyAuthenticationHandler.destroy);
+      Assert.assertTrue(DummyAuthenticationHandler.destroy);
     }
 
     // kerberos auth handler
@@ -212,11 +215,12 @@ public class TestAuthenticationFilter extends TestCase {
     } catch (ServletException ex) {
       // Expected
     } finally {
-      assertEquals(KerberosAuthenticationHandler.class, filter.getAuthenticationHandler().getClass());
+      Assert.assertEquals(KerberosAuthenticationHandler.class, filter.getAuthenticationHandler().getClass());
       filter.destroy();
     }
   }
 
+  @Test
   public void testGetRequestURL() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
@@ -235,12 +239,13 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(request.getRequestURL()).thenReturn(new StringBuffer("http://foo:8080/bar"));
       Mockito.when(request.getQueryString()).thenReturn("a=A&b=B");
 
-      assertEquals("http://foo:8080/bar?a=A&b=B", filter.getRequestURL(request));
+      Assert.assertEquals("http://foo:8080/bar?a=A&b=B", filter.getRequestURL(request));
     } finally {
       filter.destroy();
     }
   }
 
+  @Test
   public void testGetToken() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
@@ -268,12 +273,13 @@ public class TestAuthenticationFilter extends TestCase {
 
       AuthenticationToken newToken = filter.getToken(request);
 
-      assertEquals(token.toString(), newToken.toString());
+      Assert.assertEquals(token.toString(), newToken.toString());
     } finally {
       filter.destroy();
     }
   }
 
+  @Test
   public void testGetTokenExpired() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
@@ -300,17 +306,18 @@ public class TestAuthenticationFilter extends TestCase {
 
       try {
         filter.getToken(request);
-        fail();
+        Assert.fail();
       } catch (AuthenticationException ex) {
         // Expected
       } catch (Exception ex) {
-        fail();
+        Assert.fail();
       }
     } finally {
       filter.destroy();
     }
   }
 
+  @Test
   public void testGetTokenInvalidType() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
@@ -338,17 +345,18 @@ public class TestAuthenticationFilter extends TestCase {
 
       try {
         filter.getToken(request);
-        fail();
+        Assert.fail();
       } catch (AuthenticationException ex) {
         // Expected
       } catch (Exception ex) {
-        fail();
+        Assert.fail();
       }
     } finally {
       filter.destroy();
     }
   }
 
+  @Test
   public void testDoFilterNotAuthenticated() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
@@ -374,7 +382,7 @@ public class TestAuthenticationFilter extends TestCase {
         new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
-            fail();
+            Assert.fail();
             return null;
           }
         }
@@ -468,27 +476,27 @@ public class TestAuthenticationFilter extends TestCase {
         Mockito.verify(response, Mockito.never()).
           addCookie(Mockito.any(Cookie.class));
       } else {
-        assertNotNull(setCookie[0]);
-        assertEquals(AuthenticatedURL.AUTH_COOKIE, setCookie[0].getName());
-        assertTrue(setCookie[0].getValue().contains("u="));
-        assertTrue(setCookie[0].getValue().contains("p="));
-        assertTrue(setCookie[0].getValue().contains("t="));
-        assertTrue(setCookie[0].getValue().contains("e="));
-        assertTrue(setCookie[0].getValue().contains("s="));
-        assertTrue(calledDoFilter[0]);
+        Assert.assertNotNull(setCookie[0]);
+        Assert.assertEquals(AuthenticatedURL.AUTH_COOKIE, setCookie[0].getName());
+        Assert.assertTrue(setCookie[0].getValue().contains("u="));
+        Assert.assertTrue(setCookie[0].getValue().contains("p="));
+        Assert.assertTrue(setCookie[0].getValue().contains("t="));
+        Assert.assertTrue(setCookie[0].getValue().contains("e="));
+        Assert.assertTrue(setCookie[0].getValue().contains("s="));
+        Assert.assertTrue(calledDoFilter[0]);
 
         Signer signer = new Signer("secret".getBytes());
         String value = signer.verifyAndExtract(setCookie[0].getValue());
         AuthenticationToken token = AuthenticationToken.parse(value);
-        assertEquals(System.currentTimeMillis() + 1000 * 1000,
+        Assert.assertEquals(System.currentTimeMillis() + 1000 * 1000,
                      token.getExpires(), 100);
 
         if (withDomainPath) {
-          assertEquals(".foo.com", setCookie[0].getDomain());
-          assertEquals("/bar", setCookie[0].getPath());
+          Assert.assertEquals(".foo.com", setCookie[0].getDomain());
+          Assert.assertEquals("/bar", setCookie[0].getPath());
         } else {
-          assertNull(setCookie[0].getDomain());
-          assertNull(setCookie[0].getPath());
+          Assert.assertNull(setCookie[0].getDomain());
+          Assert.assertNull(setCookie[0].getPath());
         }
       }
     } finally {
@@ -496,22 +504,27 @@ public class TestAuthenticationFilter extends TestCase {
     }
   }
 
+  @Test
   public void testDoFilterAuthentication() throws Exception {
     _testDoFilterAuthentication(false, false, false);
   }
 
+  @Test
   public void testDoFilterAuthenticationImmediateExpiration() throws Exception {
     _testDoFilterAuthentication(false, false, true);
   }
 
+  @Test
   public void testDoFilterAuthenticationWithInvalidToken() throws Exception {
     _testDoFilterAuthentication(false, true, false);
   }
 
+  @Test
   public void testDoFilterAuthenticationWithDomainPath() throws Exception {
     _testDoFilterAuthentication(true, false, false);
   }
 
+  @Test
   public void testDoFilterAuthenticated() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
@@ -547,8 +560,8 @@ public class TestAuthenticationFilter extends TestCase {
           public Object answer(InvocationOnMock invocation) throws Throwable {
             Object[] args = invocation.getArguments();
             HttpServletRequest request = (HttpServletRequest) args[0];
-            assertEquals("u", request.getRemoteUser());
-            assertEquals("p", request.getUserPrincipal().getName());
+            Assert.assertEquals("u", request.getRemoteUser());
+            Assert.assertEquals("p", request.getUserPrincipal().getName());
             return null;
           }
         }
@@ -561,6 +574,7 @@ public class TestAuthenticationFilter extends TestCase {
     }
   }
 
+  @Test
   public void testDoFilterAuthenticatedExpired() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
@@ -594,7 +608,7 @@ public class TestAuthenticationFilter extends TestCase {
         new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
-            fail();
+            Assert.fail();
             return null;
           }
         }
@@ -616,15 +630,15 @@ public class TestAuthenticationFilter extends TestCase {
 
       Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED), Mockito.anyString());
 
-      assertNotNull(setCookie[0]);
-      assertEquals(AuthenticatedURL.AUTH_COOKIE, setCookie[0].getName());
-      assertEquals("", setCookie[0].getValue());
+      Assert.assertNotNull(setCookie[0]);
+      Assert.assertEquals(AuthenticatedURL.AUTH_COOKIE, setCookie[0].getName());
+      Assert.assertEquals("", setCookie[0].getValue());
     } finally {
       filter.destroy();
     }
   }
 
-
+  @Test
   public void testDoFilterAuthenticatedInvalidType() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
@@ -658,7 +672,7 @@ public class TestAuthenticationFilter extends TestCase {
         new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
-            fail();
+            Assert.fail();
             return null;
           }
         }
@@ -680,14 +694,15 @@ public class TestAuthenticationFilter extends TestCase {
 
       Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED), Mockito.anyString());
 
-      assertNotNull(setCookie[0]);
-      assertEquals(AuthenticatedURL.AUTH_COOKIE, setCookie[0].getName());
-      assertEquals("", setCookie[0].getValue());
+      Assert.assertNotNull(setCookie[0]);
+      Assert.assertEquals(AuthenticatedURL.AUTH_COOKIE, setCookie[0].getName());
+      Assert.assertEquals("", setCookie[0].getValue());
     } finally {
       filter.destroy();
     }
   }
 
+  @Test
   public void testManagementOperation() throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {

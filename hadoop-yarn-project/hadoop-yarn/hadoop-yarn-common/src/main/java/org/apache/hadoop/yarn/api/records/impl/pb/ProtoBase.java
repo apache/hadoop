@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
+import com.google.protobuf.TextFormat;
 
 @Private
 @Unstable
@@ -51,7 +52,7 @@ public abstract class ProtoBase <T extends Message> {
   
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
   
   protected final ByteBuffer convertFromProtoFormat(ByteString byteString) {

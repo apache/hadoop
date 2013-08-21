@@ -32,6 +32,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class QueueInfoPBImpl extends QueueInfo {
@@ -175,7 +177,7 @@ public class QueueInfoPBImpl extends QueueInfo {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void initLocalApplicationsList() {

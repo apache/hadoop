@@ -30,6 +30,9 @@ Release 2.3.0 - UNRELEASED
     YARN-758. Augment MockNM to use multiple cores (Karthik Kambatla via
     Sandy Ryza)
 
+    YARN-1060. Two tests in TestFairScheduler are missing @Test annotation
+    (Niranjan Singh via Sandy Ryza)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -39,7 +42,7 @@ Release 2.1.1-beta - UNRELEASED
   IMPROVEMENTS
 
     YARN-589. Expose a REST API for monitoring the fair scheduler (Sandy Ryza).
-
+    
   OPTIMIZATIONS
 
   BUG FIXES
@@ -65,7 +68,19 @@ Release 2.1.1-beta - UNRELEASED
     YARN-994. HeartBeat thread in AMRMClientAsync does not handle runtime
     exception correctly (Xuan Gong via bikas)
 
-Release 2.1.0-beta - 2013-08-06
+    YARN-337. RM handles killed application tracking URL poorly (jlowe)
+
+    YARN-107. Fixed ResourceManager and clients to better handle
+    forceKillApplication on non-running and finished applications. (Xuan Gong
+    via vinodkv)
+
+    YARN-643. Fixed ResourceManager to remove all tokens consistently on app
+    finish. (Xuan Gong via vinodkv)
+
+    YARN-1006. Fixed broken rendering in the Nodes list web page on the RM web
+    UI. (Xuan Gong via vinodkv)
+
+Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
 
@@ -517,6 +532,8 @@ Release 2.1.0-beta - 2013-08-06
     YARN-1046. Disable mem monitoring by default in MiniYARNCluster. (Karthik
     Kambatla via Sandy Ryza)
 
+    YARN-1045. Improve toString implementation for PBImpls. (Jian He via sseth)  
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
@@ -870,6 +887,10 @@ Release 2.1.0-beta - 2013-08-06
 
     YARN-1043. Push all metrics consistently. (Jian He via acmurthy) 
 
+    YARN-1056. Remove dual use of string 'resourcemanager' in
+    yarn.resourcemanager.connect.{max.wait.secs|retry_interval.secs}
+    (Karthik Kambatla via acmurthy)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
@@ -1174,6 +1195,8 @@ Release 0.23.10 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-337. RM handles killed application tracking URL poorly (jlowe)
 
 Release 0.23.9 - 2013-07-08
 

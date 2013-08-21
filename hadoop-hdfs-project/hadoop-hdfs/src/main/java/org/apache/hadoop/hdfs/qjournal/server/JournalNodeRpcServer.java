@@ -175,10 +175,11 @@ class JournalNodeRpcServer implements QJournalProtocol {
 
   @Override
   public GetEditLogManifestResponseProto getEditLogManifest(String jid,
-      long sinceTxId, boolean forReading) throws IOException {
+      long sinceTxId, boolean forReading, boolean inProgressOk)
+      throws IOException {
     
     RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid)
-        .getEditLogManifest(sinceTxId, forReading);
+        .getEditLogManifest(sinceTxId, forReading, inProgressOk);
     
     return GetEditLogManifestResponseProto.newBuilder()
         .setManifest(PBHelper.convert(manifest))

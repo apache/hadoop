@@ -35,14 +35,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -79,38 +75,36 @@ public class RMProxy<T> {
   public static RetryPolicy createRetryPolicy(Configuration conf) {
     long rmConnectWaitMS =
         conf.getInt(
-            YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS,
-            YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS)
-        * 1000;
+            YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS,
+            YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_MS);
     long rmConnectionRetryIntervalMS =
         conf.getLong(
-            YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
+            YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
             YarnConfiguration
-            .DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS)
-        * 1000;
+            .DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS);
 
     if (rmConnectionRetryIntervalMS < 0) {
       throw new YarnRuntimeException("Invalid Configuration. " +
-          YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS +
+          YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS +
           " should not be negative.");
     }
 
-    boolean waitForEver = (rmConnectWaitMS == -1000);
+    boolean waitForEver = (rmConnectWaitMS == -1);
 
     if (waitForEver) {
       return  RetryPolicies.RETRY_FOREVER;
     } else {
       if (rmConnectWaitMS < 0) {
         throw new YarnRuntimeException("Invalid Configuration. "
-            + YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS
+            + YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS
             + " can be -1, but can not be other negative numbers");
       }
 
       // try connect once
       if (rmConnectWaitMS < rmConnectionRetryIntervalMS) {
-        LOG.warn(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS
+        LOG.warn(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS
             + " is smaller than "
-            + YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS
+            + YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS
             + ". Only try connect once.");
         rmConnectWaitMS = 0;
       }

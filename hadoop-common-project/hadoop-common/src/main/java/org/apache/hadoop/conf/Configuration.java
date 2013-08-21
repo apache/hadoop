@@ -153,6 +153,10 @@ import com.google.common.base.Preconditions;
  * will be resolved to another property in this Configuration, while
  * <tt>${<i>user.name</i>}</tt> would then ordinarily be resolved to the value
  * of the System property with that name.
+ * By default, warnings will be given to any deprecated configuration 
+ * parameters and these are suppressible by configuring
+ * <tt>log4j.logger.org.apache.hadoop.conf.Configuration.deprecation</tt> in
+ * log4j.properties file.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -160,6 +164,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                                       Writable {
   private static final Log LOG =
     LogFactory.getLog(Configuration.class);
+
+  private static final Log LOG_DEPRECATION =
+    LogFactory.getLog("org.apache.hadoop.conf.Configuration.deprecation");
 
   private boolean quietmode = true;
   
@@ -836,7 +843,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private void warnOnceIfDeprecated(String name) {
     DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
     if (keyInfo != null && !keyInfo.accessed) {
-      LOG.warn(keyInfo.getWarningMessage(name));
+      LOG_DEPRECATION.info(keyInfo.getWarningMessage(name));
     }
   }
 
@@ -1909,6 +1916,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     } catch (Exception e) {
       return null;
     }
+  }
+
+  /**
+   * Get the set of parameters marked final.
+   *
+   * @return final parameter set.
+   */
+  public Set<String> getFinalParameters() {
+    return new HashSet<String>(finalParameters);
   }
 
   protected synchronized Properties getProps() {

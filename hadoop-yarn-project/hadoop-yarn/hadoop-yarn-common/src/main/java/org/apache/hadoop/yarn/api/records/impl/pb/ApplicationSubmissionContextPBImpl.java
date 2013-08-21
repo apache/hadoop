@@ -32,6 +32,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class ApplicationSubmissionContextPBImpl 
@@ -80,7 +82,7 @@ extends ApplicationSubmissionContext {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

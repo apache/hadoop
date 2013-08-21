@@ -19,7 +19,9 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
@@ -27,6 +29,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspWriter;
@@ -36,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -43,6 +47,9 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
@@ -50,6 +57,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 
 @InterfaceAudience.Private
 public class DatanodeJspHelper {
@@ -712,4 +720,24 @@ public class DatanodeJspHelper {
     final String nnAddr = request.getParameter(JspHelper.NAMENODE_ADDRESS);
     return getDFSClient(ugi, nnAddr, conf);
   }
+
+  /** Return a table containing version information. */
+  public static String getVersionTable(ServletContext context) {
+    StringBuilder sb = new StringBuilder();
+    final DataNode dataNode = (DataNode) context.getAttribute("datanode");
+    sb.append("<div class='dfstable'><table>");
+    sb.append("<tr><td class='col1'>Version:</td><td>");
+    sb.append(VersionInfo.getVersion() + ", " + VersionInfo.getRevision());
+    sb.append("</td></tr>\n" + "\n  <tr><td class='col1'>Compiled:</td><td>"
+        + VersionInfo.getDate());
+    sb.append(" by " + VersionInfo.getUser() + " from "
+        + VersionInfo.getBranch());
+    if (dataNode != null) {
+      sb.append("</td></tr>\n  <tr><td class='col1'>Cluster ID:</td><td>"
+          + dataNode.getClusterId());
+    }
+    sb.append("</td></tr>\n</table></div>");
+    return sb.toString();
+  }
+
 }

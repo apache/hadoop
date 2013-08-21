@@ -133,7 +133,8 @@ class CopyCommands {
       "Copy files that match the file pattern <src> to a\n" +
       "destination.  When copying multiple files, the destination\n" +
       "must be a directory. Passing -p preserves access and\n" +
-      "modification times, ownership and the mode.\n";
+      "modification times, ownership and the mode. Passing -f\n" +
+      "overwrites the destination if it already exists.\n";
     
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
@@ -186,7 +187,8 @@ class CopyCommands {
       "into fs. Copying fails if the file already\n" +
       "exists, unless the -f flag is given. Passing\n" +
       "-p preserves access and modification times,\n" +
-      "ownership and the mode.\n";
+      "ownership and the mode. Passing -f overwrites\n" +
+      "the destination if it already exists.\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {

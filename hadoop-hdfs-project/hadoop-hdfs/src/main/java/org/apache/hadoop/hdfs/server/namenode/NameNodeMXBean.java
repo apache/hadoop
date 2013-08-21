@@ -188,6 +188,12 @@ public interface NameNodeMXBean {
    * @return the name journal status information, as a JSON string.
    */
   public String getNameJournalStatus();
+  
+  /**
+   * Get information about the transaction ID, including the last applied 
+   * transaction ID and the most recent checkpoint's transaction ID
+   */
+  public String getJournalTransactionInfo();
 
   /**
    * Gets the NN start time

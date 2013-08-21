@@ -6,6 +6,9 @@ Trunk (Unreleased)
 
     HDFS-3034. Remove the deprecated DFSOutputStream.sync() method.  (szetszwo)
 
+    HDFS-5079. Cleaning up NNHAStatusHeartbeat.State from
+    DatanodeProtocolProtos. (Tao Luo via shv)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
@@ -116,9 +119,6 @@ Trunk (Unreleased)
     cache expires too quickly  (Chris Nauroth via Sanjay)
 
     HDFS-4904. Remove JournalService. (Arpit Agarwal via cnauroth)
-
-    HDFS-5004. Add additional JMX bean for NameNode status data
-    (Trevor Lorimer via cos)
 
   OPTIMIZATIONS
 
@@ -256,6 +256,12 @@ Release 2.3.0 - UNRELEASED
     HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
     (Colin Patrick McCabe)
 
+    HDFS-5004. Add additional JMX bean for NameNode status data
+    (Trevor Lorimer via cos)
+
+    HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
+    (shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -266,6 +272,9 @@ Release 2.3.0 - UNRELEASED
     of symlinks.  (Andrew Wang via Colin Patrick McCabe)
 
     HDFS-5065. TestSymlinkHdfsDisable fails on Windows. (ivanmi)
+
+    HDFS-4816. transitionToActive blocks if the SBN is doing checkpoint image
+    transfer. (Andrew Wang)
 
 Release 2.1.1-beta - UNRELEASED
 
@@ -278,6 +287,17 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5071 Change hdfs-nfs parent project to hadoop-project (brandonli)
 
     HDFS-4763 Add script changes/utility for starting NFS gateway (brandonli)
+
+    HDFS-5076 Add MXBean methods to query NN's transaction information and 
+    JournalNode's journal status. (jing9)
+
+    HDFS-5104 Support dotdot name in NFS LOOKUP operation (brandonli)
+
+    HDFS-5107 Fix array copy error in Readdir and Readdirplus responses
+    (brandonli)
+
+    HDFS-5110 Change FSDataOutputStream to HdfsDataOutputStream for opened
+    streams to fix type cast error. (brandonli)
 
   IMPROVEMENTS
 
@@ -296,6 +316,12 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5047. Supress logging of full stack trace of quota and lease
     exceptions. (Robert Parker via kihwal)
 
+    HDFS-2933. Improve DataNode Web UI Index Page. (Vivek Ganesan via
+    Arpit Agarwal)
+
+    HDFS-5111. Remove duplicated error message for snapshot commands when 
+    processing invalid arguments. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -312,7 +338,44 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5091. Support for spnego keytab separate from the JournalNode keytab 
     for secure HA. (jing9)
 
-Release 2.1.0-beta - 2013-08-06
+    HDFS-5051. nn fails to download checkpointed image from snn in some
+    setups. (Vinay and suresh via suresh)
+
+    HDFS-4898. BlockPlacementPolicyWithNodeGroup.chooseRemoteRack() fails to
+    properly fallback to local rack. (szetszwo)
+
+    HDFS-4632. globStatus using backslash for escaping does not work on Windows.
+    (Chuan Liu via cnauroth)
+
+    HDFS-5093. TestGlobPaths should re-use the MiniDFSCluster to avoid failure
+    on Windows. (Chuan Liu via cnauroth)
+
+    HDFS-5080. BootstrapStandby not working with QJM when the existing NN is 
+    active. (jing9)
+
+    HDFS-5099. Namenode#copyEditLogSegmentsToSharedDir should close
+    EditLogInputStreams upon finishing. (Chuan Liu via cnauroth)
+
+    HDFS-2994. If lease soft limit is recovered successfully
+    the append can fail. (Tao Luo via shv)
+
+    HDFS-5100. TestNamenodeRetryCache fails on Windows due to incorrect cleanup.
+    (Chuan Liu via cnauroth)
+
+    HDFS-5103. TestDirectoryScanner fails on Windows. (Chuan Liu via cnauroth)
+
+    HDFS-5102. Snapshot names should not be allowed to contain slash characters.
+    (jing9)
+
+    HDFS-5105. TestFsck fails on Windows. (Chuan Liu via arp)
+
+    HDFS-5106. TestDatanodeBlockScanner fails on Windows due to incorrect path
+    format. (Chuan Liu via cnauroth)
+
+    HDFS-4594. WebHDFS open sets Content-Length header to what is specified by
+    length parameter rather than how much data is actually returned. (cnauroth)
+
+Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
 

@@ -105,8 +105,6 @@ Trunk (Unreleased)
 
     HADOOP-9833 move slf4j to version 1.7.5 (Kousuke Saruta via stevel)
 
-    HADOOP-9845. Update protobuf to 2.5 from 2.4.x. (tucu)
-
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -293,6 +291,11 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9784. Add a builder for HttpServer. (Junping Du via llu)
+
+    HADOOP 9871. Fix intermittent findbugs warnings in DefaultMetricsSystem.
+    (Junping Du via llu)
+
     HADOOP-9319. Update bundled LZ4 source to r99. (Binglin Chang via llu)
 
     HADOOP-9241. DU refresh interval is not configurable (harsh)
@@ -315,6 +318,15 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9848. Create a MiniKDC for use with security testing. 
     (ywskycn via tucu)
 
+    HADOOP-9860. Remove class HackedKeytab and HackedKeytabEncoder from 
+    hadoop-minikdc once jira DIRSERVER-1882 solved. (ywskycn via tucu)
+
+    HADOOP-9866. convert hadoop-auth testcases requiring kerberos to 
+    use minikdc. (ywskycn via tucu)
+
+    HADOOP-9487 Deprecation warnings in Configuration should go to their
+    own log or otherwise be suppressible (Chu Tong via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -329,6 +341,18 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-9817. FileSystem#globStatus and FileContext#globStatus need to work
     with symlinks. (Colin Patrick McCabe via Andrew Wang)
+
+    HADOOP-9652.  RawLocalFs#getFileLinkStatus does not fill in the link owner
+    and mode.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9875.  TestDoAsEffectiveUser can fail on JDK 7.  (Aaron T. Myers via
+    Colin Patrick McCabe)
+
+    HADOOP-9865.  FileContext#globStatus has a regression with respect to
+    relative path.  (Chuan Lin via Colin Patrick McCabe)
+
+    HADOOP-9877. Fix listing of snapshot directories in globStatus.
+    (Binglin Chang via Andrew Wang)
 
 Release 2.1.1-beta - UNRELEASED
 
@@ -358,6 +382,11 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9802. Support Snappy codec on Windows. (cnauroth)
 
+    HADOOP-9879. Move the version info of zookeeper dependencies to
+    hadoop-project/pom (Karthik Kambatla via Sandy Ryza)
+    
+    HADOOP-9886. Turn warning message in RetryInvocationHandler to debug (arpit)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -384,7 +413,14 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9857. Tests block and sometimes timeout on Windows due to invalid
     entropy source. (cnauroth)
 
-Release 2.1.0-beta - 2013-08-06
+    HADOOP-9381. Document dfs cp -f option. (Keegan Witt, suresh via suresh)
+
+    HADOOP-9868. Server must not advertise kerberos realm. (daryn via kihwal)
+
+    HADOOP-9880. SASL changes from HADOOP-9421 breaks Secure HA NN. (daryn via
+    jing9)
+
+Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
 
@@ -580,6 +616,10 @@ Release 2.1.0-beta - 2013-08-06
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
     (todd)
+
+    HADOOP-9845. Update protobuf to 2.5 from 2.4.x. (tucu)
+
+    HADOOP-9872. Improve protoc version handling and detection. (tucu)
 
   BUG FIXES
 
@@ -2037,6 +2077,9 @@ Release 0.23.10 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-9686. Easy access to final parameters in Configuration (Jason Lowe
+    via jeagles)
 
   OPTIMIZATIONS
 

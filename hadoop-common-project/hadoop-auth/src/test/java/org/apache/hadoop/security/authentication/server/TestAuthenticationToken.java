@@ -14,98 +14,104 @@
 package org.apache.hadoop.security.authentication.server;
 
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import junit.framework.TestCase;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class TestAuthenticationToken extends TestCase {
+public class TestAuthenticationToken {
 
+  @Test
   public void testAnonymous() {
-    assertNotNull(AuthenticationToken.ANONYMOUS);
-    assertEquals(null, AuthenticationToken.ANONYMOUS.getUserName());
-    assertEquals(null, AuthenticationToken.ANONYMOUS.getName());
-    assertEquals(null, AuthenticationToken.ANONYMOUS.getType());
-    assertEquals(-1, AuthenticationToken.ANONYMOUS.getExpires());
-    assertFalse(AuthenticationToken.ANONYMOUS.isExpired());
+    Assert.assertNotNull(AuthenticationToken.ANONYMOUS);
+    Assert.assertEquals(null, AuthenticationToken.ANONYMOUS.getUserName());
+    Assert.assertEquals(null, AuthenticationToken.ANONYMOUS.getName());
+    Assert.assertEquals(null, AuthenticationToken.ANONYMOUS.getType());
+    Assert.assertEquals(-1, AuthenticationToken.ANONYMOUS.getExpires());
+    Assert.assertFalse(AuthenticationToken.ANONYMOUS.isExpired());
   }
 
+  @Test
   public void testConstructor() throws Exception {
     try {
       new AuthenticationToken(null, "p", "t");
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException ex) {
       // Expected
     } catch (Throwable ex) {
-      fail();
+      Assert.fail();
     }
     try {
       new AuthenticationToken("", "p", "t");
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException ex) {
       // Expected
     } catch (Throwable ex) {
-      fail();
+      Assert.fail();
     }
     try {
       new AuthenticationToken("u", null, "t");
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException ex) {
       // Expected
     } catch (Throwable ex) {
-      fail();
+      Assert.fail();
     }
     try {
       new AuthenticationToken("u", "", "t");
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException ex) {
       // Expected
     } catch (Throwable ex) {
-      fail();
+      Assert.fail();
     }
     try {
       new AuthenticationToken("u", "p", null);
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException ex) {
       // Expected
     } catch (Throwable ex) {
-      fail();
+      Assert.fail();
     }
     try {
       new AuthenticationToken("u", "p", "");
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException ex) {
       // Expected
     } catch (Throwable ex) {
-      fail();
+      Assert.fail();
     }
     new AuthenticationToken("u", "p", "t");
   }
 
+  @Test
   public void testGetters() throws Exception {
     long expires = System.currentTimeMillis() + 50;
     AuthenticationToken token = new AuthenticationToken("u", "p", "t");
     token.setExpires(expires);
-    assertEquals("u", token.getUserName());
-    assertEquals("p", token.getName());
-    assertEquals("t", token.getType());
-    assertEquals(expires, token.getExpires());
-    assertFalse(token.isExpired());
+    Assert.assertEquals("u", token.getUserName());
+    Assert.assertEquals("p", token.getName());
+    Assert.assertEquals("t", token.getType());
+    Assert.assertEquals(expires, token.getExpires());
+    Assert.assertFalse(token.isExpired());
     Thread.sleep(70);               // +20 msec fuzz for timer granularity.
-    assertTrue(token.isExpired());
+    Assert.assertTrue(token.isExpired());
   }
 
+  @Test
   public void testToStringAndParse() throws Exception {
     long expires = System.currentTimeMillis() + 50;
     AuthenticationToken token = new AuthenticationToken("u", "p", "t");
     token.setExpires(expires);
     String str = token.toString();
     token = AuthenticationToken.parse(str);
-    assertEquals("p", token.getName());
-    assertEquals("t", token.getType());
-    assertEquals(expires, token.getExpires());
-    assertFalse(token.isExpired());
+    Assert.assertEquals("p", token.getName());
+    Assert.assertEquals("t", token.getType());
+    Assert.assertEquals(expires, token.getExpires());
+    Assert.assertFalse(token.isExpired());
     Thread.sleep(70);               // +20 msec fuzz for timer granularity.
-    assertTrue(token.isExpired());
+    Assert.assertTrue(token.isExpired());
   }
 
+  @Test
   public void testParseInvalid() throws Exception {
     long expires = System.currentTimeMillis() + 50;
     AuthenticationToken token = new AuthenticationToken("u", "p", "t");
@@ -114,11 +120,11 @@ public class TestAuthenticationToken extends TestCase {
     str = str.substring(0, str.indexOf("e="));
     try {
       AuthenticationToken.parse(str);
-      fail();
+      Assert.fail();
     } catch (AuthenticationException ex) {
       // Expected
     } catch (Exception ex) {
-      fail();
+      Assert.fail();
     }
   }
 }

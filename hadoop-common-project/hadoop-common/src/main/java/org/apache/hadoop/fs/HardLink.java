@@ -41,15 +41,6 @@ import org.apache.hadoop.util.Shell;
  */
 public class HardLink { 
 
-  public enum OSType {
-    OS_TYPE_UNIX,
-    OS_TYPE_WIN,
-    OS_TYPE_SOLARIS,
-    OS_TYPE_MAC,
-    OS_TYPE_FREEBSD
-  }
-  
-  public static OSType osType;
   private static HardLinkCommandGetter getHardLinkCommand;
   
   public final LinkStats linkStats; //not static
@@ -57,19 +48,18 @@ public class HardLink {
   //initialize the command "getters" statically, so can use their 
   //methods without instantiating the HardLink object
   static { 
-    osType = getOSType();
-    if (osType == OSType.OS_TYPE_WIN) {
+    if (Shell.WINDOWS) {
       // Windows
       getHardLinkCommand = new HardLinkCGWin();
     } else {
-      // Unix
+      // Unix or Linux
       getHardLinkCommand = new HardLinkCGUnix();
       //override getLinkCountCommand for the particular Unix variant
       //Linux is already set as the default - {"stat","-c%h", null}
-      if (osType == OSType.OS_TYPE_MAC || osType == OSType.OS_TYPE_FREEBSD) {
+      if (Shell.MAC || Shell.FREEBSD) {
         String[] linkCountCmdTemplate = {"/usr/bin/stat","-f%l", null};
         HardLinkCGUnix.setLinkCountCmdTemplate(linkCountCmdTemplate);
-      } else if (osType == OSType.OS_TYPE_SOLARIS) {
+      } else if (Shell.SOLARIS) {
         String[] linkCountCmdTemplate = {"ls","-l", null};
         HardLinkCGUnix.setLinkCountCmdTemplate(linkCountCmdTemplate);        
       }
@@ -78,26 +68,6 @@ public class HardLink {
 
   public HardLink() {
     linkStats = new LinkStats();
-  }
-  
-  static private OSType getOSType() {
-    String osName = System.getProperty("os.name");
-    if (Shell.WINDOWS) {
-      return OSType.OS_TYPE_WIN;
-    }
-    else if (osName.contains("SunOS") 
-            || osName.contains("Solaris")) {
-       return OSType.OS_TYPE_SOLARIS;
-    }
-    else if (osName.contains("Mac")) {
-       return OSType.OS_TYPE_MAC;
-    }
-    else if (osName.contains("FreeBSD")) {
-       return OSType.OS_TYPE_FREEBSD;
-    }
-    else {
-      return OSType.OS_TYPE_UNIX;
-    }
   }
   
   /**
@@ -548,7 +518,7 @@ public class HardLink {
       if (inpMsg == null || exitValue != 0) {
         throw createIOException(fileName, inpMsg, errMsg, exitValue, null);
       }
-      if (osType == OSType.OS_TYPE_SOLARIS) {
+      if (Shell.SOLARIS) {
         String[] result = inpMsg.split("\\s+");
         return Integer.parseInt(result[1]);
       } else {

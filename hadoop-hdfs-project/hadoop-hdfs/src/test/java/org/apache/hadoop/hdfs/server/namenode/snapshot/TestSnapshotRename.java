@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.List;
 
@@ -29,11 +30,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiff;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -189,5 +193,37 @@ public class TestSnapshotRename {
         + sub1.toString();
     exception.expectMessage(error);
     hdfs.renameSnapshot(sub1, "s1", "s2");
+  }
+  
+  /**
+   * Test renaming a snapshot with illegal name
+   */
+  @Test
+  public void testRenameWithIllegalName() throws Exception {
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+    // Create snapshots for sub1
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, "s1");
+    
+    final String name1 = HdfsConstants.DOT_SNAPSHOT_DIR;
+    try {
+      hdfs.renameSnapshot(sub1, "s1", name1);
+      fail("Exception expected when an illegal name is given for rename");
+    } catch (RemoteException e) {
+      String errorMsg = "\"" + HdfsConstants.DOT_SNAPSHOT_DIR
+          + "\" is a reserved name.";
+      GenericTestUtils.assertExceptionContains(errorMsg, e);
+    }
+    
+    String errorMsg = "Snapshot name cannot contain \"" + Path.SEPARATOR + "\"";
+    final String[] badNames = new String[] { "foo" + Path.SEPARATOR,
+        Path.SEPARATOR + "foo", Path.SEPARATOR, "foo" + Path.SEPARATOR + "bar" };
+    for (String badName : badNames) {
+      try {
+        hdfs.renameSnapshot(sub1, "s1", badName);
+        fail("Exception expected when an illegal name is given");
+      } catch (RemoteException e) {
+        GenericTestUtils.assertExceptionContains(errorMsg, e);
+      }
+    }
   }
 }

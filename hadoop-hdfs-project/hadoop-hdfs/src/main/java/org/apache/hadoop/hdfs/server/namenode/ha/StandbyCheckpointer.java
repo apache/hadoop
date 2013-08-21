@@ -17,9 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.util.Time.now;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,10 +46,10 @@ import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import static org.apache.hadoop.util.Time.now;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Thread which runs inside the NN when it's in Standby state,
@@ -57,6 +65,7 @@ public class StandbyCheckpointer {
   private final FSNamesystem namesystem;
   private long lastCheckpointTime;
   private final CheckpointerThread thread;
+  private final ThreadFactory uploadThreadFactory;
   private String activeNNAddress;
   private InetSocketAddress myNNAddress;
 
@@ -72,6 +81,8 @@ public class StandbyCheckpointer {
     this.namesystem = ns;
     this.checkpointConf = new CheckpointConf(conf); 
     this.thread = new CheckpointerThread();
+    this.uploadThreadFactory = new ThreadFactoryBuilder().setDaemon(true)
+        .setNameFormat("TransferFsImageUpload-%d").build();
 
     setNameNodeAddresses(conf);
   }
@@ -142,7 +153,7 @@ public class StandbyCheckpointer {
 
   private void doCheckpoint() throws InterruptedException, IOException {
     assert canceler != null;
-    long txid;
+    final long txid;
     
     namesystem.writeLockInterruptibly();
     try {
@@ -171,9 +182,26 @@ public class StandbyCheckpointer {
     }
     
     // Upload the saved checkpoint back to the active
-    TransferFsImage.uploadImageFromStorage(
-        activeNNAddress, myNNAddress,
-        namesystem.getFSImage().getStorage(), txid);
+    // Do this in a separate thread to avoid blocking transition to active
+    // See HDFS-4816
+    ExecutorService executor =
+        Executors.newSingleThreadExecutor(uploadThreadFactory);
+    Future<Void> upload = executor.submit(new Callable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        TransferFsImage.uploadImageFromStorage(
+            activeNNAddress, myNNAddress,
+            namesystem.getFSImage().getStorage(), txid);
+        return null;
+      }
+    });
+    executor.shutdown();
+    try {
+      upload.get();
+    } catch (ExecutionException e) {
+      throw new IOException("Exception during image upload: " + e.getMessage(),
+          e.getCause());
+    }
   }
   
   /**
@@ -301,6 +329,7 @@ public class StandbyCheckpointer {
           LOG.info("Checkpoint was cancelled: " + ce.getMessage());
           canceledCount++;
         } catch (InterruptedException ie) {
+          LOG.info("Interrupted during checkpointing", ie);
           // Probably requested shutdown.
           continue;
         } catch (Throwable t) {

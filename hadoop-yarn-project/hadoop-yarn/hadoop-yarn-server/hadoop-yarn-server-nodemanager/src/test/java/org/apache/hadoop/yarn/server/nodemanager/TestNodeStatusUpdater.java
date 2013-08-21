@@ -957,15 +957,14 @@ public class TestNodeStatusUpdater {
   @Test (timeout = 150000)
   public void testNMConnectionToRM() throws Exception {
     final long delta = 50000;
-    final long connectionWaitSecs = 5;
-    final long connectionRetryIntervalSecs = 1;
+    final long connectionWaitMs = 5000;
+    final long connectionRetryIntervalMs = 1000;
     //Waiting for rmStartIntervalMS, RM will be started
     final long rmStartIntervalMS = 2*1000;
-    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS,
-        connectionWaitSecs);
-    conf.setLong(YarnConfiguration
-        .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
-        connectionRetryIntervalSecs);
+    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS,
+        connectionWaitMs);
+    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
+        connectionRetryIntervalMs);
 
     //Test NM try to connect to RM Several times, but finally fail
     NodeManagerWithCustomNodeStatusUpdater nmWithUpdater;
@@ -987,15 +986,15 @@ public class TestNodeStatusUpdater {
     } catch(Exception e) {
       long t = System.currentTimeMillis();
       long duration = t - waitStartTime;
-      boolean waitTimeValid = (duration >= connectionWaitSecs * 1000)
-              && (duration < (connectionWaitSecs * 1000 + delta));
+      boolean waitTimeValid = (duration >= connectionWaitMs)
+              && (duration < (connectionWaitMs + delta));
       if(!waitTimeValid) {
         //either the exception was too early, or it had a different cause.
         //reject with the inner stack trace
         throw new Exception("NM should have tried re-connecting to RM during " +
-          "period of at least " + connectionWaitSecs + " seconds, but " +
-          "stopped retrying within " + (connectionWaitSecs + delta/1000) +
-          " seconds: " + e, e);
+          "period of at least " + connectionWaitMs + " ms, but " +
+          "stopped retrying within " + (connectionWaitMs + delta) +
+          " ms: " + e, e);
       }
     }
 
@@ -1149,14 +1148,14 @@ public class TestNodeStatusUpdater {
   @Test(timeout = 200000)
   public void testNodeStatusUpdaterRetryAndNMShutdown() 
       throws Exception {
-    final long connectionWaitSecs = 1;
-    final long connectionRetryIntervalSecs = 1;
+    final long connectionWaitSecs = 1000;
+    final long connectionRetryIntervalMs = 1000;
     YarnConfiguration conf = createNMConfig();
-    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS,
+    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS,
         connectionWaitSecs);
     conf.setLong(YarnConfiguration
-        .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
-        connectionRetryIntervalSecs);
+        .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
+        connectionRetryIntervalMs);
     conf.setLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS, 5000);
     CyclicBarrier syncBarrier = new CyclicBarrier(2);
     nm = new MyNodeManager2(syncBarrier, conf);
