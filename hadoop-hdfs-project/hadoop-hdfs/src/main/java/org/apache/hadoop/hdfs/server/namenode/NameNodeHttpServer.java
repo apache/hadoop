@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -70,65 +71,30 @@ public class NameNodeHttpServer {
   public void start() throws IOException {
     final String infoHost = bindAddress.getHostName();
     int infoPort = bindAddress.getPort();
+    httpServer = new HttpServer.Builder().setName("hdfs")
+        .setBindAddress(infoHost).setPort(infoPort)
+        .setFindPort(infoPort == 0).setConf(conf).setACL(
+            new AccessControlList(conf.get(DFS_ADMIN, " ")))
+        .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
+        .setUsernameConfKey(
+            DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY)
+        .setKeytabConfKey(DFSUtil.getSpnegoKeytabKey(conf,
+            DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY)).build();
+    if (WebHdfsFileSystem.isEnabled(conf, HttpServer.LOG)) {
+      //add SPNEGO authentication filter for webhdfs
+      final String name = "SPNEGO";
+      final String classname = AuthFilter.class.getName();
+      final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
+      Map<String, String> params = getAuthFilterParams(conf);
+      httpServer.defineFilter(httpServer.getWebAppContext(), name, classname, params,
+          new String[]{pathSpec});
+      HttpServer.LOG.info("Added filter '" + name + "' (class=" + classname + ")");
 
-    httpServer = new HttpServer("hdfs", infoHost, infoPort,
-                                infoPort == 0, conf,
-                                new AccessControlList(conf.get(DFS_ADMIN, " "))) {
-      {
-        // Add SPNEGO support to NameNode
-        if (UserGroupInformation.isSecurityEnabled()) {
-          initSpnego(conf,
-              DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
-              DFSUtil.getSpnegoKeytabKey(conf,
-                  DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
-        }
-        if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
-          //add SPNEGO authentication filter for webhdfs
-          final String name = "SPNEGO";
-          final String classname = AuthFilter.class.getName();
-          final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
-          Map<String, String> params = getAuthFilterParams(conf);
-          defineFilter(webAppContext, name, classname, params,
-                       new String[]{pathSpec});
-          LOG.info("Added filter '" + name + "' (class=" + classname + ")");
-
-          // add webhdfs packages
-          addJerseyResourcePackage(
-            NamenodeWebHdfsMethods.class.getPackage().getName()
-            + ";" + Param.class.getPackage().getName(), pathSpec);
-        }
+      // add webhdfs packages
+      httpServer.addJerseyResourcePackage(
+          NamenodeWebHdfsMethods.class.getPackage().getName()
+          + ";" + Param.class.getPackage().getName(), pathSpec);
       }
-
-      private Map<String, String> getAuthFilterParams(Configuration conf)
-        throws IOException {
-        Map<String, String> params = new HashMap<String, String>();
-        String principalInConf = conf
-          .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
-        if (principalInConf != null && !principalInConf.isEmpty()) {
-          params
-            .put(
-              DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-              SecurityUtil.getServerPrincipal(principalInConf,
-                                              bindAddress.getHostName()));
-        } else if (UserGroupInformation.isSecurityEnabled()) {
-          LOG.error("WebHDFS and security are enabled, but configuration property '" +
-                    DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY +
-                    "' is not set.");
-        }
-        String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
-            DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
-        if (httpKeytab != null && !httpKeytab.isEmpty()) {
-          params.put(
-            DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
-            httpKeytab);
-        } else if (UserGroupInformation.isSecurityEnabled()) {
-          LOG.error("WebHDFS and security are enabled, but configuration property '" +
-                    DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY +
-                    "' is not set.");
-        }
-        return params;
-      }
-    };
 
     boolean certSSL = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY, false);
     if (certSSL) {
@@ -152,6 +118,38 @@ public class NameNodeHttpServer {
     setupServlets(httpServer, conf);
     httpServer.start();
     httpAddress = new InetSocketAddress(bindAddress.getAddress(), httpServer.getPort());
+  }
+  
+  private Map<String, String> getAuthFilterParams(Configuration conf)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    String principalInConf = conf
+        .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
+    if (principalInConf != null && !principalInConf.isEmpty()) {
+      params
+          .put(
+              DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
+              SecurityUtil.getServerPrincipal(principalInConf,
+                                              bindAddress.getHostName()));
+    } else if (UserGroupInformation.isSecurityEnabled()) {
+      HttpServer.LOG.error(
+          "WebHDFS and security are enabled, but configuration property '" +
+          DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY +
+          "' is not set.");
+    }
+    String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
+        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
+    if (httpKeytab != null && !httpKeytab.isEmpty()) {
+      params.put(
+          DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
+          httpKeytab);
+    } else if (UserGroupInformation.isSecurityEnabled()) {
+      HttpServer.LOG.error(
+          "WebHDFS and security are enabled, but configuration property '" +
+          DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY +
+          "' is not set.");
+    }
+    return params;
   }
 
 

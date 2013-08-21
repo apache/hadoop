@@ -42,7 +42,10 @@ public class TestLogLevel extends TestCase {
       log.error("log.error1");
       assertTrue(!Level.ERROR.equals(log.getEffectiveLevel()));
 
-      HttpServer server = new HttpServer("..", "localhost", 22222, true);
+      HttpServer server = new HttpServer.Builder().setName("..")
+          .setBindAddress("localhost").setPort(22222).setFindPort(true)
+          .build();
+      
       server.start();
       int port = server.getPort();
 
