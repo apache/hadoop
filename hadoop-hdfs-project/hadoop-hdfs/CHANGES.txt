@@ -73,6 +73,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5110 Change FSDataOutputStream to HdfsDataOutputStream for opened
     streams to fix type cast error. (brandonli)
 
+    HDFS-5069 Include hadoop-nfs and hadoop-hdfs-nfs into hadoop dist for
+    NFS deployment (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
