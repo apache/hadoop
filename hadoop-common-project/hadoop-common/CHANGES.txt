@@ -67,6 +67,8 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9865.  FileContext#globStatus has a regression with respect to
     relative path.  (Chuan Lin via Colin Patrick McCabe)
 
+    HADOOP-9877. Fix listing of snapshot directories in globStatus.
+    (Binglin Chang via Andrew Wang)
 
 Release 2.1.1-beta - UNRELEASED
 
