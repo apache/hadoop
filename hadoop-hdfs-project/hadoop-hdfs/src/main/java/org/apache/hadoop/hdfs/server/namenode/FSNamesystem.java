@@ -2120,8 +2120,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return true;
   }
 
-  ContentSummary getContentSummary(String src) throws AccessControlException,
-      FileNotFoundException, UnresolvedLinkException {
+  /**
+   * Get the content summary for a specific file/dir.
+   *
+   * @param src The string representation of the path to the file
+   *
+   * @throws AccessControlException if access is denied
+   * @throws UnresolvedLinkException if a symlink is encountered.
+   * @throws FileNotFoundException if no file exists
+   * @throws IOException for issues with writing to the audit log
+   *
+   * @return object containing information regarding the file
+   *         or null if file not found
+   */
+  ContentSummary getContentSummary(String src) throws IOException {
     FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
@@ -2131,6 +2143,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return dir.getContentSummary(src);
     } finally {
       readUnlock();
+      logAuditEvent("contentSummary", src);
     }
   }
 
