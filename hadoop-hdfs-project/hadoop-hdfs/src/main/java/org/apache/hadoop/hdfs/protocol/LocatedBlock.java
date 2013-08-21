@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 
@@ -34,6 +35,8 @@ public class LocatedBlock {
   private ExtendedBlock b;
   private long offset;  // offset of the first byte of the block in the file
   private DatanodeInfo[] locs;
+  // Storage type for each replica, if reported.
+  private StorageType[] storageTypes;
   // corrupt flag is true if all of the replicas of a block are corrupt.
   // else false. If block has few corrupt replicas, they are filtered and 
   // their locations are not part of this object
@@ -50,6 +53,12 @@ public class LocatedBlock {
 
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, long startOffset, 
                       boolean corrupt) {
+    this(b, locs, null, startOffset, corrupt);
+  }
+
+  public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs,
+                      StorageType[] storageTypes, long startOffset,
+                      boolean corrupt) {
     this.b = b;
     this.offset = startOffset;
     this.corrupt = corrupt;
@@ -58,6 +67,7 @@ public class LocatedBlock {
     } else {
       this.locs = locs;
     }
+    this.storageTypes = storageTypes;
   }
 
   public Token<BlockTokenIdentifier> getBlockToken() {
@@ -74,6 +84,14 @@ public class LocatedBlock {
 
   public DatanodeInfo[] getLocations() {
     return locs;
+  }
+
+  public void setStorageTypes(StorageType[] storageTypes) {
+    this.storageTypes = storageTypes;
+  }
+
+  public StorageType[] getStorageTypes() {
+    return storageTypes;
   }
   
   public long getStartOffset() {

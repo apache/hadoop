@@ -25,9 +25,11 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
@@ -92,6 +94,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto.File
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto.NamenodeRoleProto;
@@ -566,6 +569,12 @@ public class PBHelper {
     for (int i = 0; i < locs.length; i++) {
       builder.addLocs(i, PBHelper.convert(locs[i]));
     }
+    StorageType[] storageTypes = b.getStorageTypes();
+    if (storageTypes != null) {
+      for (int i = 0; i < storageTypes.length; ++i) {
+        builder.addStorageTypes(PBHelper.convertStorageType(storageTypes[i]));
+      }
+    }
     return builder.setB(PBHelper.convert(b.getBlock()))
         .setBlockToken(PBHelper.convert(b.getBlockToken()))
         .setCorrupt(b.isCorrupt()).setOffset(b.getStartOffset()).build();
@@ -578,8 +587,22 @@ public class PBHelper {
     for (int i = 0; i < locs.size(); i++) {
       targets[i] = PBHelper.convert(locs.get(i));
     }
+
+    List<StorageTypeProto> storageTypesList = proto.getStorageTypesList();
+    StorageType[] storageTypes = new StorageType[locs.size()];
+
+
+    // The media should correspond to targets 1:1. If not then
+    // ignore the media information (left as default).
+    if ((storageTypesList != null) &&
+        (storageTypesList.size() == locs.size())) {
+      for (int i = 0; i < storageTypesList.size(); ++i) {
+        storageTypes[i] = PBHelper.convertType(storageTypesList.get(i));
+      }
+    }
+
     LocatedBlock lb = new LocatedBlock(PBHelper.convert(proto.getB()), targets,
-        proto.getOffset(), proto.getCorrupt());
+        storageTypes, proto.getOffset(), proto.getCorrupt());
     lb.setBlockToken(PBHelper.convert(proto.getBlockToken()));
     return lb;
   }
@@ -1327,11 +1350,12 @@ public class PBHelper {
 
   public static DatanodeStorageProto convert(DatanodeStorage s) {
     return DatanodeStorageProto.newBuilder()
-        .setState(PBHelper.convert(s.getState()))
+        .setState(PBHelper.convertState(s.getState()))
+        .setStorageType(PBHelper.convertStorageType(s.getStorageType()))
         .setStorageID(s.getStorageID()).build();
   }
 
-  private static StorageState convert(State state) {
+  private static StorageState convertState(State state) {
     switch(state) {
     case READ_ONLY:
       return StorageState.READ_ONLY;
@@ -1341,17 +1365,51 @@ public class PBHelper {
     }
   }
 
-  public static DatanodeStorage convert(DatanodeStorageProto s) {
-    return new DatanodeStorage(s.getStorageID(), PBHelper.convert(s.getState()));
+  private static StorageTypeProto convertStorageType(
+      StorageType type) {
+    switch(type) {
+    case DISK:
+      return StorageTypeProto.DISK;
+    case SSD:
+      return StorageTypeProto.SSD;
+    default:
+      Preconditions.checkState(
+          false,
+          "Failed to update StorageTypeProto with new StorageType " +
+              type.toString());
+      return StorageTypeProto.DISK;
+    }
   }
 
-  private static State convert(StorageState state) {
+  public static DatanodeStorage convert(DatanodeStorageProto s) {
+    if (s.hasStorageType()) {
+      return new DatanodeStorage(s.getStorageID(),
+                                 PBHelper.convertState(s.getState()),
+                                 PBHelper.convertType(s.getStorageType()));
+    } else {
+      return new DatanodeStorage(s.getStorageID(),
+                                 PBHelper.convertState(s.getState()));
+    }
+  }
+
+  private static State convertState(StorageState state) {
     switch(state) {
     case READ_ONLY:
       return DatanodeStorage.State.READ_ONLY;
     case NORMAL:
     default:
       return DatanodeStorage.State.NORMAL;
+    }
+  }
+
+  private static StorageType convertType(StorageTypeProto type) {
+    switch(type) {
+      case DISK:
+        return StorageType.DISK;
+      case SSD:
+        return StorageType.SSD;
+      default:
+        return StorageType.DEFAULT;
     }
   }
 

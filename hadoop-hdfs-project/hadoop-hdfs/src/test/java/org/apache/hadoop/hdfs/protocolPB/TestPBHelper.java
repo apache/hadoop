@@ -17,13 +17,16 @@
  */
 package org.apache.hadoop.hdfs.protocolPB;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -35,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeStorageProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockWithLocationsProto;
@@ -57,17 +61,9 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
-import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
+import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
-import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
-import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
@@ -153,6 +149,12 @@ public class TestPBHelper {
     assertEquals(dn.getXferPort(), dn2.getXferPort());
     assertEquals(dn.getInfoPort(), dn2.getInfoPort());
     assertEquals(dn.getIpcPort(), dn2.getIpcPort());
+  }
+
+  void compare(DatanodeStorage dns1, DatanodeStorage dns2) {
+    assertThat(dns2.getStorageID(), is(dns1.getStorageID()));
+    assertThat(dns2.getState(), is(dns1.getState()));
+    assertThat(dns2.getStorageType(), is(dns1.getStorageType()));
   }
 
   @Test
@@ -428,6 +430,29 @@ public class TestPBHelper {
         DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h3", 
             AdminStates.NORMAL)
     };
+    StorageType[] media = {
+        StorageType.DISK,
+        StorageType.SSD,
+        StorageType.DISK
+    };
+    LocatedBlock lb = new LocatedBlock(
+        new ExtendedBlock("bp12", 12345, 10, 53), dnInfos, 5, false);
+    lb.setBlockToken(new Token<BlockTokenIdentifier>(
+        "identifier".getBytes(), "password".getBytes(), new Text("kind"),
+        new Text("service")));
+    lb.setStorageTypes(media);
+    return lb;
+  }
+
+  private LocatedBlock createLocatedBlockNoStorageMedia() {
+    DatanodeInfo[] dnInfos = {
+        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h1",
+                                         AdminStates.DECOMMISSION_INPROGRESS),
+        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h2",
+                                         AdminStates.DECOMMISSIONED),
+        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h3",
+                                         AdminStates.NORMAL)
+    };
     LocatedBlock lb = new LocatedBlock(
         new ExtendedBlock("bp12", 12345, 10, 53), dnInfos, 5, false);
     lb.setBlockToken(new Token<BlockTokenIdentifier>(
@@ -439,6 +464,14 @@ public class TestPBHelper {
   @Test
   public void testConvertLocatedBlock() {
     LocatedBlock lb = createLocatedBlock();
+    LocatedBlockProto lbProto = PBHelper.convert(lb);
+    LocatedBlock lb2 = PBHelper.convert(lbProto);
+    compare(lb,lb2);
+  }
+
+  @Test
+  public void testConvertLocatedBlockNoStorageMedia() {
+    LocatedBlock lb = createLocatedBlockNoStorageMedia();
     LocatedBlockProto lbProto = PBHelper.convert(lb);
     LocatedBlock lb2 = PBHelper.convert(lbProto);
     compare(lb,lb2);
@@ -486,6 +519,16 @@ public class TestPBHelper {
     compare(reg.getExportedKeys(), reg2.getExportedKeys());
     compare(reg, reg2);
     assertEquals(reg.getSoftwareVersion(), reg2.getSoftwareVersion());
+  }
+
+  @Test
+  public void TestConvertDatanodeStorage() {
+    DatanodeStorage dns1 = new DatanodeStorage(
+        "id1", DatanodeStorage.State.NORMAL, StorageType.SSD);
+
+    DatanodeStorageProto proto = PBHelper.convert(dns1);
+    DatanodeStorage dns2 = PBHelper.convert(proto);
+    compare(dns1, dns2);
   }
   
   @Test

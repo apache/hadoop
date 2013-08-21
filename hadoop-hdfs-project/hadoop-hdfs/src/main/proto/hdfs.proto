@@ -113,6 +113,13 @@ message FsPermissionProto {
   required uint32 perm = 1;       // Actually a short - only 16bits used
 }
 
+/**
+ * Types of recognized storage media.
+ */
+enum StorageTypeProto {
+  DISK = 1;
+  SSD = 2;
+}
 
 /**
  * A LocatedBlock gives information about a block and its location.
@@ -126,6 +133,7 @@ message LocatedBlockProto {
                                         // their locations are not part of this object
 
   required hadoop.common.TokenProto blockToken = 5;
+  repeated StorageTypeProto storageTypes = 6;
 }
 
 message DataEncryptionKeyProto {

@@ -55,6 +55,7 @@ message DatanodeStorageProto {
 
   required string storageID = 1;    // Unique identifier for the storage
   optional StorageState state = 2 [default = NORMAL];
+  optional StorageTypeProto storageType = 3;
 }
 
 /**

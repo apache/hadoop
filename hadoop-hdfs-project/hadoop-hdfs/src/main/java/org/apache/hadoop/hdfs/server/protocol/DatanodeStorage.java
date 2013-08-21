@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
+import org.apache.hadoop.hdfs.StorageType;
+
 /**
  * Class captures information of a storage in Datanode.
  */
@@ -29,18 +31,26 @@ public class DatanodeStorage {
   
   private final String storageID;
   private final State state;
+  private final StorageType storageType;
 
   /**
-   * Create a storage with {@link State#NORMAL}.
+   * Create a storage with {@link State#NORMAL} and
+   * {@link org.apache.hadoop.hdfs.StorageType#DEFAULT}.
+   *
    * @param storageID
    */
   public DatanodeStorage(String storageID) {
-    this(storageID, State.NORMAL);
+    this(storageID, State.NORMAL, StorageType.DEFAULT);
   }
 
   public DatanodeStorage(String sid, State s) {
-    storageID = sid;
-    state = s;
+    this(sid, s, StorageType.DEFAULT);
+  }
+
+  public DatanodeStorage(String sid, State s, StorageType sm) {
+    this.storageID = sid;
+    this.state = s;
+    this.storageType = sm;
   }
 
   public String getStorageID() {
@@ -49,5 +59,9 @@ public class DatanodeStorage {
 
   public State getState() {
     return state;
+  }
+
+  public StorageType getStorageType() {
+    return storageType;
   }
 }
