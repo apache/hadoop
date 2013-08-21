@@ -89,6 +89,11 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5001. LocalJobRunner has race condition resulting in job
     failures (Sandy Ryza via jlowe)
 
+    MAPREDUCE-5466. Changed MR AM to not promote history files of intermediate
+    AMs in case they are exiting because of errors and thus help history-server
+    pick up the right history file for the last successful AM. (Jian He via
+    vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

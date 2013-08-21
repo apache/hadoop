@@ -72,6 +72,8 @@ public class JobUnsuccessfulCompletionEvent implements HistoryEvent {
   public EventType getEventType() {
     if ("FAILED".equals(getStatus())) {
       return EventType.JOB_FAILED;
+    } else if ("ERROR".equals(getStatus())) {
+      return EventType.JOB_ERROR;
     } else
       return EventType.JOB_KILLED;
   }

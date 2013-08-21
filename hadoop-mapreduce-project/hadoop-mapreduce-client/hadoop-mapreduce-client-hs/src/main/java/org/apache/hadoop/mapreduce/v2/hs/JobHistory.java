@@ -381,4 +381,10 @@ public class JobHistory extends AbstractService implements HistoryContext {
     // Not implemented.
     return null;
   }
+
+  @Override
+  public boolean isLastAMRetry() {
+    // bogus - Not Required
+    return false;
+  }
 }

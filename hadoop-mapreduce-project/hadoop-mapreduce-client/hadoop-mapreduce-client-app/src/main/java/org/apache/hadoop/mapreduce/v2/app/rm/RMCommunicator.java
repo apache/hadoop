@@ -36,9 +36,12 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -223,6 +226,7 @@ public abstract class RMCommunicator extends AbstractService
 
   protected void startAllocatorThread() {
     allocatorThread = new Thread(new Runnable() {
+      @SuppressWarnings("unchecked")
       @Override
       public void run() {
         while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
@@ -232,6 +236,15 @@ public abstract class RMCommunicator extends AbstractService
               heartbeat();
             } catch (YarnRuntimeException e) {
               LOG.error("Error communicating with RM: " + e.getMessage() , e);
+              return;
+            } catch (InvalidToken e) {
+              // This can happen if the RM has been restarted, since currently
+              // when RM restarts AMRMToken is not populated back to
+              // AMRMTokenSecretManager yet. Once this is fixed, no need
+              // to send JOB_AM_REBOOT event in this method any more.
+              eventHandler.handle(new JobEvent(job.getID(),
+                JobEventType.JOB_AM_REBOOT));
+              LOG.error("Error in authencating with RM: " ,e);
               return;
             } catch (Exception e) {
               LOG.error("ERROR IN CONTACTING RM. ", e);
