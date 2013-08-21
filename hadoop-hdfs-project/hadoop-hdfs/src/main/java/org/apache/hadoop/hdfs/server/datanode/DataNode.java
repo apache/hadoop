@@ -390,11 +390,15 @@ public class DataNode extends Configured
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
     this.infoServer = (secureResources == null) 
-       ? new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0, 
-           conf, new AccessControlList(conf.get(DFS_ADMIN, " ")))
-       : new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0,
-           conf, new AccessControlList(conf.get(DFS_ADMIN, " ")),
-           secureResources.getListener());
+        ? new HttpServer.Builder().setName("datanode")
+            .setBindAddress(infoHost).setPort(tmpInfoPort)
+            .setFindPort(tmpInfoPort == 0).setConf(conf)
+            .setACL(new AccessControlList(conf.get(DFS_ADMIN, " "))).build()
+        : new HttpServer.Builder().setName("datanode")
+            .setBindAddress(infoHost).setPort(tmpInfoPort)
+            .setFindPort(tmpInfoPort == 0).setConf(conf)
+            .setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))
+            .setConnector(secureResources.getListener()).build();
     LOG.info("Opened info server at " + infoHost + ":" + tmpInfoPort);
     if (conf.getBoolean(DFS_HTTPS_ENABLE_KEY, false)) {
       boolean needClientAuth = conf.getBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY,

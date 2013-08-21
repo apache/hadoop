@@ -8,6 +8,8 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9784. Add a builder for HttpServer. (Junping Du via llu)
+
     HADOOP 9871. Fix intermittent findbugs warnings in DefaultMetricsSystem.
     (Junping Du via llu)
 

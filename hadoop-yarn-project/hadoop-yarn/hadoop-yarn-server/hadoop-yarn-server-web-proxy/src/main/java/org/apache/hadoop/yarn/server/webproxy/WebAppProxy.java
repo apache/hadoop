@@ -87,8 +87,9 @@ public class WebAppProxy extends AbstractService {
   @Override
   protected void serviceStart() throws Exception {
     try {
-      proxyServer = new HttpServer("proxy", bindAddress, port,
-          port == 0, getConfig(), acl);
+      proxyServer = new HttpServer.Builder().setName("proxy")
+          .setBindAddress(bindAddress).setPort(port).setFindPort(port == 0)
+          .setConf(getConfig()).setACL(acl).build();
       proxyServer.addServlet(ProxyUriUtils.PROXY_SERVLET_NAME, 
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
       proxyServer.setAttribute(FETCHER_ATTRIBUTE, fetcher);
