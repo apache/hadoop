@@ -94,6 +94,9 @@ Release 2.1.1-beta - UNRELEASED
     pick up the right history file for the last successful AM. (Jian He via
     vinodkv)
 
+    MAPREDUCE-5468. Fix MR AM recovery for map-only jobs. (vinodkv via
+    acmurthy)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
