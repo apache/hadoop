@@ -101,6 +101,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5111. Remove duplicated error message for snapshot commands when 
     processing invalid arguments. (jing9)
 
+    HDFS-5045. Add more unit tests for retry cache to cover all AtMostOnce 
+    methods. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -598,7 +598,8 @@ public class DFSClient implements java.io.Closeable {
     return dfsClientConf.hdfsTimeout;
   }
   
-  String getClientName() {
+  @VisibleForTesting
+  public String getClientName() {
     return clientName;
   }
 
