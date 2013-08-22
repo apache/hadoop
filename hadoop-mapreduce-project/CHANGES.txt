@@ -97,6 +97,9 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5468. Fix MR AM recovery for map-only jobs. (vinodkv via
     acmurthy)
 
+    MAPREDUCE-5470. LocalJobRunner does not work on Windows. (Sandy Ryza via
+    cnauroth)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
