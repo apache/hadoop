@@ -147,6 +147,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9880. SASL changes from HADOOP-9421 breaks Secure HA NN. (daryn via
     jing9)
 
+    HADOOP-9887. globStatus does not correctly handle paths starting with a drive
+    spec on Windows. (Chuan Liu via cnauroth)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
