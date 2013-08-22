@@ -100,6 +100,9 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5470. LocalJobRunner does not work on Windows. (Sandy Ryza via
     cnauroth)
 
+    MAPREDUCE-5476. Changed MR AM recovery code to cleanup staging-directory
+    only after unregistering from the RM. (Jian He via vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
