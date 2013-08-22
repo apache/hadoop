@@ -35,6 +35,9 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-5001. LocalJobRunner has race condition resulting in job
     failures (Sandy Ryza via jlowe)
 
+    MAPREDUCE-5468. Fix MR AM recovery for map-only jobs. (vinodkv via
+    acmurthy)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
