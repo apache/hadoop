@@ -385,8 +385,8 @@ public class FairScheduler implements ResourceScheduler {
     // Sort containers into reverse order of priority
     Collections.sort(runningContainers, new Comparator<RMContainer>() {
       public int compare(RMContainer c1, RMContainer c2) {
-        int ret = c2.getContainer().getPriority().compareTo(
-            c1.getContainer().getPriority());
+        int ret = c1.getContainer().getPriority().compareTo(
+            c2.getContainer().getPriority());
         if (ret == 0) {
           return c2.getContainerId().compareTo(c1.getContainerId());
         }
