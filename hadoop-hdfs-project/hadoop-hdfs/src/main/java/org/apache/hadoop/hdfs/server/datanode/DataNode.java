@@ -67,15 +67,7 @@ import java.net.UnknownHostException;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.SocketChannel;
 import java.security.PrivilegedExceptionAction;
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -138,12 +130,8 @@ import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.resources.DatanodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.namenode.FileChecksumServlets;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
+import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpServer;
@@ -1041,30 +1029,7 @@ public class DataNode extends Configured
   
   public static void setNewStorageID(DatanodeID dnId) {
     LOG.info("Datanode is " + dnId);
-    dnId.setStorageID(createNewStorageId(dnId.getXferPort()));
-  }
-  
-  /**
-   * @return a unique storage ID of form "DS-randInt-ipaddr-port-timestamp"
-   */
-  static String createNewStorageId(int port) {
-    // It is unlikely that we will create a non-unique storage ID
-    // for the following reasons:
-    // a) SecureRandom is a cryptographically strong random number generator
-    // b) IP addresses will likely differ on different hosts
-    // c) DataNode xfer ports will differ on the same host
-    // d) StorageIDs will likely be generated at different times (in ms)
-    // A conflict requires that all four conditions are violated.
-    // NB: The format of this string can be changed in the future without
-    // requiring that old SotrageIDs be updated.
-    String ip = "unknownIP";
-    try {
-      ip = DNS.getDefaultIP("default");
-    } catch (UnknownHostException ignored) {
-      LOG.warn("Could not find an IP address for the \"default\" inteface.");
-    }
-    int rand = DFSUtil.getSecureRandom().nextInt(Integer.MAX_VALUE);
-    return "DS-" + rand + "-" + ip + "-" + port + "-" + Time.now();
+    dnId.setStorageID(DatanodeStorage.newStorageID());
   }
   
   /** Ensure the authentication method is kerberos */

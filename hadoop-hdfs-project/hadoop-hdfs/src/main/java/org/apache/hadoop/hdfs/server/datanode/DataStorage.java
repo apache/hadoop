@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
@@ -106,11 +107,11 @@ public class DataStorage extends Storage {
   }
 
   /** Create an ID for this storage. */
-  public synchronized void createStorageID(int datanodePort) {
+  public synchronized void createStorageID() {
     if (storageID != null && !storageID.isEmpty()) {
       return;
     }
-    storageID = DataNode.createNewStorageId(datanodePort);
+    storageID = DatanodeStorage.newStorageID();
   }
   
   /**
@@ -194,7 +195,7 @@ public class DataStorage extends Storage {
     }
     
     // make sure we have storage id set - if not - generate new one
-    createStorageID(datanode.getXferPort());
+    createStorageID();
     
     // 3. Update all storages. Some of them might have just been formatted.
     this.writeAll();
