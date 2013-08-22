@@ -91,7 +91,7 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void startInternal() throws Exception {
+  protected synchronized void startInternal() throws Exception {
     // create filesystem only now, as part of service-start. By this time, RM is
     // authenticated with kerberos so we are good to create a file-system
     // handle.
