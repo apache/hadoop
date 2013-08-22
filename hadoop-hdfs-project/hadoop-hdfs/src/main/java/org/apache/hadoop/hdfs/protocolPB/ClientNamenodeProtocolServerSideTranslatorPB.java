@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.protocolPB;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -25,6 +26,14 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hdfs.protocol.PathCacheDirective;
+import org.apache.hadoop.hdfs.protocol.PathCacheEntry;
+import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.EmptyPathError;
+import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPathNameError;
+import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPoolNameError;
+import org.apache.hadoop.hdfs.protocol.RemovePathCacheEntryException.InvalidIdException;
+import org.apache.hadoop.hdfs.protocol.RemovePathCacheEntryException.NoSuchIdException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -37,6 +46,10 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Abando
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.PathCacheDirectiveProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddPathCacheDirectiveErrorProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddPathCacheDirectivesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddPathCacheDirectivesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowSnapshotRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendRequestProto;
@@ -92,6 +105,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSna
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathCacheEntriesElementProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathCacheEntriesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathCacheEntriesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveRequestProto;
@@ -102,6 +118,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Recove
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RecoverLeaseResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemovePathCacheEntryErrorProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemovePathCacheEntriesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemovePathCacheEntriesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2RequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2ResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameRequestProto;
@@ -142,6 +161,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
+import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenResponseProto;
@@ -150,6 +170,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRespons
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Fallible;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -1003,5 +1024,95 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
   }
-  
+
+  @Override
+  public AddPathCacheDirectivesResponseProto addPathCacheDirectives(RpcController controller,
+      AddPathCacheDirectivesRequestProto request) throws ServiceException {
+    try {
+      ArrayList<PathCacheDirective> input =
+          new ArrayList<PathCacheDirective>(request.getElementsCount());
+      for (int i = 0; i < request.getElementsCount(); i++) {
+        PathCacheDirectiveProto proto = request.getElements(i);
+        input.add(new PathCacheDirective(proto.getPath(), proto.getPool()));
+      }
+      List<Fallible<PathCacheEntry>> output = server.addPathCacheDirectives(input);
+      AddPathCacheDirectivesResponseProto.Builder builder =
+         AddPathCacheDirectivesResponseProto.newBuilder();
+      for (int idx = 0; idx < output.size(); idx++) {
+        try {
+          PathCacheEntry entry = output.get(idx).get();
+          builder.addResults(entry.getEntryId());
+        } catch (EmptyPathError ioe) {
+          builder.addResults(AddPathCacheDirectiveErrorProto.
+              EMPTY_PATH_ERROR_VALUE);
+        } catch (InvalidPathNameError ioe) {
+          builder.addResults(AddPathCacheDirectiveErrorProto.
+              INVALID_PATH_NAME_ERROR_VALUE);
+        } catch (InvalidPoolNameError ioe) {
+          builder.addResults(AddPathCacheDirectiveErrorProto.
+              INVALID_POOL_NAME_ERROR_VALUE);
+        } catch (IOException ioe) {
+          builder.addResults(AddPathCacheDirectiveErrorProto.
+              UNEXPECTED_ADD_ERROR_VALUE);
+        }
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RemovePathCacheEntriesResponseProto removePathCacheEntries(
+      RpcController controller, RemovePathCacheEntriesRequestProto request)
+      throws ServiceException {
+    try {
+      List<Fallible<Long>> output =
+         server.removePathCacheEntries(request.getElementsList());
+      RemovePathCacheEntriesResponseProto.Builder builder =
+         RemovePathCacheEntriesResponseProto.newBuilder();
+      for (int idx = 0; idx < output.size(); idx++) {
+        try {
+          long id = output.get(idx).get();
+          builder.addResults(id);
+        } catch (InvalidIdException ioe) {
+          builder.addResults(RemovePathCacheEntryErrorProto.
+              INVALID_CACHED_PATH_ID_ERROR_VALUE);
+        } catch (NoSuchIdException ioe) {
+          builder.addResults(RemovePathCacheEntryErrorProto.
+              NO_SUCH_CACHED_PATH_ID_ERROR_VALUE);
+        } catch (IOException ioe) {
+          builder.addResults(RemovePathCacheEntryErrorProto.
+              UNEXPECTED_REMOVE_ERROR_VALUE);
+        }
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ListPathCacheEntriesResponseProto listPathCacheEntries(RpcController controller,
+      ListPathCacheEntriesRequestProto request) throws ServiceException {
+    try {
+      RemoteIterator<PathCacheEntry> iter =
+         server.listPathCacheEntries(request.getPrevId(),
+             request.getPool(),
+             request.getMaxReplies());
+      ListPathCacheEntriesResponseProto.Builder builder =
+          ListPathCacheEntriesResponseProto.newBuilder();
+      while (iter.hasNext()) {
+        PathCacheEntry entry = iter.next();
+        builder.addElements(
+            ListPathCacheEntriesElementProto.newBuilder().
+              setId(entry.getEntryId()).
+              setPath(entry.getDirective().getPath()).
+              setPool(entry.getDirective().getPool()));
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
 }

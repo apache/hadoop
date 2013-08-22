@@ -12,6 +12,9 @@ HDFS-4949 (Unreleased)
     HDFS-5051.  Propagate cache status information from the DataNode to the
     NameNode  (Andrew Wang via Colin Patrick McCabe)
 
+    HDFS-5052.  Add cacheRequest/uncacheRequest support to NameNode.
+    (contributed by Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES

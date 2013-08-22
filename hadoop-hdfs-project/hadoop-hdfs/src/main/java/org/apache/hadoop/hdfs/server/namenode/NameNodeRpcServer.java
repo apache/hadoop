@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -44,6 +45,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -58,6 +60,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.PathCacheDirective;
+import org.apache.hadoop.hdfs.protocol.PathCacheEntry;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -133,6 +137,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetUserMappingsProtocolService;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
+import org.apache.hadoop.util.Fallible;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 
@@ -1199,5 +1204,82 @@ class NameNodeRpcServer implements NamenodeProtocols {
         earlierSnapshotName, laterSnapshotName);
     metrics.incrSnapshotDiffReportOps();
     return report;
+  }
+
+  @Override
+  public List<Fallible<PathCacheEntry>> addPathCacheDirectives(
+      List<PathCacheDirective> paths) throws IOException {
+    return namesystem.addPathCacheDirectives(paths);
+  }
+
+  @Override
+  public List<Fallible<Long>> removePathCacheEntries(List<Long> ids)
+      throws IOException {
+    return namesystem.removePathCacheEntries(ids);
+  }
+
+  private class PathCacheEntriesIterator
+      implements RemoteIterator<PathCacheEntry> {
+    private long prevId;
+    private final String pool;
+    private final int repliesPerRequest;
+    private List<PathCacheEntry> entries;
+    private int idx;
+
+    public PathCacheEntriesIterator(long prevId, String pool,
+        int repliesPerRequest) {
+      this.prevId = prevId;
+      this.pool = pool;
+      this.repliesPerRequest = repliesPerRequest;
+      this.entries = null;
+      this.idx = -1;
+    }
+
+    private void makeRequest() throws IOException {
+      idx = 0;
+      entries = null;
+      entries = namesystem.listPathCacheEntries(prevId, pool,
+          repliesPerRequest);
+      if (entries.isEmpty()) {
+        entries = null;
+      }
+    }
+
+    private void makeRequestIfNeeded() throws IOException {
+      if (idx == -1) {
+        makeRequest();
+      } else if ((entries != null) && (idx >= entries.size())) {
+        if (entries.size() < repliesPerRequest) {
+          // Last time, we got fewer entries than requested.
+          // So we should be at the end.
+          entries = null;
+        } else {
+          makeRequest();
+        }
+      }
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      makeRequestIfNeeded();
+      return (entries != null);
+    }
+
+    @Override
+    public PathCacheEntry next() throws IOException {
+      makeRequestIfNeeded();
+      if (entries == null) {
+        throw new NoSuchElementException();
+      }
+      PathCacheEntry entry = entries.get(idx++);
+      prevId = entry.getEntryId();
+      return entry;
+    }
+  }
+  
+  @Override
+  public RemoteIterator<PathCacheEntry> listPathCacheEntries(long prevId, String pool,
+      int maxReplies) throws IOException {
+    return new PathCacheEntriesIterator(prevId, pool, maxReplies);
   }
 }

@@ -363,6 +363,57 @@ message IsFileClosedResponseProto {
   required bool result = 1;
 }
 
+message PathCacheDirectiveProto {
+  required string path = 1;
+  required string pool = 2;
+}
+
+message AddPathCacheDirectivesRequestProto {
+  repeated PathCacheDirectiveProto elements = 1;
+}
+
+message AddPathCacheDirectivesResponseProto {
+  repeated int64 results = 1 [packed=true];
+}
+
+enum AddPathCacheDirectiveErrorProto {
+  EMPTY_PATH_ERROR = -1;
+  INVALID_PATH_NAME_ERROR = -2;
+  INVALID_POOL_NAME_ERROR = -3;
+  UNEXPECTED_ADD_ERROR = -4;
+}
+
+message RemovePathCacheEntriesRequestProto {
+  repeated int64 elements = 1 [packed=true];
+}
+
+message RemovePathCacheEntriesResponseProto {
+  repeated int64 results = 1 [packed=true];
+}
+
+enum RemovePathCacheEntryErrorProto {
+  INVALID_CACHED_PATH_ID_ERROR = -1;
+  NO_SUCH_CACHED_PATH_ID_ERROR = -2;
+  UNEXPECTED_REMOVE_ERROR = -3;
+}
+
+message ListPathCacheEntriesRequestProto {
+  required int64 prevId = 1;
+  required string pool = 2;
+  optional int32 maxReplies = 3;
+}
+
+message ListPathCacheEntriesElementProto {
+  required int64 id = 1;
+  required string path = 2;
+  required string pool = 3;
+}
+
+message ListPathCacheEntriesResponseProto {
+  repeated ListPathCacheEntriesElementProto elements = 1;
+  required bool hasMore = 2;
+}
+
 message GetFileLinkInfoRequestProto {
   required string src = 1;
 }
@@ -544,6 +595,12 @@ service ClientNamenodeProtocol {
       returns(ListCorruptFileBlocksResponseProto);
   rpc metaSave(MetaSaveRequestProto) returns(MetaSaveResponseProto);
   rpc getFileInfo(GetFileInfoRequestProto) returns(GetFileInfoResponseProto);
+  rpc addPathCacheDirectives(AddPathCacheDirectivesRequestProto)
+      returns (AddPathCacheDirectivesResponseProto);
+  rpc removePathCacheEntries(RemovePathCacheEntriesRequestProto)
+      returns (RemovePathCacheEntriesResponseProto);
+  rpc listPathCacheEntries(ListPathCacheEntriesRequestProto)
+      returns (ListPathCacheEntriesResponseProto);
   rpc getFileLinkInfo(GetFileLinkInfoRequestProto)
       returns(GetFileLinkInfoResponseProto);
   rpc getContentSummary(GetContentSummaryRequestProto)

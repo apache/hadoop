@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -46,6 +48,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.util.Fallible;
 
 /**********************************************************************
  * ClientProtocol is used by user code via 
@@ -1093,5 +1096,53 @@ public interface ClientProtocol {
   @Idempotent
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,
       String fromSnapshot, String toSnapshot) throws IOException;
+
+  /**
+   * Add some path cache directives to the CacheManager.
+   *
+   * @param directives
+   *          A list of all the path cache directives we want to add.
+   * @return
+   *          An list where each element is either a path cache entry that was
+   *          added, or an IOException exception describing why the directive
+   *          could not be added.
+   */
+  @AtMostOnce
+  public List<Fallible<PathCacheEntry>>
+    addPathCacheDirectives(List<PathCacheDirective> directives)
+      throws IOException;
+
+  /**
+   * Remove some path cache entries from the CacheManager.
+   *
+   * @param ids
+   *          A list of all the IDs we want to remove from the CacheManager.
+   * @return
+   *          An list where each element is either an ID that was removed,
+   *          or an IOException exception describing why the ID could not be
+   *          removed.
+   */
+  @AtMostOnce
+  public List<Fallible<Long>> removePathCacheEntries(List<Long> ids)
+      throws IOException;
+
+  /**
+   * List cached paths on the server.
+   *
+   * @param prevId
+   *          The previous ID that we listed, or 0 if this is the first call
+   *          to listPathCacheEntries.
+   * @param pool
+   *          The pool ID to list.  If this is the empty string, all pool ids
+   *          will be listed.
+   * @param maxRepliesPerRequest
+   *          The maximum number of replies to make in each request.
+   * @return
+   *          A RemoteIterator from which you can get PathCacheEntry objects.
+   *          Requests will be made as needed.
+   */
+  @Idempotent
+  public RemoteIterator<PathCacheEntry> listPathCacheEntries(long prevId,
+      String pool, int maxRepliesPerRequest) throws IOException;
 }
 

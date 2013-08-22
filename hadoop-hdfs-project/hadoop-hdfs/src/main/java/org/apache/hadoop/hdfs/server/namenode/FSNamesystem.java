@@ -129,6 +129,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -141,6 +142,8 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.PathCacheDirective;
+import org.apache.hadoop.hdfs.protocol.PathCacheEntry;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -223,6 +226,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.Fallible;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
@@ -360,6 +364,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   FSDirectory dir;
   private final BlockManager blockManager;
   private final SnapshotManager snapshotManager;
+  private final CacheManager cacheManager;
   private final DatanodeStatistics datanodeStatistics;
 
   // Block pool ID used by this namenode
@@ -687,6 +692,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(fsImage, this, conf);
       this.snapshotManager = new SnapshotManager(dir);
+      this.cacheManager= new CacheManager(dir, conf);
       this.safeMode = new SafeModeInfo(conf);
       this.auditLoggers = initAuditLoggers(conf);
       this.isDefaultAuditLogger = auditLoggers.size() == 1 &&
@@ -6741,6 +6747,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
+  List<Fallible<PathCacheEntry>> addPathCacheDirectives(
+      List<PathCacheDirective> directives) {
+    return cacheManager.addDirectives(directives);
+  }
+
+  List<Fallible<Long>> removePathCacheEntries(List<Long> ids) {
+    return cacheManager.removeEntries(ids);
+  }
+
+  List<PathCacheEntry> listPathCacheEntries(long startId, String pool,
+      int maxReplies) {
+    return cacheManager.listPathCacheEntries(startId, pool, maxReplies);
+  }
+
   /**
    * Default AuditLogger implementation; used when no access logger is
    * defined in the config file. It can also be explicitly listed in the
@@ -6777,7 +6797,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         auditLog.info(sb);
       }
     }
-
   }
 
+  public CacheManager getCacheManager() {
+    return cacheManager;
+  }
 }
