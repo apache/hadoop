@@ -150,6 +150,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9887. globStatus does not correctly handle paths starting with a drive
     spec on Windows. (Chuan Liu via cnauroth)
 
+    HADOOP-9899. Remove the debug message, added by HADOOP-8855, from
+    KerberosAuthenticator.  (szetszwo)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
