@@ -247,7 +247,7 @@ public class PathData implements Comparable<PathData> {
     // check getPath() so scheme slashes aren't considered part of the path
     String separator = uri.getPath().endsWith(Path.SEPARATOR)
         ? "" : Path.SEPARATOR;
-    return uri + separator + basename;
+    return uriToString(uri) + separator + basename;
   }
   
   protected enum PathType { HAS_SCHEME, SCHEMELESS_ABSOLUTE, RELATIVE };
@@ -300,7 +300,7 @@ public class PathData implements Comparable<PathData> {
             if (globUri.getAuthority() == null) {
               matchUri = removeAuthority(matchUri);
             }
-            globMatch = matchUri.toString();
+            globMatch = uriToString(matchUri);
             break;
           case SCHEMELESS_ABSOLUTE: // take just the uri's path
             globMatch = matchUri.getPath();
@@ -381,19 +381,14 @@ public class PathData implements Comparable<PathData> {
    * @return String of the path
    */
   public String toString() {
+    return uriToString(uri);
+  }
+  
+  private static String uriToString(URI uri) {
     String scheme = uri.getScheme();
     // No interpretation of symbols. Just decode % escaped chars.
-    String decodedRemainder = uri.getSchemeSpecificPart();
-
-    if (scheme == null) {
-      return decodedRemainder;
-    } else {
-      StringBuilder buffer = new StringBuilder();
-      buffer.append(scheme);
-      buffer.append(":");
-      buffer.append(decodedRemainder);
-      return buffer.toString();
-    }
+    String ssp = uri.getSchemeSpecificPart();
+    return (scheme != null) ? scheme + ":" + ssp : ssp;
   }
   
   /**
