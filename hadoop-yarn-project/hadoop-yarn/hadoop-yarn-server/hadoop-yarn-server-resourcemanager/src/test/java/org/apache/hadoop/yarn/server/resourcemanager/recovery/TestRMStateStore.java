@@ -129,7 +129,10 @@ public class TestRMStateStore {
     class TestFileSystemRMStore extends FileSystemRMStateStore {
       TestFileSystemRMStore(Configuration conf) throws Exception {
         init(conf);
+        Assert.assertNull(fs);
         assertTrue(workingDirPathURI.equals(fsWorkingPath));
+        start();
+        Assert.assertNotNull(fs);
       }
     }
 
@@ -218,7 +221,7 @@ public class TestRMStateStore {
     Configuration conf = new YarnConfiguration();
     RMStateStore store = stateStoreHelper.getRMStateStore();
     TestDispatcher dispatcher = new TestDispatcher();
-    store.setDispatcher(dispatcher);
+    store.setRMDispatcher(dispatcher);
 
     AMRMTokenSecretManager appTokenMgr =
         new AMRMTokenSecretManager(conf);
@@ -327,7 +330,7 @@ public class TestRMStateStore {
       RMStateStoreHelper stateStoreHelper) throws Exception {
     RMStateStore store = stateStoreHelper.getRMStateStore();
     TestDispatcher dispatcher = new TestDispatcher();
-    store.setDispatcher(dispatcher);
+    store.setRMDispatcher(dispatcher);
 
     // store RM delegation token;
     RMDelegationTokenIdentifier dtId1 =

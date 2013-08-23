@@ -185,6 +185,7 @@ public class JobHistoryParser implements HistoryEventHandler {
       break;
     case JOB_FAILED:
     case JOB_KILLED:
+    case JOB_ERROR:
       handleJobFailedEvent((JobUnsuccessfulCompletionEvent) event);
       break;
     case JOB_FINISHED:

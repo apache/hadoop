@@ -34,6 +34,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -60,8 +61,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
  * Real store implementations need to derive from it and implement blocking
  * store and load methods to actually store and load the state.
  */
-public abstract class RMStateStore {
+public abstract class RMStateStore extends AbstractService {
+
   public static final Log LOG = LogFactory.getLog(RMStateStore.class);
+
+  public RMStateStore() {
+    super(RMStateStore.class.getName());
+  }
 
   /**
    * State of an application attempt
@@ -174,31 +180,39 @@ public abstract class RMStateStore {
    * Dispatcher used to send state operation completion events to 
    * ResourceManager services
    */
-  public void setDispatcher(Dispatcher dispatcher) {
+  public void setRMDispatcher(Dispatcher dispatcher) {
     this.rmDispatcher = dispatcher;
   }
   
   AsyncDispatcher dispatcher;
   
-  public synchronized void init(Configuration conf) throws Exception{    
+  public synchronized void serviceInit(Configuration conf) throws Exception{    
     // create async handler
     dispatcher = new AsyncDispatcher();
     dispatcher.init(conf);
     dispatcher.register(RMStateStoreEventType.class, 
                         new ForwardingEventHandler());
-    dispatcher.start();
-    
     initInternal(conf);
+  }
+  
+  protected synchronized void serviceStart() throws Exception {
+    dispatcher.start();
+    startInternal();
   }
 
   /**
    * Derived classes initialize themselves using this method.
-   * The base class is initialized and the event dispatcher is ready to use at
-   * this point
    */
   protected abstract void initInternal(Configuration conf) throws Exception;
-  
-  public synchronized void close() throws Exception {
+
+  /**
+   * Derived classes start themselves using this method.
+   * The base class is started and the event dispatcher is ready to use at
+   * this point
+   */
+  protected abstract void startInternal() throws Exception;
+
+  public synchronized void serviceStop() throws Exception {
     closeInternal();
     dispatcher.stop();
   }

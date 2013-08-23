@@ -65,7 +65,11 @@ public class MemoryRMStateStore extends RMStateStore {
   @Override
   public synchronized void initInternal(Configuration conf) {
   }
-  
+
+  @Override
+  protected synchronized void startInternal() throws Exception {
+  }
+
   @Override
   protected synchronized void closeInternal() throws Exception {
   }

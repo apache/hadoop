@@ -262,6 +262,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
     (shv)
 
+    HDFS-4994. Audit log getContentSummary() calls. (Robert Parker via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -299,6 +301,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5110 Change FSDataOutputStream to HdfsDataOutputStream for opened
     streams to fix type cast error. (brandonli)
 
+    HDFS-5069 Include hadoop-nfs and hadoop-hdfs-nfs into hadoop dist for
+    NFS deployment (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
@@ -321,6 +326,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5111. Remove duplicated error message for snapshot commands when 
     processing invalid arguments. (jing9)
+
+    HDFS-5045. Add more unit tests for retry cache to cover all AtMostOnce 
+    methods. (jing9)
 
   OPTIMIZATIONS
 
@@ -374,6 +382,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-4594. WebHDFS open sets Content-Length header to what is specified by
     length parameter rather than how much data is actually returned. (cnauroth)
+
+    HDFS-5124. DelegationTokenSecretManager#retrievePassword can cause deadlock 
+    in NameNode. (Daryn Sharp via jing9)
 
 Release 2.1.0-beta - 2013-08-22
 
@@ -3423,6 +3434,9 @@ Release 0.23.10 - UNRELEASED
   BUG FIXES
 
     HDFS-4998. TestUnderReplicatedBlocks fails intermittently (kihwal)
+
+    HDFS-4329. DFSShell issues with directories with spaces in name (Cristina
+    L. Abad via jeagles)
 
 Release 0.23.9 - 2013-07-08
 

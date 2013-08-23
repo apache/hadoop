@@ -24,6 +24,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.StringTokenizer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.ArrayList;
 
 /**
  *
@@ -32,23 +35,31 @@ import java.util.StringTokenizer;
 public abstract class CommandExecutor {  
   protected String[] getCommandAsArgs(final String cmd, final String masterKey,
 		                                       final String master) {
-    StringTokenizer tokenizer = new StringTokenizer(cmd, " ");
-    String[] args = new String[tokenizer.countTokens()];
-    
-    int i = 0;
-    while (tokenizer.hasMoreTokens()) {
-      args[i] = tokenizer.nextToken();
+    String regex = "\'([^\']*)\'|\"([^\"]*)\"|(\\S+)";
+    Matcher matcher = Pattern.compile(regex).matcher(cmd);
 
-      args[i] = args[i].replaceAll(masterKey, master);
-      args[i] = args[i].replaceAll("CLITEST_DATA", 
-        new File(CLITestHelper.TEST_CACHE_DATA_DIR).
-        toURI().toString().replace(' ', '+'));
-      args[i] = args[i].replaceAll("USERNAME", System.getProperty("user.name"));
+    ArrayList<String> args = new ArrayList<String>();
+    String arg = null;
 
-      i++;
-    }
-    
-    return args;
+    while (matcher.find()) {
+      if (matcher.group(1) != null) {
+        arg = matcher.group(1);
+      } else if (matcher.group(2) != null) {
+        arg = matcher.group(2);
+      } else {
+        arg = matcher.group(3);
+      }
+
+      arg = arg.replaceAll(masterKey, master);
+      arg = arg.replaceAll("CLITEST_DATA",
+         new File(CLITestHelper.TEST_CACHE_DATA_DIR).
+         toURI().toString().replace(' ', '+'));
+      arg = arg.replaceAll("USERNAME", System.getProperty("user.name"));
+
+      args.add(arg);
+     }
+
+    return args.toArray(new String[0]);
   }
   
   public Result executeCommand(final String cmd) throws Exception {
