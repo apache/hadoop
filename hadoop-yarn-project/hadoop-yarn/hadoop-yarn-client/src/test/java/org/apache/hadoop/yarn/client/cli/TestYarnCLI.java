@@ -363,36 +363,239 @@ public class TestYarnCLI {
 
   @Test
   public void testListClusterNodes() throws Exception {
+    List<NodeReport> nodeReports = new ArrayList<NodeReport>();
+    nodeReports.addAll(getNodeReports(1, NodeState.NEW));
+    nodeReports.addAll(getNodeReports(2, NodeState.RUNNING));
+    nodeReports.addAll(getNodeReports(1, NodeState.UNHEALTHY));
+    nodeReports.addAll(getNodeReports(1, NodeState.DECOMMISSIONED));
+    nodeReports.addAll(getNodeReports(1, NodeState.REBOOTED));
+    nodeReports.addAll(getNodeReports(1, NodeState.LOST));
+
     NodeCLI cli = new NodeCLI();
-    when(client.getNodeReports(NodeState.RUNNING)).thenReturn(
-        getNodeReports(3));
     cli.setClient(client);
     cli.setSysOutPrintStream(sysOut);
-    int result = cli.run(new String[] { "-list" });
+
+    Set<NodeState> nodeStates = new HashSet<NodeState>();
+    nodeStates.add(NodeState.NEW);
+    NodeState[] states = nodeStates.toArray(new NodeState[0]);
+    when(client.getNodeReports(states))
+        .thenReturn(getNodeReports(nodeReports, nodeStates));
+    int result = cli.run(new String[] { "-list", "--states", "NEW" });
     assertEquals(0, result);
-    verify(client).getNodeReports(NodeState.RUNNING);
+    verify(client).getNodeReports(states);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
-    pw.println("Total Nodes:3");
-    pw.print("         Node-Id\tNode-State\tNode-Http-Address\t");
+    pw.println("Total Nodes:1");
+    pw.print("         Node-Id\t     Node-State\tNode-Http-Address\t");
     pw.println("Running-Containers");
-    pw.print("         host0:0\t   RUNNING\t       host1:8888");
-    pw.println("\t                 0");
-    pw.print("         host1:0\t   RUNNING\t       host1:8888");
-    pw.println("\t                 0");
-    pw.print("         host2:0\t   RUNNING\t       host1:8888");
+    pw.print("         host0:0\t            NEW\t       host1:8888");
     pw.println("\t                 0");
     pw.close();
     String nodesReportStr = baos.toString("UTF-8");
     Assert.assertEquals(nodesReportStr, sysOutStream.toString());
     verify(sysOut, times(1)).write(any(byte[].class), anyInt(), anyInt());
+
+    sysOutStream.reset();
+    nodeStates.clear();
+    nodeStates.add(NodeState.RUNNING);
+    states = nodeStates.toArray(new NodeState[0]);
+    when(client.getNodeReports(states))
+        .thenReturn(getNodeReports(nodeReports, nodeStates));
+    result = cli.run(new String[] { "-list", "--states", "RUNNING" });
+    assertEquals(0, result);
+    verify(client).getNodeReports(states);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total Nodes:2");
+    pw.print("         Node-Id\t     Node-State\tNode-Http-Address\t");
+    pw.println("Running-Containers");
+    pw.print("         host0:0\t        RUNNING\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host1:0\t        RUNNING\t       host1:8888");
+    pw.println("\t                 0");
+    pw.close();
+    nodesReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    verify(sysOut, times(2)).write(any(byte[].class), anyInt(), anyInt());
+
+    sysOutStream.reset();
+    result = cli.run(new String[] { "-list" });
+    assertEquals(0, result);
+    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    verify(sysOut, times(3)).write(any(byte[].class), anyInt(), anyInt());
+
+    sysOutStream.reset();
+    nodeStates.clear();
+    nodeStates.add(NodeState.UNHEALTHY);
+    states = nodeStates.toArray(new NodeState[0]);
+    when(client.getNodeReports(states))
+        .thenReturn(getNodeReports(nodeReports, nodeStates));
+    result = cli.run(new String[] { "-list", "--states", "UNHEALTHY" });
+    assertEquals(0, result);
+    verify(client).getNodeReports(states);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total Nodes:1");
+    pw.print("         Node-Id\t     Node-State\tNode-Http-Address\t");
+    pw.println("Running-Containers");
+    pw.print("         host0:0\t      UNHEALTHY\t       host1:8888");
+    pw.println("\t                 0");
+    pw.close();
+    nodesReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
+
+    sysOutStream.reset();
+    nodeStates.clear();
+    nodeStates.add(NodeState.DECOMMISSIONED);
+    states = nodeStates.toArray(new NodeState[0]);
+    when(client.getNodeReports(states))
+        .thenReturn(getNodeReports(nodeReports, nodeStates));
+    result = cli.run(new String[] { "-list", "--states", "DECOMMISSIONED" });
+    assertEquals(0, result);
+    verify(client).getNodeReports(states);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total Nodes:1");
+    pw.print("         Node-Id\t     Node-State\tNode-Http-Address\t");
+    pw.println("Running-Containers");
+    pw.print("         host0:0\t DECOMMISSIONED\t       host1:8888");
+    pw.println("\t                 0");
+    pw.close();
+    nodesReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    verify(sysOut, times(5)).write(any(byte[].class), anyInt(), anyInt());
+
+    sysOutStream.reset();
+    nodeStates.clear();
+    nodeStates.add(NodeState.REBOOTED);
+    states = nodeStates.toArray(new NodeState[0]);
+    when(client.getNodeReports(states))
+        .thenReturn(getNodeReports(nodeReports, nodeStates));
+    result = cli.run(new String[] { "-list", "--states", "REBOOTED" });
+    assertEquals(0, result);
+    verify(client).getNodeReports(states);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total Nodes:1");
+    pw.print("         Node-Id\t     Node-State\tNode-Http-Address\t");
+    pw.println("Running-Containers");
+    pw.print("         host0:0\t       REBOOTED\t       host1:8888");
+    pw.println("\t                 0");
+    pw.close();
+    nodesReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    verify(sysOut, times(6)).write(any(byte[].class), anyInt(), anyInt());
+
+    sysOutStream.reset();
+    nodeStates.clear();
+    nodeStates.add(NodeState.LOST);
+    states = nodeStates.toArray(new NodeState[0]);
+    when(client.getNodeReports(states))
+        .thenReturn(getNodeReports(nodeReports, nodeStates));
+    result = cli.run(new String[] { "-list", "--states", "LOST" });
+    assertEquals(0, result);
+    verify(client).getNodeReports(states);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total Nodes:1");
+    pw.print("         Node-Id\t     Node-State\tNode-Http-Address\t");
+    pw.println("Running-Containers");
+    pw.print("         host0:0\t           LOST\t       host1:8888");
+    pw.println("\t                 0");
+    pw.close();
+    nodesReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    verify(sysOut, times(7)).write(any(byte[].class), anyInt(), anyInt());
+
+    sysOutStream.reset();
+    nodeStates.clear();
+    nodeStates.add(NodeState.NEW);
+    nodeStates.add(NodeState.RUNNING);
+    nodeStates.add(NodeState.LOST);
+    nodeStates.add(NodeState.REBOOTED);
+    states = nodeStates.toArray(new NodeState[0]);
+    when(client.getNodeReports(states))
+        .thenReturn(getNodeReports(nodeReports, nodeStates));
+    result = cli.run(new String[] { "-list", "--states", 
+                                        "NEW,RUNNING,LOST,REBOOTED" });
+    assertEquals(0, result);
+    verify(client).getNodeReports(states);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total Nodes:5");
+    pw.print("         Node-Id\t     Node-State\tNode-Http-Address\t");
+    pw.println("Running-Containers");
+    pw.print("         host0:0\t            NEW\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host0:0\t        RUNNING\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host1:0\t        RUNNING\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host0:0\t       REBOOTED\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host0:0\t           LOST\t       host1:8888");
+    pw.println("\t                 0");
+    pw.close();
+    nodesReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    verify(sysOut, times(8)).write(any(byte[].class), anyInt(), anyInt());
+
+    sysOutStream.reset();
+    nodeStates.clear();
+    for (NodeState s : NodeState.values()) {
+      nodeStates.add(s);
+    }
+    states = nodeStates.toArray(new NodeState[0]);
+    when(client.getNodeReports(states))
+        .thenReturn(getNodeReports(nodeReports, nodeStates));
+    result = cli.run(new String[] { "-list", "--all" });
+    assertEquals(0, result);
+    verify(client).getNodeReports(states);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total Nodes:7");
+    pw.print("         Node-Id\t     Node-State\tNode-Http-Address\t");
+    pw.println("Running-Containers");
+    pw.print("         host0:0\t            NEW\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host0:0\t        RUNNING\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host1:0\t        RUNNING\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host0:0\t      UNHEALTHY\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host0:0\t DECOMMISSIONED\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host0:0\t       REBOOTED\t       host1:8888");
+    pw.println("\t                 0");
+    pw.print("         host0:0\t           LOST\t       host1:8888");
+    pw.println("\t                 0");
+    pw.close();
+    nodesReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(nodesReportStr, sysOutStream.toString());
+    verify(sysOut, times(9)).write(any(byte[].class), anyInt(), anyInt());
+  }
+
+  private List<NodeReport> getNodeReports(
+      List<NodeReport> nodeReports,
+      Set<NodeState> nodeStates) {
+    List<NodeReport> reports = new ArrayList<NodeReport>();
+
+    for (NodeReport nodeReport : nodeReports) {
+      if (nodeStates.contains(nodeReport.getNodeState())) {
+        reports.add(nodeReport);
+      }
+    }
+    return reports;
   }
 
   @Test
   public void testNodeStatus() throws Exception {
     NodeId nodeId = NodeId.newInstance("host0", 0);
     NodeCLI cli = new NodeCLI();
-    when(client.getNodeReports()).thenReturn(getNodeReports(3));
+    when(client.getNodeReports()).thenReturn(
+                    getNodeReports(3, NodeState.RUNNING));
     cli.setClient(client);
     cli.setSysOutPrintStream(sysOut);
     cli.setSysErrPrintStream(sysErr);
@@ -424,7 +627,8 @@ public class TestYarnCLI {
   public void testAbsentNodeStatus() throws Exception {
     NodeId nodeId = NodeId.newInstance("Absenthost0", 0);
     NodeCLI cli = new NodeCLI();
-    when(client.getNodeReports()).thenReturn(getNodeReports(0));
+    when(client.getNodeReports()).thenReturn(
+                getNodeReports(0, NodeState.RUNNING));
     cli.setClient(client);
     cli.setSysOutPrintStream(sysOut);
     cli.setSysErrPrintStream(sysErr);
@@ -452,12 +656,12 @@ public class TestYarnCLI {
     verify(sysErr).println("Invalid Command Usage : ");
   }
 
-  private List<NodeReport> getNodeReports(int noOfNodes) {
+  private List<NodeReport> getNodeReports(int noOfNodes, NodeState state) {
     List<NodeReport> nodeReports = new ArrayList<NodeReport>();
 
     for (int i = 0; i < noOfNodes; i++) {
       NodeReport nodeReport = NodeReport.newInstance(NodeId
-        .newInstance("host" + i, 0), NodeState.RUNNING, "host" + 1 + ":8888",
+        .newInstance("host" + i, 0), state, "host" + 1 + ":8888",
           "rack1", Records.newRecord(Resource.class), Records
               .newRecord(Resource.class), 0, "", 0);
       nodeReports.add(nodeReport);
