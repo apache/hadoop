@@ -8,6 +8,8 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
