@@ -32,12 +32,17 @@ import org.apache.hadoop.util.StringUtils;
  * Only TCP server is supported and UDP is not supported.
  */
 public class Nfs3 extends Nfs3Base {
+  static {
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
+  
   public Nfs3(List<String> exports) throws IOException {
-    super(new Mountd(exports), new RpcProgramNfs3(exports));
+    super(new Mountd(exports), new RpcProgramNfs3());
   }
 
   public Nfs3(List<String> exports, Configuration config) throws IOException {
-    super(new Mountd(exports, config), new RpcProgramNfs3(exports, config));
+    super(new Mountd(exports, config), new RpcProgramNfs3(config));
   }
 
   public static void main(String[] args) throws IOException {
