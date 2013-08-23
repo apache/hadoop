@@ -106,10 +106,12 @@ public class PathData implements Comparable<PathData> {
 
   /**
    * Validates the given Windows path.
-   * Throws IOException on failure.
    * @param pathString a String of the path suppliued by the user.
+   * @return true if the URI scheme was not present in the pathString but
+   * inferred; false, otherwise.
+   * @throws IOException if anything goes wrong
    */
-  private void ValidateWindowsPath(String pathString)
+  private static boolean checkIfSchemeInferredFromPath(String pathString)
   throws IOException
   {
     if (windowsNonUriAbsolutePath1.matcher(pathString).find()) {
@@ -118,23 +120,21 @@ public class PathData implements Comparable<PathData> {
         throw new IOException("Invalid path string " + pathString);
       }
 
-      inferredSchemeFromPath = true;
-      return;
+      return true;
     }
 
     // Is it a forward slash-separated absolute path?
     if (windowsNonUriAbsolutePath2.matcher(pathString).find()) {
-      inferredSchemeFromPath = true;
-      return;
+      return true;
     }
 
     // Does it look like a URI? If so then just leave it alone.
     if (potentialUri.matcher(pathString).find()) {
-      return;
+      return false;
     }
 
     // Looks like a relative path on Windows.
-    return;
+    return false;
   }
 
   /**
@@ -153,7 +153,7 @@ public class PathData implements Comparable<PathData> {
     setStat(stat);
 
     if (Path.WINDOWS) {
-      ValidateWindowsPath(pathString);
+      inferredSchemeFromPath = checkIfSchemeInferredFromPath(pathString);
     }
   }
 
@@ -302,7 +302,7 @@ public class PathData implements Comparable<PathData> {
     // check getPath() so scheme slashes aren't considered part of the path
     String separator = uri.getPath().endsWith(Path.SEPARATOR)
         ? "" : Path.SEPARATOR;
-    return uri + separator + basename;
+    return uriToString(uri, inferredSchemeFromPath) + separator + basename;
   }
   
   protected enum PathType { HAS_SCHEME, SCHEMELESS_ABSOLUTE, RELATIVE };
@@ -356,7 +356,7 @@ public class PathData implements Comparable<PathData> {
             if (globUri.getAuthority() == null) {
               matchUri = removeAuthority(matchUri);
             }
-            globMatch = matchUri.toString();
+            globMatch = uriToString(matchUri, false);
             break;
           case SCHEMELESS_ABSOLUTE: // take just the uri's path
             globMatch = matchUri.getPath();
@@ -438,6 +438,10 @@ public class PathData implements Comparable<PathData> {
    */
   @Override
   public String toString() {
+    return uriToString(uri, inferredSchemeFromPath);
+  }
+ 
+  private static String uriToString(URI uri, boolean inferredSchemeFromPath) {
     String scheme = uri.getScheme();
     // No interpretation of symbols. Just decode % escaped chars.
     String decodedRemainder = uri.getSchemeSpecificPart();

@@ -3265,6 +3265,9 @@ Release 0.23.10 - UNRELEASED
 
     HDFS-4998. TestUnderReplicatedBlocks fails intermittently (kihwal)
 
+    HDFS-4329. DFSShell issues with directories with spaces in name (Cristina
+    L. Abad via jeagles)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
