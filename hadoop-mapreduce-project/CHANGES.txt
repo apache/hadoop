@@ -44,6 +44,9 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5478. TeraInputFormat unnecessarily defines its own FileSplit
+    subclass (Sandy Ryza)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5446. TestJobHistoryEvents and TestJobHistoryParsing have race
