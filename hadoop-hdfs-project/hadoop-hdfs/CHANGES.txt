@@ -78,6 +78,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5069 Include hadoop-nfs and hadoop-hdfs-nfs into hadoop dist for
     NFS deployment (brandonli)
 
+    HDFS-4947 Add NFS server export table to control export by hostname or
+    IP range (Jing Zhao via brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
