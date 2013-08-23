@@ -157,6 +157,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-4594. WebHDFS open sets Content-Length header to what is specified by
     length parameter rather than how much data is actually returned. (cnauroth)
 
+    HDFS-5124. DelegationTokenSecretManager#retrievePassword can cause deadlock 
+    in NameNode. (Daryn Sharp via jing9)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
