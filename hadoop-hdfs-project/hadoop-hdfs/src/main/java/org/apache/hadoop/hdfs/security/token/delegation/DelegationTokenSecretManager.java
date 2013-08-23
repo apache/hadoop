@@ -82,7 +82,7 @@ public class DelegationTokenSecretManager
   }
   
   @Override
-  public synchronized byte[] retrievePassword(
+  public byte[] retrievePassword(
       DelegationTokenIdentifier identifier) throws InvalidToken {
     try {
       // this check introduces inconsistency in the authentication to a
@@ -91,7 +91,7 @@ public class DelegationTokenSecretManager
       // different in that a standby may be behind and thus not yet know
       // of all tokens issued by the active NN.  the following check does
       // not allow ANY token auth, however it should allow known tokens in
-      checkAvailableForRead();
+      namesystem.checkOperation(OperationCategory.READ);
     } catch (StandbyException se) {
       // FIXME: this is a hack to get around changing method signatures by
       // tunneling a non-InvalidToken exception as the cause which the
@@ -103,17 +103,6 @@ public class DelegationTokenSecretManager
     return super.retrievePassword(identifier);
   }
   
-  @Override //SecretManager
-  public void checkAvailableForRead() throws StandbyException {
-    namesystem.checkOperation(OperationCategory.READ);
-    namesystem.readLock();
-    try {
-      namesystem.checkOperation(OperationCategory.READ);
-    } finally {
-      namesystem.readUnlock();
-    }
-  }
-
   /**
    * Returns expiry time of a token given its identifier.
    * 
