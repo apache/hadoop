@@ -28,6 +28,8 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-589. Expose a REST API for monitoring the fair scheduler (Sandy Ryza).
     
+    YARN-707. Add user info in the YARN ClientToken (vinodkv via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES

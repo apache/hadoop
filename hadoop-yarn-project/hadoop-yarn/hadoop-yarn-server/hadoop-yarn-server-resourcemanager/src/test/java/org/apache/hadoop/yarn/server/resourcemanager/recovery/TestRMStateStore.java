@@ -367,7 +367,7 @@ public class TestRMStateStore {
     appToken.setService(new Text("appToken service"));
 
     ClientToAMTokenIdentifier clientToAMTokenId =
-        new ClientToAMTokenIdentifier(attemptId);
+        new ClientToAMTokenIdentifier(attemptId, "user");
     clientToAMTokenMgr.registerApplication(attemptId);
     Token<ClientToAMTokenIdentifier> clientToAMToken =
         new Token<ClientToAMTokenIdentifier>(clientToAMTokenId, clientToAMTokenMgr);
