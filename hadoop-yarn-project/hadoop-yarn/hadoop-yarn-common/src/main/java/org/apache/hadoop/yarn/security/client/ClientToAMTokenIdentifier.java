@@ -39,6 +39,7 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
   public static final Text KIND_NAME = new Text("YARN_CLIENT_TOKEN");
 
   private ApplicationAttemptId applicationAttemptId;
+  private Text applicationSubmitter = new Text();
 
   // TODO: Add more information in the tokenID such that it is not
   // transferrable, more secure etc.
@@ -46,13 +47,18 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
   public ClientToAMTokenIdentifier() {
   }
 
-  public ClientToAMTokenIdentifier(ApplicationAttemptId id) {
+  public ClientToAMTokenIdentifier(ApplicationAttemptId id, String appSubmitter) {
     this();
     this.applicationAttemptId = id;
+    this.applicationSubmitter = new Text(appSubmitter);
   }
 
   public ApplicationAttemptId getApplicationAttemptID() {
     return this.applicationAttemptId;
+  }
+
+  public String getApplicationSubmitter() {
+    return this.applicationSubmitter.toString();
   }
 
   @Override
@@ -61,6 +67,7 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
       .getClusterTimestamp());
     out.writeInt(this.applicationAttemptId.getApplicationId().getId());
     out.writeInt(this.applicationAttemptId.getAttemptId());
+    this.applicationSubmitter.write(out);
   }
 
   @Override
@@ -68,6 +75,7 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
     this.applicationAttemptId =
         ApplicationAttemptId.newInstance(
           ApplicationId.newInstance(in.readLong(), in.readInt()), in.readInt());
+    this.applicationSubmitter.readFields(in);
   }
 
   @Override
@@ -77,10 +85,11 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
 
   @Override
   public UserGroupInformation getUser() {
-    if (this.applicationAttemptId == null) {
+    if (this.applicationSubmitter == null) {
       return null;
     }
-    return UserGroupInformation.createRemoteUser(this.applicationAttemptId.toString());
+    return UserGroupInformation.createRemoteUser(this.applicationSubmitter
+      .toString());
   }
 
   @InterfaceAudience.Private
