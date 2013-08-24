@@ -59,8 +59,15 @@ public class WebServer extends AbstractService {
     LOG.info("Instantiating NMWebApp at " + bindAddress);
     try {
       this.webApp =
-          WebApps.$for("node", Context.class, this.nmContext, "ws")
-              .at(bindAddress).with(getConfig()).start(this.nmWebApp);
+          WebApps
+            .$for("node", Context.class, this.nmContext, "ws")
+            .at(bindAddress)
+            .with(getConfig())
+            .withHttpSpnegoPrincipalKey(
+              YarnConfiguration.NM_WEBAPP_SPNEGO_USER_NAME_KEY)
+            .withHttpSpnegoKeytabKey(
+              YarnConfiguration.NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+            .start(this.nmWebApp);
       this.port = this.webApp.httpServer().getPort();
     } catch (Exception e) {
       String msg = "NMWebapps failed to start.";
