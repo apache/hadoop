@@ -33,6 +33,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -134,7 +135,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport = ApplicationReport.newInstance(
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     List<ApplicationReport> applicationReports = new ArrayList<ApplicationReport>();
     applicationReports.add(newApplicationReport);
@@ -152,23 +153,39 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport3 = ApplicationReport.newInstance(
         applicationId3, ApplicationAttemptId.newInstance(applicationId3, 3),
         "user3", "queue3", "appname3", "host3", 126, null,
-        YarnApplicationState.FINISHED, "diagnostics3", "url3", 3, 3,
+        YarnApplicationState.RUNNING, "diagnostics3", "url3", 3, 3,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f, "MAPREDUCE", 
         null);
     applicationReports.add(newApplicationReport3);
 
-    Set<String> appType1 = new HashSet<String>();
-    appType1.add("YARN");
+    ApplicationId applicationId4 = ApplicationId.newInstance(1234, 8);
+    ApplicationReport newApplicationReport4 = ApplicationReport.newInstance(
+        applicationId4, ApplicationAttemptId.newInstance(applicationId4, 4),
+        "user4", "queue4", "appname4", "host4", 127, null,
+        YarnApplicationState.FAILED, "diagnostics4", "url4", 4, 4,
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.83789f, "NON-MAPREDUCE",
+        null);
+    applicationReports.add(newApplicationReport4);
 
-    when(client.getApplications(appType1)).thenReturn(
-        getApplicationReports(applicationReports, appType1));
-    int result = cli.run(new String[] { "-list", "-appTypes", "YARN" });
+    // Test command yarn application -list
+    // if the set appStates is empty, RUNNING state will be automatically added
+    // to the appStates list
+    // the output of yarn application -list should be the same as
+    // equals to yarn application -list --appStates RUNNING
+    Set<String> appType1 = new HashSet<String>();
+    EnumSet<YarnApplicationState> appState1 =
+        EnumSet.noneOf(YarnApplicationState.class);
+    appState1.add(YarnApplicationState.RUNNING);
+    when(client.getApplications(appType1, appState1)).thenReturn(
+        getApplicationReports(applicationReports, appType1, appState1, false));
+    int result = cli.run(new String[] { "-list" });
     assertEquals(0, result);
-    verify(client).getApplications(appType1);
+    verify(client).getApplications(appType1, appState1);
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
-    pw.println("Total Applications:1");
+    pw.println("Total number of applications (application-types: " + appType1
+        + " and states: " + appState1 + ")" + ":" + 2);
     pw.print("                Application-Id\t    Application-Name");
     pw.print("\t    Application-Type");
     pw.print("\t      User\t     Queue\t             State\t       ");
@@ -176,27 +193,41 @@ public class TestYarnCLI {
     pw.println("\t                       Tracking-URL");
     pw.print("         application_1234_0005\t             ");
     pw.print("appname\t                YARN\t      user\t     ");
-    pw.print("queue\t          FINISHED\t         ");
+    pw.print("queue\t           RUNNING\t         ");
     pw.print("SUCCEEDED\t         53.79%");
+    pw.println("\t                                N/A");
+    pw.print("         application_1234_0007\t            ");
+    pw.print("appname3\t           MAPREDUCE\t     user3\t    ");
+    pw.print("queue3\t           RUNNING\t         ");
+    pw.print("SUCCEEDED\t         73.79%");
     pw.println("\t                                N/A");
     pw.close();
     String appsReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appsReportStr, sysOutStream.toString());
     verify(sysOut, times(1)).write(any(byte[].class), anyInt(), anyInt());
 
+    //Test command yarn application -list --appTypes apptype1,apptype2
+    //the output should be the same as
+    //yarn application -list --appTypes apptyp1, apptype2 --appStates RUNNING
     sysOutStream.reset();
     Set<String> appType2 = new HashSet<String>();
     appType2.add("YARN");
-    appType2.add("FOO-YARN");
-    when(client.getApplications(appType2)).thenReturn(
-        getApplicationReports(applicationReports, appType2));
-    cli.run(new String[] { "-list", "-appTypes", "YARN , ,, ,FOO-YARN",
-        ",,,,, YARN,," });
+    appType2.add("NON-YARN");
+
+    EnumSet<YarnApplicationState> appState2 =
+        EnumSet.noneOf(YarnApplicationState.class);
+    appState2.add(YarnApplicationState.RUNNING);
+    when(client.getApplications(appType2, appState2)).thenReturn(
+        getApplicationReports(applicationReports, appType2, appState2, false));
+    result =
+        cli.run(new String[] { "-list", "-appTypes", "YARN, ,,  NON-YARN",
+            "   ,, ,," });
     assertEquals(0, result);
-    verify(client).getApplications(appType2);
+    verify(client).getApplications(appType2, appState2);
     baos = new ByteArrayOutputStream();
     pw = new PrintWriter(baos);
-    pw.println("Total Applications:1");
+    pw.println("Total number of applications (application-types: " + appType2
+        + " and states: " + appState2 + ")" + ":" + 1);
     pw.print("                Application-Id\t    Application-Name");
     pw.print("\t    Application-Type");
     pw.print("\t      User\t     Queue\t             State\t       ");
@@ -204,7 +235,7 @@ public class TestYarnCLI {
     pw.println("\t                       Tracking-URL");
     pw.print("         application_1234_0005\t             ");
     pw.print("appname\t                YARN\t      user\t     ");
-    pw.print("queue\t          FINISHED\t         ");
+    pw.print("queue\t           RUNNING\t         ");
     pw.print("SUCCEEDED\t         53.79%");
     pw.println("\t                                N/A");
     pw.close();
@@ -212,29 +243,74 @@ public class TestYarnCLI {
     Assert.assertEquals(appsReportStr, sysOutStream.toString());
     verify(sysOut, times(2)).write(any(byte[].class), anyInt(), anyInt());
 
+    //Test command yarn application -list --appStates appState1,appState2
     sysOutStream.reset();
     Set<String> appType3 = new HashSet<String>();
-    appType3.add("YARN");
-    appType3.add("NON-YARN");
-    when(client.getApplications(appType3)).thenReturn(
-        getApplicationReports(applicationReports, appType3));
 
-    result = cli.run(new String[] { "-list", "-appTypes", "YARN,NON-YARN" });
+    EnumSet<YarnApplicationState> appState3 =
+        EnumSet.noneOf(YarnApplicationState.class);
+    appState3.add(YarnApplicationState.FINISHED);
+    appState3.add(YarnApplicationState.FAILED);
+
+    when(client.getApplications(appType3, appState3)).thenReturn(
+        getApplicationReports(applicationReports, appType3, appState3, false));
+    result =
+        cli.run(new String[] { "-list", "--appStates", "FINISHED ,, , FAILED",
+            ",,FINISHED" });
     assertEquals(0, result);
-    verify(client).getApplications(appType3);
+    verify(client).getApplications(appType3, appState3);
     baos = new ByteArrayOutputStream();
     pw = new PrintWriter(baos);
-    pw.println("Total Applications:2");
+    pw.println("Total number of applications (application-types: " + appType3
+        + " and states: " + appState3 + ")" + ":" + 2);
     pw.print("                Application-Id\t    Application-Name");
     pw.print("\t    Application-Type");
     pw.print("\t      User\t     Queue\t             State\t       ");
     pw.print("Final-State\t       Progress");
     pw.println("\t                       Tracking-URL");
-    pw.print("         application_1234_0005\t             ");
-    pw.print("appname\t                YARN\t      user\t     ");
-    pw.print("queue\t          FINISHED\t         ");
-    pw.print("SUCCEEDED\t         53.79%");
+    pw.print("         application_1234_0006\t            ");
+    pw.print("appname2\t            NON-YARN\t     user2\t    ");
+    pw.print("queue2\t          FINISHED\t         ");
+    pw.print("SUCCEEDED\t         63.79%");
     pw.println("\t                                N/A");
+    pw.print("         application_1234_0008\t            ");
+    pw.print("appname4\t       NON-MAPREDUCE\t     user4\t    ");
+    pw.print("queue4\t            FAILED\t         ");
+    pw.print("SUCCEEDED\t         83.79%");
+    pw.println("\t                                N/A");
+    pw.close();
+    appsReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(appsReportStr, sysOutStream.toString());
+    verify(sysOut, times(3)).write(any(byte[].class), anyInt(), anyInt());
+
+    // Test command yarn application -list --appTypes apptype1,apptype2
+    // --appStates appstate1,appstate2
+    sysOutStream.reset();
+    Set<String> appType4 = new HashSet<String>();
+    appType4.add("YARN");
+    appType4.add("NON-YARN");
+
+    EnumSet<YarnApplicationState> appState4 =
+        EnumSet.noneOf(YarnApplicationState.class);
+    appState4.add(YarnApplicationState.FINISHED);
+    appState4.add(YarnApplicationState.FAILED);
+
+    when(client.getApplications(appType4, appState4)).thenReturn(
+        getApplicationReports(applicationReports, appType4, appState4, false));
+    result =
+        cli.run(new String[] { "-list", "--appTypes", "YARN,NON-YARN",
+        "--appStates", "FINISHED ,, , FAILED" });
+    assertEquals(0, result);
+    verify(client).getApplications(appType2, appState2);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total number of applications (application-types: " + appType4
+        + " and states: " + appState4 + ")" + ":" + 1);
+    pw.print("                Application-Id\t    Application-Name");
+    pw.print("\t    Application-Type");
+    pw.print("\t      User\t     Queue\t             State\t       ");
+    pw.print("Final-State\t       Progress");
+    pw.println("\t                       Tracking-URL");
     pw.print("         application_1234_0006\t            ");
     pw.print("appname2\t            NON-YARN\t     user2\t    ");
     pw.print("queue2\t          FINISHED\t         ");
@@ -243,19 +319,46 @@ public class TestYarnCLI {
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(3)).write(any(byte[].class), anyInt(), anyInt());
+    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
 
+    //Test command yarn application -list --appStates with invalid appStates
     sysOutStream.reset();
-    Set<String> appType4 = new HashSet<String>();
-    when(client.getApplications(appType4)).thenReturn(
-        getApplicationReports(applicationReports, appType4));
-    result = cli.run(new String[] { "-list" });
-    assertEquals(0, result);
-    verify(client).getApplications(appType4);
-
+    result =
+        cli.run(new String[] { "-list", "--appStates", "FINISHED ,, , INVALID" });
+    assertEquals(-1, result);
     baos = new ByteArrayOutputStream();
     pw = new PrintWriter(baos);
-    pw.println("Total Applications:3");
+    pw.println("The application state  INVALID is invalid.");
+    pw.print("The valid application state can be one of the following: ");
+    StringBuilder sb = new StringBuilder();
+    sb.append("ALL,");
+    for(YarnApplicationState state : YarnApplicationState.values()) {
+      sb.append(state+",");
+    }
+    String output = sb.toString();
+    pw.println(output.substring(0, output.length()-1));
+    pw.close();
+    appsReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(appsReportStr, sysOutStream.toString());
+    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
+
+    //Test command yarn application -list --appStates all
+    sysOutStream.reset();
+    Set<String> appType5 = new HashSet<String>();
+
+    EnumSet<YarnApplicationState> appState5 =
+        EnumSet.noneOf(YarnApplicationState.class);
+    appState5.add(YarnApplicationState.FINISHED);
+    when(client.getApplications(appType5, appState5)).thenReturn(
+        getApplicationReports(applicationReports, appType5, appState5, true));
+    result =
+        cli.run(new String[] { "-list", "--appStates", "FINISHED ,, , ALL" });
+    assertEquals(0, result);
+    verify(client).getApplications(appType5, appState5);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total number of applications (application-types: " + appType5
+        + " and states: " + appState5 + ")" + ":" + 4);
     pw.print("                Application-Id\t    Application-Name");
     pw.print("\t    Application-Type");
     pw.print("\t      User\t     Queue\t             State\t       ");
@@ -263,7 +366,7 @@ public class TestYarnCLI {
     pw.println("\t                       Tracking-URL");
     pw.print("         application_1234_0005\t             ");
     pw.print("appname\t                YARN\t      user\t     ");
-    pw.print("queue\t          FINISHED\t         ");
+    pw.print("queue\t           RUNNING\t         ");
     pw.print("SUCCEEDED\t         53.79%");
     pw.println("\t                                N/A");
     pw.print("         application_1234_0006\t            ");
@@ -273,27 +376,80 @@ public class TestYarnCLI {
     pw.println("\t                                N/A");
     pw.print("         application_1234_0007\t            ");
     pw.print("appname3\t           MAPREDUCE\t     user3\t    ");
-    pw.print("queue3\t          FINISHED\t         ");
+    pw.print("queue3\t           RUNNING\t         ");
     pw.print("SUCCEEDED\t         73.79%");
+    pw.println("\t                                N/A");
+    pw.print("         application_1234_0008\t            ");
+    pw.print("appname4\t       NON-MAPREDUCE\t     user4\t    ");
+    pw.print("queue4\t            FAILED\t         ");
+    pw.print("SUCCEEDED\t         83.79%");
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appsReportStr, sysOutStream.toString());
-    verify(sysOut, times(4)).write(any(byte[].class), anyInt(), anyInt());
+    verify(sysOut, times(5)).write(any(byte[].class), anyInt(), anyInt());
+
+    // Test command yarn application user case insensitive
+    sysOutStream.reset();
+    Set<String> appType6 = new HashSet<String>();
+    appType6.add("YARN");
+    appType6.add("NON-YARN");
+
+    EnumSet<YarnApplicationState> appState6 =
+        EnumSet.noneOf(YarnApplicationState.class);
+    appState6.add(YarnApplicationState.FINISHED);
+    when(client.getApplications(appType6, appState6)).thenReturn(
+        getApplicationReports(applicationReports, appType6, appState6, false));
+    result =
+        cli.run(new String[] { "-list", "-appTypes", "YARN, ,,  NON-YARN",
+            "--appStates", "finished" });
+    assertEquals(0, result);
+    verify(client).getApplications(appType6, appState6);
+    baos = new ByteArrayOutputStream();
+    pw = new PrintWriter(baos);
+    pw.println("Total number of applications (application-types: " + appType6
+        + " and states: " + appState6 + ")" + ":" + 1);
+    pw.print("                Application-Id\t    Application-Name");
+    pw.print("\t    Application-Type");
+    pw.print("\t      User\t     Queue\t             State\t       ");
+    pw.print("Final-State\t       Progress");
+    pw.println("\t                       Tracking-URL");
+    pw.print("         application_1234_0006\t            ");
+    pw.print("appname2\t            NON-YARN\t     user2\t    ");
+    pw.print("queue2\t          FINISHED\t         ");
+    pw.print("SUCCEEDED\t         63.79%");
+    pw.println("\t                                N/A");
+    pw.close();
+    appsReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(appsReportStr, sysOutStream.toString());
+    verify(sysOut, times(6)).write(any(byte[].class), anyInt(), anyInt());
   }
 
   private List<ApplicationReport> getApplicationReports(
       List<ApplicationReport> applicationReports,
-      Set<String> appTypes) {
+      Set<String> appTypes, EnumSet<YarnApplicationState> appStates,
+      boolean allStates) {
 
     List<ApplicationReport> appReports = new ArrayList<ApplicationReport>();
-    boolean bypassFilter = appTypes.isEmpty();
 
-    for (ApplicationReport appReport : applicationReports) {
-      if (!(bypassFilter || appTypes.contains(
-          appReport.getApplicationType()))) {
-        continue;
+    if (allStates) {
+      for(YarnApplicationState state : YarnApplicationState.values()) {
+        appStates.add(state);
       }
+    }
+    for (ApplicationReport appReport : applicationReports) {
+      if (appTypes != null && !appTypes.isEmpty()) {
+        if (!appTypes.contains(appReport.getApplicationType())) {
+          continue;
+        }
+      }
+
+      if (appStates != null && !appStates.isEmpty()) {
+        if (!appStates.contains(appReport.getYarnApplicationState())) {
+          continue;
+        }
+      }
+
       appReports.add(appReport);
     }
     return appReports;

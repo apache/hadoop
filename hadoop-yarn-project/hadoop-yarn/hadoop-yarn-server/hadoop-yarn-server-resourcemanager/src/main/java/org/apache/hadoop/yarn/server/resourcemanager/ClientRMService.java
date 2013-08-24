@@ -73,10 +73,12 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -86,6 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -394,7 +397,6 @@ public class ClientRMService extends AbstractService implements
   @Override
   public GetApplicationsResponse getApplications(
       GetApplicationsRequest request) throws YarnException {
-
     UserGroupInformation callerUGI;
     try {
       callerUGI = UserGroupInformation.getCurrentUser();
@@ -404,12 +406,22 @@ public class ClientRMService extends AbstractService implements
     }
 
     Set<String> applicationTypes = request.getApplicationTypes();
-    boolean bypassFilter = applicationTypes.isEmpty();
+    EnumSet<YarnApplicationState> applicationStates =
+        request.getApplicationStates();
+
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
     for (RMApp application : this.rmContext.getRMApps().values()) {
-      if (!(bypassFilter || applicationTypes.contains(application
-          .getApplicationType()))) {
-        continue;
+      if (applicationTypes != null && !applicationTypes.isEmpty()) {
+        if (!applicationTypes.contains(application.getApplicationType())) {
+          continue;
+        }
+      }
+
+      if (applicationStates != null && !applicationStates.isEmpty()) {
+        if (!applicationStates.contains(RMServerUtils
+            .createApplicationState(application.getState()))) {
+          continue;
+        }
       }
       boolean allowAccess = checkAccess(callerUGI, application.getUser(),
           ApplicationAccessType.VIEW_APP, application.getApplicationId());

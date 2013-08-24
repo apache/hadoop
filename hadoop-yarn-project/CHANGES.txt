@@ -29,6 +29,9 @@ Release 2.1.1-beta - UNRELEASED
   IMPROVEMENTS
 
     YARN-589. Expose a REST API for monitoring the fair scheduler (Sandy Ryza).
+
+    YARN-1074. Cleaned up YARN CLI application list to only display running
+    applications by default. (Xuan Gong via vinodkv)
     
   OPTIMIZATIONS
 
