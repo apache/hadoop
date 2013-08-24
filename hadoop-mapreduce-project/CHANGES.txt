@@ -106,8 +106,6 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5476. Changed MR AM recovery code to cleanup staging-directory
     only after unregistering from the RM. (Jian He via vinodkv)
 
-    MAPREDUCE-5475. MRClientService does not verify ACLs properly (jlowe)
-
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
