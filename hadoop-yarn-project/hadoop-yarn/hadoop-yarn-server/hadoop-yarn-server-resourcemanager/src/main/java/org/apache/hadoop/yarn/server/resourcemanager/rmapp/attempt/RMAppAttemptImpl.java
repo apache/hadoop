@@ -722,7 +722,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         // create clientToAMToken
         appAttempt.clientToAMToken =
             new Token<ClientToAMTokenIdentifier>(new ClientToAMTokenIdentifier(
-              appAttempt.applicationAttemptId, appAttempt.user),
+              appAttempt.applicationAttemptId),
               appAttempt.rmContext.getClientToAMTokenSecretManager());
       }
 
