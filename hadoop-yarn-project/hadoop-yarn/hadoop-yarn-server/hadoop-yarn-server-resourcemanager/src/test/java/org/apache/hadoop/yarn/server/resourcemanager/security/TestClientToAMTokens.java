@@ -115,6 +115,7 @@ public class TestClientToAMTokens {
     private final byte[] secretKey;
     private InetSocketAddress address;
     private boolean pinged = false;
+    private ClientToAMTokenSecretManager secretManager;
     
     public CustomAM(ApplicationAttemptId appId, byte[] secretKey) {
       super("CustomAM");
@@ -131,14 +132,12 @@ public class TestClientToAMTokens {
     protected void serviceStart() throws Exception {
       Configuration conf = getConfig();
 
+      secretManager = new ClientToAMTokenSecretManager(this.appAttemptId, secretKey);
       Server server;
       try {
         server =
-            new RPC.Builder(conf)
-              .setProtocol(CustomProtocol.class)
-              .setNumHandlers(1)
-              .setSecretManager(
-                new ClientToAMTokenSecretManager(this.appAttemptId, secretKey))
+            new RPC.Builder(conf).setProtocol(CustomProtocol.class)
+              .setNumHandlers(1).setSecretManager(secretManager)
               .setInstance(this).build();
       } catch (Exception e) {
         throw new YarnRuntimeException(e);
@@ -147,10 +146,14 @@ public class TestClientToAMTokens {
       this.address = NetUtils.getConnectAddress(server);
       super.serviceStart();
     }
+    
+    public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
+      return this.secretManager;
+    }
   }
 
   @Test
-  public void testClientToAMTokenss() throws Exception {
+  public void testClientToAMs() throws Exception {
 
     final Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
@@ -201,7 +204,7 @@ public class TestClientToAMTokens {
     GetApplicationReportResponse reportResponse =
         rm.getClientRMService().getApplicationReport(request);
     ApplicationReport appReport = reportResponse.getApplicationReport();
-    org.apache.hadoop.yarn.api.records.Token originalClientToAMToken =
+    org.apache.hadoop.yarn.api.records.Token clientToAMToken =
         appReport.getClientToAMToken();
 
     ApplicationAttemptId appAttempt = app.getCurrentAppAttempt().getAppAttemptId();
@@ -256,47 +259,17 @@ public class TestClientToAMTokens {
       Assert.assertFalse(am.pinged);
     }
 
-    Token<ClientToAMTokenIdentifier> token =
-        ConverterUtils.convertFromYarn(originalClientToAMToken, am.address);
-
-    // Verify denial for a malicious user with tampered ID
-    verifyTokenWithTamperedID(conf, am, token);
-
-    // Verify denial for a malicious user with tampered user-name
-    verifyTokenWithTamperedUserName(conf, am, token);
-
-    // Now for an authenticated user
-    verifyValidToken(conf, am, token);
-  }
-
-  private void verifyTokenWithTamperedID(final Configuration conf,
-      final CustomAM am, Token<ClientToAMTokenIdentifier> token)
-      throws IOException {
-    // Malicious user, messes with appId
+    // Verify denial for a malicious user
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("me");
+    Token<ClientToAMTokenIdentifier> token =
+        ConverterUtils.convertFromYarn(clientToAMToken, am.address);
+
+    // Malicious user, messes with appId
     ClientToAMTokenIdentifier maliciousID =
         new ClientToAMTokenIdentifier(BuilderUtils.newApplicationAttemptId(
-          BuilderUtils.newApplicationId(am.appAttemptId.getApplicationId()
-            .getClusterTimestamp(), 42), 43), UserGroupInformation
-          .getCurrentUser().getShortUserName());
+          BuilderUtils.newApplicationId(app.getApplicationId()
+            .getClusterTimestamp(), 42), 43));
 
-    verifyTamperedToken(conf, am, token, ugi, maliciousID);
-  }
-
-  private void verifyTokenWithTamperedUserName(final Configuration conf,
-      final CustomAM am, Token<ClientToAMTokenIdentifier> token)
-      throws IOException {
-    // Malicious user, messes with appId
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("me");
-    ClientToAMTokenIdentifier maliciousID =
-        new ClientToAMTokenIdentifier(am.appAttemptId, "evilOrc");
-
-    verifyTamperedToken(conf, am, token, ugi, maliciousID);
-  }
-  
-  private void verifyTamperedToken(final Configuration conf, final CustomAM am,
-      Token<ClientToAMTokenIdentifier> token, UserGroupInformation ugi,
-      ClientToAMTokenIdentifier maliciousID) {
     Token<ClientToAMTokenIdentifier> maliciousToken =
         new Token<ClientToAMTokenIdentifier>(maliciousID.getBytes(),
           token.getPassword(), token.getKind(),
@@ -336,12 +309,8 @@ public class TestClientToAMTokens {
               + "Mismatched response."));
       Assert.assertFalse(am.pinged);
     }
-  }
 
-  private void verifyValidToken(final Configuration conf, final CustomAM am,
-      Token<ClientToAMTokenIdentifier> token) throws IOException,
-      InterruptedException {
-    UserGroupInformation ugi;
+    // Now for an authenticated user
     ugi = UserGroupInformation.createRemoteUser("me");
     ugi.addToken(token);
 
@@ -357,4 +326,5 @@ public class TestClientToAMTokens {
       }
     });
   }
+
 }
