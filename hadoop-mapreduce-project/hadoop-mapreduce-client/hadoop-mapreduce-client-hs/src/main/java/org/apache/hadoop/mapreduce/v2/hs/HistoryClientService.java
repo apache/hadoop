@@ -80,6 +80,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -148,8 +149,14 @@ public class HistoryClientService extends AbstractService {
         JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS,
         JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT);
     // NOTE: there should be a .at(InetSocketAddress)
-    WebApps.$for("jobhistory", HistoryClientService.class, this, "ws")
-        .with(conf).at(NetUtils.getHostPortString(bindAddress)).start(webApp);
+    WebApps
+        .$for("jobhistory", HistoryClientService.class, this, "ws")
+        .with(conf)
+        .withHttpSpnegoKeytabKey(
+            YarnConfiguration.JHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+        .withHttpSpnegoPrincipalKey(
+            YarnConfiguration.JHS_WEBAPP_SPNEGO_USER_NAME_KEY)
+        .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
     conf.updateConnectAddr(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
                            webApp.getListenerAddress());
   }
