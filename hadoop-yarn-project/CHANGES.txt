@@ -78,6 +78,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1085. Modified YARN and MR2 web-apps to do HTTP authentication in
     secure setup with kerberos. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-1094. Fixed a blocker with RM restart code because of which RM crashes
+    when try to recover an existing app. (vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
