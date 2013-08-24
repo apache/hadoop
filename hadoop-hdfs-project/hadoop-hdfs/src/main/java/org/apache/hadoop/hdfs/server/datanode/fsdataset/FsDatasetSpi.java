@@ -269,6 +269,14 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   public BlockListAsLongs getBlockReport(String bpid);
 
+  /**
+   * Returns the cache report - the full list of cached blocks of a
+   * block pool
+   * @param bpid Block Pool Id
+   * @return - the cache report - the full list of cached blocks
+   */
+  public BlockListAsLongs getCacheReport(String bpid);
+
   /** Does the dataset contain the block? */
   public boolean contains(ExtendedBlock block);
 
@@ -293,6 +301,20 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @throws IOException
    */
   public void invalidate(String bpid, Block invalidBlks[]) throws IOException;
+
+  /**
+   * Caches the specified blocks
+   * @param bpid Block pool id
+   * @param cacheBlks - block to cache
+   */
+  public void cache(String bpid, Block[] cacheBlks);
+
+  /**
+   * Uncaches the specified blocks
+   * @param bpid Block pool id
+   * @param uncacheBlks - blocks to uncache
+   */
+  public void uncache(String bpid, Block[] uncacheBlks);
 
     /**
      * Check if all the data directories are healthy

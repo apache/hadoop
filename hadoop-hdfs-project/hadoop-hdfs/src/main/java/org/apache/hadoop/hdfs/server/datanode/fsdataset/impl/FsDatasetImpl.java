@@ -37,6 +37,7 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -170,6 +171,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   final FsVolumeList volumes;
   final ReplicaMap volumeMap;
   final FsDatasetAsyncDiskService asyncDiskService;
+  final FsDatasetCache cacheManager;
   private final int validVolsRequired;
 
   // Used for synchronizing access to usage stats
@@ -228,6 +230,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       roots[idx] = storage.getStorageDir(idx).getCurrentDir();
     }
     asyncDiskService = new FsDatasetAsyncDiskService(datanode, roots);
+    cacheManager = new FsDatasetCache(this);
     registerMBean(storage.getStorageID());
   }
 
@@ -285,6 +288,30 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public int getNumFailedVolumes() {
     return volumes.numberOfFailedVolumes();
+  }
+
+  /**
+   * Returns the total cache used by the datanode (in bytes).
+   */
+  @Override // FSDatasetMBean
+  public long getCacheUsed() {
+    return cacheManager.getCacheUsed();
+  }
+
+  /**
+   * Returns the total cache capacity of the datanode (in bytes).
+   */
+  @Override // FSDatasetMBean
+  public long getCacheCapacity() {
+    return cacheManager.getCacheCapacity();
+  }
+
+  /**
+   * Returns the total amount of cache remaining (in bytes).
+   */
+  @Override // FSDatasetMBean
+  public long getCacheRemaining() {
+    return cacheManager.getCacheRemaining();
   }
 
   /**
@@ -534,6 +561,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private synchronized ReplicaBeingWritten append(String bpid,
       FinalizedReplica replicaInfo, long newGS, long estimateBlockLen)
       throws IOException {
+    // uncache the block
+    cacheManager.uncacheBlock(bpid, replicaInfo);
     // unlink the finalized replica
     replicaInfo.unlinkBlock(1);
     
@@ -1001,6 +1030,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
+  @Override // FsDatasetSpi
+  public BlockListAsLongs getCacheReport(String bpid) {
+    return new BlockListAsLongs(cacheManager.getCachedBlocks(bpid), null);
+  }
+
   /**
    * Get the list of finalized blocks from in-memory blockmap for a block pool.
    */
@@ -1143,6 +1177,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         volumeMap.remove(bpid, invalidBlks[i]);
       }
 
+      // Uncache the block synchronously
+      cacheManager.uncacheBlock(bpid, invalidBlks[i]);
       // Delete the block asynchronously to make sure we can do it fast enough
       asyncDiskService.deleteAsync(v, f,
           FsDatasetUtil.getMetaFile(f, invalidBlks[i].getGenerationStamp()),
@@ -1150,6 +1186,78 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     if (error) {
       throw new IOException("Error in deleting blocks.");
+    }
+  }
+
+  synchronized boolean validToCache(String bpid, Block blk) {
+    ReplicaInfo info = volumeMap.get(bpid, blk);
+    if (info == null) {
+      LOG.warn("Failed to cache replica " + blk + ": ReplicaInfo not found.");
+      return false;
+    }
+    FsVolumeImpl volume = (FsVolumeImpl)info.getVolume();
+    if (volume == null) {
+      LOG.warn("Failed to cache replica " + blk + ": Volume not found.");
+      return false;
+    }
+    if (info.getState() != ReplicaState.FINALIZED) {
+      LOG.warn("Failed to cache replica " + blk + ": Replica is not"
+          + " finalized.");
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Asynchronously attempts to cache a single block via {@link FsDatasetCache}.
+   */
+  private void cacheBlock(String bpid, Block blk) {
+    ReplicaInfo info;
+    FsVolumeImpl volume;
+    synchronized (this) {
+      if (!validToCache(bpid, blk)) {
+        return;
+      }
+      info = volumeMap.get(bpid, blk);
+      volume = (FsVolumeImpl)info.getVolume();
+    }
+    // Try to open block and meta streams
+    FileInputStream blockIn = null;
+    FileInputStream metaIn = null;
+    boolean success = false;
+    try {
+      ExtendedBlock extBlk = new ExtendedBlock(bpid, blk);
+      blockIn = (FileInputStream)getBlockInputStream(extBlk, 0);
+      metaIn = (FileInputStream)getMetaDataInputStream(extBlk)
+          .getWrappedStream();
+      success = true;
+    } catch (ClassCastException e) {
+      LOG.warn("Failed to cache replica " + blk + ": Underlying blocks"
+          + " are not backed by files.", e);
+    } catch (IOException e) {
+      LOG.warn("Failed to cache replica " + blk + ": IOException while"
+          + " trying to open block or meta files.", e);
+    }
+    if (!success) {
+      IOUtils.closeQuietly(blockIn);
+      IOUtils.closeQuietly(metaIn);
+      return;
+    }
+    cacheManager.cacheBlock(bpid, blk, volume, blockIn, metaIn);
+  }
+
+  @Override // FsDatasetSpi
+  public void cache(String bpid, Block[] cacheBlks) {
+    for (int i=0; i<cacheBlks.length; i++) {
+      cacheBlock(bpid, cacheBlks[i]);
+    }
+  }
+
+  @Override // FsDatasetSpi
+  public void uncache(String bpid, Block[] uncacheBlks) {
+    for (int i=0; i<uncacheBlks.length; i++) {
+      Block blk = uncacheBlks[i];
+      cacheManager.uncacheBlock(bpid, blk);
     }
   }
 

@@ -160,4 +160,8 @@ public class DNConf {
   public long getXceiverStopTimeout() {
     return xceiverStopTimeout;
   }
+
+  public long getMaxLockedMemory() {
+    return maxLockedMemory;
+  }
 }

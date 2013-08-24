@@ -74,6 +74,8 @@ public interface DatanodeProtocol {
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
   final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
   final static int DNA_BALANCERBANDWIDTHUPDATE = 8; // update balancer bandwidth
+  final static int DNA_CACHE = 9;      // cache blocks
+  final static int DNA_UNCACHE = 10;   // uncache blocks
 
   /** 
    * Register Datanode.

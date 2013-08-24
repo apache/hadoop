@@ -18,11 +18,17 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +39,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The underlying volume used to store replica.
@@ -48,6 +56,13 @@ class FsVolumeImpl implements FsVolumeSpi {
   private final File currentDir;    // <StorageDirectory>/current
   private final DF usage;           
   private final long reserved;
+  /**
+   * Per-volume worker pool that processes new blocks to cache.
+   * The maximum number of workers per volume is bounded (configurable via
+   * dfs.datanode.fsdatasetcache.max.threads.per.volume) to limit resource
+   * contention.
+   */
+  private final ThreadPoolExecutor cacheExecutor;
   
   FsVolumeImpl(FsDatasetImpl dataset, String storageID, File currentDir,
       Configuration conf) throws IOException {
@@ -59,6 +74,20 @@ class FsVolumeImpl implements FsVolumeSpi {
     this.currentDir = currentDir; 
     File parent = currentDir.getParentFile();
     this.usage = new DF(parent, conf);
+    final int maxNumThreads = dataset.datanode.getConf().getInt(
+        DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY,
+        DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_DEFAULT
+        );
+    ThreadFactory workerFactory = new ThreadFactoryBuilder()
+        .setDaemon(true)
+        .setNameFormat("FsVolumeImplWorker-" + parent.toString() + "-%d")
+        .build();
+    cacheExecutor = new ThreadPoolExecutor(
+        1, maxNumThreads,
+        60, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>(),
+        workerFactory);
+    cacheExecutor.allowCoreThreadTimeOut(true);
   }
   
   File getCurrentDir() {
@@ -166,7 +195,11 @@ class FsVolumeImpl implements FsVolumeSpi {
   File addBlock(String bpid, Block b, File f) throws IOException {
     return getBlockPoolSlice(bpid).addBlock(b, f);
   }
-    
+
+  Executor getExecutor() {
+    return cacheExecutor;
+  }
+
   void checkDirs() throws DiskErrorException {
     // TODO:FEDERATION valid synchronization
     for(BlockPoolSlice s : bpSlices.values()) {
@@ -210,6 +243,7 @@ class FsVolumeImpl implements FsVolumeSpi {
   }
 
   void shutdown() {
+    cacheExecutor.shutdown();
     Set<Entry<String, BlockPoolSlice>> set = bpSlices.entrySet();
     for (Entry<String, BlockPoolSlice> entry : set) {
       entry.getValue().shutdown();

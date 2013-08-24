@@ -449,6 +449,10 @@ class BPServiceActor implements Runnable {
     long startTime = Time.monotonicNow();
     if (startTime - lastCacheReport > dnConf.cacheReportInterval) {
       // TODO: Implement me!
+      String bpid = bpos.getBlockPoolId();
+      BlockListAsLongs blocks = dn.getFSDataset().getCacheReport(bpid);
+      cmd = bpNamenode.cacheReport(bpRegistration, bpid,
+          blocks.getBlockListAsLongs());
     }
     return cmd;
   }

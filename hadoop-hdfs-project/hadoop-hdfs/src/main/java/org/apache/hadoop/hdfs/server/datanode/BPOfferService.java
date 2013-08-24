@@ -549,6 +549,14 @@ class BPOfferService {
       }
       dn.metrics.incrBlocksRemoved(toDelete.length);
       break;
+    case DatanodeProtocol.DNA_CACHE:
+      LOG.info("DatanodeCommand action: DNA_CACHE");
+      dn.getFSDataset().cache(bcmd.getBlockPoolId(), bcmd.getBlocks());
+      break;
+    case DatanodeProtocol.DNA_UNCACHE:
+      LOG.info("DatanodeCommand action: DNA_UNCACHE");
+      dn.getFSDataset().uncache(bcmd.getBlockPoolId(), bcmd.getBlocks());
+      break;
     case DatanodeProtocol.DNA_SHUTDOWN:
       // TODO: DNA_SHUTDOWN appears to be unused - the NN never sends this command
       // See HDFS-2987.

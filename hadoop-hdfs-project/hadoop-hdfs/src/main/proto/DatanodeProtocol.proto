@@ -101,7 +101,9 @@ message BlockCommandProto {
   enum Action {  
     TRANSFER = 1;   // Transfer blocks to another datanode
     INVALIDATE = 2; // Invalidate blocks
-    SHUTDOWN = 3; // Shutdown the datanode
+    SHUTDOWN = 3;   // Shutdown the datanode
+    CACHE = 4;      // Cache blocks on the datanode
+    UNCACHE = 5;    // Uncache blocks on the datanode
   }
   required Action action = 1;
   required string blockPoolId = 2;
