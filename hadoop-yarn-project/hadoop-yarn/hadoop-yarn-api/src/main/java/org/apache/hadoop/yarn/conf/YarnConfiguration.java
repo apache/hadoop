@@ -205,6 +205,12 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_KEYTAB = 
     RM_PREFIX + "keytab";
 
+  public static final String RM_WEBAPP_SPNEGO_USER_NAME_KEY =
+      RM_PREFIX + "webapp.spnego-principal";
+  
+  public static final String RM_WEBAPP_SPENGO_KEYTAB_FILE_KEY =
+      RM_PREFIX + "webapp.spengo-keytab-file";
+
   /** How long to wait until a container is considered dead.*/
   public static final String RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 
     RM_PREFIX + "rm.container-allocation.expiry-interval-ms";
@@ -599,7 +605,13 @@ public class YarnConfiguration extends Configuration {
 
   public static final String NM_USER_HOME_DIR =
       NM_PREFIX + "user-home-dir";
-
+  
+  public static final String NM_WEBAPP_SPNEGO_USER_NAME_KEY =
+      NM_PREFIX + "webapp.spnego-principal";
+  
+  public static final String NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
+      NM_PREFIX + "webapp.spnego-keytab-file";
+  
   public static final String DEFAULT_NM_USER_HOME_DIR= "/home/";
 
   ////////////////////////////////
@@ -728,6 +740,12 @@ public class YarnConfiguration extends Configuration {
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
+
+  public static final String JHS_WEBAPP_SPNEGO_USER_NAME_KEY =
+      "jobhistoryserver.webapp.spnego-principal";
+  
+  public static final String JHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
+      "jobhistoryserver.webapp.spnego-keytab-file";
 
   /**
    * The interval of the yarn client's querying application state after

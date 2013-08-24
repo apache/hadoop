@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
@@ -573,9 +574,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
   
   protected void startWepApp() {
     Builder<ApplicationMasterService> builder = 
-      WebApps.$for("cluster", ApplicationMasterService.class, masterService, "ws").at(
-          this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)); 
+        WebApps
+            .$for("cluster", ApplicationMasterService.class, masterService,
+                "ws")
+            .with(conf)
+            .withHttpSpnegoPrincipalKey(
+                YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY)
+            .withHttpSpnegoKeytabKey(
+                YarnConfiguration.RM_WEBAPP_SPENGO_KEYTAB_FILE_KEY)
+            .at(this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)); 
     String proxyHostAndPort = YarnConfiguration.getProxyHostAndPort(conf);
     if(YarnConfiguration.getRMWebAppHostAndPort(conf).
         equals(proxyHostAndPort)) {
