@@ -56,7 +56,7 @@ public class RMContextImpl implements RMContext {
   private AMLivelinessMonitor amFinishingMonitor;
   private RMStateStore stateStore = null;
   private ContainerAllocationExpirer containerAllocationExpirer;
-  private final DelegationTokenRenewer tokenRenewer;
+  private final DelegationTokenRenewer delegationTokenRenewer;
   private final AMRMTokenSecretManager amRMTokenSecretManager;
   private final RMContainerTokenSecretManager containerTokenSecretManager;
   private final NMTokenSecretManagerInRM nmTokenSecretManager;
@@ -67,7 +67,7 @@ public class RMContextImpl implements RMContext {
       ContainerAllocationExpirer containerAllocationExpirer,
       AMLivelinessMonitor amLivelinessMonitor,
       AMLivelinessMonitor amFinishingMonitor,
-      DelegationTokenRenewer tokenRenewer,
+      DelegationTokenRenewer delegationTokenRenewer,
       AMRMTokenSecretManager amRMTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager,
@@ -77,7 +77,7 @@ public class RMContextImpl implements RMContext {
     this.containerAllocationExpirer = containerAllocationExpirer;
     this.amLivelinessMonitor = amLivelinessMonitor;
     this.amFinishingMonitor = amFinishingMonitor;
-    this.tokenRenewer = tokenRenewer;
+    this.delegationTokenRenewer = delegationTokenRenewer;
     this.amRMTokenSecretManager = amRMTokenSecretManager;
     this.containerTokenSecretManager = containerTokenSecretManager;
     this.nmTokenSecretManager = nmTokenSecretManager;
@@ -90,13 +90,13 @@ public class RMContextImpl implements RMContext {
       ContainerAllocationExpirer containerAllocationExpirer,
       AMLivelinessMonitor amLivelinessMonitor,
       AMLivelinessMonitor amFinishingMonitor,
-      DelegationTokenRenewer tokenRenewer,
+      DelegationTokenRenewer delegationTokenRenewer,
       AMRMTokenSecretManager appTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager,
       ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager) {
     this(rmDispatcher, null, containerAllocationExpirer, amLivelinessMonitor, 
-          amFinishingMonitor, tokenRenewer, appTokenSecretManager, 
+          amFinishingMonitor, delegationTokenRenewer, appTokenSecretManager, 
           containerTokenSecretManager, nmTokenSecretManager,
           clientToAMTokenSecretManager);
     RMStateStore nullStore = new NullRMStateStore();
@@ -151,7 +151,7 @@ public class RMContextImpl implements RMContext {
 
   @Override
   public DelegationTokenRenewer getDelegationTokenRenewer() {
-    return tokenRenewer;
+    return delegationTokenRenewer;
   }
 
   @Override

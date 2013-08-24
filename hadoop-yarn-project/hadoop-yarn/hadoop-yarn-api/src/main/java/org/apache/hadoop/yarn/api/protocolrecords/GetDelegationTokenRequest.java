@@ -33,7 +33,7 @@ public abstract class GetDelegationTokenRequest {
 
   @Public
   @Stable
-  public GetDelegationTokenRequest newInstance(String renewer) {
+  public static GetDelegationTokenRequest newInstance(String renewer) {
     GetDelegationTokenRequest request =
         Records.newRecord(GetDelegationTokenRequest.class);
     request.setRenewer(renewer);
