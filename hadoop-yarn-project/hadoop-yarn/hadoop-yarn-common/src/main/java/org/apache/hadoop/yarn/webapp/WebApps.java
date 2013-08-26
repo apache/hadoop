@@ -217,11 +217,13 @@ public class WebApps {
               {
                 if (UserGroupInformation.isSecurityEnabled()) {
                   boolean initSpnego = true;
-                  if (spnegoPrincipalKey == null || spnegoPrincipalKey.isEmpty()) {
+                  if (spnegoPrincipalKey == null
+                      || conf.get(spnegoPrincipalKey, "").isEmpty()) {
                     LOG.warn("Principal for spnego filter is not set");
                     initSpnego = false;
                   }
-                  if (spnegoKeytabKey == null || spnegoKeytabKey.isEmpty()) {
+                  if (spnegoKeytabKey == null
+                      || conf.get(spnegoKeytabKey, "").isEmpty()) {
                     LOG.warn("Keytab for spnego filter is not set");
                     initSpnego = false;
                   }

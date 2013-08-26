@@ -153,9 +153,9 @@ public class HistoryClientService extends AbstractService {
         .$for("jobhistory", HistoryClientService.class, this, "ws")
         .with(conf)
         .withHttpSpnegoKeytabKey(
-            YarnConfiguration.JHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+            JHAdminConfig.MR_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
         .withHttpSpnegoPrincipalKey(
-            YarnConfiguration.JHS_WEBAPP_SPNEGO_USER_NAME_KEY)
+            JHAdminConfig.MR_WEBAPP_SPNEGO_USER_NAME_KEY)
         .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
     conf.updateConnectAddr(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
                            webApp.getListenerAddress());
