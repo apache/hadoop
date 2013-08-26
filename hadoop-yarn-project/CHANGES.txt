@@ -36,6 +36,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1093. Corrections to Fair Scheduler documentation (Wing Yew Poon via
     Sandy Ryza)
 
+    YARN-942. In Fair Scheduler documentation, inconsistency on which
+    properties have prefix (Akira Ajisaka via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
