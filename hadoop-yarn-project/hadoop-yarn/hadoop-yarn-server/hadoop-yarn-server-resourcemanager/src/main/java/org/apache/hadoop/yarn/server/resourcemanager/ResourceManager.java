@@ -584,7 +584,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
             .withHttpSpnegoPrincipalKey(
                 YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(
-                YarnConfiguration.RM_WEBAPP_SPENGO_KEYTAB_FILE_KEY)
+                YarnConfiguration.RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
             .at(this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)); 
     String proxyHostAndPort = YarnConfiguration.getProxyHostAndPort(conf);

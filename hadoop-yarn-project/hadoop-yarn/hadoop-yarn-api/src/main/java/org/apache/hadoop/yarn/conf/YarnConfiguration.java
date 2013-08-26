@@ -214,11 +214,13 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_KEYTAB = 
     RM_PREFIX + "keytab";
 
+  /**The kerberos principal to be used for spnego filter for RM.*/
   public static final String RM_WEBAPP_SPNEGO_USER_NAME_KEY =
       RM_PREFIX + "webapp.spnego-principal";
   
-  public static final String RM_WEBAPP_SPENGO_KEYTAB_FILE_KEY =
-      RM_PREFIX + "webapp.spengo-keytab-file";
+  /**The kerberos keytab to be used for spnego filter for RM.*/
+  public static final String RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
+      RM_PREFIX + "webapp.spnego-keytab-file";
 
   /** How long to wait until a container is considered dead.*/
   public static final String RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 
@@ -615,9 +617,11 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_USER_HOME_DIR =
       NM_PREFIX + "user-home-dir";
   
+  /**The kerberos principal to be used for spnego filter for NM.*/
   public static final String NM_WEBAPP_SPNEGO_USER_NAME_KEY =
       NM_PREFIX + "webapp.spnego-principal";
   
+  /**The kerberos keytab to be used for spnego filter for NM.*/
   public static final String NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
       NM_PREFIX + "webapp.spnego-keytab-file";
   
@@ -749,12 +753,6 @@ public class YarnConfiguration extends Configuration {
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
-
-  public static final String JHS_WEBAPP_SPNEGO_USER_NAME_KEY =
-      "jobhistoryserver.webapp.spnego-principal";
-  
-  public static final String JHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
-      "jobhistoryserver.webapp.spnego-keytab-file";
 
   /**
    * The interval of the yarn client's querying application state after
