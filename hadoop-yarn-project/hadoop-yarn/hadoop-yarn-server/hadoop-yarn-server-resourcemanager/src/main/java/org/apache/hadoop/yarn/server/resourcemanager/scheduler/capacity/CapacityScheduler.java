@@ -185,7 +185,8 @@ public class CapacityScheduler
   private boolean initialized = false;
 
   private ResourceCalculator calculator;
-  
+  private boolean usePortForNodeName;
+
   public CapacityScheduler() {}
 
   @Override
@@ -256,6 +257,7 @@ public class CapacityScheduler
       this.minimumAllocation = this.conf.getMinimumAllocation();
       this.maximumAllocation = this.conf.getMaximumAllocation();
       this.calculator = this.conf.getResourceCalculator();
+      this.usePortForNodeName = this.conf.getUsePortForNodeName();
 
       this.rmContext = rmContext;
       
@@ -759,7 +761,8 @@ public class CapacityScheduler
   }
 
   private synchronized void addNode(RMNode nodeManager) {
-    this.nodes.put(nodeManager.getNodeID(), new FiCaSchedulerNode(nodeManager));
+    this.nodes.put(nodeManager.getNodeID(), new FiCaSchedulerNode(nodeManager,
+        usePortForNodeName));
     Resources.addTo(clusterResource, nodeManager.getTotalCapability());
     root.updateClusterResource(clusterResource);
     ++numNodeManagers;

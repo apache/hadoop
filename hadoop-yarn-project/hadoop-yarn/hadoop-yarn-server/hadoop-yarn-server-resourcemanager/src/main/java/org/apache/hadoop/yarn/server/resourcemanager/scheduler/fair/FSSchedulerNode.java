@@ -63,10 +63,16 @@ public class FSSchedulerNode extends SchedulerNode {
     new HashMap<ContainerId, RMContainer>();
   
   private final RMNode rmNode;
+  private final String nodeName;
 
-  public FSSchedulerNode(RMNode node) {
+  public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
     this.rmNode = node;
     this.availableResource = Resources.clone(node.getTotalCapability());
+    if (usePortForNodeName) {
+      nodeName = rmNode.getHostName() + ":" + node.getNodeID().getPort();
+    } else {
+      nodeName = rmNode.getHostName();
+    }
   }
 
   public RMNode getRMNode() {
@@ -82,8 +88,8 @@ public class FSSchedulerNode extends SchedulerNode {
   }
 
   @Override
-  public String getHostName() {
-    return rmNode.getHostName();
+  public String getNodeName() {
+    return nodeName;
   }
 
   @Override

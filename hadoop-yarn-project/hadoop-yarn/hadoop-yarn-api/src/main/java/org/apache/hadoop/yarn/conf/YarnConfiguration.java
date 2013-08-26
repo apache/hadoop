@@ -132,6 +132,15 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "scheduler.client.thread-count";
   public static final int DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT = 50;
 
+  /** If the port should be included or not in the node name. The node name
+   * is used by the scheduler for resource requests allocation location 
+   * matching. Typically this is just the hostname, using the port is needed
+   * when using minicluster and specific NM are required.*/
+  public static final String RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME =
+      YARN_PREFIX + "scheduler.include-port-in-node-name";
+  public static final boolean DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME = 
+      false;
+
   /**
    * Enable periodic monitor threads.
    * @see #RM_SCHEDULER_MONITOR_POLICIES
