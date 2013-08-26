@@ -33,6 +33,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1074. Cleaned up YARN CLI application list to only display running
     applications by default. (Xuan Gong via vinodkv)
     
+    YARN-1093. Corrections to Fair Scheduler documentation (Wing Yew Poon via
+    Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
