@@ -47,7 +47,7 @@ Hadoop MapReduce Next Generation - Fair Scheduler
 
   The scheduler organizes apps further into "queues", and shares resources
   fairly between these queues. By default, all users share a single queue,
-  called “default”. If an app specifically lists a queue in a container resource
+  named “default”. If an app specifically lists a queue in a container resource
   request, the request is submitted to that queue. It is also possible to assign
   queues based on the user name included with the request through
   configuration. Within each queue, a scheduling policy is used to share
@@ -85,7 +85,7 @@ Hadoop MapReduce Next Generation - Fair Scheduler
   their parents in the fair scheduler configuration file.
   
   A queue's name starts with the names of its parents, with periods as
-  separators. So a queue named "queue1" under the root named, would be referred
+  separators. So a queue named "queue1" under the root queue, would be referred
   to as "root.queue1", and a queue named "queue2" under a queue named "parent1"
   would be referred to as "root.parent1.queue2". When referring to queues, the
   root part of the name is optional, so queue1 could be referred to as just
@@ -118,22 +118,23 @@ Hadoop MapReduce Next Generation - Fair Scheduler
 
   Customizing the Fair Scheduler typically involves altering two files. First, 
   scheduler-wide options can be set by adding configuration properties in the 
-  fair-scheduler.xml file in your existing configuration directory. Second, in 
+  yarn-site.xml file in your existing configuration directory. Second, in 
   most cases users will want to create a manifest file listing which queues 
   exist and their respective weights and capacities. The location of this file 
-  is flexible - but it must be declared in fair-scheduler.xml. 
+  is flexible - but it must be declared in yarn-site.xml.
 
  * <<<yarn.scheduler.fair.allocation.file>>>
 
    * Path to allocation file. An allocation file is an XML manifest describing
      queues and their properties, in addition to certain policy defaults. This file
      must be in XML format as described in the next section.
+     Defaults to fair-scheduler.xml in configuration directory.
 
  * <<<yarn.scheduler.fair.user-as-default-queue>>>
 
     * Whether to use the username associated with the allocation as the default 
       queue name, in the event that a queue name is not specified. If this is set 
-      to "false" or unset, all jobs have a shared default queue, called "default".
+      to "false" or unset, all jobs have a shared default queue, named "default".
       Defaults to true.
 
  * <<<yarn.scheduler.fair.preemption>>>
@@ -178,14 +179,15 @@ Hadoop MapReduce Next Generation - Fair Scheduler
 
 Allocation file format
 
-  The allocation file must be in XML format. The format contains four types of
+  The allocation file must be in XML format. The format contains five types of
   elements:
 
  * <<Queue elements>>, which represent queues. Each may contain the following
      properties:
 
    * minResources: minimum resources the queue is entitled to, in the form
-     "X mb, Y vcores". If a queue's minimum share is not satisfied, it will be
+     "X mb, Y vcores". For the single-resource fairness policy, the vcores
+     value is ignored. If a queue's minimum share is not satisfied, it will be
      offered available resources before any other queue under the same parent.
      Under the single-resource fairness policy, a queue
      is considered unsatisfied if its memory usage is below its minimum memory
@@ -199,7 +201,8 @@ Allocation file format
      may be using those resources.
 
    * maxResources: maximum resources a queue is allowed, in the form
-     "X mb, Y vcores". A queue will never be assigned a container that would
+     "X mb, Y vcores". For the single-resource fairness policy, the vcores
+     value is ignored. A queue will never be assigned a container that would
      put its aggregate usage over this limit.
 
    * maxRunningApps: limit the number of apps from the queue to run at once
@@ -234,19 +237,23 @@ Allocation file format
    its fair share before it will try to preempt containers to take resources from
    other queues.
 
+ * <<A defaultQueueSchedulingPolicy element>>, which sets the default scheduling 
+   policy for queues; overriden by the schedulingPolicy element in each queue
+   if specified. Defaults to "fair".
+
   An example allocation file is given here:
 
 ---
 <?xml version="1.0"?>
 <allocations>
   <queue name="sample_queue">
-    <minResources>10000 mb</minResources>
-    <maxResources>90000 mb</maxResources>
+    <minResources>10000 mb,0vcores</minResources>
+    <maxResources>90000 mb,0vcores</maxResources>
     <maxRunningApps>50</maxRunningApps>
     <weight>2.0</weight>
     <schedulingPolicy>fair</schedulingPolicy>
     <queue name="sample_sub_queue">
-      <minResources>5000 mb</minResources>
+      <minResources>5000 mb,0vcores</minResources>
     </queue>
   </queue>
   <user name="sample_user">
