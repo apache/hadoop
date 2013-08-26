@@ -801,7 +801,7 @@ public class LeafQueue implements CSQueue {
   assignContainers(Resource clusterResource, FiCaSchedulerNode node) {
 
     if(LOG.isDebugEnabled()) {
-      LOG.debug("assignContainers: node=" + node.getHostName()
+      LOG.debug("assignContainers: node=" + node.getNodeName()
         + " #applications=" + activeApplications.size());
     }
     
@@ -1130,7 +1130,7 @@ public class LeafQueue implements CSQueue {
 
     // Data-local
     ResourceRequest nodeLocalResourceRequest =
-        application.getResourceRequest(priority, node.getHostName());
+        application.getResourceRequest(priority, node.getNodeName());
     if (nodeLocalResourceRequest != null) {
       assigned = 
           assignNodeLocalContainers(clusterResource, nodeLocalResourceRequest, 
@@ -1257,7 +1257,7 @@ public class LeafQueue implements CSQueue {
     if (type == NodeType.NODE_LOCAL) {
       // Now check if we need containers on this host...
       ResourceRequest nodeLocalRequest = 
-        application.getResourceRequest(priority, node.getHostName());
+        application.getResourceRequest(priority, node.getNodeName());
       if (nodeLocalRequest != null) {
         return nodeLocalRequest.getNumContainers() > 0;
       }
@@ -1302,7 +1302,7 @@ public class LeafQueue implements CSQueue {
       FiCaSchedulerApp application, Priority priority, 
       ResourceRequest request, NodeType type, RMContainer rmContainer) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("assignContainers: node=" + node.getHostName()
+      LOG.debug("assignContainers: node=" + node.getNodeName()
         + " application=" + application.getApplicationId().getId()
         + " priority=" + priority.getPriority()
         + " request=" + request + " type=" + type);

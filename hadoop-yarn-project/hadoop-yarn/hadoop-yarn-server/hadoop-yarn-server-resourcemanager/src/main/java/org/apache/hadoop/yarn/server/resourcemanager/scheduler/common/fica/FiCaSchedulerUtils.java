@@ -24,9 +24,9 @@ public class FiCaSchedulerUtils {
 
   public static  boolean isBlacklisted(FiCaSchedulerApp application,
       FiCaSchedulerNode node, Log LOG) {
-    if (application.isBlacklisted(node.getHostName())) {
+    if (application.isBlacklisted(node.getNodeName())) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Skipping 'host' " + node.getHostName() + 
+        LOG.debug("Skipping 'host' " + node.getNodeName() + 
             " for " + application.getApplicationId() + 
             " since it has been blacklisted");
       }

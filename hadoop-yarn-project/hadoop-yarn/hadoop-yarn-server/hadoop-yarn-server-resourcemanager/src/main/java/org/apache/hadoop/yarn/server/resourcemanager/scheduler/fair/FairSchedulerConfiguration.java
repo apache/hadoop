@@ -166,7 +166,12 @@ public class FairSchedulerConfiguration extends Configuration {
   public int getWaitTimeBeforeKill() {
     return getInt(WAIT_TIME_BEFORE_KILL, DEFAULT_WAIT_TIME_BEFORE_KILL);
   }
-  
+
+  public boolean getUsePortForNodeName() {
+    return getBoolean(YarnConfiguration.RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME);
+  }
+
   /**
    * Parses a resource config value of a form like "1024", "1024 mb",
    * or "1024 mb, 3 vcores". If no units are given, megabytes are assumed.

@@ -281,7 +281,7 @@ public class AppSchedulingInfo {
     // Update future requirements
     nodeLocalRequest.setNumContainers(nodeLocalRequest.getNumContainers() - 1);
     if (nodeLocalRequest.getNumContainers() == 0) {
-      this.requests.get(priority).remove(node.getHostName());
+      this.requests.get(priority).remove(node.getNodeName());
     }
 
     ResourceRequest rackLocalRequest = requests.get(priority).get(

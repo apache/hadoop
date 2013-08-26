@@ -81,6 +81,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1094. Fixed a blocker with RM restart code because of which RM crashes
     when try to recover an existing app. (vinodkv)
 
+    YARN-1008. MiniYARNCluster with multiple nodemanagers, all nodes have same 
+    key for allocations. (tucu)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
