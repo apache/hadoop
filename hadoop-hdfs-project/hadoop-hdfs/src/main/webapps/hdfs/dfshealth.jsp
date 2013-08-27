@@ -65,6 +65,7 @@
 <h3>Cluster Summary</h3>
 <b> <%= NamenodeJspHelper.getSecurityModeText()%> </b>
 <b> <%= NamenodeJspHelper.getSafeModeText(fsn)%> </b>
+<b> <%= NamenodeJspHelper.getRollingUpgradeText(fsn)%> </b>
 <b> <%= NamenodeJspHelper.getInodeLimitText(fsn)%> </b>
 <%= NamenodeJspHelper.getCorruptFilesWarning(fsn)%>
 

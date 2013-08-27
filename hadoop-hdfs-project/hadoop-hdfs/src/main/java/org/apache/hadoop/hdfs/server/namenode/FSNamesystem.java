@@ -6225,6 +6225,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       innerinfo.put("nonDfsUsedSpace", node.getNonDfsUsed());
       innerinfo.put("capacity", node.getCapacity());
       innerinfo.put("numBlocks", node.numBlocks());
+      innerinfo.put("version", node.getSoftwareVersion());
       info.put(node.getHostName(), innerinfo);
     }
     return JSON.toString(info);
@@ -6434,6 +6435,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       LOG.warn("Get corrupt file blocks returned error: " + e.getMessage());
     }
     return JSON.toString(list);
+  }
+
+  @Override  //NameNodeMXBean
+  public int getDistinctVersionCount() {
+    return blockManager.getDatanodeManager().getDatanodesSoftwareVersions()
+      .size();
+  }
+
+  @Override  //NameNodeMXBean
+  public Map<String, Integer> getDistinctVersions() {
+    return blockManager.getDatanodeManager().getDatanodesSoftwareVersions();
+  }
+
+  @Override  //NameNodeMXBean
+  public String getSoftwareVersion() {
+    return VersionInfo.getVersion();
   }
 
   /**
