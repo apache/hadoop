@@ -110,6 +110,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-3245. Add metrics and web UI for cluster version summary. (Ravi
     Prakash via kihwal)
 
+    HDFS-5128. Allow multiple net interfaces to be used with HA namenode RPC
+    server. (kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
