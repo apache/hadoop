@@ -39,6 +39,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-942. In Fair Scheduler documentation, inconsistency on which
     properties have prefix (Akira Ajisaka via Sandy Ryza)
 
+    YARN-1083. Changed ResourceManager to fail when the expiry interval is less
+    than the configured node-heartbeat interval. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
