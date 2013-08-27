@@ -107,6 +107,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5045. Add more unit tests for retry cache to cover all AtMostOnce 
     methods. (jing9)
 
+    HDFS-3245. Add metrics and web UI for cluster version summary. (Ravi
+    Prakash via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
