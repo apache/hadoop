@@ -365,6 +365,20 @@ public class ResourceManager extends CompositeService implements Recoverable {
           + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
           + "=" + globalMaxAppAttempts + ", it should be a positive integer.");
     }
+
+    // validate expireIntvl >= heartbeatIntvl
+    long expireIntvl = conf.getLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
+    long heartbeatIntvl =
+        conf.getLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
+    if (expireIntvl < heartbeatIntvl) {
+      throw new YarnRuntimeException("Nodemanager expiry interval should be no"
+          + " less than heartbeat interval, "
+          + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS + "=" + expireIntvl
+          + ", " + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS + "="
+          + heartbeatIntvl);
+    }
   }
 
   @Private

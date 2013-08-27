@@ -203,4 +203,21 @@ public class TestResourceManager {
     }
   }
 
+  @Test
+  public void testNMExpiryAndHeartbeatIntervalsValidation() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS, 1000);
+    conf.setLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 1001);
+    resourceManager = new ResourceManager();;
+    try {
+      resourceManager.init(conf);
+    } catch (YarnRuntimeException e) {
+      // Exception is expected.
+      if (!e.getMessage().startsWith("Nodemanager expiry interval should be no"
+          + " less than heartbeat interval")) {
+        throw e;
+      }
+    }
+  }
+
 }
