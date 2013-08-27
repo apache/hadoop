@@ -169,6 +169,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5124. DelegationTokenSecretManager#retrievePassword can cause deadlock 
     in NameNode. (Daryn Sharp via jing9)
 
+    HDFS-5132. Deadlock in NameNode between SafeModeMonitor#run and 
+    DatanodeManager#handleHeartbeat. (kihwal)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

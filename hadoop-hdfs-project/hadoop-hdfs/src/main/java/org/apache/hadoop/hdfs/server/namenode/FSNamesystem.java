@@ -4781,7 +4781,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     @Override
     public void run() {
-      while (fsRunning && (safeMode != null && !safeMode.canLeave())) {
+      while (fsRunning) {
+        writeLock();
+        try {
+          if (safeMode == null) { // Not in safe mode.
+            break;
+          }
+          if (safeMode.canLeave()) {
+            // Leave safe mode.
+            safeMode.leave();
+            break;
+          }
+        } finally {
+          writeUnlock();
+        }
+
         try {
           Thread.sleep(recheckInterval);
         } catch (InterruptedException ie) {
@@ -4790,9 +4804,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       if (!fsRunning) {
         LOG.info("NameNode is being shutdown, exit SafeModeMonitor thread");
-      } else {
-        // leave safe mode and stop the monitor
-        leaveSafeMode();
       }
       smmthread = null;
     }
