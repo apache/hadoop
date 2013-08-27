@@ -52,6 +52,18 @@
 </property>
 
 <property>
+  <name>dfs.namenode.rpc-bind-host</name>
+  <value></value>
+  <description>
+    The actual address the server will bind to. If this optional address is
+    set, the RPC server will bind to this address and the port specified in
+    dfs.namenode.rpc-address for the RPC server. It can also be specified
+    per name node or name service for HA/Federation. This is most useful for
+    making name node listen to all interfaces by setting to 0.0.0.0.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.servicerpc-address</name>
   <value></value>
   <description>
@@ -61,6 +73,18 @@
     dfs.namenode.rpc-address.EXAMPLENAMESERVICE
     The value of this property will take the form of nn-host1:rpc-port.
     If the value of this property is unset the value of dfs.namenode.rpc-address will be used as the default.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.servicerpc-bind-host</name>
+  <value></value>
+  <description>
+    The actual address the server will bind to. If this optional address is
+    set, the service RPC server will bind to this address and the port 
+    specified in dfs.namenode.servicerpc-address. It can also be specified
+    per name node or name service for HA/Federation. This is most useful for
+    making name node listen to all interfaces by setting to 0.0.0.0.
   </description>
 </property>
 
