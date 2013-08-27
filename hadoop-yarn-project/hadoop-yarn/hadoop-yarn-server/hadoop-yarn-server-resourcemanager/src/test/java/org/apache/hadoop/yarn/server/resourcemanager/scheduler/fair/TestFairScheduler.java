@@ -2146,4 +2146,54 @@ public class TestFairScheduler {
     Assert.assertEquals(2, app3.getLiveContainers().size());
     Assert.assertEquals(2, app4.getLiveContainers().size());
   }
+
+  @Test(timeout = 30000)
+  public void testHostPortNodeName() throws Exception {
+    scheduler.getConf().setBoolean(YarnConfiguration
+        .RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME, true);
+    scheduler.reinitialize(scheduler.getConf(), 
+        resourceManager.getRMContext());
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024),
+        1, "127.0.0.1", 1);
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024),
+        2, "127.0.0.1", 2);
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1", 
+        "user1", 0);
+
+    ResourceRequest nodeRequest = createResourceRequest(1024, 
+        node1.getNodeID().getHost() + ":" + node1.getNodeID().getPort(), 1,
+        1, true);
+    ResourceRequest rackRequest = createResourceRequest(1024, 
+        node1.getRackName(), 1, 1, false);
+    ResourceRequest anyRequest = createResourceRequest(1024, 
+        ResourceRequest.ANY, 1, 1, false);
+    createSchedulingRequestExistingApplication(nodeRequest, attId1);
+    createSchedulingRequestExistingApplication(rackRequest, attId1);
+    createSchedulingRequestExistingApplication(anyRequest, attId1);
+
+    scheduler.update();
+
+    NodeUpdateSchedulerEvent node1UpdateEvent = new 
+        NodeUpdateSchedulerEvent(node1);
+    NodeUpdateSchedulerEvent node2UpdateEvent = new 
+        NodeUpdateSchedulerEvent(node2);
+
+    // no matter how many heartbeats, node2 should never get a container  
+    FSSchedulerApp app = scheduler.applications.get(attId1);
+    for (int i = 0; i < 10; i++) {
+      scheduler.handle(node2UpdateEvent);
+      assertEquals(0, app.getLiveContainers().size());
+      assertEquals(0, app.getReservedContainers().size());
+    }
+    // then node1 should get the container  
+    scheduler.handle(node1UpdateEvent);
+    assertEquals(1, app.getLiveContainers().size());
+  }
+
 }

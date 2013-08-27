@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.EnumSet;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -25,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -45,13 +47,65 @@ public abstract class GetApplicationsRequest {
     return request;
   }
 
+  /**
+   * <p>
+   * The request from clients to get a report of Applications matching the
+   * giving application types in the cluster from the
+   * <code>ResourceManager</code>.
+   * </p>
+   *
+   *
+   * @see ApplicationClientProtocol#getApplications(GetApplicationsRequest)
+   */
   @Public
   @Stable
-  public static GetApplicationsRequest newInstance(
-      Set<String> applicationTypes) {
+  public static GetApplicationsRequest
+      newInstance(Set<String> applicationTypes) {
     GetApplicationsRequest request =
         Records.newRecord(GetApplicationsRequest.class);
     request.setApplicationTypes(applicationTypes);
+    return request;
+  }
+
+  /**
+   * <p>
+   * The request from clients to get a report of Applications matching the
+   * giving application states in the cluster from the
+   * <code>ResourceManager</code>.
+   * </p>
+   *
+   *
+   * @see ApplicationClientProtocol#getApplications(GetApplicationsRequest)
+   */
+  @Public
+  @Stable
+  public static GetApplicationsRequest newInstance(
+      EnumSet<YarnApplicationState> applicationStates) {
+    GetApplicationsRequest request =
+        Records.newRecord(GetApplicationsRequest.class);
+    request.setApplicationStates(applicationStates);
+    return request;
+  }
+
+  /**
+   * <p>
+   * The request from clients to get a report of Applications matching the
+   * giving and application types and application types in the cluster from the
+   * <code>ResourceManager</code>.
+   * </p>
+   *
+   *
+   * @see ApplicationClientProtocol#getApplications(GetApplicationsRequest)
+   */
+  @Public
+  @Stable
+  public static GetApplicationsRequest newInstance(
+      Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates) {
+    GetApplicationsRequest request =
+        Records.newRecord(GetApplicationsRequest.class);
+    request.setApplicationTypes(applicationTypes);
+    request.setApplicationStates(applicationStates);
     return request;
   }
 
@@ -75,4 +129,25 @@ public abstract class GetApplicationsRequest {
   @Unstable
   public abstract void
       setApplicationTypes(Set<String> applicationTypes);
+
+  /**
+   * Get the application states to filter applications on
+   *
+   * @return Set of Application states to filter on
+   */
+  @Public
+  @Stable
+  public abstract EnumSet<YarnApplicationState> getApplicationStates();
+
+  /**
+   * Set the application states to filter applications on
+   *
+   * @param applicationStates
+   * A Set of Application states to filter on.
+   * If not defined, match all running applications
+   */
+  @Private
+  @Unstable
+  public abstract void
+      setApplicationStates(EnumSet<YarnApplicationState> applicationStates);
 }

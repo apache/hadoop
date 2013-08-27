@@ -23,6 +23,8 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -42,7 +44,16 @@ Release 2.1.1-beta - UNRELEASED
   IMPROVEMENTS
 
     YARN-589. Expose a REST API for monitoring the fair scheduler (Sandy Ryza).
+
+    YARN-1074. Cleaned up YARN CLI application list to only display running
+    applications by default. (Xuan Gong via vinodkv)
     
+    YARN-1093. Corrections to Fair Scheduler documentation (Wing Yew Poon via
+    Sandy Ryza)
+
+    YARN-942. In Fair Scheduler documentation, inconsistency on which
+    properties have prefix (Akira Ajisaka via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -84,6 +95,15 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-1082. Create base directories on HDFS after RM login to ensure RM
     recovery doesn't fail in secure mode. (vinodkv via acmurthy)
+
+    YARN-1085. Modified YARN and MR2 web-apps to do HTTP authentication in
+    secure setup with kerberos. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-1094. Fixed a blocker with RM restart code because of which RM crashes
+    when try to recover an existing app. (vinodkv)
+
+    YARN-1008. MiniYARNCluster with multiple nodemanagers, all nodes have same 
+    key for allocations. (tucu)
 
 Release 2.1.0-beta - 2013-08-22
 

@@ -101,7 +101,7 @@ public class NodeManager implements ContainerManagementProtocol {
     request.setNodeId(this.nodeId);
     resourceTrackerService.registerNodeManager(request);
     this.schedulerNode = new FiCaSchedulerNode(rmContext.getRMNodes().get(
-        this.nodeId));
+        this.nodeId), false);
    
     // Sanity check
     Assert.assertEquals(capability.getMemory(), 

@@ -338,6 +338,11 @@ public class CapacitySchedulerConfiguration extends Configuration {
         this);
   }
 
+  public boolean getUsePortForNodeName() {
+    return getBoolean(YarnConfiguration.RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME);
+  }
+
   public void setResourceComparator(
       Class<? extends ResourceCalculator> resourceCalculatorClass) {
     setClass(

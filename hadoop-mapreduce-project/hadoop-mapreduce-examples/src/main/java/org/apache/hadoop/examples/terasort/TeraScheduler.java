@@ -24,7 +24,6 @@ import java.util.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.examples.terasort.TeraInputFormat.TeraFileSplit;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
@@ -214,8 +213,9 @@ class TeraScheduler {
     for(int i=0; i < splits.length; ++i) {
       if (splits[i].isAssigned) {
         // copy the split and fix up the locations
-        ((TeraFileSplit) realSplits[i]).setLocations
-           (new String[]{splits[i].locations.get(0).hostname});
+        String[] newLocations = {splits[i].locations.get(0).hostname};
+        realSplits[i] = new FileSplit(realSplits[i].getPath(),
+            realSplits[i].getStart(), realSplits[i].getLength(), newLocations);
         result[left++] = realSplits[i];
       } else {
         result[right--] = realSplits[i];

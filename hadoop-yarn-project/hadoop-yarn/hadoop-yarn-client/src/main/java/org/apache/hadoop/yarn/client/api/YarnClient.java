@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.api;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
@@ -36,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -171,13 +173,13 @@ public abstract class YarnClient extends AbstractService {
    * <p>
    * Get a report (ApplicationReport) of all Applications in the cluster.
    * </p>
-   * 
+   *
    * <p>
    * If the user does not have <code>VIEW_APP</code> access for an application
    * then the corresponding report will be filtered as described in
    * {@link #getApplicationReport(ApplicationId)}.
    * </p>
-   * 
+   *
    * @return a list of reports of all running applications
    * @throws YarnException
    * @throws IOException
@@ -204,6 +206,50 @@ public abstract class YarnClient extends AbstractService {
    */
   public abstract List<ApplicationReport> getApplications(
       Set<String> applicationTypes) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get a report (ApplicationReport) of Applications matching the given
+   * application states in the cluster.
+   * </p>
+   *
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access for an application
+   * then the corresponding report will be filtered as described in
+   * {@link #getApplicationReport(ApplicationId)}.
+   * </p>
+   *
+   * @param applicationStates
+   * @return a list of reports of applications
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract List<ApplicationReport>
+      getApplications(EnumSet<YarnApplicationState> applicationStates)
+          throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get a report (ApplicationReport) of Applications matching the given
+   * application types and application states in the cluster.
+   * </p>
+   *
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access for an application
+   * then the corresponding report will be filtered as described in
+   * {@link #getApplicationReport(ApplicationId)}.
+   * </p>
+   *
+   * @param applicationTypes
+   * @param applicationStates
+   * @return a list of reports of applications
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract List<ApplicationReport> getApplications(
+      Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates) throws YarnException,
+      IOException;
 
   /**
    * <p>

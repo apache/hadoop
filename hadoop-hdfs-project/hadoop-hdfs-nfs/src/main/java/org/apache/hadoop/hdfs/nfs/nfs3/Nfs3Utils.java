@@ -88,6 +88,7 @@ public class Nfs3Utils {
     return new WccAttr(attr.getSize(), attr.getMtime(), attr.getCtime());
   }
 
+  // TODO: maybe not efficient
   public static WccData createWccData(final WccAttr preOpAttr,
       DFSClient dfsClient, final String fileIdPath, final IdUserGroup iug)
       throws IOException {

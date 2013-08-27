@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
+import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProtoOrBuilder;
 
@@ -38,6 +43,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   boolean viaProto = false;
 
   Set<String> applicationTypes = null;
+  EnumSet<YarnApplicationState> applicationStates = null;
 
   public GetApplicationsRequestPBImpl() {
     builder = GetApplicationsRequestProto.newBuilder();
@@ -67,6 +73,40 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     if (this.applicationTypes != null) {
       addLocalApplicationTypesToProto();
     }
+    if (this.applicationStates != null) {
+      maybeInitBuilder();
+      builder.clearApplicationStates();
+      Iterable<YarnApplicationStateProto> iterable =
+          new Iterable<YarnApplicationStateProto>() {
+
+            @Override
+            public Iterator<YarnApplicationStateProto> iterator() {
+              return new Iterator<YarnApplicationStateProto>() {
+
+                Iterator<YarnApplicationState> iter = applicationStates
+                    .iterator();
+
+                @Override
+                public boolean hasNext() {
+                  return iter.hasNext();
+                }
+
+                @Override
+                public YarnApplicationStateProto next() {
+                  return ProtoUtils.convertToProtoFormat(iter.next());
+                }
+
+                @Override
+                public void remove() {
+                  throw new UnsupportedOperationException();
+
+                }
+              };
+
+            }
+          };
+      builder.addAllApplicationStates(iterable);
+    }
   }
 
   private void addLocalApplicationTypesToProto() {
@@ -94,6 +134,20 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     this.applicationTypes.addAll(appTypeList);
   }
 
+  private void initApplicationStates() {
+    if (this.applicationStates != null) {
+      return;
+    }
+    GetApplicationsRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<YarnApplicationStateProto> appStatesList =
+        p.getApplicationStatesList();
+    this.applicationStates = EnumSet.noneOf(YarnApplicationState.class);
+
+    for (YarnApplicationStateProto c : appStatesList) {
+      this.applicationStates.add(ProtoUtils.convertFromProtoFormat(c));
+    }
+  }
+
   @Override
   public Set<String> getApplicationTypes() {
     initApplicationTypes();
@@ -106,6 +160,21 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     if (applicationTypes == null)
       builder.clearApplicationTypes();
     this.applicationTypes = applicationTypes;
+  }
+
+  @Override
+  public EnumSet<YarnApplicationState> getApplicationStates() {
+    initApplicationStates();
+    return this.applicationStates;
+  }
+
+  @Override
+  public void setApplicationStates(EnumSet<YarnApplicationState> applicationStates) {
+    maybeInitBuilder();
+    if (applicationStates == null) {
+      builder.clearApplicationStates();
+    }
+    this.applicationStates = applicationStates;
   }
 
   @Override

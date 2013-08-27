@@ -185,7 +185,7 @@ public class AppSchedulable extends Schedulable {
    */
   private void reserve(Priority priority, FSSchedulerNode node,
       Container container, boolean alreadyReserved) {
-    LOG.info("Making reservation: node=" + node.getHostName() +
+    LOG.info("Making reservation: node=" + node.getNodeName() +
                                  " app_id=" + app.getApplicationId());
     if (!alreadyReserved) {
       getMetrics().reserveResource(app.getUser(), container.getResource());
@@ -309,7 +309,7 @@ public class AppSchedulable extends Schedulable {
         ResourceRequest rackLocalRequest = app.getResourceRequest(priority,
             node.getRackName());
         ResourceRequest localRequest = app.getResourceRequest(priority,
-            node.getHostName());
+            node.getNodeName());
         
         if (localRequest != null && !localRequest.getRelaxLocality()) {
           LOG.warn("Relax locality off is not supported on local request: "
@@ -369,7 +369,7 @@ public class AppSchedulable extends Schedulable {
   public boolean hasContainerForNode(Priority prio, FSSchedulerNode node) {
     ResourceRequest anyRequest = app.getResourceRequest(prio, ResourceRequest.ANY);
     ResourceRequest rackRequest = app.getResourceRequest(prio, node.getRackName());
-    ResourceRequest nodeRequest = app.getResourceRequest(prio, node.getHostName());
+    ResourceRequest nodeRequest = app.getResourceRequest(prio, node.getNodeName());
 
     return
         // There must be outstanding requests at the given priority:
