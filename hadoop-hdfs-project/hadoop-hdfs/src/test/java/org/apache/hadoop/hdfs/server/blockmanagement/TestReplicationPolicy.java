@@ -1096,7 +1096,7 @@ public class TestReplicationPolicy {
     // Adding this block will increase its current replication, and that will
     // remove it from the queue.
     bm.addStoredBlockUnderConstruction(info,
-        TestReplicationPolicy.dataNodes[0], ReplicaState.FINALIZED);
+        TestReplicationPolicy.dataNodes[0], "STORAGE", ReplicaState.FINALIZED);
 
     // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
     // from QUEUE_VERY_UNDER_REPLICATED.

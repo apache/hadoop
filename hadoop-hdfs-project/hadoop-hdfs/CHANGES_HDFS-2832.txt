@@ -1,0 +1,4 @@
+  BREAKDOWN OF HDFS-2832 ENABLE SUPPORT FOR HETEROGENEOUS STORAGES IN HDFS
+
+    HDFS-4987. Namenode changes to track multiple storages per datanode.
+    (szetszwo)

@@ -18,15 +18,20 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.util.Time;
 
@@ -93,8 +98,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
-  private volatile BlockInfo blockList = null;
-  private int numBlocks = 0;
+  private final Map<String, DatanodeStorageInfo> storageMap = 
+      new HashMap<String, DatanodeStorageInfo>();
+
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
   public boolean isAlive = false;
@@ -217,39 +223,47 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * Add datanode to the block.
-   * Add block to the head of the list of blocks belonging to the data-node.
+   * Add data-node to the block. Add block to the head of the list of blocks
+   * belonging to the data-node.
    */
-  public boolean addBlock(BlockInfo b) {
-    if(!b.addNode(this))
-      return false;
-    // add to the head of the data-node list
-    blockList = b.listInsert(blockList, this);
-    numBlocks++;
-    return true;
-  }
-  
-  /**
-   * Remove block from the list of blocks belonging to the data-node.
-   * Remove datanode from the block.
-   */
-  public boolean removeBlock(BlockInfo b) {
-    blockList = b.listRemove(blockList, this);
-    if ( b.removeNode(this) ) {
-      numBlocks--;
-      return true;
-    } else {
-      return false;
+  public boolean addBlock(String storageID, BlockInfo b) {
+    DatanodeStorageInfo s = getStorageInfo(storageID);
+    if (s != null) {
+      return s.addBlock(b);
     }
+    return false;
+  }
+
+  DatanodeStorageInfo getStorageInfo(String storageID) {
+    return storageMap.get(storageID);
+  }
+  public Collection<DatanodeStorageInfo> getStorageInfos() {
+    return storageMap.values();
   }
 
   /**
-   * Move block to the head of the list of blocks belonging to the data-node.
-   * @return the index of the head of the blockList
+   * Remove block from the list of blocks belonging to the data-node. Remove
+   * data-node from the block.
    */
-  int moveBlockToHead(BlockInfo b, int curIndex, int headIndex) {
-    blockList = b.moveBlockToHead(blockList, this, curIndex, headIndex);
-    return curIndex;
+  boolean removeBlock(BlockInfo b) {
+    int index = b.findStorageInfo(this);
+    DatanodeStorageInfo s = b.getStorageInfo(index);
+    if (s != null) {
+      return s.removeBlock(b);
+    }
+    return false;
+  }
+  
+  /**
+   * Remove block from the list of blocks belonging to the data-node. Remove
+   * data-node from the block.
+   */
+  boolean removeBlock(String storageID, BlockInfo b) {
+    DatanodeStorageInfo s = getStorageInfo(storageID);
+    if (s != null) {
+      return s.removeBlock(b);
+    }
+    return false;
   }
 
   /**
@@ -257,7 +271,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @return the head of the blockList
    */
   protected BlockInfo getHead(){
-    return blockList;
+    return getBlockIterator().next();
   }
 
   /**
@@ -268,9 +282,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @return the new block
    */
   public BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock) {
-    boolean done = removeBlock(oldBlock);
+    int index = oldBlock.findStorageInfo(this);
+    DatanodeStorageInfo s = oldBlock.getStorageInfo(index);
+    boolean done = s.removeBlock(oldBlock);
     assert done : "Old block should belong to the data-node when replacing";
-    done = addBlock(newBlock);
+
+    done = s.addBlock(newBlock);
     assert done : "New block should not belong to the data-node when replacing";
     return newBlock;
   }
@@ -281,7 +298,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     setBlockPoolUsed(0);
     setDfsUsed(0);
     setXceiverCount(0);
-    this.blockList = null;
     this.invalidateBlocks.clear();
     this.volumeFailures = 0;
   }
@@ -295,7 +311,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   public int numBlocks() {
-    return numBlocks;
+    // TODO: synchronization
+    int blocks = 0;
+    for (DatanodeStorageInfo entry : storageMap.values()) {
+      blocks += entry.numBlocks();
+    }
+    return blocks;
   }
 
   /**
@@ -314,38 +335,52 @@ public class DatanodeDescriptor extends DatanodeInfo {
     rollBlocksScheduled(getLastUpdate());
   }
 
-  /**
-   * Iterates over the list of blocks belonging to the datanode.
-   */
-  public static class BlockIterator implements Iterator<BlockInfo> {
-    private BlockInfo current;
-    private DatanodeDescriptor node;
-      
-    BlockIterator(BlockInfo head, DatanodeDescriptor dn) {
-      this.current = head;
-      this.node = dn;
+  private static class BlockIterator implements Iterator<BlockInfo> {
+    private final int maxIndex;
+    private int index = 0;
+    private List<Iterator<BlockInfo>> iterators = new ArrayList<Iterator<BlockInfo>>();
+    
+    private BlockIterator(final Iterable<DatanodeStorageInfo> storages) {
+      for (DatanodeStorageInfo e : storages) {
+        iterators.add(e.getBlockIterator());
+      }
+      maxIndex = iterators.size() - 1;
+    }
+
+    private BlockIterator(final DatanodeStorageInfo storage) {
+      iterators.add(storage.getBlockIterator());
+      maxIndex = iterators.size() - 1;
     }
 
     @Override
     public boolean hasNext() {
-      return current != null;
+      update();
+      return iterators.get(index).hasNext();
     }
 
     @Override
     public BlockInfo next() {
-      BlockInfo res = current;
-      current = current.getNext(current.findDatanode(node));
-      return res;
+      update();
+      return iterators.get(index).next();
     }
-
+    
     @Override
-    public void remove()  {
-      throw new UnsupportedOperationException("Sorry. can't remove.");
+    public void remove() {
+      throw new UnsupportedOperationException("Remove unsupported.");
+    }
+    
+    private void update() {
+      while(index < maxIndex && !iterators.get(index).hasNext()) {
+        index++;
+      }
     }
   }
 
-  public Iterator<BlockInfo> getBlockIterator() {
-    return new BlockIterator(this.blockList, this);
+  Iterator<BlockInfo> getBlockIterator() {
+    return new BlockIterator(storageMap.values());
+  }
+  Iterator<BlockInfo> getBlockIterator(final String storageID) {
+    return new BlockIterator(storageMap.get(storageID));
   }
   
   /**
@@ -600,5 +635,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
       sb.append(" ").append(recover).append(" blocks to be recovered;");
     }
     return sb.toString();
+  }
+
+  DatanodeStorageInfo updateStorage(DatanodeStorage s) {
+    DatanodeStorageInfo storage = getStorageInfo(s.getStorageID());
+    if (storage == null) {
+      storage = new DatanodeStorageInfo(this, s);
+      storageMap.put(s.getStorageID(), storage);
+    } else {
+      storage.setState(s.getState());
+    }
+    return storage;
   }
 }

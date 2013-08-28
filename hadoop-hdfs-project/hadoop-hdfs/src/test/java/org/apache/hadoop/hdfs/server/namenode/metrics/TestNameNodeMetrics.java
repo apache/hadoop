@@ -235,7 +235,7 @@ public class TestNameNodeMetrics {
     cluster.getNamesystem().writeLock();
     try {
       bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
-          "TEST");
+          "STORAGE_ID", "TEST");
     } finally {
       cluster.getNamesystem().writeUnlock();
     }
@@ -286,7 +286,7 @@ public class TestNameNodeMetrics {
     cluster.getNamesystem().writeLock();
     try {
       bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
-          "TEST");
+          "STORAGE_ID", "TEST");
     } finally {
       cluster.getNamesystem().writeUnlock();
     }

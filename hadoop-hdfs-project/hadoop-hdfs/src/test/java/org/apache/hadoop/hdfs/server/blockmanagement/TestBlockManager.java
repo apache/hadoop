@@ -124,7 +124,7 @@ public class TestBlockManager {
   
   private void doBasicTest(int testIndex) {
     List<DatanodeDescriptor> origNodes = getNodes(0, 1);
-    BlockInfo blockInfo = addBlockOnNodes((long)testIndex, origNodes);
+    BlockInfo blockInfo = addBlockOnNodes(testIndex, origNodes);
 
     DatanodeDescriptor[] pipeline = scheduleSingleReplication(blockInfo);
     assertEquals(2, pipeline.length);
@@ -307,7 +307,7 @@ public class TestBlockManager {
   private void doTestSufficientlyReplBlocksUsesNewRack(int testIndex) {
     // Originally on only nodes in rack A.
     List<DatanodeDescriptor> origNodes = rackA;
-    BlockInfo blockInfo = addBlockOnNodes((long)testIndex, origNodes);
+    BlockInfo blockInfo = addBlockOnNodes(testIndex, origNodes);
     DatanodeDescriptor pipeline[] = scheduleSingleReplication(blockInfo);
     
     assertEquals(2, pipeline.length); // single new copy
@@ -340,7 +340,7 @@ public class TestBlockManager {
       List<DatanodeDescriptor> origNodes)
       throws Exception {
     assertEquals(0, bm.numOfUnderReplicatedBlocks());
-    addBlockOnNodes((long)testIndex, origNodes);
+    addBlockOnNodes(testIndex, origNodes);
     bm.processMisReplicatedBlocks();
     assertEquals(0, bm.numOfUnderReplicatedBlocks());
   }
@@ -353,7 +353,7 @@ public class TestBlockManager {
   private void fulfillPipeline(BlockInfo blockInfo,
       DatanodeDescriptor[] pipeline) throws IOException {
     for (int i = 1; i < pipeline.length; i++) {
-      bm.addBlock(pipeline[i], blockInfo, null);
+      bm.addBlock(pipeline[i], "STORAGE_ID", blockInfo, null);
     }
   }
 
@@ -362,7 +362,9 @@ public class TestBlockManager {
     BlockInfo blockInfo = new BlockInfo(block, 3);
 
     for (DatanodeDescriptor dn : nodes) {
-      blockInfo.addNode(dn);
+      for (DatanodeStorageInfo storage : dn.getStorageInfos()) {
+        blockInfo.addStorage(storage);
+      }
     }
     return blockInfo;
   }
@@ -508,12 +510,12 @@ public class TestBlockManager {
     assertTrue(node.isFirstBlockReport());
     // send block report, should be processed
     reset(node);
-    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    bm.processReport(node, null, "pool", new BlockListAsLongs(null, null));
     verify(node).receivedBlockReport();
     assertFalse(node.isFirstBlockReport());
     // send block report again, should NOT be processed
     reset(node);
-    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    bm.processReport(node, null, "pool", new BlockListAsLongs(null, null));
     verify(node, never()).receivedBlockReport();
     assertFalse(node.isFirstBlockReport());
 
@@ -525,7 +527,7 @@ public class TestBlockManager {
     assertTrue(node.isFirstBlockReport()); // ready for report again
     // send block report, should be processed after restart
     reset(node);
-    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    bm.processReport(node, null, "pool", new BlockListAsLongs(null, null));
     verify(node).receivedBlockReport();
     assertFalse(node.isFirstBlockReport());
   }
@@ -550,7 +552,7 @@ public class TestBlockManager {
     // send block report while pretending to already have blocks
     reset(node);
     doReturn(1).when(node).numBlocks();
-    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    bm.processReport(node, null, "pool", new BlockListAsLongs(null, null));
     verify(node).receivedBlockReport();
     assertFalse(node.isFirstBlockReport());
   }
