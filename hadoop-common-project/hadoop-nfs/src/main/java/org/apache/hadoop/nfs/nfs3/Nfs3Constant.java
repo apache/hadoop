@@ -201,4 +201,8 @@ public class Nfs3Constant {
   public static final String EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY = "hdfs.nfs.exports.cache.expirytime.millis";
   public static final long EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT = 15 * 60 * 1000; // 15 min
 
+  public static final String FILE_DUMP_DIR_KEY = "dfs.nfs3.dump.dir";
+  public static final String FILE_DUMP_DIR_DEFAULT = "/tmp/.hdfs-nfs";
+  public static final String ENABLE_FILE_DUMP_KEY = "dfs.nfs3.enableDump";
+  public static final boolean ENABLE_FILE_DUMP_DEFAULT = true;
 }
