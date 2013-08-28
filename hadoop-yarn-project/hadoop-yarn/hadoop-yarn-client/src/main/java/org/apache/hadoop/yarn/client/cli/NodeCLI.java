@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 @Private
 @Unstable
 public class NodeCLI extends YarnCLI {
-  private static final String NODES_PATTERN = "%16s\t%15s\t%17s\t%18s" +
+  private static final String NODES_PATTERN = "%16s\t%15s\t%17s\t%28s" +
     System.getProperty("line.separator");
 
   private static final String NODE_STATE_CMD = "states";
@@ -133,7 +133,7 @@ public class NodeCLI extends YarnCLI {
                                        nodeStates.toArray(new NodeState[0]));
     writer.println("Total Nodes:" + nodesReport.size());
     writer.printf(NODES_PATTERN, "Node-Id", "Node-State", "Node-Http-Address",
-        "Running-Containers");
+        "Number-of-Running-Containers");
     for (NodeReport nodeReport : nodesReport) {
       writer.printf(NODES_PATTERN, nodeReport.getNodeId(), nodeReport
           .getNodeState(), nodeReport.getHttpAddress(), nodeReport
