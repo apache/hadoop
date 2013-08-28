@@ -8,6 +8,9 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9910. proxy server start and stop documentation wrong
+    (Andre Kelpe via harsh)
+
     HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
     (Karthik Kambatla via Sandy Ryza)
 
