@@ -362,6 +362,9 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9910. proxy server start and stop documentation wrong
+    (André Kelpevia harsh)
+
     HADOOP-9446. Support Kerberos SPNEGO for IBM JDK. (Yu Gao via llu)
  
     HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
