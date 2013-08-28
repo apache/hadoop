@@ -29,6 +29,9 @@ Release 0.23.10 - UNRELEASED
 
     YARN-337. RM handles killed application tracking URL poorly (jlowe)
 
+    YARN-1101. Active nodes can be decremented below 0 (Robert Parker
+    via tgraves)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
