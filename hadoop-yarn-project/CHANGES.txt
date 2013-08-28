@@ -96,6 +96,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-981. Fixed YARN webapp so that /logs servlet works like before. (Jian He
     via vinodkv)
 
+    YARN-602. Fixed NodeManager to not let users override some mandatory 
+    environmental variables. (Kenji Kikushima  via vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
