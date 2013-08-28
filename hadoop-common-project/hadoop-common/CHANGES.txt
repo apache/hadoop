@@ -111,6 +111,9 @@ Release 2.1.1-beta - UNRELEASED
     
     HADOOP-9886. Turn warning message in RetryInvocationHandler to debug (arpit)
 
+    HADOOP-9906. Move HAZKUtil to o.a.h.util.ZKUtil and make inner-classes
+    public (Karthik Kambatla via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
