@@ -102,6 +102,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-602. Fixed NodeManager to not let users override some mandatory 
     environmental variables. (Kenji Kikushima  via vinodkv)
 
+    YARN-1101. Active nodes can be decremented below 0 (Robert Parker 
+    via tgraves)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
@@ -1219,6 +1222,9 @@ Release 0.23.10 - UNRELEASED
   BUG FIXES
 
     YARN-337. RM handles killed application tracking URL poorly (jlowe)
+
+    YARN-1101. Active nodes can be decremented below 0 (Robert Parker 
+    via tgraves)
 
 Release 0.23.9 - 2013-07-08
 

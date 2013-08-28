@@ -393,9 +393,18 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
-  private void updateMetricsForDeactivatedNode(NodeState finalState) {
+  private void updateMetricsForDeactivatedNode(NodeState initialState,
+                                               NodeState finalState) {
     ClusterMetrics metrics = ClusterMetrics.getMetrics();
-    metrics.decrNumActiveNodes();
+
+    switch (initialState) {
+      case RUNNING:
+        metrics.decrNumActiveNodes();
+        break;
+      case UNHEALTHY:
+        metrics.decrNumUnhealthyNMs();
+        break;
+    }
 
     switch (finalState) {
     case DECOMMISSIONED:
@@ -505,7 +514,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       // If the current state is NodeState.UNHEALTHY
       // Then node is already been removed from the
       // Scheduler
-      if (!rmNode.getState().equals(NodeState.UNHEALTHY)) {
+      NodeState initialState = rmNode.getState();
+      if (!initialState.equals(NodeState.UNHEALTHY)) {
         rmNode.context.getDispatcher().getEventHandler()
           .handle(new NodeRemovedSchedulerEvent(rmNode));
       }
@@ -520,7 +530,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.context.getInactiveRMNodes().put(rmNode.nodeId.getHost(), rmNode);
 
       //Update the metrics
-      rmNode.updateMetricsForDeactivatedNode(finalState);
+      rmNode.updateMetricsForDeactivatedNode(initialState, finalState);
     }
   }
 
@@ -550,7 +560,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             new NodesListManagerEvent(
                 NodesListManagerEventType.NODE_UNUSABLE, rmNode));
         // Update metrics
-        rmNode.updateMetricsForDeactivatedNode(NodeState.UNHEALTHY);
+        rmNode.updateMetricsForDeactivatedNode(rmNode.getState(),
+            NodeState.UNHEALTHY);
         return NodeState.UNHEALTHY;
       }
 
