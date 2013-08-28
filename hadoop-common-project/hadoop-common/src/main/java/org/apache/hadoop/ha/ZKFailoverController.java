@@ -36,7 +36,8 @@ import org.apache.hadoop.ha.ActiveStandbyElector.ActiveNotFoundException;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
-import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
+import org.apache.hadoop.util.ZKUtil;
+import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.hadoop.ha.HealthMonitor.State;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
@@ -313,18 +314,18 @@ public abstract class ZKFailoverController {
         ZK_SESSION_TIMEOUT_DEFAULT);
     // Parse ACLs from configuration.
     String zkAclConf = conf.get(ZK_ACL_KEY, ZK_ACL_DEFAULT);
-    zkAclConf = HAZKUtil.resolveConfIndirection(zkAclConf);
-    List<ACL> zkAcls = HAZKUtil.parseACLs(zkAclConf);
+    zkAclConf = ZKUtil.resolveConfIndirection(zkAclConf);
+    List<ACL> zkAcls = ZKUtil.parseACLs(zkAclConf);
     if (zkAcls.isEmpty()) {
       zkAcls = Ids.CREATOR_ALL_ACL;
     }
     
     // Parse authentication from configuration.
     String zkAuthConf = conf.get(ZK_AUTH_KEY);
-    zkAuthConf = HAZKUtil.resolveConfIndirection(zkAuthConf);
+    zkAuthConf = ZKUtil.resolveConfIndirection(zkAuthConf);
     List<ZKAuthInfo> zkAuths;
     if (zkAuthConf != null) {
-      zkAuths = HAZKUtil.parseAuth(zkAuthConf);
+      zkAuths = ZKUtil.parseAuth(zkAuthConf);
     } else {
       zkAuths = Collections.emptyList();
     }
