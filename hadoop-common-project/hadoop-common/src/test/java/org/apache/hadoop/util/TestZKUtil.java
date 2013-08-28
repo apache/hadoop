@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ha;
+package org.apache.hadoop.util;
 
 import static org.junit.Assert.*;
 
@@ -24,8 +24,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.ha.HAZKUtil.BadAclFormatException;
-import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
+import org.apache.hadoop.util.ZKUtil;
+import org.apache.hadoop.util.ZKUtil.BadAclFormatException;
+import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
 import org.junit.Test;
@@ -33,9 +34,9 @@ import org.junit.Test;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 
-public class TestHAZKUtil {
+public class TestZKUtil {
   private static final String TEST_ROOT_DIR = System.getProperty(
-      "test.build.data", "/tmp") + "/TestHAZKUtil";
+      "test.build.data", "/tmp") + "/TestZKUtil";
   private static final File TEST_FILE = new File(TEST_ROOT_DIR,
       "test-file");
   
@@ -45,13 +46,13 @@ public class TestHAZKUtil {
 
   @Test
   public void testEmptyACL() {
-    List<ACL> result = HAZKUtil.parseACLs("");
+    List<ACL> result = ZKUtil.parseACLs("");
     assertTrue(result.isEmpty());
   }
   
   @Test
   public void testNullACL() {
-    List<ACL> result = HAZKUtil.parseACLs(null);
+    List<ACL> result = ZKUtil.parseACLs(null);
     assertTrue(result.isEmpty());
   }
   
@@ -67,7 +68,7 @@ public class TestHAZKUtil {
   
   private static void badAcl(String acls, String expectedErr) {
     try {
-      HAZKUtil.parseACLs(acls);
+      ZKUtil.parseACLs(acls);
       fail("Should have failed to parse '" + acls + "'");
     } catch (BadAclFormatException e) {
       assertEquals(expectedErr, e.getMessage());
@@ -76,7 +77,7 @@ public class TestHAZKUtil {
 
   @Test
   public void testGoodACLs() {
-    List<ACL> result = HAZKUtil.parseACLs(
+    List<ACL> result = ZKUtil.parseACLs(
         "sasl:hdfs/host1@MY.DOMAIN:cdrwa, sasl:hdfs/host2@MY.DOMAIN:ca");
     ACL acl0 = result.get(0);
     assertEquals(Perms.CREATE | Perms.DELETE | Perms.READ |
@@ -92,19 +93,19 @@ public class TestHAZKUtil {
   
   @Test
   public void testEmptyAuth() {
-    List<ZKAuthInfo> result = HAZKUtil.parseAuth("");
+    List<ZKAuthInfo> result = ZKUtil.parseAuth("");
     assertTrue(result.isEmpty());
   }
   
   @Test
   public void testNullAuth() {
-    List<ZKAuthInfo> result = HAZKUtil.parseAuth(null);
+    List<ZKAuthInfo> result = ZKUtil.parseAuth(null);
     assertTrue(result.isEmpty());
   }
   
   @Test
   public void testGoodAuths() {
-    List<ZKAuthInfo> result = HAZKUtil.parseAuth(
+    List<ZKAuthInfo> result = ZKUtil.parseAuth(
         "scheme:data,\n   scheme2:user:pass");
     assertEquals(2, result.size());
     ZKAuthInfo auth0 = result.get(0);
@@ -118,16 +119,16 @@ public class TestHAZKUtil {
   
   @Test
   public void testConfIndirection() throws IOException {
-    assertNull(HAZKUtil.resolveConfIndirection(null));
-    assertEquals("x", HAZKUtil.resolveConfIndirection("x"));
+    assertNull(ZKUtil.resolveConfIndirection(null));
+    assertEquals("x", ZKUtil.resolveConfIndirection("x"));
     
     TEST_FILE.getParentFile().mkdirs();
     Files.write("hello world", TEST_FILE, Charsets.UTF_8);
-    assertEquals("hello world", HAZKUtil.resolveConfIndirection(
+    assertEquals("hello world", ZKUtil.resolveConfIndirection(
         "@" + TEST_FILE.getAbsolutePath()));
     
     try {
-      HAZKUtil.resolveConfIndirection("@" + BOGUS_FILE);
+      ZKUtil.resolveConfIndirection("@" + BOGUS_FILE);
       fail("Did not throw for non-existent file reference");
     } catch (FileNotFoundException fnfe) {
       assertTrue(fnfe.getMessage().startsWith(BOGUS_FILE));
