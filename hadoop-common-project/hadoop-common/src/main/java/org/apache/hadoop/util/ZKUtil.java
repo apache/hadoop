@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ha;
+package org.apache.hadoop.util;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,7 +36,7 @@ import com.google.common.io.Files;
  * Utilities for working with ZooKeeper.
  */
 @InterfaceAudience.Private
-public class HAZKUtil {
+public class ZKUtil {
   
   /**
    * Parse ACL permission string, partially borrowed from
@@ -76,9 +76,10 @@ public class HAZKUtil {
    * <code>sasl:hdfs/host1@MY.DOMAIN:cdrwa,sasl:hdfs/host2@MY.DOMAIN:cdrwa</code>
    *
    * @return ACL list
-   * @throws HadoopIllegalArgumentException if an ACL is invalid
+   * @throws {@link BadAclFormatException} if an ACL is invalid
    */
-  public static List<ACL> parseACLs(String aclString) {
+  public static List<ACL> parseACLs(String aclString) throws
+      BadAclFormatException {
     List<ACL> acl = Lists.newArrayList();
     if (aclString == null) {
       return acl;
@@ -113,8 +114,10 @@ public class HAZKUtil {
    * 
    * @param authString the comma-separated auth mechanisms
    * @return a list of parsed authentications
+   * @throws {@link BadAuthFormatException} if the auth format is invalid
    */
-  public static List<ZKAuthInfo> parseAuth(String authString) {
+  public static List<ZKAuthInfo> parseAuth(String authString) throws
+      BadAuthFormatException{
     List<ZKAuthInfo> ret = Lists.newArrayList();
     if (authString == null) {
       return ret;
@@ -161,7 +164,8 @@ public class HAZKUtil {
   /**
    * An authentication token passed to ZooKeeper.addAuthInfo
    */
-  static class ZKAuthInfo {
+  @InterfaceAudience.Private
+  public static class ZKAuthInfo {
     private final String scheme;
     private final byte[] auth;
     
@@ -171,29 +175,32 @@ public class HAZKUtil {
       this.auth = auth;
     }
 
-    String getScheme() {
+    public String getScheme() {
       return scheme;
     }
 
-    byte[] getAuth() {
+    public byte[] getAuth() {
       return auth;
     }
   }
 
-  static class BadAclFormatException extends HadoopIllegalArgumentException {
+  @InterfaceAudience.Private
+  public static class BadAclFormatException extends
+      HadoopIllegalArgumentException {
     private static final long serialVersionUID = 1L;
 
     public BadAclFormatException(String message) {
       super(message);
     }
   }
-  
-  static class BadAuthFormatException extends HadoopIllegalArgumentException {
+
+  @InterfaceAudience.Private
+  public static class BadAuthFormatException extends
+      HadoopIllegalArgumentException {
     private static final long serialVersionUID = 1L;
 
     public BadAuthFormatException(String message) {
       super(message);
     }
   }
-
 }
