@@ -48,6 +48,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1034. Remove "experimental" in the Fair Scheduler documentation.
     (Karthik Kambatla via Sandy Ryza)
 
+    YARN-1080. Improved help message for "yarn logs" command. (Xuan Gong via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
