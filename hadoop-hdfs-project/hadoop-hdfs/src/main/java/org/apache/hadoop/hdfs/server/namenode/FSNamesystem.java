@@ -174,7 +174,6 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
@@ -3755,24 +3754,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // find the DatanodeDescriptor objects
         // There should be no locations in the blockManager till now because the
         // file is underConstruction
-        DatanodeDescriptor[] descriptors = null;
+        List<DatanodeDescriptor> targetList =
+            new ArrayList<DatanodeDescriptor>(newtargets.length);
         if (newtargets.length > 0) {
-          descriptors = new DatanodeDescriptor[newtargets.length];
-          for(int i = 0; i < newtargets.length; i++) {
-            descriptors[i] = blockManager.getDatanodeManager().getDatanode(
-                newtargets[i]);
+          for (DatanodeID newtarget : newtargets) {
+            // try to get targetNode
+            DatanodeDescriptor targetNode =
+                blockManager.getDatanodeManager().getDatanode(newtarget);
+            if (targetNode != null)
+              targetList.add(targetNode);
+            else if (LOG.isDebugEnabled()) {
+              LOG.debug("DatanodeDescriptor (=" + newtarget + ") not found");
+            }
           }
         }
-        if ((closeFile) && (descriptors != null)) {
+        if ((closeFile) && !targetList.isEmpty()) {
           // the file is getting closed. Insert block locations into blockManager.
           // Otherwise fsck will report these blocks as MISSING, especially if the
           // blocksReceived from Datanodes take a long time to arrive.
-          for (int i = 0; i < descriptors.length; i++) {
-            descriptors[i].addBlock(storedBlock);
+          for (DatanodeDescriptor targetNode : targetList) {
+            targetNode.addBlock(storedBlock);
           }
         }
         // add pipeline locations into the INodeUnderConstruction
-        pendingFile.setLastBlock(storedBlock, descriptors);
+        DatanodeDescriptor[] targetArray =
+            new DatanodeDescriptor[targetList.size()];
+        pendingFile.setLastBlock(storedBlock, targetList.toArray(targetArray));
       }
 
       if (closeFile) {

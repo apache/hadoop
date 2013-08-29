@@ -175,6 +175,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5132. Deadlock in NameNode between SafeModeMonitor#run and 
     DatanodeManager#handleHeartbeat. (kihwal)
 
+    HDFS-5077. NPE in FSNamesystem.commitBlockSynchronization().
+    (Plamen Jeliazkov via shv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
