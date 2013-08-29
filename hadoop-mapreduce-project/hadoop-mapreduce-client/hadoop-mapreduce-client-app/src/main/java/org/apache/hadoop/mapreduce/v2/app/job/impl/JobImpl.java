@@ -993,7 +993,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
   
-  private static JobState getExternalState(JobStateInternal smState) {
+  private JobState getExternalState(JobStateInternal smState) {
     switch (smState) {
     case KILL_WAIT:
     case KILL_ABORT:
@@ -1005,7 +1005,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     case FAIL_ABORT:
       return JobState.FAILED;
     case REBOOT:
-      return JobState.ERROR;
+      if (appContext.isLastAMRetry()) {
+        return JobState.ERROR;
+      } else {
+        // In case of not last retry, return the external state as RUNNING since
+        // otherwise JobClient will exit when it polls the AM for job state
+        return JobState.RUNNING;
+      }
     default:
       return JobState.valueOf(smState.name());
     }

@@ -29,6 +29,7 @@ import java.util.Iterator;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -41,6 +42,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobUpdatedNodesEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
@@ -51,12 +54,15 @@ import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerRemoteLaunchEvent;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.Clock;
 import org.junit.Test;
 
 /**
@@ -365,6 +371,47 @@ public class TestMRApp {
             task.getID(), TaskEventType.T_SCHEDULE));
 
     //this must lead to job error
+    app.waitForState(job, JobState.ERROR);
+  }
+
+  @Test
+  public void testJobRebootNotLastRetry() throws Exception {
+    MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true);
+    Job job = app.submit(new Configuration());
+    app.waitForState(job, JobState.RUNNING);
+    Assert.assertEquals("Num tasks not correct", 1, job.getTasks().size());
+    Iterator<Task> it = job.getTasks().values().iterator();
+    Task task = it.next();
+    app.waitForState(task, TaskState.RUNNING);
+
+    //send an reboot event
+    app.getContext().getEventHandler().handle(new JobEvent(job.getID(),
+      JobEventType.JOB_AM_REBOOT));
+
+    // return exteranl state as RUNNING since otherwise the JobClient will
+    // prematurely exit.
+    app.waitForState(job, JobState.RUNNING);
+  }
+
+  @Test
+  public void testJobRebootOnLastRetry() throws Exception {
+    // make startCount as 2 since this is last retry which equals to
+    // DEFAULT_MAX_AM_RETRY
+    MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true, 2);
+
+    Configuration conf = new Configuration();
+    Job job = app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    Assert.assertEquals("Num tasks not correct", 1, job.getTasks().size());
+    Iterator<Task> it = job.getTasks().values().iterator();
+    Task task = it.next();
+    app.waitForState(task, TaskState.RUNNING);
+
+    //send an reboot event
+    app.getContext().getEventHandler().handle(new JobEvent(job.getID(),
+      JobEventType.JOB_AM_REBOOT));
+
+    // return exteranl state as ERROR if this is the last retry
     app.waitForState(job, JobState.ERROR);
   }
 
