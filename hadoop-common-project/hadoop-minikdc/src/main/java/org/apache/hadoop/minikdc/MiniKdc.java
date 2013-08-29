@@ -59,6 +59,7 @@ import java.io.FileReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.text.MessageFormat;
@@ -432,6 +433,17 @@ public class MiniKdc {
 
     System.setProperty("sun.security.krb5.debug", conf.getProperty(DEBUG,
             "false"));
+
+    // refresh the config
+    Class<?> classRef;
+    if (System.getProperty("java.vendor").contains("IBM")) {
+      classRef = Class.forName("com.ibm.security.krb5.internal.Config");
+    } else {
+      classRef = Class.forName("sun.security.krb5.Config");
+    }
+    Method refreshMethod = classRef.getMethod("refresh", new Class[0]);
+    refreshMethod.invoke(classRef, new Object[0]);
+
     LOG.info("MiniKdc listening at port: {}", getPort());
     LOG.info("MiniKdc setting JVM krb5.conf to: {}",
             krb5conf.getAbsolutePath());

@@ -43,6 +43,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9487 Deprecation warnings in Configuration should go to their
     own log or otherwise be suppressible (Chu Tong via stevel)
 
+    HADOOP-9889. Refresh the Krb5 configuration when creating a new kdc in
+    Hadoop-MiniKDC (Wei Yan via Sandy Ryza)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
