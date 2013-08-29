@@ -108,6 +108,10 @@ Release 2.1.1-beta - UNRELEASED
 
     MAPREDUCE-5483. revert MAPREDUCE-5357. (rkanter via tucu)
 
+    MAPREDUCE-5441. Changed MR AM to return RUNNING state if exiting when RM
+    commands to reboot, so that client can continue to track the overall job.
+    (Jian He via vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
