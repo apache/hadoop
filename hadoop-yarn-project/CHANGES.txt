@@ -45,6 +45,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1081. Made a trivial change to YARN node CLI header to avoid potential
     confusion. (Akira AJISAKA via vinodkv)
 
+    YARN-1034. Remove "experimental" in the Fair Scheduler documentation.
+    (Karthik Kambatla via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
