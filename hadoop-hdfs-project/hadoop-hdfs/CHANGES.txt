@@ -41,6 +41,9 @@ Release 0.23.10 - UNRELEASED
     HDFS-4993. Fsck can fail if a file is renamed or deleted. (Robert Parker
     via kihwal)
 
+    HDFS-4482. ReplicationMonitor thread can exit with NPE due to the race
+    between delete and replication of same file. (umamahesh)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
