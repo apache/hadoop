@@ -515,8 +515,13 @@ abstract public class Shell {
       } catch (IOException ioe) {
         LOG.warn("Error while closing the input stream", ioe);
       }
-      if (!completed.get()) {
-        errThread.interrupt();
+      try {
+        if (!completed.get()) {
+          errThread.interrupt();
+          errThread.join();
+        }
+      } catch (InterruptedException ie) {
+        LOG.warn("Interrupted while joining errThread");
       }
       try {
         errReader.close();
