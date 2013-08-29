@@ -81,6 +81,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-4947 Add NFS server export table to control export by hostname or
     IP range (Jing Zhao via brandonli)
 
+    HDFS-5078 Support file append in NFSv3 gateway to enable data streaming
+    to HDFS (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
