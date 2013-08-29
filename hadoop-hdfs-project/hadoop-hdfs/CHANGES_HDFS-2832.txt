@@ -1,4 +1,14 @@
   BREAKDOWN OF HDFS-2832 ENABLE SUPPORT FOR HETEROGENEOUS STORAGES IN HDFS
 
+IMPROVEMENTS:
+
+    HDFS-4985. Add storage type to the protocol and expose it in block report
+    and block locations. (Arpit Agarwal)
+    
+    HDFS-5115. Make StorageID a UUID. (Arpit Agarwal)
+
+    HDFS-5000. DataNode configuration should allow specifying storage type.
+    (Arpit Agarwal)
+
     HDFS-4987. Namenode changes to track multiple storages per datanode.
     (szetszwo)
