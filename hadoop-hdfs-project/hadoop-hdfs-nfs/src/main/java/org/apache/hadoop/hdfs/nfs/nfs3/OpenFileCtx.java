@@ -126,6 +126,11 @@ class OpenFileCtx {
     nonSequentialWriteInMemory = 0;
     this.dumpFilePath = dumpFilePath;  
     enabledDump = dumpFilePath == null ? false: true;
+    nextOffset = latestAttr.getSize();
+    try {
+      assert(nextOffset == this.fos.getPos());
+    } catch (IOException e) {}
+
     ctxLock = new ReentrantLock(true);
   }
 
@@ -691,12 +696,14 @@ class OpenFileCtx {
 
     try {
       fos.write(data, 0, count);
-
-      if (fos.getPos() != (offset + count)) {
+      
+      long flushedOffset = getFlushedOffset();
+      if (flushedOffset != (offset + count)) {
         throw new IOException("output stream is out of sync, pos="
-            + fos.getPos() + " and nextOffset should be" + (offset + count));
+            + flushedOffset + " and nextOffset should be"
+            + (offset + count));
       }
-      nextOffset = fos.getPos();
+      nextOffset = flushedOffset;
 
       // Reduce memory occupation size if request was allowed dumped
       if (writeCtx.getDataState() == DataState.ALLOW_DUMP) {
