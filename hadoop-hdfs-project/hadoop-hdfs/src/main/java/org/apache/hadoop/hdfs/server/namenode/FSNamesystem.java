@@ -366,7 +366,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   final LeaseManager leaseManager = new LeaseManager(this); 
 
-  Daemon smmthread = null;  // SafeModeMonitor thread
+  volatile Daemon smmthread = null;  // SafeModeMonitor thread
   
   Daemon nnrmthread = null; // NamenodeResourceMonitor thread
 
@@ -4555,7 +4555,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // Have to have write-lock since leaving safemode initializes
       // repl queues, which requires write lock
       assert hasWriteLock();
-      if (needEnter()) {
+      // if smmthread is already running, the block threshold must have been 
+      // reached before, there is no need to enter the safe mode again
+      if (smmthread == null && needEnter()) {
         enter();
         // check if we are ready to initialize replication queues
         if (canInitializeReplQueues() && !isPopulatingReplQueues()) {
@@ -4564,7 +4566,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         reportStatus("STATE* Safe mode ON.", false);
         return;
       }
-      // the threshold is reached
+      // the threshold is reached or was reached before
       if (!isOn() ||                           // safe mode is off
           extension <= 0 || threshold <= 0) {  // don't need to wait
         this.leave(); // leave safe mode
@@ -4576,9 +4578,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       // start monitor
       reached = now();
-      smmthread = new Daemon(new SafeModeMonitor());
-      smmthread.start();
-      reportStatus("STATE* Safe mode extension entered.", true);
+      if (smmthread == null) {
+        smmthread = new Daemon(new SafeModeMonitor());
+        smmthread.start();
+        reportStatus("STATE* Safe mode extension entered.", true);
+      }
 
       // check if we are ready to initialize replication queues
       if (canInitializeReplQueues() && !isPopulatingReplQueues()) {
@@ -4814,6 +4818,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if (safeMode.canLeave()) {
             // Leave safe mode.
             safeMode.leave();
+            smmthread = null;
             break;
           }
         } finally {
@@ -4829,7 +4834,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (!fsRunning) {
         LOG.info("NameNode is being shutdown, exit SafeModeMonitor thread");
       }
-      smmthread = null;
     }
   }
     
