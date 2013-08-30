@@ -28,6 +28,7 @@ import java.util.Set;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang.time.DateFormatUtils;
@@ -64,20 +65,29 @@ public class NodeCLI extends YarnCLI {
     Options opts = new Options();
     opts.addOption(STATUS_CMD, true, "Prints the status report of the node.");
     opts.addOption(LIST_CMD, false, "List all running nodes. " +
-        "Supports optional use of --states to filter nodes " +
-        "based on node state, all --all to list all nodes.");
+        "Supports optional use of -states to filter nodes " +
+        "based on node state, all -all to list all nodes.");
     Option nodeStateOpt = new Option(NODE_STATE_CMD, true,
-        "Works with -list to filter nodes based on their states.");
+        "Works with -list to filter nodes based on input comma-separated list of node states.");
     nodeStateOpt.setValueSeparator(',');
     nodeStateOpt.setArgs(Option.UNLIMITED_VALUES);
-    nodeStateOpt.setArgName("Comma-separated list of node states");
+    nodeStateOpt.setArgName("States");
     opts.addOption(nodeStateOpt);
     Option allOpt = new Option(NODE_ALL, false,
         "Works with -list to list all nodes.");
     opts.addOption(allOpt);
-    CommandLine cliParser = new GnuParser().parse(opts, args);
+    opts.getOption(STATUS_CMD).setArgName("NodeId");
 
     int exitCode = -1;
+    CommandLine cliParser = null;
+    try {
+      cliParser = new GnuParser().parse(opts, args);
+    } catch (MissingArgumentException ex) {
+      sysout.println("Missing argument for options");
+      printUsage(opts);
+      return exitCode;
+    }
+
     if (cliParser.hasOption("status")) {
       if (args.length != 2) {
         printUsage(opts);
