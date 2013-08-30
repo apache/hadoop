@@ -8,6 +8,9 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-5144. Document time unit to NameNodeMetrics. (Akira Ajisaka via
+    suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
