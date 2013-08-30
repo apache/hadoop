@@ -8,21 +8,6 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
-    HDFS-5144. Document time unit to NameNodeMetrics. (Akira Ajisaka via
-    suresh)
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-Release 2.3.0 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
     HDFS-4657.  Limit the number of blocks logged by the NN after a block
     report to a configurable value.  (Aaron T. Myers via Colin Patrick
     McCabe)
@@ -40,6 +25,9 @@ Release 2.3.0 - UNRELEASED
     (shv)
 
     HDFS-4994. Audit log getContentSummary() calls. (Robert Parker via kihwal)
+
+    HDFS-5144. Document time unit to NameNodeMetrics. (Akira Ajisaka via
+    suresh)
 
   OPTIMIZATIONS
 
