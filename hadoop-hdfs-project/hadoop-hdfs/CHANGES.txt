@@ -181,6 +181,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5077. NPE in FSNamesystem.commitBlockSynchronization().
     (Plamen Jeliazkov via shv)
 
+    HDFS-5140. Too many safemode monitor threads being created in the standby 
+    namenode causing it to fail with out of memory error. (jing9)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
