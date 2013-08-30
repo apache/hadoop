@@ -275,6 +275,21 @@ public class TestLocalFileSystem {
         stats[0].getPath().toUri().getPath());
   }
   
+  @Test
+  public void testListStatusReturnConsistentPathOnWindows() throws IOException {
+    assumeTrue(Shell.WINDOWS);
+    String dirNoDriveSpec = TEST_ROOT_DIR;
+    if (dirNoDriveSpec.charAt(1) == ':')
+    	dirNoDriveSpec = dirNoDriveSpec.substring(2);
+    
+    File file = new File(dirNoDriveSpec, "foo");
+    file.mkdirs();
+    FileStatus[] stats = fileSys.listStatus(new Path(dirNoDriveSpec));
+    assertEquals("Unexpected number of stats", 1, stats.length);
+    assertEquals("Bad path from stat", new Path(file.getPath()).toUri().getPath(),
+        stats[0].getPath().toUri().getPath());
+  }
+  
   @Test(timeout = 10000)
   public void testReportChecksumFailure() throws IOException {
     base.mkdirs();

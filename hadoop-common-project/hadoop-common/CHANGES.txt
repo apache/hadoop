@@ -168,6 +168,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9894.  Race condition in Shell leads to logged error stream handling
     exceptions (Arpit Agarwal)
 
+    HADOOP-9774. RawLocalFileSystem.listStatus() return absolute paths when
+    input path is relative on Windows. (Shanyu Zhao via ivanmi)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

@@ -387,7 +387,7 @@ public class RawLocalFileSystem extends FileSystem {
         new DeprecatedRawLocalFileStatus(localf, getDefaultBlockSize(f), this)};
     }
 
-    File[] names = localf.listFiles();
+    String[] names = localf.list();
     if (names == null) {
       return null;
     }
@@ -395,7 +395,9 @@ public class RawLocalFileSystem extends FileSystem {
     int j = 0;
     for (int i = 0; i < names.length; i++) {
       try {
-        results[j] = getFileStatus(new Path(names[i].getAbsolutePath()));
+        // Assemble the path using the Path 3 arg constructor to make sure
+        // paths with colon are properly resolved on Linux
+        results[j] = getFileStatus(new Path(f, new Path(null, null, names[i])));
         j++;
       } catch (FileNotFoundException e) {
         // ignore the files not found since the dir list may have have changed
