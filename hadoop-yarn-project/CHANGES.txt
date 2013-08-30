@@ -54,6 +54,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1080. Improved help message for "yarn logs" command. (Xuan Gong via
     vinodkv)
 
+    YARN-771. AMRMClient support for resource blacklisting (Junping Du via
+    bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES
