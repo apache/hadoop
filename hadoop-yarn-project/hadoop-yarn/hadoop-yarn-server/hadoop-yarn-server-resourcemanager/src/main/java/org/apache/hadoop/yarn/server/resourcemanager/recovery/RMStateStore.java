@@ -24,6 +24,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import javax.crypto.SecretKey;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -44,7 +46,6 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
@@ -75,14 +76,14 @@ public abstract class RMStateStore extends AbstractService {
   public static class ApplicationAttemptState {
     final ApplicationAttemptId attemptId;
     final Container masterContainer;
-    final Credentials appAttemptTokens;
+    final Credentials appAttemptCredentials;
 
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
         Container masterContainer,
-        Credentials appAttemptTokens) {
+        Credentials appAttemptCredentials) {
       this.attemptId = attemptId;
       this.masterContainer = masterContainer;
-      this.appAttemptTokens = appAttemptTokens;
+      this.appAttemptCredentials = appAttemptCredentials;
     }
 
     public Container getMasterContainer() {
@@ -91,8 +92,8 @@ public abstract class RMStateStore extends AbstractService {
     public ApplicationAttemptId getAttemptId() {
       return attemptId;
     }
-    public Credentials getAppAttemptTokens() {
-      return appAttemptTokens;
+    public Credentials getAppAttemptCredentials() {
+      return appAttemptCredentials;
     }
   }
   
@@ -265,7 +266,7 @@ public abstract class RMStateStore extends AbstractService {
    * RMAppAttemptStoredEvent will be sent on completion to notify the RMAppAttempt
    */
   public synchronized void storeApplicationAttempt(RMAppAttempt appAttempt) {
-    Credentials credentials = getTokensFromAppAttempt(appAttempt);
+    Credentials credentials = getCredentialsFromAppAttempt(appAttempt);
 
     ApplicationAttemptState attemptState =
         new ApplicationAttemptState(appAttempt.getAppAttemptId(),
@@ -365,7 +366,7 @@ public abstract class RMStateStore extends AbstractService {
             app.getSubmitTime(), app.getApplicationSubmissionContext(),
             app.getUser());
     for(RMAppAttempt appAttempt : app.getAppAttempts().values()) {
-      Credentials credentials = getTokensFromAppAttempt(appAttempt);
+      Credentials credentials = getCredentialsFromAppAttempt(appAttempt);
       ApplicationAttemptState attemptState =
           new ApplicationAttemptState(appAttempt.getAppAttemptId(),
             appAttempt.getMasterContainer(), credentials);
@@ -395,17 +396,21 @@ public abstract class RMStateStore extends AbstractService {
   // YARN-986 
   public static final Text AM_RM_TOKEN_SERVICE = new Text(
     "AM_RM_TOKEN_SERVICE");
+
+  public static final Text AM_CLIENT_TOKEN_MASTER_KEY_NAME =
+      new Text("YARN_CLIENT_TOKEN_MASTER_KEY");
   
-  private Credentials getTokensFromAppAttempt(RMAppAttempt appAttempt) {
+  private Credentials getCredentialsFromAppAttempt(RMAppAttempt appAttempt) {
     Credentials credentials = new Credentials();
     Token<AMRMTokenIdentifier> appToken = appAttempt.getAMRMToken();
     if(appToken != null){
       credentials.addToken(AM_RM_TOKEN_SERVICE, appToken);
     }
-    Token<ClientToAMTokenIdentifier> clientToAMToken =
-        appAttempt.getClientToAMToken();
-    if(clientToAMToken != null){
-      credentials.addToken(clientToAMToken.getService(), clientToAMToken);
+    SecretKey clientTokenMasterKey =
+        appAttempt.getClientTokenMasterKey();
+    if(clientTokenMasterKey != null){
+      credentials.addSecretKey(AM_CLIENT_TOKEN_MASTER_KEY_NAME,
+          clientTokenMasterKey.getEncoded());
     }
     return credentials;
   }
@@ -445,7 +450,7 @@ public abstract class RMStateStore extends AbstractService {
                     ((RMStateStoreAppAttemptEvent) event).getAppAttemptState();
           Exception storedException = null;
 
-          Credentials credentials = attemptState.getAppAttemptTokens();
+          Credentials credentials = attemptState.getAppAttemptCredentials();
           ByteBuffer appAttemptTokens = null;
           try {
             if(credentials != null){

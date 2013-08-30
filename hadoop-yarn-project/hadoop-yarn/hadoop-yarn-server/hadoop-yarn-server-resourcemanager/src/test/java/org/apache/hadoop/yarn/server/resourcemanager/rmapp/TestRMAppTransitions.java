@@ -726,7 +726,9 @@ public class TestRMAppTransitions {
   public void testGetAppReport() {
     RMApp app = createNewTestApp(null);
     assertAppState(RMAppState.NEW, app);
-    ApplicationReport report = app.createAndGetApplicationReport(true);
+    ApplicationReport report = app.createAndGetApplicationReport(null, true);
+    Assert.assertNotNull(report.getApplicationResourceUsageReport());
+    report = app.createAndGetApplicationReport("clientuser", true);
     Assert.assertNotNull(report.getApplicationResourceUsageReport());
   }
 }

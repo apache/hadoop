@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -411,7 +410,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
   
   @Override
-  public ApplicationReport createAndGetApplicationReport(boolean allowAccess) {
+  public ApplicationReport createAndGetApplicationReport(String clientUserName,
+      boolean allowAccess) {
     this.readLock.lock();
 
     try {
@@ -432,15 +432,18 @@ public class RMAppImpl implements RMApp, Recoverable {
           currentApplicationAttemptId = this.currentAttempt.getAppAttemptId();
           trackingUrl = this.currentAttempt.getTrackingUrl();
           origTrackingUrl = this.currentAttempt.getOriginalTrackingUrl();
-          Token<ClientToAMTokenIdentifier> attemptClientToAMToken =
-              this.currentAttempt.getClientToAMToken();
-          if (attemptClientToAMToken != null) {
-            clientToAMToken =
-                BuilderUtils.newClientToAMToken(
-                    attemptClientToAMToken.getIdentifier(),
-                    attemptClientToAMToken.getKind().toString(),
-                    attemptClientToAMToken.getPassword(),
-                    attemptClientToAMToken.getService().toString());
+          if (UserGroupInformation.isSecurityEnabled()
+              && clientUserName != null) {
+            Token<ClientToAMTokenIdentifier> attemptClientToAMToken =
+                new Token<ClientToAMTokenIdentifier>(
+                    new ClientToAMTokenIdentifier(
+                        currentApplicationAttemptId, clientUserName),
+                        rmContext.getClientToAMTokenSecretManager());
+            clientToAMToken = BuilderUtils.newClientToAMToken(
+                attemptClientToAMToken.getIdentifier(),
+                attemptClientToAMToken.getKind().toString(),
+                attemptClientToAMToken.getPassword(),
+                attemptClientToAMToken.getService().toString());
           }
           host = this.currentAttempt.getHost();
           rpcPort = this.currentAttempt.getRpcPort();
@@ -451,20 +454,15 @@ public class RMAppImpl implements RMApp, Recoverable {
 
         if (currentAttempt != null && 
             currentAttempt.getAppAttemptState() == RMAppAttemptState.LAUNCHED) {
-          try {
-            if (getApplicationSubmissionContext().getUnmanagedAM() &&
-              getUser().equals(UserGroupInformation.getCurrentUser().getUserName())) {
-              Token<AMRMTokenIdentifier> token = currentAttempt.getAMRMToken();
-              if (token != null) {
-                amrmToken = BuilderUtils.newAMRMToken(token.getIdentifier(),
-                    token.getKind().toString(), token.getPassword(),
-                    token.getService().toString());
-              }
+          if (getApplicationSubmissionContext().getUnmanagedAM() &&
+              clientUserName != null && getUser().equals(clientUserName)) {
+            Token<AMRMTokenIdentifier> token = currentAttempt.getAMRMToken();
+            if (token != null) {
+              amrmToken = BuilderUtils.newAMRMToken(token.getIdentifier(),
+                  token.getKind().toString(), token.getPassword(),
+                  token.getService().toString());
             }
-          } catch (IOException ex) {
-            LOG.warn("UserGroupInformation.getCurrentUser() error: " + 
-              ex.toString(), ex);
-          }          
+          }
         }
       }
 

@@ -128,10 +128,12 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    *   <li>resource usage report - all values are -1</li>
    * </ul>
    *
+   * @param clientUserName the user name of the client requesting the report
    * @param allowAccess whether to allow full access to the report
    * @return the {@link ApplicationReport} detailing the status of the application.
    */
-  ApplicationReport createAndGetApplicationReport(boolean allowAccess);
+  ApplicationReport createAndGetApplicationReport(String clientUserName,
+      boolean allowAccess);
   
   /**
    * To receive the collection of all {@link RMNode}s whose updates have been

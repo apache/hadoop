@@ -541,16 +541,21 @@ public class TestRMRestart {
     Assert.assertEquals(BuilderUtils.newContainerId(attemptId1, 1),
       attemptState.getMasterContainer().getId());
 
-    // the appToken and clientToAMToken that are generated when RMAppAttempt
-    // is created,
+    // the appToken and clientTokenMasterKey that are generated when
+    // RMAppAttempt is created,
     HashSet<Token<?>> tokenSet = new HashSet<Token<?>>();
     tokenSet.add(attempt1.getAMRMToken());
-    tokenSet.add(attempt1.getClientToAMToken());
+    byte[] clientTokenMasterKey =
+        attempt1.getClientTokenMasterKey().getEncoded();
 
-    // assert application Token is saved
+    // assert application credentials are saved
+    Credentials savedCredentials = attemptState.getAppAttemptCredentials();
     HashSet<Token<?>> savedTokens = new HashSet<Token<?>>();
-    savedTokens.addAll(attemptState.getAppAttemptTokens().getAllTokens());
+    savedTokens.addAll(savedCredentials.getAllTokens());
     Assert.assertEquals(tokenSet, savedTokens);
+    Assert.assertArrayEquals("client token master key not saved",
+        clientTokenMasterKey, savedCredentials.getSecretKey(
+            RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME));
 
     // start new RM
     MockRM rm2 = new TestSecurityMockRM(conf, memStore);
@@ -564,13 +569,18 @@ public class TestRMRestart {
     Assert.assertNotNull(loadedAttempt1);
     savedTokens.clear();
     savedTokens.add(loadedAttempt1.getAMRMToken());
-    savedTokens.add(loadedAttempt1.getClientToAMToken());
     Assert.assertEquals(tokenSet, savedTokens);
 
-    // assert clientToAMToken is recovered back to api-versioned
-    // clientToAMToken
-    Assert.assertEquals(attempt1.getClientToAMToken(),
-      loadedAttempt1.getClientToAMToken());
+    // assert client token master key is recovered back to api-versioned
+    // client token master key
+    Assert.assertEquals("client token master key not restored",
+        attempt1.getClientTokenMasterKey(),
+        loadedAttempt1.getClientTokenMasterKey());
+
+    // assert secret manager also knows about the key
+    Assert.assertArrayEquals(clientTokenMasterKey,
+        rm2.getClientToAMTokenSecretManager().getMasterKey(attemptId1)
+            .getEncoded());
 
     // Not testing ApplicationTokenSecretManager has the password populated back,
     // that is needed in work-preserving restart
