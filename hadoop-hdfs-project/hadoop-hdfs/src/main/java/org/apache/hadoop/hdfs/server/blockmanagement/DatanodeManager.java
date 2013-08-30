@@ -1145,8 +1145,8 @@ public class DatanodeManager {
   public DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
       final String blockPoolId,
       long capacity, long dfsUsed, long remaining, long blockPoolUsed,
-      int xceiverCount, int maxTransfers, int failedVolumes
-      ) throws IOException {
+      long cacheCapacity, long cacheUsed, int xceiverCount, int maxTransfers,
+      int failedVolumes) throws IOException {
     synchronized (heartbeatManager) {
       synchronized (datanodeMap) {
         DatanodeDescriptor nodeinfo = null;
@@ -1167,7 +1167,8 @@ public class DatanodeManager {
         }
 
         heartbeatManager.updateHeartbeat(nodeinfo, capacity, dfsUsed,
-            remaining, blockPoolUsed, xceiverCount, failedVolumes);
+            remaining, blockPoolUsed, cacheCapacity, cacheUsed, xceiverCount,
+            failedVolumes);
 
         // If we are in safemode, do not send back any recovery / replication
         // requests. Don't even drain the existing queue of work.

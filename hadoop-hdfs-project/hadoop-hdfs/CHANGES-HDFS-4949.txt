@@ -18,6 +18,9 @@ HDFS-4949 (Unreleased)
     HDFS-5050.  Add DataNode support for mlock and munlock
     (Andrew Wang via Colin Patrick McCabe)
 
+    HDFS-5141. Add cache status information to datanode heartbeat.
+    (Contributed by Andrew Wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

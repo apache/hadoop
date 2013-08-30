@@ -159,7 +159,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param nodeID id of the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID) {
-    this(nodeID, 0L, 0L, 0L, 0L, 0, 0);
+    this(nodeID, 0L, 0L, 0L, 0L, 0L, 0L, 0, 0);
   }
 
   /**
@@ -169,7 +169,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public DatanodeDescriptor(DatanodeID nodeID, 
                             String networkLocation) {
-    this(nodeID, networkLocation, 0L, 0L, 0L, 0L, 0, 0);
+    this(nodeID, networkLocation, 0L, 0L, 0L, 0L, 0L, 0L, 0, 0);
   }
   
   /**
@@ -179,6 +179,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param dfsUsed space used by the data node
    * @param remaining remaining capacity of the data node
    * @param bpused space used by the block pool corresponding to this namenode
+   * @param cacheCapacity cache capacity of the data node
+   * @param cacheUsed cache used on the data node
    * @param xceiverCount # of data transfers at the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID, 
@@ -186,11 +188,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
                             long dfsUsed,
                             long remaining,
                             long bpused,
+                            long cacheCapacity,
+                            long cacheUsed,
                             int xceiverCount,
                             int failedVolumes) {
     super(nodeID);
-    updateHeartbeat(capacity, dfsUsed, remaining, bpused, xceiverCount, 
-        failedVolumes);
+    updateHeartbeat(capacity, dfsUsed, remaining, bpused, cacheCapacity,
+        cacheUsed, xceiverCount, failedVolumes);
   }
 
   /**
@@ -201,6 +205,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param dfsUsed the used space by dfs datanode
    * @param remaining remaining capacity of the data node
    * @param bpused space used by the block pool corresponding to this namenode
+   * @param cacheCapacity cache capacity of the data node
+   * @param cacheUsed cache used on the data node
    * @param xceiverCount # of data transfers at the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID,
@@ -209,11 +215,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
                             long dfsUsed,
                             long remaining,
                             long bpused,
+                            long cacheCapacity,
+                            long cacheUsed,
                             int xceiverCount,
                             int failedVolumes) {
     super(nodeID, networkLocation);
-    updateHeartbeat(capacity, dfsUsed, remaining, bpused, xceiverCount, 
-        failedVolumes);
+    updateHeartbeat(capacity, dfsUsed, remaining, bpused, cacheCapacity,
+        cacheUsed, xceiverCount, failedVolumes);
   }
 
   /**
@@ -302,11 +310,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Updates stats from datanode heartbeat.
    */
   public void updateHeartbeat(long capacity, long dfsUsed, long remaining,
-      long blockPoolUsed, int xceiverCount, int volFailures) {
+      long blockPoolUsed, long cacheCapacity, long cacheUsed, int xceiverCount,
+      int volFailures) {
     setCapacity(capacity);
     setRemaining(remaining);
     setBlockPoolUsed(blockPoolUsed);
     setDfsUsed(dfsUsed);
+    setCacheCapacity(cacheCapacity);
+    setCacheUsed(cacheUsed);
     setXceiverCount(xceiverCount);
     setLastUpdate(Time.now());    
     this.volumeFailures = volFailures;

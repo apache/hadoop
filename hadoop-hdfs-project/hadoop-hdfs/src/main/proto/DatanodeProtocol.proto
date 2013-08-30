@@ -164,6 +164,8 @@ message RegisterDatanodeResponseProto {
  * xmitsInProgress - number of transfers from this datanode to others
  * xceiverCount - number of active transceiver threads
  * failedVolumes - number of failed volumes
+ * cacheCapacity - total cache capacity available at the datanode
+ * cacheUsed - amount of cache used
  */
 message HeartbeatRequestProto {
   required DatanodeRegistrationProto registration = 1; // Datanode info
@@ -171,6 +173,7 @@ message HeartbeatRequestProto {
   optional uint32 xmitsInProgress = 3 [ default = 0 ];
   optional uint32 xceiverCount = 4 [ default = 0 ];
   optional uint32 failedVolumes = 5 [ default = 0 ];
+  repeated CacheReportProto cacheReports = 6;
 }
 
 message StorageReportProto {
@@ -180,6 +183,11 @@ message StorageReportProto {
   optional uint64 dfsUsed = 4 [ default = 0 ];
   optional uint64 remaining = 5 [ default = 0 ];
   optional uint64 blockPoolUsed = 6 [ default = 0 ];
+}
+
+message CacheReportProto {
+  optional uint64 cacheCapacity = 1 [default = 0 ];
+  optional uint64 cacheUsed = 2 [default = 0 ];
 }
 
 /**

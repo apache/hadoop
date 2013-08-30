@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.CacheReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -126,6 +127,7 @@ public class TestBPOfferService {
       .when(mock).sendHeartbeat(
           Mockito.any(DatanodeRegistration.class),
           Mockito.any(StorageReport[].class),
+          Mockito.any(CacheReport[].class),
           Mockito.anyInt(),
           Mockito.anyInt(),
           Mockito.anyInt());

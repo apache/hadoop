@@ -106,6 +106,7 @@ public interface DatanodeProtocol {
   @Idempotent
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
                                        StorageReport[] reports,
+                                       CacheReport[] cacheReports,
                                        int xmitsInProgress,
                                        int xceiverCount,
                                        int failedVolumes) throws IOException;

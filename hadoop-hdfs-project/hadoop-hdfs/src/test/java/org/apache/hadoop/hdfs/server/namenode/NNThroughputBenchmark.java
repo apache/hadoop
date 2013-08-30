@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.CacheReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -863,8 +864,9 @@ public class NNThroughputBenchmark {
       // TODO:FEDERATION currently a single block pool is supported
       StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
           false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
+      CacheReport[] cacheRep = { new CacheReport(0l, 0l) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, 0, 0, 0).getCommands();
+          rep, cacheRep, 0, 0, 0).getCommands();
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
           if(LOG.isDebugEnabled()) {
@@ -910,8 +912,9 @@ public class NNThroughputBenchmark {
       // register datanode
       StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
           false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
+      CacheReport[] cacheRep = { new CacheReport(0l, 0l) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, 0, 0, 0).getCommands();
+          rep, cacheRep, 0, 0, 0).getCommands();
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {

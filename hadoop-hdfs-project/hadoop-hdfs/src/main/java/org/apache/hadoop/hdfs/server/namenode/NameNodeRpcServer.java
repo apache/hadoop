@@ -100,6 +100,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.CacheReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -935,13 +936,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // DatanodeProtocol
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration nodeReg,
-      StorageReport[] report, int xmitsInProgress, int xceiverCount,
-      int failedVolumes) throws IOException {
+      StorageReport[] report, CacheReport[] cacheReport, int xmitsInProgress,
+      int xceiverCount, int failedVolumes) throws IOException {
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, report[0].getCapacity(),
         report[0].getDfsUsed(), report[0].getRemaining(),
-        report[0].getBlockPoolUsed(), xceiverCount, xmitsInProgress,
-        failedVolumes);
+        report[0].getBlockPoolUsed(), cacheReport[0].getCapacity(),
+        cacheReport[0].getUsed(), xceiverCount, xmitsInProgress, failedVolumes);
   }
 
   @Override // DatanodeProtocol

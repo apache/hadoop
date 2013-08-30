@@ -301,6 +301,8 @@ public class JsonUtil {
     m.put("dfsUsed", datanodeinfo.getDfsUsed());
     m.put("remaining", datanodeinfo.getRemaining());
     m.put("blockPoolUsed", datanodeinfo.getBlockPoolUsed());
+    m.put("cacheCapacity", datanodeinfo.getCacheCapacity());
+    m.put("cacheUsed", datanodeinfo.getCacheUsed());
     m.put("lastUpdate", datanodeinfo.getLastUpdate());
     m.put("xceiverCount", datanodeinfo.getXceiverCount());
     m.put("networkLocation", datanodeinfo.getNetworkLocation());
@@ -326,6 +328,8 @@ public class JsonUtil {
         (Long)m.get("dfsUsed"),
         (Long)m.get("remaining"),
         (Long)m.get("blockPoolUsed"),
+        (Long)m.get("cacheCapacity"),
+        (Long)m.get("cacheUsed"),
         (Long)m.get("lastUpdate"),
         (int)(long)(Long)m.get("xceiverCount"),
         (String)m.get("networkLocation"),
