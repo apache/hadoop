@@ -24,6 +24,9 @@ Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    YARN-707. Added user information also in the YARN ClientToken so that AMs
+    can implement authorization based on incoming users. (Jason Lowe via vinodkv)
+
   NEW FEATURES
 
   IMPROVEMENTS
