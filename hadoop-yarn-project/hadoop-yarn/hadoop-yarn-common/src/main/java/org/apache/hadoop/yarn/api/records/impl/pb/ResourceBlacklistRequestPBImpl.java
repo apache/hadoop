@@ -125,7 +125,7 @@ public class ResourceBlacklistRequestPBImpl extends ResourceBlacklistRequest {
 
   @Override
   public void setBlacklistAdditions(List<String> resourceNames) {
-    if (resourceNames == null) {
+    if (resourceNames == null || resourceNames.isEmpty()) {
       if (this.blacklistAdditions != null) {
         this.blacklistAdditions.clear();
       }
@@ -144,7 +144,7 @@ public class ResourceBlacklistRequestPBImpl extends ResourceBlacklistRequest {
 
   @Override
   public void setBlacklistRemovals(List<String> resourceNames) {
-    if (resourceNames == null) {
+    if (resourceNames == null || resourceNames.isEmpty()) {
       if (this.blacklistRemovals != null) {
         this.blacklistRemovals.clear();
       }
