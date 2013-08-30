@@ -29,6 +29,7 @@ import java.util.Set;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -70,32 +71,38 @@ public class ApplicationCLI extends YarnCLI {
     Options opts = new Options();
     opts.addOption(STATUS_CMD, true, "Prints the status of the application.");
     opts.addOption(LIST_CMD, false, "List applications from the RM. " +
-        "Supports optional use of --appTypes to filter applications " +
+        "Supports optional use of -appTypes to filter applications " +
         "based on application type, " +
-        "and --appStates to filter applications based on application state");
+        "and -appStates to filter applications based on application state");
     opts.addOption(KILL_CMD, true, "Kills the application.");
     opts.addOption(HELP_CMD, false, "Displays help for all commands.");
-    Option appTypeOpt = new Option(APP_TYPE_CMD, true,
-        "Works with --list to filter applications based on their type.");
+    Option appTypeOpt = new Option(APP_TYPE_CMD, true, "Works with -list to " +
+        "filter applications based on " +
+        "input comma-separated list of application types.");
     appTypeOpt.setValueSeparator(',');
     appTypeOpt.setArgs(Option.UNLIMITED_VALUES);
-    appTypeOpt.setArgName("Comma-separated list of application types");
+    appTypeOpt.setArgName("Types");
     opts.addOption(appTypeOpt);
-    Option appStateOpt =
-        new Option(
-            APP_STATE_CMD,
-            true,
-            "Works with --list to filter applications based on their state. "
-                + getAllValidApplicationStates());
+    Option appStateOpt = new Option(APP_STATE_CMD, true, "Works with -list " +
+        "to filter applications based on input comma-separated list of " +
+        "application states. " + getAllValidApplicationStates());
     appStateOpt.setValueSeparator(',');
     appStateOpt.setArgs(Option.UNLIMITED_VALUES);
-    appStateOpt.setArgName("Comma-separated list of application states");
+    appStateOpt.setArgName("States");
     opts.addOption(appStateOpt);
     opts.getOption(KILL_CMD).setArgName("Application ID");
     opts.getOption(STATUS_CMD).setArgName("Application ID");
-    CommandLine cliParser = new GnuParser().parse(opts, args);
 
     int exitCode = -1;
+    CommandLine cliParser = null;
+    try {
+      cliParser = new GnuParser().parse(opts, args);
+    } catch (MissingArgumentException ex) {
+      sysout.println("Missing argument for options");
+      printUsage(opts);
+      return exitCode;
+    }
+
     if (cliParser.hasOption(STATUS_CMD)) {
       if (args.length != 2) {
         printUsage(opts);
