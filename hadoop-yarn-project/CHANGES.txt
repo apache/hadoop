@@ -57,6 +57,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-771. AMRMClient support for resource blacklisting (Junping Du via
     bikas)
 
+    YARN-1117. Improved help messages for "yarn application" and "yarn node"
+    commands. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -72,6 +73,7 @@ public class TestYarnCLI {
     sysOut = spy(new PrintStream(sysOutStream));
     sysErrStream = new ByteArrayOutputStream();
     sysErr = spy(new PrintStream(sysErrStream));
+    System.setOut(sysOut);
   }
   
   @Test
@@ -456,21 +458,40 @@ public class TestYarnCLI {
   }
 
   @Test (timeout = 10000)
-  public void testHelpCommand() throws Exception {
+  public void testAppsHelpCommand() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationCLI spyCli = spy(cli);
     int result = spyCli.run(new String[] { "-help" });
     Assert.assertTrue(result == 0);
     verify(spyCli).printUsage(any(Options.class));
+    Assert.assertEquals(createApplicationCLIHelpMessage(),
+        sysOutStream.toString());
 
+    sysOutStream.reset();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     result =
         cli.run(new String[] { "-kill", applicationId.toString(), "args" });
     verify(spyCli).printUsage(any(Options.class));
+    Assert.assertEquals(createApplicationCLIHelpMessage(),
+        sysOutStream.toString());
 
+    sysOutStream.reset();
     NodeId nodeId = NodeId.newInstance("host0", 0);
     result = cli.run(new String[] { "-status", nodeId.toString(), "args" });
     verify(spyCli).printUsage(any(Options.class));
+    Assert.assertEquals(createApplicationCLIHelpMessage(),
+        sysOutStream.toString());
+  }
+
+  @Test (timeout = 5000)
+  public void testNodesHelpCommand() throws Exception {
+    NodeCLI nodeCLI = new NodeCLI();
+    nodeCLI.setClient(client);
+    nodeCLI.setSysOutPrintStream(sysOut);
+    nodeCLI.setSysErrPrintStream(sysErr);
+    nodeCLI.run(new String[] {});
+    Assert.assertEquals(createNodeCLIHelpMessage(),
+        sysOutStream.toString());
   }
 
   @Test
@@ -806,6 +827,25 @@ public class TestYarnCLI {
     verifyUsageInfo(new NodeCLI());
   }
 
+  @Test
+  public void testMissingArguments() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    int result = cli.run(new String[] { "-status" });
+    Assert.assertEquals(result, -1);
+    Assert.assertEquals("Missing argument for options\n"
+        + createApplicationCLIHelpMessage(), sysOutStream.toString());
+
+    sysOutStream.reset();
+    NodeCLI nodeCLI = new NodeCLI();
+    nodeCLI.setClient(client);
+    nodeCLI.setSysOutPrintStream(sysOut);
+    nodeCLI.setSysErrPrintStream(sysErr);
+    result = nodeCLI.run(new String[] { "-status" });
+    Assert.assertEquals(result, -1);
+    Assert.assertEquals("Missing argument for options\n"
+        + createNodeCLIHelpMessage(), sysOutStream.toString());
+  }
+
   private void verifyUsageInfo(YarnCLI cli) throws Exception {
     cli.setSysErrPrintStream(sysErr);
     cli.run(new String[0]);
@@ -832,4 +872,45 @@ public class TestYarnCLI {
     return cli;
   }
 
+  private String createApplicationCLIHelpMessage() throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("usage: application");
+    pw.println(" -appStates <States>        Works with -list to filter applications based");
+    pw.println("                            on input comma-separated list of application");
+    pw.println("                            states. The valid application state can be one");
+    pw.println("                            of the following:");
+    pw.println("                            ALL,NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUNNING,");
+    pw.println("                            FINISHED,FAILED,KILLED");
+    pw.println(" -appTypes <Types>          Works with -list to filter applications based");
+    pw.println("                            on input comma-separated list of application");
+    pw.println("                            types.");
+    pw.println(" -help                      Displays help for all commands.");
+    pw.println(" -kill <Application ID>     Kills the application.");
+    pw.println(" -list                      List applications from the RM. Supports");
+    pw.println("                            optional use of -appTypes to filter");
+    pw.println("                            applications based on application type, and");
+    pw.println("                            -appStates to filter applications based on");
+    pw.println("                            application state");
+    pw.println(" -status <Application ID>   Prints the status of the application.");
+    pw.close();
+    String appsHelpStr = baos.toString("UTF-8");
+    return appsHelpStr;
+  }
+
+  private String createNodeCLIHelpMessage() throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("usage: node");
+    pw.println(" -all               Works with -list to list all nodes.");
+    pw.println(" -list              List all running nodes. Supports optional use of");
+    pw.println("                    -states to filter nodes based on node state, all -all");
+    pw.println("                    to list all nodes.");
+    pw.println(" -states <States>   Works with -list to filter nodes based on input");
+    pw.println("                    comma-separated list of node states.");
+    pw.println(" -status <NodeId>   Prints the status report of the node.");
+    pw.close();
+    String nodesHelpStr = baos.toString("UTF-8");
+    return nodesHelpStr;
+  }
 }
