@@ -248,7 +248,8 @@ public class ClientRMService extends AbstractService implements
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
         ApplicationAccessType.VIEW_APP, applicationId);
     ApplicationReport report =
-        application.createAndGetApplicationReport(allowAccess);
+        application.createAndGetApplicationReport(callerUGI.getUserName(),
+            allowAccess);
 
     GetApplicationReportResponse response = recordFactory
         .newRecordInstance(GetApplicationReportResponse.class);
@@ -425,7 +426,8 @@ public class ClientRMService extends AbstractService implements
       }
       boolean allowAccess = checkAccess(callerUGI, application.getUser(),
           ApplicationAccessType.VIEW_APP, application.getApplicationId());
-      reports.add(application.createAndGetApplicationReport(allowAccess));
+      reports.add(application.createAndGetApplicationReport(
+          callerUGI.getUserName(), allowAccess));
     }
 
     GetApplicationsResponse response =
@@ -471,7 +473,7 @@ public class ClientRMService extends AbstractService implements
             apps.size());
         for (RMApp app : apps) {
           if (app.getQueue().equals(queueInfo.getQueueName())) {
-            appReports.add(app.createAndGetApplicationReport(true));
+            appReports.add(app.createAndGetApplicationReport(null, true));
           }
         }
       }

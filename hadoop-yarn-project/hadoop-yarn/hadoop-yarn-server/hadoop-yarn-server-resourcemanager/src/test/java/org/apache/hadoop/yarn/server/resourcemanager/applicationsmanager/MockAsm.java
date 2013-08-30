@@ -115,7 +115,8 @@ public abstract class MockAsm extends MockApps {
       throw new UnsupportedOperationException("Not supported yet.");
     }
     @Override
-    public ApplicationReport createAndGetApplicationReport(boolean allowAccess) {
+    public ApplicationReport createAndGetApplicationReport(
+        String clientUserName,boolean allowAccess) {
       throw new UnsupportedOperationException("Not supported yet.");
     }
     @Override
