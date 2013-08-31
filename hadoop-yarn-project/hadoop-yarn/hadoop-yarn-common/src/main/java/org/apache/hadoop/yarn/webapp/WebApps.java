@@ -242,9 +242,8 @@ public class WebApps {
         for(Map.Entry<String, Object> entry : attributes.entrySet()) {
           server.setAttribute(entry.getKey(), entry.getValue());
         }
-        String webAppPath = "/" + name + "/*";
         server.defineFilter(server.getWebAppContext(), "guice",
-          GuiceFilter.class.getName(), null, new String[] { webAppPath, "/" });
+          GuiceFilter.class.getName(), null, new String[] { "/*" });
 
         webapp.setConf(conf);
         webapp.setHttpServer(server);
