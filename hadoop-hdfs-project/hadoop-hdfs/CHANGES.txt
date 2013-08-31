@@ -75,6 +75,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5078 Support file append in NFSv3 gateway to enable data streaming
     to HDFS (brandonli)
 
+    HDFS-5136 MNT EXPORT should give the full group list which can mount the
+    exports (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may

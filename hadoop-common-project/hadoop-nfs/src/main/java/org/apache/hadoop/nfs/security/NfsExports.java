@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.nfs.security;
+package org.apache.hadoop.nfs.security;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -153,6 +153,19 @@ public class NfsExports {
     }
   }
   
+  /**
+   * Return the configured group list
+   */
+  public String[] getHostGroupList() {
+    int listSize = mMatches.size();
+    String[] hostGroups = new String[listSize];
+
+    for (int i = 0; i < mMatches.size(); i++) {
+      hostGroups[i] = mMatches.get(i).getHostGroup();
+    }
+    return hostGroups;
+  }
+  
   public AccessPrivilege getAccessPrivilege(InetAddress addr) {
     return getAccessPrivilege(addr.getHostAddress(),
         addr.getCanonicalHostName());
@@ -191,6 +204,7 @@ public class NfsExports {
     }
 
     public abstract boolean isIncluded(String address, String hostname);
+    public abstract String getHostGroup();
   }
   
   /**
@@ -202,8 +216,13 @@ public class NfsExports {
     }
   
     @Override
-    public boolean isIncluded(String ip, String hostname) {
+    public boolean isIncluded(String address, String hostname) {
       return true;
+    }
+
+    @Override
+    public String getHostGroup() {
+      return "*";
     }
   }
   
@@ -235,6 +254,11 @@ public class NfsExports {
       }
       return false;
     }
+
+    @Override
+    public String getHostGroup() {
+      return subnetInfo.getAddress() + "/" + subnetInfo.getNetmask();
+    }
   }
   
   /**
@@ -264,6 +288,11 @@ public class NfsExports {
       }
       return false;
     }
+
+    @Override
+    public String getHostGroup() {
+      return ipOrHost;
+    }
   }
 
   /**
@@ -292,6 +321,11 @@ public class NfsExports {
             + "', denying client '" + address + "', '" + hostname + "'");
       }
       return false;
+    }
+
+    @Override
+    public String getHostGroup() {
+      return pattern.toString();
     }
   }
 
