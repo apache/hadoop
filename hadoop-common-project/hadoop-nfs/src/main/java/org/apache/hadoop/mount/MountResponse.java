@@ -19,6 +19,7 @@ package org.apache.hadoop.mount;
 
 import java.util.List;
 
+import org.apache.hadoop.nfs.security.NfsExports;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
@@ -59,15 +60,28 @@ public class MountResponse {
     xdr.writeBoolean(false); // Value follows no
     return xdr;
   }
-
+  
   /** Response for RPC call {@link MountInterface.MNTPROC#EXPORT} */
-  public static XDR writeExportList(XDR xdr, int xid, List<String> exports) {
+  public static XDR writeExportList(XDR xdr, int xid, List<String> exports,
+      List<NfsExports> hostMatcher) {
+    assert (exports.size() == hostMatcher.size());
+
     RpcAcceptedReply.voidReply(xdr, xid);
-    for (String export : exports) {
+    for (int i = 0; i < exports.size(); i++) {
       xdr.writeBoolean(true); // Value follows - yes
-      xdr.writeString(export);
-      xdr.writeInt(0);
+      xdr.writeString(exports.get(i));
+
+      // List host groups
+      String[] hostGroups = hostMatcher.get(i).getHostGroupList();
+      if (hostGroups.length > 0) {
+        for (int j = 0; j < hostGroups.length; j++) {
+          xdr.writeBoolean(true); // Value follows - yes
+          xdr.writeVariableOpaque(hostGroups[j].getBytes());
+        }
+      }
+      xdr.writeBoolean(false); // Value follows - no more group
     }
+    
     xdr.writeBoolean(false); // Value follows - no
     return xdr;
   }

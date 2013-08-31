@@ -27,8 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.nfs.security.AccessPrivilege;
-import org.apache.hadoop.hdfs.nfs.security.NfsExports;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mount.MountEntry;
@@ -36,6 +34,8 @@ import org.apache.hadoop.mount.MountInterface;
 import org.apache.hadoop.mount.MountResponse;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
+import org.apache.hadoop.nfs.security.AccessPrivilege;
+import org.apache.hadoop.nfs.security.NfsExports;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.RpcProgram;
@@ -184,7 +184,10 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     } else if (mntproc == MNTPROC.UMNTALL) {
       umntall(out, xid, client);
     } else if (mntproc == MNTPROC.EXPORT) {
-      out = MountResponse.writeExportList(out, xid, exports);
+      // Currently only support one NFS export "/"
+      List<NfsExports> hostsMatchers = new ArrayList<NfsExports>();
+      hostsMatchers.add(hostsMatcher);
+      out = MountResponse.writeExportList(out, xid, exports, hostsMatchers);
     } else {
       // Invalid procedure
       RpcAcceptedReply.voidReply(out, xid,
