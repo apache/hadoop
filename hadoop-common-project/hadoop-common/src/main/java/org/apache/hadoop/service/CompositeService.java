@@ -64,12 +64,32 @@ public class CompositeService extends AbstractService {
     }
   }
 
+  /**
+   * Add the passed {@link Service} to the list of services managed by this
+   * {@link CompositeService}
+   * @param service the {@link Service} to be added
+   */
   protected void addService(Service service) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Adding service " + service.getName());
     }
     synchronized (serviceList) {
       serviceList.add(service);
+    }
+  }
+
+  /**
+   * If the passed object is an instance of {@link Service},
+   * add it to the list of services managed by this {@link CompositeService}
+   * @param object
+   * @return true if a service is added, false otherwise.
+   */
+  protected boolean addIfService(Object object) {
+    if (object instanceof Service) {
+      addService((Service) object);
+      return true;
+    } else {
+      return false;
     }
   }
 
