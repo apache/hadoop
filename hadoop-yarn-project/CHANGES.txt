@@ -99,6 +99,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1101. Active nodes can be decremented below 0 (Robert Parker 
     via tgraves)
 
+    YARN-981. Fixed YARN webapp so that /logs servlet works like before. (Jian He
+    via vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

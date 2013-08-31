@@ -18,29 +18,46 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.hadoop.yarn.MockApps;
-import org.apache.hadoop.yarn.webapp.Controller;
-import org.apache.hadoop.yarn.webapp.WebApp;
-import org.apache.hadoop.yarn.webapp.WebApps;
-import org.apache.hadoop.yarn.webapp.view.HtmlPage;
-import org.apache.hadoop.yarn.webapp.view.JQueryUI;
-import org.apache.hadoop.yarn.webapp.view.TextPage;
-
-import com.google.inject.Inject;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_TABLE;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
-import static org.apache.hadoop.yarn.util.StringHelper.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.ext.ContextResolver;
+import javax.ws.rs.ext.Provider;
+import javax.xml.bind.JAXBContext;
 
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.hadoop.yarn.MockApps;
+import org.apache.hadoop.yarn.webapp.view.HtmlPage;
+import org.apache.hadoop.yarn.webapp.view.JQueryUI;
+import org.apache.hadoop.yarn.webapp.view.TextPage;
 import org.junit.Test;
-import static org.junit.Assert.*;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import com.sun.jersey.api.json.JSONConfiguration;
+import com.sun.jersey.api.json.JSONJAXBContext;
 
 public class TestWebApp {
   static final Logger LOG = LoggerFactory.getLogger(TestWebApp.class);
@@ -227,14 +244,19 @@ public class TestWebApp {
   }
 
   @Test public void testCustomRoutes() throws Exception {
-    WebApp app = WebApps.$for("test", this).start(new WebApp() {
-      @Override public void setup() {
-        route("/:foo", FooController.class);
-        route("/bar/foo", FooController.class, "bar");
-        route("/foo/:foo", DefaultController.class);
-        route("/foo/bar/:foo", DefaultController.class, "index");
-      }
-    });
+    WebApp app =
+        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
+          @Override
+          public void setup() {
+            bind(MyTestJAXBContextResolver.class);
+            bind(MyTestWebService.class);
+
+            route("/:foo", FooController.class);
+            route("/bar/foo", FooController.class, "bar");
+            route("/foo/:foo", DefaultController.class);
+            route("/foo/bar/:foo", DefaultController.class, "index");
+          }
+        });
     String baseUrl = baseUrl(app);
     try {
       assertEquals("foo", getContent(baseUrl).trim());
@@ -245,6 +267,31 @@ public class TestWebApp {
       assertEquals("default1", getContent(baseUrl +"test/foo/1").trim());
       assertEquals("default2", getContent(baseUrl +"test/foo/bar/2").trim());
       assertEquals(404, getResponseCode(baseUrl +"test/goo"));
+      assertEquals(200, getResponseCode(baseUrl +"ws/v1/test"));
+      assertTrue(getContent(baseUrl +"ws/v1/test").contains("myInfo"));
+    } finally {
+      app.stop();
+    }
+  }
+
+  // This is to test the GuiceFilter should only be applied to webAppContext,
+  // not to staticContext  and logContext;
+  @Test public void testYARNWebAppContext() throws Exception {
+    // setting up the log context
+    System.setProperty("hadoop.log.dir", "/Not/Existing/dir");
+    WebApp app = WebApps.$for("test", this).start(new WebApp() {
+      @Override public void setup() {
+        route("/", FooController.class);
+      }
+    });
+    String baseUrl = baseUrl(app);
+    try {
+      // should not redirect to foo
+      assertFalse("foo".equals(getContent(baseUrl +"static").trim()));
+      // Not able to access a non-existing dir, should not redirect to foo.
+      assertEquals(404, getResponseCode(baseUrl +"logs"));
+      // should be able to redirect to foo.
+      assertEquals("foo", getContent(baseUrl).trim());
     } finally {
       app.stop();
     }

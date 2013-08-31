@@ -528,7 +528,7 @@ public class HttpServer implements FilterContainer {
   /**
    * Define a filter for a context and set up default url mappings.
    */
-  protected void defineFilter(Context ctx, String name,
+  public void defineFilter(Context ctx, String name,
       String classname, Map<String,String> parameters, String[] urls) {
 
     FilterHolder holder = new FilterHolder();
@@ -567,6 +567,10 @@ public class HttpServer implements FilterContainer {
    */
   public Object getAttribute(String name) {
     return webAppContext.getAttribute(name);
+  }
+
+  public WebAppContext getWebAppContext(){
+    return this.webAppContext;
   }
 
   /**
