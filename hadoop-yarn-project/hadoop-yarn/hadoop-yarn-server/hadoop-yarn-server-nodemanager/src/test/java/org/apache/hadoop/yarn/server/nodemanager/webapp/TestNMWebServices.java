@@ -23,24 +23,38 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.StringReader;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
@@ -86,7 +100,14 @@ public class TestNMWebServices extends JerseyTest {
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
     protected void configureServlets() {
-      nmContext = new NodeManager.NMContext(null, null);
+      Configuration conf = new Configuration();
+      conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
+      conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
+      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
+      healthChecker.init(conf);
+      dirsHandler = healthChecker.getDiskHandler();
+      aclsManager = new ApplicationACLsManager(conf);
+      nmContext = new NodeManager.NMContext(null, null, dirsHandler, aclsManager);
       NodeId nodeId = NodeId.newInstance("testhost.foo.com", 8042);
       ((NodeManager.NMContext)nmContext).setNodeId(nodeId);
       resourceView = new ResourceView() {
@@ -110,13 +131,6 @@ public class TestNMWebServices extends JerseyTest {
           return true;
         }
       };
-      Configuration conf = new Configuration();
-      conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
-      conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
-      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
-      healthChecker.init(conf);
-      dirsHandler = healthChecker.getDiskHandler();
-      aclsManager = new ApplicationACLsManager(conf);
       nmWebApp = new NMWebApp(resourceView, aclsManager, dirsHandler);
       bind(JAXBContextResolver.class);
       bind(NMWebServices.class);
@@ -291,6 +305,53 @@ public class TestNMWebServices extends JerseyTest {
     NodeList nodes = dom.getElementsByTagName("nodeInfo");
     assertEquals("incorrect number of elements", 1, nodes.getLength());
     verifyNodesXML(nodes);
+  }
+  
+  @Test
+  public void testContainerLogs() throws IOException {
+    WebResource r = resource();
+    final ContainerId containerId = BuilderUtils.newContainerId(0, 0, 0, 0);
+    final String containerIdStr = BuilderUtils.newContainerId(0, 0, 0, 0)
+        .toString();
+    final ApplicationAttemptId appAttemptId = containerId.getApplicationAttemptId();
+    final ApplicationId appId = appAttemptId.getApplicationId();
+    final String appIdStr = appId.toString();
+    final String filename = "logfile1";
+    final String logMessage = "log message\n";
+    nmContext.getApplications().put(appId, new ApplicationImpl(null, "user",
+        appId, null, nmContext));
+    
+    MockContainer container = new MockContainer(appAttemptId,
+        new AsyncDispatcher(), new Configuration(), "user", appId, 1);
+    container.setState(ContainerState.RUNNING);
+    nmContext.getContainers().put(containerId, container);
+    
+    // write out log file
+    Path path = dirsHandler.getLogPathForWrite(
+        ContainerLaunch.getRelativeContainerLogDir(
+            appIdStr, containerIdStr) + "/" + filename, false);
+    
+    File logFile = new File(path.toUri().getPath());
+    logFile.deleteOnExit();
+    assertTrue("Failed to create log dir", logFile.getParentFile().mkdirs());
+    PrintWriter pw = new PrintWriter(logFile);
+    pw.print(logMessage);
+    pw.close();
+
+    // ask for it
+    ClientResponse response = r.path("ws").path("v1").path("node")
+        .path("containerlogs").path(containerIdStr).path(filename)
+        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+    String responseText = response.getEntity(String.class);
+    assertEquals(logMessage, responseText);
+    
+    // ask for file that doesn't exist
+    response = r.path("ws").path("v1").path("node")
+        .path("containerlogs").path(containerIdStr).path("uhhh")
+        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+    Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
+    responseText = response.getEntity(String.class);
+    assertTrue(responseText.contains("Cannot find this log on the local disk."));
   }
 
   public void verifyNodesXML(NodeList nodes) throws JSONException, Exception {

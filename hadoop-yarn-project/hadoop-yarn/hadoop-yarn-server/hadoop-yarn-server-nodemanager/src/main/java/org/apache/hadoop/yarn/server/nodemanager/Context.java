@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
 /**
  * Context interface for sharing information across components in the
@@ -61,4 +62,8 @@ public interface Context {
   NodeHealthStatus getNodeHealthStatus();
 
   ContainerManagementProtocol getContainerManager();
+
+  LocalDirsHandlerService getLocalDirsHandler();
+
+  ApplicationACLsManager getApplicationACLsManager();
 }

@@ -17,19 +17,31 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Map.Entry;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -59,6 +71,9 @@ public class NMWebServices {
   private static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
+  private @javax.ws.rs.core.Context 
+    HttpServletRequest request;
+  
   private @javax.ws.rs.core.Context 
     HttpServletResponse response;
 
@@ -179,5 +194,66 @@ public class NMWebServices {
         .toString(), webapp.name());
 
   }
-
+  
+  /**
+   * Returns the contents of a container's log file in plain text. 
+   *
+   * Only works for containers that are still in the NodeManager's memory, so
+   * logs are no longer available after the corresponding application is no
+   * longer running.
+   * 
+   * @param containerIdStr
+   *    The container ID
+   * @param filename
+   *    The name of the log file
+   * @return
+   *    The contents of the container's log file
+   */
+  @GET
+  @Path("/containerlogs/{containerid}/{filename}")
+  @Produces({ MediaType.TEXT_PLAIN })
+  @Public
+  @Unstable
+  public Response getLogs(@PathParam("containerid") String containerIdStr,
+      @PathParam("filename") String filename) {
+    ContainerId containerId;
+    try {
+      containerId = ConverterUtils.toContainerId(containerIdStr);
+    } catch (IllegalArgumentException ex) {
+      return Response.status(Status.BAD_REQUEST).build();
+    }
+    
+    File logFile = null;
+    try {
+      logFile = ContainerLogsUtils.getContainerLogFile(
+          containerId, filename, request.getRemoteUser(), nmContext);
+    } catch (NotFoundException ex) {
+      return Response.status(Status.NOT_FOUND).entity(ex.getMessage()).build();
+    } catch (YarnException ex) {
+      return Response.serverError().entity(ex.getMessage()).build();
+    }
+    
+    try {
+      final FileInputStream fis = ContainerLogsUtils.openLogFileForRead(
+          containerIdStr, logFile, nmContext);
+      
+      StreamingOutput stream = new StreamingOutput() {
+        @Override
+        public void write(OutputStream os) throws IOException,
+            WebApplicationException {
+          int bufferSize = 65536;
+          byte[] buf = new byte[bufferSize];
+          int len;
+          while ((len = fis.read(buf, 0, bufferSize)) > 0) {
+            os.write(buf, 0, len);
+          }
+          os.flush();
+        }
+      };
+      
+      return Response.ok(stream).build();
+    } catch (IOException ex) {
+      return Response.serverError().entity(ex.getMessage()).build();
+    }
+  }
 }
