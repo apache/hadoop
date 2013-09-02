@@ -1185,7 +1185,7 @@ public class TestNodeStatusUpdater {
     public MyNMContext(
         NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager) {
-      super(containerTokenSecretManager, nmTokenSecretManager);
+      super(containerTokenSecretManager, nmTokenSecretManager, null, null);
     }
 
     @Override

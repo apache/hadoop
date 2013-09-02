@@ -468,8 +468,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
     // Create the application
     Application application =
-        new ApplicationImpl(dispatcher, this.aclsManager, user, applicationID,
-          credentials, context);
+        new ApplicationImpl(dispatcher, user, applicationID, credentials, context);
     if (null == context.getApplications().putIfAbsent(applicationID,
       application)) {
       LOG.info("Creating a new application reference for app " + applicationID);
