@@ -525,7 +525,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
     @Override
     public void env(String key, String value) {
-      line("@set ", key, "=", value);
+      line("@set ", key, "=", value,
+          "\nif %errorlevel% neq 0 exit /b %errorlevel%");
     }
 
     @Override

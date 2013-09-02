@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -149,7 +150,8 @@ public class ContainersLauncher extends AbstractService
               dispatcher.getEventHandler().handle(
                   new ContainerExitEvent(containerId,
                       ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
-                      ExitCode.TERMINATED.getExitCode(),
+                      Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() : 
+                        ExitCode.TERMINATED.getExitCode(),
                       "Container terminated before launch."));
             }
           }
