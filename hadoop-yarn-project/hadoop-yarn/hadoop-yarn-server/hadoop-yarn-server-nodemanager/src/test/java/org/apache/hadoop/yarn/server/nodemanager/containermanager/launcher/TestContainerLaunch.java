@@ -240,15 +240,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     File shellFile = null;
     try {
       shellFile = Shell.appendScriptExtension(tmpDir, "hello");
-      String timeoutCommand = Shell.WINDOWS ? "@echo \"hello\"" :
-        "echo \"hello\"";
-      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
-      FileUtil.setExecutable(shellFile, true);
-      writer.println(timeoutCommand);
-      writer.close();
       Map<Path, List<String>> resources =
           new HashMap<Path, List<String>>();
       FileOutputStream fos = new FileOutputStream(shellFile);
+      FileUtil.setExecutable(shellFile, true);
 
       Map<String, String> env = new HashMap<String, String>();
       // invalid env
@@ -270,7 +265,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       } catch(ExitCodeException e){
         diagnostics = e.getMessage();
       }
-      Assert.assertTrue(diagnostics.contains("command not found"));
+      Assert.assertTrue(diagnostics.contains(Shell.WINDOWS ?
+          "is not recognized as an internal or external command" :
+          "command not found"));
       Assert.assertTrue(shexc.getExitCode() != 0);
     }
     finally {
@@ -289,15 +286,16 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     try {
       shellFile = Shell.appendScriptExtension(tmpDir, "hello");
       // echo "hello" to stdout and "error" to stderr and exit code with 2;
-      String command = Shell.WINDOWS ? "@echo \"hello\"; @echo \"error\" 1>&2; exit 2;" :
-        "echo \"hello\"; echo \"error\" 1>&2; exit 2;";
+      String command = Shell.WINDOWS ?
+          "@echo \"hello\" & @echo \"error\" 1>&2 & exit /b 2" :
+          "echo \"hello\"; echo \"error\" 1>&2; exit 2;";
       PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
       FileUtil.setExecutable(shellFile, true);
       writer.println(command);
       writer.close();
       Map<Path, List<String>> resources =
           new HashMap<Path, List<String>>();
-      FileOutputStream fos = new FileOutputStream(shellFile);
+      FileOutputStream fos = new FileOutputStream(shellFile, true);
 
       Map<String, String> env = new HashMap<String, String>();
       List<String> commands = new ArrayList<String>();
