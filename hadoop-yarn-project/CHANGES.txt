@@ -63,6 +63,10 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1117. Improved help messages for "yarn application" and "yarn node"
     commands. (Xuan Gong via vinodkv)
 
+    YARN-1120. Made ApplicationConstants.Environment.USER definition OS neutral
+    as the corresponding value is now set correctly end-to-end. (Chuan Liu via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
