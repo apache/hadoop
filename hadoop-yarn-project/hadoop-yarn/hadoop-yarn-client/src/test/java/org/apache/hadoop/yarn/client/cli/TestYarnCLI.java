@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -72,6 +73,7 @@ public class TestYarnCLI {
     sysOut = spy(new PrintStream(sysOutStream));
     sysErrStream = new ByteArrayOutputStream();
     sysErr = spy(new PrintStream(sysErrStream));
+    System.setOut(sysOut);
   }
   
   @Test
@@ -167,15 +169,35 @@ public class TestYarnCLI {
         null);
     applicationReports.add(newApplicationReport4);
 
+    ApplicationId applicationId5 = ApplicationId.newInstance(1234, 9);
+    ApplicationReport newApplicationReport5 = ApplicationReport.newInstance(
+        applicationId5, ApplicationAttemptId.newInstance(applicationId5, 5),
+        "user5", "queue5", "appname5", "host5", 128, null,
+        YarnApplicationState.ACCEPTED, "diagnostics5", "url5", 5, 5,
+        FinalApplicationStatus.KILLED, null, "N/A", 0.93789f, "HIVE",
+        null);
+    applicationReports.add(newApplicationReport5);
+
+    ApplicationId applicationId6 = ApplicationId.newInstance(1234, 10);
+    ApplicationReport newApplicationReport6 = ApplicationReport.newInstance(
+        applicationId6, ApplicationAttemptId.newInstance(applicationId6, 6),
+        "user6", "queue6", "appname6", "host6", 129, null,
+        YarnApplicationState.SUBMITTED, "diagnostics6", "url6", 6, 6,
+        FinalApplicationStatus.KILLED, null, "N/A", 0.99789f, "PIG",
+        null);
+    applicationReports.add(newApplicationReport6);
+
     // Test command yarn application -list
     // if the set appStates is empty, RUNNING state will be automatically added
     // to the appStates list
     // the output of yarn application -list should be the same as
-    // equals to yarn application -list --appStates RUNNING
+    // equals to yarn application -list --appStates RUNNING,ACCEPTED,SUBMITTED
     Set<String> appType1 = new HashSet<String>();
     EnumSet<YarnApplicationState> appState1 =
         EnumSet.noneOf(YarnApplicationState.class);
     appState1.add(YarnApplicationState.RUNNING);
+    appState1.add(YarnApplicationState.ACCEPTED);
+    appState1.add(YarnApplicationState.SUBMITTED);
     when(client.getApplications(appType1, appState1)).thenReturn(
         getApplicationReports(applicationReports, appType1, appState1, false));
     int result = cli.run(new String[] { "-list" });
@@ -185,7 +207,7 @@ public class TestYarnCLI {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
     pw.println("Total number of applications (application-types: " + appType1
-        + " and states: " + appState1 + ")" + ":" + 2);
+        + " and states: " + appState1 + ")" + ":" + 4);
     pw.print("                Application-Id\t    Application-Name");
     pw.print("\t    Application-Type");
     pw.print("\t      User\t     Queue\t             State\t       ");
@@ -201,6 +223,16 @@ public class TestYarnCLI {
     pw.print("queue3\t           RUNNING\t         ");
     pw.print("SUCCEEDED\t         73.79%");
     pw.println("\t                                N/A");
+    pw.print("         application_1234_0009\t            ");
+    pw.print("appname5\t                HIVE\t     user5\t    ");
+    pw.print("queue5\t          ACCEPTED\t            ");
+    pw.print("KILLED\t         93.79%");
+    pw.println("\t                                N/A");
+    pw.print("         application_1234_0010\t            ");
+    pw.print("appname6\t                 PIG\t     user6\t    ");
+    pw.print("queue6\t         SUBMITTED\t            ");
+    pw.print("KILLED\t         99.79%");
+    pw.println("\t                                N/A");
     pw.close();
     String appsReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appsReportStr, sysOutStream.toString());
@@ -208,7 +240,8 @@ public class TestYarnCLI {
 
     //Test command yarn application -list --appTypes apptype1,apptype2
     //the output should be the same as
-    //yarn application -list --appTypes apptyp1, apptype2 --appStates RUNNING
+    // yarn application -list --appTypes apptyp1, apptype2 --appStates
+    // RUNNING,ACCEPTED,SUBMITTED
     sysOutStream.reset();
     Set<String> appType2 = new HashSet<String>();
     appType2.add("YARN");
@@ -217,6 +250,8 @@ public class TestYarnCLI {
     EnumSet<YarnApplicationState> appState2 =
         EnumSet.noneOf(YarnApplicationState.class);
     appState2.add(YarnApplicationState.RUNNING);
+    appState2.add(YarnApplicationState.ACCEPTED);
+    appState2.add(YarnApplicationState.SUBMITTED);
     when(client.getApplications(appType2, appState2)).thenReturn(
         getApplicationReports(applicationReports, appType2, appState2, false));
     result =
@@ -358,7 +393,7 @@ public class TestYarnCLI {
     baos = new ByteArrayOutputStream();
     pw = new PrintWriter(baos);
     pw.println("Total number of applications (application-types: " + appType5
-        + " and states: " + appState5 + ")" + ":" + 4);
+        + " and states: " + appState5 + ")" + ":" + 6);
     pw.print("                Application-Id\t    Application-Name");
     pw.print("\t    Application-Type");
     pw.print("\t      User\t     Queue\t             State\t       ");
@@ -383,6 +418,16 @@ public class TestYarnCLI {
     pw.print("appname4\t       NON-MAPREDUCE\t     user4\t    ");
     pw.print("queue4\t            FAILED\t         ");
     pw.print("SUCCEEDED\t         83.79%");
+    pw.println("\t                                N/A");
+    pw.print("         application_1234_0009\t            ");
+    pw.print("appname5\t                HIVE\t     user5\t    ");
+    pw.print("queue5\t          ACCEPTED\t            ");
+    pw.print("KILLED\t         93.79%");
+    pw.println("\t                                N/A");
+    pw.print("         application_1234_0010\t            ");
+    pw.print("appname6\t                 PIG\t     user6\t    ");
+    pw.print("queue6\t         SUBMITTED\t            ");
+    pw.print("KILLED\t         99.79%");
     pw.println("\t                                N/A");
     pw.close();
     appsReportStr = baos.toString("UTF-8");
@@ -456,21 +501,40 @@ public class TestYarnCLI {
   }
 
   @Test (timeout = 10000)
-  public void testHelpCommand() throws Exception {
+  public void testAppsHelpCommand() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationCLI spyCli = spy(cli);
     int result = spyCli.run(new String[] { "-help" });
     Assert.assertTrue(result == 0);
     verify(spyCli).printUsage(any(Options.class));
+    Assert.assertEquals(createApplicationCLIHelpMessage(),
+        sysOutStream.toString());
 
+    sysOutStream.reset();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     result =
         cli.run(new String[] { "-kill", applicationId.toString(), "args" });
     verify(spyCli).printUsage(any(Options.class));
+    Assert.assertEquals(createApplicationCLIHelpMessage(),
+        sysOutStream.toString());
 
+    sysOutStream.reset();
     NodeId nodeId = NodeId.newInstance("host0", 0);
     result = cli.run(new String[] { "-status", nodeId.toString(), "args" });
     verify(spyCli).printUsage(any(Options.class));
+    Assert.assertEquals(createApplicationCLIHelpMessage(),
+        sysOutStream.toString());
+  }
+
+  @Test (timeout = 5000)
+  public void testNodesHelpCommand() throws Exception {
+    NodeCLI nodeCLI = new NodeCLI();
+    nodeCLI.setClient(client);
+    nodeCLI.setSysOutPrintStream(sysOut);
+    nodeCLI.setSysErrPrintStream(sysErr);
+    nodeCLI.run(new String[] {});
+    Assert.assertEquals(createNodeCLIHelpMessage(),
+        sysOutStream.toString());
   }
 
   @Test
@@ -806,6 +870,25 @@ public class TestYarnCLI {
     verifyUsageInfo(new NodeCLI());
   }
 
+  @Test
+  public void testMissingArguments() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    int result = cli.run(new String[] { "-status" });
+    Assert.assertEquals(result, -1);
+    Assert.assertEquals("Missing argument for options\n"
+        + createApplicationCLIHelpMessage(), sysOutStream.toString());
+
+    sysOutStream.reset();
+    NodeCLI nodeCLI = new NodeCLI();
+    nodeCLI.setClient(client);
+    nodeCLI.setSysOutPrintStream(sysOut);
+    nodeCLI.setSysErrPrintStream(sysErr);
+    result = nodeCLI.run(new String[] { "-status" });
+    Assert.assertEquals(result, -1);
+    Assert.assertEquals("Missing argument for options\n"
+        + createNodeCLIHelpMessage(), sysOutStream.toString());
+  }
+
   private void verifyUsageInfo(YarnCLI cli) throws Exception {
     cli.setSysErrPrintStream(sysErr);
     cli.run(new String[0]);
@@ -832,4 +915,45 @@ public class TestYarnCLI {
     return cli;
   }
 
+  private String createApplicationCLIHelpMessage() throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("usage: application");
+    pw.println(" -appStates <States>        Works with -list to filter applications based");
+    pw.println("                            on input comma-separated list of application");
+    pw.println("                            states. The valid application state can be one");
+    pw.println("                            of the following:");
+    pw.println("                            ALL,NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUNNING,");
+    pw.println("                            FINISHED,FAILED,KILLED");
+    pw.println(" -appTypes <Types>          Works with -list to filter applications based");
+    pw.println("                            on input comma-separated list of application");
+    pw.println("                            types.");
+    pw.println(" -help                      Displays help for all commands.");
+    pw.println(" -kill <Application ID>     Kills the application.");
+    pw.println(" -list                      List applications from the RM. Supports");
+    pw.println("                            optional use of -appTypes to filter");
+    pw.println("                            applications based on application type, and");
+    pw.println("                            -appStates to filter applications based on");
+    pw.println("                            application state");
+    pw.println(" -status <Application ID>   Prints the status of the application.");
+    pw.close();
+    String appsHelpStr = baos.toString("UTF-8");
+    return appsHelpStr;
+  }
+
+  private String createNodeCLIHelpMessage() throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("usage: node");
+    pw.println(" -all               Works with -list to list all nodes.");
+    pw.println(" -list              List all running nodes. Supports optional use of");
+    pw.println("                    -states to filter nodes based on node state, all -all");
+    pw.println("                    to list all nodes.");
+    pw.println(" -states <States>   Works with -list to filter nodes based on input");
+    pw.println("                    comma-separated list of node states.");
+    pw.println(" -status <NodeId>   Prints the status report of the node.");
+    pw.close();
+    String nodesHelpStr = baos.toString("UTF-8");
+    return nodesHelpStr;
+  }
 }

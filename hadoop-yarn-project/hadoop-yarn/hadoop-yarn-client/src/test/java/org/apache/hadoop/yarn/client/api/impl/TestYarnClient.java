@@ -86,6 +86,7 @@ public class TestYarnClient {
     client.init(conf);
     client.start();
     client.stop();
+    rm.stop();
   }
 
   @Test (timeout = 30000)

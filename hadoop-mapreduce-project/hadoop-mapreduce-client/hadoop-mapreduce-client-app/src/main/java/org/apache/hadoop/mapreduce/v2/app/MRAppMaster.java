@@ -626,12 +626,6 @@ public class MRAppMaster extends CompositeService {
     }
   }
 
-  protected void addIfService(Object object) {
-    if (object instanceof Service) {
-      addService((Service) object);
-    }
-  }
-
   protected EventHandler<JobHistoryEvent> createJobHistoryHandler(
       AppContext context) {
     this.jobHistoryEventHandler = new JobHistoryEventHandler(context,

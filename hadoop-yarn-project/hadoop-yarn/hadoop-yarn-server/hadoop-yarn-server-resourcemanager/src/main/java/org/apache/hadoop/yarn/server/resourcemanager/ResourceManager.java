@@ -33,7 +33,6 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
-import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -300,12 +299,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected Dispatcher createDispatcher() {
     return new AsyncDispatcher();
-  }
-
-  protected void addIfService(Object object) {
-    if (object instanceof Service) {
-      addService((Service) object);
-    }
   }
 
   protected AMRMTokenSecretManager createAMRMTokenSecretManager(

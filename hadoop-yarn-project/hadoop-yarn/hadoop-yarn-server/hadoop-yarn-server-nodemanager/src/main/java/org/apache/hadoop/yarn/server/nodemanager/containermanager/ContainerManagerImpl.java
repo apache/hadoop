@@ -85,7 +85,6 @@ import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
-import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -191,12 +190,6 @@ public class ContainerManagerImpl extends CompositeService implements
     dispatcher.register(LogHandlerEventType.class, logHandler);
     
     super.serviceInit(conf);
-  }
-
-  private void addIfService(Object object) {
-    if (object instanceof Service) {
-      addService((Service) object);
-    }
   }
 
   protected LogHandler createLogHandler(Configuration conf, Context context,
@@ -475,8 +468,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
     // Create the application
     Application application =
-        new ApplicationImpl(dispatcher, this.aclsManager, user, applicationID,
-          credentials, context);
+        new ApplicationImpl(dispatcher, user, applicationID, credentials, context);
     if (null == context.getApplications().putIfAbsent(applicationID,
       application)) {
       LOG.info("Creating a new application reference for app " + applicationID);

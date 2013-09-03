@@ -80,7 +80,7 @@ public interface ApplicationConstants {
      * $USER
      * Final, non-modifiable.
      */
-    USER(Shell.WINDOWS ? "USERNAME": "USER"),
+    USER("USER"),
     
     /**
      * $LOGNAME

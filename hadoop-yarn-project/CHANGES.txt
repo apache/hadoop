@@ -21,6 +21,9 @@ Release 2.3.0 - UNRELEASED
 
   NEW FEATURES
 
+    YARN-649. Added a new NM web-service to serve container logs in plain text
+    over HTTP. (Sandy Ryza via vinodkv)
+
   IMPROVEMENTS
 
     YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)
@@ -38,6 +41,9 @@ Release 2.3.0 - UNRELEASED
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
+
+    YARN-707. Added user information also in the YARN ClientToken so that AMs
+    can implement authorization based on incoming users. (Jason Lowe via vinodkv)
 
   NEW FEATURES
 
@@ -65,6 +71,20 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-1080. Improved help message for "yarn logs" command. (Xuan Gong via
     vinodkv)
+
+    YARN-771. AMRMClient support for resource blacklisting (Junping Du via
+    bikas)
+
+    YARN-1117. Improved help messages for "yarn application" and "yarn node"
+    commands. (Xuan Gong via vinodkv)
+
+    YARN-1120. Made ApplicationConstants.Environment.USER definition OS neutral
+    as the corresponding value is now set correctly end-to-end. (Chuan Liu via
+    vinodkv)
+
+    YARN-1124. Modified YARN CLI application list to display new and submitted
+    applications together with running apps by default, following up YARN-1074.
+    (Xuan Gong via vinodkv)
 
   OPTIMIZATIONS
 
@@ -125,6 +145,9 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-1101. Active nodes can be decremented below 0 (Robert Parker 
     via tgraves)
+
+    YARN-1077. Fixed TestContainerLaunch test failure on Windows. (Chuan Liu via
+    vinodkv)
 
 Release 2.1.0-beta - 2013-08-22
 

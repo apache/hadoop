@@ -39,6 +39,7 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
   public static final Text KIND_NAME = new Text("YARN_CLIENT_TOKEN");
 
   private ApplicationAttemptId applicationAttemptId;
+  private Text clientName = new Text();
 
   // TODO: Add more information in the tokenID such that it is not
   // transferrable, more secure etc.
@@ -46,13 +47,18 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
   public ClientToAMTokenIdentifier() {
   }
 
-  public ClientToAMTokenIdentifier(ApplicationAttemptId id) {
+  public ClientToAMTokenIdentifier(ApplicationAttemptId id, String client) {
     this();
     this.applicationAttemptId = id;
+    this.clientName = new Text(client);
   }
 
   public ApplicationAttemptId getApplicationAttemptID() {
     return this.applicationAttemptId;
+  }
+
+  public String getClientName() {
+    return this.clientName.toString();
   }
 
   @Override
@@ -61,6 +67,7 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
       .getClusterTimestamp());
     out.writeInt(this.applicationAttemptId.getApplicationId().getId());
     out.writeInt(this.applicationAttemptId.getAttemptId());
+    this.clientName.write(out);
   }
 
   @Override
@@ -68,6 +75,7 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
     this.applicationAttemptId =
         ApplicationAttemptId.newInstance(
           ApplicationId.newInstance(in.readLong(), in.readInt()), in.readInt());
+    this.clientName.readFields(in);
   }
 
   @Override
@@ -77,10 +85,10 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
 
   @Override
   public UserGroupInformation getUser() {
-    if (this.applicationAttemptId == null) {
+    if (this.clientName == null) {
       return null;
     }
-    return UserGroupInformation.createRemoteUser(this.applicationAttemptId.toString());
+    return UserGroupInformation.createRemoteUser(this.clientName.toString());
   }
 
   @InterfaceAudience.Private

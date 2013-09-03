@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -118,5 +119,10 @@ public class TestStat {
     } catch (FileNotFoundException e) {
       // expected
     }
+  }
+  
+  @Test(timeout=10000)
+  public void testStatEnvironment() throws Exception {
+    assertEquals(stat.getEnvironment("LANG"), "C");
   }
 }

@@ -357,6 +357,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9877. Fix listing of snapshot directories in globStatus.
     (Binglin Chang via Andrew Wang)
 
+    HADOOP-9909. org.apache.hadoop.fs.Stat should permit other LANG.
+    (Shinichi Yamashita via Andrew Wang)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -396,6 +399,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9906. Move HAZKUtil to o.a.h.util.ZKUtil and make inner-classes
     public (Karthik Kambatla via Sandy Ryza)
 
+    HADOOP-9918. Add addIfService to CompositeService (Karthik Kambatla via
+    Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -434,6 +440,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9894.  Race condition in Shell leads to logged error stream handling
     exceptions (Arpit Agarwal)
+
+    HADOOP-9774. RawLocalFileSystem.listStatus() return absolute paths when
+    input path is relative on Windows. (Shanyu Zhao via ivanmi)
 
 Release 2.1.0-beta - 2013-08-22
 

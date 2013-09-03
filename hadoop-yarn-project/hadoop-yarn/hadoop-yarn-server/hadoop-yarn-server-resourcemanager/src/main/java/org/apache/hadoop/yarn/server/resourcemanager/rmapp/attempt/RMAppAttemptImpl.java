@@ -33,12 +33,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import javax.crypto.SecretKey;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -60,8 +61,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientToAMTokenSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
@@ -126,9 +125,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final WriteLock writeLock;
 
   private final ApplicationAttemptId applicationAttemptId;
-  private Token<ClientToAMTokenIdentifier> clientToAMToken;
   private final ApplicationSubmissionContext submissionContext;
   private Token<AMRMTokenIdentifier> amrmToken = null;
+  private SecretKey clientTokenMasterKey = null;
 
   //nodes on while this attempt's containers ran
   private final Set<NodeId> ranNodes =
@@ -499,8 +498,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public Token<ClientToAMTokenIdentifier> getClientToAMToken() {
-    return this.clientToAMToken;
+  public SecretKey getClientTokenMasterKey() {
+    return this.clientTokenMasterKey;
   }
 
   @Override
@@ -659,7 +658,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     ApplicationAttemptState attemptState = appState.getAttempt(getAppAttemptId());
     assert attemptState != null;
     setMasterContainer(attemptState.getMasterContainer());
-    recoverAppAttemptTokens(attemptState.getAppAttemptTokens());
+    recoverAppAttemptCredentials(attemptState.getAppAttemptCredentials());
     LOG.info("Recovered attempt: AppId: " + getAppAttemptId().getApplicationId()
              + " AttemptId: " + getAppAttemptId()
              + " MasterContainer: " + masterContainer);
@@ -668,17 +667,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
                                  RMAppAttemptEventType.RECOVER));
   }
 
-  private void recoverAppAttemptTokens(Credentials appAttemptTokens) {
+  private void recoverAppAttemptCredentials(Credentials appAttemptTokens) {
     if (appAttemptTokens == null) {
       return;
     }
-    if (UserGroupInformation.isSecurityEnabled()) {
 
-      ClientToAMTokenSelector clientToAMTokenSelector =
-          new ClientToAMTokenSelector();
-      this.clientToAMToken =
-          clientToAMTokenSelector.selectToken(new Text(),
-            appAttemptTokens.getAllTokens());
+    if (UserGroupInformation.isSecurityEnabled()) {
+      byte[] clientTokenMasterKeyBytes = appAttemptTokens.getSecretKey(
+          RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME);
+      clientTokenMasterKey = rmContext.getClientToAMTokenSecretManager()
+          .registerMasterKey(applicationAttemptId, clientTokenMasterKeyBytes);
     }
 
     // Only one AMRMToken is stored per-attempt, so this should be fine. Can't
@@ -715,15 +713,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           .registerAppAttempt(appAttempt.applicationAttemptId);
 
       if (UserGroupInformation.isSecurityEnabled()) {
-
-        appAttempt.rmContext.getClientToAMTokenSecretManager()
-          .registerApplication(appAttempt.applicationAttemptId);
-
-        // create clientToAMToken
-        appAttempt.clientToAMToken =
-            new Token<ClientToAMTokenIdentifier>(new ClientToAMTokenIdentifier(
-              appAttempt.applicationAttemptId),
-              appAttempt.rmContext.getClientToAMTokenSecretManager());
+        appAttempt.clientTokenMasterKey = appAttempt.rmContext
+            .getClientToAMTokenSecretManager()
+            .registerApplication(appAttempt.applicationAttemptId);
       }
 
       // create AMRMToken
@@ -762,7 +754,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               message)
           );
 
-      appAttempt.removeTokens(appAttempt);
+      appAttempt.removeCredentials(appAttempt);
     }
   }
 
@@ -895,7 +887,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.eventHandler.handle(new AppRemovedSchedulerEvent(appAttemptId,
         finalAttemptState));
 
-      appAttempt.removeTokens(appAttempt);
+      appAttempt.removeCredentials(appAttempt);
     }
   }
 
@@ -1256,7 +1248,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     store.storeApplicationAttempt(this);
   }
 
-  private void removeTokens(RMAppAttemptImpl appAttempt) {
+  private void removeCredentials(RMAppAttemptImpl appAttempt) {
     // Unregister from the ClientToAMTokenSecretManager
     if (UserGroupInformation.isSecurityEnabled()) {
       appAttempt.rmContext.getClientToAMTokenSecretManager()

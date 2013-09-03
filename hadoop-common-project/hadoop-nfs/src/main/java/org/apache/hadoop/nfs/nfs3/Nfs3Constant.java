@@ -192,13 +192,13 @@ public class Nfs3Constant {
   
   public static final String EXPORTS_ALLOWED_HOSTS_SEPARATOR = ";";
   /** Allowed hosts for nfs exports */
-  public static final String EXPORTS_ALLOWED_HOSTS_KEY = "hdfs.nfs.exports.allowed.hosts";
+  public static final String EXPORTS_ALLOWED_HOSTS_KEY = "dfs.nfs.exports.allowed.hosts";
   public static final String EXPORTS_ALLOWED_HOSTS_KEY_DEFAULT = "* rw";
   /** Size for nfs exports cache */
-  public static final String EXPORTS_CACHE_SIZE_KEY = "hdfs.nfs.exports.cache.size";
+  public static final String EXPORTS_CACHE_SIZE_KEY = "dfs.nfs.exports.cache.size";
   public static final int EXPORTS_CACHE_SIZE_DEFAULT = 512;
   /** Expiration time for nfs exports cache entry */
-  public static final String EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY = "hdfs.nfs.exports.cache.expirytime.millis";
+  public static final String EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY = "dfs.nfs.exports.cache.expirytime.millis";
   public static final long EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT = 15 * 60 * 1000; // 15 min
 
   public static final String FILE_DUMP_DIR_KEY = "dfs.nfs3.dump.dir";
