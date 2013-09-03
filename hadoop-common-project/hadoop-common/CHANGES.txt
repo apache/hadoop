@@ -327,6 +327,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9487 Deprecation warnings in Configuration should go to their
     own log or otherwise be suppressible (Chu Tong via stevel)
 
+    HADOOP-9889. Refresh the Krb5 configuration when creating a new kdc in
+    Hadoop-MiniKDC (Wei Yan via Sandy Ryza)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -362,6 +365,9 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9910. proxy server start and stop documentation wrong
+    (Andre Kelpe via harsh)
+
     HADOOP-9446. Support Kerberos SPNEGO for IBM JDK. (Yu Gao via llu)
  
     HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
@@ -386,6 +392,9 @@ Release 2.1.1-beta - UNRELEASED
     hadoop-project/pom (Karthik Kambatla via Sandy Ryza)
     
     HADOOP-9886. Turn warning message in RetryInvocationHandler to debug (arpit)
+
+    HADOOP-9906. Move HAZKUtil to o.a.h.util.ZKUtil and make inner-classes
+    public (Karthik Kambatla via Sandy Ryza)
 
   OPTIMIZATIONS
 
@@ -422,6 +431,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9887. globStatus does not correctly handle paths starting with a drive
     spec on Windows. (Chuan Liu via cnauroth)
+
+    HADOOP-9894.  Race condition in Shell leads to logged error stream handling
+    exceptions (Arpit Agarwal)
 
 Release 2.1.0-beta - 2013-08-22
 

@@ -54,6 +54,18 @@ Release 2.1.1-beta - UNRELEASED
     YARN-942. In Fair Scheduler documentation, inconsistency on which
     properties have prefix (Akira Ajisaka via Sandy Ryza)
 
+    YARN-1083. Changed ResourceManager to fail when the expiry interval is less
+    than the configured node-heartbeat interval. (Zhijie Shen via vinodkv)
+
+    YARN-1081. Made a trivial change to YARN node CLI header to avoid potential
+    confusion. (Akira AJISAKA via vinodkv)
+
+    YARN-1034. Remove "experimental" in the Fair Scheduler documentation.
+    (Karthik Kambatla via Sandy Ryza)
+
+    YARN-1080. Improved help message for "yarn logs" command. (Xuan Gong via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -104,6 +116,15 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-1008. MiniYARNCluster with multiple nodemanagers, all nodes have same 
     key for allocations. (tucu)
+
+    YARN-981. Fixed YARN webapp so that /logs servlet works like before. (Jian He
+    via vinodkv)
+
+    YARN-602. Fixed NodeManager to not let users override some mandatory 
+    environmental variables. (Kenji Kikushima  via vinodkv)
+
+    YARN-1101. Active nodes can be decremented below 0 (Robert Parker 
+    via tgraves)
 
 Release 2.1.0-beta - 2013-08-22
 
@@ -1222,6 +1243,9 @@ Release 0.23.10 - UNRELEASED
   BUG FIXES
 
     YARN-337. RM handles killed application tracking URL poorly (jlowe)
+
+    YARN-1101. Active nodes can be decremented below 0 (Robert Parker 
+    via tgraves)
 
 Release 0.23.9 - 2013-07-08
 

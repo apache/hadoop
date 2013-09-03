@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Options;
@@ -123,7 +124,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
   private final Configuration config = new Configuration();
   private final WriteManager writeManager;
-  private final IdUserGroup iug;// = new IdUserGroup();
+  private final IdUserGroup iug;
   private final DFSClientCache clientCache;
 
   private final NfsExports exports;
@@ -161,10 +162,14 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         DFSConfigKeys.DFS_REPLICATION_DEFAULT);
     blockSize = config.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
-    bufferSize = config.getInt("io.file.buffer.size", 4096);
+    bufferSize = config.getInt(
+        CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
+        CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
     
-    writeDumpDir = config.get("dfs.nfs3.dump.dir", "/tmp/.hdfs-nfs");    
-    boolean enableDump = config.getBoolean("dfs.nfs3.enableDump", true);
+    writeDumpDir = config.get(Nfs3Constant.FILE_DUMP_DIR_KEY,
+        Nfs3Constant.FILE_DUMP_DIR_DEFAULT);
+    boolean enableDump = config.getBoolean(Nfs3Constant.ENABLE_FILE_DUMP_KEY,
+        Nfs3Constant.ENABLE_FILE_DUMP_DEFAULT);
     if (!enableDump) {
       writeDumpDir = null;
     } else {
@@ -1112,6 +1117,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
   }
 
+  @Override
   public SYMLINK3Response symlink(XDR xdr, RpcAuthSys authSys,
       InetAddress client) {
     return new SYMLINK3Response(Nfs3Status.NFS3ERR_NOTSUPP);

@@ -4804,7 +4804,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     @Override
     public void run() {
-      while (fsRunning && (safeMode != null && !safeMode.canLeave())) {
+      while (fsRunning) {
+        writeLock();
+        try {
+          if (safeMode == null) { // Not in safe mode.
+            break;
+          }
+          if (safeMode.canLeave()) {
+            // Leave safe mode.
+            safeMode.leave();
+            break;
+          }
+        } finally {
+          writeUnlock();
+        }
+
         try {
           Thread.sleep(recheckInterval);
         } catch (InterruptedException ie) {
@@ -4813,9 +4827,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       if (!fsRunning) {
         LOG.info("NameNode is being shutdown, exit SafeModeMonitor thread");
-      } else {
-        // leave safe mode and stop the monitor
-        leaveSafeMode();
       }
       smmthread = null;
     }
@@ -6226,6 +6237,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       innerinfo.put("nonDfsUsedSpace", node.getNonDfsUsed());
       innerinfo.put("capacity", node.getCapacity());
       innerinfo.put("numBlocks", node.numBlocks());
+      innerinfo.put("version", node.getSoftwareVersion());
       info.put(node.getHostName(), innerinfo);
     }
     return JSON.toString(info);
@@ -6435,6 +6447,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       LOG.warn("Get corrupt file blocks returned error: " + e.getMessage());
     }
     return JSON.toString(list);
+  }
+
+  @Override  //NameNodeMXBean
+  public int getDistinctVersionCount() {
+    return blockManager.getDatanodeManager().getDatanodesSoftwareVersions()
+      .size();
+  }
+
+  @Override  //NameNodeMXBean
+  public Map<String, Integer> getDistinctVersions() {
+    return blockManager.getDatanodeManager().getDatanodesSoftwareVersions();
+  }
+
+  @Override  //NameNodeMXBean
+  public String getSoftwareVersion() {
+    return VersionInfo.getVersion();
   }
 
   /**

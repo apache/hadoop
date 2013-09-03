@@ -25,8 +25,7 @@ Hadoop MapReduce Next Generation - Fair Scheduler
 * {Purpose} 
 
   This document describes the <<<FairScheduler>>>, a pluggable scheduler for Hadoop 
-  which provides a way to share large clusters. <<NOTE:>> The Fair Scheduler 
-  implementation is currently under development and should be considered experimental.
+  that allows YARN applications to share resources in large clusters fairly.
 
 * {Introduction}
 

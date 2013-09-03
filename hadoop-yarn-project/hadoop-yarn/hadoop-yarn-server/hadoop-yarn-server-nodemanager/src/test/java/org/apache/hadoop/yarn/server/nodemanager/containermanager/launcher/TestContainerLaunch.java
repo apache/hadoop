@@ -346,7 +346,6 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
 
-    int port = 12345;
     ContainerId cId = ContainerId.newInstance(appAttemptId, 0);
     Map<String, String> userSetEnv = new HashMap<String, String>();
     userSetEnv.put(Environment.CONTAINER_ID.name(), "user_set_container_id");
@@ -354,6 +353,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     userSetEnv.put(Environment.NM_PORT.name(), "user_set_NM_PORT");
     userSetEnv.put(Environment.NM_HTTP_PORT.name(), "user_set_NM_HTTP_PORT");
     userSetEnv.put(Environment.LOCAL_DIRS.name(), "user_set_LOCAL_DIR");
+    userSetEnv.put(Environment.USER.key(), "user_set_" +
+    	Environment.USER.key());
+    userSetEnv.put(Environment.LOGNAME.name(), "user_set_LOGNAME");
+    userSetEnv.put(Environment.PWD.name(), "user_set_PWD");
+    userSetEnv.put(Environment.HOME.name(), "user_set_HOME");
     containerLaunchContext.setEnvironment(userSetEnv);
 
     File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
@@ -371,6 +375,14 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           + processStartFile);
       fileWriter.println("@echo " + Environment.LOCAL_DIRS.$() + ">> "
           + processStartFile);
+      fileWriter.println("@echo " + Environment.USER.$() + ">> "
+    	  + processStartFile);
+      fileWriter.println("@echo " + Environment.LOGNAME.$() + ">> "
+          + processStartFile);
+      fileWriter.println("@echo " + Environment.PWD.$() + ">> "
+    	  + processStartFile);
+      fileWriter.println("@echo " + Environment.HOME.$() + ">> "
+          + processStartFile);
       fileWriter.println("@echo " + cId + ">> " + processStartFile);
       fileWriter.println("@ping -n 100 127.0.0.1 >nul");
     } else {
@@ -384,6 +396,14 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       fileWriter.write("\necho $" + Environment.NM_HTTP_PORT.name() + " >> "
           + processStartFile);
       fileWriter.write("\necho $" + Environment.LOCAL_DIRS.name() + " >> "
+          + processStartFile);
+      fileWriter.write("\necho $" + Environment.USER.name() + " >> "
+          + processStartFile);
+      fileWriter.write("\necho $" + Environment.LOGNAME.name() + " >> "
+          + processStartFile);
+      fileWriter.write("\necho $" + Environment.PWD.name() + " >> "
+          + processStartFile);
+      fileWriter.write("\necho $" + Environment.HOME.name() + " >> "
           + processStartFile);
       fileWriter.write("\necho $$ >> " + processStartFile);
       fileWriter.write("\nexec sleep 100");
@@ -452,6 +472,22 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       reader.readLine());
     Assert.assertEquals(String.valueOf(HTTP_PORT), reader.readLine());
     Assert.assertEquals(StringUtils.join(",", appDirs), reader.readLine());
+    Assert.assertEquals(user, reader.readLine());
+    Assert.assertEquals(user, reader.readLine());
+    String obtainedPWD = reader.readLine();
+    boolean found = false;
+    for (Path localDir : appDirs) {
+      if (new Path(localDir, cId.toString()).toString().equals(obtainedPWD)) {
+        found = true;
+        break;
+      }
+    }
+    Assert.assertTrue("Wrong local-dir found : " + obtainedPWD, found);
+    Assert.assertEquals(
+        conf.get(
+              YarnConfiguration.NM_USER_HOME_DIR, 
+              YarnConfiguration.DEFAULT_NM_USER_HOME_DIR),
+        reader.readLine());
 
     Assert.assertEquals(cId.toString(), containerLaunchContext
         .getEnvironment().get(Environment.CONTAINER_ID.name()));
@@ -465,6 +501,26 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         .getEnvironment().get(Environment.LOCAL_DIRS.name()));
     Assert.assertEquals(StringUtils.join(",", containerLogDirs),
       containerLaunchContext.getEnvironment().get(Environment.LOG_DIRS.name()));
+    Assert.assertEquals(user, containerLaunchContext.getEnvironment()
+    	.get(Environment.USER.name()));
+    Assert.assertEquals(user, containerLaunchContext.getEnvironment()
+    	.get(Environment.LOGNAME.name()));
+    found = false;
+    obtainedPWD =
+        containerLaunchContext.getEnvironment().get(Environment.PWD.name());
+    for (Path localDir : appDirs) {
+      if (new Path(localDir, cId.toString()).toString().equals(obtainedPWD)) {
+        found = true;
+        break;
+      }
+    }
+    Assert.assertTrue("Wrong local-dir found : " + obtainedPWD, found);
+    Assert.assertEquals(
+        conf.get(
+    	        YarnConfiguration.NM_USER_HOME_DIR, 
+    	        YarnConfiguration.DEFAULT_NM_USER_HOME_DIR),
+    	containerLaunchContext.getEnvironment()
+    		.get(Environment.HOME.name()));
 
     // Get the pid of the process
     String pid = reader.readLine().trim();
@@ -538,7 +594,6 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     ContainerLaunchContext containerLaunchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    int port = 12345;
 
     // upload the script file so that the container can run it
     URL resource_alpha =
