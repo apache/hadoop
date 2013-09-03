@@ -19,11 +19,14 @@
 package org.apache.hadoop.yarn.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.BreakableService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
@@ -313,6 +316,26 @@ public class TestCompositeService {
       new CompositeServiceAddingAChild(child);
     composite.init(new Configuration());
     assertInState(STATE.INITED, child);
+  }
+
+  @Test (timeout = 1000)
+  public void testAddIfService() {
+    CompositeService testService = new CompositeService("TestService") {
+      Service service;
+      @Override
+      public void serviceInit(Configuration conf) {
+        Integer notAService = new Integer(0);
+        assertFalse("Added an integer as a service",
+            addIfService(notAService));
+
+        service = new AbstractService("Service") {};
+        assertTrue("Unable to add a service", addIfService(service));
+      }
+    };
+
+    testService.init(new Configuration());
+    assertEquals("Incorrect number of services",
+        1, testService.getServices().size());
   }
   
   public static class CompositeServiceAddingAChild extends CompositeService{

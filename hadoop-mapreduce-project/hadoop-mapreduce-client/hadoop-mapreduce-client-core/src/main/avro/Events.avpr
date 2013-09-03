@@ -269,6 +269,7 @@
           "JOB_STATUS_CHANGED",
           "JOB_FAILED",
           "JOB_KILLED",
+          "JOB_ERROR",
           "JOB_INFO_CHANGED",
           "TASK_STARTED",
           "TASK_FINISHED",

@@ -132,6 +132,15 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "scheduler.client.thread-count";
   public static final int DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT = 50;
 
+  /** If the port should be included or not in the node name. The node name
+   * is used by the scheduler for resource requests allocation location 
+   * matching. Typically this is just the hostname, using the port is needed
+   * when using minicluster and specific NM are required.*/
+  public static final String RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME =
+      YARN_PREFIX + "scheduler.include-port-in-node-name";
+  public static final boolean DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME = 
+      false;
+
   /**
    * Enable periodic monitor threads.
    * @see #RM_SCHEDULER_MONITOR_POLICIES
@@ -205,6 +214,14 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_KEYTAB = 
     RM_PREFIX + "keytab";
 
+  /**The kerberos principal to be used for spnego filter for RM.*/
+  public static final String RM_WEBAPP_SPNEGO_USER_NAME_KEY =
+      RM_PREFIX + "webapp.spnego-principal";
+  
+  /**The kerberos keytab to be used for spnego filter for RM.*/
+  public static final String RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
+      RM_PREFIX + "webapp.spnego-keytab-file";
+
   /** How long to wait until a container is considered dead.*/
   public static final String RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 
     RM_PREFIX + "rm.container-allocation.expiry-interval-ms";
@@ -259,7 +276,7 @@ public class YarnConfiguration extends Configuration {
   
   /** URI for FileSystemRMStateStore */
   public static final String FS_RM_STATE_STORE_URI =
-                                           RM_PREFIX + "fs.rm-state-store.uri";
+                                           RM_PREFIX + "fs.state-store.uri";
 
   /** The maximum number of completed applications RM keeps. */ 
   public static final String RM_MAX_COMPLETED_APPLICATIONS =
@@ -599,7 +616,15 @@ public class YarnConfiguration extends Configuration {
 
   public static final String NM_USER_HOME_DIR =
       NM_PREFIX + "user-home-dir";
-
+  
+  /**The kerberos principal to be used for spnego filter for NM.*/
+  public static final String NM_WEBAPP_SPNEGO_USER_NAME_KEY =
+      NM_PREFIX + "webapp.spnego-principal";
+  
+  /**The kerberos keytab to be used for spnego filter for NM.*/
+  public static final String NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
+      NM_PREFIX + "webapp.spnego-keytab-file";
+  
   public static final String DEFAULT_NM_USER_HOME_DIR= "/home/";
 
   ////////////////////////////////
@@ -655,19 +680,17 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
       2000;
 
-  /** Max time to wait to establish a connection to RM
-   */
-  public static final String RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS =
-      RM_PREFIX + "resourcemanager.connect.max.wait.secs";
-  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS =
-      15*60;
+  /** Max time to wait to establish a connection to RM */
+  public static final String RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =
+      RM_PREFIX + "connect.max-wait.ms";
+  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =
+      15 * 60 * 1000;
 
-  /** Time interval between each attempt to connect to RM
-   */
-  public static final String RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS =
-      RM_PREFIX + "resourcemanager.connect.retry_interval.secs";
-  public static final long DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS
-      = 30;
+  /** Time interval between each attempt to connect to RM */
+  public static final String RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS =
+      RM_PREFIX + "connect.retry-interval.ms";
+  public static final long DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS
+      = 30 * 1000;
 
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH

@@ -13,68 +13,75 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import junit.framework.TestCase;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class TestSigner extends TestCase {
+public class TestSigner {
 
+  @Test
   public void testNoSecret() throws Exception {
     try {
       new Signer(null);
-      fail();
+      Assert.fail();
     }
     catch (IllegalArgumentException ex) {
     }
   }
 
+  @Test
   public void testNullAndEmptyString() throws Exception {
     Signer signer = new Signer("secret".getBytes());
     try {
       signer.sign(null);
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException ex) {
       // Expected
     } catch (Throwable ex) {
-      fail();
+      Assert.fail();
     }
     try {
       signer.sign("");
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException ex) {
       // Expected
     } catch (Throwable ex) {
-      fail();
+      Assert.fail();
     }
   }
 
+  @Test
   public void testSignature() throws Exception {
     Signer signer = new Signer("secret".getBytes());
     String s1 = signer.sign("ok");
     String s2 = signer.sign("ok");
     String s3 = signer.sign("wrong");
-    assertEquals(s1, s2);
-    assertNotSame(s1, s3);
+    Assert.assertEquals(s1, s2);
+    Assert.assertNotSame(s1, s3);
   }
 
+  @Test
   public void testVerify() throws Exception {
     Signer signer = new Signer("secret".getBytes());
     String t = "test";
     String s = signer.sign(t);
     String e = signer.verifyAndExtract(s);
-    assertEquals(t, e);
+    Assert.assertEquals(t, e);
   }
 
+  @Test
   public void testInvalidSignedText() throws Exception {
     Signer signer = new Signer("secret".getBytes());
     try {
       signer.verifyAndExtract("test");
-      fail();
+      Assert.fail();
     } catch (SignerException ex) {
       // Expected
     } catch (Throwable ex) {
-      fail();
+      Assert.fail();
     }
   }
 
+  @Test
   public void testTampering() throws Exception {
     Signer signer = new Signer("secret".getBytes());
     String t = "test";
@@ -82,12 +89,11 @@ public class TestSigner extends TestCase {
     s += "x";
     try {
       signer.verifyAndExtract(s);
-      fail();
+      Assert.fail();
     } catch (SignerException ex) {
       // Expected
     } catch (Throwable ex) {
-      fail();
+      Assert.fail();
     }
   }
-
 }

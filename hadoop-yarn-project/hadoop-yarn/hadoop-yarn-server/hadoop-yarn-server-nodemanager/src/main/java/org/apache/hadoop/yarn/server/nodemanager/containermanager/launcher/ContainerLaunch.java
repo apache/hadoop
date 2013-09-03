@@ -525,7 +525,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
     @Override
     public void env(String key, String value) {
-      line("@set ", key, "=", value);
+      line("@set ", key, "=", value,
+          "\nif %errorlevel% neq 0 exit /b %errorlevel%");
     }
 
     @Override
@@ -588,20 +589,18 @@ public class ContainerLaunch implements Callable<Integer> {
     environment.put(Environment.LOG_DIRS.name(),
       StringUtils.join(",", containerLogDirs));
 
-    putEnvIfNotNull(environment, Environment.USER.name(), container.getUser());
+    environment.put(Environment.USER.name(), container.getUser());
     
-    putEnvIfNotNull(environment, 
-        Environment.LOGNAME.name(),container.getUser());
-    
-    putEnvIfNotNull(environment, 
-        Environment.HOME.name(),
+    environment.put(Environment.LOGNAME.name(), container.getUser());
+
+    environment.put(Environment.HOME.name(),
         conf.get(
             YarnConfiguration.NM_USER_HOME_DIR, 
             YarnConfiguration.DEFAULT_NM_USER_HOME_DIR
             )
         );
     
-    putEnvIfNotNull(environment, Environment.PWD.name(), pwd.toString());
+    environment.put(Environment.PWD.name(), pwd.toString());
     
     putEnvIfNotNull(environment, 
         Environment.HADOOP_CONF_DIR.name(), 

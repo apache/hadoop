@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
@@ -79,6 +80,9 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   protected ApplicationMasterProtocol rmClient;
   protected Resource clusterAvailableResources;
   protected int clusterNodeCount;
+  
+  protected final Set<String> blacklistAdditions = new HashSet<String>();
+  protected final Set<String> blacklistRemovals = new HashSet<String>();
   
   class ResourceRequestInfo {
     ResourceRequest remoteRequest;
@@ -199,9 +203,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     Preconditions.checkArgument(progressIndicator >= 0,
         "Progress indicator should not be negative");
     AllocateResponse allocateResponse = null;
-    ArrayList<ResourceRequest> askList = null;
-    ArrayList<ContainerId> releaseList = null;
+    List<ResourceRequest> askList = null;
+    List<ContainerId> releaseList = null;
     AllocateRequest allocateRequest = null;
+    List<String> blacklistToAdd = new ArrayList<String>();
+    List<String> blacklistToRemove = new ArrayList<String>();
     
     try {
       synchronized (this) {
@@ -217,9 +223,22 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         // optimistically clear this collection assuming no RPC failure
         ask.clear();
         release.clear();
+
+        blacklistToAdd.addAll(blacklistAdditions);
+        blacklistToRemove.addAll(blacklistRemovals);
+        
+        ResourceBlacklistRequest blacklistRequest = 
+            (blacklistToAdd != null) || (blacklistToRemove != null) ? 
+            ResourceBlacklistRequest.newInstance(blacklistToAdd,
+                blacklistToRemove) : null;
+        
         allocateRequest =
             AllocateRequest.newInstance(lastResponseId, progressIndicator,
-              askList, releaseList, null);
+              askList, releaseList, blacklistRequest);
+        // clear blacklistAdditions and blacklistRemovals before 
+        // unsynchronized part
+        blacklistAdditions.clear();
+        blacklistRemovals.clear();
       }
 
       allocateResponse = rmClient.allocate(allocateRequest);
@@ -253,6 +272,9 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
               ask.add(oldAsk);
             }
           }
+          
+          blacklistAdditions.addAll(blacklistToAdd);
+          blacklistRemovals.addAll(blacklistToRemove);
         }
       }
     }
@@ -602,6 +624,33 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
           + " resourceName=" + resourceName + " numContainers="
           + resourceRequestInfo.remoteRequest.getNumContainers() 
           + " #asks=" + ask.size());
+    }
+  }
+
+  @Override
+  public synchronized void updateBlacklist(List<String> blacklistAdditions,
+      List<String> blacklistRemovals) {
+    
+    if (blacklistAdditions != null) {
+      this.blacklistAdditions.addAll(blacklistAdditions);
+      // if some resources are also in blacklistRemovals updated before, we 
+      // should remove them here.
+      this.blacklistRemovals.removeAll(blacklistAdditions);
+    }
+    
+    if (blacklistRemovals != null) {
+      this.blacklistRemovals.addAll(blacklistRemovals);
+      // if some resources are in blacklistAdditions before, we should remove
+      // them here.
+      this.blacklistAdditions.removeAll(blacklistRemovals);
+    }
+    
+    if (blacklistAdditions != null && blacklistRemovals != null
+        && blacklistAdditions.removeAll(blacklistRemovals)) {
+      // we allow resources to appear in addition list and removal list in the
+      // same invocation of updateBlacklist(), but should get a warn here.
+      LOG.warn("The same resources appear in both blacklistAdditions and " +
+          "blacklistRemovals in updateBlacklist.");
     }
   }
 }

@@ -30,6 +30,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StrictPreemptionContractProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StrictPreemptionContractProtoOrBuilder;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class StrictPreemptionContractPBImpl extends StrictPreemptionContract {
@@ -74,7 +76,7 @@ public class StrictPreemptionContractPBImpl extends StrictPreemptionContract {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToProto() {

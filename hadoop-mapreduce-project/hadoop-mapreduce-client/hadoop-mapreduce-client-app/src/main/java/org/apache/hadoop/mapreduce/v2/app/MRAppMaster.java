@@ -325,18 +325,23 @@ public class MRAppMaster extends CompositeService {
         dispatcher.register(org.apache.hadoop.mapreduce.jobhistory.EventType.class,
             eater);
       }
-      
+
+      if (copyHistory) {
+        // Now that there's a FINISHING state for application on RM to give AMs
+        // plenty of time to clean up after unregister it's safe to clean staging
+        // directory after unregistering with RM. So, we start the staging-dir
+        // cleaner BEFORE the ContainerAllocator so that on shut-down,
+        // ContainerAllocator unregisters first and then the staging-dir cleaner
+        // deletes staging directory.
+        addService(createStagingDirCleaningService());
+      }
+
       // service to allocate containers from RM (if non-uber) or to fake it (uber)
       containerAllocator = createContainerAllocator(null, context);
       addIfService(containerAllocator);
       dispatcher.register(ContainerAllocator.EventType.class, containerAllocator);
 
       if (copyHistory) {
-        // Add the staging directory cleaner before the history server but after
-        // the container allocator so the staging directory is cleaned after
-        // the history has been flushed but before unregistering with the RM.
-        addService(createStagingDirCleaningService());
-
         // Add the JobHistoryEventHandler last so that it is properly stopped first.
         // This will guarantee that all history-events are flushed before AM goes
         // ahead with shutdown.
@@ -344,7 +349,6 @@ public class MRAppMaster extends CompositeService {
         // component creates a JobHistoryEvent in the meanwhile, it will be just be
         // queued inside the JobHistoryEventHandler 
         addIfService(historyService);
-        
 
         JobHistoryCopyService cpHist = new JobHistoryCopyService(appAttemptID,
             dispatcher.getEventHandler());
@@ -396,6 +400,14 @@ public class MRAppMaster extends CompositeService {
       dispatcher.register(Speculator.EventType.class,
           speculatorEventDispatcher);
 
+      // Now that there's a FINISHING state for application on RM to give AMs
+      // plenty of time to clean up after unregister it's safe to clean staging
+      // directory after unregistering with RM. So, we start the staging-dir
+      // cleaner BEFORE the ContainerAllocator so that on shut-down,
+      // ContainerAllocator unregisters first and then the staging-dir cleaner
+      // deletes staging directory.
+      addService(createStagingDirCleaningService());
+
       // service to allocate containers from RM (if non-uber) or to fake it (uber)
       addIfService(containerAllocator);
       dispatcher.register(ContainerAllocator.EventType.class, containerAllocator);
@@ -404,11 +416,6 @@ public class MRAppMaster extends CompositeService {
       containerLauncher = createContainerLauncher(context);
       addIfService(containerLauncher);
       dispatcher.register(ContainerLauncher.EventType.class, containerLauncher);
-
-      // Add the staging directory cleaner before the history server but after
-      // the container allocator so the staging directory is cleaned after
-      // the history has been flushed but before unregistering with the RM.
-      addService(createStagingDirCleaningService());
 
       // Add the JobHistoryEventHandler last so that it is properly stopped first.
       // This will guarantee that all history-events are flushed before AM goes
@@ -616,12 +623,6 @@ public class MRAppMaster extends CompositeService {
       this.jobCredentials = ((JobConf)conf).getCredentials();
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
-    }
-  }
-
-  protected void addIfService(Object object) {
-    if (object instanceof Service) {
-      addService((Service) object);
     }
   }
 
@@ -952,6 +953,11 @@ public class MRAppMaster extends CompositeService {
     public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
       return clientToAMTokenSecretManager;
     }
+
+    @Override
+    public boolean isLastAMRetry(){
+      return isLastAMRetry;
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -1037,11 +1043,11 @@ public class MRAppMaster extends CompositeService {
     // attempt will generate one.  However that disables recovery if there
     // are reducers as the shuffle secret would be app attempt specific.
     int numReduceTasks = getConfig().getInt(MRJobConfig.NUM_REDUCES, 0);
-    boolean shuffleKeyValidForRecovery = (numReduceTasks > 0 &&
-        TokenCache.getShuffleSecretKey(jobCredentials) != null);
+    boolean shuffleKeyValidForRecovery =
+        TokenCache.getShuffleSecretKey(jobCredentials) != null;
 
     if (recoveryEnabled && recoverySupportedByCommitter
-          && shuffleKeyValidForRecovery) {
+        && (numReduceTasks <= 0 || shuffleKeyValidForRecovery)) {
       LOG.info("Recovery is enabled. "
           + "Will try to recover from previous life on best effort basis.");
       try {
@@ -1054,7 +1060,8 @@ public class MRAppMaster extends CompositeService {
     } else {
       LOG.info("Will not try to recover. recoveryEnabled: "
             + recoveryEnabled + " recoverySupportedByCommitter: "
-            + recoverySupportedByCommitter + " shuffleKeyValidForRecovery: "
+            + recoverySupportedByCommitter + " numReduceTasks: "
+            + numReduceTasks + " shuffleKeyValidForRecovery: "
             + shuffleKeyValidForRecovery + " ApplicationAttemptID: "
             + appAttemptID.getAttemptId());
       // Get the amInfos anyways whether recovery is enabled or not

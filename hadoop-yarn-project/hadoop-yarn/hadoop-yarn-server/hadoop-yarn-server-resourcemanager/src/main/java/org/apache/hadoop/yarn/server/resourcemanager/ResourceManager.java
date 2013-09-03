@@ -30,9 +30,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
-import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -67,18 +67,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
@@ -129,6 +129,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected RMAppManager rmAppManager;
   protected ApplicationACLsManager applicationACLsManager;
   protected RMDelegationTokenSecretManager rmDTSecretManager;
+  private DelegationTokenRenewer delegationTokenRenewer;
   private WebApp webApp;
   protected RMContext rmContext;
   protected ResourceTrackerService resourceTracker;
@@ -168,8 +169,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
     AMLivelinessMonitor amFinishingMonitor = createAMLivelinessMonitor();
     addService(amFinishingMonitor);
 
-    DelegationTokenRenewer tokenRenewer = createDelegationTokenRenewer();
-    addService(tokenRenewer);
+    if (UserGroupInformation.isSecurityEnabled()) {
+      this.delegationTokenRenewer = createDelegationTokenRenewer();
+      addService(delegationTokenRenewer);
+    }
 
     this.containerTokenSecretManager = createContainerTokenSecretManager(conf);
     this.nmTokenSecretManager = createNMTokenSecretManager(conf);
@@ -186,20 +189,21 @@ public class ResourceManager extends CompositeService implements Recoverable {
       recoveryEnabled = false;
       rmStore = new NullRMStateStore();
     }
+
     try {
       rmStore.init(conf);
-      rmStore.setDispatcher(rmDispatcher);
+      rmStore.setRMDispatcher(rmDispatcher);
     } catch (Exception e) {
       // the Exception from stateStore.init() needs to be handled for 
       // HA and we need to give up master status if we got fenced
       LOG.error("Failed to init state store", e);
       ExitUtil.terminate(1, e);
     }
-    
+
     this.rmContext =
         new RMContextImpl(this.rmDispatcher, rmStore,
           this.containerAllocationExpirer, amLivelinessMonitor,
-          amFinishingMonitor, tokenRenewer, this.amRmTokenSecretManager,
+          amFinishingMonitor, delegationTokenRenewer, this.amRmTokenSecretManager,
           this.containerTokenSecretManager, this.nmTokenSecretManager,
           this.clientToAMSecretManager);
     
@@ -275,7 +279,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   
   @VisibleForTesting
   protected void setRMStateStore(RMStateStore rmStore) {
-    rmStore.setDispatcher(rmDispatcher);
+    rmStore.setRMDispatcher(rmDispatcher);
     ((RMContextImpl) rmContext).setStateStore(rmStore);
   }
 
@@ -295,12 +299,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected Dispatcher createDispatcher() {
     return new AsyncDispatcher();
-  }
-
-  protected void addIfService(Object object) {
-    if (object instanceof Service) {
-      addService((Service) object);
-    }
   }
 
   protected AMRMTokenSecretManager createAMRMTokenSecretManager(
@@ -359,6 +357,20 @@ public class ResourceManager extends CompositeService implements Recoverable {
       throw new YarnRuntimeException("Invalid global max attempts configuration"
           + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
           + "=" + globalMaxAppAttempts + ", it should be a positive integer.");
+    }
+
+    // validate expireIntvl >= heartbeatIntvl
+    long expireIntvl = conf.getLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
+    long heartbeatIntvl =
+        conf.getLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
+    if (expireIntvl < heartbeatIntvl) {
+      throw new YarnRuntimeException("Nodemanager expiry interval should be no"
+          + " less than heartbeat interval, "
+          + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS + "=" + expireIntvl
+          + ", " + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS + "="
+          + heartbeatIntvl);
     }
   }
 
@@ -572,9 +584,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
   
   protected void startWepApp() {
     Builder<ApplicationMasterService> builder = 
-      WebApps.$for("cluster", ApplicationMasterService.class, masterService, "ws").at(
-          this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)); 
+        WebApps
+            .$for("cluster", ApplicationMasterService.class, masterService,
+                "ws")
+            .with(conf)
+            .withHttpSpnegoPrincipalKey(
+                YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY)
+            .withHttpSpnegoKeytabKey(
+                YarnConfiguration.RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+            .at(this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)); 
     String proxyHostAndPort = YarnConfiguration.getProxyHostAndPort(conf);
     if(YarnConfiguration.getRMWebAppHostAndPort(conf).
         equals(proxyHostAndPort)) {
@@ -601,9 +620,20 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.containerTokenSecretManager.start();
     this.nmTokenSecretManager.start();
 
+    // Explicitly start DTRenewer too in secure mode before kicking recovery as
+    // tokens will start getting added for renewal as part of the recovery
+    // process itself.
+    if (UserGroupInformation.isSecurityEnabled()) {
+      this.delegationTokenRenewer.start();
+    }
+
+    RMStateStore rmStore = rmContext.getStateStore();
+    // The state store needs to start irrespective of recoveryEnabled as apps
+    // need events to move to further states.
+    rmStore.start();
+
     if(recoveryEnabled) {
       try {
-        RMStateStore rmStore = rmContext.getStateStore();
         RMState state = rmStore.loadState();
         recover(state);
       } catch (Exception e) {

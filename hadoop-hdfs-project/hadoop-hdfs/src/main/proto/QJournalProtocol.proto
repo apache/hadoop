@@ -177,6 +177,7 @@ message GetEditLogManifestRequestProto {
   required uint64 sinceTxId = 2;  // Transaction ID
   // Whether or not the client will be reading from the returned streams.
   optional bool forReading = 3 [default = true];
+  optional bool inProgressOk = 4 [default = false];
 }
 
 message GetEditLogManifestResponseProto {

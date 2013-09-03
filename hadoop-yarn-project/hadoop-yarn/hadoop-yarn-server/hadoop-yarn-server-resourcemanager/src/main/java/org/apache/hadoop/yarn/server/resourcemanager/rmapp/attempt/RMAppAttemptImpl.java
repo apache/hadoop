@@ -33,12 +33,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import javax.crypto.SecretKey;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -60,8 +61,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientToAMTokenSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
@@ -126,9 +125,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final WriteLock writeLock;
 
   private final ApplicationAttemptId applicationAttemptId;
-  private Token<ClientToAMTokenIdentifier> clientToAMToken;
   private final ApplicationSubmissionContext submissionContext;
   private Token<AMRMTokenIdentifier> amrmToken = null;
+  private SecretKey clientTokenMasterKey = null;
 
   //nodes on while this attempt's containers ran
   private final Set<NodeId> ranNodes =
@@ -499,8 +498,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public Token<ClientToAMTokenIdentifier> getClientToAMToken() {
-    return this.clientToAMToken;
+  public SecretKey getClientTokenMasterKey() {
+    return this.clientTokenMasterKey;
   }
 
   @Override
@@ -659,7 +658,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     ApplicationAttemptState attemptState = appState.getAttempt(getAppAttemptId());
     assert attemptState != null;
     setMasterContainer(attemptState.getMasterContainer());
-    recoverAppAttemptTokens(attemptState.getAppAttemptTokens());
+    recoverAppAttemptCredentials(attemptState.getAppAttemptCredentials());
     LOG.info("Recovered attempt: AppId: " + getAppAttemptId().getApplicationId()
              + " AttemptId: " + getAppAttemptId()
              + " MasterContainer: " + masterContainer);
@@ -668,17 +667,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
                                  RMAppAttemptEventType.RECOVER));
   }
 
-  private void recoverAppAttemptTokens(Credentials appAttemptTokens) {
+  private void recoverAppAttemptCredentials(Credentials appAttemptTokens) {
     if (appAttemptTokens == null) {
       return;
     }
-    if (UserGroupInformation.isSecurityEnabled()) {
 
-      ClientToAMTokenSelector clientToAMTokenSelector =
-          new ClientToAMTokenSelector();
-      this.clientToAMToken =
-          clientToAMTokenSelector.selectToken(new Text(),
-            appAttemptTokens.getAllTokens());
+    if (UserGroupInformation.isSecurityEnabled()) {
+      byte[] clientTokenMasterKeyBytes = appAttemptTokens.getSecretKey(
+          RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME);
+      clientTokenMasterKey = rmContext.getClientToAMTokenSecretManager()
+          .registerMasterKey(applicationAttemptId, clientTokenMasterKeyBytes);
     }
 
     // Only one AMRMToken is stored per-attempt, so this should be fine. Can't
@@ -715,15 +713,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           .registerAppAttempt(appAttempt.applicationAttemptId);
 
       if (UserGroupInformation.isSecurityEnabled()) {
-
-        appAttempt.rmContext.getClientToAMTokenSecretManager()
-          .registerApplication(appAttempt.applicationAttemptId);
-
-        // create clientToAMToken
-        appAttempt.clientToAMToken =
-            new Token<ClientToAMTokenIdentifier>(new ClientToAMTokenIdentifier(
-              appAttempt.applicationAttemptId),
-              appAttempt.rmContext.getClientToAMTokenSecretManager());
+        appAttempt.clientTokenMasterKey = appAttempt.rmContext
+            .getClientToAMTokenSecretManager()
+            .registerApplication(appAttempt.applicationAttemptId);
       }
 
       // create AMRMToken
@@ -761,6 +753,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               rejectedEvent.getApplicationAttemptId().getApplicationId(),
               message)
           );
+
+      appAttempt.removeCredentials(appAttempt);
     }
   }
 
@@ -847,7 +841,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
-
       ApplicationAttemptId appAttemptId = appAttempt.getAppAttemptId();
 
       // Tell the AMS. Unregister from the ApplicationMasterService
@@ -865,6 +858,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         break;
         case KILLED:
         {
+          // don't leave the tracking URL pointing to a non-existent AM
+          appAttempt.setTrackingUrlToRMAppPage();
           appEvent =
               new RMAppFailedAttemptEvent(applicationId,
                   RMAppEventType.ATTEMPT_KILLED,
@@ -873,6 +868,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         break;
         case FAILED:
         {
+          // don't leave the tracking URL pointing to a non-existent AM
+          appAttempt.setTrackingUrlToRMAppPage();
           appEvent =
               new RMAppFailedAttemptEvent(applicationId,
                   RMAppEventType.ATTEMPT_FAILED,
@@ -890,9 +887,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.eventHandler.handle(new AppRemovedSchedulerEvent(appAttemptId,
         finalAttemptState));
 
-      // Remove the AppAttempt from the AMRMTokenSecretManager
-      appAttempt.rmContext.getAMRMTokenSecretManager()
-        .applicationMasterFinished(appAttemptId);
+      appAttempt.removeCredentials(appAttempt);
     }
   }
 
@@ -1011,7 +1006,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           " exitCode: " + status.getExitStatus() +
           " due to: " +  status.getDiagnostics() + "." +
           "Failing this attempt.");
-
       // Tell the app, scheduler
       super.transition(appAttempt, finishEvent);
     }
@@ -1038,12 +1032,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.rmContext.getAMFinishingMonitor().unregister(
           appAttempt.getAppAttemptId());
 
-      // Unregister from the ClientToAMTokenSecretManager
-      if (UserGroupInformation.isSecurityEnabled()) {
-        appAttempt.rmContext.getClientToAMTokenSecretManager()
-          .unRegisterApplication(appAttempt.getAppAttemptId());
-      }
-
       if(!appAttempt.submissionContext.getUnmanagedAM()) {
         // Tell the launcher to cleanup.
         appAttempt.eventHandler.handle(new AMLauncherEvent(
@@ -1063,7 +1051,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         RMAppAttemptEvent event) {
       appAttempt.diagnostics.append("ApplicationMaster for attempt " +
         appAttempt.getAppAttemptId() + " timed out");
-      appAttempt.setTrackingUrlToRMAppPage();
       super.transition(appAttempt, event);
     }
   }
@@ -1112,10 +1099,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       ApplicationAttemptId appAttemptId = appAttempt.getAppAttemptId();
 
       appAttempt.rmContext.getAMLivelinessMonitor().unregister(appAttemptId);
-
-      // Remove the AppAttempt from the AMRMTokenSecretManager
-      appAttempt.rmContext.getAMRMTokenSecretManager()
-        .applicationMasterFinished(appAttemptId);
 
       appAttempt.progress = 1.0f;
 
@@ -1181,11 +1164,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             " exitCode: " + containerStatus.getExitStatus() +
             " due to: " +  containerStatus.getDiagnostics() + "." +
             "Failing this attempt.");
-
-        // When the AM dies, the trackingUrl is left pointing to the AM's URL,
-        // which shows up in the scheduler UI as a broken link.  Direct the
-        // user to the app page on the RM so they can see the status and logs.
-        appAttempt.setTrackingUrlToRMAppPage();
 
         new FinalTransition(RMAppAttemptState.FAILED).transition(
             appAttempt, containerFinishedEvent);
@@ -1268,5 +1246,17 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               getAppAttemptId()
               + " MasterContainer: " + masterContainer);
     store.storeApplicationAttempt(this);
+  }
+
+  private void removeCredentials(RMAppAttemptImpl appAttempt) {
+    // Unregister from the ClientToAMTokenSecretManager
+    if (UserGroupInformation.isSecurityEnabled()) {
+      appAttempt.rmContext.getClientToAMTokenSecretManager()
+        .unRegisterApplication(appAttempt.getAppAttemptId());
+    }
+
+    // Remove the AppAttempt from the AMRMTokenSecretManager
+    appAttempt.rmContext.getAMRMTokenSecretManager()
+      .applicationMasterFinished(appAttempt.getAppAttemptId());
   }
 }

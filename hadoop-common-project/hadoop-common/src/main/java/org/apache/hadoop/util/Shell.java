@@ -58,6 +58,45 @@ abstract public class Shell {
   /** Windows CreateProcess synchronization object */
   public static final Object WindowsProcessLaunchLock = new Object();
 
+  // OSType detection
+
+  public enum OSType {
+    OS_TYPE_LINUX,
+    OS_TYPE_WIN,
+    OS_TYPE_SOLARIS,
+    OS_TYPE_MAC,
+    OS_TYPE_FREEBSD,
+    OS_TYPE_OTHER
+  }
+
+  public static final OSType osType = getOSType();
+
+  static private OSType getOSType() {
+    String osName = System.getProperty("os.name");
+    if (osName.startsWith("Windows")) {
+      return OSType.OS_TYPE_WIN;
+    } else if (osName.contains("SunOS") || osName.contains("Solaris")) {
+      return OSType.OS_TYPE_SOLARIS;
+    } else if (osName.contains("Mac")) {
+      return OSType.OS_TYPE_MAC;
+    } else if (osName.contains("FreeBSD")) {
+      return OSType.OS_TYPE_FREEBSD;
+    } else if (osName.startsWith("Linux")) {
+      return OSType.OS_TYPE_LINUX;
+    } else {
+      // Some other form of Unix
+      return OSType.OS_TYPE_OTHER;
+    }
+  }
+
+  // Helper static vars for each platform
+  public static final boolean WINDOWS = (osType == OSType.OS_TYPE_WIN);
+  public static final boolean SOLARIS = (osType == OSType.OS_TYPE_SOLARIS);
+  public static final boolean MAC     = (osType == OSType.OS_TYPE_MAC);
+  public static final boolean FREEBSD = (osType == OSType.OS_TYPE_FREEBSD);
+  public static final boolean LINUX   = (osType == OSType.OS_TYPE_LINUX);
+  public static final boolean OTHER   = (osType == OSType.OS_TYPE_OTHER);
+
   /** a Unix command to get the current user's groups list */
   public static String[] getGroupsCommand() {
     return (WINDOWS)? new String[]{"cmd", "/c", "groups"}
@@ -282,13 +321,6 @@ abstract public class Shell {
     return exeFile.getCanonicalPath();
   }
 
-  /** Set to true on Windows platforms */
-  public static final boolean WINDOWS /* borrowed from Path.WINDOWS */
-                = System.getProperty("os.name").startsWith("Windows");
-
-  public static final boolean LINUX
-                = System.getProperty("os.name").startsWith("Linux");
-  
   /** a Windows utility to emulate Unix commands */
   public static final String WINUTILS = getWinUtilsPath();
 
@@ -336,6 +368,7 @@ abstract public class Shell {
 
   private long    interval;   // refresh interval in msec
   private long    lastTime;   // last time the command was performed
+  final private boolean redirectErrorStream; // merge stdout and stderr
   private Map<String, String> environment; // env for the command execution
   private File dir;
   private Process process; // sub process used to execute the command
@@ -348,13 +381,18 @@ abstract public class Shell {
     this(0L);
   }
   
+  public Shell(long interval) {
+    this(interval, false);
+  }
+
   /**
    * @param interval the minimum duration to wait before re-executing the 
    *        command.
    */
-  public Shell( long interval ) {
+  public Shell(long interval, boolean redirectErrorStream) {
     this.interval = interval;
     this.lastTime = (interval<0) ? 0 : -interval;
+    this.redirectErrorStream = redirectErrorStream;
   }
   
   /** set the environment for the command 
@@ -393,6 +431,8 @@ abstract public class Shell {
     if (dir != null) {
       builder.directory(this.dir);
     }
+
+    builder.redirectErrorStream(redirectErrorStream);
     
     if (Shell.WINDOWS) {
       synchronized (WindowsProcessLaunchLock) {
@@ -475,8 +515,13 @@ abstract public class Shell {
       } catch (IOException ioe) {
         LOG.warn("Error while closing the input stream", ioe);
       }
-      if (!completed.get()) {
-        errThread.interrupt();
+      try {
+        if (!completed.get()) {
+          errThread.interrupt();
+          errThread.join();
+        }
+      } catch (InterruptedException ie) {
+        LOG.warn("Interrupted while joining errThread");
       }
       try {
         errReader.close();
@@ -495,6 +540,13 @@ abstract public class Shell {
   protected abstract void parseExecResult(BufferedReader lines)
   throws IOException;
 
+  /** 
+   * Get the environment variable
+   */
+  public String getEnvironment(String env) {
+    return environment.get(env);
+  }
+  
   /** get the current sub-process executing the given command 
    * @return process executing the command
    */

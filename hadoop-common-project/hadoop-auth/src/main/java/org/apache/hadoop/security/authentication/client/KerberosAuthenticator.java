@@ -37,6 +37,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+
 /**
  * The {@link KerberosAuthenticator} implements the Kerberos SPNEGO authentication sequence.
  * <p/>
@@ -75,13 +77,29 @@ public class KerberosAuthenticator implements Authenticator {
 
     private static final String OS_LOGIN_MODULE_NAME;
     private static final boolean windows = System.getProperty("os.name").startsWith("Windows");
+    private static final boolean is64Bit = System.getProperty("os.arch").contains("64");
+    private static final boolean aix = System.getProperty("os.name").equals("AIX");
+
+    /* Return the OS login module class name */
+    private static String getOSLoginModuleName() {
+      if (IBM_JAVA) {
+        if (windows) {
+          return is64Bit ? "com.ibm.security.auth.module.Win64LoginModule"
+              : "com.ibm.security.auth.module.NTLoginModule";
+        } else if (aix) {
+          return is64Bit ? "com.ibm.security.auth.module.AIX64LoginModule"
+              : "com.ibm.security.auth.module.AIXLoginModule";
+        } else {
+          return "com.ibm.security.auth.module.LinuxLoginModule";
+        }
+      } else {
+        return windows ? "com.sun.security.auth.module.NTLoginModule"
+            : "com.sun.security.auth.module.UnixLoginModule";
+      }
+    }
 
     static {
-      if (windows) {
-        OS_LOGIN_MODULE_NAME = "com.sun.security.auth.module.NTLoginModule";
-      } else {
-        OS_LOGIN_MODULE_NAME = "com.sun.security.auth.module.UnixLoginModule";
-      }
+      OS_LOGIN_MODULE_NAME = getOSLoginModuleName();
     }
 
     private static final AppConfigurationEntry OS_SPECIFIC_LOGIN =
@@ -92,13 +110,22 @@ public class KerberosAuthenticator implements Authenticator {
     private static final Map<String, String> USER_KERBEROS_OPTIONS = new HashMap<String, String>();
 
     static {
-      USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
-      USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
-      USER_KERBEROS_OPTIONS.put("renewTGT", "true");
       String ticketCache = System.getenv("KRB5CCNAME");
-      if (ticketCache != null) {
-        USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
+      if (IBM_JAVA) {
+        USER_KERBEROS_OPTIONS.put("useDefaultCcache", "true");
+      } else {
+        USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+        USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
       }
+      if (ticketCache != null) {
+        if (IBM_JAVA) {
+          // The first value searched when "useDefaultCcache" is used.
+          System.setProperty("KRB5CCNAME", ticketCache);
+        } else {
+          USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
+        }
+      }
+      USER_KERBEROS_OPTIONS.put("renewTGT", "true");
     }
 
     private static final AppConfigurationEntry USER_KERBEROS_LOGIN =
@@ -281,7 +308,6 @@ public class KerberosAuthenticator implements Authenticator {
   * Sends the Kerberos token to the server.
   */
   private void sendToken(byte[] outToken) throws IOException, AuthenticationException {
-    new Exception("sendToken").printStackTrace(System.out);
     String token = base64.encodeToString(outToken);
     conn = (HttpURLConnection) url.openConnection();
     if (connConfigurator != null) {

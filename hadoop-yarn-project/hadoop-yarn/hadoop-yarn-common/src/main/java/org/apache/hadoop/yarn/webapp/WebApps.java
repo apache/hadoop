@@ -33,6 +33,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +67,6 @@ import com.google.inject.servlet.GuiceFilter;
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class WebApps {
   static final Logger LOG = LoggerFactory.getLogger(WebApps.class);
-
   public static class Builder<T> {
     static class ServletStruct {
       public Class<? extends HttpServlet> clazz;
@@ -82,6 +83,8 @@ public class WebApps {
     boolean findPort = false;
     Configuration conf;
     boolean devMode = false;
+    private String spnegoPrincipalKey;
+    private String spnegoKeytabKey;
     private final HashSet<ServletStruct> servlets = new HashSet<ServletStruct>();
     private final HashMap<String, Object> attributes = new HashMap<String, Object>();
 
@@ -133,6 +136,16 @@ public class WebApps {
     
     public Builder<T> with(Configuration conf) {
       this.conf = conf;
+      return this;
+    }
+    
+    public Builder<T> withHttpSpnegoPrincipalKey(String spnegoPrincipalKey) {
+      this.spnegoPrincipalKey = spnegoPrincipalKey;
+      return this;
+    }
+    
+    public Builder<T> withHttpSpnegoKeytabKey(String spnegoKeytabKey) {
+      this.spnegoKeytabKey = spnegoKeytabKey;
       return this;
     }
 
@@ -197,15 +210,41 @@ public class WebApps {
           }
         }
         HttpServer server =
-            new HttpServer(name, bindAddress, port, findPort, conf, 
-            new AdminACLsManager(conf).getAdminAcl(), null, webapp.getServePathSpecs());
+            new HttpServer(name, bindAddress, port, findPort, conf,
+                new AdminACLsManager(conf).getAdminAcl(), null,
+                webapp.getServePathSpecs()) {
+
+              {
+                if (UserGroupInformation.isSecurityEnabled()) {
+                  boolean initSpnego = true;
+                  if (spnegoPrincipalKey == null
+                      || conf.get(spnegoPrincipalKey, "").isEmpty()) {
+                    LOG.warn("Principal for spnego filter is not set");
+                    initSpnego = false;
+                  }
+                  if (spnegoKeytabKey == null
+                      || conf.get(spnegoKeytabKey, "").isEmpty()) {
+                    LOG.warn("Keytab for spnego filter is not set");
+                    initSpnego = false;
+                  }
+                  if (initSpnego) {
+                    LOG.info("Initializing spnego filter with principal key : "
+                        + spnegoPrincipalKey + " keytab key : "
+                        + spnegoKeytabKey);
+                    initSpnego(conf, spnegoPrincipalKey, spnegoKeytabKey);
+                  }
+                }
+              }
+            };
         for(ServletStruct struct: servlets) {
           server.addServlet(struct.name, struct.spec, struct.clazz);
         }
         for(Map.Entry<String, Object> entry : attributes.entrySet()) {
           server.setAttribute(entry.getKey(), entry.getValue());
         }
-        server.addGlobalFilter("guice", GuiceFilter.class.getName(), null);
+        server.defineFilter(server.getWebAppContext(), "guice",
+          GuiceFilter.class.getName(), null, new String[] { "/*" });
+
         webapp.setConf(conf);
         webapp.setHttpServer(server);
         server.start();

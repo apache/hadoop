@@ -30,6 +30,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainersRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainersRequestProtoOrBuilder;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class StopContainersRequestPBImpl extends StopContainersRequest {
@@ -73,8 +75,7 @@ public class StopContainersRequestPBImpl extends StopContainersRequest {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ")
-      .replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

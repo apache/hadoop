@@ -104,7 +104,7 @@ public class SaslRpcServer {
         if (LOG.isDebugEnabled())
           LOG.debug("Kerberos principal name is " + fullName);
         // don't use KerberosName because we don't want auth_to_local
-        String[] parts = fullName.split("[/@]", 2);
+        String[] parts = fullName.split("[/@]", 3);
         protocol = parts[0];
         // should verify service host is present here rather than in create()
         // but lazy tests are using a UGI that isn't a SPN...
@@ -127,7 +127,6 @@ public class SaslRpcServer {
     final CallbackHandler callback;
     switch (authMethod) {
       case TOKEN: {
-        secretManager.checkAvailableForRead();
         callback = new SaslDigestCallbackHandler(secretManager, connection);
         break;
       }

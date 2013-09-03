@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterMetricsRequestProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class GetClusterMetricsRequestPBImpl extends GetClusterMetricsRequest {
@@ -63,6 +65,6 @@ public class GetClusterMetricsRequestPBImpl extends GetClusterMetricsRequest {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }  

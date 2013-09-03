@@ -104,6 +104,8 @@ public class EventReader implements Closeable {
       result = new JobUnsuccessfulCompletionEvent(); break;
     case JOB_KILLED:
       result = new JobUnsuccessfulCompletionEvent(); break;
+    case JOB_ERROR:
+      result = new JobUnsuccessfulCompletionEvent(); break;
     case JOB_INFO_CHANGED:
       result = new JobInfoChangeEvent(); break;
     case TASK_STARTED:

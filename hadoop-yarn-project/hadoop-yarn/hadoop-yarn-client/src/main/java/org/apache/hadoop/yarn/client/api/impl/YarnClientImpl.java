@@ -211,15 +211,29 @@ public class YarnClientImpl extends YarnClient {
   @Override
   public List<ApplicationReport> getApplications() throws YarnException,
       IOException {
-    return getApplications(null);
+    return getApplications(null, null);
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(Set<String> applicationTypes)
+      throws YarnException,
+      IOException {
+    return getApplications(applicationTypes, null);
   }
 
   @Override
   public List<ApplicationReport> getApplications(
-      Set<String> applicationTypes) throws YarnException, IOException {
+      EnumSet<YarnApplicationState> applicationStates)
+      throws YarnException, IOException {
+    return getApplications(null, applicationStates);
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates) throws YarnException,
+      IOException {
     GetApplicationsRequest request =
-        applicationTypes == null ? GetApplicationsRequest.newInstance()
-            : GetApplicationsRequest.newInstance(applicationTypes);
+        GetApplicationsRequest.newInstance(applicationTypes, applicationStates);
     GetApplicationsResponse response = rmClient.getApplications(request);
     return response.getApplicationList();
   }

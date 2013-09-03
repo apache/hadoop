@@ -158,7 +158,43 @@ public class TestPath extends TestCase {
       assertEquals(new Path("c:/foo"), new Path("d:/bar", "c:/foo"));
     }
   }
-  
+
+  @Test (timeout = 30000)
+  public void testPathThreeArgContructor() {
+    assertEquals(new Path("foo"), new Path(null, null, "foo"));
+    assertEquals(new Path("scheme:///foo"), new Path("scheme", null, "/foo"));
+    assertEquals(
+        new Path("scheme://authority/foo"),
+        new Path("scheme", "authority", "/foo"));
+
+    if (Path.WINDOWS) {
+      assertEquals(new Path("c:/foo/bar"), new Path(null, null, "c:/foo/bar"));
+      assertEquals(new Path("c:/foo/bar"), new Path(null, null, "/c:/foo/bar"));
+    } else {
+      assertEquals(new Path("./a:b"), new Path(null, null, "a:b"));
+    }
+
+    // Resolution tests
+    if (Path.WINDOWS) {
+      assertEquals(
+          new Path("c:/foo/bar"),
+          new Path("/fou", new Path(null, null, "c:/foo/bar")));
+      assertEquals(
+          new Path("c:/foo/bar"),
+          new Path("/fou", new Path(null, null, "/c:/foo/bar")));
+      assertEquals(
+          new Path("/foo/bar"),
+          new Path("/foo", new Path(null, null, "bar")));
+    } else {
+      assertEquals(
+          new Path("/foo/bar/a:b"),
+          new Path("/foo/bar", new Path(null, null, "a:b")));
+      assertEquals(
+          new Path("/a:b"),
+          new Path("/foo/bar", new Path(null, null, "/a:b")));
+    }
+  }
+
   @Test (timeout = 30000)
   public void testEquals() {
     assertFalse(new Path("/").equals(new Path("/foo")));

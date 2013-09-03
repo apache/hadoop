@@ -174,7 +174,6 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
@@ -352,7 +351,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   final LeaseManager leaseManager = new LeaseManager(this); 
 
-  Daemon smmthread = null;  // SafeModeMonitor thread
+  volatile Daemon smmthread = null;  // SafeModeMonitor thread
   
   Daemon nnrmthread = null; // NamenodeResourceMonitor thread
 
@@ -2136,10 +2135,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new FileNotFoundException("failed to append to non-existent file "
           + src + " on client " + clientMachine);
       }
-      final INodeFile myFile = INodeFile.valueOf(inode, src, true);
+      INodeFile myFile = INodeFile.valueOf(inode, src, true);
       // Opening an existing file for write - may need to recover lease.
       recoverLeaseInternal(myFile, src, holder, clientMachine, false);
-
+      
+      // recoverLeaseInternal may create a new InodeFile via 
+      // finalizeINodeFileUnderConstruction so we need to refresh 
+      // the referenced file.  
+      myFile = INodeFile.valueOf(dir.getINode(src), src, true);
+      
       final DatanodeDescriptor clientNode = 
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
       return prepareFileForWrite(src, myFile, holder, clientMachine, clientNode,
@@ -3393,12 +3397,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return true;
   }
 
-  ContentSummary getContentSummary(String src) throws AccessControlException,
-      FileNotFoundException, UnresolvedLinkException, StandbyException {
+  /**
+   * Get the content summary for a specific file/dir.
+   *
+   * @param src The string representation of the path to the file
+   *
+   * @throws AccessControlException if access is denied
+   * @throws UnresolvedLinkException if a symlink is encountered.
+   * @throws FileNotFoundException if no file exists
+   * @throws StandbyException
+   * @throws IOException for issues with writing to the audit log
+   *
+   * @return object containing information regarding the file
+   *         or null if file not found
+   */
+  ContentSummary getContentSummary(String src) throws IOException {
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
+    boolean success = true;
     try {
       checkOperation(OperationCategory.READ);
       src = FSDirectory.resolvePath(src, pathComponents, dir);
@@ -3406,8 +3424,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         checkPermission(pc, src, false, null, null, null, FsAction.READ_EXECUTE);
       }
       return dir.getContentSummary(src);
+
+    } catch (AccessControlException ace) {
+      success = false;
+      throw ace;
     } finally {
       readUnlock();
+      logAuditEvent(success, "contentSummary", src);
     }
   }
 
@@ -3731,24 +3754,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // find the DatanodeDescriptor objects
         // There should be no locations in the blockManager till now because the
         // file is underConstruction
-        DatanodeDescriptor[] descriptors = null;
+        List<DatanodeDescriptor> targetList =
+            new ArrayList<DatanodeDescriptor>(newtargets.length);
         if (newtargets.length > 0) {
-          descriptors = new DatanodeDescriptor[newtargets.length];
-          for(int i = 0; i < newtargets.length; i++) {
-            descriptors[i] = blockManager.getDatanodeManager().getDatanode(
-                newtargets[i]);
+          for (DatanodeID newtarget : newtargets) {
+            // try to get targetNode
+            DatanodeDescriptor targetNode =
+                blockManager.getDatanodeManager().getDatanode(newtarget);
+            if (targetNode != null)
+              targetList.add(targetNode);
+            else if (LOG.isDebugEnabled()) {
+              LOG.debug("DatanodeDescriptor (=" + newtarget + ") not found");
+            }
           }
         }
-        if ((closeFile) && (descriptors != null)) {
+        if ((closeFile) && !targetList.isEmpty()) {
           // the file is getting closed. Insert block locations into blockManager.
           // Otherwise fsck will report these blocks as MISSING, especially if the
           // blocksReceived from Datanodes take a long time to arrive.
-          for (int i = 0; i < descriptors.length; i++) {
-            descriptors[i].addBlock(storedBlock);
+          for (DatanodeDescriptor targetNode : targetList) {
+            targetNode.addBlock(storedBlock);
           }
         }
         // add pipeline locations into the INodeUnderConstruction
-        pendingFile.setLastBlock(storedBlock, descriptors);
+        DatanodeDescriptor[] targetArray =
+            new DatanodeDescriptor[targetList.size()];
+        pendingFile.setLastBlock(storedBlock, targetList.toArray(targetArray));
       }
 
       if (closeFile) {
@@ -4507,7 +4538,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // Have to have write-lock since leaving safemode initializes
       // repl queues, which requires write lock
       assert hasWriteLock();
-      if (needEnter()) {
+      // if smmthread is already running, the block threshold must have been 
+      // reached before, there is no need to enter the safe mode again
+      if (smmthread == null && needEnter()) {
         enter();
         // check if we are ready to initialize replication queues
         if (canInitializeReplQueues() && !isPopulatingReplQueues()) {
@@ -4516,7 +4549,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         reportStatus("STATE* Safe mode ON.", false);
         return;
       }
-      // the threshold is reached
+      // the threshold is reached or was reached before
       if (!isOn() ||                           // safe mode is off
           extension <= 0 || threshold <= 0) {  // don't need to wait
         this.leave(); // leave safe mode
@@ -4528,9 +4561,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       // start monitor
       reached = now();
-      smmthread = new Daemon(new SafeModeMonitor());
-      smmthread.start();
-      reportStatus("STATE* Safe mode extension entered.", true);
+      if (smmthread == null) {
+        smmthread = new Daemon(new SafeModeMonitor());
+        smmthread.start();
+        reportStatus("STATE* Safe mode extension entered.", true);
+      }
 
       // check if we are ready to initialize replication queues
       if (canInitializeReplQueues() && !isPopulatingReplQueues()) {
@@ -4757,7 +4792,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     @Override
     public void run() {
-      while (fsRunning && (safeMode != null && !safeMode.canLeave())) {
+      while (fsRunning) {
+        writeLock();
+        try {
+          if (safeMode == null) { // Not in safe mode.
+            break;
+          }
+          if (safeMode.canLeave()) {
+            // Leave safe mode.
+            safeMode.leave();
+            smmthread = null;
+            break;
+          }
+        } finally {
+          writeUnlock();
+        }
+
         try {
           Thread.sleep(recheckInterval);
         } catch (InterruptedException ie) {
@@ -4766,11 +4816,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       if (!fsRunning) {
         LOG.info("NameNode is being shutdown, exit SafeModeMonitor thread");
-      } else {
-        // leave safe mode and stop the monitor
-        leaveSafeMode();
       }
-      smmthread = null;
     }
   }
     
@@ -6184,6 +6230,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       innerinfo.put("nonDfsUsedSpace", node.getNonDfsUsed());
       innerinfo.put("capacity", node.getCapacity());
       innerinfo.put("numBlocks", node.numBlocks());
+      innerinfo.put("version", node.getSoftwareVersion());
       info.put(node.getHostName(), innerinfo);
     }
     return JSON.toString(info);
@@ -6347,6 +6394,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return JSON.toString(jasList);
   }
 
+  @Override // NameNodeMxBean
+  public String getJournalTransactionInfo() {
+    Map<String, String> txnIdMap = new HashMap<String, String>();
+    txnIdMap.put("LastAppliedOrWrittenTxId",
+        Long.toString(this.getFSImage().getLastAppliedOrWrittenTxId()));
+    txnIdMap.put("MostRecentCheckpointTxId",
+        Long.toString(this.getFSImage().getMostRecentCheckpointTxId()));
+    return JSON.toString(txnIdMap);
+  }
+  
   @Override  // NameNodeMXBean
   public String getNNStarted() {
     return getStartTime().toString();
@@ -6383,6 +6440,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       LOG.warn("Get corrupt file blocks returned error: " + e.getMessage());
     }
     return JSON.toString(list);
+  }
+
+  @Override  //NameNodeMXBean
+  public int getDistinctVersionCount() {
+    return blockManager.getDatanodeManager().getDatanodesSoftwareVersions()
+      .size();
+  }
+
+  @Override  //NameNodeMXBean
+  public Map<String, Integer> getDistinctVersions() {
+    return blockManager.getDatanodeManager().getDatanodesSoftwareVersions();
+  }
+
+  @Override  //NameNodeMXBean
+  public String getSoftwareVersion() {
+    return VersionInfo.getVersion();
   }
 
   /**

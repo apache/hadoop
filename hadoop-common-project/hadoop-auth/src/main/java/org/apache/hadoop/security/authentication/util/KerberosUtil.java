@@ -27,6 +27,8 @@ import java.util.Locale;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.Oid;
 
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+
 public class KerberosUtil {
 
   /* Return the Kerberos login module name */
@@ -40,7 +42,11 @@ public class KerberosUtil {
       throws ClassNotFoundException, GSSException, NoSuchFieldException,
       IllegalAccessException {
     Class<?> oidClass;
-    if (System.getProperty("java.vendor").contains("IBM")) {
+    if (IBM_JAVA) {
+      if ("NT_GSS_KRB5_PRINCIPAL".equals(oidName)) {
+        // IBM JDK GSSUtil class does not have field for krb5 principal oid
+        return new Oid("1.2.840.113554.1.2.2.1");
+      }
       oidClass = Class.forName("com.ibm.security.jgss.GSSUtil");
     } else {
       oidClass = Class.forName("sun.security.jgss.GSSUtil");

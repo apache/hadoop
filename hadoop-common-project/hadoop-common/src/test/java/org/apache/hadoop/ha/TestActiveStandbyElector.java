@@ -41,7 +41,7 @@ import org.mockito.Mockito;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveNotFoundException;
-import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
+import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 
 public class TestActiveStandbyElector {

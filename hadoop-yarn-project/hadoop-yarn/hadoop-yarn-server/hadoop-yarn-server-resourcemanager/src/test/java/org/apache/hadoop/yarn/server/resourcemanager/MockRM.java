@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
@@ -385,6 +386,10 @@ public class MockRM extends ResourceManager {
 
   public RMDelegationTokenSecretManager getRMDTSecretManager() {
     return this.rmDTSecretManager;
+  }
+
+  public ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager() {
+    return this.clientToAMSecretManager;
   }
 
   @Override

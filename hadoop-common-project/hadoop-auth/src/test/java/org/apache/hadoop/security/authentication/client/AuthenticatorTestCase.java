@@ -2,9 +2,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,10 +13,7 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
-import junit.framework.Assert;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
-import junit.framework.TestCase;
-import org.mockito.Mockito;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
@@ -27,19 +24,20 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.URL;
 import java.util.Properties;
+import org.junit.Assert;
 
-public abstract class AuthenticatorTestCase extends TestCase {
+public class AuthenticatorTestCase {
   private Server server;
   private String host = null;
   private int port = -1;
@@ -151,18 +149,18 @@ public abstract class AuthenticatorTestCase extends TestCase {
         writer.write(POST);
         writer.close();
       }
-      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       if (doPost) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         String echo = reader.readLine();
-        assertEquals(POST, echo);
-        assertNull(reader.readLine());
+        Assert.assertEquals(POST, echo);
+        Assert.assertNull(reader.readLine());
       }
       aUrl = new AuthenticatedURL();
       conn = aUrl.openConnection(url, token);
       conn.connect();
-      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-      assertEquals(tokenStr, token.toString());
+      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      Assert.assertEquals(tokenStr, token.toString());
     } finally {
       stop();
     }

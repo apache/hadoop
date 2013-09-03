@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.YarnClusterMetricsProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterMetricsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterMetricsResponseProtoOrBuilder;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class GetClusterMetricsResponsePBImpl extends GetClusterMetricsResponse {
@@ -71,7 +73,7 @@ public class GetClusterMetricsResponsePBImpl extends GetClusterMetricsResponse {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

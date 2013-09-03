@@ -61,4 +61,6 @@ public interface AppContext {
   Set<String> getBlacklistedNodes();
   
   ClientToAMTokenSecretManager getClientToAMTokenSecretManager();
+
+  boolean isLastAMRetry();
 }

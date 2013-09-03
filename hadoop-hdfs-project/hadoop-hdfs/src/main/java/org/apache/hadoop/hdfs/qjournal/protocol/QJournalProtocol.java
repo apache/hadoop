@@ -125,10 +125,13 @@ public interface QJournalProtocol {
    * @param sinceTxId the first transaction which the client cares about
    * @param forReading whether or not the caller intends to read from the edit
    *        logs
+   * @param inProgressOk whether or not to check the in-progress edit log 
+   *        segment       
    * @return a list of edit log segments since the given transaction ID.
    */
-  public GetEditLogManifestResponseProto getEditLogManifest(
-      String jid, long sinceTxId, boolean forReading) throws IOException;
+  public GetEditLogManifestResponseProto getEditLogManifest(String jid,
+      long sinceTxId, boolean forReading, boolean inProgressOk)
+      throws IOException;
   
   /**
    * Begin the recovery process for a given segment. See the HDFS-3077

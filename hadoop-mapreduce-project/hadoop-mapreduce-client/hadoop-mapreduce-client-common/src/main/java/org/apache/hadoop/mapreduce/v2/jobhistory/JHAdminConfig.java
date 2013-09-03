@@ -129,6 +129,15 @@ public class JHAdminConfig {
   public static final int DEFAULT_MR_HISTORY_WEBAPP_PORT = 19888;
   public static final String DEFAULT_MR_HISTORY_WEBAPP_ADDRESS =
     "0.0.0.0:" + DEFAULT_MR_HISTORY_WEBAPP_PORT;
+  
+  /**The kerberos principal to be used for spnego filter for history server*/
+  public static final String MR_WEBAPP_SPNEGO_USER_NAME_KEY =
+      MR_HISTORY_PREFIX + "webapp.spnego-principal";
+  
+  /** The kerberos keytab to be used for spnego filter for history server*/
+  public static final String MR_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
+      MR_HISTORY_PREFIX + "webapp.spnego-keytab-file";
+
   /*
    * HS Service Authorization
    */

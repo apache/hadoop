@@ -73,6 +73,8 @@
               <goal>protoc</goal>
             </goals>
             <configuration>
+              <protocVersion>${protobuf.version}</protocVersion>
+              <protocCommand>${protoc.path}</protocCommand>
               <imports>
                 <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>

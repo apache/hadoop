@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -44,7 +43,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -55,6 +53,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
@@ -378,29 +377,6 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
   }
 
-  private YarnApplicationState createApplicationState(RMAppState rmAppState) {
-    switch(rmAppState) {
-    case NEW:
-      return YarnApplicationState.NEW;
-    case NEW_SAVING:
-      return YarnApplicationState.NEW_SAVING;
-    case SUBMITTED:
-      return YarnApplicationState.SUBMITTED;
-    case ACCEPTED:
-      return YarnApplicationState.ACCEPTED;
-    case RUNNING:
-      return YarnApplicationState.RUNNING;
-    case FINISHING:
-    case FINISHED:
-      return YarnApplicationState.FINISHED;
-    case KILLED:
-      return YarnApplicationState.KILLED;
-    case FAILED:
-      return YarnApplicationState.FAILED;
-    }
-    throw new YarnRuntimeException("Unknown state passed!");
-  }
-
   private FinalApplicationStatus createFinalApplicationStatus(RMAppState state) {
     switch(state) {
     case NEW:
@@ -434,7 +410,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
   
   @Override
-  public ApplicationReport createAndGetApplicationReport(boolean allowAccess) {
+  public ApplicationReport createAndGetApplicationReport(String clientUserName,
+      boolean allowAccess) {
     this.readLock.lock();
 
     try {
@@ -455,15 +432,18 @@ public class RMAppImpl implements RMApp, Recoverable {
           currentApplicationAttemptId = this.currentAttempt.getAppAttemptId();
           trackingUrl = this.currentAttempt.getTrackingUrl();
           origTrackingUrl = this.currentAttempt.getOriginalTrackingUrl();
-          Token<ClientToAMTokenIdentifier> attemptClientToAMToken =
-              this.currentAttempt.getClientToAMToken();
-          if (attemptClientToAMToken != null) {
-            clientToAMToken =
-                BuilderUtils.newClientToAMToken(
-                    attemptClientToAMToken.getIdentifier(),
-                    attemptClientToAMToken.getKind().toString(),
-                    attemptClientToAMToken.getPassword(),
-                    attemptClientToAMToken.getService().toString());
+          if (UserGroupInformation.isSecurityEnabled()
+              && clientUserName != null) {
+            Token<ClientToAMTokenIdentifier> attemptClientToAMToken =
+                new Token<ClientToAMTokenIdentifier>(
+                    new ClientToAMTokenIdentifier(
+                        currentApplicationAttemptId, clientUserName),
+                        rmContext.getClientToAMTokenSecretManager());
+            clientToAMToken = BuilderUtils.newClientToAMToken(
+                attemptClientToAMToken.getIdentifier(),
+                attemptClientToAMToken.getKind().toString(),
+                attemptClientToAMToken.getPassword(),
+                attemptClientToAMToken.getService().toString());
           }
           host = this.currentAttempt.getHost();
           rpcPort = this.currentAttempt.getRpcPort();
@@ -474,20 +454,15 @@ public class RMAppImpl implements RMApp, Recoverable {
 
         if (currentAttempt != null && 
             currentAttempt.getAppAttemptState() == RMAppAttemptState.LAUNCHED) {
-          try {
-            if (getApplicationSubmissionContext().getUnmanagedAM() &&
-              getUser().equals(UserGroupInformation.getCurrentUser().getUserName())) {
-              Token<AMRMTokenIdentifier> token = currentAttempt.getAMRMToken();
-              if (token != null) {
-                amrmToken = BuilderUtils.newAMRMToken(token.getIdentifier(),
-                    token.getKind().toString(), token.getPassword(),
-                    token.getService().toString());
-              }
+          if (getApplicationSubmissionContext().getUnmanagedAM() &&
+              clientUserName != null && getUser().equals(clientUserName)) {
+            Token<AMRMTokenIdentifier> token = currentAttempt.getAMRMToken();
+            if (token != null) {
+              amrmToken = BuilderUtils.newAMRMToken(token.getIdentifier(),
+                  token.getKind().toString(), token.getPassword(),
+                  token.getService().toString());
             }
-          } catch (IOException ex) {
-            LOG.warn("UserGroupInformation.getCurrentUser() error: " + 
-              ex.toString(), ex);
-          }          
+          }
         }
       }
 
@@ -500,7 +475,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       return BuilderUtils.newApplicationReport(this.applicationId,
           currentApplicationAttemptId, this.user, this.queue,
           this.name, host, rpcPort, clientToAMToken,
-          createApplicationState(this.stateMachine.getCurrentState()), diags,
+          RMServerUtils.createApplicationState(this.stateMachine.getCurrentState()), diags,
           trackingUrl, this.startTime, this.finishTime, finishState,
           appUsageReport, origTrackingUrl, progress, this.applicationType, 
           amrmToken);

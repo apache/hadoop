@@ -42,7 +42,7 @@ Hadoop MapReduce Next Generation - CLI MiniCluster.
 $ mvn clean install -DskipTests
 $ mvn package -Pdist -Dtar -DskipTests -Dmaven.javadoc.skip
 +---+
-  <<NOTE:>> You will need protoc installed of version 2.4.1 or greater.
+  <<NOTE:>> You will need protoc 2.5.0 installed.
 
   The tarball should be available in <<<hadoop-dist/target/>>> directory. 
 

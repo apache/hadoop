@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesResponseProtoOrBuilder;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class GetClusterNodesResponsePBImpl extends GetClusterNodesResponse {
@@ -89,7 +91,7 @@ public class GetClusterNodesResponsePBImpl extends GetClusterNodesResponse {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

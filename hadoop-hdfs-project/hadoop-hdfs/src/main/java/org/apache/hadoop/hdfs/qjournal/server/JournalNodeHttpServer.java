@@ -31,12 +31,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Encapsulates the HTTP server started by the Journal Service.
@@ -68,16 +69,15 @@ public class JournalNodeHttpServer {
         bindAddr.getHostName()));
 
     int tmpInfoPort = bindAddr.getPort();
-    httpServer = new HttpServer("journal", bindAddr.getHostName(),
-        tmpInfoPort, tmpInfoPort == 0, conf, new AccessControlList(conf
-            .get(DFS_ADMIN, " "))) {
-      {
-        if (UserGroupInformation.isSecurityEnabled()) {
-          initSpnego(conf, DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY,
-              DFS_JOURNALNODE_KEYTAB_FILE_KEY);
-        }
-      }
-    };
+    httpServer = new HttpServer.Builder().setName("journal")
+        .setBindAddress(bindAddr.getHostName()).setPort(tmpInfoPort)
+        .setFindPort(tmpInfoPort == 0).setConf(conf).setACL(
+            new AccessControlList(conf.get(DFS_ADMIN, " ")))
+        .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
+        .setUsernameConfKey(
+            DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY)
+        .setKeytabConfKey(DFSUtil.getSpnegoKeytabKey(conf,
+            DFS_JOURNALNODE_KEYTAB_FILE_KEY)).build();
     httpServer.setAttribute(JN_ATTRIBUTE_KEY, localJournalNode);
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     httpServer.addInternalServlet("getJournal", "/getJournal",

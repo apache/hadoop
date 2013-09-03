@@ -35,7 +35,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -122,6 +121,7 @@ public class FairScheduler implements ResourceScheduler {
   private Resource incrAllocation;
   private QueueManager queueMgr;
   private Clock clock;
+  private boolean usePortForNodeName;
 
   private static final Log LOG = LogFactory.getLog(FairScheduler.class);
   
@@ -385,8 +385,8 @@ public class FairScheduler implements ResourceScheduler {
     // Sort containers into reverse order of priority
     Collections.sort(runningContainers, new Comparator<RMContainer>() {
       public int compare(RMContainer c1, RMContainer c2) {
-        int ret = c2.getContainer().getPriority().compareTo(
-            c1.getContainer().getPriority());
+        int ret = c1.getContainer().getPriority().compareTo(
+            c2.getContainer().getPriority());
         if (ret == 0) {
           return c2.getContainerId().compareTo(c1.getContainerId());
         }
@@ -751,7 +751,7 @@ public class FairScheduler implements ResourceScheduler {
   }
 
   private synchronized void addNode(RMNode node) {
-    nodes.put(node.getNodeID(), new FSSchedulerNode(node));
+    nodes.put(node.getNodeID(), new FSSchedulerNode(node, usePortForNodeName));
     Resources.addTo(clusterCapacity, node.getTotalCapability());
     updateRootQueueMetrics();
 
@@ -1065,7 +1065,8 @@ public class FairScheduler implements ResourceScheduler {
     sizeBasedWeight = this.conf.getSizeBasedWeight();
     preemptionInterval = this.conf.getPreemptionInterval();
     waitTimeBeforeKill = this.conf.getWaitTimeBeforeKill();
-
+    usePortForNodeName = this.conf.getUsePortForNodeName();
+    
     if (!initialized) {
       rootMetrics = FSQueueMetrics.forQueue("root", null, true, conf);
       this.rmContext = rmContext;

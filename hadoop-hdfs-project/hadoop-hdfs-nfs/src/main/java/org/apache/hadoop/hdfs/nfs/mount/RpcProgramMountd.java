@@ -34,6 +34,8 @@ import org.apache.hadoop.mount.MountInterface;
 import org.apache.hadoop.mount.MountResponse;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
+import org.apache.hadoop.nfs.security.AccessPrivilege;
+import org.apache.hadoop.nfs.security.NfsExports;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.RpcProgram;
@@ -59,6 +61,8 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
   
   /** List that is unmodifiable */
   private final List<String> exports;
+  
+  private final NfsExports hostsMatcher;
 
   public RpcProgramMountd() throws IOException {
     this(new ArrayList<String>(0));
@@ -72,19 +76,29 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
       throws IOException {
     // Note that RPC cache is not enabled
     super("mountd", "localhost", PORT, PROGRAM, VERSION_1, VERSION_3, 0);
+    
+    this.hostsMatcher = NfsExports.getInstance(config);
     this.mounts = Collections.synchronizedList(new ArrayList<MountEntry>());
     this.exports = Collections.unmodifiableList(exports);
     this.dfsClient = new DFSClient(NameNode.getAddress(config), config);
   }
   
+  @Override
   public XDR nullOp(XDR out, int xid, InetAddress client) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("MOUNT NULLOP : " + " client: " + client);
     }
-    return  RpcAcceptedReply.voidReply(out, xid);
+    return RpcAcceptedReply.voidReply(out, xid);
   }
 
+  @Override
   public XDR mnt(XDR xdr, XDR out, int xid, InetAddress client) {
+    AccessPrivilege accessPrivilege = hostsMatcher.getAccessPrivilege(client);
+    if (accessPrivilege == AccessPrivilege.NONE) {
+      return MountResponse.writeMNTResponse(Nfs3Status.NFS3ERR_ACCES, out, xid,
+          null);
+    }
+
     String path = xdr.readString();
     if (LOG.isDebugEnabled()) {
       LOG.debug("MOUNT MNT path: " + path + " client: " + client);
@@ -121,6 +135,7 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     return out;
   }
 
+  @Override
   public XDR dump(XDR out, int xid, InetAddress client) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("MOUNT NULLOP : " + " client: " + client);
@@ -131,6 +146,7 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     return out;
   }
 
+  @Override
   public XDR umnt(XDR xdr, XDR out, int xid, InetAddress client) {
     String path = xdr.readString();
     if (LOG.isDebugEnabled()) {
@@ -143,6 +159,7 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     return out;
   }
 
+  @Override
   public XDR umntall(XDR out, int xid, InetAddress client) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("MOUNT UMNTALL : " + " client: " + client);
@@ -167,7 +184,10 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     } else if (mntproc == MNTPROC.UMNTALL) {
       umntall(out, xid, client);
     } else if (mntproc == MNTPROC.EXPORT) {
-      out = MountResponse.writeExportList(out, xid, exports);
+      // Currently only support one NFS export "/"
+      List<NfsExports> hostsMatchers = new ArrayList<NfsExports>();
+      hostsMatchers.add(hostsMatcher);
+      out = MountResponse.writeExportList(out, xid, exports, hostsMatchers);
     } else {
       // Invalid procedure
       RpcAcceptedReply.voidReply(out, xid,

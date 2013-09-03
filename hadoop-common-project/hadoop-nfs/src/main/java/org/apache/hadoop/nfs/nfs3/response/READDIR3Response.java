@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.nfs.nfs3.response;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.XDR;
-
-import com.google.common.collect.ObjectArrays;
 
 /**
  * READDIR3 Response
@@ -56,12 +58,11 @@ public class READDIR3Response extends NFS3Response {
   }
 
   public static class DirList3 {
-    final Entry3 entries[];
+    final List<Entry3> entries;
     final boolean eof;
     
     public DirList3(Entry3[] entries, boolean eof) {
-      this.entries = ObjectArrays.newArray(entries, entries.length);
-      System.arraycopy(this.entries, 0, entries, 0, entries.length);
+      this.entries = Collections.unmodifiableList(Arrays.asList(entries));
       this.eof = eof;
     }
   }
@@ -102,12 +103,11 @@ public class READDIR3Response extends NFS3Response {
 
     if (getStatus() == Nfs3Status.NFS3_OK) {
       xdr.writeLongAsHyper(cookieVerf);
-      Entry3[] f = dirList.entries;
-      for (int i = 0; i < f.length; i++) {
+      for (Entry3 e : dirList.entries) {
         xdr.writeBoolean(true); // Value follows
-        xdr.writeLongAsHyper(f[i].getFileId());
-        xdr.writeString(f[i].getName());
-        xdr.writeLongAsHyper(f[i].getCookie());
+        xdr.writeLongAsHyper(e.getFileId());
+        xdr.writeString(e.getName());
+        xdr.writeLongAsHyper(e.getCookie());
       }
 
       xdr.writeBoolean(false);

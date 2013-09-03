@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshUserToGroupsMappingsRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class RefreshUserToGroupsMappingsRequestPBImpl 
@@ -64,6 +66,6 @@ extends RefreshUserToGroupsMappingsRequest {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }

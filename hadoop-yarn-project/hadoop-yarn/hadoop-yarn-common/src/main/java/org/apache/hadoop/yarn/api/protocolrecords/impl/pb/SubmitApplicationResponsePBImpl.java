@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationResponseProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class SubmitApplicationResponsePBImpl extends SubmitApplicationResponse {
@@ -63,6 +65,6 @@ public class SubmitApplicationResponsePBImpl extends SubmitApplicationResponse {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }  

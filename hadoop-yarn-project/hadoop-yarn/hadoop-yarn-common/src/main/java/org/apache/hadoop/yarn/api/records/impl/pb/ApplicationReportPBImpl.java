@@ -36,6 +36,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportPro
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class ApplicationReportPBImpl extends ApplicationReport {
@@ -424,7 +426,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

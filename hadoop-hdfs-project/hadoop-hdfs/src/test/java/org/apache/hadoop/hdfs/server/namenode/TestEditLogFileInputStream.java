@@ -41,7 +41,8 @@ public class TestEditLogFileInputStream {
   @Test
   public void testReadURL() throws Exception {
     // Start a simple web server which hosts the log data.
-    HttpServer server = new HttpServer("test", "0.0.0.0", 0, true);
+    HttpServer server = new HttpServer.Builder().setName("test")
+        .setBindAddress("0.0.0.0").setPort(0).setFindPort(true).build();
     server.start();
     try {
       server.addServlet("fakeLog", "/fakeLog", FakeLogServlet.class);

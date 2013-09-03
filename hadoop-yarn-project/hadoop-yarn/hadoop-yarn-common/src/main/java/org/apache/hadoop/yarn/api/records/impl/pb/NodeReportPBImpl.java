@@ -29,6 +29,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class NodeReportPBImpl extends NodeReport {
@@ -234,7 +236,7 @@ public class NodeReportPBImpl extends NodeReport {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

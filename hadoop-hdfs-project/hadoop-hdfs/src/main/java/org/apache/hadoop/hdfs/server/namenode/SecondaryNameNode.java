@@ -256,19 +256,15 @@ public class SecondaryNameNode implements Runnable {
 
     // initialize the webserver for uploading files.
     int tmpInfoPort = infoSocAddr.getPort();
-    infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
-                                tmpInfoPort == 0, conf,
-                                new AccessControlList(conf.get(DFS_ADMIN, " "))) {
-      {
-        if (UserGroupInformation.isSecurityEnabled()) {
-          initSpnego(
-              conf,
-              DFSConfigKeys.DFS_SECONDARY_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
-              DFSUtil.getSpnegoKeytabKey(conf,
-                  DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY));
-        }
-      }
-    };
+    infoServer = new HttpServer.Builder().setName("secondary")
+        .setBindAddress(infoBindAddress).setPort(tmpInfoPort)
+        .setFindPort(tmpInfoPort == 0).setConf(conf).setACL(
+            new AccessControlList(conf.get(DFS_ADMIN, " ")))
+        .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
+        .setUsernameConfKey(
+            DFSConfigKeys.DFS_SECONDARY_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY)
+        .setKeytabConfKey(DFSUtil.getSpnegoKeytabKey(conf,
+            DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY)).build();
     infoServer.setAttribute("secondary.name.node", this);
     infoServer.setAttribute("name.system.image", checkpointImage);
     infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);

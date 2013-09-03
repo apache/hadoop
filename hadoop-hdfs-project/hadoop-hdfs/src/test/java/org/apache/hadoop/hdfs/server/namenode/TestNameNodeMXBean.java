@@ -120,6 +120,11 @@ public class TestNameNodeMXBean {
       String nameJournalStatus = (String) (mbs.getAttribute(mxbeanName,
           "NameJournalStatus"));
       assertEquals("Bad value for NameJournalStatus", fsn.getNameJournalStatus(), nameJournalStatus);
+      // get attribute JournalTransactionInfo
+      String journalTxnInfo = (String) mbs.getAttribute(mxbeanName,
+          "JournalTransactionInfo");
+      assertEquals("Bad value for NameTxnIds", fsn.getJournalTransactionInfo(),
+          journalTxnInfo);
       // get attribute "NNStarted"
       String nnStarted = (String) mbs.getAttribute(mxbeanName, "NNStarted");
       assertEquals("Bad value for NNStarted", fsn.getNNStarted(), nnStarted);

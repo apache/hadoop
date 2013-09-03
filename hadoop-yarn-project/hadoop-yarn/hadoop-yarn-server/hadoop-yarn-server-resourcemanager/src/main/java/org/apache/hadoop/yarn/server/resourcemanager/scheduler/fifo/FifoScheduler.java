@@ -111,6 +111,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   private boolean initialized;
   private Resource minimumAllocation;
   private Resource maximumAllocation;
+  private boolean usePortForNodeName;
 
   private Map<ApplicationAttemptId, FiCaSchedulerApp> applications
       = new TreeMap<ApplicationAttemptId, FiCaSchedulerApp>();
@@ -233,6 +234,9 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         Resources.createResource(conf.getInt(
             YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
+      this.usePortForNodeName = conf.getBoolean(
+          YarnConfiguration.RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME, 
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME);
       this.metrics = QueueMetrics.forQueue(DEFAULT_QUEUE_NAME, null, false,
           conf);
       this.activeUsersManager = new ActiveUsersManager(metrics);
@@ -490,7 +494,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       FiCaSchedulerApp application, Priority priority) {
     int assignedContainers = 0;
     ResourceRequest request = 
-      application.getResourceRequest(priority, node.getHostName());
+      application.getResourceRequest(priority, node.getNodeName());
     if (request != null) {
       // Don't allocate on this node if we don't need containers on this rack
       ResourceRequest rackRequest =
@@ -801,7 +805,8 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   }
 
   private synchronized void addNode(RMNode nodeManager) {
-    this.nodes.put(nodeManager.getNodeID(), new FiCaSchedulerNode(nodeManager));
+    this.nodes.put(nodeManager.getNodeID(), new FiCaSchedulerNode(nodeManager,
+        usePortForNodeName));
     Resources.addTo(clusterResource, nodeManager.getTotalCapability());
   }
 

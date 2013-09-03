@@ -13,17 +13,33 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
+import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
-public class TestKerberosAuthenticator extends AuthenticatorTestCase {
+public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
+
+  @Before
+  public void setup() throws Exception {
+    // create keytab
+    File keytabFile = new File(KerberosTestUtils.getKeytabFile());
+    String clientPrincipal = KerberosTestUtils.getClientPrincipal();
+    String serverPrincipal = KerberosTestUtils.getServerPrincipal();
+    clientPrincipal = clientPrincipal.substring(0, clientPrincipal.lastIndexOf("@"));
+    serverPrincipal = serverPrincipal.substring(0, serverPrincipal.lastIndexOf("@"));
+    getKdc().createPrincipal(keytabFile, clientPrincipal, serverPrincipal);
+  }
 
   private Properties getAuthenticationHandlerConfiguration() {
     Properties props = new Properties();
@@ -35,57 +51,67 @@ public class TestKerberosAuthenticator extends AuthenticatorTestCase {
     return props;
   }
 
+  @Test(timeout=60000)
   public void testFallbacktoPseudoAuthenticator() throws Exception {
+    AuthenticatorTestCase auth = new AuthenticatorTestCase();
     Properties props = new Properties();
     props.setProperty(AuthenticationFilter.AUTH_TYPE, "simple");
     props.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "false");
-    setAuthenticationHandlerConfig(props);
-    _testAuthentication(new KerberosAuthenticator(), false);
+    auth.setAuthenticationHandlerConfig(props);
+    auth._testAuthentication(new KerberosAuthenticator(), false);
   }
 
+  @Test(timeout=60000)
   public void testFallbacktoPseudoAuthenticatorAnonymous() throws Exception {
+    AuthenticatorTestCase auth = new AuthenticatorTestCase();
     Properties props = new Properties();
     props.setProperty(AuthenticationFilter.AUTH_TYPE, "simple");
     props.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "true");
-    setAuthenticationHandlerConfig(props);
-    _testAuthentication(new KerberosAuthenticator(), false);
+    auth.setAuthenticationHandlerConfig(props);
+    auth._testAuthentication(new KerberosAuthenticator(), false);
   }
 
+  @Test(timeout=60000)
   public void testNotAuthenticated() throws Exception {
-    setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
-    start();
+    AuthenticatorTestCase auth = new AuthenticatorTestCase();
+    auth.setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
+    auth.start();
     try {
-      URL url = new URL(getBaseURL());
+      URL url = new URL(auth.getBaseURL());
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.connect();
-      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
-      assertTrue(conn.getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE) != null);
+      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
+      Assert.assertTrue(conn.getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE) != null);
     } finally {
-      stop();
+      auth.stop();
     }
   }
 
-
+  @Test(timeout=60000)
   public void testAuthentication() throws Exception {
-    setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
+    final AuthenticatorTestCase auth = new AuthenticatorTestCase();
+    auth.setAuthenticationHandlerConfig(
+            getAuthenticationHandlerConfiguration());
     KerberosTestUtils.doAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        _testAuthentication(new KerberosAuthenticator(), false);
+        auth._testAuthentication(new KerberosAuthenticator(), false);
         return null;
       }
     });
   }
 
+  @Test(timeout=60000)
   public void testAuthenticationPost() throws Exception {
-    setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
+    final AuthenticatorTestCase auth = new AuthenticatorTestCase();
+    auth.setAuthenticationHandlerConfig(
+            getAuthenticationHandlerConfiguration());
     KerberosTestUtils.doAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        _testAuthentication(new KerberosAuthenticator(), true);
+        auth._testAuthentication(new KerberosAuthenticator(), true);
         return null;
       }
     });
   }
-
 }

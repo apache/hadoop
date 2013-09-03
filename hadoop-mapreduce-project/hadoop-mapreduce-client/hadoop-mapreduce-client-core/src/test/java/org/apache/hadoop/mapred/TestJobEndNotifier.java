@@ -102,7 +102,8 @@ public class TestJobEndNotifier extends TestCase {
   public void setUp() throws Exception {
     new File(System.getProperty("build.webapps", "build/webapps") + "/test"
         ).mkdirs();
-    server = new HttpServer("test", "0.0.0.0", 0, true);
+    server = new HttpServer.Builder().setName("test")
+        .setBindAddress("0.0.0.0").setPort(0).setFindPort(true).build();
     server.addServlet("delay", "/delay", DelayServlet.class);
     server.addServlet("jobend", "/jobend", JobEndServlet.class);
     server.addServlet("fail", "/fail", FailServlet.class);

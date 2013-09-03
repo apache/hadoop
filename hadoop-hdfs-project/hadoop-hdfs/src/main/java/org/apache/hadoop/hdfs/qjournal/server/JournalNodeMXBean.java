@@ -15,39 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.util;
+package org.apache.hadoop.hdfs.qjournal.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * A helper class for getting build-info of the java-vm. 
- * 
+ * This is the JMX management interface for JournalNode information
  */
-@InterfaceAudience.LimitedPrivate({"HBase"})
-@InterfaceStability.Unstable
-public class PlatformName {
-  /**
-   * The complete platform 'name' to identify the platform as 
-   * per the java-vm.
-   */
-  private static final String PLATFORM_NAME = System.getProperty("os.name") + "-" + 
-    System.getProperty("os.arch") + "-" +
-    System.getProperty("sun.arch.data.model");
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public interface JournalNodeMXBean {
   
   /**
-   * The java vendor name used in this platform. 
+   * Get status information (e.g., whether formatted) of JournalNode's journals.
+   * 
+   * @return A string presenting status for each journal
    */
-  public static final String JAVA_VENDOR_NAME = System.getProperty("java.vendor");
-
-  /**
-   * A public static variable to indicate the current java vendor is 
-   * IBM java or not. 
-   */
-  public static final boolean IBM_JAVA = JAVA_VENDOR_NAME.contains("IBM");
-  
-  public static void main(String[] args) {
-    System.out.println(PLATFORM_NAME);
-  }
+  public String getJournalsStatus();
 }

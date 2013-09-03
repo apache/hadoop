@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -55,10 +56,12 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -83,6 +86,7 @@ public class TestYarnClient {
     client.init(conf);
     client.start();
     client.stop();
+    rm.stop();
   }
 
   @Test (timeout = 30000)
@@ -163,11 +167,15 @@ public class TestYarnClient {
 
     List<ApplicationReport> expectedReports = ((MockYarnClient)client).getReports();
 
+    List<ApplicationReport>  reports = client.getApplications();
+    Assert.assertEquals(reports, expectedReports);
+
     Set<String> appTypes = new HashSet<String>();
     appTypes.add("YARN");
     appTypes.add("NON-YARN");
 
-    List<ApplicationReport> reports = client.getApplications(appTypes);
+    reports =
+        client.getApplications(appTypes, null);
     Assert.assertEquals(reports.size(), 2);
     Assert
         .assertTrue((reports.get(0).getApplicationType().equals("YARN") && reports
@@ -178,8 +186,28 @@ public class TestYarnClient {
       Assert.assertTrue(expectedReports.contains(report));
     }
 
-    reports = client.getApplications();
-    Assert.assertEquals(reports, expectedReports);
+    EnumSet<YarnApplicationState> appStates =
+        EnumSet.noneOf(YarnApplicationState.class);
+    appStates.add(YarnApplicationState.FINISHED);
+    appStates.add(YarnApplicationState.FAILED);
+    reports = client.getApplications(null, appStates);
+    Assert.assertEquals(reports.size(), 2);
+    Assert
+    .assertTrue((reports.get(0).getApplicationType().equals("NON-YARN") && reports
+        .get(1).getApplicationType().equals("NON-MAPREDUCE"))
+        || (reports.get(1).getApplicationType().equals("NON-YARN") && reports
+            .get(0).getApplicationType().equals("NON-MAPREDUCE")));
+    for (ApplicationReport report : reports) {
+      Assert.assertTrue(expectedReports.contains(report));
+    }
+
+    reports = client.getApplications(appTypes, appStates);
+    Assert.assertEquals(reports.size(), 1);
+    Assert
+    .assertTrue((reports.get(0).getApplicationType().equals("NON-YARN")));
+    for (ApplicationReport report : reports) {
+      Assert.assertTrue(expectedReports.contains(report));
+    }
 
     client.stop();
   }
@@ -187,6 +215,8 @@ public class TestYarnClient {
   private static class MockYarnClient extends YarnClientImpl {
     private ApplicationReport mockReport;
     private List<ApplicationReport> reports;
+    GetApplicationsResponse mockAppResponse =
+        mock(GetApplicationsResponse.class);
 
     public MockYarnClient() {
       super();
@@ -202,6 +232,8 @@ public class TestYarnClient {
       try{
         when(rmClient.getApplicationReport(any(
             GetApplicationReportRequest.class))).thenReturn(mockResponse);
+        when(rmClient.getApplications(any(GetApplicationsRequest.class)))
+            .thenReturn(mockAppResponse);
       } catch (YarnException e) {
         Assert.fail("Exception is not expected.");
       } catch (IOException e) {
@@ -212,16 +244,11 @@ public class TestYarnClient {
 
     @Override
     public List<ApplicationReport> getApplications(
-        Set<String> applicationTypes) throws YarnException, IOException {
-      GetApplicationsRequest request =
-          applicationTypes == null ? GetApplicationsRequest.newInstance()
-              : GetApplicationsRequest.newInstance(applicationTypes);
-      when(rmClient.getApplications(request))
-          .thenReturn(
-              getApplicationReports(reports,
-                  request));
-      GetApplicationsResponse response = rmClient.getApplications(request);
-      return response.getApplicationList();
+        Set<String> applicationTypes, EnumSet<YarnApplicationState> applicationStates)
+        throws YarnException, IOException {
+      when(mockAppResponse.getApplicationList()).thenReturn(
+          getApplicationReports(reports, applicationTypes, applicationStates));
+      return super.getApplications(applicationTypes, applicationStates);
     }
 
     @Override
@@ -243,7 +270,7 @@ public class TestYarnClient {
       ApplicationReport newApplicationReport = ApplicationReport.newInstance(
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,
-          YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+          YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
           FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
       List<ApplicationReport> applicationReports =
           new ArrayList<ApplicationReport>();
@@ -262,31 +289,44 @@ public class TestYarnClient {
       ApplicationReport newApplicationReport3 = ApplicationReport.newInstance(
           applicationId3, ApplicationAttemptId.newInstance(applicationId3, 3),
           "user3", "queue3", "appname3", "host3", 126, null,
-          YarnApplicationState.FINISHED, "diagnostics3", "url3", 3, 3,
-          FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f, "MAPREDUCE", 
+          YarnApplicationState.RUNNING, "diagnostics3", "url3", 3, 3,
+          FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f, "MAPREDUCE",
         null);
       applicationReports.add(newApplicationReport3);
+
+      ApplicationId applicationId4 = ApplicationId.newInstance(1234, 8);
+      ApplicationReport newApplicationReport4 =
+          ApplicationReport.newInstance(
+              applicationId4,
+              ApplicationAttemptId.newInstance(applicationId4, 4),
+              "user4", "queue4", "appname4", "host4", 127, null,
+              YarnApplicationState.FAILED, "diagnostics4", "url4", 4, 4,
+              FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.83789f,
+              "NON-MAPREDUCE", null);
+      applicationReports.add(newApplicationReport4);
       return applicationReports;
     }
 
-    private GetApplicationsResponse getApplicationReports(
+    private List<ApplicationReport> getApplicationReports(
         List<ApplicationReport> applicationReports,
-        GetApplicationsRequest request) {
+        Set<String> applicationTypes, EnumSet<YarnApplicationState> applicationStates) {
 
       List<ApplicationReport> appReports = new ArrayList<ApplicationReport>();
-      Set<String> appTypes = request.getApplicationTypes();
-      boolean bypassFilter = appTypes.isEmpty();
-
       for (ApplicationReport appReport : applicationReports) {
-        if (!(bypassFilter || appTypes.contains(
-            appReport.getApplicationType()))) {
-          continue;
+        if (applicationTypes != null && !applicationTypes.isEmpty()) {
+          if (!applicationTypes.contains(appReport.getApplicationType())) {
+            continue;
+          }
+        }
+
+        if (applicationStates != null && !applicationStates.isEmpty()) {
+          if (!applicationStates.contains(appReport.getYarnApplicationState())) {
+            continue;
+          }
         }
         appReports.add(appReport);
       }
-      GetApplicationsResponse response =
-          GetApplicationsResponse.newInstance(appReports);
-      return response;
+      return appReports;
     }
   }
 

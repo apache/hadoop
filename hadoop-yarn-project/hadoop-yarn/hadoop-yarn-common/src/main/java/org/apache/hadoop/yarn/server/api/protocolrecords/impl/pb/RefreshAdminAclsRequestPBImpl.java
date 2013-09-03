@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshAdminAclsRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class RefreshAdminAclsRequestPBImpl 
@@ -64,6 +66,6 @@ extends RefreshAdminAclsRequest {
   
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }

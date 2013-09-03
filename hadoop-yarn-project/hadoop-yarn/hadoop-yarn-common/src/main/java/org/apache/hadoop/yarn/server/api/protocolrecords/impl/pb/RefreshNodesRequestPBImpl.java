@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshNodesRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class RefreshNodesRequestPBImpl extends RefreshNodesRequest {
@@ -63,6 +65,6 @@ public class RefreshNodesRequestPBImpl extends RefreshNodesRequest {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }

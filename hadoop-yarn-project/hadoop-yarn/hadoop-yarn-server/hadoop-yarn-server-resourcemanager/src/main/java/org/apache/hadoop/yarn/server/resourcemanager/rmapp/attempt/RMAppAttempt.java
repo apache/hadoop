@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 import java.util.List;
 import java.util.Set;
 
+import javax.crypto.SecretKey;
+
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -32,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 
 /**
@@ -91,12 +92,6 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
   String getWebProxyBase();
 
   /**
-   * The token required by the clients to talk to the application attempt
-   * @return the token required by the clients to talk to the application attempt
-   */
-  Token<ClientToAMTokenIdentifier> getClientToAMToken();
-
-  /**
    * Diagnostics information for the application attempt.
    * @return diagnostics information for the application attempt.
    */
@@ -153,6 +148,12 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @return The AMRMToken belonging to this app attempt
    */
   Token<AMRMTokenIdentifier> getAMRMToken();
+
+  /**
+   * The master key for client-to-AM tokens for this app attempt
+   * @return The master key for client-to-AM tokens for this app attempt
+   */
+  SecretKey getClientTokenMasterKey();
 
   /**
    * Get application container and resource usage information.

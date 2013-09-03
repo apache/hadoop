@@ -138,7 +138,7 @@ public class TestParentQueue {
           throw new Exception();
         } catch (Exception e) {
           LOG.info("FOOBAR q.assignContainers q=" + queue.getQueueName() + 
-              " alloc=" + allocation + " node=" + node.getHostName());
+              " alloc=" + allocation + " node=" + node.getNodeName());
         }
         final Resource allocatedResource = Resources.createResource(allocation);
         if (queue instanceof ParentQueue) {
