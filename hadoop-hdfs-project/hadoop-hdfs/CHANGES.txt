@@ -110,6 +110,8 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5128. Allow multiple net interfaces to be used with HA namenode RPC
     server. (kihwal)
 
+    HDFS-5150. Allow per NN SPN for internal SPNEGO. (kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
