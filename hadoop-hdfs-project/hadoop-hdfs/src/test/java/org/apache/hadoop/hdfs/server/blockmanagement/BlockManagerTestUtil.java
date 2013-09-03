@@ -24,9 +24,11 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.Daemon;
 import org.junit.Assert;
 
@@ -214,5 +216,24 @@ public class BlockManagerTestUtil {
    */
   public static void checkHeartbeat(BlockManager bm) {
     bm.getDatanodeManager().getHeartbeatManager().heartbeatCheck();
+  }
+  
+  public static DatanodeDescriptor getLocalDatanodeDescriptor(
+      boolean initializeStorage) {
+    DatanodeDescriptor dn = new DatanodeDescriptor(DFSTestUtil.getLocalDatanodeID());
+    if (initializeStorage) {
+      dn.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
+    }
+    return dn;
+  }
+  
+  public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
+      String rackLocation, boolean initializeStorage) {
+      DatanodeDescriptor dn = DFSTestUtil.getDatanodeDescriptor(ipAddr,
+          DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT, rackLocation);
+      if (initializeStorage) {
+        dn.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
+      }
+      return dn;
   }
 }

@@ -247,9 +247,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   boolean removeBlock(BlockInfo b) {
     int index = b.findStorageInfo(this);
-    DatanodeStorageInfo s = b.getStorageInfo(index);
-    if (s != null) {
-      return s.removeBlock(b);
+    // if block exists on this datanode
+    if (index >= 0) {
+      DatanodeStorageInfo s = b.getStorageInfo(index);
+      if (s != null) {
+        return s.removeBlock(b);
+      }
     }
     return false;
   }

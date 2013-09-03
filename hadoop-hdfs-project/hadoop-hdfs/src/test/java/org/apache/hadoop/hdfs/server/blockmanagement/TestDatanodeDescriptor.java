@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -55,11 +56,13 @@ public class TestDatanodeDescriptor {
   
   @Test
   public void testBlocksCounter() throws Exception {
-    DatanodeDescriptor dd = DFSTestUtil.getLocalDatanodeDescriptor();
+    DatanodeDescriptor dd = BlockManagerTestUtil.getLocalDatanodeDescriptor(true);
     assertEquals(0, dd.numBlocks());
     BlockInfo blk = new BlockInfo(new Block(1L), 1);
     BlockInfo blk1 = new BlockInfo(new Block(2L), 2);
-    final String storageID = "STORAGE_ID";
+    Iterator<DatanodeStorageInfo> iterator = dd.getStorageInfos().iterator();
+    assertTrue(iterator.hasNext());
+    final String storageID = iterator.next().getStorageID();
     // add first block
     assertTrue(dd.addBlock(storageID, blk));
     assertEquals(1, dd.numBlocks());
