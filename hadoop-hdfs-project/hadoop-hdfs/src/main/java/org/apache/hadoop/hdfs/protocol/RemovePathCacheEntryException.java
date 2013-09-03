@@ -47,6 +47,16 @@ public abstract class RemovePathCacheEntryException extends IOException {
     }
   }
 
+  public final static class RemovePermissionDeniedException
+      extends RemovePathCacheEntryException {
+    private static final long serialVersionUID = 1L;
+
+    public RemovePermissionDeniedException(long entryId) {
+      super("permission denied when trying to remove path cache entry id " +
+        entryId, entryId);
+    }
+  }
+
   public final static class NoSuchIdException
       extends RemovePathCacheEntryException {
     private static final long serialVersionUID = 1L;

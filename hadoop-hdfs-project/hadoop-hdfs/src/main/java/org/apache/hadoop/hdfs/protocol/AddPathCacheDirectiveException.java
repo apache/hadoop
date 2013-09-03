@@ -65,6 +65,16 @@ public abstract class AddPathCacheDirectiveException extends IOException {
     }
   }
 
+  public static class PoolWritePermissionDeniedError
+      extends AddPathCacheDirectiveException {
+    private static final long serialVersionUID = 1L;
+
+    public PoolWritePermissionDeniedError(PathCacheDirective directive) {
+      super("write permission denied for pool '" + directive.getPool() + "'",
+            directive);
+    }
+  }
+
   public static class UnexpectedAddPathCacheDirectiveException
       extends AddPathCacheDirectiveException {
     private static final long serialVersionUID = 1L;

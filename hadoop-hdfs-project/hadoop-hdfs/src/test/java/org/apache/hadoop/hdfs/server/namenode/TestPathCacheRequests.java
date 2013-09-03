@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -32,16 +34,88 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.EmptyPathError;
 import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPoolNameError;
 import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPathNameError;
+import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.PoolWritePermissionDeniedError;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.RemovePathCacheEntryException.InvalidIdException;
 import org.apache.hadoop.hdfs.protocol.PathCacheDirective;
 import org.apache.hadoop.hdfs.protocol.PathCacheEntry;
 import org.apache.hadoop.hdfs.protocol.RemovePathCacheEntryException.NoSuchIdException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Fallible;
 import org.junit.Test;
 
 public class TestPathCacheRequests {
   static final Log LOG = LogFactory.getLog(TestPathCacheRequests.class);
+
+  @Test
+  public void testCreateAndRemovePools() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+    NamenodeProtocols proto = cluster.getNameNodeRpc();
+    CachePoolInfo req = new CachePoolInfo("pool1").
+        setOwnerName("bob").setGroupName("bobgroup").
+        setMode(0755).setWeight(150);
+    proto.addCachePool(req);
+    try {
+      proto.removeCachePool("pool99");
+      Assert.fail("expected to get an exception when " +
+          "removing a non-existent pool.");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("can't remove " +
+          "nonexistent cache pool", ioe);
+    }
+    proto.removeCachePool("pool1");
+    try {
+      proto.removeCachePool("pool1");
+      Assert.fail("expected to get an exception when " +
+          "removing a non-existent pool.");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("can't remove " +
+          "nonexistent cache pool", ioe);
+    }
+    req = new CachePoolInfo("pool2");
+    proto.addCachePool(req);
+  }
+
+  @Test
+  public void testCreateAndModifyPools() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+    NamenodeProtocols proto = cluster.getNameNodeRpc();
+    proto.addCachePool(new CachePoolInfo("pool1").
+        setOwnerName("abc").setGroupName("123").
+        setMode(0755).setWeight(150));
+    proto.modifyCachePool(new CachePoolInfo("pool1").
+        setOwnerName("def").setGroupName("456"));
+    RemoteIterator<CachePoolInfo> iter = proto.listCachePools("", 1);
+    CachePoolInfo info = iter.next();
+    assertEquals("pool1", info.getPoolName());
+    assertEquals("def", info.getOwnerName());
+    assertEquals("456", info.getGroupName());
+    assertEquals(Integer.valueOf(0755), info.getMode());
+    assertEquals(Integer.valueOf(150), info.getWeight());
+
+    try {
+      proto.removeCachePool("pool99");
+      Assert.fail("expected to get an exception when " +
+          "removing a non-existent pool.");
+    } catch (IOException ioe) {
+    }
+    proto.removeCachePool("pool1");
+    try {
+      proto.removeCachePool("pool1");
+      Assert.fail("expected to get an exception when " +
+          "removing a non-existent pool.");
+    } catch (IOException ioe) {
+    }
+  }
 
   private static void validateListAll(
       RemoteIterator<PathCacheEntry> iter,
@@ -67,12 +141,18 @@ public class TestPathCacheRequests {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive();
       NamenodeProtocols proto = cluster.getNameNodeRpc();
+      proto.addCachePool(new CachePoolInfo("pool1"));
+      proto.addCachePool(new CachePoolInfo("pool2"));
+      proto.addCachePool(new CachePoolInfo("pool3"));
+      proto.addCachePool(new CachePoolInfo("pool4").setMode(0));
       List<Fallible<PathCacheEntry>> addResults1 = 
           proto.addPathCacheDirectives(Arrays.asList(
             new PathCacheDirective[] {
         new PathCacheDirective("/alpha", "pool1"),
         new PathCacheDirective("/beta", "pool2"),
-        new PathCacheDirective("", "pool3")
+        new PathCacheDirective("", "pool3"),
+        new PathCacheDirective("/zeta", "nonexistent_pool"),
+        new PathCacheDirective("/zeta", "pool4")
       }));
       long ids1[] = new long[2];
       ids1[0] = addResults1.get(0).get().getEntryId();
@@ -82,6 +162,20 @@ public class TestPathCacheRequests {
         Assert.fail("expected an error when adding an empty path");
       } catch (IOException ioe) {
         Assert.assertTrue(ioe.getCause() instanceof EmptyPathError);
+      }
+      try {
+        addResults1.get(3).get();
+        Assert.fail("expected an error when adding to a nonexistent pool.");
+      } catch (IOException ioe) {
+        Assert.assertTrue(ioe.getCause() instanceof InvalidPoolNameError);
+      }
+      try {
+        addResults1.get(4).get();
+        Assert.fail("expected an error when adding to a pool with " +
+            "mode 0 (no permissions for anyone).");
+      } catch (IOException ioe) {
+        Assert.assertTrue(ioe.getCause()
+            instanceof PoolWritePermissionDeniedError);
       }
 
       List<Fallible<PathCacheEntry>> addResults2 = 

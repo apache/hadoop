@@ -1144,5 +1144,53 @@ public interface ClientProtocol {
   @Idempotent
   public RemoteIterator<PathCacheEntry> listPathCacheEntries(long prevId,
       String pool, int maxRepliesPerRequest) throws IOException;
-}
+  
+  /**
+   * Modify a cache pool.
+   *
+   * @param req
+   *          The request to modify a cache pool.
+   * @throws IOException 
+   *          If the request could not be completed.
+   */
+  @AtMostOnce
+  public void addCachePool(CachePoolInfo info) throws IOException;
 
+  /**
+   * Modify a cache pool.
+   *
+   * @param req
+   *          The request to modify a cache pool.
+   * @throws IOException 
+   *          If the request could not be completed.
+   */
+  @Idempotent
+  public void modifyCachePool(CachePoolInfo req) throws IOException;
+  
+  /**
+   * Remove a cache pool.
+   *
+   * @param cachePoolName
+   *          Name of the cache pool to remove.
+   * @throws IOException 
+   *          if the cache pool did not exist, or could not be removed.
+   */
+  @AtMostOnce
+  public void removeCachePool(String cachePoolName) throws IOException;
+
+  /**
+   * List some cache pools.
+   *
+   * @param prevKey
+   *          The previous key we listed.  We will list keys greater than this.
+   * @param maxRepliesPerRequest
+   *          Maximum number of cache pools to list.
+   * @return A remote iterator from which you can get CachePool objects.
+   *          Requests will be made as needed.
+   * @throws IOException
+   *          If there was an error listing cache pools.
+   */
+  @Idempotent
+  public RemoteIterator<CachePoolInfo> listCachePools(String prevKey,
+      int maxRepliesPerRequest) throws IOException;
+}

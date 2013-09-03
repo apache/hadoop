@@ -255,4 +255,40 @@ class FSPermissionChecker {
     throw new AccessControlException("Permission denied by sticky bit setting:" +
       " user=" + user + ", inode=" + inode);
   }
+
+  /**
+   * Check if this CachePool can be accessed.
+   *
+   * @param pc
+   *          Permission checker object with user name and groups.
+   * @param write
+   *          True if we care about write access; false otherwise.
+   * @return
+   *          True only if the cache pool is accessible.
+   */
+  private boolean checkPermission(String userName, 
+      String groupName, int mode, int mask) {
+    if ((mode & mask) != 0) {
+      return true;
+    }
+    if (((mode & (mask << 6)) != 0) 
+        && (getUser().equals(userName))) {
+      return true;
+    }
+    if (((mode & (mask << 6)) != 0) 
+        && (containsGroup(groupName))) {
+      return true;
+    }
+    return false;
+  }
+
+  public boolean checkWritePermission(String userName,
+      String groupName, int mode) {
+    return checkPermission(userName, groupName, mode, 02);
+  }
+
+  public boolean checkReadPermission(String userName,
+      String groupName, int mode) {
+    return checkPermission(userName, groupName, mode, 04);
+  }
 }

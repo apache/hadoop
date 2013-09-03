@@ -394,7 +394,8 @@ message RemovePathCacheEntriesResponseProto {
 enum RemovePathCacheEntryErrorProto {
   INVALID_CACHED_PATH_ID_ERROR = -1;
   NO_SUCH_CACHED_PATH_ID_ERROR = -2;
-  UNEXPECTED_REMOVE_ERROR = -3;
+  REMOVE_PERMISSION_DENIED_ERROR = -3;
+  UNEXPECTED_REMOVE_ERROR = -4;
 }
 
 message ListPathCacheEntriesRequestProto {
@@ -412,6 +413,53 @@ message ListPathCacheEntriesElementProto {
 message ListPathCacheEntriesResponseProto {
   repeated ListPathCacheEntriesElementProto elements = 1;
   required bool hasMore = 2;
+}
+
+message AddCachePoolRequestProto {
+  required string poolName = 1;
+  optional string ownerName = 2;
+  optional string groupName = 3;
+  optional int32 mode = 4;
+  optional int32 weight = 5;
+}
+
+message AddCachePoolResponseProto { // void response
+}
+
+message ModifyCachePoolRequestProto {
+  required string poolName = 1;
+  optional string ownerName = 2;
+  optional string groupName = 3;
+  optional int32 mode = 4;
+  optional int32 weight = 5;
+}
+
+message ModifyCachePoolResponseProto { // void response
+}
+
+message RemoveCachePoolRequestProto {
+  required string poolName = 1;
+}
+
+message RemoveCachePoolResponseProto { // void response
+}
+
+message ListCachePoolsRequestProto {
+  required string prevPoolName = 1;
+  required int32 maxReplies = 2;
+}
+
+message ListCachePoolsResponseProto {
+  repeated ListCachePoolsResponseElementProto elements = 1;
+  optional bool hasMore = 2;
+}
+
+message ListCachePoolsResponseElementProto {
+  required string poolName = 1;
+  required string ownerName = 2;
+  required string groupName = 3;
+  required int32 mode = 4;
+  required int32 weight = 5;
 }
 
 message GetFileLinkInfoRequestProto {
@@ -601,6 +649,14 @@ service ClientNamenodeProtocol {
       returns (RemovePathCacheEntriesResponseProto);
   rpc listPathCacheEntries(ListPathCacheEntriesRequestProto)
       returns (ListPathCacheEntriesResponseProto);
+  rpc addCachePool(AddCachePoolRequestProto)
+      returns(AddCachePoolResponseProto);
+  rpc modifyCachePool(ModifyCachePoolRequestProto)
+      returns(ModifyCachePoolResponseProto);
+  rpc removeCachePool(RemoveCachePoolRequestProto)
+      returns(RemoveCachePoolResponseProto);
+  rpc listCachePools(ListCachePoolsRequestProto)
+      returns(ListCachePoolsResponseProto);
   rpc getFileLinkInfo(GetFileLinkInfoRequestProto)
       returns(GetFileLinkInfoResponseProto);
   rpc getContentSummary(GetContentSummaryRequestProto)

@@ -36,7 +36,7 @@ public class PathCacheDirective implements Comparable<PathCacheDirective> {
 
   private final String pool;
 
-  public PathCacheDirective(String path, String pool) throws IOException {
+  public PathCacheDirective(String path, String pool) {
     Preconditions.checkNotNull(path);
     Preconditions.checkNotNull(pool);
     this.path = path;
@@ -67,10 +67,9 @@ public class PathCacheDirective implements Comparable<PathCacheDirective> {
     if (path.isEmpty()) {
       throw new EmptyPathError(this);
     }
-    if (DFSUtil.isValidName(path)) {
+    if (!DFSUtil.isValidName(path)) {
       throw new InvalidPathNameError(this);
     }
-
     if (pool.isEmpty()) {
       throw new InvalidPoolNameError(this);
     }

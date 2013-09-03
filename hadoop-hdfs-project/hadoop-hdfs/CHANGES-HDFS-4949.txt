@@ -21,6 +21,10 @@ HDFS-4949 (Unreleased)
     HDFS-5141. Add cache status information to datanode heartbeat.
     (Contributed by Andrew Wang)
 
+    HDFS-5121. Add RPCs for creating and manipulating cache pools.
+    (Contributed by Colin Patrick McCabe)
+
+
   OPTIMIZATIONS
 
   BUG FIXES
