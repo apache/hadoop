@@ -169,4 +169,23 @@ public class TestCommitBlockSynchronization {
     namesystemSpy.commitBlockSynchronization(
         lastBlock, genStamp, length, true, false, newTargets, null);
   }
+
+  @Test
+  public void testCommitBlockSynchronizationWithCloseAndNonExistantTarget()
+      throws IOException {
+    INodeFileUnderConstruction file = mock(INodeFileUnderConstruction.class);
+    Block block = new Block(blockId, length, genStamp);
+    FSNamesystem namesystemSpy = makeNameSystemSpy(block, file);
+    DatanodeID[] newTargets = new DatanodeID[]{
+        new DatanodeID("0.0.0.0", "nonexistantHost", "1", 0, 0, 0)};
+
+    ExtendedBlock lastBlock = new ExtendedBlock();
+    namesystemSpy.commitBlockSynchronization(
+        lastBlock, genStamp, length, true,
+        false, newTargets, null);
+
+    // Repeat the call to make sure it returns true
+    namesystemSpy.commitBlockSynchronization(
+        lastBlock, genStamp, length, true, false, newTargets, null);
+  }
 }

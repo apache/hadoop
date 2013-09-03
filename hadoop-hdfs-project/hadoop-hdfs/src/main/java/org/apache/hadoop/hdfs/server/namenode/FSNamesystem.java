@@ -3326,7 +3326,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   boolean isFileClosed(String src) 
       throws AccessControlException, UnresolvedLinkException,
       StandbyException, IOException {
-    FSPermissionChecker pc = getPermissionChecker();	
+    FSPermissionChecker pc = getPermissionChecker();  
     checkOperation(OperationCategory.READ);
     readLock();
     try {
@@ -3784,18 +3784,39 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // find the DatanodeDescriptor objects
         // There should be no locations in the blockManager till now because the
         // file is underConstruction
-        final DatanodeStorageInfo[] storages = blockManager.getDatanodeManager()
-            .getDatanodeStorageInfos(newtargets, newtargetstorages);
-        if (closeFile && storages != null) {
+        ArrayList<DatanodeDescriptor> trimmedTargets =
+            new ArrayList<DatanodeDescriptor>(newtargets.length);
+        ArrayList<String> trimmedStorages =
+            new ArrayList<String>(newtargets.length);
+        if (newtargets.length > 0) {
+          for (int i = 0; i < newtargets.length; ++i) {
+            // try to get targetNode
+            DatanodeDescriptor targetNode =
+                blockManager.getDatanodeManager().getDatanode(newtargets[i]);
+            if (targetNode != null) {
+              trimmedTargets.add(targetNode);
+              trimmedStorages.add(newtargetstorages[i]);
+            } else if (LOG.isDebugEnabled()) {
+              LOG.debug("DatanodeDescriptor (=" + newtargets[i] + ") not found");
+            }
+          }
+        }
+        if ((closeFile) && !trimmedTargets.isEmpty()) {
           // the file is getting closed. Insert block locations into blockManager.
           // Otherwise fsck will report these blocks as MISSING, especially if the
           // blocksReceived from Datanodes take a long time to arrive.
-          for (int i = 0; i < storages.length; i++) {
-            storages[i].addBlock(storedBlock);
+          for (int i = 0; i < trimmedTargets.size(); i++) {
+            trimmedTargets.get(i).addBlock(
+              trimmedStorages.get(i), storedBlock);
           }
         }
+
         // add pipeline locations into the INodeUnderConstruction
-        pendingFile.setLastBlock(storedBlock, storages);
+        DatanodeStorageInfo[] trimmedStorageInfos =
+            blockManager.getDatanodeManager().getDatanodeStorageInfos(
+                trimmedTargets.toArray(new DatanodeID[trimmedTargets.size()]),
+                trimmedStorages.toArray(new String[trimmedStorages.size()]));
+        pendingFile.setLastBlock(storedBlock, trimmedStorageInfos);
       }
 
       if (closeFile) {
@@ -5823,7 +5844,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   Collection<CorruptFileBlockInfo> listCorruptFileBlocks(String path,
-	String[] cookieTab) throws IOException {
+  String[] cookieTab) throws IOException {
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.READ);
     readLock();
