@@ -194,6 +194,8 @@ public class ApplicationCLI extends YarnCLI {
     } else {
       if (appStates.isEmpty()) {
         appStates.add(YarnApplicationState.RUNNING);
+        appStates.add(YarnApplicationState.ACCEPTED);
+        appStates.add(YarnApplicationState.SUBMITTED);
       }
     }
 

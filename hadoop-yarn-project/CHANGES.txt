@@ -67,6 +67,10 @@ Release 2.1.1-beta - UNRELEASED
     as the corresponding value is now set correctly end-to-end. (Chuan Liu via
     vinodkv)
 
+    YARN-1124. Modified YARN CLI application list to display new and submitted
+    applications together with running apps by default, following up YARN-1074.
+    (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
