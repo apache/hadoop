@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -29,6 +32,17 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
  * by this class.
  */
 public class DatanodeStorageInfo {
+  static DatanodeInfo[] toDatanodeInfos(DatanodeStorageInfo[] storages) {
+    return toDatanodeInfos(Arrays.asList(storages));
+  }
+  static DatanodeInfo[] toDatanodeInfos(List<DatanodeStorageInfo> storages) {
+    final DatanodeInfo[] datanodes = new DatanodeInfo[storages.size()];
+    for(int i = 0; i < storages.size(); i++) {
+      datanodes[i] = storages.get(i).getDatanodeDescriptor();
+    }
+    return datanodes;
+  }
+
   /**
    * Iterates over the list of blocks belonging to the data-node.
    */
@@ -65,7 +79,7 @@ public class DatanodeStorageInfo {
   private long remaining;
   private volatile BlockInfo blockList = null;
   
-  DatanodeStorageInfo(DatanodeDescriptor dn, DatanodeStorage s) {
+  public DatanodeStorageInfo(DatanodeDescriptor dn, DatanodeStorage s) {
     this.dn = dn;
     this.storageID = s.getStorageID();
     this.storageType = s.getStorageType();
@@ -90,6 +104,10 @@ public class DatanodeStorageInfo {
   
   public String getStorageID() {
     return storageID;
+  }
+
+  public StorageType getStorageType() {
+    return storageType;
   }
 
   public long getCapacity() {

@@ -813,10 +813,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       UpdatePipelineRequestProto req) throws ServiceException {
     try {
       List<DatanodeIDProto> newNodes = req.getNewNodesList();
-      server
-          .updatePipeline(req.getClientName(), PBHelper.convert(req
-              .getOldBlock()), PBHelper.convert(req.getNewBlock()), PBHelper
-              .convert(newNodes.toArray(new DatanodeIDProto[newNodes.size()])));
+      List<String> newStorageIDs = req.getStorageIDsList();
+      server.updatePipeline(req.getClientName(),
+          PBHelper.convert(req.getOldBlock()),
+          PBHelper.convert(req.getNewBlock()),
+          PBHelper.convert(newNodes.toArray(new DatanodeIDProto[newNodes.size()])),
+          newStorageIDs.toArray(new String[newStorageIDs.size()]));
       return VOID_UPDATEPIPELINE_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);

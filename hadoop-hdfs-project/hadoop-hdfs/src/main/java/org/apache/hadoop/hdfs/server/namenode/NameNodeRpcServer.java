@@ -611,9 +611,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public void updatePipeline(String clientName, ExtendedBlock oldBlock,
-      ExtendedBlock newBlock, DatanodeID[] newNodes)
+      ExtendedBlock newBlock, DatanodeID[] newNodes, String[] newStorageIDs)
       throws IOException {
-    namesystem.updatePipeline(clientName, oldBlock, newBlock, newNodes);
+    namesystem.updatePipeline(clientName, oldBlock, newBlock, newNodes, newStorageIDs);
   }
   
   @Override // DatanodeProtocol

@@ -575,6 +575,8 @@ public class PBHelper {
         builder.addStorageTypes(PBHelper.convertStorageType(storageTypes[i]));
       }
     }
+    builder.addAllStorageIDs(Arrays.asList(b.getStorageIDs()));
+
     return builder.setB(PBHelper.convert(b.getBlock()))
         .setBlockToken(PBHelper.convert(b.getBlockToken()))
         .setCorrupt(b.isCorrupt()).setOffset(b.getStartOffset()).build();
@@ -602,6 +604,7 @@ public class PBHelper {
     }
 
     LocatedBlock lb = new LocatedBlock(PBHelper.convert(proto.getB()), targets,
+        proto.getStorageIDsList().toArray(new String[proto.getStorageIDsCount()]),
         storageTypes, proto.getOffset(), proto.getCorrupt());
     lb.setBlockToken(PBHelper.convert(proto.getBlockToken()));
     return lb;

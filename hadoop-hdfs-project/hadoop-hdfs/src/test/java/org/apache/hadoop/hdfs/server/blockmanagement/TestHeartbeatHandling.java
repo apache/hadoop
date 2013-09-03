@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -162,10 +161,13 @@ public class TestHeartbeatHandling {
           dd1.setLastUpdate(System.currentTimeMillis());
           dd2.setLastUpdate(System.currentTimeMillis());
           dd3.setLastUpdate(System.currentTimeMillis());
+          final DatanodeStorageInfo[] storages = {
+              dd1.getStorageInfos().iterator().next(),
+              dd2.getStorageInfos().iterator().next(),
+              dd3.getStorageInfos().iterator().next()};
           BlockInfoUnderConstruction blockInfo = new BlockInfoUnderConstruction(
               new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), 3,
-              BlockUCState.UNDER_RECOVERY,
-              new DatanodeDescriptor[] {dd1, dd2, dd3});
+              BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
           DatanodeCommand[] cmds =
               NameNodeAdapter.sendHeartBeat(nodeReg1, dd1, namesystem).getCommands();
@@ -187,8 +189,7 @@ public class TestHeartbeatHandling {
           dd3.setLastUpdate(System.currentTimeMillis());
           blockInfo = new BlockInfoUnderConstruction(
               new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), 3,
-              BlockUCState.UNDER_RECOVERY,
-              new DatanodeDescriptor[] {dd1, dd2, dd3});
+              BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
           cmds = NameNodeAdapter.sendHeartBeat(nodeReg1, dd1, namesystem).getCommands();
           assertEquals(1, cmds.length);
@@ -209,8 +210,7 @@ public class TestHeartbeatHandling {
           dd3.setLastUpdate(System.currentTimeMillis() - 80 * 1000);
           blockInfo = new BlockInfoUnderConstruction(
               new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), 3,
-              BlockUCState.UNDER_RECOVERY,
-              new DatanodeDescriptor[] {dd1, dd2, dd3});
+              BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
           cmds = NameNodeAdapter.sendHeartBeat(nodeReg1, dd1, namesystem).getCommands();
           assertEquals(1, cmds.length);

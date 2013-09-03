@@ -168,6 +168,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.OutOfV1GenerationStampsException;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -2484,8 +2485,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     // choose targets for the new block to be allocated.
-    final DatanodeDescriptor targets[] = getBlockManager().chooseTarget( 
+    // TODO: chooseTarget(..) should be changed to return DatanodeStorageInfo's
+    final DatanodeDescriptor chosenDatanodes[] = getBlockManager().chooseTarget( 
         src, replication, clientNode, excludedNodes, blockSize, favoredNodes);
+    final DatanodeStorageInfo[] targets = new DatanodeStorageInfo[chosenDatanodes.length];
+    for(int i = 0; i < targets.length; i++) {
+      final DatanodeDescriptor dd = chosenDatanodes[i];
+      targets[i] = dd.getStorageInfos().iterator().next(); 
+    }
 
     // Part II.
     // Allocate a new block, add it to the INode and the BlocksMap. 
@@ -2607,7 +2614,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             src + ". Returning previously allocated block " + lastBlockInFile);
         long offset = pendingFile.computeFileSize();
         onRetryBlock[0] = makeLocatedBlock(lastBlockInFile,
-            ((BlockInfoUnderConstruction)lastBlockInFile).getExpectedLocations(),
+            ((BlockInfoUnderConstruction)lastBlockInFile).getExpectedStorageLocations(),
             offset);
         return iip;
       } else {
@@ -2625,11 +2632,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return iip;
   }
 
-  LocatedBlock makeLocatedBlock(Block blk,
-                                        DatanodeInfo[] locs,
+  LocatedBlock makeLocatedBlock(Block blk, DatanodeStorageInfo[] locs,
                                         long offset) throws IOException {
-    LocatedBlock lBlk = new LocatedBlock(
-        getExtendedBlock(blk), locs, offset);
+    LocatedBlock lBlk = LocatedBlock.createLocatedBlock(
+        getExtendedBlock(blk), locs, offset, false);
     getBlockManager().setBlockToken(
         lBlk, BlockTokenSecretManager.AccessMode.WRITE);
     return lBlk;
@@ -2852,13 +2858,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws QuotaExceededException If addition of block exceeds space quota
    */
   BlockInfo saveAllocatedBlock(String src, INodesInPath inodesInPath,
-      Block newBlock, DatanodeDescriptor targets[]) throws IOException {
+      Block newBlock, DatanodeStorageInfo[] targets)
+          throws IOException {
     assert hasWriteLock();
     BlockInfo b = dir.addBlock(src, inodesInPath, newBlock, targets);
     NameNode.stateChangeLog.info("BLOCK* allocateBlock: " + src + ". "
         + getBlockPoolId() + " " + b);
-    for (DatanodeDescriptor dn : targets) {
-      dn.incBlocksScheduled();
+    for (DatanodeStorageInfo storage : targets) {
+      storage.getDatanodeDescriptor().incBlocksScheduled();
     }
     return b;
   }
@@ -3622,7 +3629,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)lastBlock;
       // setup the last block locations from the blockManager if not known
       if (uc.getNumExpectedLocations() == 0) {
-        uc.setExpectedLocations(blockManager.getNodes(lastBlock));
+        uc.setExpectedLocations(blockManager.getStorages(lastBlock));
       }
       // start recovery of the last block for this file
       long blockRecoveryId = nextGenerationStamp(isLegacyBlock(uc));
@@ -3777,24 +3784,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // find the DatanodeDescriptor objects
         // There should be no locations in the blockManager till now because the
         // file is underConstruction
-        DatanodeDescriptor[] descriptors = null;
-        if (newtargets.length > 0) {
-          descriptors = new DatanodeDescriptor[newtargets.length];
-          for(int i = 0; i < newtargets.length; i++) {
-            descriptors[i] = blockManager.getDatanodeManager().getDatanode(
-                newtargets[i]);
-          }
-        }
-        if ((closeFile) && (descriptors != null)) {
+        final DatanodeStorageInfo[] storages = blockManager.getDatanodeManager()
+            .getDatanodeStorageInfos(newtargets, newtargetstorages);
+        if (closeFile && storages != null) {
           // the file is getting closed. Insert block locations into blockManager.
           // Otherwise fsck will report these blocks as MISSING, especially if the
           // blocksReceived from Datanodes take a long time to arrive.
-          for (int i = 0; i < descriptors.length; i++) {
-            descriptors[i].addBlock(newtargetstorages[i], storedBlock);
+          for (int i = 0; i < storages.length; i++) {
+            storages[i].addBlock(storedBlock);
           }
         }
         // add pipeline locations into the INodeUnderConstruction
-        pendingFile.setLastBlock(storedBlock, descriptors);
+        pendingFile.setLastBlock(storedBlock, storages);
       }
 
       if (closeFile) {
@@ -5639,7 +5640,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException if any error occurs
    */
   void updatePipeline(String clientName, ExtendedBlock oldBlock, 
-      ExtendedBlock newBlock, DatanodeID[] newNodes)
+      ExtendedBlock newBlock, DatanodeID[] newNodes, String[] newStorageIDs)
       throws IOException {
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
@@ -5662,7 +5663,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       assert newBlock.getBlockId()==oldBlock.getBlockId() : newBlock + " and "
         + oldBlock + " has different block identifier";
       updatePipelineInternal(clientName, oldBlock, newBlock, newNodes,
-          cacheEntry != null);
+          newStorageIDs, cacheEntry != null);
       success = true;
     } finally {
       writeUnlock();
@@ -5674,7 +5675,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /** @see #updatePipeline(String, ExtendedBlock, ExtendedBlock, DatanodeID[]) */
   private void updatePipelineInternal(String clientName, ExtendedBlock oldBlock, 
-      ExtendedBlock newBlock, DatanodeID[] newNodes, boolean logRetryCache)
+      ExtendedBlock newBlock, DatanodeID[] newNodes, String[] newStorageIDs,
+      boolean logRetryCache)
       throws IOException {
     assert hasWriteLock();
     // check the vadility of the block and lease holder name
@@ -5698,15 +5700,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     blockinfo.setNumBytes(newBlock.getNumBytes());
 
     // find the DatanodeDescriptor objects
-    final DatanodeManager dm = getBlockManager().getDatanodeManager();
-    DatanodeDescriptor[] descriptors = null;
-    if (newNodes.length > 0) {
-      descriptors = new DatanodeDescriptor[newNodes.length];
-      for(int i = 0; i < newNodes.length; i++) {
-        descriptors[i] = dm.getDatanode(newNodes[i]);
-      }
-    }
-    blockinfo.setExpectedLocations(descriptors);
+    final DatanodeStorageInfo[] storages = blockManager.getDatanodeManager()
+        .getDatanodeStorageInfos(newNodes, newStorageIDs);
+    blockinfo.setExpectedLocations(storages);
 
     String src = leaseManager.findPath(pendingFile);
     dir.persistBlocks(src, pendingFile, logRetryCache);

@@ -134,6 +134,7 @@ message LocatedBlockProto {
 
   required hadoop.common.TokenProto blockToken = 5;
   repeated StorageTypeProto storageTypes = 6;
+  repeated string storageIDs = 7;
 }
 
 message DataEncryptionKeyProto {

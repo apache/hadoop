@@ -31,18 +31,19 @@ import org.junit.Test;
 public class TestBlockInfoUnderConstruction {
   @Test
   public void testInitializeBlockRecovery() throws Exception {
-    DatanodeDescriptor dd1 = DFSTestUtil.getDatanodeDescriptor("10.10.1.1",
-        "default");
-    DatanodeDescriptor dd2 = DFSTestUtil.getDatanodeDescriptor("10.10.1.2",
-        "default");
-    DatanodeDescriptor dd3 = DFSTestUtil.getDatanodeDescriptor("10.10.1.3",
-        "default");
+    DatanodeStorageInfo s1 = DFSTestUtil.createDatanodeStorageInfo("10.10.1.1", "s1");
+    DatanodeDescriptor dd1 = s1.getDatanodeDescriptor();
+    DatanodeStorageInfo s2 = DFSTestUtil.createDatanodeStorageInfo("10.10.1.2", "s2");
+    DatanodeDescriptor dd2 = s2.getDatanodeDescriptor();
+    DatanodeStorageInfo s3 = DFSTestUtil.createDatanodeStorageInfo("10.10.1.3", "s3");
+    DatanodeDescriptor dd3 = s3.getDatanodeDescriptor();
+
     dd1.isAlive = dd2.isAlive = dd3.isAlive = true;
     BlockInfoUnderConstruction blockInfo = new BlockInfoUnderConstruction(
         new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP),
         3,
         BlockUCState.UNDER_CONSTRUCTION,
-        new DatanodeDescriptor[] {dd1, dd2, dd3});
+        new DatanodeStorageInfo[] {s1, s2, s3});
 
     // Recovery attempt #1.
     long currentTime = System.currentTimeMillis();

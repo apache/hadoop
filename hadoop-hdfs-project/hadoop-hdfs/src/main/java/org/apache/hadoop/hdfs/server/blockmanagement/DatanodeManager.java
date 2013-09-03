@@ -23,7 +23,13 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,10 +54,17 @@ import org.apache.hadoop.hdfs.server.namenode.HostFileManager.EntrySet;
 import org.apache.hadoop.hdfs.server.namenode.HostFileManager.MutableEntrySet;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
-import org.apache.hadoop.hdfs.server.protocol.*;
+import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
@@ -421,6 +434,20 @@ public class DatanodeManager {
       throw e;
     }
     return node;
+  }
+
+  public DatanodeStorageInfo[] getDatanodeStorageInfos(
+      DatanodeID[] datanodeID, String[] storageIDs)
+          throws UnregisteredNodeException {
+    if (datanodeID.length == 0) {
+      return null;
+    }
+    final DatanodeStorageInfo[] storages = new DatanodeStorageInfo[datanodeID.length];
+    for(int i = 0; i < datanodeID.length; i++) {
+      final DatanodeDescriptor dd = getDatanode(datanodeID[i]);
+      storages[i] = dd.getStorageInfo(storageIDs[i]);
+    }
+    return storages; 
   }
 
   /** Prints information about all datanodes. */
@@ -1151,32 +1178,32 @@ public class DatanodeManager {
           BlockRecoveryCommand brCommand = new BlockRecoveryCommand(
               blocks.length);
           for (BlockInfoUnderConstruction b : blocks) {
-            DatanodeDescriptor[] expectedLocations = b.getExpectedLocations();
+            final DatanodeStorageInfo[] storages = b.getExpectedStorageLocations();
             // Skip stale nodes during recovery - not heart beated for some time (30s by default).
-            List<DatanodeDescriptor> recoveryLocations =
-                new ArrayList<DatanodeDescriptor>(expectedLocations.length);
-            for (int i = 0; i < expectedLocations.length; i++) {
-              if (!expectedLocations[i].isStale(this.staleInterval)) {
-                recoveryLocations.add(expectedLocations[i]);
+            final List<DatanodeStorageInfo> recoveryLocations =
+                new ArrayList<DatanodeStorageInfo>(storages.length);
+            for (int i = 0; i < storages.length; i++) {
+              if (!storages[i].getDatanodeDescriptor().isStale(staleInterval)) {
+                recoveryLocations.add(storages[i]);
               }
             }
             // If we only get 1 replica after eliminating stale nodes, then choose all
             // replicas for recovery and let the primary data node handle failures.
             if (recoveryLocations.size() > 1) {
-              if (recoveryLocations.size() != expectedLocations.length) {
+              if (recoveryLocations.size() != storages.length) {
                 LOG.info("Skipped stale nodes for recovery : " +
-                    (expectedLocations.length - recoveryLocations.size()));
+                    (storages.length - recoveryLocations.size()));
               }
               brCommand.add(new RecoveringBlock(
                   new ExtendedBlock(blockPoolId, b),
-                  recoveryLocations.toArray(new DatanodeDescriptor[recoveryLocations.size()]),
+                  DatanodeStorageInfo.toDatanodeInfos(recoveryLocations),
                   b.getBlockRecoveryId()));
             } else {
               // If too many replicas are stale, then choose all replicas to participate
               // in block recovery.
               brCommand.add(new RecoveringBlock(
                   new ExtendedBlock(blockPoolId, b),
-                  expectedLocations,
+                  DatanodeStorageInfo.toDatanodeInfos(storages),
                   b.getBlockRecoveryId()));
             }
           }

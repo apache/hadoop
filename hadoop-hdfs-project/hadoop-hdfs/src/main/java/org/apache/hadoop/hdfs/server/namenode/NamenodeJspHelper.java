@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -1065,11 +1066,10 @@ class NamenodeJspHelper {
         } 
 
         doc.startTag("replicas");
-        for(final Iterator<DatanodeDescriptor> it = blockManager.datanodeIterator(block);
-            it.hasNext(); ) {
+        for(DatanodeStorageInfo storage : blockManager.getStorages(block)) {
           doc.startTag("replica");
 
-          DatanodeDescriptor dd = it.next();
+          DatanodeDescriptor dd = storage.getDatanodeDescriptor();
 
           doc.startTag("host_name");
           doc.pcdata(dd.getHostName());

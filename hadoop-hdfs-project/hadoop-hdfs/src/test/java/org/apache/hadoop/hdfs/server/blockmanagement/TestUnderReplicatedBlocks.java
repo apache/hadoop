@@ -48,7 +48,8 @@ public class TestUnderReplicatedBlocks {
       // but the block does not get put into the under-replicated blocks queue
       final BlockManager bm = cluster.getNamesystem().getBlockManager();
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
-      DatanodeDescriptor dn = bm.blocksMap.nodeIterator(b.getLocalBlock()).next();
+      DatanodeDescriptor dn = bm.blocksMap.getStorages(b.getLocalBlock())
+          .iterator().next().getDatanodeDescriptor();
       bm.addToInvalidates(b.getLocalBlock(), dn);
       // Compute the invalidate work in NN, and trigger the heartbeat from DN
       BlockManagerTestUtil.computeAllPendingWork(bm);

@@ -982,7 +982,7 @@ public interface ClientProtocol {
    */
   @AtMostOnce
   public void updatePipeline(String clientName, ExtendedBlock oldBlock, 
-      ExtendedBlock newBlock, DatanodeID[] newNodes)
+      ExtendedBlock newBlock, DatanodeID[] newNodes, String[] newStorageIDs)
       throws IOException;
 
   /**

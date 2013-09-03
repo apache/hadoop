@@ -437,6 +437,7 @@ message UpdatePipelineRequestProto {
   required ExtendedBlockProto oldBlock = 2;
   required ExtendedBlockProto newBlock = 3;
   repeated DatanodeIDProto newNodes = 4;
+  repeated string storageIDs = 5;
 }
 
 message UpdatePipelineResponseProto { // void response

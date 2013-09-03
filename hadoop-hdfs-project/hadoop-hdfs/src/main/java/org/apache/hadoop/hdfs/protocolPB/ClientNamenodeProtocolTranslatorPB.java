@@ -780,12 +780,13 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public void updatePipeline(String clientName, ExtendedBlock oldBlock,
-      ExtendedBlock newBlock, DatanodeID[] newNodes) throws IOException {
+      ExtendedBlock newBlock, DatanodeID[] newNodes, String[] storageIDs) throws IOException {
     UpdatePipelineRequestProto req = UpdatePipelineRequestProto.newBuilder()
         .setClientName(clientName)
         .setOldBlock(PBHelper.convert(oldBlock))
         .setNewBlock(PBHelper.convert(newBlock))
         .addAllNewNodes(Arrays.asList(PBHelper.convert(newNodes)))
+        .addAllStorageIDs(Arrays.asList(storageIDs))
         .build();
     try {
       rpcProxy.updatePipeline(null, req);

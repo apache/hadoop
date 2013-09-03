@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.Time;
@@ -71,6 +72,7 @@ public class TestReplicationPolicy {
   private static BlockPlacementPolicy replicator;
   private static final String filename = "/dummyfile.txt";
   private static DatanodeDescriptor dataNodes[];
+  private static String[] storageIDs;
   // The interval for marking a datanode as stale,
   private static long staleInterval = 
       DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT;
@@ -1143,11 +1145,12 @@ public class TestReplicationPolicy {
     info.setBlockCollection(mbc);
     bm.addBlockCollection(info, mbc);
 
-    DatanodeDescriptor[] dnAry = {dataNodes[0]};
+    DatanodeStorageInfo[] storageAry = {new DatanodeStorageInfo(
+        dataNodes[0], new DatanodeStorage("s1"))};
     final BlockInfoUnderConstruction ucBlock =
         info.convertToBlockUnderConstruction(BlockUCState.UNDER_CONSTRUCTION,
-            dnAry);
-    when(mbc.setLastBlock((BlockInfo) any(), (DatanodeDescriptor[]) any()))
+            storageAry);
+    when(mbc.setLastBlock((BlockInfo) any(), (DatanodeStorageInfo[]) any()))
     .thenReturn(ucBlock);
 
     bm.convertLastBlockToUnderConstruction(mbc);

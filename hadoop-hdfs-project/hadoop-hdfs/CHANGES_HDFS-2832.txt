@@ -13,5 +13,7 @@ IMPROVEMENTS:
     HDFS-4987. Namenode changes to track multiple storages per datanode.
     (szetszwo)
 
-    HDFS-5154.  Fix TestBlockManager and TestDatanodeDescriptor after HDFS-4987.
+    HDFS-5154. Fix TestBlockManager and TestDatanodeDescriptor after HDFS-4987.
     (Junping Du via szetszwo)
+
+    HDFS-5009. Include storage information in the LocatedBlock.  (szetszwo)
