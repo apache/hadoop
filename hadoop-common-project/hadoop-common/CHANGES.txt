@@ -179,6 +179,8 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9924. FileUtil.createJarWithClassPath() does not generate relative
     classpath correctly. (Shanyu Zhao via ivanmi)
 
+    HADOOP-9932. Improper synchronization in RetryCache. (kihwal)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
