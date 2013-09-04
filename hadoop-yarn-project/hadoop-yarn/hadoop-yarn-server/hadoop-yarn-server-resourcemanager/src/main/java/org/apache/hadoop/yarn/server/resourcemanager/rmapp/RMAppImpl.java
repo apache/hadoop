@@ -76,7 +76,6 @@ public class RMAppImpl implements RMApp {
   private final String queue;
   private final String name;
   private final ApplicationSubmissionContext submissionContext;
-  private final String clientTokenStr;
   private final ApplicationStore appStore;
   private final Dispatcher dispatcher;
   private final YarnScheduler scheduler;
@@ -175,7 +174,7 @@ public class RMAppImpl implements RMApp {
 
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
-      ApplicationSubmissionContext submissionContext, String clientTokenStr,
+      ApplicationSubmissionContext submissionContext,
       ApplicationStore appStore,
       YarnScheduler scheduler, ApplicationMasterService masterService, 
       long submitTime) {
@@ -189,7 +188,6 @@ public class RMAppImpl implements RMApp {
     this.user = user;
     this.queue = queue;
     this.submissionContext = submissionContext;
-    this.clientTokenStr = clientTokenStr;
     this.appStore = appStore;
     this.scheduler = scheduler;
     this.masterService = masterService;
@@ -468,8 +466,7 @@ public class RMAppImpl implements RMApp {
     appAttemptId.setAttemptId(attempts.size() + 1);
 
     RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
-        clientTokenStr, rmContext, scheduler, masterService,
-        submissionContext, conf);
+        rmContext, scheduler, masterService, submissionContext, conf);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
     handler.handle(

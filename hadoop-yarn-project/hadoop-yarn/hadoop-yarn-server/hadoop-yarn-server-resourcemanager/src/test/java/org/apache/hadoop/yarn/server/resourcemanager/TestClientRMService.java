@@ -36,9 +36,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.MockApps;
@@ -256,7 +254,7 @@ public class TestClientRMService {
     ApplicationsStore stateStore = mock(ApplicationsStore.class);
     when(rmContext.getApplicationsStore()).thenReturn(stateStore);
     mockRMContext(yarnScheduler, rmContext);
-    RMAppManager appManager = new RMAppManager(rmContext, null, yarnScheduler,
+    RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler,
         null, mock(ApplicationACLsManager.class), new Configuration());
 
     final ApplicationId appId1 = getApplicationId(100);
@@ -371,7 +369,7 @@ public class TestClientRMService {
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,
       ApplicationId applicationId3, YarnConfiguration config, String queueName) {
     return new RMAppImpl(applicationId3, rmContext, config, null, null,
-        queueName, null, null, null, yarnScheduler, null, System
+        queueName, null, null, yarnScheduler, null, System
             .currentTimeMillis());
   }
 }

@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NodeStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -59,4 +60,6 @@ public interface RMContext {
   ApplicationTokenSecretManager getApplicationTokenSecretManager();
 
   RMContainerTokenSecretManager getContainerTokenSecretManager();
+
+  ClientToAMSecretManager getClientToAMSecretManager();
 }

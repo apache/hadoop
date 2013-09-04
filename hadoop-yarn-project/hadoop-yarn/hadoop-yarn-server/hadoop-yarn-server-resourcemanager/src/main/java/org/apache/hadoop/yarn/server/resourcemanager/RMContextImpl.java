@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NodeStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
@@ -54,13 +55,15 @@ public class RMContextImpl implements RMContext {
   private final DelegationTokenRenewer tokenRenewer;
   private final ApplicationTokenSecretManager appTokenSecretManager;
   private final RMContainerTokenSecretManager containerTokenSecretManager;
+  private final ClientToAMSecretManager clientToAMSecretManager;
 
   public RMContextImpl(Store store, Dispatcher rmDispatcher,
       ContainerAllocationExpirer containerAllocationExpirer,
       AMLivelinessMonitor amLivelinessMonitor,
       DelegationTokenRenewer tokenRenewer,
       ApplicationTokenSecretManager appTokenSecretManager,
-      RMContainerTokenSecretManager containerTokenSecretManager) {
+      RMContainerTokenSecretManager containerTokenSecretManager,
+      ClientToAMSecretManager clientToAMSecretManager) {
     this.store = store;
     this.rmDispatcher = rmDispatcher;
     this.containerAllocationExpirer = containerAllocationExpirer;
@@ -68,6 +71,7 @@ public class RMContextImpl implements RMContext {
     this.tokenRenewer = tokenRenewer;
     this.appTokenSecretManager = appTokenSecretManager;
     this.containerTokenSecretManager = containerTokenSecretManager;
+    this.clientToAMSecretManager = clientToAMSecretManager;
   }
   
   @Override
@@ -123,5 +127,10 @@ public class RMContextImpl implements RMContext {
   @Override
   public RMContainerTokenSecretManager getContainerTokenSecretManager() {
     return this.containerTokenSecretManager;
+  }
+
+  @Override
+  public ClientToAMSecretManager getClientToAMSecretManager() {
+    return this.clientToAMSecretManager;
   }
 }

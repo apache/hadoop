@@ -27,15 +27,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
-import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -58,19 +55,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
   private LinkedList<ApplicationId> completedApps = new LinkedList<ApplicationId>();
 
   private final RMContext rmContext;
-  private final ClientToAMSecretManager clientToAMSecretManager;
   private final ApplicationMasterService masterService;
   private final YarnScheduler scheduler;
   private final ApplicationACLsManager applicationACLsManager;
   private Configuration conf;
 
   public RMAppManager(RMContext context,
-      ClientToAMSecretManager clientToAMSecretManager,
       YarnScheduler scheduler, ApplicationMasterService masterService,
       ApplicationACLsManager applicationACLsManager, Configuration conf) {
     this.rmContext = context;
     this.scheduler = scheduler;
-    this.clientToAMSecretManager = clientToAMSecretManager;
     this.masterService = masterService;
     this.applicationACLsManager = applicationACLsManager;
     this.conf = conf;
@@ -230,16 +224,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     ApplicationId applicationId = submissionContext.getApplicationId();
     RMApp application = null;
     try {
-      String clientTokenStr = null;
-      if (UserGroupInformation.isSecurityEnabled()) {
-        Token<ClientTokenIdentifier> clientToken = new 
-            Token<ClientTokenIdentifier>(
-            new ClientTokenIdentifier(applicationId),
-            this.clientToAMSecretManager);
-        clientTokenStr = clientToken.encodeToUrlString();
-        LOG.debug("Sending client token as " + clientTokenStr);
-      }
-      
       // Sanity checks
       if (submissionContext.getQueue() == null) {
         submissionContext.setQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
@@ -259,7 +243,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
           new RMAppImpl(applicationId, rmContext, this.conf,
             submissionContext.getApplicationName(),
             submissionContext.getUser(), submissionContext.getQueue(),
-            submissionContext, clientTokenStr, appStore, this.scheduler,
+            submissionContext, appStore, this.scheduler,
             this.masterService, submitTime);
 
       // Sanity check - duplicate?

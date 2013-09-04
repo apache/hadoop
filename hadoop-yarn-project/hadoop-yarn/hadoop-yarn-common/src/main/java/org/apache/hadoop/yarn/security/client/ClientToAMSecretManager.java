@@ -26,8 +26,9 @@ import javax.crypto.SecretKey;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ClientToAMSecretManager extends
     SecretManager<ClientTokenIdentifier> {
@@ -35,11 +36,11 @@ public class ClientToAMSecretManager extends
   private static Log LOG = LogFactory.getLog(ClientToAMSecretManager.class);
 
   // Per application masterkeys for managing client-tokens
-  private Map<Text, SecretKey> masterKeys = new HashMap<Text, SecretKey>();
+  private Map<ApplicationId, SecretKey> masterKeys =
+      new HashMap<ApplicationId, SecretKey>();
 
-  public void setMasterKey(ClientTokenIdentifier identifier, byte[] key) {
+  public void setMasterKey(ApplicationId applicationID, byte[] key) {
     SecretKey sk = SecretManager.createSecretKey(key);
-    Text applicationID = identifier.getApplicationID();
     this.masterKeys.put(applicationID, sk);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Setting master key for "
@@ -50,8 +51,7 @@ public class ClientToAMSecretManager extends
     }
   }
 
-  private void addMasterKey(ClientTokenIdentifier identifier) {
-    Text applicationID = identifier.getApplicationID();
+  private void addMasterKey(ApplicationId applicationID) {
     this.masterKeys.put(applicationID, generateSecret());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Creating master key for "
@@ -62,11 +62,9 @@ public class ClientToAMSecretManager extends
   }
 
   // TODO: Handle the masterKey invalidation.
-  public synchronized SecretKey getMasterKey(
-      ClientTokenIdentifier identifier) {
-    Text applicationID = identifier.getApplicationID();
+  public synchronized SecretKey getMasterKey(ApplicationId applicationID) {
     if (!this.masterKeys.containsKey(applicationID)) {
-      addMasterKey(identifier);
+      addMasterKey(applicationID);
     }
     return this.masterKeys.get(applicationID);
   }
@@ -74,8 +72,11 @@ public class ClientToAMSecretManager extends
   @Override
   public synchronized byte[] createPassword(
       ClientTokenIdentifier identifier) {
+    ApplicationId applicationID = ConverterUtils.toApplicationId(
+        identifier.getApplicationID().toString());
     byte[] password =
-        createPassword(identifier.getBytes(), getMasterKey(identifier));
+        createPassword(identifier.getBytes(),
+            getMasterKey(applicationID));
     if (LOG.isDebugEnabled()) {
       LOG.debug("Password created is "
           + new String(Base64.encodeBase64(password)));
@@ -86,8 +87,8 @@ public class ClientToAMSecretManager extends
   @Override
   public byte[] retrievePassword(ClientTokenIdentifier identifier)
       throws SecretManager.InvalidToken {
-    byte[] password =
-        createPassword(identifier.getBytes(), getMasterKey(identifier));
+    byte[] password = createPassword(identifier.getBytes(),
+        getMasterKey(identifier.getApplicationID()));
     if (LOG.isDebugEnabled()) {
       LOG.debug("Password retrieved is "
           + new String(Base64.encodeBase64(password)));

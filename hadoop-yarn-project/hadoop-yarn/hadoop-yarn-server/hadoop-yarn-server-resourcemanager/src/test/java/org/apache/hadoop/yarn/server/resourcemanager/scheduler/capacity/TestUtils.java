@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
@@ -84,7 +85,8 @@ public class TestUtils {
     RMContext rmContext =
         new RMContextImpl(null, nullDispatcher, cae, null, null,
           new ApplicationTokenSecretManager(conf),
-          new RMContainerTokenSecretManager(conf));
+          new RMContainerTokenSecretManager(conf),
+          new ClientToAMSecretManager());
     
     return rmContext;
   }

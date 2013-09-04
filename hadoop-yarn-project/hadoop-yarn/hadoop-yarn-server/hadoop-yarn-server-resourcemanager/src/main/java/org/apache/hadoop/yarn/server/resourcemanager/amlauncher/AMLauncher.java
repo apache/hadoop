@@ -54,8 +54,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
-import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -76,7 +74,6 @@ public class AMLauncher implements Runnable {
   private final Configuration conf;
   private final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
-  private final ClientToAMSecretManager clientToAMSecretManager;
   private final AMLauncherEventType eventType;
   private final RMContext rmContext;
   
@@ -84,11 +81,9 @@ public class AMLauncher implements Runnable {
   private final EventHandler handler;
   
   public AMLauncher(RMContext rmContext, RMAppAttempt application,
-      AMLauncherEventType eventType,
-      ClientToAMSecretManager clientToAMSecretManager, Configuration conf) {
+      AMLauncherEventType eventType, Configuration conf) {
     this.application = application;
     this.conf = conf;
-    this.clientToAMSecretManager = clientToAMSecretManager;
     this.eventType = eventType;
     this.rmContext = rmContext;
     this.handler = rmContext.getDispatcher().getEventHandler();
@@ -237,10 +232,9 @@ public class AMLauncher implements Runnable {
       container.setContainerTokens(
           ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
 
-      ClientTokenIdentifier identifier = new ClientTokenIdentifier(
-          application.getAppAttemptId().getApplicationId());
       SecretKey clientSecretKey =
-          this.clientToAMSecretManager.getMasterKey(identifier);
+          this.rmContext.getClientToAMSecretManager().getMasterKey(
+              application.getAppAttemptId().getApplicationId());
       String encoded =
           Base64.encodeBase64URLSafeString(clientSecretKey.getEncoded());
       environment.put(

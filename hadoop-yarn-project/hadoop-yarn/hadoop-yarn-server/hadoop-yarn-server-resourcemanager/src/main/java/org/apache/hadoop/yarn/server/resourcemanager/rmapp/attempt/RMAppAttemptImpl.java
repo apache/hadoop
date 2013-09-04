@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -37,6 +38,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -52,6 +55,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
@@ -110,7 +114,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private final WriteLock writeLock;
 
   private final ApplicationAttemptId applicationAttemptId;
-  private final String clientToken;
   private final ApplicationSubmissionContext submissionContext;
 
   //nodes on while this attempt's containers ran
@@ -265,7 +268,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     .installTopology();
 
   public RMAppAttemptImpl(ApplicationAttemptId appAttemptId,
-      String clientToken, RMContext rmContext, YarnScheduler scheduler,
+      RMContext rmContext, YarnScheduler scheduler,
       ApplicationMasterService masterService,
       ApplicationSubmissionContext submissionContext,
       Configuration conf) {
@@ -277,7 +280,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     this.submissionContext = submissionContext;
     this.scheduler = scheduler;
     this.masterService = masterService;
-    this.clientToken = clientToken;
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -403,7 +405,22 @@ public class RMAppAttemptImpl implements RMAppAttempt {
 
   @Override
   public String getClientToken() {
-    return this.clientToken;
+    String tokenStr = null;
+    if (UserGroupInformation.isSecurityEnabled()) {
+      try {
+        UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+        ClientTokenIdentifier tokenId =
+            new ClientTokenIdentifier(applicationAttemptId.getApplicationId(),
+                ugi.getUserName());
+        Token<ClientTokenIdentifier> token =
+            new Token<ClientTokenIdentifier>(tokenId,
+                this.rmContext.getClientToAMSecretManager());
+        tokenStr = token.encodeToUrlString();
+      } catch (IOException e) {
+        LOG.error("Error generating client-to-AM token", e);
+      }
+    }
+    return tokenStr;
   }
 
   @Override

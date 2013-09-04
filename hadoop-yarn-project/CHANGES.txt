@@ -14,6 +14,8 @@ Release 0.23.10 - UNRELEASED
     YARN-985. Nodemanager should log where a resource was localized (Ravi
     Prakash via jeagles)
 
+    YARN-707. Add user info in the YARN ClientToken (jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -28,36 +28,46 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 public class ClientTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND_NAME = new Text("YARN_CLIENT_TOKEN");
 
-  private Text appId;
+  private ApplicationId appId;
+  private Text clientName;
 
   // TODO: Add more information in the tokenID such that it is not
   // transferrable, more secure etc.
 
-  public ClientTokenIdentifier(ApplicationId id) {
-    this.appId = new Text(Integer.toString(id.getId()));
+  public ClientTokenIdentifier(ApplicationId id, String clientName) {
+    this.appId = id;
+    this.clientName = new Text(clientName);
   }
 
   public ClientTokenIdentifier() {
-    this.appId = new Text();
+    this.clientName = new Text();
   }
 
-  public Text getApplicationID() {
+  public ApplicationId getApplicationID() {
     return appId;
+  }
+
+  public Text getClientName() {
+    return clientName;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    appId.write(out);
+    out.writeLong(this.appId.getClusterTimestamp());
+    out.writeInt(this.appId.getId());
+    clientName.write(out);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    appId.readFields(in);
+    this.appId = BuilderUtils.newApplicationId(in.readLong(), in.readInt());
+    clientName.readFields(in);
   }
 
   @Override
@@ -67,10 +77,11 @@ public class ClientTokenIdentifier extends TokenIdentifier {
 
   @Override
   public UserGroupInformation getUser() {
-    if (appId == null || "".equals(appId.toString())) {
+    String userName = clientName.toString();
+    if (userName.isEmpty()) {
       return null;
     }
-    return UserGroupInformation.createRemoteUser(appId.toString());
+    return UserGroupInformation.createRemoteUser(userName);
   }
 
   @InterfaceAudience.Private

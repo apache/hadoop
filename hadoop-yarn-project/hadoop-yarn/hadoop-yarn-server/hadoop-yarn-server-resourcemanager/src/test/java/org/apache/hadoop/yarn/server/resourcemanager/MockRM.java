@@ -275,8 +275,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ApplicationMasterLauncher createAMLauncher() {
-    return new ApplicationMasterLauncher(this.clientToAMSecretManager,
-      getRMContext()) {
+    return new ApplicationMasterLauncher(getRMContext()) {
       @Override
       public void start() {
         // override to not start rpc handler

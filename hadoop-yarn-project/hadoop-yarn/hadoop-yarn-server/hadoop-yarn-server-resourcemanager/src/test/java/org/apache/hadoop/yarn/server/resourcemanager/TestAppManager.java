@@ -92,7 +92,8 @@ public class TestAppManager{
     AMLivelinessMonitor amLivelinessMonitor = new AMLivelinessMonitor(
         rmDispatcher);
     return new RMContextImpl(new MemStore(), rmDispatcher,
-        containerAllocationExpirer, amLivelinessMonitor, null, null, null) {
+        containerAllocationExpirer, amLivelinessMonitor, null, null, null,
+        null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;
@@ -132,15 +133,14 @@ public class TestAppManager{
   public class TestRMAppManager extends RMAppManager {
 
     public TestRMAppManager(RMContext context, Configuration conf) {
-      super(context, null, null, null, new ApplicationACLsManager(conf), conf);
+      super(context, null, null, new ApplicationACLsManager(conf), conf);
       setCompletedAppsMax(YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
 
     public TestRMAppManager(RMContext context,
-        ClientToAMSecretManager clientToAMSecretManager,
         YarnScheduler scheduler, ApplicationMasterService masterService,
         ApplicationACLsManager applicationACLsManager, Configuration conf) {
-      super(context, clientToAMSecretManager, scheduler, masterService,
+      super(context, scheduler, masterService,
           applicationACLsManager, conf);
       setCompletedAppsMax(YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
@@ -339,8 +339,7 @@ public class TestAppManager{
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMSecretManager(), scheduler, masterService,
-        new ApplicationACLsManager(conf), conf);
+        scheduler, masterService, new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(1);
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
@@ -387,8 +386,7 @@ public class TestAppManager{
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMSecretManager(), scheduler, masterService,
-        new ApplicationACLsManager(conf), conf);
+        scheduler, masterService, new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(10);
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
@@ -435,8 +433,7 @@ public class TestAppManager{
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMSecretManager(), scheduler, masterService,
-        new ApplicationACLsManager(conf), conf);
+        scheduler, masterService, new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(0);
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);

@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
@@ -263,7 +264,8 @@ public class TestCapacityScheduler {
     setupQueueConfiguration(conf);
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(conf)));
+      null, new RMContainerTokenSecretManager(conf),
+      new ClientToAMSecretManager()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
     conf.setCapacity(A, 80f);
@@ -360,7 +362,7 @@ public class TestCapacityScheduler {
     conf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100.0f);
 
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
-      new RMContainerTokenSecretManager(conf)));
+      new RMContainerTokenSecretManager(conf), new ClientToAMSecretManager()));
   }
 
   @Test
@@ -371,7 +373,7 @@ public class TestCapacityScheduler {
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(csConf, new RMContextImpl(null, null, null, null, null, null,
-      new RMContainerTokenSecretManager(csConf)));
+      new RMContainerTokenSecretManager(csConf), new ClientToAMSecretManager()));
 
     RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
     RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2);
@@ -396,7 +398,7 @@ public class TestCapacityScheduler {
     setupQueueConfiguration(conf);
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
-      new RMContainerTokenSecretManager(conf)));
+      new RMContainerTokenSecretManager(conf), new ClientToAMSecretManager()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
     // Add a new queue b4

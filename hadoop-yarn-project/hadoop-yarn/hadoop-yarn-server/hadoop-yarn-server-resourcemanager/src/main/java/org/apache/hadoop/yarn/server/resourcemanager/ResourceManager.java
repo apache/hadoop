@@ -162,7 +162,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
         new RMContextImpl(this.store, this.rmDispatcher,
           this.containerAllocationExpirer, amLivelinessMonitor,
           tokenRenewer, this.appTokenSecretManager,
-          this.containerTokenSecretManager);
+          this.containerTokenSecretManager,
+          this.clientToAMSecretManager);
 
     addService(nodesListManager);
 
@@ -267,8 +268,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }  }
 
   protected ApplicationMasterLauncher createAMLauncher() {
-    return new ApplicationMasterLauncher(this.clientToAMSecretManager,
-      this.rmContext);
+    return new ApplicationMasterLauncher(this.rmContext);
   }
 
   private NMLivelinessMonitor createNMLivelinessMonitor() {
@@ -285,9 +285,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected RMAppManager createRMAppManager() {
-    return new RMAppManager(this.rmContext, this.clientToAMSecretManager,
-        this.scheduler, this.masterService, this.applicationACLsManager,
-        this.conf);
+    return new RMAppManager(this.rmContext, this.scheduler, this.masterService,
+        this.applicationACLsManager, this.conf);
   }
 
   @Private
