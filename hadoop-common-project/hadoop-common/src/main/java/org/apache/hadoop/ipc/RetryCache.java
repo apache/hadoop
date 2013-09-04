@@ -76,6 +76,12 @@ public class RetryCache {
       this.expirationTime = expirationTime;
     }
 
+    CacheEntry(byte[] clientId, int callId, long expirationTime,
+        boolean success) {
+      this(clientId, callId, expirationTime);
+      this.state = success ? SUCCESS : FAILED;
+    }
+
     private static int hashCode(long value) {
       return (int)(value ^ (value >>> 32));
     }
@@ -146,6 +152,12 @@ public class RetryCache {
       super(clientId, callId, expirationTime);
       this.payload = payload;
     }
+
+    CacheEntryWithPayload(byte[] clientId, int callId, Object payload,
+        long expirationTime, boolean success) {
+     super(clientId, callId, expirationTime, success);
+     this.payload = payload;
+   }
 
     /** Override equals to avoid findbugs warnings */
     @Override
@@ -253,18 +265,20 @@ public class RetryCache {
    */
   public void addCacheEntry(byte[] clientId, int callId) {
     CacheEntry newEntry = new CacheEntry(clientId, callId, System.nanoTime()
-        + expirationTime);
-    newEntry.completed(true);
-    set.put(newEntry);
+        + expirationTime, true);
+    synchronized(this) {
+      set.put(newEntry);
+    }
   }
   
   public void addCacheEntryWithPayload(byte[] clientId, int callId,
       Object payload) {
-    CacheEntry newEntry = new CacheEntryWithPayload(clientId, callId, payload,
-        System.nanoTime() + expirationTime);
     // since the entry is loaded from editlog, we can assume it succeeded.    
-    newEntry.completed(true);
-    set.put(newEntry);
+    CacheEntry newEntry = new CacheEntryWithPayload(clientId, callId, payload,
+        System.nanoTime() + expirationTime, true);
+    synchronized(this) {
+      set.put(newEntry);
+    }
   }
 
   private static CacheEntry newEntry(long expirationTime) {
