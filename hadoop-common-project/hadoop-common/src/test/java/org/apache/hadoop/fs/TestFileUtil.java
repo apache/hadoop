@@ -782,14 +782,23 @@ public class TestFileUtil {
             expectedClassPaths.add(wildcardMatch.toURI().toURL()
               .toExternalForm());
           }
-        } else if (nonExistentSubdir.equals(classPath)) {
-          // expect to maintain trailing path separator if present in input, even
-          // if directory doesn't exist yet
-          expectedClassPaths.add(new File(classPath).toURI().toURL()
-            .toExternalForm() + Path.SEPARATOR);
         } else {
-          expectedClassPaths.add(new File(classPath).toURI().toURL()
-            .toExternalForm());
+          File fileCp = null;
+          if(!new Path(classPath).isAbsolute()) {
+            fileCp = new File(tmp, classPath);
+          }
+          else {
+            fileCp = new File(classPath);
+          }
+          if (nonExistentSubdir.equals(classPath)) {
+            // expect to maintain trailing path separator if present in input, even
+            // if directory doesn't exist yet
+            expectedClassPaths.add(fileCp.toURI().toURL()
+              .toExternalForm() + Path.SEPARATOR);
+          } else {
+            expectedClassPaths.add(fileCp.toURI().toURL()
+              .toExternalForm());
+          }
         }
       }
       List<String> actualClassPaths = Arrays.asList(classPathAttr.split(" "));
