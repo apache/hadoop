@@ -216,7 +216,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   protected ContainersLauncher createContainersLauncher(Context context,
       ContainerExecutor exec) {
-    return new ContainersLauncher(context, this.dispatcher, exec, dirsHandler);
+    return new ContainersLauncher(context, this.dispatcher, exec, dirsHandler, this);
   }
 
   @Override
@@ -410,7 +410,7 @@ public class ContainerManagerImpl extends CompositeService implements
       }
     }
 
-    return StartContainersResponse.newInstance(auxiliaryServices.getMetaData(),
+    return StartContainersResponse.newInstance(getAuxServiceMetaData(),
       succeededContainers, failedContainers);
   }
 
@@ -759,4 +759,7 @@ public class ContainerManagerImpl extends CompositeService implements
     return this.context;
   }
 
+  public Map<String, ByteBuffer> getAuxServiceMetaData() {
+    return this.auxiliaryServices.getMetaData();
+  }
 }

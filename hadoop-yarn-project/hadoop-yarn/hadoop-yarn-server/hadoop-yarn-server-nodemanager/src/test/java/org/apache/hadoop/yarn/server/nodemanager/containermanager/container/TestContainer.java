@@ -650,7 +650,7 @@ public class TestContainer {
       Context context = mock(Context.class);
       when(context.getApplications()).thenReturn(
           new ConcurrentHashMap<ApplicationId, Application>());
-      launcher = new ContainersLauncher(context, dispatcher, null, null);
+      launcher = new ContainersLauncher(context, dispatcher, null, null, null);
       // create a mock ExecutorService, which will not really launch
       // ContainerLaunch at all.
       launcher.containerLauncher = mock(ExecutorService.class);
