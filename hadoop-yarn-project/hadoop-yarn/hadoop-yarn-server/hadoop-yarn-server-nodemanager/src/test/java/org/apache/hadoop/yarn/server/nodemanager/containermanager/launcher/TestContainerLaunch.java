@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.spy;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,6 +29,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,6 +39,7 @@ import java.util.Map;
 
 import junit.framework.Assert;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -70,11 +73,13 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
@@ -381,6 +386,12 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     	  + processStartFile);
       fileWriter.println("@echo " + Environment.HOME.$() + ">> "
           + processStartFile);
+      for (String serviceName : containerManager.getAuxServiceMetaData()
+          .keySet()) {
+        fileWriter.println("@echo" + AuxiliaryServiceHelper.NM_AUX_SERVICE
+            + serviceName + " >> "
+            + processStartFile);
+      }
       fileWriter.println("@echo " + cId + ">> " + processStartFile);
       fileWriter.println("@ping -n 100 127.0.0.1 >nul");
     } else {
@@ -403,6 +414,12 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           + processStartFile);
       fileWriter.write("\necho $" + Environment.HOME.name() + " >> "
           + processStartFile);
+      for (String serviceName : containerManager.getAuxServiceMetaData()
+          .keySet()) {
+        fileWriter.write("\necho $" + AuxiliaryServiceHelper.NM_AUX_SERVICE
+            + serviceName + " >> "
+            + processStartFile);
+      }
       fileWriter.write("\necho $$ >> " + processStartFile);
       fileWriter.write("\nexec sleep 100");
     }
@@ -487,6 +504,12 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
               YarnConfiguration.DEFAULT_NM_USER_HOME_DIR),
         reader.readLine());
 
+    for (String serviceName : containerManager.getAuxServiceMetaData().keySet()) {
+      Assert.assertEquals(
+          containerManager.getAuxServiceMetaData().get(serviceName),
+          ByteBuffer.wrap(Base64.decodeBase64(reader.readLine().getBytes())));
+    }
+
     Assert.assertEquals(cId.toString(), containerLaunchContext
         .getEnvironment().get(Environment.CONTAINER_ID.name()));
     Assert.assertEquals(context.getNodeId().getHost(), containerLaunchContext
@@ -555,6 +578,16 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     // Assert that the process is not alive anymore
     Assert.assertFalse("Process is still alive!",
       DefaultContainerExecutor.containerIsAlive(pid));
+  }
+
+  @Test (timeout = 5000)
+  public void testAuxiliaryServiceHelper() throws Exception {
+    Map<String, String> env = new HashMap<String, String>();
+    String serviceName = "testAuxiliaryService";
+    ByteBuffer bb = ByteBuffer.wrap("testAuxiliaryService".getBytes());
+    AuxiliaryServiceHelper.setServiceDataIntoEnv(serviceName, bb, env);
+    Assert.assertEquals(bb,
+        AuxiliaryServiceHelper.getServiceDataFromEnv(serviceName, env));
   }
 
   @Test
@@ -703,7 +736,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     };
     when(dispatcher.getEventHandler()).thenReturn(eventHandler);
     ContainerLaunch launch = new ContainerLaunch(context, new Configuration(),
-        dispatcher, exec, null, container, dirsHandler);
+        dispatcher, exec, null, container, dirsHandler, containerManager);
     launch.call();
   }
 

@@ -71,6 +71,9 @@ Release 2.1.1-beta - UNRELEASED
     applications together with running apps by default, following up YARN-1074.
     (Xuan Gong via vinodkv)
 
+    YARN-1065. NM should provide AuxillaryService data to the container (Xuan
+    Gong via bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES
