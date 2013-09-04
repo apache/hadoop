@@ -29,8 +29,7 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.EmptyPathError;
 import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPathNameError;
-import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPoolNameError;
-import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPoolError;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -113,7 +112,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCa
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathCacheEntriesElementProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathCacheEntriesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathCacheEntriesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveRequestProto;
@@ -173,7 +171,6 @@ import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
-import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenResponseProto;
@@ -1038,16 +1035,19 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public AddPathCacheDirectivesResponseProto addPathCacheDirectives(RpcController controller,
-      AddPathCacheDirectivesRequestProto request) throws ServiceException {
+  public AddPathCacheDirectivesResponseProto addPathCacheDirectives(
+      RpcController controller, AddPathCacheDirectivesRequestProto request)
+          throws ServiceException {
     try {
       ArrayList<PathCacheDirective> input =
           new ArrayList<PathCacheDirective>(request.getElementsCount());
       for (int i = 0; i < request.getElementsCount(); i++) {
         PathCacheDirectiveProto proto = request.getElements(i);
-        input.add(new PathCacheDirective(proto.getPath(), proto.getPool()));
+        input.add(new PathCacheDirective(proto.getPath(),
+            proto.getPool().getId()));
       }
-      List<Fallible<PathCacheEntry>> output = server.addPathCacheDirectives(input);
+      List<Fallible<PathCacheEntry>> output = server
+          .addPathCacheDirectives(input);
       AddPathCacheDirectivesResponseProto.Builder builder =
          AddPathCacheDirectivesResponseProto.newBuilder();
       for (int idx = 0; idx < output.size(); idx++) {
@@ -1060,7 +1060,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         } catch (InvalidPathNameError ioe) {
           builder.addResults(AddPathCacheDirectiveErrorProto.
               INVALID_PATH_NAME_ERROR_VALUE);
-        } catch (InvalidPoolNameError ioe) {
+        } catch (InvalidPoolError ioe) {
           builder.addResults(AddPathCacheDirectiveErrorProto.
               INVALID_POOL_NAME_ERROR_VALUE);
         } catch (IOException ioe) {
@@ -1108,22 +1108,21 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public ListPathCacheEntriesResponseProto listPathCacheEntries(RpcController controller,
-      ListPathCacheEntriesRequestProto request) throws ServiceException {
+  public ListPathCacheEntriesResponseProto listPathCacheEntries(
+      RpcController controller, ListPathCacheEntriesRequestProto request)
+      throws ServiceException {
     try {
+      CachePool pool = PBHelper.convert(request.getPool());
       RemoteIterator<PathCacheEntry> iter =
-         server.listPathCacheEntries(request.getPrevId(),
-             request.getPool(),
+         server.listPathCacheEntries(
+             PBHelper.convert(request.getPrevEntry()).getEntryId(),
+             pool.getId(),
              request.getMaxReplies());
       ListPathCacheEntriesResponseProto.Builder builder =
           ListPathCacheEntriesResponseProto.newBuilder();
       while (iter.hasNext()) {
         PathCacheEntry entry = iter.next();
-        builder.addElements(
-            ListPathCacheEntriesElementProto.newBuilder().
-              setId(entry.getEntryId()).
-              setPath(entry.getDirective().getPath()).
-              setPool(entry.getDirective().getPool()));
+        builder.addEntries(PBHelper.convert(entry));
       }
       return builder.build();
     } catch (IOException e) {
@@ -1135,46 +1134,20 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public AddCachePoolResponseProto addCachePool(RpcController controller,
       AddCachePoolRequestProto request) throws ServiceException {
     try {
-      CachePoolInfo info =
-          new CachePoolInfo(request.getPoolName());
-      if (request.hasOwnerName()) {
-        info.setOwnerName(request.getOwnerName());
-      }
-      if (request.hasGroupName()) {
-        info.setGroupName(request.getGroupName());
-      }
-      if (request.hasMode()) {
-        info.setMode(request.getMode());
-      }
-      if (request.hasWeight()) {
-        info.setWeight(request.getWeight());
-      }
-      server.addCachePool(info);
+      server.addCachePool(PBHelper.convert(request.getInfo()));
       return AddCachePoolResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
-  
+
   @Override
   public ModifyCachePoolResponseProto modifyCachePool(RpcController controller,
       ModifyCachePoolRequestProto request) throws ServiceException {
     try {
-      CachePoolInfo info =
-          new CachePoolInfo(request.getPoolName());
-      if (request.hasOwnerName()) {
-        info.setOwnerName(request.getOwnerName());
-      }
-      if (request.hasGroupName()) {
-        info.setGroupName(request.getGroupName());
-      }
-      if (request.hasMode()) {
-        info.setMode(request.getMode());
-      }
-      if (request.hasWeight()) {
-        info.setWeight(request.getWeight());
-      }
-      server.modifyCachePool(info);
+      server.modifyCachePool(
+          PBHelper.convert(request.getPool()).getId(),
+          PBHelper.convert(request.getInfo()));
       return ModifyCachePoolResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1185,7 +1158,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public RemoveCachePoolResponseProto removeCachePool(RpcController controller,
       RemoveCachePoolRequestProto request) throws ServiceException {
     try {
-      server.removeCachePool(request.getPoolName());
+      server.removeCachePool(PBHelper.convert(request.getPool()).getId());
       return RemoveCachePoolResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1196,28 +1169,16 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public ListCachePoolsResponseProto listCachePools(RpcController controller,
       ListCachePoolsRequestProto request) throws ServiceException {
     try {
-      RemoteIterator<CachePoolInfo> iter =
-        server.listCachePools(request.getPrevPoolName(),
+      RemoteIterator<CachePool> iter =
+        server.listCachePools(PBHelper.convert(request.getPrevPool()).getId(),
             request.getMaxReplies());
       ListCachePoolsResponseProto.Builder responseBuilder =
         ListCachePoolsResponseProto.newBuilder();
       while (iter.hasNext()) {
-        CachePoolInfo pool = iter.next();
-        ListCachePoolsResponseElementProto.Builder elemBuilder = 
+        CachePool pool = iter.next();
+        ListCachePoolsResponseElementProto.Builder elemBuilder =
             ListCachePoolsResponseElementProto.newBuilder();
-        elemBuilder.setPoolName(pool.getPoolName());
-        if (pool.getOwnerName() != null) {
-          elemBuilder.setOwnerName(pool.getOwnerName());
-        }
-        if (pool.getGroupName() != null) {
-          elemBuilder.setGroupName(pool.getGroupName());
-        }
-        if (pool.getMode() != null) {
-          elemBuilder.setMode(pool.getMode());
-        }
-        if (pool.getWeight() != null) {
-          elemBuilder.setWeight(pool.getWeight());
-        }
+        elemBuilder.setPool(PBHelper.convert(pool));
         responseBuilder.addElements(elemBuilder.build());
       }
       return responseBuilder.build();

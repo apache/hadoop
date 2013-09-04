@@ -29,7 +29,7 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
     public E get(int i);
     public int size();
   }
-  
+
   public static class BatchedListEntries<E> implements BatchedEntries<E> {
     private final List<E> entries;
 
@@ -39,7 +39,6 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
 
     public E get(int i) {
       return entries.get(i);
-      
     }
 
     public int size() {
@@ -47,13 +46,13 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
     }
   }
 
-  private K nextKey;
+  private K prevKey;
   private final int maxRepliesPerRequest;
   private BatchedEntries<E> entries;
   private int idx;
 
-  public BatchedRemoteIterator(K nextKey, int maxRepliesPerRequest) {
-    this.nextKey = nextKey;
+  public BatchedRemoteIterator(K prevKey, int maxRepliesPerRequest) {
+    this.prevKey = prevKey;
     this.maxRepliesPerRequest = maxRepliesPerRequest;
     this.entries = null;
     this.idx = -1;
@@ -66,13 +65,13 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
    * @param maxRepliesPerRequest   The maximum number of replies to allow.
    * @return                       A list of replies.
    */
-  public abstract BatchedEntries<E> makeRequest(K nextKey, int maxRepliesPerRequest)
-      throws IOException;
+  public abstract BatchedEntries<E> makeRequest(K prevKey,
+      int maxRepliesPerRequest) throws IOException;
 
   private void makeRequest() throws IOException {
     idx = 0;
     entries = null;
-    entries = makeRequest(nextKey, maxRepliesPerRequest);
+    entries = makeRequest(prevKey, maxRepliesPerRequest);
     if (entries.size() > maxRepliesPerRequest) {
       throw new IOException("invalid number of replies returned: got " +
           entries.size() + ", expected " + maxRepliesPerRequest +
@@ -106,7 +105,7 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
   /**
    * Return the next list key associated with an element.
    */
-  public abstract K elementToNextKey(E element);
+  public abstract K elementToPrevKey(E element);
 
   @Override
   public E next() throws IOException {
@@ -115,7 +114,7 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
       throw new NoSuchElementException();
     }
     E entry = entries.get(idx++);
-    nextKey = elementToNextKey(entry);
+    prevKey = elementToPrevKey(entry);
     return entry;
   }
 }

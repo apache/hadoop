@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -29,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -257,38 +257,29 @@ class FSPermissionChecker {
   }
 
   /**
-   * Check if this CachePool can be accessed.
+   * Whether a cache pool can be accessed by the current context
    *
-   * @param pc
-   *          Permission checker object with user name and groups.
-   * @param write
-   *          True if we care about write access; false otherwise.
-   * @return
-   *          True only if the cache pool is accessible.
+   * @param pool CachePool being accessed
+   * @param access type of action being performed on the cache pool
+   * @return if the pool can be accessed
    */
-  private boolean checkPermission(String userName, 
-      String groupName, int mode, int mask) {
-    if ((mode & mask) != 0) {
+  public boolean checkPermission(CachePool pool, FsAction access) {
+    CachePoolInfo info = pool.getInfo();
+    FsPermission mode = info.getMode();
+    if (isSuperUser()) {
       return true;
     }
-    if (((mode & (mask << 6)) != 0) 
-        && (getUser().equals(userName))) {
+    if (user.equals(info.getOwnerName())
+        && mode.getUserAction().implies(access)) {
       return true;
     }
-    if (((mode & (mask << 6)) != 0) 
-        && (containsGroup(groupName))) {
+    if (groups.contains(info.getGroupName())
+        && mode.getGroupAction().implies(access)) {
+      return true;
+    }
+    if (mode.getOtherAction().implies(access)) {
       return true;
     }
     return false;
-  }
-
-  public boolean checkWritePermission(String userName,
-      String groupName, int mode) {
-    return checkPermission(userName, groupName, mode, 02);
-  }
-
-  public boolean checkReadPermission(String userName,
-      String groupName, int mode) {
-    return checkPermission(userName, groupName, mode, 04);
   }
 }

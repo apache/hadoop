@@ -25,7 +25,7 @@ import com.google.common.collect.ComparisonChain;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.EmptyPathError;
-import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPoolNameError;
+import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPoolError;
 import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPathNameError;
 
 /**
@@ -33,14 +33,13 @@ import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPat
  */
 public class PathCacheDirective implements Comparable<PathCacheDirective> {
   private final String path;
+  private final long poolId;
 
-  private final String pool;
-
-  public PathCacheDirective(String path, String pool) {
+  public PathCacheDirective(String path, long poolId) {
     Preconditions.checkNotNull(path);
-    Preconditions.checkNotNull(pool);
+    Preconditions.checkArgument(poolId > 0);
     this.path = path;
-    this.pool = pool;
+    this.poolId = poolId;
   }
 
   /**
@@ -53,8 +52,8 @@ public class PathCacheDirective implements Comparable<PathCacheDirective> {
   /**
    * @return The pool used in this request.
    */
-  public String getPool() {
-    return pool;
+  public long getPoolId() {
+    return poolId;
   }
 
   /**
@@ -70,22 +69,22 @@ public class PathCacheDirective implements Comparable<PathCacheDirective> {
     if (!DFSUtil.isValidName(path)) {
       throw new InvalidPathNameError(this);
     }
-    if (pool.isEmpty()) {
-      throw new InvalidPoolNameError(this);
+    if (poolId <= 0) {
+      throw new InvalidPoolError(this);
     }
   }
 
   @Override
   public int compareTo(PathCacheDirective rhs) {
     return ComparisonChain.start().
-        compare(pool, rhs.getPool()).
+        compare(poolId, rhs.getPoolId()).
         compare(path, rhs.getPath()).
         result();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().append(path).append(pool).hashCode();
+    return new HashCodeBuilder().append(path).append(poolId).hashCode();
   }
 
   @Override
@@ -102,7 +101,7 @@ public class PathCacheDirective implements Comparable<PathCacheDirective> {
   public String toString() {
     StringBuilder builder = new StringBuilder();
     builder.append("{ path:").append(path).
-      append(", pool:").append(pool).
+      append(", poolId:").append(poolId).
       append(" }");
     return builder.toString();
   }

@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
+import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -1099,98 +1100,82 @@ public interface ClientProtocol {
 
   /**
    * Add some path cache directives to the CacheManager.
-   *
-   * @param directives
-   *          A list of all the path cache directives we want to add.
-   * @return
-   *          An list where each element is either a path cache entry that was
-   *          added, or an IOException exception describing why the directive
-   *          could not be added.
+   * 
+   * @param directives A list of path cache directives to be added.
+   * @return A Fallible list, where each element is either a successfully addded
+   *         path cache entry, or an IOException describing why the directive
+   *         could not be added.
    */
   @AtMostOnce
-  public List<Fallible<PathCacheEntry>>
-    addPathCacheDirectives(List<PathCacheDirective> directives)
-      throws IOException;
+  public List<Fallible<PathCacheEntry>> addPathCacheDirectives(
+      List<PathCacheDirective> directives) throws IOException;
 
   /**
    * Remove some path cache entries from the CacheManager.
-   *
-   * @param ids
-   *          A list of all the IDs we want to remove from the CacheManager.
-   * @return
-   *          An list where each element is either an ID that was removed,
-   *          or an IOException exception describing why the ID could not be
-   *          removed.
+   * 
+   * @param ids A list of all the entry IDs to be removed from the CacheManager.
+   * @return A Fallible list where each element is either a successfully removed
+   *         ID, or an IOException describing why the ID could not be removed.
    */
-  @AtMostOnce
+  @Idempotent
   public List<Fallible<Long>> removePathCacheEntries(List<Long> ids)
       throws IOException;
 
   /**
-   * List cached paths on the server.
-   *
-   * @param prevId
-   *          The previous ID that we listed, or 0 if this is the first call
-   *          to listPathCacheEntries.
-   * @param pool
-   *          The pool ID to list.  If this is the empty string, all pool ids
-   *          will be listed.
-   * @param maxRepliesPerRequest
-   *          The maximum number of replies to make in each request.
-   * @return
-   *          A RemoteIterator from which you can get PathCacheEntry objects.
-   *          Requests will be made as needed.
+   * List the set of cached paths of a cache pool. Incrementally fetches results
+   * from the server.
+   * 
+   * @param prevId The last listed entry ID, or -1 if this is the first call to
+   *          listPathCacheEntries.
+   * @param pool The cache pool to list, or -1 to list all pools
+   * @param maxRepliesPerRequest The maximum number of entries to return per
+   *          request
+   * @return A RemoteIterator which returns PathCacheEntry objects.
    */
   @Idempotent
   public RemoteIterator<PathCacheEntry> listPathCacheEntries(long prevId,
-      String pool, int maxRepliesPerRequest) throws IOException;
-  
-  /**
-   * Modify a cache pool.
-   *
-   * @param req
-   *          The request to modify a cache pool.
-   * @throws IOException 
-   *          If the request could not be completed.
-   */
-  @AtMostOnce
-  public void addCachePool(CachePoolInfo info) throws IOException;
+      long poolId, int maxRepliesPerRequest) throws IOException;
 
   /**
-   * Modify a cache pool.
-   *
-   * @param req
-   *          The request to modify a cache pool.
-   * @throws IOException 
-   *          If the request could not be completed.
+   * Add a new cache pool.
+   * 
+   * @param info Description of the new cache pool
+   * @throws IOException If the request could not be completed.
    */
-  @Idempotent
-  public void modifyCachePool(CachePoolInfo req) throws IOException;
-  
+  @AtMostOnce
+  public CachePool addCachePool(CachePoolInfo info) throws IOException;
+
+  /**
+   * Modify a cache pool, e.g. pool name, permissions, owner, group.
+   * 
+   * @param poolId ID of the cache pool to modify
+   * @param info New metadata for the cache pool
+   * @throws IOException If the request could not be completed.
+   */
+  @AtMostOnce
+  public void modifyCachePool(long poolId, CachePoolInfo info)
+      throws IOException;
+
   /**
    * Remove a cache pool.
-   *
-   * @param cachePoolName
-   *          Name of the cache pool to remove.
-   * @throws IOException 
-   *          if the cache pool did not exist, or could not be removed.
-   */
-  @AtMostOnce
-  public void removeCachePool(String cachePoolName) throws IOException;
-
-  /**
-   * List some cache pools.
-   *
-   * @param prevKey
-   *          The previous key we listed.  We will list keys greater than this.
-   * @param maxRepliesPerRequest
-   *          Maximum number of cache pools to list.
-   * @return A remote iterator from which you can get CachePool objects.
-   *          Requests will be made as needed.
-   * @throws IOException
-   *          If there was an error listing cache pools.
+   * 
+   * @param poolId ID of the cache pool to remove.
+   * @throws IOException if the cache pool did not exist, or could not be
+   *           removed.
    */
   @Idempotent
-  public RemoteIterator<CachePoolInfo> listCachePools(String prevKey,
+  public void removeCachePool(long poolId) throws IOException;
+
+  /**
+   * List the set of cache pools. Incrementally fetches results from the server.
+   * 
+   * @param prevPoolId ID of the last pool listed, or -1 if this is the first
+   *          invocation of listCachePools
+   * @param maxRepliesPerRequest Maximum number of cache pools to return per
+   *          server request.
+   * @return A RemoteIterator which returns CachePool objects.
+   */
+  @Idempotent
+  public RemoteIterator<CachePool> listCachePools(long prevPoolId,
       int maxRepliesPerRequest) throws IOException;
 }

@@ -31,13 +31,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator;
-import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -62,9 +60,9 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.PathCacheDirective;
 import org.apache.hadoop.hdfs.protocol.PathCacheEntry;
-import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -1225,72 +1223,73 @@ class NameNodeRpcServer implements NamenodeProtocols {
   private class ServerSidePathCacheEntriesIterator
       extends BatchedRemoteIterator<Long, PathCacheEntry> {
 
-    private final String pool;
+    private final Long poolId;
 
     public ServerSidePathCacheEntriesIterator(Long firstKey,
-        int maxRepliesPerRequest, String pool) {
+        int maxRepliesPerRequest, Long poolId) {
       super(firstKey, maxRepliesPerRequest);
-      this.pool = pool;
+      this.poolId = poolId;
     }
 
     @Override
     public BatchedEntries<PathCacheEntry> makeRequest(
-        Long nextKey, int maxRepliesPerRequest) throws IOException {
+        Long prevKey, int maxRepliesPerRequest) throws IOException {
       return new BatchedListEntries<PathCacheEntry>(
-          namesystem.listPathCacheEntries(nextKey, pool,
+          namesystem.listPathCacheEntries(prevKey, poolId,
               maxRepliesPerRequest));
     }
 
     @Override
-    public Long elementToNextKey(PathCacheEntry entry) {
+    public Long elementToPrevKey(PathCacheEntry entry) {
       return entry.getEntryId();
     }
   }
-  
+
   @Override
-  public RemoteIterator<PathCacheEntry> listPathCacheEntries(long prevId, String pool,
-      int maxReplies) throws IOException {
-    return new ServerSidePathCacheEntriesIterator(prevId, maxReplies, pool);
+  public RemoteIterator<PathCacheEntry> listPathCacheEntries(long prevId,
+      long poolId, int maxReplies) throws IOException {
+    return new ServerSidePathCacheEntriesIterator(prevId, maxReplies, poolId);
   }
 
   @Override
-  public void addCachePool(CachePoolInfo info) throws IOException {
-    namesystem.addCachePool(info);
+  public CachePool addCachePool(CachePoolInfo info) throws IOException {
+    return namesystem.addCachePool(info);
   }
 
   @Override
-  public void modifyCachePool(CachePoolInfo info) throws IOException {
-    namesystem.modifyCachePool(info);
+  public void modifyCachePool(long poolId, CachePoolInfo info)
+      throws IOException {
+    namesystem.modifyCachePool(poolId, info);
   }
 
   @Override
-  public void removeCachePool(String cachePoolName) throws IOException {
-    namesystem.removeCachePool(cachePoolName);
+  public void removeCachePool(long poolId) throws IOException {
+    namesystem.removeCachePool(poolId);
   }
 
   private class ServerSideCachePoolIterator 
-      extends BatchedRemoteIterator<String, CachePoolInfo> {
+      extends BatchedRemoteIterator<Long, CachePool> {
 
-    public ServerSideCachePoolIterator(String prevKey, int maxRepliesPerRequest) {
-      super(prevKey, maxRepliesPerRequest);
+    public ServerSideCachePoolIterator(long prevId, int maxRepliesPerRequest) {
+      super(prevId, maxRepliesPerRequest);
     }
 
     @Override
-    public BatchedEntries<CachePoolInfo> makeRequest(String prevKey,
+    public BatchedEntries<CachePool> makeRequest(Long prevId,
         int maxRepliesPerRequest) throws IOException {
-      return new BatchedListEntries<CachePoolInfo>(
-          namesystem.listCachePools(prevKey, maxRepliesPerRequest));
+      return new BatchedListEntries<CachePool>(
+          namesystem.listCachePools(prevId, maxRepliesPerRequest));
     }
 
     @Override
-    public String elementToNextKey(CachePoolInfo element) {
-      return element.getPoolName();
+    public Long elementToPrevKey(CachePool element) {
+      return element.getId();
     }
   }
 
   @Override
-  public RemoteIterator<CachePoolInfo> listCachePools(String prevKey,
+  public RemoteIterator<CachePool> listCachePools(long prevPoolId,
       int maxRepliesPerRequest) throws IOException {
-    return new ServerSideCachePoolIterator(prevKey, maxRepliesPerRequest);
+    return new ServerSideCachePoolIterator(prevPoolId, maxRepliesPerRequest);
   }
 }

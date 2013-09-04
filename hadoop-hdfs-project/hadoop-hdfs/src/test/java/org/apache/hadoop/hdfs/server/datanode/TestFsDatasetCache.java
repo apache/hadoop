@@ -92,6 +92,9 @@ public class TestFsDatasetCache {
 
   @After
   public void tearDown() throws Exception {
+    if (fs != null) {
+      fs.close();
+    }
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -159,13 +162,11 @@ public class TestFsDatasetCache {
   }
 
   /**
-   * Blocks until cache usage changes from the current value, then verifies
-   * against the expected new value.
+   * Blocks until cache usage hits the expected new value.
    */
-  private long verifyExpectedCacheUsage(final long current,
-      final long expected) throws Exception {
+  private long verifyExpectedCacheUsage(final long expected) throws Exception {
     long cacheUsed = fsd.getCacheUsed();
-    while (cacheUsed == current) {
+    while (cacheUsed != expected) {
       cacheUsed = fsd.getCacheUsed();
       Thread.sleep(100);
     }
@@ -202,13 +203,13 @@ public class TestFsDatasetCache {
     // Cache each block in succession, checking each time
     for (int i=0; i<NUM_BLOCKS; i++) {
       setHeartbeatResponse(cacheBlock(locs[i]));
-      current = verifyExpectedCacheUsage(current, current + blockSizes[i]);
+      current = verifyExpectedCacheUsage(current + blockSizes[i]);
     }
 
     // Uncache each block in succession, again checking each time
     for (int i=0; i<NUM_BLOCKS; i++) {
       setHeartbeatResponse(uncacheBlock(locs[i]));
-      current = verifyExpectedCacheUsage(current, current - blockSizes[i]);
+      current = verifyExpectedCacheUsage(current - blockSizes[i]);
     }
   }
 
@@ -237,7 +238,7 @@ public class TestFsDatasetCache {
     long current = 0;
     for (int i=0; i<numFiles-1; i++) {
       setHeartbeatResponse(cacheBlocks(fileLocs[i]));
-      current = verifyExpectedCacheUsage(current, current + fileSizes[i]);
+      current = verifyExpectedCacheUsage(current + fileSizes[i]);
     }
     final long oldCurrent = current;
 
@@ -262,7 +263,7 @@ public class TestFsDatasetCache {
     // Uncache the n-1 files
     for (int i=0; i<numFiles-1; i++) {
       setHeartbeatResponse(uncacheBlocks(fileLocs[i]));
-      current = verifyExpectedCacheUsage(current, current - fileSizes[i]);
+      current = verifyExpectedCacheUsage(current - fileSizes[i]);
     }
   }
 }

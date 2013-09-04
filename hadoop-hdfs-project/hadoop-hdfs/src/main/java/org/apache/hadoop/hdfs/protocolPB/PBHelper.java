@@ -32,10 +32,13 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.PathCacheDirective;
+import org.apache.hadoop.hdfs.protocol.PathCacheEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -50,9 +53,15 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddCachePoolRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ModifyCachePoolRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.PathCacheDirectiveProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.PathCacheEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
@@ -114,6 +123,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
@@ -1491,6 +1501,74 @@ public class PBHelper {
 
   public static HdfsProtos.ChecksumTypeProto convert(DataChecksum.Type type) {
     return HdfsProtos.ChecksumTypeProto.valueOf(type.id);
+  }
+
+  public static PathCacheDirective convert(
+      PathCacheDirectiveProto directiveProto) {
+    CachePool pool = convert(directiveProto.getPool());
+    return new PathCacheDirective(directiveProto.getPath(), pool.getId());
+  }
+
+  public static PathCacheDirectiveProto convert(PathCacheDirective directive) {
+    PathCacheDirectiveProto.Builder builder = 
+        PathCacheDirectiveProto.newBuilder()
+        .setPath(directive.getPath())
+        .setPool(PBHelper.convert(new CachePool(directive.getPoolId())));
+    return builder.build();
+  }
+
+  public static PathCacheEntry convert(PathCacheEntryProto entryProto) {
+    long entryId = entryProto.getId();
+    PathCacheDirective directive = convert(entryProto.getDirective());
+    return new PathCacheEntry(entryId, directive);
+  }
+
+  public static PathCacheEntryProto convert(PathCacheEntry entry) {
+    PathCacheEntryProto.Builder builder = PathCacheEntryProto.newBuilder()
+        .setId(entry.getEntryId())
+        .setDirective(PBHelper.convert(entry.getDirective()));
+    return builder.build();
+  }
+
+  public static CachePoolInfo convert(CachePoolInfoProto infoProto) {
+    CachePoolInfo.Builder builder =
+        CachePoolInfo.newBuilder().setPoolName(infoProto.getPoolName());
+    if (infoProto.hasOwnerName()) {
+      builder.setOwnerName(infoProto.getOwnerName());
+    }
+    if (infoProto.hasGroupName()) {
+      builder.setGroupName(infoProto.getGroupName());
+    }
+    if (infoProto.hasMode()) {
+      builder.setMode(new FsPermission((short) infoProto.getMode()));
+    }
+    if (infoProto.hasWeight()) {
+      builder.setWeight(infoProto.getWeight());
+    }
+    return builder.build();
+  }
+
+  public static CachePoolInfoProto convert(CachePoolInfo info) {
+    CachePoolInfoProto.Builder builder = CachePoolInfoProto.newBuilder()
+        .setPoolName(info.getPoolName())
+        .setOwnerName(info.getOwnerName())
+        .setGroupName(info.getGroupName())
+        .setMode(info.getMode().toShort())
+        .setWeight(info.getWeight());
+    return builder.build();
+  }
+
+  public static CachePool convert(CachePoolProto poolProto) {
+    CachePoolInfo info = convert(poolProto.getInfo());
+    CachePool pool = new CachePool(poolProto.getId(), info);
+    return pool;
+  }
+
+  public static CachePoolProto convert(CachePool pool) {
+    CachePoolProto.Builder builder = CachePoolProto.newBuilder()
+        .setId(pool.getId())
+        .setInfo(convert(pool.getInfo()));
+    return builder.build();
   }
 
   public static InputStream vintPrefixed(final InputStream input)
