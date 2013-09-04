@@ -114,6 +114,8 @@ Release 2.1.1-beta - UNRELEASED
     commands to reboot, so that client can continue to track the overall job.
     (Jian He via vinodkv)
 
+    MAPREDUCE-5475. MRClientService does not verify ACLs properly (jlowe)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
@@ -1203,6 +1205,8 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5001. LocalJobRunner has race condition resulting in job
     failures (Sandy Ryza via jlowe)
+
+    MAPREDUCE-5475. MRClientService does not verify ACLs properly (jlowe)
 
 Release 0.23.9 - 2013-07-08
 
