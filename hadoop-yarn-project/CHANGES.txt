@@ -137,6 +137,10 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1077. Fixed TestContainerLaunch test failure on Windows. (Chuan Liu via
     vinodkv)
 
+    YARN-957. Fixed a bug in CapacityScheduler because of which requests that
+    need more than a node's total capability were incorrectly allocated on that
+    node causing apps to hang. (Omkar Vinit Joshi via vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

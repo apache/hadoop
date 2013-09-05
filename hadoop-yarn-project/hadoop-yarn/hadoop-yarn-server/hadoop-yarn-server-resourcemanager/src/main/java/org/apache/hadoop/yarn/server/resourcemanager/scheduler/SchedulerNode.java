@@ -67,4 +67,9 @@ public abstract class SchedulerNode {
    */
   public abstract int getNumContainers();
 
+  /**
+   * Get total resources on the node.
+   * @return total resources on the node.
+   */
+  public abstract Resource getTotalResource();
 }
