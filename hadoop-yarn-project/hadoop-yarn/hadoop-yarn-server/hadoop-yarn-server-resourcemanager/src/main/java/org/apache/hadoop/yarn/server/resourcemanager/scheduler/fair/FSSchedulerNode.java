@@ -52,6 +52,7 @@ public class FSSchedulerNode extends SchedulerNode {
 
   private Resource availableResource;
   private Resource usedResource = recordFactory.newRecordInstance(Resource.class);
+  private Resource totalResourceCapability;
 
   private volatile int numContainers;
 
@@ -68,6 +69,9 @@ public class FSSchedulerNode extends SchedulerNode {
   public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
     this.rmNode = node;
     this.availableResource = Resources.clone(node.getTotalCapability());
+    totalResourceCapability =
+        Resource.newInstance(node.getTotalCapability().getMemory(), node
+            .getTotalCapability().getVirtualCores());
     if (usePortForNodeName) {
       nodeName = rmNode.getHostName() + ":" + node.getNodeID().getPort();
     } else {
@@ -171,6 +175,11 @@ public class FSSchedulerNode extends SchedulerNode {
     }
     Resources.addTo(availableResource, resource);
     Resources.subtractFrom(usedResource, resource);
+  }
+
+  @Override
+  public Resource getTotalResource() {
+    return this.totalResourceCapability;
   }
 
   private synchronized void deductAvailableResource(Resource resource) {
