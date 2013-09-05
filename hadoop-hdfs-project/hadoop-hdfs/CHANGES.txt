@@ -177,6 +177,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5140. Too many safemode monitor threads being created in the standby 
     namenode causing it to fail with out of memory error. (jing9)
 
+    HDFS-5159. Secondary NameNode fails to checkpoint if error occurs
+    downloading edits on first checkpoint. (atm)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
