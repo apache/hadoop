@@ -1308,9 +1308,15 @@ public class LeafQueue implements CSQueue {
         + " request=" + request + " type=" + type);
     }
     Resource capability = request.getCapability();
-
     Resource available = node.getAvailableResource();
+    Resource totalResource = node.getTotalResource();
 
+    if (!Resources.fitsIn(capability, totalResource)) {
+      LOG.warn("Node : " + node.getNodeID()
+          + " does not have sufficient resource for request : " + request
+          + " node total capability : " + node.getTotalResource());
+      return Resources.none();
+    }
     assert Resources.greaterThan(
         resourceCalculator, clusterResource, available, Resources.none());
 
