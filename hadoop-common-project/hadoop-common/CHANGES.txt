@@ -79,6 +79,8 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9909. org.apache.hadoop.fs.Stat should permit other LANG.
     (Shinichi Yamashita via Andrew Wang)
 
+    HADOOP-9908. Fix NPE when versioninfo properties file is missing (todd)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
