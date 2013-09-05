@@ -105,6 +105,9 @@ Trunk (Unreleased)
 
     HADOOP-9833 move slf4j to version 1.7.5 (Kousuke Saruta via stevel)
 
+    HADOOP-9915.  o.a.h.fs.Stat support on Mac OS X  (Binglin Chang via Colin
+    Patrick McCabe)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
