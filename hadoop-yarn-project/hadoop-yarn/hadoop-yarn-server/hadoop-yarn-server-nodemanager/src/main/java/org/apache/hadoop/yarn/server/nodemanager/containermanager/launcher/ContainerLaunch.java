@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -60,6 +61,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
@@ -70,6 +72,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.yarn.util.Apps;
+import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ContainerLaunch implements Callable<Integer> {
@@ -88,6 +91,7 @@ public class ContainerLaunch implements Callable<Integer> {
   private final Container container;
   private final Configuration conf;
   private final Context context;
+  private final ContainerManagerImpl containerManager;
   
   private volatile AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
   private volatile AtomicBoolean completed = new AtomicBoolean(false);
@@ -101,7 +105,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
   public ContainerLaunch(Context context, Configuration configuration,
       Dispatcher dispatcher, ContainerExecutor exec, Application app,
-      Container container, LocalDirsHandlerService dirsHandler) {
+      Container container, LocalDirsHandlerService dirsHandler,
+      ContainerManagerImpl containerManager) {
     this.context = context;
     this.conf = configuration;
     this.app = app;
@@ -109,6 +114,7 @@ public class ContainerLaunch implements Callable<Integer> {
     this.container = container;
     this.dispatcher = dispatcher;
     this.dirsHandler = dirsHandler;
+    this.containerManager = containerManager;
     this.sleepDelayBeforeSigKill =
         conf.getLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS,
             YarnConfiguration.DEFAULT_NM_SLEEP_DELAY_BEFORE_SIGKILL_MS);
@@ -227,7 +233,6 @@ public class ContainerLaunch implements Callable<Integer> {
             ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME, 
             new Path(containerWorkDir, 
                 FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
-
         // Sanitize the container's environment
         sanitizeEnv(environment, containerWorkDir, appDirs, containerLogDirs,
           localResources);
@@ -679,6 +684,12 @@ public class ContainerLaunch implements Callable<Integer> {
           newClassPath.toString(), pwd, mergedEnv);
         environment.put(Environment.CLASSPATH.name(), classPathJar);
       }
+    }
+    // put AuxiliaryService data to environment
+    for (Map.Entry<String, ByteBuffer> meta : containerManager
+        .getAuxServiceMetaData().entrySet()) {
+      AuxiliaryServiceHelper.setServiceDataIntoEnv(
+          meta.getKey(), meta.getValue(), environment);
     }
   }
     
