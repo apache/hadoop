@@ -30,19 +30,27 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 @InterfaceStability.Unstable
-public class URLUtils {
+public class URLConnectionFactory {
   /**
    * Timeout for socket connects and reads
    */
-  public static int SOCKET_TIMEOUT = 1*60*1000; // 1 minute
+  public final static int DEFAULT_SOCKET_TIMEOUT = 1*60*1000; // 1 minute
 
+  public static final URLConnectionFactory DEFAULT_CONNECTION_FACTORY = new URLConnectionFactory(DEFAULT_SOCKET_TIMEOUT);
+  
+  private int socketTimeout;
+
+  public URLConnectionFactory(int socketTimeout) {
+    this.socketTimeout = socketTimeout;
+  }
+  
   /**
    * Opens a url with read and connect timeouts
    * @param url to open
    * @return URLConnection
    * @throws IOException
    */
-  public static URLConnection openConnection(URL url) throws IOException {
+  public URLConnection openConnection(URL url) throws IOException {
     URLConnection connection = url.openConnection();
     setTimeouts(connection);
     return connection;    
@@ -53,8 +61,8 @@ public class URLUtils {
    * 
    * @param connection URLConnection to set
    */
-  static void setTimeouts(URLConnection connection) {
-    connection.setConnectTimeout(SOCKET_TIMEOUT);
-    connection.setReadTimeout(SOCKET_TIMEOUT);
+  public void setTimeouts(URLConnection connection) {
+    connection.setConnectTimeout(socketTimeout);
+    connection.setReadTimeout(socketTimeout);
   }
 }
