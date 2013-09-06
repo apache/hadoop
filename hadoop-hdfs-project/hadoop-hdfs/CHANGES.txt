@@ -6,6 +6,9 @@ Release 2.3.0 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-5118. Provide testing support for DFSClient to drop RPC responses.
+    (jing9)
+
   IMPROVEMENTS
 
     HDFS-4657.  Limit the number of blocks logged by the NN after a block
