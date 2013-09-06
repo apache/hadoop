@@ -17,9 +17,6 @@ Release 2.3.0 - UNRELEASED
 
   BUG FIXES
 
-    YARN-758. Augment MockNM to use multiple cores (Karthik Kambatla via
-    Sandy Ryza)
-
     YARN-1060. Two tests in TestFairScheduler are missing @Test annotation
     (Niranjan Singh via Sandy Ryza)
 
@@ -73,6 +70,9 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-1065. NM should provide AuxillaryService data to the container (Xuan
     Gong via bikas)
+
+    YARN-758. Augment MockNM to use multiple cores (Karthik Kambatla via
+    Sandy Ryza)
 
   OPTIMIZATIONS
 
