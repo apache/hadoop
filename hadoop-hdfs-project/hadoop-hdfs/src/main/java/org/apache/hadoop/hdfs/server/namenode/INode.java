@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.util.StringUtils;
 
@@ -707,7 +708,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     }
     
     public BlocksMapUpdateInfo() {
-      toDeleteList = new ArrayList<Block>();
+      toDeleteList = new ChunkedArrayList<Block>();
     }
     
     /**
