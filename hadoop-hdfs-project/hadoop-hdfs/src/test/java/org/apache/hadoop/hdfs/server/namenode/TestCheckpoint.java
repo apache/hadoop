@@ -77,6 +77,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
@@ -206,7 +207,7 @@ public class TestCheckpoint {
     ArrayList<URI> fsImageDirs = new ArrayList<URI>();
     ArrayList<URI> editsDirs = new ArrayList<URI>();
     File filePath =
-      new File(System.getProperty("test.build.data","/tmp"), "storageDirToCheck");
+      new File(PathUtils.getTestDir(getClass()), "storageDirToCheck");
     assertTrue("Couldn't create directory storageDirToCheck",
                filePath.exists() || filePath.mkdirs());
     fsImageDirs.add(filePath.toURI());
@@ -1914,9 +1915,11 @@ public class TestCheckpoint {
       }
       
       // Start a new NN with the same host/port.
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .nameNodePort(origPort).nameNodeHttpPort(origHttpPort).format(true)
-          .build();
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0)
+          .nameNodePort(origPort)
+          .nameNodeHttpPort(origHttpPort)
+          .format(true).build();
 
       try {
         secondary.doCheckpoint();
@@ -2138,7 +2141,8 @@ public class TestCheckpoint {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
     
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0)
           .format(true).build();
       FileSystem fs = cluster.getFileSystem();
       secondary = startSecondaryNameNode(conf);

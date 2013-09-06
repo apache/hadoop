@@ -56,8 +56,8 @@ public class TestBootstrapStandby {
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10002)));
+        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(20001))
+        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(20002)));
     
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(topology)

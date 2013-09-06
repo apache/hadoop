@@ -391,7 +391,8 @@ public class TestStorageRestore {
         (new File(path3, "current").getAbsolutePath()) : path3.toString();
 
     try {
-      cluster = new MiniDFSCluster.Builder(config).numDataNodes(0)
+      cluster = new MiniDFSCluster.Builder(config)
+          .numDataNodes(0)
           .manageNameDfsDirs(false).build();
       cluster.waitActive();
 

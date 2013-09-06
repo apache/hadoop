@@ -29,6 +29,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5144. Document time unit to NameNodeMetrics. (Akira Ajisaka via
     suresh)
 
+    HDFS-4491. Parallel testing HDFS. (Andrey Klochkov via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

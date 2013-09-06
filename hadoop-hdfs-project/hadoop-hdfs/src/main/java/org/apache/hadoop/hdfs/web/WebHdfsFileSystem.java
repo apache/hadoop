@@ -121,13 +121,15 @@ public class WebHdfsFileSystem extends FileSystem
 
   /** SPNEGO authenticator */
   private static final KerberosUgiAuthenticator AUTH = new KerberosUgiAuthenticator();
+  /** Default connection factory may be overriden in tests to use smaller timeout values */
+  URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
   /** Configures connections for AuthenticatedURL */
-  private static final ConnectionConfigurator CONN_CONFIGURATOR =
+  private final ConnectionConfigurator CONN_CONFIGURATOR =
     new ConnectionConfigurator() {
       @Override
       public HttpURLConnection configure(HttpURLConnection conn)
           throws IOException {
-        URLUtils.setTimeouts(conn);
+        connectionFactory.setTimeouts(conn);
         return conn;
       }
     };
@@ -481,10 +483,9 @@ public class WebHdfsFileSystem extends FileSystem
           final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
           conn = new AuthenticatedURL(AUTH, CONN_CONFIGURATOR).openConnection(
             url, authToken);
-          URLUtils.setTimeouts(conn);
         } else {
           LOG.debug("open URL connection");
-          conn = (HttpURLConnection)URLUtils.openConnection(url);
+          conn = (HttpURLConnection)connectionFactory.openConnection(url);
         }
       } catch (AuthenticationException e) {
         throw new IOException(e);
@@ -579,7 +580,7 @@ public class WebHdfsFileSystem extends FileSystem
       checkRetry = false;
       
       //Step 2) Submit another Http request with the URL from the Location header with data.
-      conn = (HttpURLConnection)URLUtils.openConnection(new URL(redirect));
+      conn = (HttpURLConnection)connectionFactory.openConnection(new URL(redirect));
       conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
       conn.setChunkedStreamingMode(32 << 10); //32kB-chunk
       connect();
@@ -602,7 +603,7 @@ public class WebHdfsFileSystem extends FileSystem
           disconnect();
   
           checkRetry = false;
-          conn = (HttpURLConnection)URLUtils.openConnection(new URL(redirect));
+          conn = (HttpURLConnection)connectionFactory.openConnection(new URL(redirect));
           connect();
         }
 

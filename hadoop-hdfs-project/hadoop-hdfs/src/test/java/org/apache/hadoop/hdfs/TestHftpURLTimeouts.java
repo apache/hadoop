@@ -33,16 +33,11 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.web.URLUtils;
-import org.junit.BeforeClass;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.junit.Test;
 
 public class TestHftpURLTimeouts {
-  @BeforeClass
-  public static void setup() {
-    URLUtils.SOCKET_TIMEOUT = 5;
-  }
-  
+
   @Test
   public void testHftpSocketTimeout() throws Exception {
     Configuration conf = new Configuration();
@@ -51,9 +46,11 @@ public class TestHftpURLTimeouts {
         InetAddress.getByName(null).getHostAddress(),
         socket.getLocalPort(),
         null, null, null);
-    boolean timedout = false;
 
     HftpFileSystem fs = (HftpFileSystem)FileSystem.get(uri, conf);
+    fs.connectionFactory = new URLConnectionFactory(5);
+
+    boolean timedout = false;
     try {
       HttpURLConnection conn = fs.openConnection("/", "");
       timedout = false;
@@ -69,6 +66,7 @@ public class TestHftpURLTimeouts {
       assertTrue("read timedout", timedout);
       assertTrue("connect timedout", checkConnectTimeout(fs, false));
     } finally {
+      fs.connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
       fs.close();
     }
   }
@@ -84,6 +82,8 @@ public class TestHftpURLTimeouts {
     boolean timedout = false;
 
     HsftpFileSystem fs = (HsftpFileSystem)FileSystem.get(uri, conf);
+    fs.connectionFactory = new URLConnectionFactory(5);
+    
     try {
       HttpURLConnection conn = null;
       timedout = false;
@@ -100,6 +100,7 @@ public class TestHftpURLTimeouts {
       assertTrue("ssl read connect timedout", timedout);
       assertTrue("connect timedout", checkConnectTimeout(fs, true));
     } finally {
+      fs.connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
       fs.close();
     }
   }
@@ -121,7 +122,7 @@ public class TestHftpURLTimeouts {
           // https will get a read timeout due to SSL negotiation, but
           // a normal http will not, so need to ignore SSL read timeouts
           // until a connect timeout occurs
-          if (!(ignoreReadTimeout && message.equals("Read timed out"))) {
+          if (!(ignoreReadTimeout && "Read timed out".equals(message))) {
             timedout = true;
             assertEquals("connect timed out", message);
           }

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -38,6 +37,9 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.test.PathUtils;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestReplicationPolicyWithNodeGroup extends TestCase {
@@ -45,10 +47,10 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
   private static final int NUM_OF_DATANODES = 8;
   private static final int NUM_OF_DATANODES_BOUNDARY = 6;
   private static final int NUM_OF_DATANODES_MORE_TARGETS = 12;
-  private static final Configuration CONF = new HdfsConfiguration();
-  private static final NetworkTopology cluster;
-  private static final NameNode namenode;
-  private static final BlockPlacementPolicy replicator;
+  private final Configuration CONF = new HdfsConfiguration();
+  private NetworkTopology cluster;
+  private NameNode namenode;
+  private BlockPlacementPolicy replicator;
   private static final String filename = "/dummyfile.txt";
 
   private final static DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
@@ -91,27 +93,23 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
   private final static DatanodeDescriptor NODE = 
       new DatanodeDescriptor(DFSTestUtil.getDatanodeDescriptor("9.9.9.9", "/d2/r4/n7"));
 
-  static {
-    try {
-      FileSystem.setDefaultUri(CONF, "hdfs://localhost:0");
-      CONF.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-      // Set properties to make HDFS aware of NodeGroup.
-      CONF.set("dfs.block.replicator.classname", 
-          "org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithNodeGroup");
-      CONF.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY, 
-          "org.apache.hadoop.net.NetworkTopologyWithNodeGroup");
-      
-      File baseDir = new File(System.getProperty(
-          "test.build.data", "build/test/data"), "dfs/");
-      CONF.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-          new File(baseDir, "name").getPath());
-      
-      DFSTestUtil.formatNameNode(CONF);
-      namenode = new NameNode(CONF);
-    } catch (IOException e) {
-      e.printStackTrace();
-      throw (RuntimeException)new RuntimeException().initCause(e);
-    }
+  @Before
+  public void setUp() throws Exception {
+    FileSystem.setDefaultUri(CONF, "hdfs://localhost:0");
+    CONF.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    // Set properties to make HDFS aware of NodeGroup.
+    CONF.set("dfs.block.replicator.classname", 
+        "org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithNodeGroup");
+    CONF.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY, 
+        "org.apache.hadoop.net.NetworkTopologyWithNodeGroup");
+    
+    File baseDir = PathUtils.getTestDir(TestReplicationPolicyWithNodeGroup.class);
+    
+    CONF.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        new File(baseDir, "name").getPath());
+    
+    DFSTestUtil.formatNameNode(CONF);
+    namenode = new NameNode(CONF);
     final BlockManager bm = namenode.getNamesystem().getBlockManager();
     replicator = bm.getBlockPlacementPolicy();
     cluster = bm.getDatanodeManager().getNetworkTopology();
@@ -122,6 +120,11 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
     setupDataNodeCapacity();
   }
 
+  @After
+  public void tearDown() throws Exception {
+    namenode.stop();
+  }
+  
   private static void setupDataNodeCapacity() {
     for(int i=0; i<NUM_OF_DATANODES; i++) {
       dataNodes[i].updateHeartbeat(
@@ -625,7 +628,9 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    */
   @Test
   public void testChooseMoreTargetsThanNodeGroups() throws Exception {
-    // Cleanup nodes in previous tests
+    for(int i=0; i<NUM_OF_DATANODES; i++) {
+      cluster.remove(dataNodes[i]);
+    }
     for(int i=0; i<NUM_OF_DATANODES_BOUNDARY; i++) {
       DatanodeDescriptor node = dataNodesInBoundaryCase[i];
       if (cluster.contains(node)) {

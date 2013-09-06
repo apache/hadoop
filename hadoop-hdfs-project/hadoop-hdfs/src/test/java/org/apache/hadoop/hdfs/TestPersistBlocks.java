@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -304,7 +305,7 @@ public class TestPersistBlocks {
         
     String tarFile = System.getProperty("test.cache.data", "build/test/cache")
       + "/" + HADOOP_1_0_MULTIBLOCK_TGZ;
-    String testDir = System.getProperty("test.build.data", "build/test/data");
+    String testDir = PathUtils.getTestDirName(getClass());
     File dfsDir = new File(testDir, "image-1.0");
     if (dfsDir.exists() && !FileUtil.fullyDelete(dfsDir)) {
       throw new IOException("Could not delete dfs directory '" + dfsDir + "'");

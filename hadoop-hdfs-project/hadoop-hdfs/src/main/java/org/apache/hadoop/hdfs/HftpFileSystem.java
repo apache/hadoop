@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
-import org.apache.hadoop.hdfs.web.URLUtils;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -85,6 +85,8 @@ public class HftpFileSystem extends FileSystem
   static {
     HttpURLConnection.setFollowRedirects(true);
   }
+
+  URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
 
   public static final Text TOKEN_KIND = new Text("HFTP delegation");
 
@@ -331,8 +333,8 @@ public class HftpFileSystem extends FileSystem
       throws IOException {
     query = addDelegationTokenParam(query);
     final URL url = getNamenodeURL(path, query);
-    final HttpURLConnection connection =
-        (HttpURLConnection)URLUtils.openConnection(url);
+    final HttpURLConnection connection;
+    connection = (HttpURLConnection)connectionFactory.openConnection(url);
     connection.setRequestMethod("GET");
     connection.connect();
     return connection;
@@ -352,12 +354,14 @@ public class HftpFileSystem extends FileSystem
   }
 
   static class RangeHeaderUrlOpener extends ByteRangeInputStream.URLOpener {
+    URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+    
     RangeHeaderUrlOpener(final URL url) {
       super(url);
     }
 
     protected HttpURLConnection openConnection() throws IOException {
-      return (HttpURLConnection)URLUtils.openConnection(url);
+      return (HttpURLConnection)connectionFactory.openConnection(url);
     }
 
     /** Use HTTP Range header for specifying offset. */

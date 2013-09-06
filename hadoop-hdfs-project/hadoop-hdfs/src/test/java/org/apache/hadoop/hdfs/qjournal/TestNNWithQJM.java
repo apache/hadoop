@@ -174,6 +174,7 @@ public class TestNNWithQJM {
   public void testMismatchedNNIsRejected() throws Exception {
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         MiniDFSCluster.getBaseDirectory() + "/TestNNWithQJM/image");
+    String defaultEditsDir = conf.get(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY);
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         mjc.getQuorumJournalURI("myjournal").toString());
     
@@ -187,7 +188,7 @@ public class TestNNWithQJM {
     
     // Reformat just the on-disk portion
     Configuration onDiskOnly = new Configuration(conf);
-    onDiskOnly.unset(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY);
+    onDiskOnly.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, defaultEditsDir);
     NameNode.format(onDiskOnly);
 
     // Start the NN - should fail because the JNs are still formatted
