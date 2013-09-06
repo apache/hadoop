@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
@@ -96,9 +97,8 @@ public class TestEditLog {
   static final int NUM_TRANSACTIONS = 100;
   static final int NUM_THREADS = 100;
   
-  static final File TEST_DIR = new File(
-    System.getProperty("test.build.data","build/test/data"));
-
+  static final File TEST_DIR = PathUtils.getTestDir(TestEditLog.class);
+  
   /** An edits log with 3 edits from 0.20 - the result of
    * a fresh namesystem followed by hadoop fs -touchz /myfile */
   static final byte[] HADOOP20_SOME_EDITS =
@@ -569,6 +569,7 @@ public class TestEditLog {
       fail("should not be able to start");
     } catch (IOException e) {
       // expected
+      assertNotNull("Cause of exception should be ChecksumException", e.getCause());
       assertEquals("Cause of exception should be ChecksumException",
           ChecksumException.class, e.getCause().getClass());
     }

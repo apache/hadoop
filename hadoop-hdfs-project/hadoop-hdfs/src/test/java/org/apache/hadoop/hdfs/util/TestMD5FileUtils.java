@@ -29,14 +29,12 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestMD5FileUtils {
-  private static final File TEST_DIR_ROOT = new File(
-      System.getProperty("test.build.data","build/test/data"));
-  private static final File TEST_DIR = new File(TEST_DIR_ROOT,
-      "TestMD5FileUtils");
+  private static final File TEST_DIR = PathUtils.getTestDir(TestMD5FileUtils.class);
   private static final File TEST_FILE = new File(TEST_DIR,
       "testMd5File.dat");
   

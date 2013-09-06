@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -95,7 +96,7 @@ public class TestFileCorruption {
   @Test
   public void testLocalFileCorruption() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    Path file = new Path(System.getProperty("test.build.data"), "corruptFile");
+    Path file = new Path(PathUtils.getTestDirName(getClass()), "corruptFile");
     FileSystem fs = FileSystem.getLocal(conf);
     DataOutputStream dos = fs.create(file);
     dos.writeBytes("original bytes");

@@ -91,7 +91,7 @@ import static org.mockito.Mockito.*;
  */
 public class TestFsck {
   static final String auditLogFile = System.getProperty("test.build.dir",
-      "build/test") + "/audit.log";
+      "build/test") + "/TestFsck-audit.log";
   
   // Pattern for: 
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
@@ -159,7 +159,8 @@ public class TestFsck {
       cluster.shutdown();
       
       // restart the cluster; bring up namenode but not the data nodes
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(false).build();
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0).format(false).build();
       outStr = runFsck(conf, 1, true, "/");
       // expect the result is corrupt
       assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));

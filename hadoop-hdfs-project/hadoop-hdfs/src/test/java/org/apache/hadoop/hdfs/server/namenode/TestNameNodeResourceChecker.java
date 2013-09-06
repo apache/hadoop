@@ -33,12 +33,14 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NameNodeResourceMonitor;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeResourceChecker.CheckedVolume;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestNameNodeResourceChecker {
+  private final static File BASE_DIR = PathUtils.getTestDir(TestNameNodeResourceChecker.class);
   private Configuration conf;
   private File baseDir;
   private File nameDir;
@@ -46,8 +48,7 @@ public class TestNameNodeResourceChecker {
   @Before
   public void setUp () throws IOException {
     conf = new Configuration();
-    baseDir = new File(System.getProperty("test.build.data"));
-    nameDir = new File(baseDir, "resource-check-name-dir");
+    nameDir = new File(BASE_DIR, "resource-check-name-dir");
     nameDir.mkdirs();
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameDir.getAbsolutePath());
   }
@@ -141,8 +142,8 @@ public class TestNameNodeResourceChecker {
   @Test
   public void testChecking2NameDirsOnOneVolume() throws IOException {
     Configuration conf = new Configuration();
-    File nameDir1 = new File(System.getProperty("test.build.data"), "name-dir1");
-    File nameDir2 = new File(System.getProperty("test.build.data"), "name-dir2");
+    File nameDir1 = new File(BASE_DIR, "name-dir1");
+    File nameDir2 = new File(BASE_DIR, "name-dir2");
     nameDir1.mkdirs();
     nameDir2.mkdirs();
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
@@ -162,7 +163,7 @@ public class TestNameNodeResourceChecker {
   @Test
   public void testCheckingExtraVolumes() throws IOException {
     Configuration conf = new Configuration();
-    File nameDir = new File(System.getProperty("test.build.data"), "name-dir");
+    File nameDir = new File(BASE_DIR, "name-dir");
     nameDir.mkdirs();
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameDir.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_KEY, nameDir.getAbsolutePath());
@@ -182,8 +183,8 @@ public class TestNameNodeResourceChecker {
   @Test
   public void testLowResourceVolumePolicy() throws IOException, URISyntaxException {
     Configuration conf = new Configuration();
-    File nameDir1 = new File(System.getProperty("test.build.data"), "name-dir1");
-    File nameDir2 = new File(System.getProperty("test.build.data"), "name-dir2");
+    File nameDir1 = new File(BASE_DIR, "name-dir1");
+    File nameDir2 = new File(BASE_DIR, "name-dir2");
     nameDir1.mkdirs();
     nameDir2.mkdirs();
     

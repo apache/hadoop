@@ -27,6 +27,7 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.ImageVisitor.ImageElement;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 /**
@@ -34,7 +35,7 @@ import org.junit.Test;
  * on predetermined inputs
  */
 public class TestDelimitedImageVisitor {
-  private static String ROOT = System.getProperty("test.build.data","/tmp");
+  private static String ROOT = PathUtils.getTestDirName(TestDelimitedImageVisitor.class);
   private static final String delim = "--";
   
   // Record an element in the visitor and build the expected line in the output
