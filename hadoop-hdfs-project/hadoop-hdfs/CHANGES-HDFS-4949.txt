@@ -27,7 +27,8 @@ HDFS-4949 (Unreleased)
     HDFS-5163. Miscellaneous cache pool RPC fixes.  (Contributed by Colin
     Patrick McCabe)
 
-
   OPTIMIZATIONS
 
   BUG FIXES
+    HDFS-5169. hdfs.c: translateZCRException: null pointer deref when
+    translating some exceptions.  (Contributed by Colin Patrick McCabe)
