@@ -31,6 +31,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4491. Parallel testing HDFS. (Andrey Klochkov via cnauroth)
 
+    HDFS-4879. Add "blocked ArrayList" collection to avoid CMS full GCs
+    (Todd Lipcon via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
