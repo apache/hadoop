@@ -28,13 +28,16 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
   public interface BatchedEntries<E> {
     public E get(int i);
     public int size();
+    public boolean hasMore();
   }
 
   public static class BatchedListEntries<E> implements BatchedEntries<E> {
     private final List<E> entries;
+    private final boolean hasMore;
 
-    public BatchedListEntries(List<E> entries) {
+    public BatchedListEntries(List<E> entries, boolean hasMore) {
       this.entries = entries;
+      this.hasMore = hasMore;
     }
 
     public E get(int i) {
@@ -44,16 +47,18 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
     public int size() {
       return entries.size();
     }
+
+    public boolean hasMore() {
+      return hasMore;
+    }
   }
 
   private K prevKey;
-  private final int maxRepliesPerRequest;
   private BatchedEntries<E> entries;
   private int idx;
 
-  public BatchedRemoteIterator(K prevKey, int maxRepliesPerRequest) {
+  public BatchedRemoteIterator(K prevKey) {
     this.prevKey = prevKey;
-    this.maxRepliesPerRequest = maxRepliesPerRequest;
     this.entries = null;
     this.idx = -1;
   }
@@ -62,21 +67,14 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
    * Perform the actual remote request.
    *
    * @param key                    The key to send.
-   * @param maxRepliesPerRequest   The maximum number of replies to allow.
    * @return                       A list of replies.
    */
-  public abstract BatchedEntries<E> makeRequest(K prevKey,
-      int maxRepliesPerRequest) throws IOException;
+  public abstract BatchedEntries<E> makeRequest(K prevKey) throws IOException;
 
   private void makeRequest() throws IOException {
     idx = 0;
     entries = null;
-    entries = makeRequest(prevKey, maxRepliesPerRequest);
-    if (entries.size() > maxRepliesPerRequest) {
-      throw new IOException("invalid number of replies returned: got " +
-          entries.size() + ", expected " + maxRepliesPerRequest +
-          " at most.");
-    }
+    entries = makeRequest(prevKey);
     if (entries.size() == 0) {
       entries = null;
     }
@@ -86,7 +84,7 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
     if (idx == -1) {
       makeRequest();
     } else if ((entries != null) && (idx >= entries.size())) {
-      if (entries.size() < maxRepliesPerRequest) {
+      if (!entries.hasMore()) {
         // Last time, we got fewer entries than requested.
         // So we should be at the end.
         entries = null;

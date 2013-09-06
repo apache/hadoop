@@ -119,6 +119,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -6756,9 +6757,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (retryCacheEntry != null && retryCacheEntry.isSuccess()) {
       return (List<Fallible<PathCacheEntry>>) retryCacheEntry.getPayload();
     }
-    final FSPermissionChecker pc = getPermissionChecker();
+    final FSPermissionChecker pc = isPermissionEnabled ?
+        getPermissionChecker() : null;
     boolean success = false;
     List<Fallible<PathCacheEntry>> results = null;
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6766,7 +6769,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException(
             "Cannot add path cache directive", safeMode);
       }
-      results = cacheManager.addDirectives(pc, directives);
+      results = cacheManager.addDirectives(directives, pc);
       //getEditLog().logAddPathCacheDirectives(results); FIXME: HDFS-5119
       success = true;
     } finally {
@@ -6774,7 +6777,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (success) {
         getEditLog().logSync();
       }
-      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      if (isAuditEnabled() && isExternalInvocation()) {
         logAuditEvent(success, "addPathCacheDirectives", null, null, null);
       }
       RetryCache.setState(retryCacheEntry, success, results);
@@ -6783,147 +6786,175 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   @SuppressWarnings("unchecked")
-  List<Fallible<Long>> removePathCacheEntries(List<Long> ids)
-      throws IOException {
-    final FSPermissionChecker pc = getPermissionChecker();
+  List<Fallible<Long>> removePathCacheEntries(List<Long> ids) throws IOException {
+    CacheEntryWithPayload retryCacheEntry =
+        RetryCache.waitForCompletion(retryCache, null);
+    if (retryCacheEntry != null && retryCacheEntry.isSuccess()) {
+      return (List<Fallible<Long>>) retryCacheEntry.getPayload();
+    }
+    final FSPermissionChecker pc = isPermissionEnabled ?
+        getPermissionChecker() : null;
     boolean success = false;
     List<Fallible<Long>> results = null;
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException(
-            "Cannot add path cache directive", safeMode);
+            "Cannot remove path cache directives", safeMode);
       }
-      results = cacheManager.removeEntries(pc, ids);
+      results = cacheManager.removeEntries(ids, pc);
       //getEditLog().logRemovePathCacheEntries(results); FIXME: HDFS-5119
       success = true;
     } finally {
       writeUnlock();
-      if (success) {
-        getEditLog().logSync();
-      }
-      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      if (isAuditEnabled() && isExternalInvocation()) {
         logAuditEvent(success, "removePathCacheEntries", null, null, null);
+      }
+      RetryCache.setState(retryCacheEntry, success, results);
+    }
+    getEditLog().logSync();
+    return results;
+  }
+
+  BatchedListEntries<PathCacheEntry> listPathCacheEntries(long startId,
+      String pool) throws IOException {
+    final FSPermissionChecker pc = isPermissionEnabled ?
+        getPermissionChecker() : null;
+    BatchedListEntries<PathCacheEntry> results;
+    checkOperation(OperationCategory.READ);
+    readLock();
+    boolean success = false;
+    try {
+      checkOperation(OperationCategory.READ);
+      results = cacheManager.listPathCacheEntries(startId, pool, pc);
+      success = true;
+    } finally {
+      readUnlock();
+      if (isAuditEnabled() && isExternalInvocation()) {
+        logAuditEvent(success, "listPathCacheEntries", null, null, null);
       }
     }
     return results;
   }
 
-  List<PathCacheEntry> listPathCacheEntries(long startId,
-      Long poolId, int maxReplies) throws IOException {
-    LOG.info("listPathCacheEntries with " + startId + " " + poolId);
-    final FSPermissionChecker pc = getPermissionChecker();
-    return cacheManager.listPathCacheEntries(pc, startId, poolId, maxReplies);
-  }
-
-  public CachePool addCachePool(CachePoolInfo req) throws IOException {
-    final FSPermissionChecker pc = getPermissionChecker();
-    CacheEntryWithPayload cacheEntry =
-        RetryCache.waitForCompletion(retryCache, null);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (CachePool)cacheEntry.getPayload(); // Return previous response
-    }
-    writeLock();
-    CachePool pool = null;
-    try {
-      checkOperation(OperationCategory.WRITE);
-      if (!pc.isSuperUser()) {
-        throw new AccessControlException("Non-super users cannot " +
-            "add cache pools.");
-      }
-      if (isInSafeMode()) {
-        throw new SafeModeException(
-            "Cannot add cache pool " + req.getPoolName(), safeMode);
-      }
-      pool = cacheManager.addCachePool(req);
-      RetryCache.setState(cacheEntry, true);
-      //getEditLog().logAddCachePool(req); // FIXME: HDFS-5119
-    } finally {
-      writeUnlock();
-    }
-
-    getEditLog().logSync();
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(true, "addCachePool", req.getPoolName(), null, null);
-    }
-    return pool;
-  }
-
-  public void modifyCachePool(long poolId, CachePoolInfo info)
-      throws IOException {
-    final FSPermissionChecker pc = getPermissionChecker();
+  public void addCachePool(CachePoolInfo req) throws IOException {
+    final FSPermissionChecker pc = isPermissionEnabled ?
+        getPermissionChecker() : null;
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
+    checkOperation(OperationCategory.WRITE);
     writeLock();
+    boolean success = false;
     try {
       checkOperation(OperationCategory.WRITE);
-      if (!pc.isSuperUser()) {
-        throw new AccessControlException("Non-super users cannot " +
-            "modify cache pools.");
-      }
       if (isInSafeMode()) {
         throw new SafeModeException(
-            "Cannot modify cache pool " + info.getPoolName(), safeMode);
+            "Cannot add cache pool " + req.getPoolName(), safeMode);
       }
-      cacheManager.modifyCachePool(poolId, info);
-      RetryCache.setState(cacheEntry, true);
+      if (pc != null) {
+        pc.checkSuperuserPrivilege();
+      }
+      cacheManager.addCachePool(req);
+      //getEditLog().logAddCachePool(req); // FIXME: HDFS-5119
+      success = true;
+    } finally {
+      writeUnlock();
+      if (isAuditEnabled() && isExternalInvocation()) {
+        logAuditEvent(success, "addCachePool", req.getPoolName(), null, null);
+      }
+      RetryCache.setState(cacheEntry, success);
+    }
+    
+    getEditLog().logSync();
+  }
+
+  public void modifyCachePool(CachePoolInfo req) throws IOException {
+    final FSPermissionChecker pc =
+        isPermissionEnabled ? getPermissionChecker() : null;
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    checkOperation(OperationCategory.WRITE);
+    writeLock();
+    boolean success = false;
+    try {
+      checkOperation(OperationCategory.WRITE);
+      if (isInSafeMode()) {
+        throw new SafeModeException(
+            "Cannot modify cache pool " + req.getPoolName(), safeMode);
+      }
+      if (pc != null) {
+        pc.checkSuperuserPrivilege();
+      }
+      cacheManager.modifyCachePool(req);
       //getEditLog().logModifyCachePool(req); // FIXME: HDFS-5119
+      success = true;
     } finally {
       writeUnlock();
+      if (isAuditEnabled() && isExternalInvocation()) {
+        logAuditEvent(success, "modifyCachePool", req.getPoolName(), null, null);
+      }
+      RetryCache.setState(cacheEntry, success);
     }
 
     getEditLog().logSync();
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(true, "modifyCachePool", info.getPoolName(), null, null);
-    }
   }
 
-  public void removeCachePool(long poolId) throws IOException {
-    final FSPermissionChecker pc = getPermissionChecker();
+  public void removeCachePool(String cachePoolName) throws IOException {
+    final FSPermissionChecker pc =
+        isPermissionEnabled ? getPermissionChecker() : null;
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    checkOperation(OperationCategory.WRITE);
     writeLock();
-    CachePool pool;
+    boolean success = false;
     try {
       checkOperation(OperationCategory.WRITE);
-      if (!pc.isSuperUser()) {
-        throw new AccessControlException("Non-super users cannot " +
-            "remove cache pools.");
-      }
-      pool = cacheManager.getCachePool(poolId);
       if (isInSafeMode()) {
-        String identifier;
-        if (pool == null) {
-          identifier = "with id " + Long.toString(poolId);
-        } else {
-          identifier = pool.getInfo().getPoolName();
-        }
         throw new SafeModeException(
-            "Cannot remove cache pool " + identifier, safeMode);
+            "Cannot remove cache pool " + cachePoolName, safeMode);
       }
-      cacheManager.removeCachePool(poolId);
+      if (pc != null) {
+        pc.checkSuperuserPrivilege();
+      }
+      cacheManager.removeCachePool(cachePoolName);
       //getEditLog().logRemoveCachePool(req); // FIXME: HDFS-5119
+      success = true;
     } finally {
       writeUnlock();
+      if (isAuditEnabled() && isExternalInvocation()) {
+        logAuditEvent(success, "removeCachePool", cachePoolName, null, null);
+      }
+      RetryCache.setState(cacheEntry, success);
     }
-
+    
     getEditLog().logSync();
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(true, "removeCachePool", pool.getInfo().getPoolName(),
-          null, null);
-    }
   }
 
-  public List<CachePool> listCachePools(long prevKey,
-      int maxRepliesPerRequest) throws IOException {
-    List<CachePool> results;
+  public BatchedListEntries<CachePoolInfo> listCachePools(String prevKey)
+      throws IOException {
+    final FSPermissionChecker pc =
+        isPermissionEnabled ? getPermissionChecker() : null;
+    BatchedListEntries<CachePoolInfo> results;
+    checkOperation(OperationCategory.READ);
+    boolean success = false;
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      results = cacheManager.listCachePools(prevKey, maxRepliesPerRequest);
+      results = cacheManager.listCachePools(pc, prevKey);
+      success = true;
     } finally {
       readUnlock();
+      if (isAuditEnabled() && isExternalInvocation()) {
+        logAuditEvent(success, "listCachePools", null, null, null);
+      }
     }
     return results;
   }

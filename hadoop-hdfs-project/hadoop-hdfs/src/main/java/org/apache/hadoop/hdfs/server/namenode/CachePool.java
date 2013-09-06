@@ -19,119 +19,137 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import javax.annotation.Nonnull;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.CachePoolInfo.Builder;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * A CachePool describes a set of cache resources being managed by the NameNode.
  * User caching requests are billed to the cache pool specified in the request.
  *
- * CachePools are uniquely identified by a numeric id as well as the
- * {@link CachePoolInfo} pool name. Mutable metadata is contained in
- * CachePoolInfo, including pool name, owner, group, and permissions.
- * See this class for more details.
+ * This is an internal class, only used on the NameNode.  For identifying or
+ * describing a cache pool to clients, please use CachePoolInfo.
  */
+@InterfaceAudience.Private
 public final class CachePool {
   public static final Log LOG = LogFactory.getLog(CachePool.class);
 
-  private final long id;
+  @Nonnull
+  private final String poolName;
 
-  private CachePoolInfo info;
+  @Nonnull
+  private String ownerName;
 
-  public CachePool(long id) {
-    this.id = id;
-    this.info = null;
-  }
-
-  CachePool(long id, String poolName, String ownerName, String groupName,
+  @Nonnull
+  private String groupName;
+  
+  @Nonnull
+  private FsPermission mode;
+  
+  private int weight;
+  
+  public CachePool(String poolName, String ownerName, String groupName,
       FsPermission mode, Integer weight) throws IOException {
-    this.id = id;
-    // Set CachePoolInfo default fields if null
-    if (poolName == null || poolName.isEmpty()) {
-      throw new IOException("invalid empty cache pool name");
-    }
+    this.poolName = poolName;
     UserGroupInformation ugi = null;
     if (ownerName == null) {
-      ugi = NameNode.getRemoteUser();
-      ownerName = ugi.getShortUserName();
+      if (ugi == null) {
+        ugi = NameNode.getRemoteUser();
+      }
+      this.ownerName = ugi.getShortUserName();
+    } else {
+      this.ownerName = ownerName;
     }
     if (groupName == null) {
       if (ugi == null) {
         ugi = NameNode.getRemoteUser();
       }
-      String[] groups = ugi.getGroupNames();
-      if (groups.length == 0) {
-        throw new IOException("failed to get group names from UGI " + ugi);
-      }
-      groupName = groups[0];
+      this.groupName = ugi.getPrimaryGroupName();
+    } else {
+      this.groupName = ownerName;
     }
-    if (mode == null) {
-      mode = FsPermission.getDirDefault();
-    }
-    if (weight == null) {
-      weight = 100;
-    }
-    CachePoolInfo.Builder builder = CachePoolInfo.newBuilder();
-    builder.setPoolName(poolName).setOwnerName(ownerName)
-        .setGroupName(groupName).setMode(mode).setWeight(weight);
-    this.info = builder.build();
+    this.mode = mode != null ? 
+        new FsPermission(mode): FsPermission.getCachePoolDefault();
+    this.weight = weight != null ? weight : 100;
   }
 
-  public CachePool(long id, CachePoolInfo info) {
-    this.id = id;
-    this.info = info;
+  public String getName() {
+    return poolName;
   }
 
-  /**
-   * @return id of the pool
-   */
-  public long getId() {
-    return id;
+  public String getOwnerName() {
+    return ownerName;
   }
 
+  public CachePool setOwnerName(String ownerName) {
+    this.ownerName = ownerName;
+    return this;
+  }
+
+  public String getGroupName() {
+    return groupName;
+  }
+
+  public CachePool setGroupName(String groupName) {
+    this.groupName = groupName;
+    return this;
+  }
+
+  public FsPermission getMode() {
+    return mode;
+  }
+
+  public CachePool setMode(FsPermission mode) {
+    this.mode = new FsPermission(mode);
+    return this;
+  }
+  
+  public int getWeight() {
+    return weight;
+  }
+
+  public CachePool setWeight(int weight) {
+    this.weight = weight;
+    return this;
+  }
+  
   /**
    * Get information about this cache pool.
    *
+   * @param fullInfo
+   *          If true, only the name will be returned (i.e., what you 
+   *          would get if you didn't have read permission for this pool.)
    * @return
    *          Cache pool information.
    */
-  public CachePoolInfo getInfo() {
-    return info;
+  public CachePoolInfo getInfo(boolean fullInfo) {
+    CachePoolInfo info = new CachePoolInfo(poolName);
+    if (!fullInfo) {
+      return info;
+    }
+    return info.setOwnerName(ownerName).
+        setGroupName(groupName).
+        setMode(new FsPermission(mode)).
+        setWeight(weight);
   }
 
-  void setInfo(CachePoolInfo info) {
-    this.info = info;
+  public CachePoolInfo getInfo(FSPermissionChecker pc) {
+    return getInfo(pc.checkPermission(this, FsAction.READ)); 
   }
 
   public String toString() {
     return new StringBuilder().
-        append("{ ").append("id:").append(id).
-        append(", info:").append(info.toString()).
+        append("{ ").append("poolName:").append(poolName).
+        append(", ownerName:").append(ownerName).
+        append(", groupName:").append(groupName).
+        append(", mode:").append(mode).
+        append(", weight:").append(weight).
         append(" }").toString();
-  }
-
-  @Override
-  public int hashCode() {
-    return new HashCodeBuilder().append(id).append(info).hashCode();
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == null) { return false; }
-    if (obj == this) { return true; }
-    if (obj.getClass() != getClass()) {
-      return false;
-    }
-    CachePool rhs = (CachePool)obj;
-    return new EqualsBuilder()
-      .append(id, rhs.id)
-      .append(info, rhs.info)
-      .isEquals();
   }
 }

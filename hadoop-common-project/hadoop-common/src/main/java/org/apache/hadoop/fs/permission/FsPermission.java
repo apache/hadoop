@@ -304,6 +304,13 @@ public class FsPermission implements Writable {
   }
 
   /**
+   * Get the default permission for cache pools.
+   */
+  public static FsPermission getCachePoolDefault() {
+    return new FsPermission((short)00755);
+  }
+
+  /**
    * Create a FsPermission from a Unix symbolic permission string
    * @param unixSymbolicPermission e.g. "-rw-rw-rw-"
    */

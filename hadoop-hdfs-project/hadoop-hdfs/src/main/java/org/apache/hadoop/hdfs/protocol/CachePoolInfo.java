@@ -18,45 +18,38 @@
 
 package org.apache.hadoop.hdfs.protocol;
 
+import javax.annotation.Nullable;
+
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
 
-import com.google.common.base.Preconditions;
-
 /**
  * Information about a cache pool.
- * 
- * CachePoolInfo permissions roughly map to Unix file permissions.
- * Write permissions allow addition and removal of a {@link PathCacheEntry} from
- * the pool. Execute permissions allow listing of PathCacheEntries in a pool.
- * Read permissions have no associated meaning.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CachePoolInfo {
+  final String poolName;
 
-  private String poolName;
-  private String ownerName;
-  private String groupName;
-  private FsPermission mode;
-  private Integer weight;
+  @Nullable
+  String ownerName;
 
-  /**
-   * For Builder use
-   */
-  private CachePoolInfo() {}
+  @Nullable
+  String groupName;
 
-  /**
-   * Use a CachePoolInfo {@link Builder} to create a new CachePoolInfo with
-   * more parameters
-   */
+  @Nullable
+  FsPermission mode;
+
+  @Nullable
+  Integer weight;
+
   public CachePoolInfo(String poolName) {
     this.poolName = poolName;
   }
-
+  
   public String getPoolName() {
     return poolName;
   }
@@ -65,103 +58,73 @@ public class CachePoolInfo {
     return ownerName;
   }
 
+  public CachePoolInfo setOwnerName(String ownerName) {
+    this.ownerName = ownerName;
+    return this;
+  }
+
   public String getGroupName() {
     return groupName;
   }
 
+  public CachePoolInfo setGroupName(String groupName) {
+    this.groupName = groupName;
+    return this;
+  }
+  
   public FsPermission getMode() {
     return mode;
+  }
+
+  public CachePoolInfo setMode(FsPermission mode) {
+    this.mode = mode;
+    return this;
   }
 
   public Integer getWeight() {
     return weight;
   }
 
+  public CachePoolInfo setWeight(Integer weight) {
+    this.weight = weight;
+    return this;
+  }
+
   public String toString() {
-    return new StringBuilder().
-        append("{ ").append("poolName:").append(poolName).
-        append(", ownerName:").append(ownerName).
-        append(", groupName:").append(groupName).
-        append(", mode:").append(mode).
-        append(", weight:").append(weight).
-        append(" }").toString();
+    return new StringBuilder().append("{").
+      append("poolName:").append(poolName).
+      append(", ownerName:").append(ownerName).
+      append(", groupName:").append(groupName).
+      append(", mode:").append((mode == null) ? "null" :
+          String.format("0%03o", mode)).
+      append(", weight:").append(weight).
+      append("}").toString();
+  }
+  
+  @Override
+  public boolean equals(Object o) {
+    try {
+      CachePoolInfo other = (CachePoolInfo)o;
+      return new EqualsBuilder().
+          append(poolName, other.poolName).
+          append(ownerName, other.ownerName).
+          append(groupName, other.groupName).
+          append(mode, other.mode).
+          append(weight, other.weight).
+          isEquals();
+    } catch (ClassCastException e) {
+      return false;
+    }
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().append(poolName).append(ownerName)
-        .append(groupName).append(mode.toShort()).append(weight).hashCode();
+    return new HashCodeBuilder().
+        append(poolName).
+        append(ownerName).
+        append(groupName).
+        append(mode).
+        append(weight).
+        hashCode();
   }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == null) { return false; }
-    if (obj == this) { return true; }
-    if (obj.getClass() != getClass()) {
-      return false;
-    }
-    CachePoolInfo rhs = (CachePoolInfo)obj;
-    return new EqualsBuilder()
-      .append(poolName, rhs.poolName)
-      .append(ownerName, rhs.ownerName)
-      .append(groupName, rhs.groupName)
-      .append(mode, rhs.mode)
-      .append(weight, rhs.weight)
-      .isEquals();
-  }
-
-  public static Builder newBuilder() {
-    return new Builder();
-  }
-
-  public static Builder newBuilder(CachePoolInfo info) {
-    return new Builder(info);
-  }
-
-  /**
-   * CachePoolInfo Builder
-   */
-  public static class Builder {
-    private CachePoolInfo info;
-
-    public Builder() {
-      this.info = new CachePoolInfo();
-    }
-
-    public Builder(CachePoolInfo info) {
-      this.info = info;
-    }
-
-    public CachePoolInfo build() {
-      Preconditions.checkNotNull(info.poolName,
-          "Cannot create a CachePoolInfo without a pool name");
-      return info;
-    }
-
-    public Builder setPoolName(String poolName) {
-      info.poolName = poolName;
-      return this;
-    }
-
-    public Builder setOwnerName(String ownerName) {
-      info.ownerName = ownerName;
-      return this;
-    }
-
-    public Builder setGroupName(String groupName) {
-      info.groupName = groupName;
-      return this;
-    }
-
-    public Builder setMode(FsPermission mode) {
-      info.mode = mode;
-      return this;
-    }
-
-    public Builder setWeight(Integer weight) {
-      info.weight = weight;
-      return this;
-    }
-  }
-
 }

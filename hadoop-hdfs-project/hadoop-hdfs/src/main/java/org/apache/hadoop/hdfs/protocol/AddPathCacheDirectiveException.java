@@ -56,12 +56,12 @@ public abstract class AddPathCacheDirectiveException extends IOException {
     }
   }
 
-  public static class InvalidPoolError
+  public static class InvalidPoolNameError
       extends AddPathCacheDirectiveException {
     private static final long serialVersionUID = 1L;
 
-    public InvalidPoolError(PathCacheDirective directive) {
-      super("invalid pool id " + directive.getPoolId(), directive);
+    public InvalidPoolNameError(PathCacheDirective directive) {
+      super("invalid pool name '" + directive.getPool() + "'", directive);
     }
   }
 
@@ -70,7 +70,7 @@ public abstract class AddPathCacheDirectiveException extends IOException {
     private static final long serialVersionUID = 1L;
 
     public PoolWritePermissionDeniedError(PathCacheDirective directive) {
-      super("write permission denied for pool id " + directive.getPoolId(),
+      super("write permission denied for pool '" + directive.getPool() + "'",
             directive);
     }
   }
@@ -82,9 +82,7 @@ public abstract class AddPathCacheDirectiveException extends IOException {
     public UnexpectedAddPathCacheDirectiveException(
         PathCacheDirective directive) {
       super("encountered an unexpected error when trying to " +
-          "add path cache directive to pool id " + directive.getPoolId() +
-          " " + directive,
-          directive);
+          "add path cache directive " + directive, directive);
     }
   }
 };

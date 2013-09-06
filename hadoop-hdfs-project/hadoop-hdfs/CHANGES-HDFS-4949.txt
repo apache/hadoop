@@ -24,6 +24,9 @@ HDFS-4949 (Unreleased)
     HDFS-5121. Add RPCs for creating and manipulating cache pools.
     (Contributed by Colin Patrick McCabe)
 
+    HDFS-5163. Miscellaneous cache pool RPC fixes.  (Contributed by Colin
+    Patrick McCabe)
+
 
   OPTIMIZATIONS
 
