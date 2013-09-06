@@ -45,6 +45,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4816. transitionToActive blocks if the SBN is doing checkpoint image
     transfer. (Andrew Wang)
 
+    HDFS-5164.  deleteSnapshot should check if OperationCategory.WRITE is
+    possible before taking write lock.  (Colin Patrick McCabe)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
