@@ -68,6 +68,7 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.JerseyTest;
 import com.sun.jersey.test.framework.WebAppDescriptor;
@@ -240,6 +241,122 @@ public class TestRMWebServicesApps extends JerseyTest {
   }
 
   @Test
+  public void testAppsQueryStates() throws JSONException, Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    rm.submitApp(1024);
+    RMApp killedApp = rm.submitApp(1024);
+    rm.killApp(killedApp.getApplicationId());
+
+    amNodeManager.nodeHeartbeat(true);
+
+    WebResource r = resource();
+    MultivaluedMapImpl params = new MultivaluedMapImpl();
+    params.add("states", RMAppState.ACCEPTED.toString());
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps").queryParams(params)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    JSONArray array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 1, array.length());
+    assertEquals("state not equal to ACCEPTED", "ACCEPTED", array
+        .getJSONObject(0).getString("state"));
+
+    r = resource();
+    params = new MultivaluedMapImpl();
+    params.add("states", RMAppState.ACCEPTED.toString());
+    params.add("states", RMAppState.KILLED.toString());
+    response = r.path("ws").path("v1").path("cluster")
+        .path("apps").queryParams(params)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 2, array.length());
+    assertTrue("both app states of ACCEPTED and KILLED are not present", 
+        (array.getJSONObject(0).getString("state").equals("ACCEPTED") &&
+        array.getJSONObject(1).getString("state").equals("KILLED")) ||
+        (array.getJSONObject(0).getString("state").equals("KILLED") &&
+        array.getJSONObject(1).getString("state").equals("ACCEPTED")));
+
+    rm.stop();
+  }
+
+  @Test
+  public void testAppsQueryStatesComma() throws JSONException, Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    rm.submitApp(1024);
+    RMApp killedApp = rm.submitApp(1024);
+    rm.killApp(killedApp.getApplicationId());
+
+    amNodeManager.nodeHeartbeat(true);
+
+    WebResource r = resource();
+    MultivaluedMapImpl params = new MultivaluedMapImpl();
+    params.add("states", RMAppState.ACCEPTED.toString());
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps").queryParams(params)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    JSONArray array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 1, array.length());
+    assertEquals("state not equal to ACCEPTED", "ACCEPTED", array
+        .getJSONObject(0).getString("state"));
+
+    r = resource();
+    params = new MultivaluedMapImpl();
+    params.add("states", RMAppState.ACCEPTED.toString() + ","
+        + RMAppState.KILLED.toString());
+    response = r.path("ws").path("v1").path("cluster")
+        .path("apps").queryParams(params)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 2, array.length());
+    assertTrue("both app states of ACCEPTED and KILLED are not present", 
+        (array.getJSONObject(0).getString("state").equals("ACCEPTED") &&
+        array.getJSONObject(1).getString("state").equals("KILLED")) ||
+        (array.getJSONObject(0).getString("state").equals("KILLED") &&
+        array.getJSONObject(1).getString("state").equals("ACCEPTED")));
+    
+    rm.stop();
+  }
+
+  @Test
+  public void testAppsQueryStatesNone() throws JSONException, Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    rm.submitApp(1024);
+    amNodeManager.nodeHeartbeat(true);
+    WebResource r = resource();
+
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps").queryParam("states", RMAppState.RUNNING.toString())
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
+    rm.stop();
+  }
+
+  @Test
   public void testAppsQueryStateNone() throws JSONException, Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
@@ -255,6 +372,43 @@ public class TestRMWebServicesApps extends JerseyTest {
     assertEquals("incorrect number of elements", 1, json.length());
     assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
     rm.stop();
+  }
+
+  @Test
+  public void testAppsQueryStatesInvalid() throws JSONException, Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    rm.submitApp(1024);
+    amNodeManager.nodeHeartbeat(true);
+    WebResource r = resource();
+
+    try {
+      r.path("ws").path("v1").path("cluster").path("apps")
+          .queryParam("states", "INVALID_test")
+          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+      fail("should have thrown exception on invalid state query");
+    } catch (UniformInterfaceException ue) {
+      ClientResponse response = ue.getResponse();
+      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject msg = response.getEntity(JSONObject.class);
+      JSONObject exception = msg.getJSONObject("RemoteException");
+      assertEquals("incorrect number of elements", 3, exception.length());
+      String message = exception.getString("message");
+      String type = exception.getString("exception");
+      String classname = exception.getString("javaClassName");
+      WebServicesTestUtils.checkStringContains(
+          "exception message",
+          "Invalid application-state INVALID_test",
+          message);
+      WebServicesTestUtils.checkStringMatch("exception type",
+          "BadRequestException", type);
+      WebServicesTestUtils.checkStringMatch("exception classname",
+          "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+
+    } finally {
+      rm.stop();
+    }
   }
 
   @Test
@@ -280,15 +434,14 @@ public class TestRMWebServicesApps extends JerseyTest {
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      WebServicesTestUtils
-          .checkStringContains(
-              "exception message",
-              "org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState.INVALID_test",
-              message);
+      WebServicesTestUtils.checkStringContains(
+          "exception message",
+          "Invalid application-state INVALID_test",
+          message);
       WebServicesTestUtils.checkStringMatch("exception type",
-          "IllegalArgumentException", type);
+          "BadRequestException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
-          "java.lang.IllegalArgumentException", classname);
+          "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
 
     } finally {
       rm.stop();

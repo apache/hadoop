@@ -74,6 +74,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-758. Augment MockNM to use multiple cores (Karthik Kambatla via
     Sandy Ryza)
 
+    YARN-696. Changed RMWebservice apps call to take in multiple application
+    states. (Trevor Lorimer via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

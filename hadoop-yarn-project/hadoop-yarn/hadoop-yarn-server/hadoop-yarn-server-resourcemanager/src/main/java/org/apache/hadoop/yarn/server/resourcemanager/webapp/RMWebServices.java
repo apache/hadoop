@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -231,6 +232,7 @@ public class RMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AppsInfo getApps(@Context HttpServletRequest hsr,
       @QueryParam("state") String stateQuery,
+      @QueryParam("states") Set<String> statesQuery,
       @QueryParam("finalStatus") String finalStatusQuery,
       @QueryParam("user") String userQuery,
       @QueryParam("queue") String queueQuery,
@@ -245,6 +247,7 @@ public class RMWebServices {
     boolean checkStart = false;
     boolean checkEnd = false;
     boolean checkAppTypes = false;
+    boolean checkAppStates = false;
     long countNum = 0;
 
     // set values suitable in case both of begin/end not specified
@@ -321,6 +324,36 @@ public class RMWebServices {
       checkAppTypes = true;
     }
 
+    String allAppStates;
+    RMAppState[] stateArray = RMAppState.values();
+    allAppStates = Arrays.toString(stateArray);
+
+    Set<String> appStates = new HashSet<String>();
+    // stateQuery is deprecated.
+    if (stateQuery != null && !stateQuery.isEmpty()) {
+      statesQuery.add(stateQuery);
+    }
+    if (!statesQuery.isEmpty()) {
+      for (String applicationState : statesQuery) {
+        if (applicationState != null && !applicationState.isEmpty()) {
+          String[] states = applicationState.split(",");
+          for (String state : states) {
+            try {
+              RMAppState.valueOf(state.trim());
+            } catch (IllegalArgumentException iae) {
+              throw new BadRequestException(
+                  "Invalid application-state " + state
+                  + " specified. It should be one of " + allAppStates);
+            }
+            appStates.add(state.trim().toLowerCase());
+          }
+        }
+      }
+    }
+    if (!appStates.isEmpty()) {
+      checkAppStates = true;
+    }
+
     final ConcurrentMap<ApplicationId, RMApp> apps = rm.getRMContext()
         .getRMApps();
     AppsInfo allApps = new AppsInfo();
@@ -329,11 +362,10 @@ public class RMWebServices {
       if (checkCount && num == countNum) {
         break;
       }
-      if (stateQuery != null && !stateQuery.isEmpty()) {
-        RMAppState.valueOf(stateQuery);
-        if (!rmapp.getState().toString().equalsIgnoreCase(stateQuery)) {
-          continue;
-        }
+
+      if (checkAppStates
+          && !appStates.contains(rmapp.getState().toString().toLowerCase())) {
+        continue;
       }
       if (finalStatusQuery != null && !finalStatusQuery.isEmpty()) {
         FinalApplicationStatus.valueOf(finalStatusQuery);
