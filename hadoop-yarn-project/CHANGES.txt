@@ -56,6 +56,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1065. NM should provide AuxillaryService data to the container (Xuan
     Gong via bikas)
 
+    YARN-696. Changed RMWebservice apps call to take in multiple application
+    states. (Trevor Lorimer via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
