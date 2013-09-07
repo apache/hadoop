@@ -169,11 +169,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     AMLivelinessMonitor amFinishingMonitor = createAMLivelinessMonitor();
     addService(amFinishingMonitor);
 
-    if (UserGroupInformation.isSecurityEnabled()) {
-      this.delegationTokenRenewer = createDelegationTokenRenewer();
-      addService(delegationTokenRenewer);
-    }
-
     this.containerTokenSecretManager = createContainerTokenSecretManager(conf);
     this.nmTokenSecretManager = createNMTokenSecretManager(conf);
     
@@ -198,6 +193,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
       // HA and we need to give up master status if we got fenced
       LOG.error("Failed to init state store", e);
       ExitUtil.terminate(1, e);
+    }
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      this.delegationTokenRenewer = createDelegationTokenRenewer();
     }
 
     this.rmContext =
@@ -260,7 +259,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmDispatcher.register(RMAppManagerEventType.class,
         this.rmAppManager);
     this.rmDTSecretManager = createRMDelegationTokenSecretManager(this.rmContext);
+    rmContext.setRMDelegationTokenSecretManager(this.rmDTSecretManager);
     clientRM = createClientRMService();
+    rmContext.setClientRMService(clientRM);
     addService(clientRM);
     
     adminService = createAdminService(clientRM, masterService, resourceTracker);
@@ -271,7 +272,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
         this.applicationMasterLauncher);
 
     addService(applicationMasterLauncher);
-
+    if (UserGroupInformation.isSecurityEnabled()) {
+      addService(delegationTokenRenewer);
+      delegationTokenRenewer.setRMContext(rmContext);
+    }
     new RMNMInfo(this.rmContext, this.scheduler);
     
     super.serviceInit(conf);
@@ -619,13 +623,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.amRmTokenSecretManager.start();
     this.containerTokenSecretManager.start();
     this.nmTokenSecretManager.start();
-
-    // Explicitly start DTRenewer too in secure mode before kicking recovery as
-    // tokens will start getting added for renewal as part of the recovery
-    // process itself.
-    if (UserGroupInformation.isSecurityEnabled()) {
-      this.delegationTokenRenewer.start();
-    }
 
     RMStateStore rmStore = rmContext.getStateStore();
     // The state store needs to start irrespective of recoveryEnabled as apps
