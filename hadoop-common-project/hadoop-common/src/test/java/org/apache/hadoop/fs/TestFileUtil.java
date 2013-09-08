@@ -757,7 +757,7 @@ public class TestFileUtil {
     String wildcardPath = tmp.getCanonicalPath() + File.separator + "*";
     String nonExistentSubdir = tmp.getCanonicalPath() + Path.SEPARATOR + "subdir"
       + Path.SEPARATOR;
-    List<String> classPaths = Arrays.asList("cp1.jar", "cp2.jar", wildcardPath,
+    List<String> classPaths = Arrays.asList("", "cp1.jar", "cp2.jar", wildcardPath,
       "cp3.jar", nonExistentSubdir);
     String inputClassPath = StringUtils.join(File.pathSeparator, classPaths);
     String classPathJar = FileUtil.createJarWithClassPath(inputClassPath,
@@ -776,6 +776,9 @@ public class TestFileUtil {
       Assert.assertNotNull(classPathAttr);
       List<String> expectedClassPaths = new ArrayList<String>();
       for (String classPath: classPaths) {
+        if (classPath.length() == 0) {
+          continue;
+        }
         if (wildcardPath.equals(classPath)) {
           // add wildcard matches
           for (File wildcardMatch: wildcardMatches) {

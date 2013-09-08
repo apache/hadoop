@@ -1239,6 +1239,9 @@ public class FileUtil {
     List<String> classPathEntryList = new ArrayList<String>(
       classPathEntries.length);
     for (String classPathEntry: classPathEntries) {
+      if (classPathEntry.length() == 0) {
+        continue;
+      }
       if (classPathEntry.endsWith("*")) {
         // Append all jars that match the wildcard
         Path globPath = new Path(classPathEntry).suffix("{.jar,.JAR}");
