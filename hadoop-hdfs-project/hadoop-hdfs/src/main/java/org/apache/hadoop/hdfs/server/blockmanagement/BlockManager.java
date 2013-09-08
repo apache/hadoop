@@ -510,7 +510,7 @@ public class BlockManager {
         state = "(decommissioned)";
       }
       
-      if (node.areBlockContentsStale()) {
+      if (storage.areBlockContentsStale()) {
         state += " (block deletions maybe out of date)";
       }
       out.print(" " + node + state + " : ");
@@ -993,7 +993,14 @@ public class BlockManager {
     // failover, then we may have been holding up on processing
     // over-replicated blocks because of it. But we can now
     // process those blocks.
-    if (node.areBlockContentsStale()) {
+    boolean stale = false;
+    for(DatanodeStorageInfo storage : node.getStorageInfos()) {
+      if (storage.areBlockContentsStale()) {
+        stale = true;
+        break;
+      }
+    }
+    if (stale) {
       rescanPostponedMisreplicatedBlocks();
     }
   }
@@ -1616,14 +1623,16 @@ public class BlockManager {
 
       // To minimize startup time, we discard any second (or later) block reports
       // that we receive while still in startup phase.
-      if (namesystem.isInStartupSafeMode() && !node.isFirstBlockReport()) {
+      final DatanodeStorageInfo storageInfo = node.getStorageInfo(storage.getStorageID());
+      if (namesystem.isInStartupSafeMode()
+          && storageInfo.getBlockReportCount() > 0) {
         blockLog.info("BLOCK* processReport: "
             + "discarded non-initial block report from " + nodeID
             + " because namenode still in startup phase");
         return;
       }
 
-      if (node.numBlocks() == 0) {
+      if (storageInfo.numBlocks() == 0) {
         // The first block report can be processed a lot more efficiently than
         // ordinary block reports.  This shortens restart times.
         processFirstBlockReport(node, storage.getStorageID(), newReport);
@@ -1633,9 +1642,9 @@ public class BlockManager {
       
       // Now that we have an up-to-date block report, we know that any
       // deletions from a previous NN iteration have been accounted for.
-      boolean staleBefore = node.areBlockContentsStale();
-      node.receivedBlockReport();
-      if (staleBefore && !node.areBlockContentsStale()) {
+      boolean staleBefore = storageInfo.areBlockContentsStale();
+      storageInfo.receivedBlockReport();
+      if (staleBefore && !storageInfo.areBlockContentsStale()) {
         LOG.info("BLOCK* processReport: Received first block report from "
             + node + " after starting up or becoming active. Its block "
             + "contents are no longer considered stale");
@@ -1747,7 +1756,7 @@ public class BlockManager {
       final BlockListAsLongs report) throws IOException {
     if (report == null) return;
     assert (namesystem.hasWriteLock());
-    assert (node.numBlocks() == 0);
+    assert (node.getStorageInfo(storageID).numBlocks() == 0);
     BlockReportIterator itBR = report.getBlockReportIterator();
 
     while(itBR.hasNext()) {
@@ -2421,10 +2430,11 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         .getNodes(block);
     for(DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
       final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
-      if (cur.areBlockContentsStale()) {
+      if (storage.areBlockContentsStale()) {
         LOG.info("BLOCK* processOverReplicatedBlock: " +
             "Postponing processing of over-replicated " +
-            block + " since datanode " + cur + " does not yet have up-to-date " +
+            block + " since storage + " + storage
+            + "datanode " + cur + " does not yet have up-to-date " +
             "block information.");
         postponeBlock(block);
         return;
@@ -2756,7 +2766,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
           live++;
         }
       }
-      if (node.areBlockContentsStale()) {
+      if (storage.areBlockContentsStale()) {
         stale++;
       }
     }

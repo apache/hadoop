@@ -713,8 +713,10 @@ public class DatanodeManager {
   /** Start decommissioning the specified datanode. */
   private void startDecommission(DatanodeDescriptor node) {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
-      LOG.info("Start Decommissioning " + node + " with " + 
-          node.numBlocks() +  " blocks");
+      for (DatanodeStorageInfo storage : node.getStorageInfos()) {
+        LOG.info("Start Decommissioning " + node + " " + storage
+            + " with " + storage.numBlocks() + " blocks");
+      }
       heartbeatManager.startDecommission(node);
       node.decommissioningStatus.setStartTime(now());
       
@@ -1345,7 +1347,9 @@ public class DatanodeManager {
     LOG.info("Marking all datandoes as stale");
     synchronized (datanodeMap) {
       for (DatanodeDescriptor dn : datanodeMap.values()) {
-        dn.markStaleAfterFailover();
+        for(DatanodeStorageInfo storage : dn.getStorageInfos()) {
+          storage.markStaleAfterFailover();
+        }
       }
     }
   }

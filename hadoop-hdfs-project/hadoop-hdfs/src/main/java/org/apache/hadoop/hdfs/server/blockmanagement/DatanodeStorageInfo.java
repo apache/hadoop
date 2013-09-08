@@ -78,14 +78,62 @@ public class DatanodeStorageInfo {
   private long dfsUsed;
   private long remaining;
   private volatile BlockInfo blockList = null;
-  
+  private int numBlocks = 0;
+
+  /** The number of block reports received */
+  private int blockReportCount = 0;
+
+  /**
+   * Set to false on any NN failover, and reset to true
+   * whenever a block report is received.
+   */
+  private boolean heartbeatedSinceFailover = false;
+
+  /**
+   * At startup or at failover, the storages in the cluster may have pending
+   * block deletions from a previous incarnation of the NameNode. The block
+   * contents are considered as stale until a block report is received. When a
+   * storage is considered as stale, the replicas on it are also considered as
+   * stale. If any block has at least one stale replica, then no invalidations
+   * will be processed for this block. See HDFS-1972.
+   */
+  private boolean blockContentsStale = true;
+
   public DatanodeStorageInfo(DatanodeDescriptor dn, DatanodeStorage s) {
     this.dn = dn;
     this.storageID = s.getStorageID();
     this.storageType = s.getStorageType();
     this.state = s.getState();
   }
-  
+
+  int getBlockReportCount() {
+    return blockReportCount;
+  }
+
+  void setBlockReportCount(int blockReportCount) {
+    this.blockReportCount = blockReportCount;
+  }
+
+  public boolean areBlockContentsStale() {
+    return blockContentsStale;
+  }
+
+  public void markStaleAfterFailover() {
+    heartbeatedSinceFailover = false;
+    blockContentsStale = true;
+  }
+
+  public void receivedHeartbeat() {
+    heartbeatedSinceFailover = true;
+  }
+
+  public void receivedBlockReport() {
+    if (heartbeatedSinceFailover) {
+      blockContentsStale = false;
+    }
+    blockReportCount++;
+  }
+
   public void setUtilization(long capacity, long dfsUsed, long remaining) {
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
@@ -127,16 +175,22 @@ public class DatanodeStorageInfo {
       return false;
     // add to the head of the data-node list
     blockList = b.listInsert(blockList, this);
+    numBlocks++;
     return true;
   }
 
   public boolean removeBlock(BlockInfo b) {
     blockList = b.listRemove(blockList, this);
-    return b.removeStorage(this);
+    if (b.removeStorage(this)) {
+      numBlocks--;
+      return true;
+    } else {
+      return false;
+    }
   }
 
   public int numBlocks() {
-    return blockList == null ? 0 : blockList.listCount(this);
+    return numBlocks;
   }
   
   Iterator<BlockInfo> getBlockIterator() {

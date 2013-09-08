@@ -106,23 +106,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public boolean isAlive = false;
   public boolean needKeyUpdate = false;
 
-  /**
-   * Set to false on any NN failover, and reset to true
-   * whenever a block report is received.
-   */
-  private boolean heartbeatedSinceFailover = false;
-  
-  /**
-   * At startup or at any failover, the DNs in the cluster may
-   * have pending block deletions from a previous incarnation
-   * of the NameNode. Thus, we consider their block contents
-   * stale until we have received a block report. When a DN
-   * is considered stale, any replicas on it are transitively
-   * considered stale. If any block has at least one stale replica,
-   * then no invalidations will be processed for this block.
-   * See HDFS-1972.
-   */
-  private boolean blockContentsStale = true;
   
   // A system administrator can tune the balancer bandwidth parameter
   // (dfs.balance.bandwidthPerSec) dynamically by calling
@@ -150,9 +133,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long lastBlocksScheduledRollTime = 0;
   private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
   private int volumeFailures = 0;
-  
-  /** Set to false after processing first block report */
-  private boolean firstBlockReport = true;
   
   /** 
    * When set to true, the node is not in include list and is not allowed
@@ -234,11 +214,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return false;
   }
 
-  DatanodeStorageInfo getStorageInfo(String storageID) {
-    return storageMap.get(storageID);
+  public DatanodeStorageInfo getStorageInfo(String storageID) {
+    synchronized (storageMap) {
+      return storageMap.get(storageID);
+    }
   }
   public Collection<DatanodeStorageInfo> getStorageInfos() {
-    return storageMap.values();
+    synchronized (storageMap) {
+      return new ArrayList<DatanodeStorageInfo>(storageMap.values());
+    }
   }
 
   /**
@@ -314,9 +298,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   public int numBlocks() {
-    // TODO: synchronization
     int blocks = 0;
-    for (DatanodeStorageInfo entry : storageMap.values()) {
+    for (DatanodeStorageInfo entry : getStorageInfos()) {
       blocks += entry.numBlocks();
     }
     return blocks;
@@ -334,7 +317,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
     setXceiverCount(xceiverCount);
     setLastUpdate(Time.now());    
     this.volumeFailures = volFailures;
-    this.heartbeatedSinceFailover = true;
+    for(DatanodeStorageInfo storage : getStorageInfos()) {
+      storage.receivedHeartbeat();
+    }
     rollBlocksScheduled(getLastUpdate());
   }
 
@@ -380,10 +365,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   Iterator<BlockInfo> getBlockIterator() {
-    return new BlockIterator(storageMap.values());
+    return new BlockIterator(getStorageInfos());
   }
   Iterator<BlockInfo> getBlockIterator(final String storageID) {
-    return new BlockIterator(storageMap.get(storageID));
+    return new BlockIterator(getStorageInfo(storageID));
   }
   
   /**
@@ -585,7 +570,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   @Override
   public void updateRegInfo(DatanodeID nodeReg) {
     super.updateRegInfo(nodeReg);
-    firstBlockReport = true; // must re-process IBR after re-registration
+    
+    // must re-process IBR after re-registration
+    for(DatanodeStorageInfo storage : getStorageInfos()) {
+      storage.setBlockReportCount(0);
+    }
   }
 
   /**
@@ -600,26 +589,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public void setBalancerBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
-  }
-
-  public boolean areBlockContentsStale() {
-    return blockContentsStale;
-  }
-
-  public void markStaleAfterFailover() {
-    heartbeatedSinceFailover = false;
-    blockContentsStale = true;
-  }
-
-  public void receivedBlockReport() {
-    if (heartbeatedSinceFailover) {
-      blockContentsStale = false;
-    }
-    firstBlockReport = false;
-  }
-  
-  boolean isFirstBlockReport() {
-    return firstBlockReport;
   }
 
   @Override
@@ -641,13 +610,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   DatanodeStorageInfo updateStorage(DatanodeStorage s) {
-    DatanodeStorageInfo storage = getStorageInfo(s.getStorageID());
-    if (storage == null) {
-      storage = new DatanodeStorageInfo(this, s);
-      storageMap.put(s.getStorageID(), storage);
-    } else {
-      storage.setState(s.getState());
+    synchronized (storageMap) {
+      DatanodeStorageInfo storage = storageMap.get(s.getStorageID());
+      if (storage == null) {
+        storage = new DatanodeStorageInfo(this, s);
+        storageMap.put(s.getStorageID(), storage);
+      } else {
+        storage.setState(s.getState());
+      }
+      return storage;
     }
-    return storage;
   }
 }

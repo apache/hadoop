@@ -523,33 +523,30 @@ public class TestBlockManager {
     bm.getDatanodeManager().registerDatanode(nodeReg);
     bm.getDatanodeManager().addDatanode(node); // swap in spy    
     assertEquals(node, bm.getDatanodeManager().getDatanode(node));
-    assertTrue(node.isFirstBlockReport());
+    assertEquals(0, ds.getBlockReportCount());
     // send block report, should be processed
     reset(node);
     
     bm.processReport(node, new DatanodeStorage(ds.getStorageID()), "pool", 
         new BlockListAsLongs(null, null));
-    verify(node).receivedBlockReport();
-    assertFalse(node.isFirstBlockReport());
+    assertEquals(1, ds.getBlockReportCount());
     // send block report again, should NOT be processed
     reset(node);
     bm.processReport(node, new DatanodeStorage(ds.getStorageID()), "pool",
         new BlockListAsLongs(null, null));
-    verify(node, never()).receivedBlockReport();
-    assertFalse(node.isFirstBlockReport());
+    assertEquals(1, ds.getBlockReportCount());
 
     // re-register as if node restarted, should update existing node
     bm.getDatanodeManager().removeDatanode(node);
     reset(node);
     bm.getDatanodeManager().registerDatanode(nodeReg);
     verify(node).updateRegInfo(nodeReg);
-    assertTrue(node.isFirstBlockReport()); // ready for report again
+    assertEquals(0, ds.getBlockReportCount()); // ready for report again
     // send block report, should be processed after restart
     reset(node);
     bm.processReport(node, new DatanodeStorage(ds.getStorageID()), "pool",
         new BlockListAsLongs(null, null));
-    verify(node).receivedBlockReport();
-    assertFalse(node.isFirstBlockReport());
+    assertEquals(1, ds.getBlockReportCount());
   }
   
   @Test
@@ -570,13 +567,12 @@ public class TestBlockManager {
     bm.getDatanodeManager().registerDatanode(nodeReg);
     bm.getDatanodeManager().addDatanode(node); // swap in spy    
     assertEquals(node, bm.getDatanodeManager().getDatanode(node));
-    assertTrue(node.isFirstBlockReport());
+    assertEquals(0, ds.getBlockReportCount());
     // send block report while pretending to already have blocks
     reset(node);
     doReturn(1).when(node).numBlocks();
     bm.processReport(node, new DatanodeStorage(ds.getStorageID()), "pool",
         new BlockListAsLongs(null, null));
-    verify(node).receivedBlockReport();
-    assertFalse(node.isFirstBlockReport());
+    assertEquals(1, ds.getBlockReportCount());
   }
 }

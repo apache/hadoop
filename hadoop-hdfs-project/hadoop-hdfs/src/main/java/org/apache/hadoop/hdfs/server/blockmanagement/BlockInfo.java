@@ -324,14 +324,6 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return head;
   }
 
-  int listCount(DatanodeStorageInfo storage) {
-    int count = 0;
-    for(BlockInfo cur = this; cur != null;
-          cur = cur.getNext(cur.findStorageInfo(storage)))
-      count++;
-    return count;
-  }
-
   /**
    * BlockInfo represents a block that is not being constructed.
    * In order to start modifying the block, the BlockInfo should be converted
