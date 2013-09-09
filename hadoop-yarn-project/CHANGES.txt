@@ -153,6 +153,10 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1144. Unmanaged AMs registering a tracking URI should not be 
     proxy-fied. (tucu)
 
+    YARN-1152. Fixed a bug in ResourceManager that was causing clients to get
+    invalid client token key errors when an appliation is about to finish.
+    (Jason Lowe via vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

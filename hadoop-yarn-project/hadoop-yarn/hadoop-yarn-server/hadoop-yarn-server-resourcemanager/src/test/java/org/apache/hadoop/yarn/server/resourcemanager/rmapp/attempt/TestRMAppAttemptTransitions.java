@@ -30,13 +30,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.spy;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -85,7 +89,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(value = Parameterized.class)
 public class TestRMAppAttemptTransitions {
 
   private static final Log LOG = 
@@ -95,6 +102,7 @@ public class TestRMAppAttemptTransitions {
   private static final String RM_WEBAPP_ADDR =
       YarnConfiguration.getRMWebAppHostAndPort(new Configuration());
   
+  private boolean isSecurityEnabled;
   private RMContext rmContext;
   private YarnScheduler scheduler;
   private ApplicationMasterService masterService;
@@ -162,8 +170,26 @@ public class TestRMAppAttemptTransitions {
   private ApplicationSubmissionContext submissionContext = null;
   private boolean unmanagedAM;
 
+  @Parameterized.Parameters
+  public static Collection<Object[]> getTestParameters() {
+    return Arrays.asList(new Object[][] {
+        { Boolean.FALSE },
+        { Boolean.TRUE }
+    });
+  }
+
+  public TestRMAppAttemptTransitions(Boolean isSecurityEnabled) {
+    this.isSecurityEnabled = isSecurityEnabled;
+  }
+
   @Before
   public void setUp() throws Exception {
+    AuthenticationMethod authMethod = AuthenticationMethod.SIMPLE;
+    if (isSecurityEnabled) {
+      authMethod = AuthenticationMethod.KERBEROS;
+    }
+    SecurityUtil.setAuthenticationMethod(authMethod, conf);
+    UserGroupInformation.setConfiguration(conf);
     InlineDispatcher rmDispatcher = new InlineDispatcher();
   
     ContainerAllocationExpirer containerAllocationExpirer =
@@ -270,7 +296,9 @@ public class TestRMAppAttemptTransitions {
     if (UserGroupInformation.isSecurityEnabled()) {
       verify(clientToAMTokenManager).registerApplication(
           applicationAttempt.getAppAttemptId());
+      assertNotNull(applicationAttempt.createClientToken("some client"));
     }
+    assertNull(applicationAttempt.createClientToken(null));
     assertNotNull(applicationAttempt.getAMRMToken());
     // Check events
     verify(masterService).
@@ -883,6 +911,9 @@ public class TestRMAppAttemptTransitions {
     verify(amRMTokenManager, times(count)).applicationMasterFinished(appAttemptId);
     if (UserGroupInformation.isSecurityEnabled()) {
       verify(clientToAMTokenManager, times(count)).unRegisterApplication(appAttemptId);
+      if (count > 0) {
+        assertNull(applicationAttempt.createClientToken("client"));
+      }
     }
   }
 }

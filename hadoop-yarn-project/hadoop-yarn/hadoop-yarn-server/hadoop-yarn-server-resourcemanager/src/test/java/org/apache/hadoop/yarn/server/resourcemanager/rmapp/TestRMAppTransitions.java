@@ -19,14 +19,20 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import static org.mockito.Mockito.mock;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -57,11 +63,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 
+@RunWith(value = Parameterized.class)
 public class TestRMAppTransitions {
   static final Log LOG = LogFactory.getLog(TestRMAppTransitions.class);
 
+  private boolean isSecurityEnabled;
+  private Configuration conf;
   private RMContext rmContext;
   private static int maxAppAttempts =
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS;
@@ -132,10 +143,29 @@ public class TestRMAppTransitions {
     public void handle(SchedulerEvent event) {
     }
   }  
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> getTestParameters() {
+    return Arrays.asList(new Object[][] {
+        { Boolean.FALSE },
+        { Boolean.TRUE }
+    });
+  }
+
+  public TestRMAppTransitions(boolean isSecurityEnabled) {
+    this.isSecurityEnabled = isSecurityEnabled;
+  }
   
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new Configuration();
+    conf = new YarnConfiguration();
+    AuthenticationMethod authMethod = AuthenticationMethod.SIMPLE;
+    if (isSecurityEnabled) {
+      authMethod = AuthenticationMethod.KERBEROS;
+    }
+    SecurityUtil.setAuthenticationMethod(authMethod, conf);
+    UserGroupInformation.setConfiguration(conf);
+
     rmDispatcher = new DrainDispatcher();
     ContainerAllocationExpirer containerAllocationExpirer = 
         mock(ContainerAllocationExpirer.class);
@@ -171,7 +201,6 @@ public class TestRMAppTransitions {
     String user = MockApps.newUserName();
     String name = MockApps.newAppName();
     String queue = MockApps.newQueue();
-    Configuration conf = new YarnConfiguration();
     // ensure max application attempts set to known value
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, maxAppAttempts);
     YarnScheduler scheduler = mock(YarnScheduler.class);
@@ -191,6 +220,8 @@ public class TestRMAppTransitions {
           System.currentTimeMillis(), "YARN");
 
     testAppStartState(applicationId, user, name, queue, application);
+    this.rmContext.getRMApps().putIfAbsent(application.getApplicationId(),
+        application);
     return application;
   }
 
@@ -488,8 +519,6 @@ public class TestRMAppTransitions {
     // SUBMITTED => KILLED event RMAppEventType.KILL
     RMAppEvent event = new RMAppEvent(application.getApplicationId(),
         RMAppEventType.KILL);
-    this.rmContext.getRMApps().putIfAbsent(application.getApplicationId(),
-        application);
     application.handle(event);
     rmDispatcher.await();
     assertKilled(application);
@@ -535,8 +564,6 @@ public class TestRMAppTransitions {
     // ACCEPTED => KILLED event RMAppEventType.KILL
     RMAppEvent event = new RMAppEvent(application.getApplicationId(),
         RMAppEventType.KILL);
-    this.rmContext.getRMApps().putIfAbsent(application.getApplicationId(),
-        application);
     application.handle(event);
     rmDispatcher.await();
     assertKilled(application);
@@ -730,5 +757,34 @@ public class TestRMAppTransitions {
     Assert.assertNotNull(report.getApplicationResourceUsageReport());
     report = app.createAndGetApplicationReport("clientuser", true);
     Assert.assertNotNull(report.getApplicationResourceUsageReport());
+  }
+
+  @Test
+  public void testClientTokens() throws Exception {
+    assumeTrue(isSecurityEnabled);
+
+    RMApp app = createNewTestApp(null);
+    assertAppState(RMAppState.NEW, app);
+    ApplicationReport report = app.createAndGetApplicationReport(null, true);
+    Assert.assertNull(report.getClientToAMToken());
+    report = app.createAndGetApplicationReport("clientuser", true);
+    Assert.assertNull(report.getClientToAMToken());
+
+    app = testCreateAppRunning(null);
+    rmDispatcher.await();
+    assertAppState(RMAppState.RUNNING, app);
+    report = app.createAndGetApplicationReport(null, true);
+    Assert.assertNull(report.getClientToAMToken());
+    report = app.createAndGetApplicationReport("clientuser", true);
+    Assert.assertNotNull(report.getClientToAMToken());
+
+    // kill the app attempt and verify client token is unavailable
+    app.handle(new RMAppEvent(app.getApplicationId(), RMAppEventType.KILL));
+    rmDispatcher.await();
+    assertAppAndAttemptKilled(app);
+    report = app.createAndGetApplicationReport(null, true);
+    Assert.assertNull(report.getClientToAMToken());
+    report = app.createAndGetApplicationReport("clientuser", true);
+    Assert.assertNull(report.getClientToAMToken());
   }
 }
