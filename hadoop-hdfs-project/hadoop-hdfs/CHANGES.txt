@@ -51,6 +51,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5164.  deleteSnapshot should check if OperationCategory.WRITE is
     possible before taking write lock.  (Colin Patrick McCabe)
 
+    HDFS-5170. BlockPlacementPolicyDefault uses the wrong classname when
+    alerting to enable debug logging. (Andrew Wang)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
