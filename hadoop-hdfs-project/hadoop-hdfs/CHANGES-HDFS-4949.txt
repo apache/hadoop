@@ -27,6 +27,10 @@ HDFS-4949 (Unreleased)
     HDFS-5163. Miscellaneous cache pool RPC fixes.  (Contributed by Colin
     Patrick McCabe)
 
+    HDFS-5120. Add command-line support for manipulating cache pools.
+    (Contributed by Colin Patrick McCabe)
+
+
   OPTIMIZATIONS
 
   BUG FIXES

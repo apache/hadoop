@@ -16356,7 +16356,7 @@
       </comparators>
     </test>
   
-  <test> <!--Tested -->
+    <test> <!--Tested -->
       <description>Verifying clrSpaceQuota operation is not permitted in safemode</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /test </command>
@@ -16374,5 +16374,70 @@
         </comparator>
       </comparators>
     </test>
+
+    <test> <!--Tested -->
+      <description>Testing listing no cache pools</description>
+      <test-commands>
+        <dfs-admin-command>-fs NAMENODE -listCachePools</dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>No cache pools found.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!--Tested -->
+      <description>Testing adding a cache pool</description>
+      <test-commands>
+        <dfs-admin-command>-fs NAMENODE -addCachePool foo</dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <dfs-admin-command>-fs NAMENODE -removeCachePool foo</dfs-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Successfully added cache pool foo.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!--Tested -->
+      <description>Testing deleting a cache pool</description>
+      <test-commands>
+        <dfs-admin-command>-fs NAMENODE -addCachePool foo</dfs-admin-command>
+        <dfs-admin-command>-fs NAMENODE -removeCachePool foo</dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Successfully removed cache pool foo.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!--Tested -->
+      <description>Testing listing a cache pool</description>
+      <test-commands>
+        <dfs-admin-command>-fs NAMENODE -addCachePool foo -owner bob -group bob -mode 0664</dfs-admin-command>
+        <dfs-admin-command>-fs NAMENODE -listCachePools foo</dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <dfs-admin-command>-fs NAMENODE -removeCachePool foo</dfs-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>foo</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
   </tests>
 </configuration>

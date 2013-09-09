@@ -40,6 +40,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 public final class CachePool {
   public static final Log LOG = LogFactory.getLog(CachePool.class);
 
+  public static final int DEFAULT_WEIGHT = 100;
+  
   @Nonnull
   private final String poolName;
 
@@ -151,5 +153,14 @@ public final class CachePool {
         append(", mode:").append(mode).
         append(", weight:").append(weight).
         append(" }").toString();
+  }
+
+  public static void validateName(String name) throws IOException {
+    if (name.isEmpty()) {
+      // Empty pool names are not allowed because they would be highly
+      // confusing.  They would also break the ability to list all pools
+      // by starting with prevKey = ""
+      throw new IOException("invalid empty cache pool name");
+    }
   }
 }

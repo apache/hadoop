@@ -1144,7 +1144,7 @@ public interface ClientProtocol {
   public void addCachePool(CachePoolInfo info) throws IOException;
 
   /**
-   * Modify a cache pool.
+   * Modify an existing cache pool.
    *
    * @param req
    *          The request to modify a cache pool.

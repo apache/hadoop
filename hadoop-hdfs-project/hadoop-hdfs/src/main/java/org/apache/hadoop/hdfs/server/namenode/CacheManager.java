@@ -254,9 +254,7 @@ final class CacheManager {
   public synchronized void addCachePool(CachePoolInfo info)
       throws IOException {
     String poolName = info.getPoolName();
-    if (poolName.isEmpty()) {
-      throw new IOException("invalid empty cache pool name");
-    }
+    CachePool.validateName(poolName);
     CachePool pool = cachePools.get(poolName);
     if (pool != null) {
       throw new IOException("cache pool " + poolName + " already exists.");
