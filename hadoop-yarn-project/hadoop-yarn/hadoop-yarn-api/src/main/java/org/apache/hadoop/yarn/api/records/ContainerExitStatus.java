@@ -41,4 +41,9 @@ public class ContainerExitStatus {
    * threshold number of the nodemanager-log-directories become bad.
    */
   public static final int DISKS_FAILED = -101;
+
+  /**
+   * Containers preempted by the framework.
+   */
+  public static final int PREEMPTED = -102;
 }

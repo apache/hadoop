@@ -147,6 +147,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1107. Fixed a bug in ResourceManager because of which RM in secure mode
     fails to restart. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-1049. ContainerExistStatus should define a status for preempted 
+    containers. (tucu)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
