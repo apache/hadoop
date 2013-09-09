@@ -16,11 +16,29 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager;
+package org.apache.hadoop.yarn.server.api;
 
-public enum AuxServicesEventType {
-  APPLICATION_INIT,
-  APPLICATION_STOP,
-  CONTAINER_INIT,
-  CONTAINER_STOP
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
+
+/**
+ * Initialization context for {@link AuxiliaryService} when starting a
+ * container.
+ * 
+ */
+@Public
+@Evolving
+public class ContainerInitializationContext extends ContainerContext {
+
+  @Private
+  @Unstable
+  public ContainerInitializationContext(String user, ContainerId containerId,
+      Resource resource) {
+    super(user, containerId, resource);
+  }
+
 }
