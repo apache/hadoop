@@ -343,7 +343,7 @@ public class TestTaskAttempt{
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
-          mock(Token.class), new Credentials(),
+          new Token(), new Credentials(),
           new SystemClock(), null);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
@@ -399,7 +399,7 @@ public class TestTaskAttempt{
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
-          mock(Token.class), new Credentials(),
+          new Token(), new Credentials(),
           new SystemClock(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.2", 0);
@@ -456,7 +456,7 @@ public class TestTaskAttempt{
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
-          mock(Token.class), new Credentials(),
+          new Token(), new Credentials(),
           new SystemClock(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
@@ -516,7 +516,7 @@ public class TestTaskAttempt{
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
-          mock(Token.class), new Credentials(),
+          new Token(), new Credentials(),
           new SystemClock(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
@@ -582,7 +582,7 @@ public class TestTaskAttempt{
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener,
-        mock(Token.class), new Credentials(), new SystemClock(), appCtx);
+        new Token(), new Credentials(), new SystemClock(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
     ContainerId contId = ContainerId.newInstance(appAttemptId, 3);
@@ -631,7 +631,7 @@ public class TestTaskAttempt{
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener,
-        mock(Token.class), new Credentials(), new SystemClock(), appCtx);
+        new Token(), new Credentials(), new SystemClock(), appCtx);
 
     NodeId nid = NodeId.newInstance("127.0.0.1", 0);
     ContainerId contId = ContainerId.newInstance(appAttemptId, 3);
