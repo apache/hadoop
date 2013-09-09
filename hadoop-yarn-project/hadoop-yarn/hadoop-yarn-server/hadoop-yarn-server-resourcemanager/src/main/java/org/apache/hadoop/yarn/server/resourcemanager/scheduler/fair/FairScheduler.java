@@ -444,7 +444,7 @@ public class FairScheduler implements ResourceScheduler {
       // proceed with kill
       if (time + waitTimeBeforeKill < clock.getTime()) {
         ContainerStatus status =
-          SchedulerUtils.createAbnormalContainerStatus(
+          SchedulerUtils.createPreemptedContainerStatus(
             container.getContainerId(), SchedulerUtils.PREEMPTED_CONTAINER);
 
         // TODO: Not sure if this ever actually adds this to the list of cleanup

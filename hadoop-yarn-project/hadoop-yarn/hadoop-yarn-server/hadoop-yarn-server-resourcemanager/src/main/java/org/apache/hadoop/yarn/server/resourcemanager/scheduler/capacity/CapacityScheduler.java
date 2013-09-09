@@ -904,7 +904,7 @@ public class CapacityScheduler
       LOG.debug("KILL_CONTAINER: container" + cont.toString());
     }
     completedContainer(cont,
-        SchedulerUtils.createAbnormalContainerStatus(
+        SchedulerUtils.createPreemptedContainerStatus(
             cont.getContainerId(),"Container being forcibly preempted:"
         + cont.getContainerId()),
         RMContainerEventType.KILL);
