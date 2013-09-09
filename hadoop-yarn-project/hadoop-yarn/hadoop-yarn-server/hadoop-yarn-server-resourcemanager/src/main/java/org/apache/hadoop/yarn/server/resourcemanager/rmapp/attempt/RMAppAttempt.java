@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 
 /**
@@ -154,6 +155,13 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @return The master key for client-to-AM tokens for this app attempt
    */
   SecretKey getClientTokenMasterKey();
+
+  /**
+   * Create a token for authenticating a client connection to the app attempt
+   * @param clientName the name of the client requesting the token
+   * @return the token or null if the attempt is not running
+   */
+  Token<ClientToAMTokenIdentifier> createClientToken(String clientName);
 
   /**
    * Get application container and resource usage information.
