@@ -440,7 +440,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   public String getTrackingUrl() {
     this.readLock.lock();
     try {
-      return this.proxiedTrackingUrl;
+      return (getSubmissionContext().getUnmanagedAM()) ? 
+              this.origTrackingUrl : this.proxiedTrackingUrl;
     } finally {
       this.readLock.unlock();
     }
@@ -961,7 +962,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
   }
 
-  private static final class AMRegisteredTransition extends BaseTransition {
+  static final class AMRegisteredTransition extends BaseTransition {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {

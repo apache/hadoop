@@ -150,6 +150,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1049. ContainerExistStatus should define a status for preempted 
     containers. (tucu)
 
+    YARN-1144. Unmanaged AMs registering a tracking URI should not be 
+    proxy-fied. (tucu)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
