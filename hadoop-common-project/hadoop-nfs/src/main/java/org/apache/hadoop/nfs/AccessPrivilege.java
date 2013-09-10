@@ -15,31 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.oncrpc;
+package org.apache.hadoop.nfs;
 
-import static org.junit.Assert.assertEquals;
-
-import org.junit.Test;
-
-/**
- * Test for {@link RpcAuthSys}
- */
-public class TestRpcAuthSys {
-  @Test
-  public void testConstructor() {
-    RpcAuthSys auth = new RpcAuthSys(0, 1);
-    assertEquals(0, auth.getUid());
-    assertEquals(1, auth.getGid());
-  }
-  
-  @Test
-  public void testRead() {
-    byte[] bytes = {0, 1, 2, 3}; // 4 bytes Stamp
-    bytes = XDR.append(bytes, XDR.getVariableOpque(new byte[0]));
-    bytes = XDR.append(bytes, XDR.toBytes(0)); // gid
-    bytes = XDR.append(bytes, XDR.toBytes(1)); // uid
-    RpcAuthSys auth = RpcAuthSys.from(bytes);
-    assertEquals(0, auth.getUid());
-    assertEquals(1, auth.getGid());
-  }
+public enum AccessPrivilege {
+  READ_ONLY,
+  READ_WRITE,
+  NONE;
 }

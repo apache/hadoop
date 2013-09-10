@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
+import org.apache.hadoop.oncrpc.security.Verifier;
+import org.apache.hadoop.oncrpc.security.RpcAuthInfo;
+import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
 
 /** 
  * Represents RPC message MSG_ACCEPTED reply body. See RFC 1831 for details.
@@ -54,7 +56,7 @@ public class RpcAcceptedReply extends RpcReply {
 
   public static RpcAcceptedReply read(int xid, RpcMessage.Type messageType,
       ReplyState replyState, XDR xdr) {
-    RpcAuthInfo verifier = RpcAuthInfo.read(xdr);
+    Verifier verifier = Verifier.readFlavorAndVerifier(xdr);
     AcceptState acceptState = AcceptState.fromValue(xdr.readInt());
     return new RpcAcceptedReply(xid, messageType, replyState, verifier,
         acceptState);
