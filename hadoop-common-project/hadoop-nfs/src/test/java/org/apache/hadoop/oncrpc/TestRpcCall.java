@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
 import static org.junit.Assert.assertEquals;
+
+import org.apache.hadoop.oncrpc.security.CredentialsNone;
+import org.apache.hadoop.oncrpc.security.Credentials;
+import org.apache.hadoop.oncrpc.security.Verifier;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.junit.Test;
 
 /**
@@ -28,8 +32,8 @@ public class TestRpcCall {
   
   @Test
   public void testConstructor() {
-    RpcAuthInfo credential = new RpcAuthInfo(AuthFlavor.AUTH_NONE, new byte[0]);
-    RpcAuthInfo verifier = new RpcAuthInfo(AuthFlavor.AUTH_NONE, new byte[0]);
+    Credentials credential = new CredentialsNone();
+    Verifier verifier = new VerifierNone();
     int rpcVersion = RpcCall.RPC_VERSION;
     int program = 2;
     int version = 3;

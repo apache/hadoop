@@ -19,6 +19,8 @@ package org.apache.hadoop.oncrpc;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.oncrpc.security.Credentials;
+import org.apache.hadoop.oncrpc.security.Verifier;
 
 /**
  * Represents an RPC message of type RPC call as defined in RFC 1831
@@ -30,11 +32,12 @@ public class RpcCall extends RpcMessage {
   private final int program;
   private final int version;
   private final int procedure;
-  private final RpcAuthInfo credential;
-  private final RpcAuthInfo verifier;
+  private final Credentials credential;
+  private final Verifier verifier;
 
-  protected RpcCall(int xid, RpcMessage.Type messageType, int rpcVersion, int program,
-      int version, int procedure, RpcAuthInfo credential, RpcAuthInfo verifier) {
+  protected RpcCall(int xid, RpcMessage.Type messageType, int rpcVersion,
+      int program, int version, int procedure, Credentials credential,
+      Verifier verifier) {
     super(xid, messageType);
     this.rpcVersion = rpcVersion;
     this.program = program;
@@ -79,19 +82,19 @@ public class RpcCall extends RpcMessage {
     return procedure;
   }
   
-  public RpcAuthInfo getCredential() {
+  public Credentials getCredential() {
     return credential;
   }
 
-  public RpcAuthInfo getVerifier() {
+  public Verifier getVerifier() {
     return verifier;
   }
   
   public static RpcCall read(XDR xdr) {
     return new RpcCall(xdr.readInt(), RpcMessage.Type.fromValue(xdr.readInt()),
-        xdr.readInt(), xdr.readInt(),
-        xdr.readInt(), xdr.readInt(), RpcAuthInfo.read(xdr),
-        RpcAuthInfo.read(xdr));
+        xdr.readInt(), xdr.readInt(), xdr.readInt(), xdr.readInt(), 
+        Credentials.readFlavorAndCredentials(xdr),
+        Verifier.readFlavorAndVerifier(xdr));
   }
   
   public static void write(XDR out, int xid, int program, int progVersion,

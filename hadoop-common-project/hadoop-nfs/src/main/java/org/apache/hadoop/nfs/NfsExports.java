@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.nfs.security;
+package org.apache.hadoop.nfs;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
