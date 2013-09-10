@@ -79,4 +79,27 @@ public abstract class AuxiliaryService extends AbstractService {
    *         applications.
    */
   public abstract ByteBuffer getMetaData();
+
+  /**
+   * A new container is started on this NodeManager. This is a signal to
+   * this {@link AuxiliaryService} about the container initialization.
+   * This method is called when the NodeManager receives the container launch
+   * command from the ApplicationMaster and before the container process is 
+   * launched.
+   *
+   * @param initContainerContext context for the container's initialization
+   */
+  public void initializeContainer(ContainerInitializationContext
+      initContainerContext) {
+  }
+
+  /**
+   * A container is finishing on this NodeManager. This is a signal to this
+   * {@link AuxiliaryService} about the same.
+   *
+   * @param stopContainerContext context for the container termination
+   */
+  public void stopContainer(ContainerTerminationContext stopContainerContext) {
+  }
+
 }

@@ -59,6 +59,10 @@ Release 2.1.1-beta - UNRELEASED
     YARN-696. Changed RMWebservice apps call to take in multiple application
     states. (Trevor Lorimer via vinodkv)
 
+    YARN-910. Augmented auxiliary services to listen for container starts and
+    completions in addition to application events. (Alejandro Abdelnur via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
