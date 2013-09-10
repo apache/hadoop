@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.After;
 import org.junit.Before;
@@ -192,8 +193,7 @@ public class TestEditLogJournalFailures {
     Configuration conf = new HdfsConfiguration();
     String[] nameDirs = new String[4];
     for (int i = 0; i < nameDirs.length; i++) {
-      File nameDir = new File(System.getProperty("test.build.data"),
-          "name-dir" + i);
+      File nameDir = new File(PathUtils.getTestDir(getClass()), "name-dir" + i);
       nameDir.mkdirs();
       nameDirs[i] = nameDir.getAbsolutePath();
     }

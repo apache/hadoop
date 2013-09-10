@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -35,6 +34,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -90,7 +90,7 @@ public class TestRMRestart {
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
 
-    rmAddr = new InetSocketAddress(InetAddress.getLocalHost(), 123);
+    rmAddr = new InetSocketAddress("localhost", 8032);
   }
 
   @Test (timeout=180000)
@@ -592,7 +592,12 @@ public class TestRMRestart {
   @Test
   public void testRMDelegationTokenRestoredOnRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
-
+    
+    conf.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    conf.set(YarnConfiguration.RM_ADDRESS, "localhost:8032");
+    UserGroupInformation.setConfiguration(conf);
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
     RMState rmState = memStore.getState();
@@ -614,6 +619,8 @@ public class TestRMRestart {
     // request a token and add into credential
     GetDelegationTokenRequest request1 =
         GetDelegationTokenRequest.newInstance("renewer1");
+    UserGroupInformation.getCurrentUser().setAuthenticationMethod(
+        AuthMethod.KERBEROS);
     GetDelegationTokenResponse response1 =
         rm1.getClientRMService().getDelegationToken(request1);
     org.apache.hadoop.yarn.api.records.Token delegationToken1 =
@@ -644,7 +651,7 @@ public class TestRMRestart {
         rm1.getRMDTSecretManager().getAllTokens();
     Assert.assertEquals(tokenIdentSet, allTokensRM1.keySet());
     Assert.assertEquals(allTokensRM1, rmDTState);
-
+    
     // assert sequence number is saved
     Assert.assertEquals(
       rm1.getRMDTSecretManager().getLatestDTSequenceNumber(),
@@ -682,7 +689,7 @@ public class TestRMRestart {
     // assert master keys and tokens are populated back to DTSecretManager
     Map<RMDelegationTokenIdentifier, Long> allTokensRM2 =
         rm2.getRMDTSecretManager().getAllTokens();
-    Assert.assertEquals(allTokensRM1, allTokensRM2);
+    Assert.assertEquals(allTokensRM2.keySet(), allTokensRM1.keySet());
     // rm2 has its own master keys when it starts, we use containsAll here
     Assert.assertTrue(rm2.getRMDTSecretManager().getAllMasterKeys()
       .containsAll(allKeysRM1));
@@ -735,15 +742,24 @@ public class TestRMRestart {
     }
 
     @Override
-    protected void doSecureLogin() throws IOException {
-      // Do nothing.
+    protected ClientRMService createClientRMService() {
+      return new ClientRMService(getRMContext(), getResourceScheduler(),
+          rmAppManager, applicationACLsManager, rmDTSecretManager){ 
+        @Override
+        protected void serviceStart() throws Exception {
+          // do nothing
+        }
+
+        @Override
+        protected void serviceStop() throws Exception {
+          //do nothing
+        }
+      };
     }
 
     @Override
-    protected void serviceInit(Configuration conf) throws Exception {
-      super.serviceInit(conf);
-      RMDelegationTokenIdentifier.Renewer.setSecretManager(
-        this.getRMDTSecretManager(), rmAddr);
+    protected void doSecureLogin() throws IOException {
+      // Do nothing.
     }
   }
 }

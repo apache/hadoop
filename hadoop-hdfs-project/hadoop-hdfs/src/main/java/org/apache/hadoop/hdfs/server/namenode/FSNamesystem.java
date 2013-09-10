@@ -208,6 +208,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RetryCache;
@@ -3143,7 +3144,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws AccessControlException, SafeModeException, UnresolvedLinkException,
              IOException {
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-    List<INode> removedINodes = new ArrayList<INode>();
+    List<INode> removedINodes = new ChunkedArrayList<INode>();
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
@@ -3197,21 +3198,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *          of blocks that need to be removed from blocksMap
    */
   void removeBlocks(BlocksMapUpdateInfo blocks) {
-    int start = 0;
-    int end = 0;
     List<Block> toDeleteList = blocks.getToDeleteList();
-    while (start < toDeleteList.size()) {
-      end = BLOCK_DELETION_INCREMENT + start;
-      end = end > toDeleteList.size() ? toDeleteList.size() : end;
+    Iterator<Block> iter = toDeleteList.iterator();
+    while (iter.hasNext()) {
       writeLock();
       try {
-        for (int i = start; i < end; i++) {
-          blockManager.removeBlock(toDeleteList.get(i));
+        for (int i = 0; i < BLOCK_DELETION_INCREMENT && iter.hasNext(); i++) {
+          blockManager.removeBlock(iter.next());
         }
       } finally {
         writeUnlock();
       }
-      start = end;
     }
   }
   
@@ -6782,6 +6779,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return; // Return previous response
     }
     boolean success = false;
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6792,7 +6790,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkOwner(pc, snapshotRoot);
 
       BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-      List<INode> removedINodes = new ArrayList<INode>();
+      List<INode> removedINodes = new ChunkedArrayList<INode>();
       dir.writeLock();
       try {
         snapshotManager.deleteSnapshot(snapshotRoot, snapshotName,

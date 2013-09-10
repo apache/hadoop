@@ -267,6 +267,11 @@ Release 2.3.0 - UNRELEASED
     HDFS-5144. Document time unit to NameNodeMetrics. (Akira Ajisaka via
     suresh)
 
+    HDFS-4491. Parallel testing HDFS. (Andrey Klochkov via cnauroth)
+
+    HDFS-4879. Add "blocked ArrayList" collection to avoid CMS full GCs
+    (Todd Lipcon via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -280,6 +285,12 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4816. transitionToActive blocks if the SBN is doing checkpoint image
     transfer. (Andrew Wang)
+
+    HDFS-5164.  deleteSnapshot should check if OperationCategory.WRITE is
+    possible before taking write lock.  (Colin Patrick McCabe)
+
+    HDFS-5170. BlockPlacementPolicyDefault uses the wrong classname when
+    alerting to enable debug logging. (Andrew Wang)
 
 Release 2.1.1-beta - UNRELEASED
 
@@ -315,6 +326,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5136 MNT EXPORT should give the full group list which can mount the
     exports (brandonli)
+
+    HDFS-5118. Provide testing support for DFSClient to drop RPC responses.
+    (jing9)
 
   IMPROVEMENTS
 

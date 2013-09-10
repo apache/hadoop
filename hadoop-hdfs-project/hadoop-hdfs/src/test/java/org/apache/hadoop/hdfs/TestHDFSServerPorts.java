@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.BackupNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 /**
@@ -53,6 +54,9 @@ public class TestHDFSServerPorts {
   
   // reset default 0.0.0.0 addresses in order to avoid IPv6 problem
   static final String THIS_HOST = getFullHostName() + ":0";
+  
+  private static final File TEST_DATA_DIR = PathUtils.getTestDir(TestHDFSServerPorts.class);
+  
   static {
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
@@ -81,13 +85,6 @@ public class TestHDFSServerPorts {
     }
   }
   
-  /**
-   * Get base directory these tests should run in.
-   */
-  private String getTestingDir() {
-    return System.getProperty("test.build.data", "build/test/data");
-  }
-  
   public NameNode startNameNode() throws IOException {
     return startNameNode(false);
   }
@@ -95,8 +92,7 @@ public class TestHDFSServerPorts {
    * Start the namenode.
    */
   public NameNode startNameNode(boolean withService) throws IOException {
-    String dataDir = getTestingDir();
-    hdfsDir = new File(dataDir, "dfs");
+    hdfsDir = new File(TEST_DATA_DIR, "dfs");
     if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
       throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
     }
@@ -119,9 +115,8 @@ public class TestHDFSServerPorts {
    * Start the BackupNode
    */
   public BackupNode startBackupNode(Configuration conf) throws IOException {
-    String dataDir = getTestingDir();
     // Set up testing environment directories
-    hdfsDir = new File(dataDir, "backupNode");
+    hdfsDir = new File(TEST_DATA_DIR, "backupNode");
     if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
       throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
     }
@@ -150,8 +145,7 @@ public class TestHDFSServerPorts {
    */
   public DataNode startDataNode(int index, Configuration config) 
   throws IOException {
-    String dataDir = getTestingDir();
-    File dataNodeDir = new File(dataDir, "data-" + index);
+    File dataNodeDir = new File(TEST_DATA_DIR, "data-" + index);
     config.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataNodeDir.getPath());
 
     String[] args = new String[] {};

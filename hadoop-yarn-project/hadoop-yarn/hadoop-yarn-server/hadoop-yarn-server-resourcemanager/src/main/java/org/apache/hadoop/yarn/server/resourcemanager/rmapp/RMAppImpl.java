@@ -432,18 +432,18 @@ public class RMAppImpl implements RMApp, Recoverable {
           currentApplicationAttemptId = this.currentAttempt.getAppAttemptId();
           trackingUrl = this.currentAttempt.getTrackingUrl();
           origTrackingUrl = this.currentAttempt.getOriginalTrackingUrl();
-          if (UserGroupInformation.isSecurityEnabled()
-              && clientUserName != null) {
+          if (UserGroupInformation.isSecurityEnabled()) {
+            // get a token so the client can communicate with the app attempt
+            // NOTE: token may be unavailable if the attempt is not running
             Token<ClientToAMTokenIdentifier> attemptClientToAMToken =
-                new Token<ClientToAMTokenIdentifier>(
-                    new ClientToAMTokenIdentifier(
-                        currentApplicationAttemptId, clientUserName),
-                        rmContext.getClientToAMTokenSecretManager());
-            clientToAMToken = BuilderUtils.newClientToAMToken(
-                attemptClientToAMToken.getIdentifier(),
-                attemptClientToAMToken.getKind().toString(),
-                attemptClientToAMToken.getPassword(),
-                attemptClientToAMToken.getService().toString());
+                this.currentAttempt.createClientToken(clientUserName);
+            if (attemptClientToAMToken != null) {
+              clientToAMToken = BuilderUtils.newClientToAMToken(
+                  attemptClientToAMToken.getIdentifier(),
+                  attemptClientToAMToken.getKind().toString(),
+                  attemptClientToAMToken.getPassword(),
+                  attemptClientToAMToken.getService().toString());
+            }
           }
           host = this.currentAttempt.getHost();
           rpcPort = this.currentAttempt.getRpcPort();

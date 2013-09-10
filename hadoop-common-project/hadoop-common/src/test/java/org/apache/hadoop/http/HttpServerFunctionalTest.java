@@ -101,8 +101,12 @@ public class HttpServerFunctionalTest extends Assert {
     String webapps = System.getProperty(TEST_BUILD_WEBAPPS, BUILD_WEBAPPS_DIR);
     File testWebappDir = new File(webapps +
         File.separatorChar + TEST);
+    try {
     if (!testWebappDir.exists()) {
-      fail("Test webapp dir " + testWebappDir + " missing");
+      fail("Test webapp dir " + testWebappDir.getCanonicalPath() + " missing");
+    }
+    }
+    catch (IOException e) {
     }
   }
 

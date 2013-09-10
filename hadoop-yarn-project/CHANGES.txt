@@ -27,13 +27,12 @@ Release 2.3.0 - UNRELEASED
   IMPROVEMENTS
 
     YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)
+    YARN-1098. Separate out RM services into Always On and Active (Karthik
+    Kambatla via bikas)
 
   OPTIMIZATIONS
 
   BUG FIXES
-
-    YARN-758. Augment MockNM to use multiple cores (Karthik Kambatla via
-    Sandy Ryza)
 
     YARN-1060. Two tests in TestFairScheduler are missing @Test annotation
     (Niranjan Singh via Sandy Ryza)
@@ -88,6 +87,16 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-1065. NM should provide AuxillaryService data to the container (Xuan
     Gong via bikas)
+
+    YARN-758. Augment MockNM to use multiple cores (Karthik Kambatla via
+    Sandy Ryza)
+
+    YARN-696. Changed RMWebservice apps call to take in multiple application
+    states. (Trevor Lorimer via vinodkv)
+
+    YARN-910. Augmented auxiliary services to listen for container starts and
+    completions in addition to application events. (Alejandro Abdelnur via
+    vinodkv)
 
   OPTIMIZATIONS
 
@@ -155,6 +164,23 @@ Release 2.1.1-beta - UNRELEASED
     YARN-957. Fixed a bug in CapacityScheduler because of which requests that
     need more than a node's total capability were incorrectly allocated on that
     node causing apps to hang. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-1107. Fixed a bug in ResourceManager because of which RM in secure mode
+    fails to restart. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-1049. ContainerExistStatus should define a status for preempted 
+    containers. (tucu)
+
+    YARN-1144. Unmanaged AMs registering a tracking URI should not be 
+    proxy-fied. (tucu)
+
+    YARN-1152. Fixed a bug in ResourceManager that was causing clients to get
+    invalid client token key errors when an appliation is about to finish.
+    (Jason Lowe via vinodkv)
+
+    YARN-292. Fixed FifoScheduler and FairScheduler to make their applications
+    data structures thread safe to avoid RM crashing with
+    ArrayIndexOutOfBoundsException. (Zhijie Shen via vinodkv)
 
 Release 2.1.0-beta - 2013-08-22
 

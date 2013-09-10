@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 
@@ -57,8 +58,7 @@ import com.google.common.collect.Sets;
 public class TestNameNodeRecovery {
   private static final Log LOG = LogFactory.getLog(TestNameNodeRecovery.class);
   private static StartupOption recoverStartOpt = StartupOption.RECOVER;
-  private static final File TEST_DIR = new File(
-      System.getProperty("test.build.data","build/test/data"));
+  private static final File TEST_DIR = PathUtils.getTestDir(TestNameNodeRecovery.class);
 
   static {
     recoverStartOpt.setForce(MetaRecoveryContext.FORCE_ALL);

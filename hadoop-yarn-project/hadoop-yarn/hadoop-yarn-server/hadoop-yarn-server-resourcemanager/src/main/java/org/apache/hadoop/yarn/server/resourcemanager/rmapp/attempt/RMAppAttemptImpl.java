@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
@@ -89,6 +90,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppRepor
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
@@ -440,7 +442,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   public String getTrackingUrl() {
     this.readLock.lock();
     try {
-      return this.proxiedTrackingUrl;
+      return (getSubmissionContext().getUnmanagedAM()) ? 
+              this.origTrackingUrl : this.proxiedTrackingUrl;
     } finally {
       this.readLock.unlock();
     }
@@ -505,6 +508,26 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   @Override
   public Token<AMRMTokenIdentifier> getAMRMToken() {
     return this.amrmToken;
+  }
+
+  @Override
+  public Token<ClientToAMTokenIdentifier> createClientToken(String client) {
+    this.readLock.lock();
+
+    try {
+      Token<ClientToAMTokenIdentifier> token = null;
+      ClientToAMTokenSecretManagerInRM secretMgr =
+          this.rmContext.getClientToAMTokenSecretManager();
+      if (client != null &&
+          secretMgr.getMasterKey(this.applicationAttemptId) != null) {
+        token = new Token<ClientToAMTokenIdentifier>(
+            new ClientToAMTokenIdentifier(this.applicationAttemptId, client),
+            secretMgr);
+      }
+      return token;
+    } finally {
+      this.readLock.unlock();
+    }
   }
 
   @Override
@@ -810,7 +833,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       Allocation amContainerAllocation = appAttempt.scheduler.allocate(
           appAttempt.applicationAttemptId, EMPTY_CONTAINER_REQUEST_LIST,
           EMPTY_CONTAINER_RELEASE_LIST, null, null);
-
+      // There must be at least one container allocated, because a
+      // CONTAINER_ALLOCATED is emitted after an RMContainer is constructed,
+      // and is put in SchedulerApplication#newlyAllocatedContainers. Then,
+      // YarnScheduler#allocate will fetch it.
+      assert amContainerAllocation.getContainers().size() != 0;
       // Set the masterContainer
       appAttempt.setMasterContainer(amContainerAllocation.getContainers().get(
                                                                            0));
@@ -961,7 +988,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
   }
 
-  private static final class AMRegisteredTransition extends BaseTransition {
+  static final class AMRegisteredTransition extends BaseTransition {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {

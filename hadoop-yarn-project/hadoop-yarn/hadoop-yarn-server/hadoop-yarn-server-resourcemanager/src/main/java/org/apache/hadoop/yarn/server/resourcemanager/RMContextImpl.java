@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -61,6 +62,8 @@ public class RMContextImpl implements RMContext {
   private final RMContainerTokenSecretManager containerTokenSecretManager;
   private final NMTokenSecretManagerInRM nmTokenSecretManager;
   private final ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager;
+  private ClientRMService clientRMService;
+  private RMDelegationTokenSecretManager rmDelegationTokenSecretManager;
 
   public RMContextImpl(Dispatcher rmDispatcher,
       RMStateStore store,
@@ -177,5 +180,26 @@ public class RMContextImpl implements RMContext {
   @VisibleForTesting
   public void setStateStore(RMStateStore store) {
     stateStore = store;
+  }
+  
+  @Override
+  public ClientRMService getClientRMService() {
+    return this.clientRMService;
+  }
+  
+  @Override
+  public void setClientRMService(ClientRMService clientRMService) {
+    this.clientRMService = clientRMService;
+  }
+  
+  @Override
+  public RMDelegationTokenSecretManager getRMDelegationTokenSecretManager() {
+    return this.rmDelegationTokenSecretManager;
+  }
+  
+  @Override
+  public void setRMDelegationTokenSecretManager(
+      RMDelegationTokenSecretManager delegationTokenSecretManager) {
+    this.rmDelegationTokenSecretManager = delegationTokenSecretManager;
   }
 }
