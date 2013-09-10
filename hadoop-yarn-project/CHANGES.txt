@@ -13,10 +13,6 @@ Release 2.3.0 - UNRELEASED
 
     YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)
 
-    YARN-910. Augmented auxiliary services to listen for container starts and
-    completions in addition to application events. (Alejandro Abdelnur via
-    vinodkv)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -80,6 +76,10 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-696. Changed RMWebservice apps call to take in multiple application
     states. (Trevor Lorimer via vinodkv)
+
+    YARN-910. Augmented auxiliary services to listen for container starts and
+    completions in addition to application events. (Alejandro Abdelnur via
+    vinodkv)
 
   OPTIMIZATIONS
 
