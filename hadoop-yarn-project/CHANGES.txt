@@ -16,6 +16,9 @@ Release 0.23.10 - UNRELEASED
 
     YARN-707. Add user info in the YARN ClientToken (jlowe)
 
+    YARN-1119. Add ClusterMetrics checks to tho TestRMNodeTransitions tests
+    (Mit Desai via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
