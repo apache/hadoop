@@ -135,6 +135,10 @@ if "%1" == "--config" (
 
   call :%yarn-command% %yarn-command-arguments%
 
+  if defined JAVA_LIBRARY_PATH (
+    set YARN_OPTS=%YARN_OPTS% -Djava.library.path=%JAVA_LIBRARY_PATH%
+  )
+
   set java_arguments=%JAVA_HEAP_MAX% %YARN_OPTS% -classpath %CLASSPATH% %CLASS% %yarn-command-arguments%
   call %JAVA% %java_arguments%
 
