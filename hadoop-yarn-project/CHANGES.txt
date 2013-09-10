@@ -167,6 +167,9 @@ Release 2.1.1-beta - UNRELEASED
     data structures thread safe to avoid RM crashing with
     ArrayIndexOutOfBoundsException. (Zhijie Shen via vinodkv)
 
+    YARN-1025. ResourceManager and NodeManager do not load native libraries on
+    Windows. (cnauroth)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
