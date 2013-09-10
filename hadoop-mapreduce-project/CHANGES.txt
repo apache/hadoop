@@ -119,6 +119,8 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5414. TestTaskAttempt fails in JDK7 with NPE (Nemon Lou via 
     devaraj)
 
+    MAPREDUCE-5020. Compile failure with JDK8 (Trevor Robinson via tgraves)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
