@@ -161,6 +161,10 @@ Release 2.1.1-beta - UNRELEASED
     invalid client token key errors when an appliation is about to finish.
     (Jason Lowe via vinodkv)
 
+    YARN-292. Fixed FifoScheduler and FairScheduler to make their applications
+    data structures thread safe to avoid RM crashing with
+    ArrayIndexOutOfBoundsException. (Zhijie Shen via vinodkv)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
