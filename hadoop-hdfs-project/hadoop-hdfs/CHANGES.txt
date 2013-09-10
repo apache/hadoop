@@ -92,6 +92,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5118. Provide testing support for DFSClient to drop RPC responses.
     (jing9)
 
+    HDFS-5085. Refactor o.a.h.nfs to support different types of 
+    authentications. (jing9)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may

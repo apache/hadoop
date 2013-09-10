@@ -15,10 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.nfs.security;
+package org.apache.hadoop.oncrpc.security;
 
-public enum AccessPrivilege {
-  READ_ONLY,
-  READ_WRITE,
-  NONE;
+import org.apache.hadoop.oncrpc.XDR;
+
+/** Credential used by RPCSEC_GSS */
+public class CredentialsGSS extends Credentials {
+
+  public CredentialsGSS() {
+    super(AuthFlavor.RPCSEC_GSS);
+  }
+
+  @Override
+  public void read(XDR xdr) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void write(XDR xdr) {
+    // TODO Auto-generated method stub
+    
+  }
+
 }

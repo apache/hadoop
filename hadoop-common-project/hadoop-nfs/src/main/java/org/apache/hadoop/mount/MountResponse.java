@@ -19,10 +19,10 @@ package org.apache.hadoop.mount;
 
 import java.util.List;
 
-import org.apache.hadoop.nfs.security.NfsExports;
+import org.apache.hadoop.nfs.NfsExports;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.XDR;
-import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
+import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
 
 /**
  * Helper class for sending MountResponse

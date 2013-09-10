@@ -15,37 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.oncrpc;
+package org.apache.hadoop.oncrpc.security;
+
+import static org.junit.Assert.assertEquals;
+
+import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.CredentialsSys;
+import org.junit.Test;
 
 /**
- * AUTH_SYS as defined in RFC 1831
+ * Test for {@link CredentialsSys}
  */
-public class RpcAuthSys {
-  private final int uid;
-  private final int gid;
+public class TestCredentialsSys {
 
-  public RpcAuthSys(int uid, int gid) {
-    this.uid = uid;
-    this.gid = gid;
-  }
-  
-  public static RpcAuthSys from(byte[] credentials) {
-    XDR sys = new XDR(credentials);
-    sys.skip(4); // Stamp
-    sys.skipVariableOpaque(); // Machine name
-    return new RpcAuthSys(sys.readInt(), sys.readInt());
-  }
-  
-  public int getUid() {
-    return uid;
-  }
-
-  public int getGid() {
-    return gid;
-  }
-
-  @Override
-  public String toString() {
-    return "(AuthSys: uid=" + uid + " gid=" + gid + ")";
+  @Test
+  public void testReadWrite() {
+    CredentialsSys credential = new CredentialsSys();
+    credential.setUID(0);
+    credential.setGID(1);
+    
+    XDR xdr = new XDR();
+    credential.write(xdr);
+    
+    CredentialsSys newCredential = new CredentialsSys();
+    newCredential.read(xdr);
+    
+    assertEquals(0, newCredential.getUID());
+    assertEquals(1, newCredential.getGID());
   }
 }

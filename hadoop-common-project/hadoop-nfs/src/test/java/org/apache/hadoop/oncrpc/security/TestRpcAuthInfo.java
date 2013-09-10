@@ -15,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.oncrpc;
+package org.apache.hadoop.oncrpc.security;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
-import java.util.Arrays;
-
-import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
+import org.apache.hadoop.oncrpc.security.RpcAuthInfo;
+import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
 import org.junit.Test;
 
 /**
@@ -41,13 +39,5 @@ public class TestRpcAuthInfo {
   @Test(expected=IllegalArgumentException.class)
   public void testInvalidAuthFlavor() {
     assertEquals(AuthFlavor.AUTH_NONE, AuthFlavor.fromValue(4));
-  }
-  
-  @Test
-  public void testConsturctor() {
-    byte[] body = new byte[0];
-    RpcAuthInfo auth = new RpcAuthInfo(AuthFlavor.AUTH_NONE, body);
-    assertEquals(AuthFlavor.AUTH_NONE, auth.getFlavor());
-    assertTrue(Arrays.equals(body, auth.getBody()));
   }
 }

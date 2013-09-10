@@ -42,6 +42,8 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.nfs.AccessPrivilege;
+import org.apache.hadoop.nfs.NfsExports;
 import org.apache.hadoop.nfs.NfsTime;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.IdUserGroup;
@@ -96,16 +98,18 @@ import org.apache.hadoop.nfs.nfs3.response.VoidResponse;
 import org.apache.hadoop.nfs.nfs3.response.WRITE3Response;
 import org.apache.hadoop.nfs.nfs3.response.WccAttr;
 import org.apache.hadoop.nfs.nfs3.response.WccData;
-import org.apache.hadoop.nfs.security.AccessPrivilege;
-import org.apache.hadoop.nfs.security.NfsExports;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
-import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
-import org.apache.hadoop.oncrpc.RpcAuthSys;
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.RpcDeniedReply;
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.RpcReply;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.CredentialsSys;
+import org.apache.hadoop.oncrpc.security.Credentials;
+import org.apache.hadoop.oncrpc.security.Verifier;
+import org.apache.hadoop.oncrpc.security.SecurityHandler;
+import org.apache.hadoop.oncrpc.security.SysSecurityHandler;
+import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
 import org.apache.hadoop.security.AccessControlException;
 import org.jboss.netty.channel.Channel;
 
@@ -205,8 +209,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public GETATTR3Response getattr(XDR xdr, RpcAuthSys authSys,
-      InetAddress client) {
+  public GETATTR3Response getattr(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     GETATTR3Response response = new GETATTR3Response(Nfs3Status.NFS3_OK);
     
     if (!checkAccessPrivilege(client, AccessPrivilege.READ_ONLY)) {
@@ -214,8 +218,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
     
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -268,9 +271,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     if (updateFields.contains(SetAttrField.UID)
         || updateFields.contains(SetAttrField.GID)) {
       String uname = updateFields.contains(SetAttrField.UID) ? iug.getUserName(
-          newAttr.getUid(), UNKNOWN_USER) : null;
+          newAttr.getUid(), Nfs3Constant.UNKNOWN_USER) : null;
       String gname = updateFields.contains(SetAttrField.GID) ? iug
-          .getGroupName(newAttr.getGid(), UNKNOWN_GROUP) : null;
+          .getGroupName(newAttr.getGid(), Nfs3Constant.UNKNOWN_GROUP) : null;
       dfsClient.setOwner(fileIdPath, uname, gname);
     }
 
@@ -287,11 +290,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public SETATTR3Response setattr(XDR xdr, RpcAuthSys authSys,
-      InetAddress client) {
+  public SETATTR3Response setattr(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     SETATTR3Response response = new SETATTR3Response(Nfs3Status.NFS3_OK);
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -364,7 +366,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public LOOKUP3Response lookup(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public LOOKUP3Response lookup(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     LOOKUP3Response response = new LOOKUP3Response(Nfs3Status.NFS3_OK);
     
     if (!checkAccessPrivilege(client, AccessPrivilege.READ_ONLY)) {
@@ -372,8 +375,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
     
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -426,7 +428,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
   
   @Override
-  public ACCESS3Response access(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public ACCESS3Response access(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     ACCESS3Response response = new ACCESS3Response(Nfs3Status.NFS3_OK);
     
     if (!checkAccessPrivilege(client, AccessPrivilege.READ_ONLY)) {
@@ -434,8 +437,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
     
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -464,8 +466,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         LOG.error("Can't get path for fileId:" + handle.getFileId());
         return new ACCESS3Response(Nfs3Status.NFS3ERR_STALE);
       }
-      int access = Nfs3Utils.getAccessRightsForUserGroup(authSys.getUid(),
-          authSys.getGid(), attrs);
+      int access = Nfs3Utils.getAccessRightsForUserGroup(
+          securityHandler.getUid(), securityHandler.getGid(), attrs);
       
       return new ACCESS3Response(Nfs3Status.NFS3_OK, attrs, access);
     } catch (IOException e) {
@@ -474,13 +476,14 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
   }
 
-  public READLINK3Response readlink(XDR xdr, RpcAuthSys authSys,
-      InetAddress client) {
+  public READLINK3Response readlink(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     return new READLINK3Response(Nfs3Status.NFS3ERR_NOTSUPP);
   }
 
   @Override
-  public READ3Response read(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public READ3Response read(XDR xdr, SecurityHandler securityHandler,
+      InetAddress client) {
     READ3Response response = new READ3Response(Nfs3Status.NFS3_OK);
     
     if (!checkAccessPrivilege(client, AccessPrivilege.READ_ONLY)) {
@@ -488,8 +491,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
     
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -534,8 +536,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         }
         return new READ3Response(Nfs3Status.NFS3ERR_NOENT);
       }
-      int access = Nfs3Utils.getAccessRightsForUserGroup(authSys.getUid(),
-          authSys.getGid(), attrs);
+      int access = Nfs3Utils.getAccessRightsForUserGroup(
+          securityHandler.getUid(), securityHandler.getGid(), attrs);
       if ((access & Nfs3Constant.ACCESS3_READ) != 0) {
         eof = offset < attrs.getSize() ? false : true;
         return new READ3Response(Nfs3Status.NFS3_OK, attrs, 0, eof,
@@ -578,10 +580,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
   @Override
   public WRITE3Response write(XDR xdr, Channel channel, int xid,
-      RpcAuthSys authSys, InetAddress client) {
+      SecurityHandler securityHandler, InetAddress client) {
     WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK);
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -653,10 +655,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public CREATE3Response create(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public CREATE3Response create(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     CREATE3Response response = new CREATE3Response(Nfs3Status.NFS3_OK);
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -725,7 +727,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         // Set group if it's not specified in the request.
         if (!setAttr3.getUpdateFields().contains(SetAttrField.GID)) {
           setAttr3.getUpdateFields().add(SetAttrField.GID);
-          setAttr3.setGid(authSys.getGid());
+          setAttr3.setGid(securityHandler.getGid());
         }
         setattrInternal(dfsClient, fileIdPath, setAttr3, false);
       }
@@ -776,10 +778,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public MKDIR3Response mkdir(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public MKDIR3Response mkdir(XDR xdr, SecurityHandler securityHandler,
+      InetAddress client) {
     MKDIR3Response response = new MKDIR3Response(Nfs3Status.NFS3_OK);
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -834,7 +836,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       // Set group if it's not specified in the request.
       if (!setAttr3.getUpdateFields().contains(SetAttrField.GID)) {
         setAttr3.getUpdateFields().add(SetAttrField.GID);
-        setAttr3.setGid(authSys.getGid());
+        setAttr3.setGid(securityHandler.getGid());
       }
       setattrInternal(dfsClient, fileIdPath, setAttr3, false);
       
@@ -866,15 +868,16 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
   }
 
-  public READDIR3Response mknod(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public READDIR3Response mknod(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     return new READDIR3Response(Nfs3Status.NFS3ERR_NOTSUPP);
   }
   
   @Override
-  public REMOVE3Response remove(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public REMOVE3Response remove(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     REMOVE3Response response = new REMOVE3Response(Nfs3Status.NFS3_OK);
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -947,10 +950,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public RMDIR3Response rmdir(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public RMDIR3Response rmdir(XDR xdr, SecurityHandler securityHandler,
+      InetAddress client) {
     RMDIR3Response response = new RMDIR3Response(Nfs3Status.NFS3_OK);
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -1030,10 +1033,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public RENAME3Response rename(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public RENAME3Response rename(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     RENAME3Response response = new RENAME3Response(Nfs3Status.NFS3_OK);
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -1118,18 +1121,18 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public SYMLINK3Response symlink(XDR xdr, RpcAuthSys authSys,
-      InetAddress client) {
+  public SYMLINK3Response symlink(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     return new SYMLINK3Response(Nfs3Status.NFS3ERR_NOTSUPP);
   }
 
-  public READDIR3Response link(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public READDIR3Response link(XDR xdr, SecurityHandler securityHandler, InetAddress client) {
     return new READDIR3Response(Nfs3Status.NFS3ERR_NOTSUPP);
   }
 
   @Override
-  public READDIR3Response readdir(XDR xdr, RpcAuthSys authSys,
-      InetAddress client) {
+  public READDIR3Response readdir(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     READDIR3Response response = new READDIR3Response(Nfs3Status.NFS3_OK);
     
     if (!checkAccessPrivilege(client, AccessPrivilege.READ_ONLY)) {
@@ -1137,8 +1140,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
     
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -1269,14 +1271,13 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         dirStatus.getModificationTime(), dirList);
   }
 
-  public READDIRPLUS3Response readdirplus(XDR xdr, RpcAuthSys authSys,
-      InetAddress client) {
+  public READDIRPLUS3Response readdirplus(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     if (!checkAccessPrivilege(client, AccessPrivilege.READ_ONLY)) {
       return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_ACCES);
     }
     
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_SERVERFAULT);
     }
@@ -1420,7 +1421,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
   
   @Override
-  public FSSTAT3Response fsstat(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public FSSTAT3Response fsstat(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     FSSTAT3Response response = new FSSTAT3Response(Nfs3Status.NFS3_OK);
     
     if (!checkAccessPrivilege(client, AccessPrivilege.READ_ONLY)) {
@@ -1428,8 +1430,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
     
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -1478,7 +1479,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public FSINFO3Response fsinfo(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public FSINFO3Response fsinfo(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     FSINFO3Response response = new FSINFO3Response(Nfs3Status.NFS3_OK);
     
     if (!checkAccessPrivilege(client, AccessPrivilege.READ_ONLY)) {
@@ -1486,8 +1488,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
     
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -1530,8 +1531,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public PATHCONF3Response pathconf(XDR xdr, RpcAuthSys authSys,
-      InetAddress client) {
+  public PATHCONF3Response pathconf(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     PATHCONF3Response response = new PATHCONF3Response(Nfs3Status.NFS3_OK);
     
     if (!checkAccessPrivilege(client, AccessPrivilege.READ_ONLY)) {
@@ -1539,8 +1540,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
     
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -1578,10 +1578,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public COMMIT3Response commit(XDR xdr, RpcAuthSys authSys, InetAddress client) {
+  public COMMIT3Response commit(XDR xdr,
+      SecurityHandler securityHandler, InetAddress client) {
     COMMIT3Response response = new COMMIT3Response(Nfs3Status.NFS3_OK);
-    String uname = authSysCheck(authSys);
-    DFSClient dfsClient = clientCache.get(uname);
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
       response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
       return response;
@@ -1645,12 +1645,15 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           Nfs3Constant.WRITE_COMMIT_VERF);
     }
   }
-  
-  private final static String UNKNOWN_USER = "nobody";
-  private final static String UNKNOWN_GROUP = "nobody";
 
-  private String authSysCheck(RpcAuthSys authSys) {
-    return iug.getUserName(authSys.getUid(), UNKNOWN_USER);
+  private SecurityHandler getSecurityHandler(Credentials credentials,
+      Verifier verifier) {
+    if (credentials instanceof CredentialsSys) {
+      return new SysSecurityHandler((CredentialsSys) credentials, iug);
+    } else {
+      // TODO: support GSS and handle other cases
+      return null;
+    }
   }
   
   @Override
@@ -1658,67 +1661,71 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       InetAddress client, Channel channel) {
     final NFSPROC3 nfsproc3 = NFSPROC3.fromValue(rpcCall.getProcedure());
     int xid = rpcCall.getXid();
-    RpcAuthSys authSys = null;
-    
+
+    Credentials credentials = rpcCall.getCredential();
     // Ignore auth only for NFSPROC3_NULL, especially for Linux clients.
     if (nfsproc3 != NFSPROC3.NULL) {
-      if (rpcCall.getCredential().getFlavor() != AuthFlavor.AUTH_SYS) {
+      if (rpcCall.getCredential().getFlavor() != AuthFlavor.AUTH_SYS
+          && rpcCall.getCredential().getFlavor() != AuthFlavor.RPCSEC_GSS) {
         LOG.info("Wrong RPC AUTH flavor, "
-            + rpcCall.getCredential().getFlavor() + " is not AUTH_SYS.");
+            + rpcCall.getCredential().getFlavor()
+            + " is not AUTH_SYS or RPCSEC_GSS.");
         XDR reply = new XDR();
         reply = RpcDeniedReply.voidReply(reply, xid,
             RpcReply.ReplyState.MSG_ACCEPTED,
             RpcDeniedReply.RejectState.AUTH_ERROR);
         return reply;
       }
-      authSys = RpcAuthSys.from(rpcCall.getCredential().getBody());
     }
+    
+    SecurityHandler securityHandler = getSecurityHandler(credentials,
+        rpcCall.getVerifier());
     
     NFS3Response response = null;
     if (nfsproc3 == NFSPROC3.NULL) {
       response = nullProcedure();
     } else if (nfsproc3 == NFSPROC3.GETATTR) {
-      response = getattr(xdr, authSys, client);
+      response = getattr(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.SETATTR) {
-      response = setattr(xdr, authSys, client);
+      response = setattr(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.LOOKUP) {
-      response = lookup(xdr, authSys, client);
+      response = lookup(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.ACCESS) {
-      response = access(xdr, authSys, client);
+      response = access(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.READLINK) {
-      response = readlink(xdr, authSys, client);
+      response = readlink(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.READ) {
-      response = read(xdr, authSys, client);
+      response = read(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.WRITE) {
-      response = write(xdr, channel, xid, authSys, client);
+      response = write(xdr, channel, xid, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.CREATE) {
-      response = create(xdr, authSys, client);
+      response = create(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.MKDIR) {      
-      response = mkdir(xdr, authSys, client);
+      response = mkdir(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.SYMLINK) {
-      response = symlink(xdr, authSys, client);
+      response = symlink(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.MKNOD) {
-      response = mknod(xdr, authSys, client);
+      response = mknod(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.REMOVE) {
-      response = remove(xdr, authSys, client);
+      response = remove(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.RMDIR) {
-      response = rmdir(xdr, authSys, client);
+      response = rmdir(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.RENAME) {
-      response = rename(xdr, authSys, client);
+      response = rename(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.LINK) {
-      response = link(xdr, authSys, client);
+      response = link(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.READDIR) {
-      response = readdir(xdr, authSys, client);
+      response = readdir(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.READDIRPLUS) {
-      response = readdirplus(xdr, authSys, client);
+      response = readdirplus(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.FSSTAT) {
-      response = fsstat(xdr, authSys, client);
+      response = fsstat(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.FSINFO) {
-      response = fsinfo(xdr, authSys, client);
+      response = fsinfo(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.PATHCONF) {
-      response = pathconf(xdr, authSys, client);
+      response = pathconf(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.COMMIT) {
-      response = commit(xdr, authSys, client);
+      response = commit(xdr, securityHandler, client);
     } else {
       // Invalid procedure
       RpcAcceptedReply.voidReply(out, xid,

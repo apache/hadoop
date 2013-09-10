@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
+import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
 
 /** 
  * Represents RPC message MSG_DENIED reply body. See RFC 1831 for details.
