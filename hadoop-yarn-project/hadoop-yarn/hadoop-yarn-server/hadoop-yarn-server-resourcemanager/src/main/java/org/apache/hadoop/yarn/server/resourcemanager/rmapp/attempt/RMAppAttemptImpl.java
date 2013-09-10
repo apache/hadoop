@@ -833,7 +833,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       Allocation amContainerAllocation = appAttempt.scheduler.allocate(
           appAttempt.applicationAttemptId, EMPTY_CONTAINER_REQUEST_LIST,
           EMPTY_CONTAINER_RELEASE_LIST, null, null);
-
+      // There must be at least one container allocated, because a
+      // CONTAINER_ALLOCATED is emitted after an RMContainer is constructed,
+      // and is put in SchedulerApplication#newlyAllocatedContainers. Then,
+      // YarnScheduler#allocate will fetch it.
+      assert amContainerAllocation.getContainers().size() != 0;
       // Set the masterContainer
       appAttempt.setMasterContainer(amContainerAllocation.getContainers().get(
                                                                            0));
