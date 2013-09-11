@@ -49,6 +49,10 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5478. TeraInputFormat unnecessarily defines its own FileSplit
     subclass (Sandy Ryza)
 
+    MAPREDUCE-5497. Changed MRAppMaster to sleep only after doing everything else
+    but just before ClientService to avoid race conditions during RM restart.
+    (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5446. TestJobHistoryEvents and TestJobHistoryParsing have race
