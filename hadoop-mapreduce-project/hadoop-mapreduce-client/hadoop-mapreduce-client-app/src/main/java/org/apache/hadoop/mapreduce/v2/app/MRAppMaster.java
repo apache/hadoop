@@ -362,7 +362,10 @@ public class MRAppMaster extends CompositeService {
 
       //service to handle requests from JobClient
       clientService = createClientService(context);
-      addIfService(clientService);
+      // Init ClientService separately so that we stop it separately, since this
+      // service needs to wait some time before it stops so clients can know the
+      // final states
+      clientService.init(conf);
       
       containerAllocator = createContainerAllocator(clientService, context);
       
@@ -425,7 +428,6 @@ public class MRAppMaster extends CompositeService {
       // queued inside the JobHistoryEventHandler 
       addIfService(historyService);
     }
-    
     super.serviceInit(conf);
   } // end of init()
   
@@ -534,14 +536,6 @@ public class MRAppMaster extends CompositeService {
       }
     }
 
-    // TODO:currently just wait for some time so clients can know the
-    // final states. Will be removed once RM come on.
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
-
     try {
       //if isLastAMRetry comes as true, should never set it to false
       if ( !isLastAMRetry){
@@ -556,6 +550,14 @@ public class MRAppMaster extends CompositeService {
       LOG.info("Calling stop for all the services");
       MRAppMaster.this.stop();
 
+      // TODO: Stop ClientService last, since only ClientService should wait for
+      // some time so clients can know the final states. Will be removed once RM come on.
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      clientService.stop();
     } catch (Throwable t) {
       LOG.warn("Graceful stop failed ", t);
     }
@@ -1019,8 +1021,10 @@ public class MRAppMaster extends CompositeService {
         LOG.info("MRAppMaster launching normal, non-uberized, multi-container "
             + "job " + job.getID() + ".");
       }
+      // Start ClientService here, since it's not initialized if
+      // errorHappenedShutDown is true
+      clientService.start();
     }
-
     //start all the components
     super.serviceStart();
 
