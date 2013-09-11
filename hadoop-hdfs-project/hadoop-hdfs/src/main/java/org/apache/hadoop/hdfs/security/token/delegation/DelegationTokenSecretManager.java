@@ -58,6 +58,15 @@ public class DelegationTokenSecretManager
       .getLog(DelegationTokenSecretManager.class);
   
   private final FSNamesystem namesystem;
+
+  public DelegationTokenSecretManager(long delegationKeyUpdateInterval,
+      long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
+      long delegationTokenRemoverScanInterval, FSNamesystem namesystem) {
+    this(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
+        delegationTokenRenewInterval, delegationTokenRemoverScanInterval, false,
+        namesystem);
+  }
+
   /**
    * Create a secret manager
    * @param delegationKeyUpdateInterval the number of seconds for rolling new
@@ -67,13 +76,16 @@ public class DelegationTokenSecretManager
    * @param delegationTokenRenewInterval how often the tokens must be renewed
    * @param delegationTokenRemoverScanInterval how often the tokens are scanned
    *        for expired tokens
+   * @param storeTokenTrackingId whether to store the token's tracking id
    */
   public DelegationTokenSecretManager(long delegationKeyUpdateInterval,
       long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
-      long delegationTokenRemoverScanInterval, FSNamesystem namesystem) {
+      long delegationTokenRemoverScanInterval, boolean storeTokenTrackingId,
+      FSNamesystem namesystem) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
         delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
     this.namesystem = namesystem;
+    this.storeTokenTrackingId = storeTokenTrackingId;
   }
 
   @Override //SecretManager
@@ -184,7 +196,7 @@ public class DelegationTokenSecretManager
     }
     if (currentTokens.get(identifier) == null) {
       currentTokens.put(identifier, new DelegationTokenInformation(expiryTime,
-          password));
+          password, getTrackingIdIfEnabled(identifier)));
     } else {
       throw new IOException(
           "Same delegation token being added twice; invalid entry in fsimage or editlogs");
@@ -223,7 +235,7 @@ public class DelegationTokenSecretManager
       byte[] password = createPassword(identifier.getBytes(), allKeys
           .get(keyId).getKey());
       currentTokens.put(identifier, new DelegationTokenInformation(expiryTime,
-          password));
+          password, getTrackingIdIfEnabled(identifier)));
     }
   }
 
