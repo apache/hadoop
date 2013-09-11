@@ -124,6 +124,11 @@ public abstract class FileSystem extends Configured implements Closeable {
     return get(getDefaultUri(conf), conf);
   }
   
+  /** Returns the configured filesystem implementation.*/
+  public static FileSystem newInstance(Configuration conf) throws IOException {
+    return get(getDefaultUri(conf), conf);
+  }
+  
   /** Get the default filesystem URI from a configuration.
    * @param conf the configuration to access
    * @return the uri of the default filesystem

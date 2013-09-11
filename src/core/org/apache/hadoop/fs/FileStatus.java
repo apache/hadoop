@@ -81,6 +81,14 @@ public class FileStatus implements Writable, Comparable {
   public boolean isDir() {
     return isdir;
   }
+  
+  /**
+   * Is this a directory?
+   * @return true if this is a directory
+   */
+  public boolean isDirectory() {
+    return isdir;
+  }
 
   /**
    * Get the block size of the file.

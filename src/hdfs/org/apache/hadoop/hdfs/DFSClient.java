@@ -734,6 +734,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     //    Get block info from namenode
     return new DFSInputStream(src, buffersize, verifyChecksum);
   }
+  
+  /**
+   * Get the namenode associated with this DFSClient object
+   * @return the namenode associated with this DFSClient object
+   */
+  public ClientProtocol getNamenode() {
+    return namenode;
+  }
 
   /**
    * Create a new dfs file and return an output stream for writing into it. 
