@@ -41,6 +41,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
+import org.apache.hadoop.mapreduce.v2.app.client.MRClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobFinishEvent;
@@ -284,14 +285,12 @@ import org.junit.Test;
   private final class MRAppTestCleanup extends MRApp {
     int stagingDirCleanedup;
     int ContainerAllocatorStopped;
-    int JobHistoryEventHandlerStopped;
     int numStops;
     public MRAppTestCleanup(int maps, int reduces, boolean autoComplete,
         String testName, boolean cleanOnStart) {
       super(maps, reduces, autoComplete, testName, cleanOnStart);
       stagingDirCleanedup = 0;
       ContainerAllocatorStopped = 0;
-      JobHistoryEventHandlerStopped = 0;
       numStops = 0;
     }
 
@@ -316,26 +315,6 @@ import org.junit.Test;
           createJobFinishEventHandler());
 
       return newJob;
-    }
-
-    @Override
-    protected EventHandler<JobHistoryEvent> createJobHistoryHandler(
-        AppContext context) {
-      return new TestJobHistoryEventHandler(context, getStartCount());
-    }
-
-    private class TestJobHistoryEventHandler extends JobHistoryEventHandler {
-
-      public TestJobHistoryEventHandler(AppContext context, int startCount) {
-        super(context, startCount);
-      }
-
-      @Override
-      public void serviceStop() throws Exception {
-        numStops++;
-        JobHistoryEventHandlerStopped = numStops;
-        super.serviceStop();
-      }
     }
 
     @Override
@@ -405,15 +384,13 @@ import org.junit.Test;
     app.verifyCompleted();
 
     int waitTime = 20 * 1000;
-    while (waitTime > 0 && app.numStops < 3 ) {
+    while (waitTime > 0 && app.numStops < 2) {
       Thread.sleep(100);
       waitTime -= 100;
     }
 
-    // assert JobHistoryEventHandlerStopped first, then
-    // ContainerAllocatorStopped, and then stagingDirCleanedup
-    Assert.assertEquals(1, app.JobHistoryEventHandlerStopped);
-    Assert.assertEquals(2, app.ContainerAllocatorStopped);
-    Assert.assertEquals(3, app.stagingDirCleanedup);
+    // assert ContainerAllocatorStopped and then tagingDirCleanedup
+    Assert.assertEquals(1, app.ContainerAllocatorStopped);
+    Assert.assertEquals(2, app.stagingDirCleanedup);
   }
  }
