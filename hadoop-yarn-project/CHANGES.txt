@@ -170,6 +170,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1025. ResourceManager and NodeManager do not load native libraries on
     Windows. (cnauroth)
 
+    YARN-1176. RM web services ClusterMetricsInfo total nodes doesn't include 
+    unhealthy nodes (Jonathan Eagles via tgraves)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
@@ -1293,6 +1296,9 @@ Release 0.23.10 - UNRELEASED
 
     YARN-1101. Active nodes can be decremented below 0 (Robert Parker 
     via tgraves)
+
+    YARN-1176. RM web services ClusterMetricsInfo total nodes doesn't include 
+    unhealthy nodes (Jonathan Eagles via tgraves)
 
 Release 0.23.9 - 2013-07-08
 
