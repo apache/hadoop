@@ -34,8 +34,6 @@ Release 2.3.0 - UNRELEASED
     HDFS-4879. Add "blocked ArrayList" collection to avoid CMS full GCs
     (Todd Lipcon via Colin Patrick McCabe)
 
-    HDFS-4680. Audit logging of delegation tokens for MR tracing. (Andrew Wang)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -130,6 +128,8 @@ Release 2.1.1-beta - UNRELEASED
     server. (kihwal)
 
     HDFS-5150. Allow per NN SPN for internal SPNEGO. (kihwal)
+
+    HDFS-4680. Audit logging of delegation tokens for MR tracing. (Andrew Wang)
 
   OPTIMIZATIONS
 
