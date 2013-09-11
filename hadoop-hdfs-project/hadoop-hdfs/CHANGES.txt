@@ -34,6 +34,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-4879. Add "blocked ArrayList" collection to avoid CMS full GCs
     (Todd Lipcon via Colin Patrick McCabe)
 
+    HDFS-4680. Audit logging of delegation tokens for MR tracing. (Andrew Wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
