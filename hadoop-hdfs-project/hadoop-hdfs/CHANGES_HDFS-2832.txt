@@ -21,3 +21,5 @@ IMPROVEMENTS:
     HDFS-5134. Move blockContentsStale, heartbeatedSinceFailover and
     firstBlockReport from DatanodeDescriptor to DatanodeStorageInfo; and
     fix a synchronization problem in DatanodeStorageInfo.  (szetszwo)
+
+    HDFS-5157. Add StorageType to FsVolume.  (Junping Du via szetszwo)

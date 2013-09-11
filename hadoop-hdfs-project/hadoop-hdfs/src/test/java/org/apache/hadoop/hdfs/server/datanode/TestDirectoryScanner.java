@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -405,6 +406,11 @@ public class TestDirectoryScanner {
     @Override
     public File getFinalizedDir(String bpid) throws IOException {
       return new File("/base/current/" + bpid + "/finalized");
+    }
+
+    @Override
+    public StorageType getStorageType() {
+      return StorageType.DEFAULT;
     }
   }
 
