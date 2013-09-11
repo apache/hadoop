@@ -21,6 +21,7 @@ package org.apache.hadoop.security.token;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -35,6 +36,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public abstract class TokenIdentifier implements Writable {
+
+  private String trackingId = null;
+
   /**
    * Get the token kind
    * @return the kind of the token
@@ -61,5 +65,20 @@ public abstract class TokenIdentifier implements Writable {
       throw new RuntimeException("i/o error in getBytes", ie);
     }
     return Arrays.copyOf(buf.getData(), buf.getLength());
+  }
+
+  /**
+   * Returns a tracking identifier that can be used to associate usages of a
+   * token across multiple client sessions.
+   *
+   * Currently, this function just returns an MD5 of {{@link #getBytes()}.
+   *
+   * @return tracking identifier
+   */
+  public String getTrackingId() {
+    if (trackingId == null) {
+      trackingId = DigestUtils.md5Hex(getBytes());
+    }
+    return trackingId;
   }
 }

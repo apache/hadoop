@@ -72,6 +72,8 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5150. Allow per NN SPN for internal SPNEGO. (kihwal)
 
+    HDFS-4680. Audit logging of delegation tokens for MR tracing. (Andrew Wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
