@@ -84,7 +84,7 @@ public class ClusterMetricsInfo {
     this.decommissionedNodes = clusterMetrics.getNumDecommisionedNMs();
     this.rebootedNodes = clusterMetrics.getNumRebootedNMs();
     this.totalNodes = activeNodes + lostNodes + decommissionedNodes
-        + rebootedNodes;
+        + rebootedNodes + unhealthyNodes;
   }
 
   public int getAppsSubmitted() {
