@@ -184,6 +184,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9932. Improper synchronization in RetryCache. (kihwal)
 
+    HADOOP-9958. Add old constructor back to DelegationTokenInformation to
+    unbreak downstream builds. (Andrew Wang)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
