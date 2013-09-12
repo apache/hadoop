@@ -23,7 +23,9 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -219,11 +221,11 @@ public class TestNodeStatusUpdater {
         Resource resource = BuilderUtils.newResource(2, 1);
         long currentTime = System.currentTimeMillis();
         String user = "testUser";
-        ContainerTokenIdentifier containerToken =
-            BuilderUtils.newContainerTokenIdentifier(BuilderUtils
-              .newContainerToken(firstContainerID, "localhost", 1234, user,
-                resource, currentTime + 10000, 123, "password".getBytes(),
-                currentTime));
+        ContainerTokenIdentifier containerToken = BuilderUtils
+            .newContainerTokenIdentifier(BuilderUtils.newContainerToken(
+                firstContainerID, InetAddress.getByName("localhost")
+                    .getCanonicalHostName(), 1234, user, resource,
+                currentTime + 10000, 123, "password".getBytes(), currentTime));
         Container container =
             new ContainerImpl(conf, mockDispatcher, launchContext, null,
               mockMetrics, containerToken);
@@ -250,11 +252,11 @@ public class TestNodeStatusUpdater {
         long currentTime = System.currentTimeMillis();
         String user = "testUser";
         Resource resource = BuilderUtils.newResource(3, 1);
-        ContainerTokenIdentifier containerToken =
-            BuilderUtils.newContainerTokenIdentifier(BuilderUtils
-              .newContainerToken(secondContainerID, "localhost", 1234, user,
-                resource, currentTime + 10000, 123,
-                "password".getBytes(), currentTime));
+        ContainerTokenIdentifier containerToken = BuilderUtils
+            .newContainerTokenIdentifier(BuilderUtils.newContainerToken(
+                secondContainerID, InetAddress.getByName("localhost")
+                    .getCanonicalHostName(), 1234, user, resource,
+                currentTime + 10000, 123, "password".getBytes(), currentTime));
         Container container =
             new ContainerImpl(conf, mockDispatcher, launchContext, null,
               mockMetrics, containerToken);
@@ -1290,9 +1292,15 @@ public class TestNodeStatusUpdater {
 
   private YarnConfiguration createNMConfig() {
     YarnConfiguration conf = new YarnConfiguration();
+    String localhostAddress = null;
+    try {
+      localhostAddress = InetAddress.getByName("localhost").getCanonicalHostName();
+    } catch (UnknownHostException e) {
+      Assert.fail("Unable to get localhost address: " + e.getMessage());
+    }
     conf.setInt(YarnConfiguration.NM_PMEM_MB, 5 * 1024); // 5GB
-    conf.set(YarnConfiguration.NM_ADDRESS, "localhost:12345");
-    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "localhost:12346");
+    conf.set(YarnConfiguration.NM_ADDRESS, localhostAddress + ":12345");
+    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, localhostAddress + ":12346");  
     conf.set(YarnConfiguration.NM_LOG_DIRS, logsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
       remoteLogsDir.getAbsolutePath());
