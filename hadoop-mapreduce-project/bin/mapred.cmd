@@ -103,10 +103,12 @@ goto :eof
 
 :job
   set CLASS=org.apache.hadoop.mapred.JobClient
+  set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_CLIENT_OPTS%
   goto :eof
 
 :queue
   set CLASS=org.apache.hadoop.mapred.JobQueueClient
+  set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_CLIENT_OPTS%
   goto :eof
 
 :sampler
