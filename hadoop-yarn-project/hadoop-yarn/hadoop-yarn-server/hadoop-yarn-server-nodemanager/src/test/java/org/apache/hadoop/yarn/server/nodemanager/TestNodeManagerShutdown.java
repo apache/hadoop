@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -163,7 +164,8 @@ public class TestNodeManagerShutdown {
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
-    NodeId nodeId = BuilderUtils.newNodeId("localhost", 12345);
+    NodeId nodeId = BuilderUtils.newNodeId(InetAddress.getByName("localhost")
+        .getCanonicalHostName(), 12345);
  
     URL localResourceUri =
         ConverterUtils.getYarnUrlFromPath(localFS
