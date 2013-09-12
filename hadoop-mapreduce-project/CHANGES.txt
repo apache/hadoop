@@ -125,6 +125,9 @@ Release 2.1.1-beta - UNRELEASED
 
     MAPREDUCE-5020. Compile failure with JDK8 (Trevor Robinson via tgraves)
 
+    MAPREDUCE-5164. mapred job and queue commands omit HADOOP_CLIENT_OPTS 
+    (Nemon Lou via devaraj)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
