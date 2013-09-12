@@ -24,19 +24,19 @@ import com.google.common.collect.ComparisonChain;
 
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.EmptyPathError;
-import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPoolNameError;
-import org.apache.hadoop.hdfs.protocol.AddPathCacheDirectiveException.InvalidPathNameError;
+import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.EmptyPathError;
+import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPoolNameError;
+import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPathNameError;
 
 /**
  * A directive to add a path to a cache pool.
  */
-public class PathCacheDirective implements Comparable<PathCacheDirective> {
+public class PathBasedCacheDirective implements Comparable<PathBasedCacheDirective> {
   private final String path;
 
   private final String pool;
 
-  public PathCacheDirective(String path, String pool) {
+  public PathBasedCacheDirective(String path, String pool) {
     Preconditions.checkNotNull(path);
     Preconditions.checkNotNull(pool);
     this.path = path;
@@ -58,10 +58,10 @@ public class PathCacheDirective implements Comparable<PathCacheDirective> {
   }
 
   /**
-   * Check if this PathCacheDirective is valid.
+   * Check if this PathBasedCacheDirective is valid.
    * 
    * @throws IOException
-   *     If this PathCacheDirective is not valid.
+   *     If this PathBasedCacheDirective is not valid.
    */
   public void validate() throws IOException {
     if (path.isEmpty()) {
@@ -76,7 +76,7 @@ public class PathCacheDirective implements Comparable<PathCacheDirective> {
   }
 
   @Override
-  public int compareTo(PathCacheDirective rhs) {
+  public int compareTo(PathBasedCacheDirective rhs) {
     return ComparisonChain.start().
         compare(pool, rhs.getPool()).
         compare(path, rhs.getPath()).
@@ -91,7 +91,7 @@ public class PathCacheDirective implements Comparable<PathCacheDirective> {
   @Override
   public boolean equals(Object o) {
     try {
-      PathCacheDirective other = (PathCacheDirective)o;
+      PathBasedCacheDirective other = (PathBasedCacheDirective)o;
       return other.compareTo(this) == 0;
     } catch (ClassCastException e) {
       return false;

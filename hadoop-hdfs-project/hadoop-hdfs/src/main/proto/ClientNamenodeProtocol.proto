@@ -363,54 +363,56 @@ message IsFileClosedResponseProto {
   required bool result = 1;
 }
 
-message PathCacheDirectiveProto {
+message PathBasedCacheDirectiveProto {
   required string path = 1;
   required string pool = 2;
 }
 
-message AddPathCacheDirectivesRequestProto {
-  repeated PathCacheDirectiveProto elements = 1;
+message AddPathBasedCacheDirectivesRequestProto {
+  repeated PathBasedCacheDirectiveProto elements = 1;
 }
 
-message AddPathCacheDirectivesResponseProto {
+message AddPathBasedCacheDirectivesResponseProto {
   repeated int64 results = 1 [packed=true];
 }
 
-enum AddPathCacheDirectiveErrorProto {
-  EMPTY_PATH_ERROR = -1;
-  INVALID_PATH_NAME_ERROR = -2;
-  INVALID_POOL_NAME_ERROR = -3;
-  UNEXPECTED_ADD_ERROR = -4;
+enum AddPathBasedCacheDirectiveErrorProto {
+  UNEXPECTED_ADD_ERROR = -1;
+  EMPTY_PATH_ERROR = -2;
+  INVALID_PATH_NAME_ERROR = -3;
+  INVALID_POOL_NAME_ERROR = -4;
+  ADD_PERMISSION_DENIED_ERROR = -5;
 }
 
-message RemovePathCacheEntriesRequestProto {
+message RemovePathBasedCacheEntriesRequestProto {
   repeated int64 elements = 1 [packed=true];
 }
 
-message RemovePathCacheEntriesResponseProto {
+message RemovePathBasedCacheEntriesResponseProto {
   repeated int64 results = 1 [packed=true];
 }
 
-enum RemovePathCacheEntryErrorProto {
-  INVALID_CACHED_PATH_ID_ERROR = -1;
-  NO_SUCH_CACHED_PATH_ID_ERROR = -2;
-  REMOVE_PERMISSION_DENIED_ERROR = -3;
-  UNEXPECTED_REMOVE_ERROR = -4;
+enum RemovePathBasedCacheEntryErrorProto {
+  UNEXPECTED_REMOVE_ERROR = -1;
+  INVALID_CACHED_PATH_ID_ERROR = -2;
+  NO_SUCH_CACHED_PATH_ID_ERROR = -3;
+  REMOVE_PERMISSION_DENIED_ERROR = -4;
 }
 
-message ListPathCacheEntriesRequestProto {
+message ListPathBasedCacheEntriesRequestProto {
   required int64 prevId = 1;
-  required string pool = 2;
+  optional string pool = 2;
+  optional string path = 3;
 }
 
-message ListPathCacheEntriesElementProto {
+message ListPathBasedCacheEntriesElementProto {
   required int64 id = 1;
-  required string path = 2;
-  required string pool = 3;
+  required string pool = 2;
+  required string path = 3;
 }
 
-message ListPathCacheEntriesResponseProto {
-  repeated ListPathCacheEntriesElementProto elements = 1;
+message ListPathBasedCacheEntriesResponseProto {
+  repeated ListPathBasedCacheEntriesElementProto elements = 1;
   required bool hasMore = 2;
 }
 
@@ -449,7 +451,7 @@ message ListCachePoolsRequestProto {
 
 message ListCachePoolsResponseProto {
   repeated ListCachePoolsResponseElementProto elements = 1;
-  optional bool hasMore = 2;
+  required bool hasMore = 2;
 }
 
 message ListCachePoolsResponseElementProto {
@@ -641,12 +643,12 @@ service ClientNamenodeProtocol {
       returns(ListCorruptFileBlocksResponseProto);
   rpc metaSave(MetaSaveRequestProto) returns(MetaSaveResponseProto);
   rpc getFileInfo(GetFileInfoRequestProto) returns(GetFileInfoResponseProto);
-  rpc addPathCacheDirectives(AddPathCacheDirectivesRequestProto)
-      returns (AddPathCacheDirectivesResponseProto);
-  rpc removePathCacheEntries(RemovePathCacheEntriesRequestProto)
-      returns (RemovePathCacheEntriesResponseProto);
-  rpc listPathCacheEntries(ListPathCacheEntriesRequestProto)
-      returns (ListPathCacheEntriesResponseProto);
+  rpc addPathBasedCacheDirectives(AddPathBasedCacheDirectivesRequestProto)
+      returns (AddPathBasedCacheDirectivesResponseProto);
+  rpc removePathBasedCacheEntries(RemovePathBasedCacheEntriesRequestProto)
+      returns (RemovePathBasedCacheEntriesResponseProto);
+  rpc listPathBasedCacheEntries(ListPathBasedCacheEntriesRequestProto)
+      returns (ListPathBasedCacheEntriesResponseProto);
   rpc addCachePool(AddCachePoolRequestProto)
       returns(AddCachePoolResponseProto);
   rpc modifyCachePool(ModifyCachePoolRequestProto)

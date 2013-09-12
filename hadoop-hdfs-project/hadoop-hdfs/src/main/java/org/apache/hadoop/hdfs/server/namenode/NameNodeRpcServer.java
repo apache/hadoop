@@ -62,8 +62,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
-import org.apache.hadoop.hdfs.protocol.PathCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathCacheEntry;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -1211,43 +1211,47 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public List<Fallible<PathCacheEntry>> addPathCacheDirectives(
-      List<PathCacheDirective> paths) throws IOException {
-    return namesystem.addPathCacheDirectives(paths);
+  public List<Fallible<PathBasedCacheEntry>> addPathBasedCacheDirectives(
+      List<PathBasedCacheDirective> paths) throws IOException {
+    return namesystem.addPathBasedCacheDirectives(paths);
   }
 
   @Override
-  public List<Fallible<Long>> removePathCacheEntries(List<Long> ids)
+  public List<Fallible<Long>> removePathBasedCacheEntries(List<Long> ids)
       throws IOException {
-    return namesystem.removePathCacheEntries(ids);
+    return namesystem.removePathBasedCacheEntries(ids);
   }
 
-  private class ServerSidePathCacheEntriesIterator
-      extends BatchedRemoteIterator<Long, PathCacheEntry> {
+  private class ServerSidePathBasedCacheEntriesIterator
+      extends BatchedRemoteIterator<Long, PathBasedCacheEntry> {
 
     private final String pool;
 
-    public ServerSidePathCacheEntriesIterator(Long firstKey, String pool) {
+    private final String path;
+
+    public ServerSidePathBasedCacheEntriesIterator(Long firstKey, String pool,
+        String path) {
       super(firstKey);
       this.pool = pool;
+      this.path = path;
     }
 
     @Override
-    public BatchedEntries<PathCacheEntry> makeRequest(
+    public BatchedEntries<PathBasedCacheEntry> makeRequest(
         Long nextKey) throws IOException {
-      return namesystem.listPathCacheEntries(nextKey, pool);
+      return namesystem.listPathBasedCacheEntries(nextKey, pool, path);
     }
 
     @Override
-    public Long elementToPrevKey(PathCacheEntry entry) {
+    public Long elementToPrevKey(PathBasedCacheEntry entry) {
       return entry.getEntryId();
     }
   }
   
   @Override
-  public RemoteIterator<PathCacheEntry> listPathCacheEntries(long prevId,
-      String pool) throws IOException {
-    return new ServerSidePathCacheEntriesIterator(prevId, pool);
+  public RemoteIterator<PathBasedCacheEntry> listPathBasedCacheEntries(long prevId,
+      String pool, String path) throws IOException {
+    return new ServerSidePathBasedCacheEntriesIterator(prevId, pool, path);
   }
 
   @Override

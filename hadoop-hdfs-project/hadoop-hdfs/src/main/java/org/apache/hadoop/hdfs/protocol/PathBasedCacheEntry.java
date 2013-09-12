@@ -23,13 +23,13 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import com.google.common.base.Preconditions;
 
 /**
- * An entry in the NameNode's path cache.
+ * An entry in the NameNode's PathBasedCache.
  */
-public final class PathCacheEntry {
+public final class PathBasedCacheEntry {
   private final long entryId;
-  private final PathCacheDirective directive;
+  private final PathBasedCacheDirective directive;
 
-  public PathCacheEntry(long entryId, PathCacheDirective directive) {
+  public PathBasedCacheEntry(long entryId, PathBasedCacheDirective directive) {
     Preconditions.checkArgument(entryId > 0);
     this.entryId = entryId;
     this.directive = directive;
@@ -39,14 +39,14 @@ public final class PathCacheEntry {
     return entryId;
   }
 
-  public PathCacheDirective getDirective() {
+  public PathBasedCacheDirective getDirective() {
     return directive;
   }
 
   @Override
   public boolean equals(Object o) {
     try {
-      PathCacheEntry other = (PathCacheEntry)o;
+      PathBasedCacheEntry other = (PathBasedCacheEntry)o;
       return new EqualsBuilder().
           append(this.entryId, other.entryId).
           append(this.directive, other.directive).

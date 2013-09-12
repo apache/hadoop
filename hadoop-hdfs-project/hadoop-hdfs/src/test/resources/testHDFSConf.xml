@@ -16385,7 +16385,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>No cache pools found.</expected-output>
+          <expected-output>Found 0 results.</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16434,7 +16434,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>foo</expected-output>
+          <expected-output>bob    bob    rw-rw-r--      100</expected-output>
         </comparator>
       </comparators>
     </test>

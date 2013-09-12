@@ -67,6 +67,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
@@ -77,6 +79,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Fallible;
 import org.apache.hadoop.util.Progressable;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -1578,6 +1581,45 @@ public class DistributedFileSystem extends FileSystem {
         }
       }
     }.resolve(this, absF);
+  }
+
+  /**
+   * Add some PathBasedCache directives.
+   * 
+   * @param directives A list of PathBasedCache directives to be added.
+   * @return A Fallible list, where each element is either a successfully addded
+   *         PathBasedCache entry, or an IOException describing why the directive
+   *         could not be added.
+   */
+  public List<Fallible<PathBasedCacheEntry>>
+      addPathBasedCacheDirective(List<PathBasedCacheDirective> directives)
+          throws IOException {
+    return dfs.namenode.addPathBasedCacheDirectives(directives);
+  }
+  
+  /**
+   * Remove some PathBasedCache entries.
+   * 
+   * @param ids A list of all the entry IDs to be removed.
+   * @return A Fallible list where each element is either a successfully removed
+   *         ID, or an IOException describing why the ID could not be removed.
+   */
+  public List<Fallible<Long>>
+      removePathBasedCacheEntries(List<Long> ids) throws IOException {
+    return dfs.namenode.removePathBasedCacheEntries(ids);
+  }
+  
+  /**
+   * List the set of cached paths of a cache pool. Incrementally fetches results
+   * from the server.
+   * 
+   * @param pool The cache pool to list, or null to list all pools.
+   * @param path The path name to list, or null to list all paths.
+   * @return A RemoteIterator which returns PathBasedCacheEntry objects.
+   */
+  public RemoteIterator<PathBasedCacheEntry> listPathBasedCacheEntries(
+      String pool, String path) throws IOException {
+    return dfs.namenode.listPathBasedCacheEntries(0, pool, path);
   }
 
   /**

@@ -143,8 +143,8 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.PathCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathCacheEntry;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -6750,27 +6750,27 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   @SuppressWarnings("unchecked")
-  List<Fallible<PathCacheEntry>> addPathCacheDirectives(
-      List<PathCacheDirective> directives) throws IOException {
+  List<Fallible<PathBasedCacheEntry>> addPathBasedCacheDirectives(
+      List<PathBasedCacheDirective> directives) throws IOException {
     CacheEntryWithPayload retryCacheEntry =
         RetryCache.waitForCompletion(retryCache, null);
     if (retryCacheEntry != null && retryCacheEntry.isSuccess()) {
-      return (List<Fallible<PathCacheEntry>>) retryCacheEntry.getPayload();
+      return (List<Fallible<PathBasedCacheEntry>>) retryCacheEntry.getPayload();
     }
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     boolean success = false;
-    List<Fallible<PathCacheEntry>> results = null;
+    List<Fallible<PathBasedCacheEntry>> results = null;
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException(
-            "Cannot add path cache directive", safeMode);
+            "Cannot add PathBasedCache directive", safeMode);
       }
       results = cacheManager.addDirectives(directives, pc);
-      //getEditLog().logAddPathCacheDirectives(results); FIXME: HDFS-5119
+      //getEditLog().logAddPathBasedCacheDirectives(results); FIXME: HDFS-5119
       success = true;
     } finally {
       writeUnlock();
@@ -6778,7 +6778,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         getEditLog().logSync();
       }
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "addPathCacheDirectives", null, null, null);
+        logAuditEvent(success, "addPathBasedCacheDirectives", null, null, null);
       }
       RetryCache.setState(retryCacheEntry, success, results);
     }
@@ -6786,7 +6786,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   @SuppressWarnings("unchecked")
-  List<Fallible<Long>> removePathCacheEntries(List<Long> ids) throws IOException {
+  List<Fallible<Long>> removePathBasedCacheEntries(List<Long> ids) throws IOException {
     CacheEntryWithPayload retryCacheEntry =
         RetryCache.waitForCompletion(retryCache, null);
     if (retryCacheEntry != null && retryCacheEntry.isSuccess()) {
@@ -6802,15 +6802,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException(
-            "Cannot remove path cache directives", safeMode);
+            "Cannot remove PathBasedCache directives", safeMode);
       }
       results = cacheManager.removeEntries(ids, pc);
-      //getEditLog().logRemovePathCacheEntries(results); FIXME: HDFS-5119
+      //getEditLog().logRemovePathBasedCacheEntries(results); FIXME: HDFS-5119
       success = true;
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "removePathCacheEntries", null, null, null);
+        logAuditEvent(success, "removePathBasedCacheEntries", null, null, null);
       }
       RetryCache.setState(retryCacheEntry, success, results);
     }
@@ -6818,22 +6818,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return results;
   }
 
-  BatchedListEntries<PathCacheEntry> listPathCacheEntries(long startId,
-      String pool) throws IOException {
+  BatchedListEntries<PathBasedCacheEntry> listPathBasedCacheEntries(long startId,
+      String pool, String path) throws IOException {
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
-    BatchedListEntries<PathCacheEntry> results;
+    BatchedListEntries<PathBasedCacheEntry> results;
     checkOperation(OperationCategory.READ);
     readLock();
     boolean success = false;
     try {
       checkOperation(OperationCategory.READ);
-      results = cacheManager.listPathCacheEntries(startId, pool, pc);
+      results = cacheManager.listPathBasedCacheEntries(startId, pool, path, pc);
       success = true;
     } finally {
       readUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "listPathCacheEntries", null, null, null);
+        logAuditEvent(success, "listPathBasedCacheEntries", null, null, null);
       }
     }
     return results;

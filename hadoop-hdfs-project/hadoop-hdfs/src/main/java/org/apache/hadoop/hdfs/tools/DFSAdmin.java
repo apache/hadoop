@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
+import org.apache.hadoop.hdfs.tools.TableListing.Justification;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -634,15 +635,6 @@ public class DFSAdmin extends FsShell {
   final private static String LIST_CACHE_POOLS_USAGE =
       "-listCachePools] [-verbose] [name]";
 
-  private void listCachePool(CachePoolInfo info) {
-    System.out.print(String.format("%s\n", info.getPoolName()));
-    System.out.print(String.format("owner:\t%s\n", info.getOwnerName()));
-    System.out.print(String.format("group:\t%s\n", info.getGroupName()));
-    System.out.print(String.format("mode:\t%s\n", info.getMode()));
-    System.out.print(String.format("weight:\t%d\n", info.getWeight()));
-    System.out.print("\n");
-  }
-
   public int listCachePools(String argsArray[], int idx) throws IOException {
     List<String> args = new LinkedList<String>();
     for (int i = idx; i < argsArray.length; i++) {
@@ -655,39 +647,44 @@ public class DFSAdmin extends FsShell {
       System.err.println("usage is " + LIST_CACHE_POOLS_USAGE);
       return 1;
     }
-    boolean gotResults = false;
     DistributedFileSystem dfs = getDFS();
+    TableListing listing = new TableListing.Builder().
+        addField("NAME", Justification.LEFT).
+        addField("OWNER", Justification.LEFT).
+        addField("GROUP", Justification.LEFT).
+        addField("MODE", Justification.LEFT).
+        addField("WEIGHT", Justification.RIGHT).
+        build();
+    int numResults = 0;
     try {
       RemoteIterator<CachePoolInfo> iter = dfs.listCachePools();
-      if (name != null) {
-        while (iter.hasNext()) {
-          CachePoolInfo info = iter.next();
-          if (info.getPoolName().equals(name)) {
-            listCachePool(info);
-            gotResults = true;
-            return 0;
+      while (iter.hasNext()) {
+        CachePoolInfo info = iter.next();
+        if (name == null || info.getPoolName().equals(name)) {
+          listing.addRow(new String[] {
+              info.getPoolName(),
+              info.getOwnerName(),
+              info.getGroupName(),
+              info.getMode().toString(),
+              info.getWeight().toString(),
+          });
+          ++numResults;
+          if (name != null) {
+            break;
           }
-        }
-      } else {
-        while (iter.hasNext()) {
-          listCachePool(iter.next());
-          gotResults = true;
         }
       }
     } catch (IOException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
-    int ret = 0;
-    if (!gotResults) {
-      if (name != null) {
-        System.out.println("No cache pool named " + name + " found.");
-        ret = 1;
-      } else {
-        System.out.println("No cache pools found.");
-        ret = 1;
-      }
+    System.out.print(String.format("Found %d result%s.\n", numResults,
+        (numResults == 1 ? "" : "s")));
+    if (numResults > 0) { 
+      System.out.print(listing.build());
     }
-    return ret;
+    // If there are no results, we return 1 (failure exit code);
+    // otherwise we return 0 (success exit code).
+    return (numResults == 0) ? 1 : 0;
   }
 
   public int rollEdits() throws IOException {

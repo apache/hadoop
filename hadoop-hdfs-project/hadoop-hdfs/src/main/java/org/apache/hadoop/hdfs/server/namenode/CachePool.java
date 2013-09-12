@@ -51,6 +51,14 @@ public final class CachePool {
   @Nonnull
   private String groupName;
   
+  /**
+   * Cache pool permissions.
+   * 
+   * READ permission means that you can list the cache directives in this pool.
+   * WRITE permission means that you can add, remove, or modify cache directives
+   *       in this pool.
+   * EXECUTE permission is unused.
+   */
   @Nonnull
   private FsPermission mode;
   
@@ -74,7 +82,7 @@ public final class CachePool {
       }
       this.groupName = ugi.getPrimaryGroupName();
     } else {
-      this.groupName = ownerName;
+      this.groupName = groupName;
     }
     this.mode = mode != null ? 
         new FsPermission(mode): FsPermission.getCachePoolDefault();

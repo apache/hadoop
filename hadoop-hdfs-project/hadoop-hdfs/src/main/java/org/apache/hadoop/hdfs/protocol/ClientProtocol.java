@@ -1098,27 +1098,27 @@ public interface ClientProtocol {
       String fromSnapshot, String toSnapshot) throws IOException;
 
   /**
-   * Add some path cache directives to the CacheManager.
+   * Add some PathBasedCache directives to the CacheManager.
    * 
-   * @param directives A list of path cache directives to be added.
+   * @param directives A list of PathBasedCache directives to be added.
    * @return A Fallible list, where each element is either a successfully addded
-   *         path cache entry, or an IOException describing why the directive
+   *         PathBasedCache entry, or an IOException describing why the directive
    *         could not be added.
    */
   @AtMostOnce
-  public List<Fallible<PathCacheEntry>>
-    addPathCacheDirectives(List<PathCacheDirective> directives)
+  public List<Fallible<PathBasedCacheEntry>>
+    addPathBasedCacheDirectives(List<PathBasedCacheDirective> directives)
       throws IOException;
 
   /**
-   * Remove some path cache entries from the CacheManager.
+   * Remove some PathBasedCache entries from the CacheManager.
    * 
    * @param ids A list of all the entry IDs to be removed from the CacheManager.
    * @return A Fallible list where each element is either a successfully removed
    *         ID, or an IOException describing why the ID could not be removed.
    */
   @AtMostOnce
-  public List<Fallible<Long>> removePathCacheEntries(List<Long> ids)
+  public List<Fallible<Long>> removePathBasedCacheEntries(List<Long> ids)
       throws IOException;
 
   /**
@@ -1126,13 +1126,14 @@ public interface ClientProtocol {
    * from the server.
    * 
    * @param prevId The last listed entry ID, or -1 if this is the first call to
-   *          listPathCacheEntries.
-   * @param pool The cache pool to list, or the empty string to list all pools
-   * @return A RemoteIterator which returns PathCacheEntry objects.
+   *          listPathBasedCacheEntries.
+   * @param pool The cache pool to list, or null to list all pools.
+   * @param path The path name to list, or null to list all paths.
+   * @return A RemoteIterator which returns PathBasedCacheEntry objects.
    */
   @Idempotent
-  public RemoteIterator<PathCacheEntry> listPathCacheEntries(long prevId,
-      String pool) throws IOException;
+  public RemoteIterator<PathBasedCacheEntry> listPathBasedCacheEntries(long prevId,
+      String pool, String path) throws IOException;
   
   /**
    * Add a new cache pool.

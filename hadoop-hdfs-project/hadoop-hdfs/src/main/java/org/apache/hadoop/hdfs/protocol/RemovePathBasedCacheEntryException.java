@@ -22,14 +22,14 @@ import java.io.IOException;
 import com.google.common.base.Preconditions;
 
 /**
- * An exception which occurred when trying to remove a path cache entry.
+ * An exception which occurred when trying to remove a PathBasedCache entry.
  */
-public abstract class RemovePathCacheEntryException extends IOException {
+public abstract class RemovePathBasedCacheEntryException extends IOException {
   private static final long serialVersionUID = 1L;
 
   private final long entryId;
 
-  public RemovePathCacheEntryException(String description, long entryId) {
+  public RemovePathBasedCacheEntryException(String description, long entryId) {
     super(description);
     this.entryId = entryId;
   }
@@ -39,7 +39,7 @@ public abstract class RemovePathCacheEntryException extends IOException {
   }
 
   public final static class InvalidIdException
-      extends RemovePathCacheEntryException {
+      extends RemovePathBasedCacheEntryException {
     private static final long serialVersionUID = 1L;
 
     public InvalidIdException(long entryId) {
@@ -48,31 +48,31 @@ public abstract class RemovePathCacheEntryException extends IOException {
   }
 
   public final static class RemovePermissionDeniedException
-      extends RemovePathCacheEntryException {
+      extends RemovePathBasedCacheEntryException {
     private static final long serialVersionUID = 1L;
 
     public RemovePermissionDeniedException(long entryId) {
-      super("permission denied when trying to remove path cache entry id " +
+      super("permission denied when trying to remove PathBasedCache entry id " +
         entryId, entryId);
     }
   }
 
   public final static class NoSuchIdException
-      extends RemovePathCacheEntryException {
+      extends RemovePathBasedCacheEntryException {
     private static final long serialVersionUID = 1L;
 
     public NoSuchIdException(long entryId) {
-      super("there is no path cache entry with id " + entryId, entryId);
+      super("there is no PathBasedCache entry with id " + entryId, entryId);
     }
   }
 
-  public final static class UnexpectedRemovePathCacheEntryException
-      extends RemovePathCacheEntryException {
+  public final static class UnexpectedRemovePathBasedCacheEntryException
+      extends RemovePathBasedCacheEntryException {
     private static final long serialVersionUID = 1L;
 
-    public UnexpectedRemovePathCacheEntryException(long id) {
+    public UnexpectedRemovePathBasedCacheEntryException(long id) {
       super("encountered an unexpected error when trying to " +
-          "remove path cache entry id " + id, id);
+          "remove PathBasedCache entry id " + id, id);
     }
   }
 }
