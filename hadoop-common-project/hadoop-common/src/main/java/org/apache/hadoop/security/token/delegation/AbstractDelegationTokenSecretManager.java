@@ -444,6 +444,10 @@ extends AbstractDelegationTokenIdentifier>
     byte[] password;
     String trackingId;
 
+    public DelegationTokenInformation(long renewDate, byte[] password) {
+      this(renewDate, password, null);
+    }
+
     public DelegationTokenInformation(long renewDate, byte[] password,
         String trackingId) {
       this.renewDate = renewDate;
