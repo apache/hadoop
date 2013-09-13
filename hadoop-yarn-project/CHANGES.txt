@@ -179,6 +179,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1194. TestContainerLogsPage fails with native builds (Roman Shaposhnik
     via jlowe)
 
+    YARN-1116. Populate AMRMTokens back to AMRMTokenSecretManager after RM
+    restarts (Jian He via bikas)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

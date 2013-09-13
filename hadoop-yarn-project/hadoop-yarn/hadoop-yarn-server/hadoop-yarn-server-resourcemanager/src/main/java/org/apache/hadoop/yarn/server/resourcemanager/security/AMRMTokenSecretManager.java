@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
@@ -30,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -121,6 +123,19 @@ public class AMRMTokenSecretManager extends
     byte[] password = createPassword(identifier.getBytes(), masterKey);
     this.passwords.put(applicationAttemptId, password);
     return password;
+  }
+
+  /**
+   * Populate persisted password of AMRMToken back to AMRMTokenSecretManager.
+   */
+  public synchronized void
+      addPersistedPassword(Token<AMRMTokenIdentifier> token) throws IOException {
+    AMRMTokenIdentifier identifier = token.decodeIdentifier();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Adding password for " + identifier.getApplicationAttemptId());
+    }
+    this.passwords.put(identifier.getApplicationAttemptId(),
+      token.getPassword());
   }
 
   /**
