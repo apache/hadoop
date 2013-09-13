@@ -4182,6 +4182,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return this.snapshotManager.getNumSnapshots();
   }
 
+  @Override
+  public String getSnapshotStats() {
+    Map<String, Object> info = new HashMap<String, Object>();
+    info.put("SnapshottableDirectories", this.getNumSnapshottableDirs());
+    info.put("Snapshots", this.getNumSnapshots());
+    return JSON.toString(info);
+  }
+
+
   int getNumberOfDatanodes(DatanodeReportType type) {
     readLock();
     try {

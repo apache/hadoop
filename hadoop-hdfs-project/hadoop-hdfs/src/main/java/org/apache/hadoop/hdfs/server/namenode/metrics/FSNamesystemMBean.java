@@ -130,4 +130,9 @@ public interface FSNamesystemMBean {
    * @return number of decommissioned dead data nodes
    */
   public int getNumDecomDeadDataNodes();
+
+  /**
+   * The statistics of snapshots
+   */
+  public String getSnapshotStats();
 }
