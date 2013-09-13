@@ -486,14 +486,17 @@ public class DFSClient implements java.io.Closeable {
     int numResponseToDrop = conf.getInt(
         DFSConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY,
         DFSConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT);
+    NameNodeProxies.ProxyAndInfo<ClientProtocol> proxyInfo = null;
     if (numResponseToDrop > 0) {
       // This case is used for testing.
       LOG.warn(DFSConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY
           + " is set to " + numResponseToDrop
           + ", this hacked client will proactively drop responses");
-      NameNodeProxies.ProxyAndInfo<ClientProtocol> proxyInfo = NameNodeProxies
-          .createProxyWithLossyRetryHandler(conf, nameNodeUri,
-              ClientProtocol.class, numResponseToDrop);
+      proxyInfo = NameNodeProxies.createProxyWithLossyRetryHandler(conf,
+          nameNodeUri, ClientProtocol.class, numResponseToDrop);
+    }
+    
+    if (proxyInfo != null) {
       this.dtService = proxyInfo.getDelegationTokenService();
       this.namenode = proxyInfo.getProxy();
     } else if (rpcNamenode != null) {
@@ -504,9 +507,8 @@ public class DFSClient implements java.io.Closeable {
     } else {
       Preconditions.checkArgument(nameNodeUri != null,
           "null URI");
-      NameNodeProxies.ProxyAndInfo<ClientProtocol> proxyInfo =
-        NameNodeProxies.createProxy(conf, nameNodeUri, ClientProtocol.class);
-      
+      proxyInfo = NameNodeProxies.createProxy(conf, nameNodeUri,
+          ClientProtocol.class);
       this.dtService = proxyInfo.getDelegationTokenService();
       this.namenode = proxyInfo.getProxy();
     }

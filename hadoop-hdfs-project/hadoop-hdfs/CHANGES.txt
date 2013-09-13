@@ -201,6 +201,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5159. Secondary NameNode fails to checkpoint if error occurs
     downloading edits on first checkpoint. (atm)
 
+    HDFS-5192. NameNode may fail to start when 
+    dfs.client.test.drop.namenode.response.number is set. (jing9)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
