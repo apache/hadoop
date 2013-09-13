@@ -43,13 +43,15 @@ public interface HAServiceProtocol {
   public static final long versionID = 1L;
 
   /**
-   * An HA service may be in active or standby state. During
-   * startup, it is in an unknown INITIALIZING state.
+   * An HA service may be in active or standby state. During startup, it is in
+   * an unknown INITIALIZING state. During shutdown, it is in the STOPPING state
+   * and can no longer return to active/standby states.
    */
   public enum HAServiceState {
     INITIALIZING("initializing"),
     ACTIVE("active"),
-    STANDBY("standby");
+    STANDBY("standby"),
+    STOPPING("stopping");
 
     private String name;
 
