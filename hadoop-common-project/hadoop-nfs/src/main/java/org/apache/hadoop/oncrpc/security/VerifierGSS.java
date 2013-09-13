@@ -15,16 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.oncrpc.security;
 
-package org.apache.hadoop.mapreduce.v2.app.client;
+import org.apache.hadoop.oncrpc.XDR;
 
-import java.net.InetSocketAddress;
+/** Verifier mapped to RPCSEC_GSS. */
+public class VerifierGSS extends Verifier {
 
-import org.apache.hadoop.service.Service;
+  public VerifierGSS() {
+    super(AuthFlavor.RPCSEC_GSS);
+  }
 
-public interface ClientService extends Service {
+  @Override
+  public void read(XDR xdr) {
+    // TODO Auto-generated method stub
+    
+  }
 
-  public abstract InetSocketAddress getBindAddress();
+  @Override
+  public void write(XDR xdr) {
+    // TODO Auto-generated method stub
+    
+  }
 
-  public abstract int getHttpPort();
 }

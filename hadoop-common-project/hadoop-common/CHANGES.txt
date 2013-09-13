@@ -363,6 +363,9 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-9908. Fix NPE when versioninfo properties file is missing (todd)
 
+    HADOOP-9350. Hadoop not building against Java7 on OSX
+    (Robert Kanter via stevel)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -453,6 +456,9 @@ Release 2.1.1-beta - UNRELEASED
     classpath correctly. (Shanyu Zhao via ivanmi)
 
     HADOOP-9932. Improper synchronization in RetryCache. (kihwal)
+
+    HADOOP-9958. Add old constructor back to DelegationTokenInformation to
+    unbreak downstream builds. (Andrew Wang)
 
 Release 2.1.0-beta - 2013-08-22
 

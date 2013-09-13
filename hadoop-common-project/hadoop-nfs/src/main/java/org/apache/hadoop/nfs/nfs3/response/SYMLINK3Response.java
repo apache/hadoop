@@ -60,9 +60,9 @@ public class SYMLINK3Response extends NFS3Response {
     if (this.getStatus() == Nfs3Status.NFS3_OK) {
       out.writeBoolean(true);
       objFileHandle.serialize(out);
+      out.writeBoolean(true);
       objPostOpAttr.serialize(out);
     }
-    out.writeBoolean(true);
     dirWcc.serialize(out);
     
     return out;

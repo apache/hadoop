@@ -15,16 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.oncrpc.security;
 
-package org.apache.hadoop.mapreduce.v2.app.client;
+import org.apache.hadoop.oncrpc.XDR;
 
-import java.net.InetSocketAddress;
+import com.google.common.base.Preconditions;
 
-import org.apache.hadoop.service.Service;
+/** Verifier used by AUTH_NONE. */
+public class VerifierNone extends Verifier {
 
-public interface ClientService extends Service {
+  public VerifierNone() {
+    super(AuthFlavor.AUTH_NONE);
+  }
 
-  public abstract InetSocketAddress getBindAddress();
+  @Override
+  public void read(XDR xdr) {
+    int length = xdr.readInt();
+    Preconditions.checkState(length == 0);
+  }
 
-  public abstract int getHttpPort();
+  @Override
+  public void write(XDR xdr) {
+    xdr.writeInt(0);
+  }
 }

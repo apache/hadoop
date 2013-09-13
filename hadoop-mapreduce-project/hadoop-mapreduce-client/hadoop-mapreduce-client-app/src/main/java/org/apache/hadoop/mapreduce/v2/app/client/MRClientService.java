@@ -94,8 +94,7 @@ import org.apache.hadoop.yarn.webapp.WebApps;
  * jobclient (user facing).
  *
  */
-public class MRClientService extends AbstractService 
-    implements ClientService {
+public class MRClientService extends AbstractService implements ClientService {
 
   static final Log LOG = LogFactory.getLog(MRClientService.class);
   
@@ -106,7 +105,7 @@ public class MRClientService extends AbstractService
   private AppContext appContext;
 
   public MRClientService(AppContext appContext) {
-    super("MRClientService");
+    super(MRClientService.class.getName());
     this.appContext = appContext;
     this.protocolHandler = new MRClientProtocolHandler();
   }

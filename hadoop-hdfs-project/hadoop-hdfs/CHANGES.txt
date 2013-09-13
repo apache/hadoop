@@ -272,6 +272,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4879. Add "blocked ArrayList" collection to avoid CMS full GCs
     (Todd Lipcon via Colin Patrick McCabe)
 
+    HDFS-4096. Add snapshot information to namenode WebUI. (Haohui Mai via 
+    jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -330,6 +333,11 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5118. Provide testing support for DFSClient to drop RPC responses.
     (jing9)
 
+    HDFS-5085. Refactor o.a.h.nfs to support different types of 
+    authentications. (jing9)
+
+    HDFS-5067 Support symlink operations in NFS gateway. (brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
@@ -363,6 +371,8 @@ Release 2.1.1-beta - UNRELEASED
     server. (kihwal)
 
     HDFS-5150. Allow per NN SPN for internal SPNEGO. (kihwal)
+
+    HDFS-4680. Audit logging of delegation tokens for MR tracing. (Andrew Wang)
 
   OPTIMIZATIONS
 
@@ -431,6 +441,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5159. Secondary NameNode fails to checkpoint if error occurs
     downloading edits on first checkpoint. (atm)
+
+    HDFS-5192. NameNode may fail to start when 
+    dfs.client.test.drop.namenode.response.number is set. (jing9)
 
 Release 2.1.0-beta - 2013-08-22
 

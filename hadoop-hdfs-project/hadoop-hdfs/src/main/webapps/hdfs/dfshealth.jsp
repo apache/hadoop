@@ -73,7 +73,10 @@
 <% healthjsp.generateJournalReport(out, nn, request); %>
 <hr/>
 <% healthjsp.generateConfReport(out, nn, request); %>
-<hr>
+<hr/>
+<h3>Snapshot Summary</h3>
+<% NamenodeJspHelper.generateSnapshotReport(out, fsn); %>
+<hr/>
 <h3>Startup Progress</h3>
 <% healthjsp.generateStartupProgress(out, nn.getStartupProgress()); %>
 <%

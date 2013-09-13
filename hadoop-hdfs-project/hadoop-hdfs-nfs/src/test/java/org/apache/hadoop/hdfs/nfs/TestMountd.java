@@ -42,7 +42,7 @@ public class TestMountd {
     // Start minicluster
     Configuration config = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(config).numDataNodes(1)
-        .manageNameDfsDirs(false).build();
+        .build();
     cluster.waitActive();
     
     // Start nfs

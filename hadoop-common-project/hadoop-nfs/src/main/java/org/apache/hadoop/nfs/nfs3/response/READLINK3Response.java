@@ -46,7 +46,7 @@ public class READLINK3Response extends NFS3Response {
     out.writeBoolean(true); // Attribute follows
     postOpSymlinkAttr.serialize(out);
     if (getStatus() == Nfs3Status.NFS3_OK) {
-      out.writeFixedOpaque(path, path.length);
+      out.writeVariableOpaque(path);
     }
     return out;
   }

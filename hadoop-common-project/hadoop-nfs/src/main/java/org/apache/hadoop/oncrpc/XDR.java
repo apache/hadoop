@@ -280,7 +280,7 @@ public class XDR {
 
   public byte[] readVariableOpaque() {
     int size = this.readInt();
-    return size != 0 ? this.readFixedOpaque(size) : null;
+    return size != 0 ? this.readFixedOpaque(size) : new byte[0];
   }
 
   public void skipVariableOpaque() {

@@ -153,8 +153,12 @@ Building on OS/X
 
 ----------------------------------------------------------------------------------
 
-Hadoop does not build on OS/X with Java 7.
+A one-time manual step is required to enable building Hadoop OS X with Java 7
+every time the JDK is updated.
 see: https://issues.apache.org/jira/browse/HADOOP-9350
+
+$ sudo mkdir `/usr/libexec/java_home`/Classes
+$ sudo ln -s `/usr/libexec/java_home`/lib/tools.jar `/usr/libexec/java_home`/Classes/classes.jar
 
 ----------------------------------------------------------------------------------
 
