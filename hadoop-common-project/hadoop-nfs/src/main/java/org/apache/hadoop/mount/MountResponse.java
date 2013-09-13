@@ -40,8 +40,7 @@ public class MountResponse {
     RpcAcceptedReply.voidReply(xdr, xid);
     xdr.writeInt(status);
     if (status == MNT_OK) {
-      xdr.writeInt(handle.length);
-      xdr.writeFixedOpaque(handle);
+      xdr.writeVariableOpaque(handle);
       // Only MountV3 returns a list of supported authFlavors
       xdr.writeInt(1);
       xdr.writeInt(AuthFlavor.AUTH_SYS.getValue());
