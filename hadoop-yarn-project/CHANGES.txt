@@ -101,6 +101,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
   devaraj)
 
+  YARN-1191. Update artifact versions for application history service. 
+  (Mayank Bansal via devaraj)
+
 Release 2.1.1-beta - UNRELEASED
 
     YARN-948. Changed ResourceManager to validate the release container list
