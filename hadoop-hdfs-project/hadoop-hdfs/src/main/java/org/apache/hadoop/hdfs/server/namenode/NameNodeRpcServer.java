@@ -968,7 +968,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
       String poolId, long[] blocks) throws IOException {
     verifyRequest(nodeReg);
     BlockListAsLongs blist = new BlockListAsLongs(blocks);
-    namesystem.getBlockManager().processCacheReport(nodeReg, poolId, blist);
+    if (blockStateChangeLog.isDebugEnabled()) {
+      blockStateChangeLog.debug("*BLOCK* NameNode.cacheReport: "
+           + "from " + nodeReg + " " + blist.getNumberOfBlocks()
+           + " blocks");
+    }
+
+    namesystem.getCacheReplicationManager()
+        .processCacheReport(nodeReg, poolId, blist);
     return null;
   }
 

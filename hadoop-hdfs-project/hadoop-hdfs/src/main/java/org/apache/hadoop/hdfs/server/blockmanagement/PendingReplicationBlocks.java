@@ -29,20 +29,27 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.util.Daemon;
 
-/***************************************************
- * PendingReplicationBlocks does the bookkeeping of all
- * blocks that are getting replicated.
- *
- * It does the following:
- * 1)  record blocks that are getting replicated at this instant.
- * 2)  a coarse grain timer to track age of replication request
- * 3)  a thread that periodically identifies replication-requests
- *     that never made it.
- *
- ***************************************************/
+/**
+ * PendingReplicationBlocks is used in the BlockManager to track blocks that are
+ * currently being replicated on disk and in the CacheReplicationManager to
+ * track blocks that are currently being cached.
+ * 
+ * <p>
+ * PendingReplicationBlocks performs the following tasks:
+ * </p>
+ * 
+ * <ol>
+ * <li>tracks in-flight replication or caching requests for a block at target
+ * datanodes.</li>
+ * <li>identifies requests that have timed out and need to be rescheduled at a
+ * different datanode.</li>
+ * </ol>
+ */
+@InterfaceAudience.LimitedPrivate({"HDFS"})
 class PendingReplicationBlocks {
   private static final Log LOG = BlockManager.LOG;
 

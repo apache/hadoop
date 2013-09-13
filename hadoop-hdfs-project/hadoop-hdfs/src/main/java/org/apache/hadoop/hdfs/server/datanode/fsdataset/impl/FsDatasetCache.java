@@ -105,10 +105,10 @@ public class FsDatasetCache {
    */
   List<Block> getCachedBlocks(String bpid) {
     List<Block> blocks = new ArrayList<Block>();
-    MappableBlock mapBlock = null;
     // ConcurrentHashMap iteration doesn't see latest updates, which is okay
-    for (Iterator<MappableBlock> it = cachedBlocks.values().iterator();
-        it.hasNext(); mapBlock = it.next()) {
+    Iterator<MappableBlock> it = cachedBlocks.values().iterator();
+    while (it.hasNext()) {
+      MappableBlock mapBlock = it.next();
       if (mapBlock.getBlockPoolId().equals(bpid)) {
         blocks.add(mapBlock.getBlock());
       }
@@ -174,12 +174,15 @@ public class FsDatasetCache {
         mapBlock.getBlockPoolId().equals(bpid) &&
         mapBlock.getBlock().equals(block)) {
       mapBlock.close();
-      cachedBlocks.remove(mapBlock);
+      cachedBlocks.remove(block.getBlockId());
       long bytes = mapBlock.getNumBytes();
       long used = usedBytes.get();
       while (!usedBytes.compareAndSet(used, used - bytes)) {
         used = usedBytes.get();
       }
+      LOG.info("Successfully uncached block " + block);
+    } else {
+      LOG.info("Could not uncache block " + block + ": unknown block.");
     }
   }
 
@@ -219,6 +222,7 @@ public class FsDatasetCache {
           used = usedBytes.get();
         }
       } else {
+        LOG.info("Successfully cached block " + block.getBlock());
         cachedBlocks.put(block.getBlock().getBlockId(), block);
       }
     }

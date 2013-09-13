@@ -79,6 +79,8 @@ public class NameNodeMetrics {
   MutableCounterLong transactionsBatchedInSync;
   @Metric("Block report") MutableRate blockReport;
   MutableQuantiles[] blockReportQuantiles;
+  @Metric("Cache report") MutableRate cacheReport;
+  MutableQuantiles[] cacheReportQuantiles;
 
   @Metric("Duration in SafeMode at startup") MutableGaugeInt safeModeTime;
   @Metric("Time loading FS Image at startup") MutableGaugeInt fsImageLoadTime;
@@ -89,6 +91,7 @@ public class NameNodeMetrics {
     final int len = intervals.length;
     syncsQuantiles = new MutableQuantiles[len];
     blockReportQuantiles = new MutableQuantiles[len];
+    cacheReportQuantiles = new MutableQuantiles[len];
     
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
@@ -98,6 +101,9 @@ public class NameNodeMetrics {
       blockReportQuantiles[i] = registry.newQuantiles(
           "blockReport" + interval + "s", 
           "Block report", "ops", "latency", interval);
+      cacheReportQuantiles[i] = registry.newQuantiles(
+          "cacheReport" + interval + "s",
+          "Cache report", "ops", "latency", interval);
     }
   }
 
@@ -223,6 +229,13 @@ public class NameNodeMetrics {
   public void addBlockReport(long latency) {
     blockReport.add(latency);
     for (MutableQuantiles q : blockReportQuantiles) {
+      q.add(latency);
+    }
+  }
+
+  public void addCacheBlockReport(long latency) {
+    cacheReport.add(latency);
+    for (MutableQuantiles q : cacheReportQuantiles) {
       q.add(latency);
     }
   }

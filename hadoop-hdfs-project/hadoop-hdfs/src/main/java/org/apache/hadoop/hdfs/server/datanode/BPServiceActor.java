@@ -449,11 +449,24 @@ class BPServiceActor implements Runnable {
     DatanodeCommand cmd = null;
     long startTime = Time.monotonicNow();
     if (startTime - lastCacheReport > dnConf.cacheReportInterval) {
-      // TODO: Implement me!
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Sending cacheReport from service actor: " + this);
+      }
+      lastCacheReport = startTime;
+
       String bpid = bpos.getBlockPoolId();
       BlockListAsLongs blocks = dn.getFSDataset().getCacheReport(bpid);
+      long createTime = Time.monotonicNow();
+
       cmd = bpNamenode.cacheReport(bpRegistration, bpid,
           blocks.getBlockListAsLongs());
+      long sendTime = Time.monotonicNow();
+      long createCost = createTime - startTime;
+      long sendCost = sendTime - createTime;
+      dn.getMetrics().addCacheReport(sendCost);
+      LOG.info("CacheReport of " + blocks.getNumberOfBlocks()
+          + " blocks took " + createCost + " msec to generate and "
+          + sendCost + " msecs for RPC and NN processing");
     }
     return cmd;
   }

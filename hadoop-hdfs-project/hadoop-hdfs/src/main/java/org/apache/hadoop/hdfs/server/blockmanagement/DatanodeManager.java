@@ -1230,6 +1230,19 @@ public class DatanodeManager {
               blockPoolId, blks));
         }
         
+        // Check pending caching
+        List<Block> pendingCacheList = nodeinfo.getCacheBlocks();
+        if (pendingCacheList != null) {
+          cmds.add(new BlockCommand(DatanodeProtocol.DNA_CACHE, blockPoolId,
+              pendingCacheList.toArray(new Block[] {})));
+        }
+        // Check cached block invalidation
+        blks = nodeinfo.getInvalidateCacheBlocks();
+        if (blks != null) {
+          cmds.add(new BlockCommand(DatanodeProtocol.DNA_UNCACHE,
+              blockPoolId, blks));
+        }
+
         blockManager.addKeyUpdateCommand(cmds, nodeinfo);
 
         // check for balancer bandwidth update

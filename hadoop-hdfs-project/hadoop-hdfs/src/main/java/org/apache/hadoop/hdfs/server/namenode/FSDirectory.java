@@ -1092,6 +1092,52 @@ public class FSDirectory implements Closeable {
   }
 
   /**
+   * Set cache replication for a file
+   * 
+   * @param src file name
+   * @param replication new replication
+   * @param blockRepls block replications - output parameter
+   * @return array of file blocks
+   * @throws QuotaExceededException
+   * @throws SnapshotAccessControlException
+   */
+  Block[] setCacheReplication(String src, short replication, short[] blockRepls)
+      throws QuotaExceededException, UnresolvedLinkException,
+      SnapshotAccessControlException {
+    waitForReady();
+    writeLock();
+    try {
+      return unprotectedSetCacheReplication(src, replication, blockRepls);
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  Block[] unprotectedSetCacheReplication(String src, short replication,
+      short[] blockRepls) throws QuotaExceededException,
+      UnresolvedLinkException, SnapshotAccessControlException {
+    assert hasWriteLock();
+
+    final INodesInPath iip = rootDir.getINodesInPath4Write(src, true);
+    final INode inode = iip.getLastINode();
+    if (inode == null || !inode.isFile()) {
+      return null;
+    }
+    INodeFile file = inode.asFile();
+    final short oldBR = file.getCacheReplication();
+
+    // TODO: Update quotas here as repl goes up or down
+    file.setCacheReplication(replication);
+    final short newBR = file.getCacheReplication();
+
+    if (blockRepls != null) {
+      blockRepls[0] = oldBR;
+      blockRepls[1] = newBR;
+    }
+    return file.getBlocks();
+  }
+
+  /**
    * @param path the file path
    * @return the block size of the file. 
    */

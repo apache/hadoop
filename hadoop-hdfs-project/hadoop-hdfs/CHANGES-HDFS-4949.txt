@@ -33,6 +33,8 @@ HDFS-4949 (Unreleased)
     HDFS-5158. Add command-line support for manipulating cache directives.
     (Contributed by Colin Patrick McCabe)
 
+    HDFS-5053. NameNode should invoke DataNode APIs to coordinate caching.
+    (Andrew Wang)
 
   OPTIMIZATIONS
 

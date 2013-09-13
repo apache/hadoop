@@ -26,9 +26,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,7 +51,7 @@ import org.apache.hadoop.util.Fallible;
 /**
  * The Cache Manager handles caching on DataNodes.
  */
-final class CacheManager {
+public final class CacheManager {
   public static final Log LOG = LogFactory.getLog(CacheManager.class);
 
   /**
@@ -68,6 +68,12 @@ final class CacheManager {
    */
   private final TreeMap<PathBasedCacheDirective, PathBasedCacheEntry> entriesByDirective =
       new TreeMap<PathBasedCacheDirective, PathBasedCacheEntry>();
+
+  /**
+   * Cache entries, sorted by path
+   */
+  private final TreeMap<String, List<PathBasedCacheEntry>> entriesByPath =
+      new TreeMap<String, List<PathBasedCacheEntry>>();
 
   /**
    * Cache pools, sorted by name.
@@ -90,9 +96,14 @@ final class CacheManager {
    */
   private final int maxListCacheDirectivesResponses;
 
-  CacheManager(FSDirectory dir, Configuration conf) {
+  final private FSNamesystem namesystem;
+  final private FSDirectory dir;
+
+  CacheManager(FSNamesystem namesystem, FSDirectory dir, Configuration conf) {
     // TODO: support loading and storing of the CacheManager state
     clear();
+    this.namesystem = namesystem;
+    this.dir = dir;
     maxListCachePoolsResponses = conf.getInt(
         DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES,
         DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES_DEFAULT);
@@ -104,6 +115,7 @@ final class CacheManager {
   synchronized void clear() {
     entriesById.clear();
     entriesByDirective.clear();
+    entriesByPath.clear();
     cachePools.clear();
     nextEntryId = 1;
   }
@@ -131,7 +143,8 @@ final class CacheManager {
     try {
       directive.validate();
     } catch (IOException ioe) {
-      LOG.info("addDirective " + directive + ": validation failed.");
+      LOG.info("addDirective " + directive + ": validation failed: "
+          + ioe.getClass().getName() + ": " + ioe.getMessage());
       return new Fallible<PathBasedCacheEntry>(ioe);
     }
     // Check if we already have this entry.
@@ -152,8 +165,34 @@ final class CacheManager {
     }
     LOG.info("addDirective " + directive + ": added cache directive "
         + directive);
+
+    // Success!
+    // First, add it to the various maps
     entriesByDirective.put(directive, entry);
     entriesById.put(entry.getEntryId(), entry);
+    String path = directive.getPath();
+    List<PathBasedCacheEntry> entryList = entriesByPath.get(path);
+    if (entryList == null) {
+      entryList = new ArrayList<PathBasedCacheEntry>(1);
+      entriesByPath.put(path, entryList);
+    }
+    entryList.add(entry);
+
+    // Next, set the path as cached in the namesystem
+    try {
+      INode node = dir.getINode(directive.getPath());
+      if (node.isFile()) {
+        INodeFile file = node.asFile();
+        // TODO: adjustable cache replication factor
+        namesystem.setCacheReplicationInt(directive.getPath(),
+            file.getBlockReplication());
+      }
+    } catch (IOException ioe) {
+      LOG.info("addDirective " + directive +": failed to cache file: " +
+          ioe.getClass().getName() +": " + ioe.getMessage());
+      return new Fallible<PathBasedCacheEntry>(ioe);
+    }
+
     return new Fallible<PathBasedCacheEntry>(entry);
   }
 
@@ -201,7 +240,31 @@ final class CacheManager {
       return new Fallible<Long>(
           new UnexpectedRemovePathBasedCacheEntryException(entryId));
     }
+    // Remove the corresponding entry in entriesByPath.
+    String path = existing.getDirective().getPath();
+    List<PathBasedCacheEntry> entries = entriesByPath.get(path);
+    if (entries == null || !entries.remove(existing)) {
+      return new Fallible<Long>(
+          new UnexpectedRemovePathBasedCacheEntryException(entryId));
+    }
+    if (entries.size() == 0) {
+      entriesByPath.remove(path);
+    }
     entriesById.remove(entryId);
+
+    // Set the path as uncached in the namesystem
+    try {
+      INode node = dir.getINode(existing.getDirective().getPath());
+      if (node.isFile()) {
+        namesystem.setCacheReplicationInt(existing.getDirective().getPath(),
+            (short) 0);
+      }
+    } catch (IOException e) {
+      LOG.warn("removeEntry " + entryId + ": failure while setting cache"
+          + " replication factor", e);
+      return new Fallible<Long>(e);
+    }
+    LOG.info("removeEntry successful for PathCacheEntry id " + entryId);
     return new Fallible<Long>(entryId);
   }
 

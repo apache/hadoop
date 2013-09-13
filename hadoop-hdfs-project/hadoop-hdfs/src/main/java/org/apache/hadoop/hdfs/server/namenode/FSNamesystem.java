@@ -367,6 +367,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private final BlockManager blockManager;
   private final SnapshotManager snapshotManager;
   private final CacheManager cacheManager;
+  private final CacheReplicationManager cacheReplicationManager;
   private final DatanodeStatistics datanodeStatistics;
 
   // Block pool ID used by this namenode
@@ -694,7 +695,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(fsImage, this, conf);
       this.snapshotManager = new SnapshotManager(dir);
-      this.cacheManager= new CacheManager(dir, conf);
+      this.cacheManager = new CacheManager(this, dir, conf);
+      this.cacheReplicationManager = new CacheReplicationManager(this,
+          blockManager, blockManager.getDatanodeManager(), this, conf);
       this.safeMode = new SafeModeInfo(conf);
       this.auditLoggers = initAuditLoggers(conf);
       this.isDefaultAuditLogger = auditLoggers.size() == 1 &&
@@ -871,6 +874,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         getCompleteBlocksTotal());
       setBlockTotal();
       blockManager.activate(conf);
+      cacheReplicationManager.activate();
     } finally {
       writeUnlock();
     }
@@ -887,6 +891,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       if (blockManager != null) blockManager.close();
+      if (cacheReplicationManager != null) cacheReplicationManager.close();
     } finally {
       writeUnlock();
     }
@@ -917,7 +922,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         blockManager.getDatanodeManager().markAllDatanodesStale();
         blockManager.clearQueues();
         blockManager.processAllPendingDNMessages();
-        
+
+        cacheReplicationManager.clearQueues();
+
         if (!isInSafeMode() ||
             (isInSafeMode() && safeMode.isPopulatingReplQueues())) {
           LOG.info("Reprocessing replication and invalidation queues");
@@ -1898,6 +1905,42 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       isFile = blocks != null;
       if (isFile) {
         blockManager.setReplication(blockRepls[0], blockRepls[1], src, blocks);
+      }
+    } finally {
+      writeUnlock();
+    }
+
+    getEditLog().logSync();
+    if (isFile) {
+      logAuditEvent(true, "setReplication", src);
+    }
+    return isFile;
+  }
+
+  boolean setCacheReplicationInt(String src, final short replication)
+      throws IOException {
+    final boolean isFile;
+    FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot set replication for " + src, safeMode);
+      }
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
+      if (isPermissionEnabled) {
+        checkPathAccess(pc, src, FsAction.WRITE);
+      }
+
+      final short[] blockRepls = new short[2]; // 0: old, 1: new
+      final Block[] blocks = dir.setCacheReplication(src, replication,
+          blockRepls);
+      isFile = (blocks != null);
+      if (isFile) {
+        cacheReplicationManager.setCacheReplication(blockRepls[0],
+            blockRepls[1], src, blocks);
       }
     } finally {
       writeUnlock();
@@ -6391,6 +6434,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public FSDirectory getFSDirectory() {
     return dir;
   }
+  /** @return the cache manager. */
+  public CacheManager getCacheManager() {
+    return cacheManager;
+  }
+  /** @return the cache replication manager. */
+  public CacheReplicationManager getCacheReplicationManager() {
+    return cacheReplicationManager;
+  }
 
   @Override  // NameNodeMXBean
   public String getCorruptFiles() {
@@ -6957,10 +7008,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
     }
     return results;
-  }
-
-  public CacheManager getCacheManager() {
-    return cacheManager;
   }
 
   /**
