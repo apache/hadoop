@@ -129,6 +129,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9918. Add addIfService to CompositeService (Karthik Kambatla via
     Sandy Ryza)
 
+    HADOOP-9945. HAServiceState should have a state for stopped services.
+    (Karthik Kambatla via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
