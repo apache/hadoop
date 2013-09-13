@@ -149,6 +149,8 @@ public class IdUserGroup {
     checkAndUpdateMaps();
     String uname = uidNameMap.get(uid);
     if (uname == null) {
+      LOG.warn("Can't find user name for uid " + uid
+          + ". Use default user name " + unknown);
       uname = unknown;
     }
     return uname;
@@ -158,6 +160,8 @@ public class IdUserGroup {
     checkAndUpdateMaps();
     String gname = gidNameMap.get(gid);
     if (gname == null) {
+      LOG.warn("Can't find group name for gid " + gid
+          + ". Use default group name " + unknown);
       gname = unknown;
     }
     return gname;
