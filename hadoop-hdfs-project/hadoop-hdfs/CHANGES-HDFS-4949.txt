@@ -42,3 +42,5 @@ HDFS-4949 (Unreleased)
 
     HDFS-5198. NameNodeRpcServer must not send back DNA_FINALIZE in reply to a
     cache report.  (Contributed by Colin Patrick McCabe)
+
+    HDFS-5195. Prevent passing null pointer to mlock and munlock. (cnauroth)

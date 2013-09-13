@@ -545,9 +545,12 @@ public class TestNativeIO {
       bufSum += buf[i];
     }
     FileOutputStream fos = new FileOutputStream(TEST_FILE);
-    fos.write(buf);
-    fos.getChannel().force(true);
-    fos.close();
+    try {
+      fos.write(buf);
+      fos.getChannel().force(true);
+    } finally {
+      fos.close();
+    }
     
     FileInputStream fis = null;
     FileChannel channel = null;

@@ -363,6 +363,15 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_sync_1file_1range(
 #endif
 }
 
+#define CHECK_DIRECT_BUFFER_ADDRESS(buf) \
+  { \
+    if (!buf) { \
+      THROW(env, "java/lang/UnsupportedOperationException", \
+        "JNI access to direct buffers not available"); \
+      return; \
+    } \
+  }
+
 /**
  * public static native void mlock_native(
  *   ByteBuffer buffer, long offset);
@@ -379,6 +388,7 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mlock_1native(
   PASS_EXCEPTIONS(env);
 
   if (mlock(buf, len)) {
+    CHECK_DIRECT_BUFFER_ADDRESS(buf);
     throw_ioe(env, errno);
   }
 }
@@ -399,6 +409,7 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_munlock_1native(
   PASS_EXCEPTIONS(env);
 
   if (munlock(buf, len)) {
+    CHECK_DIRECT_BUFFER_ADDRESS(buf);
     throw_ioe(env, errno);
   }
 }
