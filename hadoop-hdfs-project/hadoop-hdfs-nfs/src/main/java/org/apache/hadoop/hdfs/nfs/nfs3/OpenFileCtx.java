@@ -291,7 +291,7 @@ class OpenFileCtx {
         WccData fileWcc = new WccData(latestAttr.getWccAttr(), latestAttr);
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO,
             fileWcc, 0, request.getStableHow(), Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
       } else {
         // Handle repeated write requests(same xid or not).
         // If already replied, send reply again. If not replied, drop the
@@ -313,7 +313,7 @@ class OpenFileCtx {
             WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
                 fileWcc, request.getCount(), request.getStableHow(),
                 Nfs3Constant.WRITE_COMMIT_VERF);
-            Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+            Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
           }
           updateLastAccessTime();
           
@@ -367,7 +367,7 @@ class OpenFileCtx {
         WccData fileWcc = new WccData(preOpAttr, postOpAttr);
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
         writeCtx.setReplied(true);
       }
 
@@ -392,7 +392,7 @@ class OpenFileCtx {
         WccData fileWcc = new WccData(preOpAttr, postOpAttr);
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
         writeCtx.setReplied(true);
       }
 
@@ -418,7 +418,7 @@ class OpenFileCtx {
       }
       
       updateLastAccessTime();
-      Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+      Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
     }
   }
   
@@ -707,7 +707,7 @@ class OpenFileCtx {
         WccData fileWcc = new WccData(preOpAttr, latestAttr);
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
       }
 
     } catch (IOException e) {
@@ -715,7 +715,7 @@ class OpenFileCtx {
           + offset + " and length " + data.length, e);
       if (!writeCtx.getReplied()) {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
         // Keep stream open. Either client retries or SteamMonitor closes it.
       }
 
@@ -753,7 +753,7 @@ class OpenFileCtx {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO,
             fileWcc, 0, writeCtx.getStableHow(), Nfs3Constant.WRITE_COMMIT_VERF);
         Nfs3Utils.writeChannel(writeCtx.getChannel(),
-            response.send(new XDR(), writeCtx.getXid()));
+            response.send(new XDR(), writeCtx.getXid()), writeCtx.getXid());
       }
     }
     

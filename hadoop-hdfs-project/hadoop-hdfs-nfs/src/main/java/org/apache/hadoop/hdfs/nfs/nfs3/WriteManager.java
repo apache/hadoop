@@ -118,7 +118,7 @@ public class WriteManager {
     byte[] data = request.getData().array();
     if (data.length < count) {
       WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_INVAL);
-      Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+      Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
       return;
     }
 
@@ -155,7 +155,7 @@ public class WriteManager {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO,
             fileWcc, count, request.getStableHow(),
             Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
         return;
       }
 
@@ -182,10 +182,10 @@ public class WriteManager {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, request.getStableHow(),
             Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
       } else {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid));
+        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
       }
     }
 
