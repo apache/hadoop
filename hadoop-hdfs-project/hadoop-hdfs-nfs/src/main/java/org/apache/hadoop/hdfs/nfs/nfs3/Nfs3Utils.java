@@ -49,7 +49,7 @@ public class Nfs3Utils {
 
   public static HdfsFileStatus getFileStatus(DFSClient client, String fileIdPath)
       throws IOException {
-    return client.getFileInfo(fileIdPath);
+    return client.getFileLinkInfo(fileIdPath);
   }
 
   public static Nfs3FileAttributes getNfs3FileAttrFromFileStatus(
@@ -59,7 +59,10 @@ public class Nfs3Utils {
      * client takes only the lower 32bit of the fileId and treats it as signed
      * int. When the 32th bit is 1, the client considers it invalid.
      */
-    return new Nfs3FileAttributes(fs.isDir(), fs.getChildrenNum(), fs
+    NfsFileType fileType = fs.isDir() ? NfsFileType.NFSDIR : NfsFileType.NFSREG;
+    fileType = fs.isSymlink() ? NfsFileType.NFSLNK : fileType;
+    
+    return new Nfs3FileAttributes(fileType, fs.getChildrenNum(), fs
         .getPermission().toShort(), iug.getUidAllowingUnknown(fs.getOwner()),
         iug.getGidAllowingUnknown(fs.getGroup()), fs.getLen(), 0 /* fsid */,
         fs.getFileId(), fs.getModificationTime(), fs.getAccessTime());

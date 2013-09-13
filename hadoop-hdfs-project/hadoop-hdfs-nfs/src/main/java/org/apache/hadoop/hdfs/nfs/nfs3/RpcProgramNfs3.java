@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.nfs.AccessPrivilege;
 import org.apache.hadoop.nfs.NfsExports;
+import org.apache.hadoop.nfs.NfsFileType;
 import org.apache.hadoop.nfs.NfsTime;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.IdUserGroup;
@@ -65,10 +67,12 @@ import org.apache.hadoop.nfs.nfs3.request.PATHCONF3Request;
 import org.apache.hadoop.nfs.nfs3.request.READ3Request;
 import org.apache.hadoop.nfs.nfs3.request.READDIR3Request;
 import org.apache.hadoop.nfs.nfs3.request.READDIRPLUS3Request;
+import org.apache.hadoop.nfs.nfs3.request.READLINK3Request;
 import org.apache.hadoop.nfs.nfs3.request.REMOVE3Request;
 import org.apache.hadoop.nfs.nfs3.request.RENAME3Request;
 import org.apache.hadoop.nfs.nfs3.request.RMDIR3Request;
 import org.apache.hadoop.nfs.nfs3.request.SETATTR3Request;
+import org.apache.hadoop.nfs.nfs3.request.SYMLINK3Request;
 import org.apache.hadoop.nfs.nfs3.request.SetAttr3;
 import org.apache.hadoop.nfs.nfs3.request.SetAttr3.SetAttrField;
 import org.apache.hadoop.nfs.nfs3.request.WRITE3Request;
@@ -476,9 +480,70 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
   }
 
-  public READLINK3Response readlink(XDR xdr,
-      SecurityHandler securityHandler, InetAddress client) {
-    return new READLINK3Response(Nfs3Status.NFS3ERR_NOTSUPP);
+  public READLINK3Response readlink(XDR xdr, SecurityHandler securityHandler,
+      InetAddress client) {
+    READLINK3Response response = new READLINK3Response(Nfs3Status.NFS3_OK);
+
+    if (!checkAccessPrivilege(client, AccessPrivilege.READ_ONLY)) {
+      response.setStatus(Nfs3Status.NFS3ERR_ACCES);
+      return response;
+    }
+
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
+    }
+
+    READLINK3Request request = null;
+
+    try {
+      request = new READLINK3Request(xdr);
+    } catch (IOException e) {
+      LOG.error("Invalid READLINK request");
+      return new READLINK3Response(Nfs3Status.NFS3ERR_INVAL);
+    }
+
+    FileHandle handle = request.getHandle();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("NFS READLINK fileId: " + handle.getFileId());
+    }
+
+    String fileIdPath = Nfs3Utils.getFileIdPath(handle);
+    try {
+      String target = dfsClient.getLinkTarget(fileIdPath);
+
+      Nfs3FileAttributes postOpAttr = Nfs3Utils.getFileAttr(dfsClient,
+          fileIdPath, iug);
+      if (postOpAttr == null) {
+        LOG.info("Can't get path for fileId:" + handle.getFileId());
+        return new READLINK3Response(Nfs3Status.NFS3ERR_STALE);
+      }
+      if (postOpAttr.getType() != NfsFileType.NFSLNK.toValue()) {
+        LOG.error("Not a symlink, fileId:" + handle.getFileId());
+        return new READLINK3Response(Nfs3Status.NFS3ERR_INVAL);
+      }
+      if (target == null) {
+        LOG.error("Symlink target should not be null, fileId:"
+            + handle.getFileId());
+        return new READLINK3Response(Nfs3Status.NFS3ERR_SERVERFAULT);
+      }
+      if (MAX_READ_TRANSFER_SIZE < target.getBytes().length) {
+        return new READLINK3Response(Nfs3Status.NFS3ERR_IO, postOpAttr, null);
+      }
+
+      return new READLINK3Response(Nfs3Status.NFS3_OK, postOpAttr,
+          target.getBytes());
+
+    } catch (IOException e) {
+      LOG.warn("Readlink error: " + e.getClass(), e);
+      if (e instanceof FileNotFoundException) {
+        return new READLINK3Response(Nfs3Status.NFS3ERR_STALE);
+      } else if (e instanceof AccessControlException) {
+        return new READLINK3Response(Nfs3Status.NFS3ERR_ACCES);
+      }
+      return new READLINK3Response(Nfs3Status.NFS3ERR_IO);
+    }
   }
 
   @Override
@@ -1121,9 +1186,63 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public SYMLINK3Response symlink(XDR xdr,
-      SecurityHandler securityHandler, InetAddress client) {
-    return new SYMLINK3Response(Nfs3Status.NFS3ERR_NOTSUPP);
+  public SYMLINK3Response symlink(XDR xdr, SecurityHandler securityHandler,
+      InetAddress client) {
+    SYMLINK3Response response = new SYMLINK3Response(Nfs3Status.NFS3_OK);
+
+    if (!checkAccessPrivilege(client, AccessPrivilege.READ_WRITE)) {
+      response.setStatus(Nfs3Status.NFS3ERR_ACCES);
+      return response;
+    }
+
+    DFSClient dfsClient = clientCache.get(securityHandler.getUser());
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
+    }
+
+    SYMLINK3Request request = null;
+    try {
+      request = new SYMLINK3Request(xdr);
+    } catch (IOException e) {
+      LOG.error("Invalid SYMLINK request");
+      response.setStatus(Nfs3Status.NFS3ERR_INVAL);
+      return response;
+    }
+
+    FileHandle dirHandle = request.getHandle();
+    String name = request.getName();
+    String symData = request.getSymData();
+    String linkDirIdPath = Nfs3Utils.getFileIdPath(dirHandle);
+    // Don't do any name check to source path, just leave it to HDFS
+    String linkIdPath = linkDirIdPath + "/" + name;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("NFS SYMLINK, target: " + symData + " link: " + linkIdPath);
+    }
+
+    try {
+      WccData dirWcc = response.getDirWcc();
+      WccAttr preOpAttr = Nfs3Utils.getWccAttr(dfsClient, linkDirIdPath);
+      dirWcc.setPreOpAttr(preOpAttr);
+
+      dfsClient.createSymlink(symData, linkIdPath, false);
+      // Set symlink attr is considered as to change the attr of the target
+      // file. So no need to set symlink attr here after it's created.
+
+      HdfsFileStatus linkstat = dfsClient.getFileLinkInfo(linkIdPath);
+      Nfs3FileAttributes objAttr = Nfs3Utils.getNfs3FileAttrFromFileStatus(
+          linkstat, iug);
+      dirWcc
+          .setPostOpAttr(Nfs3Utils.getFileAttr(dfsClient, linkDirIdPath, iug));
+
+      return new SYMLINK3Response(Nfs3Status.NFS3_OK, new FileHandle(
+          objAttr.getFileid()), objAttr, dirWcc);
+
+    } catch (IOException e) {
+      LOG.warn("Exception:" + e);
+      response.setStatus(Nfs3Status.NFS3ERR_IO);
+      return response;
+    }
   }
 
   public READDIR3Response link(XDR xdr, SecurityHandler securityHandler, InetAddress client) {

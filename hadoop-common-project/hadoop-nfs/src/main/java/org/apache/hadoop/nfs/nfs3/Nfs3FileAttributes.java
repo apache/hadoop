@@ -72,19 +72,18 @@ public class Nfs3FileAttributes {
   }
    
   public Nfs3FileAttributes() {
-    this(false, 0, (short)0, 0, 0, 0, 0, 0, 0, 0);
+    this(NfsFileType.NFSREG, 0, (short)0, 0, 0, 0, 0, 0, 0, 0);
   }
 
-  public Nfs3FileAttributes(boolean isDir, int nlink, short mode, int uid,
+  public Nfs3FileAttributes(NfsFileType nfsType, int nlink, short mode, int uid,
       int gid, long size, long fsid, long fileid, long mtime, long atime) {
-    this.type = isDir ? NfsFileType.NFSDIR.toValue() : NfsFileType.NFSREG
-        .toValue();
+    this.type = nfsType.toValue();
     this.mode = mode;
-    this.nlink = isDir ? (nlink + 2) : 1;
+    this.nlink = (type == NfsFileType.NFSDIR.toValue()) ? (nlink + 2) : 1;
     this.uid = uid;
     this.gid = gid;
     this.size = size;
-    if(isDir) {
+    if(type == NfsFileType.NFSDIR.toValue()) {
       this.size = getDirSize(nlink);
     }
     this.used = this.size;
