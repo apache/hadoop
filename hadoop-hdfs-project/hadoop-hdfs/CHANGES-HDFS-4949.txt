@@ -39,3 +39,6 @@ HDFS-4949 (Unreleased)
   BUG FIXES
     HDFS-5169. hdfs.c: translateZCRException: null pointer deref when
     translating some exceptions.  (Contributed by Colin Patrick McCabe)
+
+    HDFS-5198. NameNodeRpcServer must not send back DNA_FINALIZE in reply to a
+    cache report.  (Contributed by Colin Patrick McCabe)

@@ -31,13 +31,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator;
-import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -971,9 +969,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
     verifyRequest(nodeReg);
     BlockListAsLongs blist = new BlockListAsLongs(blocks);
     namesystem.getBlockManager().processCacheReport(nodeReg, poolId, blist);
-    if (nn.getFSImage().isUpgradeFinalized() && !nn.isStandbyState()) {
-      return new FinalizeCommand(poolId);
-    }
     return null;
   }
 
