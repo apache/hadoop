@@ -113,11 +113,15 @@ public class TestDatanodeConfig {
   @Test(timeout=60000)
   public void testMemlockLimit() throws Exception {
     assumeTrue(NativeIO.isAvailable());
-    final long memlockLimit = NativeIO.POSIX.getMemlockLimit();
+    final long memlockLimit = NativeIO.getMemlockLimit();
     Configuration conf = cluster.getConfiguration(0);
     // Try starting the DN with limit configured to the ulimit
     conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
         memlockLimit);
+    if (memlockLimit == Long.MAX_VALUE) {
+      // Can't increase the memlock limit past the maximum.
+      return;
+    }
     DataNode dn = null;
     dn = DataNode.createDataNode(new String[]{},  conf);
     dn.shutdown();

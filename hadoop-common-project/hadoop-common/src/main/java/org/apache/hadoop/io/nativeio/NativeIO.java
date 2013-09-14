@@ -272,44 +272,6 @@ public class NativeIO {
       munlock_native(buffer, len);
     }
 
-    /**
-     * Resource limit types copied from <sys/resource.h>
-     */
-    private static class ResourceLimit {
-      public static final int RLIMIT_CPU        = 0;
-      public static final int RLIMIT_FSIZE      = 1;
-      public static final int RLIMIT_DATA       = 2;
-      public static final int RLIMIT_STACK      = 3;
-      public static final int RLIMIT_CORE       = 4;
-      public static final int RLIMIT_RSS        = 5;
-      public static final int RLIMIT_NPROC      = 6;
-      public static final int RLIMIT_NOFILE     = 7;
-      public static final int RLIMIT_MEMLOCK    = 8;
-      public static final int RLIMIT_AS         = 9;
-      public static final int RLIMIT_LOCKS      = 10;
-      public static final int RLIMIT_SIGPENDING = 11;
-      public static final int RLIMIT_MSGQUEUE   = 12;
-      public static final int RLIMIT_NICE       = 13;
-      public static final int RLIMIT_RTPRIO     = 14;
-      public static final int RLIMIT_RTTIME     = 15;
-      public static final int RLIMIT_NLIMITS    = 16;
-    }
-
-    static native String getrlimit(int limit) throws NativeIOException;
-    /**
-     * Returns the soft limit on the number of bytes that may be locked by the
-     * process in bytes (RLIMIT_MEMLOCK).
-     * 
-     * See the getrlimit(2) man page for more information
-     *  
-     * @return maximum amount of locked memory in bytes
-     */
-    public static long getMemlockLimit() throws IOException {
-      assertCodeLoaded();
-      String strLimit = getrlimit(ResourceLimit.RLIMIT_MEMLOCK);
-      return Long.parseLong(strLimit);
-    }
-
     /** Linux only methods used for getOwner() implementation */
     private static native long getUIDforFDOwnerforOwner(FileDescriptor fd) throws IOException;
     private static native String getUserName(long uid) throws IOException;
@@ -563,6 +525,20 @@ public class NativeIO {
   /** Initialize the JNI method ID and class ID cache */
   private static native void initNative();
 
+  /**
+   * Get the maximum number of bytes that can be locked into memory at any
+   * given point.
+   *
+   * @return 0 if no bytes can be locked into memory;
+   *         Long.MAX_VALUE if there is no limit;
+   *         The number of bytes that can be locked into memory otherwise.
+   */
+  public static long getMemlockLimit() {
+    return isAvailable() ? getMemlockLimit0() : 0;
+  }
+
+  private static native long getMemlockLimit0();
+  
   private static class CachedUid {
     final long timestamp;
     final String username;

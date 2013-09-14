@@ -583,6 +583,6 @@ public class TestNativeIO {
   @Test(timeout=10000)
   public void testGetMemlockLimit() throws Exception {
     assumeTrue(NativeIO.isAvailable());
-    NativeIO.POSIX.getMemlockLimit();
+    NativeIO.getMemlockLimit();
   }
 }

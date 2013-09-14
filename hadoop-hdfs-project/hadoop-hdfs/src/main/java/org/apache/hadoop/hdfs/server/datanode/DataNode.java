@@ -745,7 +745,7 @@ public class DataNode extends Configured
             " size (%s) is greater than zero and native code is not available.",
             DFS_DATANODE_MAX_LOCKED_MEMORY_KEY));
       }
-      long ulimit = NativeIO.POSIX.getMemlockLimit();
+      long ulimit = NativeIO.getMemlockLimit();
       if (dnConf.maxLockedMemory > ulimit) {
       throw new RuntimeException(String.format(
           "Cannot start datanode because the configured max locked memory" +

@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-#define _GNU_SOURCE
-
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_io_nativeio_NativeIO.h"
 
@@ -28,6 +26,7 @@
 #include <grp.h>
 #include <jni.h>
 #include <pwd.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -412,36 +411,6 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_munlock_1native(
     CHECK_DIRECT_BUFFER_ADDRESS(buf);
     throw_ioe(env, errno);
   }
-}
-
-/**
- * public static native String getrlimit(
- *   int resource);
- *
- * The "00024" in the function name is an artifact of how JNI encodes
- * special characters. U+0024 is '$'.
- */
-JNIEXPORT jstring JNICALL
-Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_getrlimit(
-  JNIEnv *env, jclass clazz,
-  jint resource)
-{
-  jstring ret = NULL;
-
-  struct rlimit rlim;
-  int rc = getrlimit((int)resource, &rlim);
-  if (rc != 0) {
-    throw_ioe(env, errno);
-    goto cleanup;
-  }
-
-  // Convert soft limit into a string
-  char limit[17];
-  int len = snprintf(&limit, 17, "%d", rlim.rlim_cur);
-  ret = (*env)->NewStringUTF(env,&limit);
-
-cleanup:
-  return ret;
 }
 
 #ifdef __FreeBSD__
@@ -1005,6 +974,24 @@ done:
 done:
   if (src) (*env)->ReleaseStringChars(env, jsrc, src);
   if (dst) (*env)->ReleaseStringChars(env, jdst, dst);
+#endif
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_getMemlockLimit0(
+JNIEnv *env, jclass clazz)
+{
+#ifdef WINDOWS
+  return 0;
+#else
+  struct rlimit rlim;
+  int rc = getrlimit(RLIMIT_MEMLOCK, &rlim);
+  if (rc != 0) {
+    throw_ioe(env, errno);
+    return 0;
+  }
+  return (rlim.rlim_cur == RLIM_INFINITY) ?
+    INT64_MAX : rlim.rlim_cur;
 #endif
 }
 
