@@ -237,15 +237,6 @@ public abstract class RMCommunicator extends AbstractService
             } catch (YarnRuntimeException e) {
               LOG.error("Error communicating with RM: " + e.getMessage() , e);
               return;
-            } catch (InvalidToken e) {
-              // This can happen if the RM has been restarted, since currently
-              // when RM restarts AMRMToken is not populated back to
-              // AMRMTokenSecretManager yet. Once this is fixed, no need
-              // to send JOB_AM_REBOOT event in this method any more.
-              eventHandler.handle(new JobEvent(job.getID(),
-                JobEventType.JOB_AM_REBOOT));
-              LOG.error("Error in authencating with RM: " ,e);
-              return;
             } catch (Exception e) {
               LOG.error("ERROR IN CONTACTING RM. ", e);
               continue;
