@@ -363,9 +363,6 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-9908. Fix NPE when versioninfo properties file is missing (todd)
 
-    HADOOP-9350. Hadoop not building against Java7 on OSX
-    (Robert Kanter via stevel)
-
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -467,6 +464,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9557. hadoop-client excludes commons-httpclient. (Lohit Vijayarenu via
     cnauroth)
+
+    HADOOP-9350. Hadoop not building against Java7 on OSX
+    (Robert Kanter via stevel)
 
 Release 2.1.0-beta - 2013-08-22
 
