@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.refEq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -62,6 +63,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Test;
@@ -413,6 +415,27 @@ public class TestApplication {
     }
   }
 
+  @Test
+  public void testNMTokenSecretManagerCleanup() {
+    WrappedApplication wa = null;
+    try {
+      wa = new WrappedApplication(1, 314159265358979L, "yak", 1);
+      wa.initApplication();
+      wa.initContainer(0);
+      assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
+      assertEquals(1, wa.app.getContainers().size());
+      wa.appFinished();
+      wa.containerFinished(0);
+      wa.appResourcesCleanedup();
+      assertEquals(ApplicationState.FINISHED, wa.app.getApplicationState());
+      verify(wa.nmTokenSecretMgr).appFinished(eq(wa.appId));
+    } finally {
+      if (wa != null) {
+        wa.finished();
+      }
+    }
+  }
+
   private class ContainerKillMatcher extends ArgumentMatcher<ContainerEvent> {
     private ContainerId cId;
 
@@ -460,6 +483,7 @@ public class TestApplication {
     final List<Container> containers;
     final Context context;
     final Map<ContainerId, ContainerTokenIdentifier> containerTokenIdentifierMap;
+    final NMTokenSecretManagerInNM nmTokenSecretMgr;
     
     final ApplicationId appId;
     final Application app;
@@ -486,12 +510,15 @@ public class TestApplication {
       dispatcher.register(ContainerEventType.class, containerBus);
       dispatcher.register(LogHandlerEventType.class, logAggregationBus);
 
+      nmTokenSecretMgr = mock(NMTokenSecretManagerInNM.class);
+
       context = mock(Context.class);
       
       when(context.getContainerTokenSecretManager()).thenReturn(
         new NMContainerTokenSecretManager(conf));
       when(context.getApplicationACLsManager()).thenReturn(
         new ApplicationACLsManager(conf));
+      when(context.getNMTokenSecretManager()).thenReturn(nmTokenSecretMgr);
       
       // Setting master key
       MasterKey masterKey = new MasterKeyPBImpl();
