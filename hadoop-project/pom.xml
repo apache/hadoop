@@ -59,6 +59,9 @@
     <hadoop.common.build.dir>${basedir}/../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
+    <!-- jersey version -->
+    <jersey.version>1.9</jersey.version>
+
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
     <protobuf.version>2.5.0</protobuf.version>
@@ -364,12 +367,12 @@
       <dependency>
         <groupId>com.sun.jersey</groupId>
         <artifactId>jersey-core</artifactId>
-        <version>1.8</version>
+        <version>${jersey.version}</version>
       </dependency>
       <dependency>
         <groupId>com.sun.jersey</groupId>
         <artifactId>jersey-json</artifactId>
-        <version>1.8</version>
+        <version>${jersey.version}</version>
         <exclusions>
           <exclusion>
             <groupId>javax.xml.stream</groupId>
@@ -380,7 +383,7 @@
       <dependency>
         <groupId>com.sun.jersey</groupId>
         <artifactId>jersey-server</artifactId>
-        <version>1.8</version>
+        <version>${jersey.version}</version>
       </dependency>
 
       <dependency>
@@ -398,19 +401,19 @@
       <dependency>
         <groupId>com.sun.jersey.contribs</groupId>
         <artifactId>jersey-guice</artifactId>
-        <version>1.8</version>
+        <version>${jersey.version}</version>
       </dependency>
 
       <dependency>
         <groupId>com.sun.jersey.jersey-test-framework</groupId>
         <artifactId>jersey-test-framework-core</artifactId>
-        <version>1.8</version>
+        <version>${jersey.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>com.sun.jersey.jersey-test-framework</groupId>
         <artifactId>jersey-test-framework-grizzly2</artifactId>
-        <version>1.8</version>
+        <version>${jersey.version}</version>
       </dependency>
 
       <dependency>
