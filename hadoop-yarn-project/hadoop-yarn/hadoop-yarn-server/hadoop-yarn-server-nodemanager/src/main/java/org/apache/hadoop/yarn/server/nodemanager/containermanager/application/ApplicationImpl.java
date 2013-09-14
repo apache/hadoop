@@ -396,6 +396,7 @@ public class ApplicationImpl implements Application {
       app.dispatcher.getEventHandler().handle(
           new LogHandlerAppFinishedEvent(app.appId));
 
+      app.context.getNMTokenSecretManager().appFinished(app.getAppId());
     }
   }
 
