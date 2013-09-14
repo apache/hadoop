@@ -195,6 +195,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9960. Upgrade Jersey version to 1.9. (Karthik Kambatla via atm)
 
+    HADOOP-9557. hadoop-client excludes commons-httpclient. (Lohit Vijayarenu via
+    cnauroth)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
