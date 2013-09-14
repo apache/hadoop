@@ -182,6 +182,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1116. Populate AMRMTokens back to AMRMTokenSecretManager after RM
     restarts (Jian He via bikas)
 
+    YARN-1189. NMTokenSecretManagerInNM is not being told when applications
+    have finished (Omkar Vinit Joshi via jlowe)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
