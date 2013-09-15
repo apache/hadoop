@@ -125,7 +125,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   public static final FsPermission umask = new FsPermission(
       (short) DEFAULT_UMASK);
   
-  private static final Log LOG = LogFactory.getLog(RpcProgramNfs3.class);
+  static final Log LOG = LogFactory.getLog(RpcProgramNfs3.class);
   private static final int MAX_READ_TRANSFER_SIZE = 64 * 1024;
   private static final int MAX_WRITE_TRANSFER_SIZE = 64 * 1024;
   private static final int MAX_READDIR_TRANSFER_SIZE = 64 * 1024;
@@ -1814,9 +1814,19 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     } else if (nfsproc3 == NFSPROC3.READLINK) {
       response = readlink(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.READ) {
+      if (LOG.isDebugEnabled()) {
+          LOG.debug(Nfs3Utils.READ_RPC_START + xid);
+      }    
       response = read(xdr, securityHandler, client);
+      if (LOG.isDebugEnabled() && (nfsproc3 == NFSPROC3.READ)) {
+        LOG.debug(Nfs3Utils.READ_RPC_END + xid);
+      }
     } else if (nfsproc3 == NFSPROC3.WRITE) {
+      if (LOG.isDebugEnabled()) {
+          LOG.debug(Nfs3Utils.WRITE_RPC_START + xid);
+      }
       response = write(xdr, channel, xid, securityHandler, client);
+      // Write end debug trace is in Nfs3Utils.writeChannel
     } else if (nfsproc3 == NFSPROC3.CREATE) {
       response = create(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.MKDIR) {      
@@ -1853,6 +1863,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     if (response != null) {
       out = response.send(out, xid);
     }
+
     return out;
   }
   

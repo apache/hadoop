@@ -186,10 +186,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       
       completedApps.add(applicationId);  
       writeAuditLog(applicationId);
-      
-      // application completely done. Remove from state
-      RMStateStore store = rmContext.getStateStore();
-      store.removeApplication(rmContext.getRMApps().get(applicationId));
     }
   }
 

@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
@@ -333,10 +334,12 @@ public class TestRMRestart {
 
     // finish the AM's
     am1.unregisterAppAttempt();
+    rm2.waitForState(loadedApp1.getApplicationId(), RMAppState.FINISHING);
     am1Node.nodeHeartbeat(attempt1.getAppAttemptId(), 1, ContainerState.COMPLETE);
     am1.waitForState(RMAppAttemptState.FINISHED);
     
     am2.unregisterAppAttempt();
+    rm2.waitForState(loadedApp2.getApplicationId(), RMAppState.FINISHING);
     am2Node.nodeHeartbeat(attempt2.getAppAttemptId(), 1, ContainerState.COMPLETE);
     am2.waitForState(RMAppAttemptState.FINISHED);
     
@@ -577,14 +580,16 @@ public class TestRMRestart {
         attempt1.getClientTokenMasterKey(),
         loadedAttempt1.getClientTokenMasterKey());
 
-    // assert secret manager also knows about the key
+    // assert ClientTokenSecretManager also knows about the key
     Assert.assertArrayEquals(clientTokenMasterKey,
         rm2.getClientToAMTokenSecretManager().getMasterKey(attemptId1)
             .getEncoded());
 
-    // Not testing ApplicationTokenSecretManager has the password populated back,
-    // that is needed in work-preserving restart
-
+    // assert AMRMTokenSecretManager also knows about the AMRMToken password
+    Token<AMRMTokenIdentifier> amrmToken = loadedAttempt1.getAMRMToken();
+    Assert.assertArrayEquals(amrmToken.getPassword(),
+      rm2.getAMRMTokenSecretManager().retrievePassword(
+        amrmToken.decodeIdentifier()));
     rm1.stop();
     rm2.stop();
   }

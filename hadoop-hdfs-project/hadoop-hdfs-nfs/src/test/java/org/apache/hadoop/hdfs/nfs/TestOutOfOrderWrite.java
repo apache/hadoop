@@ -174,11 +174,11 @@ public class TestOutOfOrderWrite {
     XDR writeReq;
 
     writeReq = write(handle, 0x8000005c, 2000, 1000, data3);
-    Nfs3Utils.writeChannel(channel, writeReq);
+    Nfs3Utils.writeChannel(channel, writeReq, 1);
     writeReq = write(handle, 0x8000005d, 1000, 1000, data2);
-    Nfs3Utils.writeChannel(channel, writeReq);
+    Nfs3Utils.writeChannel(channel, writeReq, 2);
     writeReq = write(handle, 0x8000005e, 0, 1000, data1);
-    Nfs3Utils.writeChannel(channel, writeReq);
+    Nfs3Utils.writeChannel(channel, writeReq, 3);
 
     // TODO: convert to Junit test, and validate result automatically
   }
