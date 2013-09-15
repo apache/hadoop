@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.Ap
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppStoredEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRemovedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
 
@@ -482,12 +483,15 @@ public abstract class RMStateStore extends AbstractService {
           ApplicationState appState = 
                           ((RMStateStoreRemoveAppEvent) event).getAppState();
           ApplicationId appId = appState.getAppId();
-          
+          Exception removedException = null;
           LOG.info("Removing info for app: " + appId);
           try {
             removeApplicationState(appState);
           } catch (Exception e) {
             LOG.error("Error removing app: " + appId, e);
+            removedException = e;
+          } finally {
+            notifyDoneRemovingApplcation(appId, removedException);
           }
         }
         break;
@@ -521,7 +525,18 @@ public abstract class RMStateStore extends AbstractService {
     rmDispatcher.getEventHandler().handle(
         new RMAppAttemptStoredEvent(attemptId, storedException));
   }
-  
+
+  @SuppressWarnings("unchecked")
+  /**
+   * This is to notify RMApp that this application has been removed from
+   * RMStateStore
+   */
+  private void notifyDoneRemovingApplcation(ApplicationId appId,
+      Exception removedException) {
+    rmDispatcher.getEventHandler().handle(
+      new RMAppRemovedEvent(appId, removedException));
+  }
+
   /**
    * EventHandler implementation which forward events to the FSRMStateStore
    * This hides the EventHandle methods of the store from its public interface 
