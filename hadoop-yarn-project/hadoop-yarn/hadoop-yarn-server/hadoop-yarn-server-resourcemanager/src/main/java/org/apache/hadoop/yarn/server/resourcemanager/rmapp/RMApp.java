@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -194,4 +195,20 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the application type.
    */
   String getApplicationType(); 
+
+  /**
+   * Check whether this application is safe to unregister.
+   * An application is deemed to be safe to unregister if it is an unmanaged
+   * AM or its state has been removed from state store.
+   * @return the flag which indicates whether this application is safe to
+   *         unregister.
+   */
+  boolean isAppSafeToUnregister();
+
+  /**
+   * Create the external user-facing state of ApplicationMaster from the
+   * current state of the {@link RMApp}.
+   * @return the external user-facing state of ApplicationMaster.
+   */
+  YarnApplicationState createApplicationState();
 }

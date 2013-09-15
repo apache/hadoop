@@ -414,8 +414,8 @@ public class ClientRMService extends AbstractService implements
       }
 
       if (applicationStates != null && !applicationStates.isEmpty()) {
-        if (!applicationStates.contains(RMServerUtils
-            .createApplicationState(application.getState()))) {
+        if (!applicationStates.contains(application
+            .createApplicationState())) {
           continue;
         }
       }
