@@ -275,6 +275,10 @@ Release 2.3.0 - UNRELEASED
     HDFS-4096. Add snapshot information to namenode WebUI. (Haohui Mai via 
     jing9)
 
+    HDFS-5188. In BlockPlacementPolicy, reduce the number of chooseTarget(..)
+    methods; replace HashMap with Map in parameter declarations and cleanup
+    some related code.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
