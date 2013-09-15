@@ -334,10 +334,12 @@ public class TestRMRestart {
 
     // finish the AM's
     am1.unregisterAppAttempt();
+    rm2.waitForState(loadedApp1.getApplicationId(), RMAppState.FINISHING);
     am1Node.nodeHeartbeat(attempt1.getAppAttemptId(), 1, ContainerState.COMPLETE);
     am1.waitForState(RMAppAttemptState.FINISHED);
     
     am2.unregisterAppAttempt();
+    rm2.waitForState(loadedApp2.getApplicationId(), RMAppState.FINISHING);
     am2Node.nodeHeartbeat(attempt2.getAppAttemptId(), 1, ContainerState.COMPLETE);
     am2.waitForState(RMAppAttemptState.FINISHED);
     

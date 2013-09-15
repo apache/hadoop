@@ -115,27 +115,4 @@ public class RMServerUtils {
       }
     }
   }
-
-  public static YarnApplicationState createApplicationState(RMAppState rmAppState) {
-    switch(rmAppState) {
-    case NEW:
-      return YarnApplicationState.NEW;
-    case NEW_SAVING:
-      return YarnApplicationState.NEW_SAVING;
-    case SUBMITTED:
-      return YarnApplicationState.SUBMITTED;
-    case ACCEPTED:
-      return YarnApplicationState.ACCEPTED;
-    case RUNNING:
-      return YarnApplicationState.RUNNING;
-    case FINISHING:
-    case FINISHED:
-      return YarnApplicationState.FINISHED;
-    case KILLED:
-      return YarnApplicationState.KILLED;
-    case FAILED:
-      return YarnApplicationState.FAILED;
-    }
-    throw new YarnRuntimeException("Unknown state passed!");
-  }
 }

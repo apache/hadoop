@@ -18,23 +18,19 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-public enum RMAppEventType {
-  // Source: ClientRMService
-  START,
-  RECOVER,
-  KILL,
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
-  // Source: RMAppAttempt
-  APP_REJECTED,
-  APP_ACCEPTED,
-  ATTEMPT_REGISTERED,
-  ATTEMPT_UNREGISTERED,
-  ATTEMPT_FINISHED, // Will send the final state
-  ATTEMPT_FAILED,
-  ATTEMPT_KILLED,
-  NODE_UPDATE,
+public class RMAppRemovedEvent extends RMAppEvent {
 
-  // Source: RMStateStore
-  APP_SAVED,
-  APP_REMOVED
+  private final Exception removedException;
+
+  public RMAppRemovedEvent(ApplicationId appId, Exception removedException) {
+    super(appId, RMAppEventType.APP_REMOVED);
+    this.removedException = removedException;
+  }
+
+  public Exception getRemovedException() {
+    return removedException;
+  }
+
 }

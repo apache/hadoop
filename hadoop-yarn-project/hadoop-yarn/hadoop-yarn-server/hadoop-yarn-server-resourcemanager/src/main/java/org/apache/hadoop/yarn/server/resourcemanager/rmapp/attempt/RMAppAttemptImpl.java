@@ -1147,7 +1147,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       ApplicationId applicationId =
           appAttempt.getAppAttemptId().getApplicationId();
       appAttempt.eventHandler.handle(
-          new RMAppEvent(applicationId, RMAppEventType.ATTEMPT_FINISHING));
+          new RMAppEvent(applicationId, RMAppEventType.ATTEMPT_UNREGISTERED));
       return RMAppAttemptState.FINISHING;
     }
   }

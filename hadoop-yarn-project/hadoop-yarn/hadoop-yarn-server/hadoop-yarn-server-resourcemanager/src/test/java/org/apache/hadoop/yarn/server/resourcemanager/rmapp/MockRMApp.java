@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.MockApps;
@@ -215,6 +216,15 @@ public class MockRMApp implements RMApp {
   @Override
   public String getApplicationType() {
     return YarnConfiguration.DEFAULT_APPLICATION_TYPE;
-  };
+  }
 
+  @Override
+  public boolean isAppSafeToUnregister() {
+    return true;
+  }
+
+  @Override
+  public YarnApplicationState createApplicationState() {
+    return null;
+  };
 }
