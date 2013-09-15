@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -55,25 +55,6 @@ public abstract class BlockPlacementPolicy {
    * choose <i>numOfReplicas</i> data nodes for <i>writer</i> 
    * to re-replicate a block with size <i>blocksize</i> 
    * If not, return as many as we can.
-   * 
-   * @param srcPath the file to which this chooseTargets is being invoked. 
-   * @param numOfReplicas additional number of replicas wanted.
-   * @param writer the writer's machine, null if not in the cluster.
-   * @param chosenNodes datanodes that have been chosen as targets.
-   * @param blocksize size of the data to be written.
-   * @return array of DatanodeDescriptor instances chosen as target 
-   * and sorted as a pipeline.
-   */
-  abstract DatanodeDescriptor[] chooseTarget(String srcPath,
-                                             int numOfReplicas,
-                                             DatanodeDescriptor writer,
-                                             List<DatanodeDescriptor> chosenNodes,
-                                             long blocksize);
-
-  /**
-   * choose <i>numOfReplicas</i> data nodes for <i>writer</i> 
-   * to re-replicate a block with size <i>blocksize</i> 
-   * If not, return as many as we can.
    *
    * @param srcPath the file to which this chooseTargets is being invoked.
    * @param numOfReplicas additional number of replicas wanted.
@@ -90,34 +71,8 @@ public abstract class BlockPlacementPolicy {
                                              DatanodeDescriptor writer,
                                              List<DatanodeDescriptor> chosenNodes,
                                              boolean returnChosenNodes,
-                                             HashMap<Node, Node> excludedNodes,
+                                             Map<Node, Node> excludedNodes,
                                              long blocksize);
-
-  /**
-   * choose <i>numOfReplicas</i> data nodes for <i>writer</i>
-   * If not, return as many as we can.
-   * The base implemenatation extracts the pathname of the file from the
-   * specified srcBC, but this could be a costly operation depending on the
-   * file system implementation. Concrete implementations of this class should
-   * override this method to avoid this overhead.
-   * 
-   * @param srcBC block collection of file for which chooseTarget is invoked.
-   * @param numOfReplicas additional number of replicas wanted.
-   * @param writer the writer's machine, null if not in the cluster.
-   * @param chosenNodes datanodes that have been chosen as targets.
-   * @param blocksize size of the data to be written.
-   * @return array of DatanodeDescriptor instances chosen as target 
-   * and sorted as a pipeline.
-   */
-  DatanodeDescriptor[] chooseTarget(BlockCollection srcBC,
-                                    int numOfReplicas,
-                                    DatanodeDescriptor writer,
-                                    List<DatanodeDescriptor> chosenNodes,
-                                    HashMap<Node, Node> excludedNodes,
-                                    long blocksize) {
-    return chooseTarget(srcBC.getName(), numOfReplicas, writer,
-                        chosenNodes, false, excludedNodes, blocksize);
-  }
   
   /**
    * Same as {@link #chooseTarget(String, int, DatanodeDescriptor, List, boolean, 
@@ -128,7 +83,7 @@ public abstract class BlockPlacementPolicy {
    */
   DatanodeDescriptor[] chooseTarget(String src,
       int numOfReplicas, DatanodeDescriptor writer,
-      HashMap<Node, Node> excludedNodes,
+      Map<Node, Node> excludedNodes,
       long blocksize, List<DatanodeDescriptor> favoredNodes) {
     // This class does not provide the functionality of placing
     // a block in favored datanodes. The implementations of this class
@@ -183,7 +138,7 @@ public abstract class BlockPlacementPolicy {
     
   /**
    * Get an instance of the configured Block Placement Policy based on the
-   * value of the configuration paramater dfs.block.replicator.classname.
+   * the configuration property {@link DFS_BLOCK_REPLICATOR_CLASSNAME_KEY}.
    * 
    * @param conf the configuration to be used
    * @param stats an object that is used to retrieve the load on the cluster
@@ -193,12 +148,12 @@ public abstract class BlockPlacementPolicy {
   public static BlockPlacementPolicy getInstance(Configuration conf, 
                                                  FSClusterStats stats,
                                                  NetworkTopology clusterMap) {
-    Class<? extends BlockPlacementPolicy> replicatorClass =
-                      conf.getClass("dfs.block.replicator.classname",
-                                    BlockPlacementPolicyDefault.class,
-                                    BlockPlacementPolicy.class);
-    BlockPlacementPolicy replicator = (BlockPlacementPolicy) ReflectionUtils.newInstance(
-                                                             replicatorClass, conf);
+    final Class<? extends BlockPlacementPolicy> replicatorClass = conf.getClass(
+        DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_DEFAULT,
+        BlockPlacementPolicy.class);
+    final BlockPlacementPolicy replicator = ReflectionUtils.newInstance(
+        replicatorClass, conf);
     replicator.initialize(conf, stats, clusterMap);
     return replicator;
   }
