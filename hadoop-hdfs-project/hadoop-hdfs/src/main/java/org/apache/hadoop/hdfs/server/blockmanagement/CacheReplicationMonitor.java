@@ -156,7 +156,7 @@ class CacheReplicationMonitor implements Runnable {
           }
           // Choose some replicas to cache if needed
           additionalRepl = requiredRepl - effectiveRepl;
-          targets = new ArrayList<DatanodeDescriptor>(storedNodes);
+          targets = new ArrayList<DatanodeDescriptor>(storedNodes.size());
           // Only target replicas that aren't already cached.
           for (DatanodeDescriptor dn: storedNodes) {
             if (!cachedNodes.contains(dn)) {

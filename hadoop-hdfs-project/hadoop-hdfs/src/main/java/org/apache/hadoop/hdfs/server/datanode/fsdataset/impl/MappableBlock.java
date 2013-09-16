@@ -225,7 +225,7 @@ class MappableBlock implements Closeable {
       blockBuf.flip();
       // Number of read chunks, including partial chunk at end
       int chunks = (bytesRead+bytesPerChecksum-1) / bytesPerChecksum;
-      checksumBuf.limit(chunks*bytesPerChecksum);
+      checksumBuf.limit(chunks*checksumSize);
       fillBuffer(metaChannel, checksumBuf);
       checksumBuf.flip();
       checksum.verifyChunkedSums(blockBuf, checksumBuf, block.getBlockName(),

@@ -35,6 +35,9 @@ import org.apache.hadoop.hdfs.protocol.Block;
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 public class CacheReplicationPolicy {
 
+  // Not thread-safe, but only accessed by the CacheReplicationMonitor
+  private static RandomData random = new RandomDataImpl();
+
   /**
    * @return List of datanodes with sufficient capacity to cache the block
    */
@@ -53,8 +56,7 @@ public class CacheReplicationPolicy {
 
   /**
    * Returns a random datanode from targets, weighted by the amount of free
-   * cache capacity on the datanode. Prunes unsuitable datanodes from the
-   * targets list.
+   * cache capacity on the datanode.
    * 
    * @param block Block to be cached
    * @param targets List of potential cache targets
@@ -75,8 +77,7 @@ public class CacheReplicationPolicy {
       lottery.put(totalCacheAvailable, dn);
     }
     // Pick our lottery winner
-    RandomData r = new RandomDataImpl();
-    long winningTicket = r.nextLong(0, totalCacheAvailable - 1);
+    long winningTicket = random.nextLong(0, totalCacheAvailable - 1);
     Entry<Long, DatanodeDescriptor> winner = lottery.higherEntry(winningTicket);
     return winner.getValue();
   }
@@ -94,7 +95,10 @@ public class CacheReplicationPolicy {
     List<DatanodeDescriptor> chosen =
         new ArrayList<DatanodeDescriptor>(numTargets);
     for (int i = 0; i < numTargets && !sufficient.isEmpty(); i++) {
-      chosen.add(randomDatanodeByRemainingCache(block, sufficient));
+      DatanodeDescriptor choice =
+          randomDatanodeByRemainingCache(block, sufficient);
+      chosen.add(choice);
+      sufficient.remove(choice);
     }
     return chosen;
   }

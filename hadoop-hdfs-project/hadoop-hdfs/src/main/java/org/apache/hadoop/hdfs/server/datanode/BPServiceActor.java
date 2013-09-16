@@ -242,17 +242,6 @@ class BPServiceActor implements Runnable {
     resetBlockReportTime = true; // reset future BRs for randomness
   }
 
-  void scheduleCacheReport(long delay) {
-    if (delay > 0) {
-      // Uniform random jitter by the delay
-      lastCacheReport = Time.monotonicNow()
-          - dnConf.cacheReportInterval
-          + DFSUtil.getRandom().nextInt(((int)delay));
-    } else { // send at next heartbeat
-      lastCacheReport = lastCacheReport - dnConf.cacheReportInterval;
-    }
-  }
-
   void reportBadBlocks(ExtendedBlock block) {
     if (bpRegistration == null) {
       return;
@@ -445,6 +434,10 @@ class BPServiceActor implements Runnable {
   }
   
   DatanodeCommand cacheReport() throws IOException {
+    // If caching is disabled, do not send a cache report
+    if (dn.getFSDataset().getCacheCapacity() == 0) {
+      return null;
+    }
     // send cache report if timer has expired.
     DatanodeCommand cmd = null;
     long startTime = Time.monotonicNow();

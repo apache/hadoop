@@ -186,6 +186,8 @@ public final class CacheManager {
         // TODO: adjustable cache replication factor
         namesystem.setCacheReplicationInt(directive.getPath(),
             file.getBlockReplication());
+      } else {
+        LOG.warn("Path " + directive.getPath() + " is not a file");
       }
     } catch (IOException ioe) {
       LOG.info("addDirective " + directive +": failed to cache file: " +

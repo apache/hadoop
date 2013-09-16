@@ -48,9 +48,11 @@ import org.junit.Test;
 
 public class TestCacheReplicationManager {
 
+  private static final long BLOCK_SIZE = 512;
+  private static final int REPL_FACTOR = 3;
+  private static final int NUM_DATANODES = 4;
   // Most Linux installs allow a default of 64KB locked memory
-  private static final long CACHE_CAPACITY = 64 * 1024;
-  private static final long BLOCK_SIZE = 4096;
+  private static final long CACHE_CAPACITY = 64 * 1024 / NUM_DATANODES;
 
   private static Configuration conf;
   private static MiniDFSCluster cluster = null;
@@ -75,7 +77,7 @@ public class TestCacheReplicationManager {
     conf.setLong(DFS_CACHEREPORT_INTERVAL_MSEC_KEY, 1000);
 
     cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(1).build();
+        .numDataNodes(NUM_DATANODES).build();
     cluster.waitActive();
 
     fs = cluster.getFileSystem();
@@ -106,6 +108,25 @@ public class TestCacheReplicationManager {
       Thread.sleep(500);
       actual = countNumCachedBlocks();
     }
+    waitForExpectedNumCachedReplicas(expected*REPL_FACTOR);
+  }
+
+  private void waitForExpectedNumCachedReplicas(final int expected)
+      throws Exception {
+    BlocksMap cachedBlocksMap = cacheReplManager.cachedBlocksMap;
+    int actual = 0;
+    while (expected != actual) {
+      Thread.sleep(500);
+      nn.getNamesystem().readLock();
+      try {
+        actual = 0;
+        for (BlockInfo b : cachedBlocksMap.getBlocks()) {
+          actual += cachedBlocksMap.numNodes(b);
+        }
+      } finally {
+        nn.getNamesystem().readUnlock();
+      }
+    }
   }
 
   @Test(timeout=60000)
@@ -114,7 +135,7 @@ public class TestCacheReplicationManager {
     final String pool = "friendlyPool";
     nnRpc.addCachePool(new CachePoolInfo("friendlyPool"));
     // Create some test files
-    final int numFiles = 3;
+    final int numFiles = 2;
     final int numBlocksPerFile = 2;
     final List<String> paths = new ArrayList<String>(numFiles);
     for (int i=0; i<numFiles; i++) {

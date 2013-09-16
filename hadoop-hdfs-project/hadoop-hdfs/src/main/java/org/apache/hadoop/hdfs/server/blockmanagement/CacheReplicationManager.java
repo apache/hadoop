@@ -167,11 +167,13 @@ public class CacheReplicationManager extends ReportProcessor {
   }
 
   public void clearQueues() {
-    blocksToUncache.clear();
-    synchronized (neededCacheBlocks) {
-      neededCacheBlocks.clear();
+    if (isCachingEnabled) {
+      blocksToUncache.clear();
+      synchronized (neededCacheBlocks) {
+        neededCacheBlocks.clear();
+      }
+      pendingCacheBlocks.clear();
     }
-    pendingCacheBlocks.clear();
   }
 
   public boolean isCachingEnabled() {
@@ -571,7 +573,8 @@ public class CacheReplicationManager extends ReportProcessor {
   }
 
   /**
-   * Return the safely cached replicas of a block in a BlocksMap
+   * Return the safe replicas (not corrupt or decomissioning/decommissioned) of
+   * a block in a BlocksMap
    */
   List<DatanodeDescriptor> getSafeReplicas(BlocksMap map, Block block) {
     List<DatanodeDescriptor> nodes = new ArrayList<DatanodeDescriptor>(3);

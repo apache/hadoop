@@ -53,3 +53,5 @@ HDFS-4949 (Unreleased)
     HDFS-5201. NativeIO: consolidate getrlimit into NativeIO#getMemlockLimit
     (Contributed by Colin Patrick McCabe)
 
+    HDFS-5210. Fix some failing unit tests on HDFS-4949 branch.
+    (Contributed by Andrew Wang)

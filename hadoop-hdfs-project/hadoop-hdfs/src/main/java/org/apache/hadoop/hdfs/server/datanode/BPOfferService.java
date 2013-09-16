@@ -368,12 +368,6 @@ class BPOfferService {
     }
   }
 
-  void scheduleCacheReport(long delay) {
-    for (BPServiceActor actor: bpServices) {
-      actor.scheduleCacheReport(delay);
-    }
-  }
-
   /**
    * Ask each of the actors to report a bad block hosted on another DN.
    */
