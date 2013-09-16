@@ -295,10 +295,10 @@ public class TestRMWebServices extends JerseyTest {
       String hadoopVersion, String resourceManagerVersionBuiltOn,
       String resourceManagerBuildVersion, String resourceManagerVersion) {
 
-    assertEquals("clusterId doesn't match: ", ResourceManager.clusterTimeStamp,
-        clusterid);
-    assertEquals("startedOn doesn't match: ", ResourceManager.clusterTimeStamp,
-        startedon);
+    assertEquals("clusterId doesn't match: ",
+        ResourceManager.getClusterTimeStamp(), clusterid);
+    assertEquals("startedOn doesn't match: ",
+        ResourceManager.getClusterTimeStamp(), startedon);
     assertTrue("stated doesn't match: " + state,
         state.matches(STATE.INITED.toString()));
 

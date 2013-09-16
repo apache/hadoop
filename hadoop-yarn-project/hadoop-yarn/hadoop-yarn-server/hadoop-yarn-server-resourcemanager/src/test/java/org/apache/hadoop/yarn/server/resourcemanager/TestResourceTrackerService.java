@@ -283,7 +283,7 @@ public class TestResourceTrackerService {
     RegisterNodeManagerResponse response = nm.registerNode();
 
     // Verify the RMIdentifier is correctly set in RegisterNodeManagerResponse
-    Assert.assertEquals(ResourceManager.clusterTimeStamp,
+    Assert.assertEquals(ResourceManager.getClusterTimeStamp(),
       response.getRMIdentifier());
   }
 

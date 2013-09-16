@@ -105,7 +105,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
   private static final Log LOG = LogFactory.getLog(ResourceManager.class);
-  public static final long clusterTimeStamp = System.currentTimeMillis();
+  private static long clusterTimeStamp = System.currentTimeMillis();
+
+  /**
+   * "Always On" services. Services that need to run always irrespective of
+   * the HA state of the RM.
+   */
+  @VisibleForTesting
+  protected RMHAProtocolService haService;
 
   /**
    * "Active" services. Services that need to run only on the Active RM.
@@ -155,14 +162,18 @@ public class ResourceManager extends CompositeService implements Recoverable {
   public RMContext getRMContext() {
     return this.rmContext;
   }
+
+  public static long getClusterTimeStamp() {
+    return clusterTimeStamp;
+  }
   
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     validateConfigs(conf);
     this.conf = conf;
 
-    activeServices = new RMActiveServices();
-    addService(activeServices);
+    haService = new RMHAProtocolService(this);
+    addService(haService);
     super.serviceInit(conf);
   }
   
@@ -470,6 +481,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
           LOG.error("Error closing store.", e);
         }
       }
+
       super.serviceStop();
     }
   }
@@ -708,6 +720,43 @@ public class ResourceManager extends CompositeService implements Recoverable {
     webApp = builder.start(new RMWebApp(this));
   }
 
+  /**
+   * Helper method to create and init {@link #activeServices}. This creates an
+   * instance of {@link RMActiveServices} and initializes it.
+   * @throws Exception
+   */
+  void createAndInitActiveServices() throws Exception {
+    activeServices = new RMActiveServices();
+    activeServices.init(conf);
+  }
+
+  /**
+   * Helper method to start {@link #activeServices}.
+   * @throws Exception
+   */
+  void startActiveServices() throws Exception {
+    if (activeServices != null) {
+      clusterTimeStamp = System.currentTimeMillis();
+      activeServices.start();
+    }
+  }
+
+  /**
+   * Helper method to stop {@link #activeServices}.
+   * @throws Exception
+   */
+  void stopActiveServices() throws Exception {
+    if (activeServices != null) {
+      activeServices.stop();
+      activeServices = null;
+    }
+  }
+
+  @VisibleForTesting
+  protected boolean areActiveServicesRunning() {
+    return activeServices != null && activeServices.isInState(STATE.STARTED);
+  }
+
   @Override
   protected void serviceStart() throws Exception {
     try {
@@ -715,7 +764,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     } catch(IOException ie) {
       throw new YarnRuntimeException("Failed to login", ie);
     }
-
     super.serviceStart();
   }
   
