@@ -36,6 +36,9 @@ HDFS-4949 (Unreleased)
     HDFS-5053. NameNode should invoke DataNode APIs to coordinate caching.
     (Andrew Wang)
 
+    HDFS-5197. Document dfs.cachereport.intervalMsec in hdfs-default.xml.
+    (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
