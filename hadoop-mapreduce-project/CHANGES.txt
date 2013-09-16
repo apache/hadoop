@@ -190,6 +190,8 @@ Release 2.1.1-beta - UNRELEASED
     but just before ClientService to avoid race conditions during RM restart.
     (Jian He via vinodkv)
 
+    MAPREDUCE-5379. Include token tracking ids in jobconf. (kkambatl via tucu)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5446. TestJobHistoryEvents and TestJobHistoryParsing have race
@@ -264,6 +266,9 @@ Release 2.1.1-beta - UNRELEASED
 
     MAPREDUCE-5164. mapred job and queue commands omit HADOOP_CLIENT_OPTS 
     (Nemon Lou via devaraj)
+
+    MAPREDUCE-5493. Cleanup in-memory & on-disk segments to prevent leak on
+    shuffle completion. (jlowe via acmurthy)
 
 Release 2.1.0-beta - 2013-08-22
 

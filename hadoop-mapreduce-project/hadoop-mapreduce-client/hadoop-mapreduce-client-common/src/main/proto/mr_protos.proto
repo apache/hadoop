@@ -20,6 +20,7 @@ option java_package = "org.apache.hadoop.mapreduce.v2.proto";
 option java_outer_classname = "MRProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+package hadoop.mapreduce;
 
 import "yarn_protos.proto";
 
@@ -29,7 +30,7 @@ enum TaskTypeProto {
 }
 
 message JobIdProto {
-  optional ApplicationIdProto app_id = 1;
+  optional hadoop.yarn.ApplicationIdProto app_id = 1;
   optional int32 id = 2;
 }
 
@@ -115,7 +116,7 @@ message TaskAttemptReportProto {
   optional string node_manager_host = 12;
   optional int32 node_manager_port = 13;
   optional int32 node_manager_http_port = 14;
-  optional ContainerIdProto container_id = 15;
+  optional hadoop.yarn.ContainerIdProto container_id = 15;
 }
 
 enum JobStateProto {
@@ -148,9 +149,9 @@ message JobReportProto {
 }
 
 message AMInfoProto {
-  optional ApplicationAttemptIdProto application_attempt_id = 1;
+  optional hadoop.yarn.ApplicationAttemptIdProto application_attempt_id = 1;
   optional int64 start_time = 2;
-  optional ContainerIdProto container_id = 3;
+  optional hadoop.yarn.ContainerIdProto container_id = 3;
   optional string node_manager_host = 4;
   optional int32 node_manager_port = 5;
   optional int32 node_manager_http_port = 6;

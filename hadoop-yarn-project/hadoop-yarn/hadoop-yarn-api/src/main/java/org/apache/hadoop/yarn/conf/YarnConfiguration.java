@@ -270,6 +270,11 @@ public class YarnConfiguration extends Configuration {
   
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
+
+  /** HA related configs */
+  public static final String RM_HA_PREFIX = RM_PREFIX + "ha.";
+  public static final String RM_HA_ENABLED = RM_HA_PREFIX + "enabled";
+  public static final boolean DEFAULT_RM_HA_ENABLED = false;
   
   /** The class to use as the persistent store.*/
   public static final String RM_STORE = RM_PREFIX + "store.class";

@@ -185,7 +185,7 @@ public class RMContainerTokenSecretManager extends
       tokenIdentifier =
           new ContainerTokenIdentifier(containerId, nodeId.toString(),
             appSubmitter, capability, expiryTimeStamp, this.currentMasterKey
-              .getMasterKey().getKeyId(), ResourceManager.clusterTimeStamp);
+              .getMasterKey().getKeyId(), ResourceManager.getClusterTimeStamp());
       password = this.createPassword(tokenIdentifier);
 
     } finally {

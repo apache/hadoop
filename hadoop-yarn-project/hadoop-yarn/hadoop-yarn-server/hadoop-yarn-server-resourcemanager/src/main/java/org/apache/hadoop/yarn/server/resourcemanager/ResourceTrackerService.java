@@ -229,7 +229,7 @@ public class ResourceTrackerService extends AbstractService implements
             + ", assigned nodeId " + nodeId;
     LOG.info(message);
     response.setNodeAction(NodeAction.NORMAL);
-    response.setRMIdentifier(ResourceManager.clusterTimeStamp);
+    response.setRMIdentifier(ResourceManager.getClusterTimeStamp());
     return response;
   }
 

@@ -24,6 +24,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -56,6 +57,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -404,6 +406,19 @@ class JobSubmitter {
       // because of it if present as the referral will point to a
       // different job.
       TokenCache.cleanUpTokenReferral(conf);
+
+      if (conf.getBoolean(
+          MRJobConfig.JOB_TOKEN_TRACKING_IDS_ENABLED,
+          MRJobConfig.DEFAULT_JOB_TOKEN_TRACKING_IDS_ENABLED)) {
+        // Add HDFS tracking ids
+        ArrayList<String> trackingIds = new ArrayList<String>();
+        for (Token<? extends TokenIdentifier> t :
+            job.getCredentials().getAllTokens()) {
+          trackingIds.add(t.decodeIdentifier().getTrackingId());
+        }
+        conf.setStrings(MRJobConfig.JOB_TOKEN_TRACKING_IDS,
+            trackingIds.toArray(new String[trackingIds.size()]));
+      }
 
       // Write job file to submit dir
       writeConf(conf, submitJobFile);

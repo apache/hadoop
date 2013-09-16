@@ -269,6 +269,14 @@
   </property>
 
   <property>
+    <description>Enable RM high-availability. When enabled, the RM starts
+    in the Standby mode by default, and transitions to the Active mode when
+    prompted to.</description>
+    <name>yarn.resourcemanager.ha.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The maximum number of completed applications RM keeps. </description>
     <name>yarn.resourcemanager.max-completed-applications</name>
     <value>10000</value>
