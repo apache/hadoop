@@ -132,6 +132,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9945. HAServiceState should have a state for stopped services.
     (Karthik Kambatla via atm)
 
+    HADOOP-9962. in order to avoid dependency divergence within Hadoop itself 
+    lets enable DependencyConvergence. (rvs via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

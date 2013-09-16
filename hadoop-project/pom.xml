@@ -945,6 +945,26 @@
           <includeReports>false</includeReports>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>depcheck</id>
+            <configuration>
+              <rules>
+                <DependencyConvergence>
+                  <uniqueVersions>true</uniqueVersions> 
+                </DependencyConvergence>
+              </rules>
+            </configuration>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <phase>verify</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
