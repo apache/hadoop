@@ -20,6 +20,7 @@ option java_package = "org.apache.hadoop.yarn.proto";
 option java_outer_classname = "YarnServerCommonProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+package hadoop.yarn;
 
 import "yarn_protos.proto";
 

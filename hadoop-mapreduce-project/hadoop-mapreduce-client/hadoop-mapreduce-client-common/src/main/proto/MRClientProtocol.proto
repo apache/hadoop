@@ -19,6 +19,7 @@
 option java_package = "org.apache.hadoop.yarn.proto";
 option java_outer_classname = "MRClientProtocol";
 option java_generic_services = true;
+package hadoop.mapreduce;
 
 import "Security.proto";
 import "mr_service_protos.proto";
