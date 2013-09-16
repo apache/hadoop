@@ -82,7 +82,7 @@ public class TestMerger {
   }
   
   @Test
-  public void testInMemoryMerger() throws IOException {
+  public void testInMemoryMerger() throws Throwable {
     JobID jobId = new JobID("a", 0);
     TaskAttemptID reduceId = new TaskAttemptID(
         new TaskID(jobId, TaskType.REDUCE, 0), 0);
@@ -132,6 +132,11 @@ public class TestMerger {
     readOnDiskMapOutput(conf, fs, outPath, keys, values);
     Assert.assertEquals(keys, Arrays.asList("apple", "banana", "carrot"));
     Assert.assertEquals(values, Arrays.asList("disgusting", "pretty good", "delicious"));
+
+    mergeManager.close();
+    Assert.assertEquals(0, mergeManager.inMemoryMapOutputs.size());
+    Assert.assertEquals(0, mergeManager.inMemoryMergedMapOutputs.size());
+    Assert.assertEquals(0, mergeManager.onDiskMapOutputs.size());
   }
   
   private byte[] writeMapOutput(Configuration conf, Map<String, String> keysToValues)
