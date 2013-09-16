@@ -26,6 +26,7 @@ option java_package = "org.apache.hadoop.yarn.proto";
 option java_outer_classname = "ResourceManagerAdministrationProtocol";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+package hadoop.yarn;
 
 import "server/yarn_server_resourcemanager_service_protos.proto";
 

@@ -20,6 +20,7 @@ option java_package = "org.apache.hadoop.mapreduce.v2.proto";
 option java_outer_classname = "MRServiceProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+package hadoop.mapreduce;
 
 import "Security.proto";
 import "mr_protos.proto";
