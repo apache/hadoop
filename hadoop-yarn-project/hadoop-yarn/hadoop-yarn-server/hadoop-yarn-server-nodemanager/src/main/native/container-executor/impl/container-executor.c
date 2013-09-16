@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
 
@@ -492,6 +493,21 @@ static struct passwd* get_user_info(const char* user) {
   return result;
 }
 
+int is_whitelisted(const char *user) {
+  char **whitelist = get_values(ALLOWED_SYSTEM_USERS_KEY);
+  char **users = whitelist;
+  if (whitelist != NULL) {
+    for(; *users; ++users) {
+      if (strncmp(*users, user, LOGIN_NAME_MAX) == 0) {
+        free_values(whitelist);
+        return 1;
+      }
+    }
+    free_values(whitelist);
+  }
+  return 0;
+}
+
 /**
  * Is the user a real user account?
  * Checks:
@@ -526,9 +542,9 @@ struct passwd* check_user(const char *user) {
     fflush(LOGFILE);
     return NULL;
   }
-  if (user_info->pw_uid < min_uid) {
-    fprintf(LOGFILE, "Requested user %s has id %d, which is below the "
-	    "minimum allowed %d\n", user, user_info->pw_uid, min_uid);
+  if (user_info->pw_uid < min_uid && !is_whitelisted(user)) {
+    fprintf(LOGFILE, "Requested user %s is not whitelisted and has id %d,"
+	    "which is below the minimum allowed %d\n", user, user_info->pw_uid, min_uid);
     fflush(LOGFILE);
     free(user_info);
     return NULL;
