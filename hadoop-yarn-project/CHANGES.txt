@@ -44,6 +44,10 @@ Release 2.1.1-beta - UNRELEASED
     YARN-707. Added user information also in the YARN ClientToken so that AMs
     can implement authorization based on incoming users. (Jason Lowe via vinodkv)
 
+    YARN-1170. YARN & MapReduce proto definitions fixed to specify protobuf
+    package as hadoop.yarn and hadoop.mapreduce respectively. (Binglin Chang
+    via acmurthy)
+
   NEW FEATURES
 
   IMPROVEMENTS
