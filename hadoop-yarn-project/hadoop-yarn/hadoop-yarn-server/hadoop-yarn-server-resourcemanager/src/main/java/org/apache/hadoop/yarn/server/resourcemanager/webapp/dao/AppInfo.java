@@ -108,7 +108,7 @@ public class AppInfo {
         this.diagnostics = "";
       }
       this.finalStatus = app.getFinalApplicationStatus();
-      this.clusterId = ResourceManager.clusterTimeStamp;
+      this.clusterId = ResourceManager.getClusterTimeStamp();
       if (hasAccess) {
         this.startedTime = app.getStartTime();
         this.finishedTime = app.getFinishTime();

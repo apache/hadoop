@@ -29,6 +29,7 @@ Release 2.3.0 - UNRELEASED
     YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)
     YARN-1098. Separate out RM services into Always On and Active (Karthik
     Kambatla via bikas)
+    YARN-1027. Implement RMHAProtocolService (Karthik Kambatla via bikas)
 
   OPTIMIZATIONS
 

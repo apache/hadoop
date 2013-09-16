@@ -44,7 +44,7 @@ public class ClusterInfo {
   } // JAXB needs this
 
   public ClusterInfo(ResourceManager rm) {
-    long ts = ResourceManager.clusterTimeStamp;
+    long ts = ResourceManager.getClusterTimeStamp();
 
     this.id = ts;
     this.state = rm.getServiceState();

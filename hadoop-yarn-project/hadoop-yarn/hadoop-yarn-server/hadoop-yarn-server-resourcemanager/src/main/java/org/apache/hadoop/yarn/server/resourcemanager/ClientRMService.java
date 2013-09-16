@@ -196,7 +196,7 @@ public class ClientRMService extends AbstractService implements
 
   ApplicationId getNewApplicationId() {
     ApplicationId applicationId = org.apache.hadoop.yarn.server.utils.BuilderUtils
-        .newApplicationId(recordFactory, ResourceManager.clusterTimeStamp,
+        .newApplicationId(recordFactory, ResourceManager.getClusterTimeStamp(),
             applicationCounter.incrementAndGet());
     LOG.info("Allocated new applicationId: " + applicationId.getId());
     return applicationId;
