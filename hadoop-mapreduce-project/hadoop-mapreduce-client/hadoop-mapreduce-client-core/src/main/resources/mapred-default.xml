@@ -749,6 +749,23 @@
 </property>
 
 <property>
+  <name>mapreduce.job.token.tracking.ids.enabled</name>
+  <value>false</value>
+  <description>Whether to write tracking ids of tokens to
+    job-conf. When true, the configuration property
+    "mapreduce.job.token.tracking.ids" is set to the token-tracking-ids of
+    the job</description>
+</property>
+
+<property>
+  <name>mapreduce.job.token.tracking.ids</name>
+  <value></value>
+  <description>When mapreduce.job.token.tracking.ids.enabled is
+    set to true, this is set by the framework to the
+    token-tracking-ids used by the job.</description>
+</property>
+
+<property>
   <name>mapreduce.task.merge.progress.records</name>
   <value>10000</value>
   <description> The number of records to process during merge before

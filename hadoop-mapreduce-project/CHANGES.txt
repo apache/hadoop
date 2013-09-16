@@ -190,6 +190,8 @@ Release 2.1.1-beta - UNRELEASED
     but just before ClientService to avoid race conditions during RM restart.
     (Jian He via vinodkv)
 
+    MAPREDUCE-5379. Include token tracking ids in jobconf. (kkambatl via tucu)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5446. TestJobHistoryEvents and TestJobHistoryParsing have race

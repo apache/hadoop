@@ -313,6 +313,13 @@ public interface MRJobConfig {
   public static final String MAPREDUCE_JOB_CREDENTIALS_BINARY = 
       "mapreduce.job.credentials.binary";
 
+  /* Configs for tracking ids of tokens used by a job */
+  public static final String JOB_TOKEN_TRACKING_IDS_ENABLED =
+      "mapreduce.job.token.tracking.ids.enabled";
+  public static final boolean DEFAULT_JOB_TOKEN_TRACKING_IDS_ENABLED = false;
+  public static final String JOB_TOKEN_TRACKING_IDS =
+      "mapreduce.job.token.tracking.ids";
+
   public static final String JOB_SUBMITHOST =
     "mapreduce.job.submithostname";
   public static final String JOB_SUBMITHOSTADDR =
