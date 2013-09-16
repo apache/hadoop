@@ -98,6 +98,9 @@ Release 2.1.1-beta - UNRELEASED
     completions in addition to application events. (Alejandro Abdelnur via
     vinodkv)
 
+    YARN-1137. Add support whitelist for system users to Yarn 
+    container-executor.c. (rvs via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

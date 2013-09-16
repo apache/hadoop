@@ -99,6 +99,7 @@ int write_config_file(char *file_name) {
   }
   fprintf(file, "banned.users=bannedUser\n");
   fprintf(file, "min.user.id=500\n");
+  fprintf(file, "allowed.system.users=allowedUser,bin\n");
   fclose(file);
   return 0;
 }
@@ -193,6 +194,10 @@ void test_check_user() {
   }
   if (check_user("root") != NULL) {
     printf("FAIL: failed check for system user root\n");
+    exit(1);
+  }
+  if (check_user("bin") == NULL) {
+    printf("FAIL: failed check for whitelisted system user bin\n");
     exit(1);
   }
 }
