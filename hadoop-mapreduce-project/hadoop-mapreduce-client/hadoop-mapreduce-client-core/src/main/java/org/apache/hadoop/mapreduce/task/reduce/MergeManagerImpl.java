@@ -355,8 +355,11 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     
     List<InMemoryMapOutput<K, V>> memory = 
       new ArrayList<InMemoryMapOutput<K, V>>(inMemoryMergedMapOutputs);
+    inMemoryMergedMapOutputs.clear();
     memory.addAll(inMemoryMapOutputs);
+    inMemoryMapOutputs.clear();
     List<CompressAwarePath> disk = new ArrayList<CompressAwarePath>(onDiskMapOutputs);
+    onDiskMapOutputs.clear();
     return finalMerge(jobConf, rfs, memory, disk);
   }
    
