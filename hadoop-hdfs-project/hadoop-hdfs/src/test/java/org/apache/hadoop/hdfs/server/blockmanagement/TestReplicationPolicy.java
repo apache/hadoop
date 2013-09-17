@@ -29,9 +29,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
@@ -189,7 +191,7 @@ public class TestReplicationPolicy {
   }
 
   private static DatanodeDescriptor[] chooseTarget(int numOfReplicas,
-      List<DatanodeDescriptor> chosenNodes, Map<Node, Node> excludedNodes) {
+      List<DatanodeDescriptor> chosenNodes, Set<Node> excludedNodes) {
     return chooseTarget(numOfReplicas, dataNodes[0], chosenNodes, excludedNodes);
   }
 
@@ -197,7 +199,7 @@ public class TestReplicationPolicy {
       int numOfReplicas,
       DatanodeDescriptor writer,
       List<DatanodeDescriptor> chosenNodes,
-      Map<Node, Node> excludedNodes) {
+      Set<Node> excludedNodes) {
     return replicator.chooseTarget(filename, numOfReplicas, writer, chosenNodes,
         false, excludedNodes, BLOCK_SIZE);
   }
@@ -212,25 +214,25 @@ public class TestReplicationPolicy {
    */
   @Test
   public void testChooseTarget2() throws Exception { 
-    HashMap<Node, Node> excludedNodes;
+    Set<Node> excludedNodes;
     DatanodeDescriptor[] targets;
     List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
     
-    excludedNodes = new HashMap<Node, Node>();
-    excludedNodes.put(dataNodes[1], dataNodes[1]); 
+    excludedNodes = new HashSet<Node>();
+    excludedNodes.add(dataNodes[1]); 
     targets = chooseTarget(0, chosenNodes, excludedNodes);
     assertEquals(targets.length, 0);
     
     excludedNodes.clear();
     chosenNodes.clear();
-    excludedNodes.put(dataNodes[1], dataNodes[1]); 
+    excludedNodes.add(dataNodes[1]); 
     targets = chooseTarget(1, chosenNodes, excludedNodes);
     assertEquals(targets.length, 1);
     assertEquals(targets[0], dataNodes[0]);
     
     excludedNodes.clear();
     chosenNodes.clear();
-    excludedNodes.put(dataNodes[1], dataNodes[1]); 
+    excludedNodes.add(dataNodes[1]); 
     targets = chooseTarget(2, chosenNodes, excludedNodes);
     assertEquals(targets.length, 2);
     assertEquals(targets[0], dataNodes[0]);
@@ -238,7 +240,7 @@ public class TestReplicationPolicy {
     
     excludedNodes.clear();
     chosenNodes.clear();
-    excludedNodes.put(dataNodes[1], dataNodes[1]); 
+    excludedNodes.add(dataNodes[1]); 
     targets = chooseTarget(3, chosenNodes, excludedNodes);
     assertEquals(targets.length, 3);
     assertEquals(targets[0], dataNodes[0]);
@@ -247,7 +249,7 @@ public class TestReplicationPolicy {
     
     excludedNodes.clear();
     chosenNodes.clear();
-    excludedNodes.put(dataNodes[1], dataNodes[1]); 
+    excludedNodes.add(dataNodes[1]); 
     targets = chooseTarget(4, chosenNodes, excludedNodes);
     assertEquals(targets.length, 4);
     assertEquals(targets[0], dataNodes[0]);
@@ -260,7 +262,7 @@ public class TestReplicationPolicy {
 
     excludedNodes.clear();
     chosenNodes.clear();
-    excludedNodes.put(dataNodes[1], dataNodes[1]); 
+    excludedNodes.add(dataNodes[1]); 
     chosenNodes.add(dataNodes[2]);
     targets = replicator.chooseTarget(filename, 1, dataNodes[0], chosenNodes, true,
         excludedNodes, BLOCK_SIZE);
@@ -481,8 +483,8 @@ public class TestReplicationPolicy {
     assertEquals(targets.length, 1);
     assertEquals(targets[0], dataNodes[1]);
 
-    HashMap<Node, Node> excludedNodes = new HashMap<Node, Node>();
-    excludedNodes.put(dataNodes[1], dataNodes[1]);
+    Set<Node> excludedNodes = new HashSet<Node>();
+    excludedNodes.add(dataNodes[1]);
     List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
     targets = chooseTarget(1, chosenNodes, excludedNodes);
     assertEquals(targets.length, 1);

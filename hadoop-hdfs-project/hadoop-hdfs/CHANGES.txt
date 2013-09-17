@@ -279,6 +279,10 @@ Release 2.3.0 - UNRELEASED
     methods; replace HashMap with Map in parameter declarations and cleanup
     some related code.  (szetszwo)
 
+    HDFS-5207. In BlockPlacementPolicy.chooseTarget(..), change the writer
+    and the excludedNodes parameter types respectively to Node and Set.
+    (Junping Du via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

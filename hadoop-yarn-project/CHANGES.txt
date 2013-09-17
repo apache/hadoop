@@ -106,6 +106,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1137. Add support whitelist for system users to Yarn 
     container-executor.c. (rvs via tucu)
 
+    YARN-1001. Added a web-service to get statistics about per application-type
+    per state for consumption by downstream projects. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -210,6 +213,8 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-540. Race condition causing RM to potentially relaunch already
     unregistered AMs on RM restart (Jian He via bikas)
+
+    YARN-1184. ClassCastException during preemption enforcement. (cdouglas)
 
 Release 2.1.0-beta - 2013-08-22
 

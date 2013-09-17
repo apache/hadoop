@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,22 +69,22 @@ public abstract class BlockPlacementPolicy {
    */
   public abstract DatanodeDescriptor[] chooseTarget(String srcPath,
                                              int numOfReplicas,
-                                             DatanodeDescriptor writer,
+                                             Node writer,
                                              List<DatanodeDescriptor> chosenNodes,
                                              boolean returnChosenNodes,
-                                             Map<Node, Node> excludedNodes,
+                                             Set<Node> excludedNodes,
                                              long blocksize);
   
   /**
-   * Same as {@link #chooseTarget(String, int, DatanodeDescriptor, List, boolean, 
-   * HashMap, long)} with added parameter {@code favoredDatanodes}
+   * Same as {@link #chooseTarget(String, int, Node, List, boolean, 
+   * Set, long)} with added parameter {@code favoredDatanodes}
    * @param favoredNodes datanodes that should be favored as targets. This
    *          is only a hint and due to cluster state, namenode may not be 
    *          able to place the blocks on these datanodes.
    */
   DatanodeDescriptor[] chooseTarget(String src,
-      int numOfReplicas, DatanodeDescriptor writer,
-      Map<Node, Node> excludedNodes,
+      int numOfReplicas, Node writer,
+      Set<Node> excludedNodes,
       long blocksize, List<DatanodeDescriptor> favoredNodes) {
     // This class does not provide the functionality of placing
     // a block in favored datanodes. The implementations of this class
