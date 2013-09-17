@@ -62,7 +62,7 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
 
   optional RpcKindProto rpcKind = 1;
   optional OperationProto rpcOp = 2;
-  required uint32 callId = 3; // a sequence number that is sent back in response
+  required sint32 callId = 3; // a sequence number that is sent back in response
   required bytes clientId = 4; // Globally unique client ID
   // clientId + callId uniquely identifies a request
   // retry count, 1 means this is the first retry
