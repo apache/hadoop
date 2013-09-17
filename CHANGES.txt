@@ -135,6 +135,10 @@ Release 1.3.0 - unreleased
     HDFS-4898. BlockPlacementPolicyWithNodeGroup.chooseRemoteRack() fails to
     properly fallback to local rack. (szetszwo)
 
+    HDFS-5211. Race condition between DistributedFileSystem#close and
+    FileSystem#close can cause return of a closed DistributedFileSystem instance
+    from the FileSystem cache. (cnauroth)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES
