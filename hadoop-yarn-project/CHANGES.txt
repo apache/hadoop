@@ -91,6 +91,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1137. Add support whitelist for system users to Yarn 
     container-executor.c. (rvs via tucu)
 
+    YARN-1001. Added a web-service to get statistics about per application-type
+    per state for consumption by downstream projects. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
