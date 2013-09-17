@@ -1609,9 +1609,12 @@ public class LeafQueue implements CSQueue {
 
   }
 
-  // need to access the list of apps from the preemption monitor
+  /**
+   * Obtain (read-only) collection of active applications.
+   */
   public Set<FiCaSchedulerApp> getApplications() {
-    return Collections.unmodifiableSet(activeApplications);
+    // need to access the list of apps from the preemption monitor
+    return activeApplications;
   }
 
   // return a single Resource capturing the overal amount of pending resources
