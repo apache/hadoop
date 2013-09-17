@@ -367,6 +367,10 @@ Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-9944. Fix RpcRequestHeaderProto.callId to be sint32 rather than
+    uint32 since ipc.Client.CONNECTION_CONTEXT_CALL_ID is signed (i.e. -3) 
+    (acmurthy)
+
   NEW FEATURES
 
   IMPROVEMENTS
