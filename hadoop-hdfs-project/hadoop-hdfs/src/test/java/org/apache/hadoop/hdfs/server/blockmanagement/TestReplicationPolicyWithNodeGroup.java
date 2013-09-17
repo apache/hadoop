@@ -178,7 +178,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
       int numOfReplicas,
       DatanodeDescriptor writer,
       List<DatanodeDescriptor> chosenNodes,
-      Map<Node, Node> excludedNodes) {
+      Set<Node> excludedNodes) {
     return replicator.chooseTarget(filename, numOfReplicas, writer, chosenNodes,
         false, excludedNodes, BLOCK_SIZE);
   }
@@ -247,14 +247,13 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * node group, and the rest should be placed on a third rack.
    * @throws Exception
    */
-  public void testChooseTarget2() throws Exception { 
-    HashMap<Node, Node> excludedNodes;
+  public void testChooseTarget2() throws Exception {
     DatanodeDescriptor[] targets;
     BlockPlacementPolicyDefault repl = (BlockPlacementPolicyDefault)replicator;
     List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
 
-    excludedNodes = new HashMap<Node, Node>();
-    excludedNodes.put(dataNodes[1], dataNodes[1]); 
+    Set<Node> excludedNodes = new HashSet<Node>();
+    excludedNodes.add(dataNodes[1]); 
     targets = repl.chooseTarget(filename, 4, dataNodes[0], chosenNodes, false, 
         excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 4);
@@ -270,7 +269,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
 
     excludedNodes.clear();
     chosenNodes.clear();
-    excludedNodes.put(dataNodes[1], dataNodes[1]); 
+    excludedNodes.add(dataNodes[1]); 
     chosenNodes.add(dataNodes[2]);
     targets = repl.chooseTarget(filename, 1, dataNodes[0], chosenNodes, true,
         excludedNodes, BLOCK_SIZE);
