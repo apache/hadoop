@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
@@ -42,12 +44,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -58,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
@@ -68,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
@@ -80,6 +84,7 @@ import com.google.inject.Singleton;
 @Path("/ws/v1/cluster")
 public class RMWebServices {
   private static final String EMPTY = "";
+  private static final String ANY = "*";
   private final ResourceManager rm;
   private static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
@@ -303,53 +308,16 @@ public class RMWebServices {
           "finishTimeEnd must be greater than finishTimeBegin");
     }
 
-    Set<String> appTypes = new HashSet<String>();
-    if (!applicationTypes.isEmpty()) {
-      for (String applicationType : applicationTypes) {
-        if (applicationType != null && !applicationType.trim().isEmpty()) {
-          if (applicationType.indexOf(",") == -1) {
-            appTypes.add(applicationType.trim());
-          } else {
-            String[] types = applicationType.split(",");
-            for (String type : types) {
-              if (!type.trim().isEmpty()) {
-                appTypes.add(type.trim());
-              }
-            }
-          }
-        }
-      }
-    }
+    Set<String> appTypes = parseQueries(applicationTypes, false);
     if (!appTypes.isEmpty()) {
       checkAppTypes = true;
     }
 
-    String allAppStates;
-    RMAppState[] stateArray = RMAppState.values();
-    allAppStates = Arrays.toString(stateArray);
-
-    Set<String> appStates = new HashSet<String>();
     // stateQuery is deprecated.
     if (stateQuery != null && !stateQuery.isEmpty()) {
       statesQuery.add(stateQuery);
     }
-    if (!statesQuery.isEmpty()) {
-      for (String applicationState : statesQuery) {
-        if (applicationState != null && !applicationState.isEmpty()) {
-          String[] states = applicationState.split(",");
-          for (String state : states) {
-            try {
-              RMAppState.valueOf(state.trim());
-            } catch (IllegalArgumentException iae) {
-              throw new BadRequestException(
-                  "Invalid application-state " + state
-                  + " specified. It should be one of " + allAppStates);
-            }
-            appStates.add(state.trim().toLowerCase());
-          }
-        }
-      }
-    }
+    Set<String> appStates = parseQueries(statesQuery, true);
     if (!appStates.isEmpty()) {
       checkAppStates = true;
     }
@@ -363,8 +331,8 @@ public class RMWebServices {
         break;
       }
 
-      if (checkAppStates
-          && !appStates.contains(rmapp.getState().toString().toLowerCase())) {
+      if (checkAppStates && !appStates.contains(
+          rmapp.createApplicationState().toString().toLowerCase())) {
         continue;
       }
       if (finalStatusQuery != null && !finalStatusQuery.isEmpty()) {
@@ -394,8 +362,8 @@ public class RMWebServices {
           continue;
         }
       }
-      if (checkAppTypes
-          && !appTypes.contains(rmapp.getApplicationType())) {
+      if (checkAppTypes && !appTypes.contains(
+          rmapp.getApplicationType().trim().toLowerCase())) {
         continue;
       }
 
@@ -413,6 +381,122 @@ public class RMWebServices {
       num++;
     }
     return allApps;
+  }
+
+  @GET
+  @Path("/appstatistics")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public ApplicationStatisticsInfo getAppStatistics(
+      @Context HttpServletRequest hsr,
+      @QueryParam("states") Set<String> stateQueries,
+      @QueryParam("applicationTypes") Set<String> typeQueries) {
+    init();
+
+    // parse the params and build the scoreboard
+    // converting state/type name to lowercase
+    Set<String> states = parseQueries(stateQueries, true);
+    Set<String> types = parseQueries(typeQueries, false);
+    // if no types, counts the applications of any types
+    if (types.size() == 0) {
+      types.add(ANY);
+    } else if (types.size() != 1) {
+      throw new BadRequestException("# of applicationTypes = " + types.size()
+          + ", we temporarily support at most one applicationType");
+    }
+    // if no states, returns the counts of all RMAppStates
+    if (states.size() == 0) {
+      for (YarnApplicationState state : YarnApplicationState.values()) {
+        states.add(state.toString().toLowerCase());
+      }
+    }
+    // in case we extend to multiple applicationTypes in the future
+    Map<YarnApplicationState, Map<String, Long>> scoreboard =
+        buildScoreboard(states, types);
+
+    // go through the apps in RM to count the numbers, ignoring the case of
+    // the state/type name
+    ConcurrentMap<ApplicationId, RMApp> apps = rm.getRMContext().getRMApps();
+    for (RMApp rmapp : apps.values()) {
+      YarnApplicationState state = rmapp.createApplicationState();
+      String type = rmapp.getApplicationType().trim().toLowerCase();
+      if (states.contains(state.toString().toLowerCase())) {
+        if (types.contains(ANY)) {
+          countApp(scoreboard, state, ANY);
+        } else if (types.contains(type)) {
+          countApp(scoreboard, state, type);
+        }
+      }
+    }
+
+    // fill the response object
+    ApplicationStatisticsInfo appStatInfo = new ApplicationStatisticsInfo();
+    for (Map.Entry<YarnApplicationState, Map<String, Long>> partScoreboard
+        : scoreboard.entrySet()) {
+      for (Map.Entry<String, Long> statEntry
+          : partScoreboard.getValue().entrySet()) {
+        StatisticsItemInfo statItem = new StatisticsItemInfo(
+            partScoreboard.getKey(), statEntry.getKey(), statEntry.getValue());
+        appStatInfo.add(statItem);
+      }
+    }
+    return appStatInfo;
+  }
+
+  private static Set<String> parseQueries(
+      Set<String> queries, boolean isState) {
+    Set<String> params = new HashSet<String>();
+    if (!queries.isEmpty()) {
+      for (String query : queries) {
+        if (query != null && !query.trim().isEmpty()) {
+          String[] paramStrs = query.split(",");
+          for (String paramStr : paramStrs) {
+            if (paramStr != null && !paramStr.trim().isEmpty()) {
+              if (isState) {
+                try {
+                  // enum string is in the uppercase
+                  YarnApplicationState.valueOf(paramStr.trim().toUpperCase());
+                } catch (RuntimeException e) {
+                  YarnApplicationState[] stateArray =
+                      YarnApplicationState.values();
+                  String allAppStates = Arrays.toString(stateArray);
+                  throw new BadRequestException(
+                      "Invalid application-state " + paramStr.trim()
+                      + " specified. It should be one of " + allAppStates);
+                }
+              }
+              params.add(paramStr.trim().toLowerCase());
+            }
+          }
+        }
+      }
+    }
+    return params;
+  }
+
+  private static Map<YarnApplicationState, Map<String, Long>> buildScoreboard(
+     Set<String> states, Set<String> types) {
+    Map<YarnApplicationState, Map<String, Long>> scoreboard
+        = new HashMap<YarnApplicationState, Map<String, Long>>();
+    // default states will result in enumerating all YarnApplicationStates
+    assert !states.isEmpty();
+    for (String state : states) {
+      Map<String, Long> partScoreboard = new HashMap<String, Long>();
+      scoreboard.put(
+          YarnApplicationState.valueOf(state.toUpperCase()), partScoreboard);
+      // types is verified no to be empty
+      for (String type : types) {
+        partScoreboard.put(type, 0L);
+      }
+    }
+    return scoreboard;
+  }
+
+  private static void countApp(
+      Map<YarnApplicationState, Map<String, Long>> scoreboard,
+      YarnApplicationState state, String type) {
+    Map<String, Long> partScoreboard = scoreboard.get(state);
+    Long count = partScoreboard.get(type);
+    partScoreboard.put(type, count + 1L);
   }
 
   @GET
