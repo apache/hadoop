@@ -25,7 +25,7 @@ import static org.mockito.Mockito.spy;
 
 import java.lang.reflect.Field;
 import java.util.EnumSet;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -119,7 +119,7 @@ public class TestAddBlockRetry {
         return ret;
       }
     }).when(spyBM).chooseTarget(Mockito.anyString(), Mockito.anyInt(),
-        Mockito.<DatanodeDescriptor>any(), Mockito.<HashMap<Node, Node>>any(),
+        Mockito.<DatanodeDescriptor>any(), Mockito.<HashSet<Node>>any(),
         Mockito.anyLong(), Mockito.<List<String>>any());
 
     // create file

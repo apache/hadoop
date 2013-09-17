@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -63,8 +64,8 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
    * @return the chosen node
    */
   @Override
-  protected DatanodeDescriptor chooseLocalNode(DatanodeDescriptor localMachine,
-      Map<Node, Node> excludedNodes, long blocksize, int maxNodesPerRack,
+  protected DatanodeDescriptor chooseLocalNode(Node localMachine,
+      Set<Node> excludedNodes, long blocksize, int maxNodesPerRack,
       List<DatanodeDescriptor> results, boolean avoidStaleNodes)
         throws NotEnoughReplicasException {
     // if no local machine, randomly choose one node
@@ -72,14 +73,16 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
       return chooseRandom(NodeBase.ROOT, excludedNodes, 
           blocksize, maxNodesPerRack, results, avoidStaleNodes);
 
-    // otherwise try local machine first
-    Node oldNode = excludedNodes.put(localMachine, localMachine);
-    if (oldNode == null) { // was not in the excluded list
-      if (addIfIsGoodTarget(localMachine, excludedNodes, blocksize,
-          maxNodesPerRack, false, results, avoidStaleNodes) >= 0) {
-        return localMachine;
+    if (localMachine instanceof DatanodeDescriptor) {
+      DatanodeDescriptor localDataNode = (DatanodeDescriptor)localMachine;
+      // otherwise try local machine first
+      if (excludedNodes.add(localMachine)) { // was not in the excluded list
+        if (addIfIsGoodTarget(localDataNode, excludedNodes, blocksize,
+            maxNodesPerRack, false, results, avoidStaleNodes) >= 0) {
+          return localDataNode;
+        }
       }
-    } 
+    }
 
     // try a node on local node group
     DatanodeDescriptor chosenNode = chooseLocalNodeGroup(
@@ -95,8 +98,8 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
 
   
   @Override
-  protected DatanodeDescriptor chooseLocalRack(DatanodeDescriptor localMachine,
-      Map<Node, Node> excludedNodes, long blocksize, int maxNodesPerRack,
+  protected DatanodeDescriptor chooseLocalRack(Node localMachine,
+      Set<Node> excludedNodes, long blocksize, int maxNodesPerRack,
       List<DatanodeDescriptor> results, boolean avoidStaleNodes)
       throws NotEnoughReplicasException {
     // no local machine, so choose a random machine
@@ -142,7 +145,7 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
 
   @Override
   protected void chooseRemoteRack(int numOfReplicas,
-      DatanodeDescriptor localMachine, Map<Node, Node> excludedNodes,
+      DatanodeDescriptor localMachine, Set<Node> excludedNodes,
       long blocksize, int maxReplicasPerRack, List<DatanodeDescriptor> results,
       boolean avoidStaleNodes) throws NotEnoughReplicasException {
     int oldNumOfReplicas = results.size();
@@ -168,8 +171,8 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
    * @return the chosen node
    */
   private DatanodeDescriptor chooseLocalNodeGroup(
-      NetworkTopologyWithNodeGroup clusterMap, DatanodeDescriptor localMachine,
-      Map<Node, Node> excludedNodes, long blocksize, int maxNodesPerRack,
+      NetworkTopologyWithNodeGroup clusterMap, Node localMachine,
+      Set<Node> excludedNodes, long blocksize, int maxNodesPerRack,
       List<DatanodeDescriptor> results, boolean avoidStaleNodes)
       throws NotEnoughReplicasException {
     // no local machine, so choose a random machine
@@ -225,13 +228,12 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
    */
   @Override
   protected int addToExcludedNodes(DatanodeDescriptor chosenNode,
-      Map<Node, Node> excludedNodes) {
+      Set<Node> excludedNodes) {
     int countOfExcludedNodes = 0;
     String nodeGroupScope = chosenNode.getNetworkLocation();
     List<Node> leafNodes = clusterMap.getLeaves(nodeGroupScope);
     for (Node leafNode : leafNodes) {
-      Node node = excludedNodes.put(leafNode, leafNode);
-      if (node == null) {
+      if (excludedNodes.add(leafNode)) {
         // not a existing node in excludedNodes
         countOfExcludedNodes++;
       }
