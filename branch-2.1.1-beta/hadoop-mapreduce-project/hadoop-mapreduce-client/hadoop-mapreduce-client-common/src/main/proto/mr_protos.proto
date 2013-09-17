@@ -1,0 +1,184 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+option java_package = "org.apache.hadoop.mapreduce.v2.proto";
+option java_outer_classname = "MRProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.mapreduce;
+
+import "yarn_protos.proto";
+
+enum TaskTypeProto {
+  MAP = 1;
+  REDUCE = 2;
+}
+
+message JobIdProto {
+  optional hadoop.yarn.ApplicationIdProto app_id = 1;
+  optional int32 id = 2;
+}
+
+message TaskIdProto {
+  optional JobIdProto job_id = 1;
+  optional TaskTypeProto task_type = 2;
+  optional int32 id = 3;
+}
+
+message TaskAttemptIdProto {
+  optional TaskIdProto task_id = 1;
+  optional int32 id = 2;
+}
+
+enum TaskStateProto {
+  TS_NEW = 1;
+  TS_SCHEDULED = 2;
+  TS_RUNNING = 3;
+  TS_SUCCEEDED = 4;
+  TS_FAILED = 5;
+  TS_KILLED = 6;
+}
+
+enum PhaseProto {
+  P_STARTING = 1;
+  P_MAP = 2;
+  P_SHUFFLE = 3;
+  P_SORT = 4;
+  P_REDUCE = 5;
+  P_CLEANUP = 6;
+}
+
+message CounterProto {
+  optional string name = 1;
+  optional string display_name = 2;
+  optional int64 value = 3;
+}
+
+message CounterGroupProto {
+  optional string name = 1;
+  optional string display_name = 2;
+  repeated StringCounterMapProto counters = 3;
+}
+
+message CountersProto {
+  repeated StringCounterGroupMapProto counter_groups = 1;
+}
+
+message TaskReportProto {
+  optional TaskIdProto task_id = 1;
+  optional TaskStateProto task_state = 2;
+  optional float progress = 3;
+  optional int64 start_time = 4;
+  optional int64 finish_time = 5;
+  optional CountersProto counters = 6;
+  repeated TaskAttemptIdProto running_attempts = 7;
+  optional TaskAttemptIdProto successful_attempt = 8;
+  repeated string diagnostics = 9;
+}
+
+enum TaskAttemptStateProto {
+  TA_NEW = 1;
+  TA_STARTING = 2;
+  TA_RUNNING = 3;
+  TA_COMMIT_PENDING = 4;
+  TA_SUCCEEDED = 5;
+  TA_FAILED = 6;
+  TA_KILLED = 7;
+}
+
+message TaskAttemptReportProto {
+  optional TaskAttemptIdProto task_attempt_id = 1;
+  optional TaskAttemptStateProto task_attempt_state = 2;
+  optional float progress = 3;
+  optional int64 start_time = 4;
+  optional int64 finish_time = 5;
+  optional CountersProto counters = 6;
+  optional string diagnostic_info = 7;
+  optional string state_string = 8;
+  optional PhaseProto phase = 9;
+  optional int64 shuffle_finish_time = 10;
+  optional int64 sort_finish_time=11;
+  optional string node_manager_host = 12;
+  optional int32 node_manager_port = 13;
+  optional int32 node_manager_http_port = 14;
+  optional hadoop.yarn.ContainerIdProto container_id = 15;
+}
+
+enum JobStateProto {
+  J_NEW = 1;
+  J_INITED = 2;
+  J_RUNNING = 3;
+  J_SUCCEEDED = 4;
+  J_FAILED = 5;
+  J_KILLED = 6;
+  J_ERROR = 7;
+}
+
+message JobReportProto {
+  optional JobIdProto job_id = 1;
+  optional JobStateProto job_state = 2;
+  optional float map_progress = 3;
+  optional float reduce_progress = 4;
+  optional float cleanup_progress = 5;
+  optional float setup_progress = 6;
+  optional int64 start_time = 7;
+  optional int64 finish_time = 8;
+  optional string user = 9;
+  optional string jobName = 10;
+  optional string trackingUrl = 11;
+  optional string diagnostics = 12;
+  optional string jobFile = 13;
+  repeated AMInfoProto am_infos = 14;
+  optional int64 submit_time = 15;
+  optional bool is_uber = 16 [default = false];
+}
+
+message AMInfoProto {
+  optional hadoop.yarn.ApplicationAttemptIdProto application_attempt_id = 1;
+  optional int64 start_time = 2;
+  optional hadoop.yarn.ContainerIdProto container_id = 3;
+  optional string node_manager_host = 4;
+  optional int32 node_manager_port = 5;
+  optional int32 node_manager_http_port = 6;
+}
+
+enum TaskAttemptCompletionEventStatusProto {
+  TACE_FAILED = 1;
+  TACE_KILLED = 2;
+  TACE_SUCCEEDED = 3;
+  TACE_OBSOLETE = 4;
+  TACE_TIPFAILED = 5;
+}
+
+message TaskAttemptCompletionEventProto {
+  optional TaskAttemptIdProto attempt_id = 1;
+  optional TaskAttemptCompletionEventStatusProto status = 2;
+  optional string map_output_server_address = 3;
+  optional int32 attempt_run_time = 4;
+  optional int32 event_id = 5;
+}
+
+message StringCounterMapProto {
+  optional string key = 1;
+  optional CounterProto value = 2;
+}
+
+message StringCounterGroupMapProto {
+  optional string key = 1;
+  optional CounterGroupProto value = 2;
+}

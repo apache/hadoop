@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+
+  <properties>
+    <title>HFDS Snapshots</title>
+  </properties>
+
+  <body>
+
+  <h1>HDFS Snapshots</h1>
+  <macro name="toc">
+    <param name="section" value="0"/>
+    <param name="fromDepth" value="0"/>
+    <param name="toDepth" value="4"/>
+  </macro>
+
+  <section name="Overview" id="Overview">
+  <p>
+    HDFS Snapshots are read-only point-in-time copies of the file system.
+    Snapshots can be taken on a subtree of the file system or the entire file system.
+    Some common use cases of snapshots are data backup, protection against user errors
+    and disaster recovery.
+  </p>
+
+  <p>
+    The implementation of HDFS Snapshots is efficient:
+  </p>
+  <ul>
+    <li>Snapshot creation is instantaneous:
+        the cost is <em>O(1)</em> excluding the inode lookup time.</li>
+    <li>Additional memory is used only when modifications are made relative to a snapshot:
+        memory usage is <em>O(M)</em>,
+        where <em>M</em> is the number of modified files/directories.</li>
+    <li>Blocks in datanodes are not copied:
+        the snapshot files record the block list and the file size.
+        There is no data copying.</li>
+    <li>Snapshots do not adversely affect regular HDFS operations:
+        modifications are recorded in reverse chronological order
+        so that the current data can be accessed directly.
+        The snapshot data is computed by subtracting the modifications
+        from the current data.</li>
+  </ul>
+
+  <subsection name="Snapshottable Directories" id="SnapshottableDirectories">
+  <p>
+    Snapshots can be taken on any directory once the directory has been set as
+    <em>snapshottable</em>.
+    A snapshottable directory is able to accommodate 65,536 simultaneous snapshots.
+    There is no limit on the number of snapshottable directories.
+    Administrators may set any directory to be snapshottable.
+    If there are snapshots in a snapshottable directory,
+    the directory can be neither deleted nor renamed
+    before all the snapshots are deleted.
+  </p>
+
+  <p>
+    Nested snapshottable directories are currently not allowed.
+    In other words, a directory cannot be set to snapshottable
+    if one of its ancestors/descendants is a snapshottable directory.
+  </p>
+
+  </subsection>
+
+  <subsection name="Snapshot Paths" id="SnapshotPaths">
+  <p>
+    For a snapshottable directory,
+    the path component <em>".snapshot"</em> is used for accessing its snapshots.
+    Suppose <code>/foo</code> is a snapshottable directory,
+    <code>/foo/bar</code> is a file/directory in <code>/foo</code>,
+    and <code>/foo</code> has a snapshot <code>s0</code>.
+    Then, the path <source>/foo/.snapshot/s0/bar</source>
+    refers to the snapshot copy of <code>/foo/bar</code>.
+    The usual API and CLI can work with the ".snapshot" paths.
+    The following are some examples.
+  </p>
+  <ul>
+    <li>Listing all the snapshots under a snapshottable directory:
+      <source>hdfs dfs -ls /foo/.snapshot</source></li>
+    <li>Listing the files in snapshot <code>s0</code>:
+      <source>hdfs dfs -ls /foo/.snapshot/s0</source></li>
+    <li>Copying a file from snapshot <code>s0</code>:
+      <source>hdfs dfs -cp /foo/.snapshot/s0/bar /tmp</source></li>
+  </ul>
+  <p>
+    <b>Note</b> that the name ".snapshot" is now a reserved file name in HDFS
+    so that users cannot create a file/directory with ".snapshot" as the name.
+    If ".snapshot" is used in a previous version of HDFS, it must be renamed before upgrade;
+    otherwise, upgrade will fail. 
+  </p>
+  </subsection>
+  </section>
+
+  <section name="Snapshot Operations" id="SnapshotOperations">
+  <subsection name="Administrator Operations" id="AdministratorOperations">
+  <p>
+    The operations described in this section require superuser privilege.
+  </p>
+
+  <h4>Allow Snapshots</h4>
+  <p>
+    Allowing snapshots of a directory to be created.
+    If the operation completes successfully, the directory becomes snapshottable.
+  </p>
+  <ul>
+    <li>Command:
+      <source>hdfs dfsadmin -allowSnapshot &lt;path&gt;</source></li>
+    <li>Arguments:<table>
+      <tr><td>path</td><td>The path of the snapshottable directory.</td></tr>
+    </table></li>
+  </ul>
+  <p>
+    See also the corresponding Java API
+    <code>void allowSnapshot(Path path)</code> in <code>HdfsAdmin</code>.
+  </p>
+
+  <h4>Disallow Snapshots</h4>
+  <p>
+    Disallowing snapshots of a directory to be created.
+    All snapshots of the directory must be deleted before disallowing snapshots.
+  </p>
+  <ul>
+    <li>Command:
+      <source>hdfs dfsadmin -disallowSnapshot &lt;path&gt;</source></li>
+    <li>Arguments:<table>
+      <tr><td>path</td><td>The path of the snapshottable directory.</td></tr>
+    </table></li>
+  </ul>
+  <p>
+    See also the corresponding Java API
+    <code>void disallowSnapshot(Path path)</code> in <code>HdfsAdmin</code>.
+  </p>
+  </subsection>
+
+  <subsection name="User Operations" id="UserOperations">
+  <p>
+    The section describes user operations.
+    Note that HDFS superuser can perform all the operations
+    without satisfying the permission requirement in the individual operations.
+  </p>
+
+  <h4>Create Snapshots</h4>
+  <p>
+    Create a snapshot of a snapshottable directory.
+    This operation requires owner privilege of the snapshottable directory.
+  </p>
+  <ul>
+    <li>Command:
+      <source>hdfs dfs -createSnapshot &lt;path&gt; [&lt;snapshotName&gt;]</source></li>
+    <li>Arguments:<table>
+      <tr><td>path</td><td>The path of the snapshottable directory.</td></tr>
+      <tr><td>snapshotName</td><td>
+        The snapshot name, which is an optional argument.
+        When it is omitted, a default name is generated using a timestamp with the format
+        <code>"'s'yyyyMMdd-HHmmss.SSS"</code>, e.g. "s20130412-151029.033".
+      </td></tr>
+    </table></li>
+  </ul>
+  <p>
+    See also the corresponding Java API
+    <code>Path createSnapshot(Path path)</code> and
+    <code>Path createSnapshot(Path path, String snapshotName)</code>
+    in <a href="../../api/org/apache/hadoop/fs/FileSystem.html"><code>FileSystem</code></a>.
+    The snapshot path is returned in these methods.
+  </p>
+
+  <h4>Delete Snapshots</h4>
+  <p>
+    Delete a snapshot of from a snapshottable directory.
+    This operation requires owner privilege of the snapshottable directory.
+  </p>
+  <ul>
+    <li>Command:
+      <source>hdfs dfs -deleteSnapshot &lt;path&gt; &lt;snapshotName&gt;</source></li>
+    <li>Arguments:<table>
+      <tr><td>path</td><td>The path of the snapshottable directory.</td></tr>
+      <tr><td>snapshotName</td><td>The snapshot name.</td></tr>
+    </table></li>
+  </ul>
+  <p>
+    See also the corresponding Java API
+    <code>void deleteSnapshot(Path path, String snapshotName)</code>
+    in <a href="../../api/org/apache/hadoop/fs/FileSystem.html"><code>FileSystem</code></a>.
+  </p>
+
+  <h4>Rename Snapshots</h4>
+  <p>
+    Rename a snapshot.
+    This operation requires owner privilege of the snapshottable directory.
+  </p>
+  <ul>
+    <li>Command:
+      <source>hdfs dfs -renameSnapshot &lt;path&gt; &lt;oldName&gt; &lt;newName&gt;</source></li>
+    <li>Arguments:<table>
+      <tr><td>path</td><td>The path of the snapshottable directory.</td></tr>
+      <tr><td>oldName</td><td>The old snapshot name.</td></tr>
+      <tr><td>newName</td><td>The new snapshot name.</td></tr>
+    </table></li>
+  </ul>
+  <p>
+    See also the corresponding Java API
+    <code>void renameSnapshot(Path path, String oldName, String newName)</code>
+    in <a href="../../api/org/apache/hadoop/fs/FileSystem.html"><code>FileSystem</code></a>.
+  </p>
+
+  <h4>Get Snapshottable Directory Listing</h4>
+  <p>
+    Get all the snapshottable directories where the current user has permission to take snapshtos.
+  </p>
+  <ul>
+    <li>Command:
+      <source>hdfs lsSnapshottableDir</source></li>
+    <li>Arguments: none</li>
+  </ul>
+  <p>
+    See also the corresponding Java API
+    <code>SnapshottableDirectoryStatus[] getSnapshottableDirectoryListing()</code>
+    in <code>DistributedFileSystem</code>.
+  </p>
+
+  <h4>Get Snapshots Difference Report</h4>
+  <p>
+    Get the differences between two snapshots.
+    This operation requires read access privilege for all files/directories in both snapshots.
+  </p>
+  <ul>
+    <li>Command:
+      <source>hdfs snapshotDiff &lt;path&gt; &lt;fromSnapshot&gt; &lt;toSnapshot&gt;</source></li>
+    <li>Arguments:<table>
+      <tr><td>path</td><td>The path of the snapshottable directory.</td></tr>
+      <tr><td>fromSnapshot</td><td>The name of the starting snapshot.</td></tr>
+      <tr><td>toSnapshot</td><td>The name of the ending snapshot.</td></tr>
+    </table></li>
+  </ul>
+  <p>
+    See also the corresponding Java API
+    <code>SnapshotDiffReport getSnapshotDiffReport(Path path, String fromSnapshot, String toSnapshot)</code>
+    in <code>DistributedFileSystem</code>.
+  </p>
+
+  </subsection>
+  </section>
+
+  </body>
+</document>

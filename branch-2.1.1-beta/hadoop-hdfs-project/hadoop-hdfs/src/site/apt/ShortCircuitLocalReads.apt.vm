@@ -1,0 +1,98 @@
+
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  Hadoop Distributed File System-${project.version} - Short-Circuit Local Reads
+  ---
+  ---
+  ${maven.build.timestamp}
+
+HDFS Short-Circuit Local Reads
+
+  \[ {{{./index.html}Go Back}} \]
+
+%{toc|section=1|fromDepth=0}
+
+* {Background}
+
+  In <<<HDFS>>>, reads normally go through the <<<DataNode>>>.  Thus, when the
+  client asks the <<<DataNode>>> to read a file, the <<<DataNode>>> reads that
+  file off of the disk and sends the data to the client over a TCP socket.
+  So-called "short-circuit" reads bypass the <<<DataNode>>>, allowing the client
+  to read the file directly.  Obviously, this is only possible in cases where
+  the client is co-located with the data.  Short-circuit reads provide a
+  substantial performance boost to many applications.
+
+* {Configuration}
+
+  To configure short-circuit local reads, you will need to enable
+  <<<libhadoop.so>>>.  See
+  {{{../hadoop-common/NativeLibraries.html}Native
+  Libraries}} for details on enabling this library.
+
+  Short-circuit reads make use of a UNIX domain socket.  This is a special path
+  in the filesystem that allows the client and the DataNodes to communicate.
+  You will need to set a path to this socket.  The DataNode needs to be able to
+  create this path.  On the other hand, it should not be possible for any user
+  except the hdfs user or root to create this path.  For this reason, paths
+  under <<</var/run>>> or <<</var/lib>>> are often used.
+
+  Short-circuit local reads need to be configured on both the <<<DataNode>>>
+  and the client.
+
+* {Example Configuration}
+
+  Here is an example configuration.
+
+----
+<configuration>
+  <property>
+    <name>dfs.client.read.shortcircuit</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>dfs.domain.socket.path</name>
+    <value>/var/lib/hadoop-hdfs/dn_socket</value>
+  </property>
+</configuration>
+----
+
+* {Configuration Keys}
+
+  * dfs.client.read.shortcircuit
+
+  This configuration parameter turns on short-circuit local reads.
+
+  * dfs.client.read.shortcircuit.skip.checkusm
+
+  If this configuration parameter is set, short-circuit local reads will skip
+  checksums.  This is normally not recommended, but it may be useful for
+  special setups.  You might consider using this if you are doing your own
+  checksumming outside of HDFS.
+
+  * dfs.client.read.shortcircuit.streams.cache.size
+
+  The DFSClient maintains a cache of recently opened file descriptors.  This
+  parameter controls the size of that cache.  Setting this higher will use more
+  file descriptors, but potentially provide better performance on workloads
+  involving lots of seeks.
+
+  * dfs.client.read.shortcircuit.streams.cache.expiry.ms
+
+  This controls the minimum amount of time file descriptors need to sit in the
+  FileInputStreamCache before they can be closed for being inactive for too long.
+
+  * dfs.client.domain.socket.data.traffic
+
+  This control whether we will try to pass normal data traffic over UNIX domain
+  sockets.

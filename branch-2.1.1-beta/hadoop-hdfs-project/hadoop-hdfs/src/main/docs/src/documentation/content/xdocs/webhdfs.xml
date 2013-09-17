@@ -1,0 +1,1577 @@
+<?xml version="1.0"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  <header>
+    <title>WebHDFS REST API</title>
+  </header>
+
+  <body>
+    <section>
+      <title>Document Conventions</title>
+<table>
+<tr><td><code>Monospaced</code></td><td>Used for commands, HTTP request and responses and code blocks.</td></tr>
+<tr><td><code>&lt;Monospaced&gt;</code></td><td>User entered values.</td></tr>
+<tr><td><code>[Monospaced]</code></td><td>Optional values.  When the value is not specified, the default value is used.</td></tr>
+<tr><td><em>Italics</em></td><td>Important phrases and words.</td></tr>
+</table>
+    </section>
+<!-- ***************************************************************************** -->
+    <section>
+      <title>Introduction</title>
+<p>
+  The HTTP REST API supports the complete FileSystem interface for HDFS.
+  The operations and the corresponding FileSystem methods are shown in the next section.
+  The Section <a href="#ParameterDictionary">HTTP Query Parameter Dictionary</a> specifies the parameter details
+  such as the defaults and the valid values.
+</p>
+      <section id="Operations">
+        <title>Operations</title>
+<ul>
+  <li>HTTP GET
+  <ul>
+    <li><a href="#OPEN"><code>OPEN</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/open">FileSystem.open</a>)
+    </li>
+    <li><a href="#GETFILESTATUS"><code>GETFILESTATUS</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/getFileStatus">FileSystem.getFileStatus</a>)
+    </li>
+    <li><a href="#LISTSTATUS"><code>LISTSTATUS</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/listStatus">FileSystem.listStatus</a>)
+    </li>
+    <li><a href="#GETCONTENTSUMMARY"><code>GETCONTENTSUMMARY</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/getContentSummary">FileSystem.getContentSummary</a>)
+    </li>
+    <li><a href="#GETFILECHECKSUM"><code>GETFILECHECKSUM</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/getFileChecksum">FileSystem.getFileChecksum</a>)
+    </li>
+    <li><a href="#GETHOMEDIRECTORY"><code>GETHOMEDIRECTORY</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/getHomeDirectory">FileSystem.getHomeDirectory</a>)
+    </li>
+    <li><a href="#GETDELEGATIONTOKEN"><code>GETDELEGATIONTOKEN</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/getDelegationToken">FileSystem.getDelegationToken</a>)
+    </li>
+  </ul></li>
+  <li>HTTP PUT
+  <ul>
+    <li><a href="#CREATE"><code>CREATE</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/create">FileSystem.create</a>)
+    </li>
+    <li><a href="#MKDIRS"><code>MKDIRS</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/mkdirs">FileSystem.mkdirs</a>)
+    </li>
+    <li><a href="#RENAME"><code>RENAME</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/rename">FileSystem.rename</a>)
+    </li>
+    <li><a href="#SETREPLICATION"><code>SETREPLICATION</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/setReplication">FileSystem.setReplication</a>)
+    </li>
+    <li><a href="#SETOWNER"><code>SETOWNER</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/setOwner">FileSystem.setOwner</a>)
+    </li>
+    <li><a href="#SETPERMISSION"><code>SETPERMISSION</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/setPermission">FileSystem.setPermission</a>)
+    </li>
+    <li><a href="#SETTIMES"><code>SETTIMES</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/setTimes">FileSystem.setTimes</a>)
+    </li>
+    <li><a href="#RENEWDELEGATIONTOKEN"><code>RENEWDELEGATIONTOKEN</code></a>
+        (see DistributedFileSystem.renewDelegationToken)
+    </li>
+    <li><a href="#CANCELDELEGATIONTOKEN"><code>CANCELDELEGATIONTOKEN</code></a>
+        (see DistributedFileSystem.cancelDelegationToken)
+    </li>
+  </ul></li>
+  <li>HTTP POST
+  <ul>
+    <li><a href="#APPEND"><code>APPEND</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/append">FileSystem.append</a>)
+    </li>
+  </ul></li>
+  <li>HTTP DELETE
+  <ul>
+    <li><a href="#DELETE"><code>DELETE</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/delete">FileSystem.delete</a>)
+    </li>
+  </ul></li>
+</ul>
+
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="FsURIvsHTTP_URL">
+        <title>FileSystem URIs vs HTTP URLs</title>
+<p>
+  The FileSystem scheme of WebHDFS is "<code>webhdfs://</code>".
+  A WebHDFS FileSystem URI has the following format.
+</p>
+<source>
+  webhdfs://&lt;HOST&gt;:&lt;HTTP_PORT&gt;/&lt;PATH&gt;
+</source>
+<p>
+  The above WebHDFS URI corresponds to the below HDFS URI.
+</p>
+<source>
+  hdfs://&lt;HOST&gt;:&lt;RPC_PORT&gt;/&lt;PATH&gt;
+</source>
+<p>
+  In the REST API, the prefix "<code>/webhdfs/v1</code>" is inserted in the path and a query is appended at the end.
+  Therefore, the corresponding HTTP URL has the following format.
+</p>
+<source>
+  http://&lt;HOST&gt;:&lt;HTTP_PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=...
+</source>
+      </section>
+<!-- ***************************************************************************** -->
+      <section>
+        <title>HDFS Configuration Options</title>
+<p>
+  Below are the HDFS configuration options for WebHDFS.
+</p>
+<table>
+<tr><th>Property Name</th><th>Description</th></tr>
+<tr><td><code>dfs.webhdfs.enabled</code></td>
+<td>Enable/disable WebHDFS in Namenodes and Datanodes
+</td></tr>
+<tr><td><code>dfs.web.authentication.kerberos.principal</code></td>
+<td>The HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint.
+    The HTTP Kerberos principal MUST start with 'HTTP/' per Kerberos
+    HTTP SPNEGO specification.
+</td></tr>
+<tr><td><code>dfs.web.authentication.kerberos.keytab</code></td>
+<td>The Kerberos keytab file with the credentials for the
+    HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint.
+</td></tr>
+</table>
+      </section>
+    </section>
+<!-- ***************************************************************************** -->
+    <section id="Authentication">
+      <title>Authentication</title>
+<p>
+  When security is <em>off</em>, the authenticated user is the username specified in the <code>user.name</code> query parameter.
+  If the <code>user.name</code> parameter is not set,
+  the server may either set the authenticated user to a default web user, if there is any, or return an error response.
+</p>
+<p>
+  When security is <em>on</em>, authentication is performed by either Hadoop delegation token or Kerberos SPNEGO.
+  If a token is set in the <code>delegation</code> query parameter, the authenticated user is the user encoded in the token.
+  If the <code>delegation</code> parameter is not set, the user is authenticated by Kerberos SPNEGO.
+</p>
+<p>
+Below are examples using the <code>curl</code> command tool.
+</p>
+<ol>
+  <li>
+    Authentication when security is off:
+    <source>
+curl -i "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?[user.name=&lt;USER&gt;&amp;]op=..."
+    </source>
+  </li><li>
+    Authentication using Kerberos SPNEGO when security is on:
+    <source>
+curl -i --negotiate -u : "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=..."
+    </source>
+  </li><li>
+    Authentication using Hadoop delegation token when security is on:
+    <source>
+curl -i "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?delegation=&lt;TOKEN&gt;&amp;op=..."
+    </source>
+  </li>
+</ol>
+    </section>
+<!-- ***************************************************************************** -->
+    <section id="ProxyUsers">
+      <title>Proxy Users</title>
+<p>
+  When the proxy user feature is enabled, a proxy user <em>P</em> may submit a request on behalf of another user <em>U</em>.
+  The username of <em>U</em> must be specified in the <code>doas</code> query parameter unless a delegation token is presented in authentication.
+  In such case, the information of both users <em>P</em> and <em>U</em> must be encoded in the delegation token.
+</p>
+<ol>
+  <li>
+    A proxy request when security is off:
+    <source>
+curl -i "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?[user.name=&lt;USER&gt;&amp;]doas=&lt;USER&gt;&amp;op=..."
+    </source>
+  </li><li>
+    A proxy request using Kerberos SPNEGO when security is on:
+    <source>
+curl -i --negotiate -u : "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?doas=&lt;USER&gt;&amp;op=..."
+    </source>
+  </li><li>
+    A proxy request using Hadoop delegation token when security is on:
+    <source>
+curl -i "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?delegation=&lt;TOKEN&gt;&amp;op=..."
+    </source>
+  </li>
+</ol>
+    </section>
+<!-- ***************************************************************************** -->
+<!-- ***************************************************************************** -->
+    <section>
+      <title>File and Directory Operations</title>
+      <section id="CREATE">
+        <title>Create and Write to a File</title>
+<ul>
+  <li>Step 1: Submit a HTTP PUT request without automatically following redirects and without sending the file data.
+    <source>
+curl -i -X PUT "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=CREATE
+                    [&amp;overwrite=&lt;true|false&gt;][&amp;blocksize=&lt;LONG&gt;][&amp;replication=&lt;SHORT&gt;]
+                    [&amp;permission=&lt;OCTAL&gt;][&amp;buffersize=&lt;INT&gt;]"
+    </source>
+The request is redirected to a datanode where the file data is to be written:
+    <source>
+HTTP/1.1 307 TEMPORARY_REDIRECT
+Location: http://&lt;DATANODE&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=CREATE...
+Content-Length: 0
+    </source>
+  </li>
+  <li>Step 2: Submit another HTTP PUT request using the URL in the <code>Location</code> header with the file data to be written.
+    <source>
+curl -i -X PUT -T &lt;LOCAL_FILE&gt; "http://&lt;DATANODE&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=CREATE..."
+    </source>
+The client receives a <code>201 Created</code> response with zero content length
+and the WebHDFS URI of the file in the <code>Location</code> header:
+    <source>
+HTTP/1.1 201 Created
+Location: webhdfs://&lt;HOST&gt;:&lt;PORT&gt;/&lt;PATH&gt;
+Content-Length: 0
+    </source>
+  </li>
+</ul>
+<p>
+  <strong>Note</strong> that the reason of having two-step create/append is
+  for preventing clients to send out data before the redirect.
+  This issue is addressed by the "<code>Expect: 100-continue</code>" header in HTTP/1.1;
+  see <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.2.3">RFC 2616, Section 8.2.3</a>.
+  Unfortunately, there are software library bugs (e.g. Jetty 6 HTTP server and Java 6 HTTP client),
+  which do not correctly implement "<code>Expect: 100-continue</code>".
+  The two-step create/append is a temporary workaround for the software library bugs.
+</p>
+<p>
+  See also:
+  <a href="#overwrite"><code>overwrite</code></a>,
+  <a href="#blocksize"><code>blocksize</code></a>,
+  <a href="#replication"><code>replication</code></a>,
+  <a href="#permission"><code>permission</code></a>,
+  <a href="#buffersize"><code>buffersize</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/create">FileSystem.create</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="APPEND">
+        <title>Append to a File</title>
+<ul>
+  <li>Step 1: Submit a HTTP POST request without automatically following redirects and without sending the file data.
+    <source>
+curl -i -X POST "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=APPEND[&amp;buffersize=&lt;INT&gt;]"
+    </source>
+The request is redirected to a datanode where the file data is to be appended:
+    <source>
+HTTP/1.1 307 TEMPORARY_REDIRECT
+Location: http://&lt;DATANODE&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=APPEND...
+Content-Length: 0
+    </source>
+  </li>
+  <li>Step 2: Submit another HTTP POST request using the URL in the <code>Location</code> header with the file data to be appended.
+    <source>
+curl -i -X POST -T &lt;LOCAL_FILE&gt; "http://&lt;DATANODE&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=APPEND..."
+    </source>
+The client receives a response with zero content length:
+    <source>
+HTTP/1.1 200 OK
+Content-Length: 0
+    </source>
+  </li>
+</ul>
+<p><em>
+  See the note in the previous section for the description of why this operation requires two steps.
+</em></p>
+<p>
+  See also:
+  <a href="#buffersize"><code>buffersize</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/append">FileSystem.append</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="OPEN">
+        <title>Open and Read a File</title>
+<ul>
+  <li>Submit a HTTP GET request with automatically following redirects.
+    <source>
+curl -i -L "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=OPEN
+                    [&amp;offset=&lt;LONG&gt;][&amp;length=&lt;LONG&gt;][&amp;buffersize=&lt;INT&gt;]"
+    </source>
+The request is redirected to a datanode where the file data can be read:
+    <source>
+HTTP/1.1 307 TEMPORARY_REDIRECT
+Location: http://&lt;DATANODE&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=OPEN...
+Content-Length: 0
+    </source>
+The client follows the redirect to the datanode and receives the file data:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/octet-stream
+Content-Length: 22
+
+Hello, webhdfs user!
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#offset"><code>offset</code></a>,
+  <a href="#length"><code>length</code></a>,
+  <a href="#buffersize"><code>buffersize</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/open">FileSystem.open</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="MKDIRS">
+        <title>Make a Directory</title>
+<ul>
+  <li>Submit a HTTP PUT request.
+    <source>
+        curl -i -X PUT "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=MKDIRS[&amp;permission=&lt;OCTAL&gt;]"
+    </source>
+The client receives a response with a <a href="#boolean"><code>boolean</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"boolean": true}
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#permission"><code>permission</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/mkdirs">FileSystem.mkdirs</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="RENAME">
+        <title>Rename a File/Directory</title>
+<ul>
+  <li>Submit a HTTP PUT request.
+    <source>
+curl -i -X PUT "&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=RENAME&amp;destination=&lt;PATH&gt;"
+    </source>
+The client receives a response with a <a href="#boolean"><code>boolean</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"boolean": true}
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#destination"><code>destination</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/rename">FileSystem.rename</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="DELETE">
+        <title>Delete a File/Directory</title>
+<ul>
+  <li>Submit a HTTP DELETE request.
+    <source>
+curl -i -X DELETE "http://&lt;host&gt;:&lt;port&gt;/webhdfs/v1/&lt;path&gt;?op=DELETE
+                              [&amp;recursive=&lt;true|false&gt;]"
+    </source>
+The client receives a response with a <a href="#boolean"><code>boolean</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"boolean": true}
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#recursive"><code>recursive</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/delete">FileSystem.delete</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="GETFILESTATUS">
+        <title>Status of a File/Directory</title>
+<ul>
+  <li>Submit a HTTP GET request.
+    <source>
+curl -i  "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=GETFILESTATUS"
+    </source>
+The client receives a response with a <a href="#FileStatus"><code>FileStatus</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+  "FileStatus":
+  {
+    "accessTime"      : 0,
+    "blockSize"       : 0,
+    "group"           : "supergroup",
+    "length"          : 0,             //in bytes, zero for directories
+    "modificationTime": 1320173277227,
+    "owner"           : "webuser",
+    "pathSuffix"      : "",
+    "permission"      : "777",
+    "replication"     : 0,
+    "type"            : "DIRECTORY"    //enum {FILE, DIRECTORY, SYMLINK}
+  }
+}
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/getFileStatus">FileSystem.getFileStatus</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="LISTSTATUS">
+        <title>List a Directory</title>
+<ul>
+  <li>Submit a HTTP GET request.
+    <source>
+curl -i  "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=LISTSTATUS"
+    </source>
+The client receives a response with a <a href="#FileStatuses"><code>FileStatuses</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 427
+
+{
+  "FileStatuses":
+  {
+    "FileStatus":
+    [
+      {
+        "accessTime"      : 1320171722771,
+        "blockSize"       : 33554432,
+        "group"           : "supergroup",
+        "length"          : 24930,
+        "modificationTime": 1320171722771,
+        "owner"           : "webuser",
+        "pathSuffix"      : "a.patch",
+        "permission"      : "644",
+        "replication"     : 1,
+        "type"            : "FILE"
+      },
+      {
+        "accessTime"      : 0,
+        "blockSize"       : 0,
+        "group"           : "supergroup",
+        "length"          : 0,
+        "modificationTime": 1320895981256,
+        "owner"           : "szetszwo",
+        "pathSuffix"      : "bar",
+        "permission"      : "711",
+        "replication"     : 0,
+        "type"            : "DIRECTORY"
+      },
+      ...
+    ]
+  }
+}
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/listStatus">FileSystem.listStatus</a>
+</p>
+      </section>
+    </section>
+<!-- ***************************************************************************** -->
+<!-- ***************************************************************************** -->
+    <section>
+      <title>Other File System Operations</title>
+      <section id="GETCONTENTSUMMARY">
+        <title>Get Content Summary of a Directory</title>
+<ul>
+  <li>Submit a HTTP GET request.
+    <source>
+curl -i "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=GETCONTENTSUMMARY"
+    </source>
+The client receives a response with a <a href="#ContentSummary"><code>ContentSummary</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+  "ContentSummary":
+  {
+    "directoryCount": 2,
+    "fileCount"     : 1,
+    "length"        : 24930,
+    "quota"         : -1,
+    "spaceConsumed" : 24930,
+    "spaceQuota"    : -1
+  }
+}
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/getContentSummary">FileSystem.getContentSummary</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="GETFILECHECKSUM">
+        <title>Get File Checksum</title>
+<ul>
+  <li>Submit a HTTP GET request.
+    <source>
+curl -i "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=GETFILECHECKSUM"
+    </source>
+The request is redirected to a datanode:
+    <source>
+HTTP/1.1 307 TEMPORARY_REDIRECT
+Location: http://&lt;DATANODE&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=GETFILECHECKSUM...
+Content-Length: 0
+    </source>
+The client follows the redirect to the datanode and receives a <a href="#FileChecksum"><code>FileChecksum</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+  "FileChecksum":
+  {
+    "algorithm": "MD5-of-1MD5-of-512CRC32",
+    "bytes"    : "eadb10de24aa315748930df6e185c0d ...",
+    "length"   : 28
+  }
+}
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/getFileChecksum">FileSystem.getFileChecksum</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="GETHOMEDIRECTORY">
+        <title>Get Home Directory</title>
+<ul>
+  <li>Submit a HTTP GET request.
+    <source>
+curl -i "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/?op=GETHOMEDIRECTORY"
+    </source>
+The client receives a response with a <a href="#Path"><code>Path</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"Path": "/user/szetszwo"}
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/getHomeDirectory">FileSystem.getHomeDirectory</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="SETPERMISSION">
+        <title>Set Permission</title>
+<ul>
+  <li>Submit a HTTP PUT request.
+    <source>
+curl -i -X PUT "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=SETPERMISSION
+                              [&amp;permission=&lt;OCTAL&gt;]"
+    </source>
+The client receives a response with zero content length:
+    <source>
+HTTP/1.1 200 OK
+Content-Length: 0
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#permission"><code>permission</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/setPermission">FileSystem.setPermission</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="SETOWNER">
+        <title>Set Owner</title>
+<ul>
+  <li>Submit a HTTP PUT request.
+    <source>
+curl -i -X PUT "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=SETOWNER
+                              [&amp;owner=&lt;USER&gt;][&amp;group=&lt;GROUP&gt;]"
+    </source>
+The client receives a response with zero content length:
+    <source>
+HTTP/1.1 200 OK
+Content-Length: 0
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#owner"><code>owner</code></a>,
+  <a href="#group"><code>group</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/setOwner">FileSystem.setOwner</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="SETREPLICATION">
+        <title>Set Replication Factor</title>
+<ul>
+  <li>Submit a HTTP PUT request.
+    <source>
+curl -i -X PUT "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=SETREPLICATION
+                              [&amp;replication=&lt;SHORT&gt;]"
+    </source>
+The client receives a response with a <a href="#boolean"><code>boolean</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"boolean": true}
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#replication"><code>replication</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/setReplication">FileSystem.setReplication</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="SETTIMES">
+        <title>Set Access or Modification Time</title>
+<ul>
+  <li>Submit a HTTP PUT request.
+    <source>
+curl -i -X PUT "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=SETTIMES
+                              [&amp;modificationtime=&lt;TIME&gt;][&amp;accesstime=&lt;TIME&gt;]"
+    </source>
+The client receives a response with zero content length:
+    <source>
+HTTP/1.1 200 OK
+Content-Length: 0
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#modificationtime"><code>modificationtime</code></a>,
+  <a href="#accesstime"><code>accesstime</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/setTimes">FileSystem.setTimes</a>
+</p>
+      </section>
+    </section>
+<!-- ***************************************************************************** -->
+<!-- ***************************************************************************** -->
+    <section>
+      <title>Delegation Token Operations</title>
+      <section id="GETDELEGATIONTOKEN">
+        <title>Get Delegation Token</title>
+<ul>
+  <li>Submit a HTTP GET request.
+    <source>
+curl -i "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/?op=GETDELEGATIONTOKEN&amp;renewer=&lt;USER&gt;"
+    </source>
+The client receives a response with a <a href="#Token"><code>Token</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+  "Token":
+  {
+    "urlString": "JQAIaG9y..."
+  }
+}
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#renewer"><code>renewer</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/getDelegationToken">FileSystem.getDelegationToken</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="RENEWDELEGATIONTOKEN">
+        <title>Renew Delegation Token</title>
+<ul>
+  <li>Submit a HTTP PUT request.
+    <source>
+curl -i -X PUT "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/?op=RENEWDELEGATIONTOKEN&amp;token=&lt;TOKEN&gt;"
+    </source>
+The client receives a response with a <a href="#long"><code>long</code> JSON object</a>:
+    <source>
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"long": 1320962673997}           //the new expiration time
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#token"><code>token</code></a>,
+  DistributedFileSystem.renewDelegationToken
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="CANCELDELEGATIONTOKEN">
+        <title>Cancel Delegation Token</title>
+<ul>
+  <li>Submit a HTTP PUT request.
+    <source>
+curl -i -X PUT "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/?op=CANCELDELEGATIONTOKEN&amp;token=&lt;TOKEN&gt;"
+    </source>
+The client receives a response with zero content length:
+    <source>
+HTTP/1.1 200 OK
+Content-Length: 0
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#token"><code>token</code></a>,
+  DistributedFileSystem.cancelDelegationToken
+</p>
+      </section>
+    </section>
+<!-- ***************************************************************************** -->
+<!-- ***************************************************************************** -->
+    <section>
+      <title>Error Responses</title>
+<p>
+  When an operation fails, the server may throw an exception.
+  The JSON schema of error responses is defined in <a href="#RemoteException"><code>RemoteException</code> JSON schema</a>.
+  The table below shows the mapping from exceptions to HTTP response codes.
+</p>
+      <section>
+        <title>HTTP Response Codes</title>
+<table>
+<tr><th>Exceptions</th><th>HTTP Response Codes</th></tr>
+<tr><td><code>IllegalArgumentException     </code></td><td><code>400 Bad Request          </code></td></tr>
+<tr><td><code>UnsupportedOperationException</code></td><td><code>400 Bad Request          </code></td></tr>
+<tr><td><code>SecurityException            </code></td><td><code>401 Unauthorized         </code></td></tr>
+<tr><td><code>IOException                  </code></td><td><code>403 Forbidden            </code></td></tr>
+<tr><td><code>FileNotFoundException        </code></td><td><code>404 Not Found            </code></td></tr>
+<tr><td><code>RumtimeException             </code></td><td><code>500 Internal Server Error</code></td></tr>
+</table>
+<p>
+  Below are examples of exception responses.
+</p>
+<!-- ***************************************************************************** -->
+        <section>
+          <title>Illegal Argument Exception</title>
+<source>
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+  "RemoteException":
+  {
+    "exception"    : "IllegalArgumentException",
+    "javaClassName": "java.lang.IllegalArgumentException",
+    "message"      : "Invalid value for webhdfs parameter \"permission\": ..."
+  }
+}
+</source>
+        </section>
+<!-- ***************************************************************************** -->
+        <section>
+          <title>Security Exception</title>
+<source>
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+  "RemoteException":
+  {
+    "exception"    : "SecurityException",
+    "javaClassName": "java.lang.SecurityException",
+    "message"      : "Failed to obtain user group information: ..."
+  }
+}
+</source>
+        </section>
+<!-- ***************************************************************************** -->
+        <section>
+          <title>Access Control Exception</title>
+<source>
+HTTP/1.1 403 Forbidden
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+  "RemoteException":
+  {
+    "exception"    : "AccessControlException",
+    "javaClassName": "org.apache.hadoop.security.AccessControlException",
+    "message"      : "Permission denied: ..."
+  }
+}
+</source>
+        </section>
+<!-- ***************************************************************************** -->
+        <section>
+          <title>File Not Found Exception</title>
+<source>
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+  "RemoteException":
+  {
+    "exception"    : "FileNotFoundException",
+    "javaClassName": "java.io.FileNotFoundException",
+    "message"      : "File does not exist: /foo/a.patch"
+  }
+}
+</source>
+        </section>
+      </section>
+    </section>
+<!-- ***************************************************************************** -->
+<!-- ***************************************************************************** -->
+    <section>
+      <title>JSON Schemas</title>
+<p>
+All operations, except for <a href="#OPEN"><code>OPEN</code></a>,
+either return a zero-length response or a JSON response .
+For <a href="#OPEN"><code>OPEN</code></a>, the response is an octet-stream.
+The JSON schemas are shown below.
+See <a href="http://tools.ietf.org/id/draft-zyp-json-schema-03.html">draft-zyp-json-schema-03</a>
+for the syntax definitions of the JSON schemas.
+</p>
+      <section id="boolean">
+        <title>Boolean JSON Schema</title>
+<source>
+{
+  "name"      : "boolean",
+  "properties":
+  {
+    "boolean":
+    {
+      "description": "A boolean value",
+      "type"       : "boolean",
+      "required"   : true
+    }
+  }
+}
+</source>
+<p>
+  See also:
+  <a href="#MKDIRS"><code>MKDIRS</code></a>,
+  <a href="#RENAME"><code>RENAME</code></a>,
+  <a href="#DELETE"><code>DELETE</code></a>,
+  <a href="#SETREPLICATION"><code>SETREPLICATION</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="ContentSummary">
+        <title>ContentSummary JSON Schema</title>
+<source>
+{
+  "name"      : "ContentSummary",
+  "properties":
+  {
+    "ContentSummary":
+    {
+      "type"      : "object",
+      "properties":
+      {
+        "directoryCount":
+        {
+          "description": "The number of directories.",
+          "type"       : "integer",
+          "required"   : true
+        },
+        "fileCount":
+        {
+          "description": "The number of files.",
+          "type"       : "integer",
+          "required"   : true
+        },
+        "length":
+        {
+          "description": "The number of bytes used by the content.",
+          "type"       : "integer",
+          "required"   : true
+        },
+        "quota":
+        {
+          "description": "The namespace quota of this directory.",
+          "type"       : "integer",
+          "required"   : true
+        },
+        "spaceConsumed":
+        {
+          "description": "The disk space consumed by the content.",
+          "type"       : "integer",
+          "required"   : true
+        },
+        "spaceQuota":
+        {
+          "description": "The disk space quota.",
+          "type"       : "integer",
+          "required"   : true
+        }
+      }
+    }
+  }
+}
+</source>
+<p>
+  See also:
+  <a href="#GETCONTENTSUMMARY"><code>GETCONTENTSUMMARY</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="FileChecksum">
+        <title>FileChecksum JSON Schema</title>
+<source>
+{
+  "name"      : "FileChecksum",
+  "properties":
+  {
+    "FileChecksum":
+    {
+      "type"      : "object",
+      "properties":
+      {
+        "algorithm":
+        {
+          "description": "The name of the checksum algorithm.",
+          "type"       : "string",
+          "required"   : true
+        },
+        "bytes":
+        {
+          "description": "The byte sequence of the checksum in hexadecimal.",
+          "type"       : "string",
+          "required"   : true
+        },
+        "length":
+        {
+          "description": "The length of the bytes (not the length of the string).",
+          "type"       : "integer",
+          "required"   : true
+        }
+      }
+    }
+  }
+}
+</source>
+<p>
+  See also:
+  <a href="#GETFILECHECKSUM"><code>GETFILECHECKSUM</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="FileStatus">
+        <title>FileStatus JSON Schema</title>
+<source>
+{
+  "name"      : "FileStatus",
+  "properties":
+  {
+    "FileStatus": fileStatusProperties      //See <a href="#fileStatusProperties">FileStatus Properties</a>
+  }
+}
+</source>
+<p>
+  See also:
+  <a href="#GETFILESTATUS"><code>GETFILESTATUS</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/FileStatus">FileStatus</a>
+</p>
+      <section id="fileStatusProperties">
+        <title>FileStatus Properties</title>
+<p>
+  JavaScript syntax is used to define <code>fileStatusProperties</code>
+  so that it can be referred in both <code>FileStatus</code> and <code>FileStatuses</code> JSON schemas.
+</p>
+<source>
+var fileStatusProperties =
+{
+  "type"      : "object",
+  "properties":
+  {
+    "accessTime":
+    {
+      "description": "The access time.",
+      "type"       : "integer",
+      "required"   : true
+    },
+    "blockSize":
+    {
+      "description": "The block size of a file.",
+      "type"       : "integer",
+      "required"   : true
+    },
+    "group":
+    {
+      "description": "The group owner.",
+      "type"       : "string",
+      "required"   : true
+    },
+    "length":
+    {
+      "description": "The number of bytes in a file.",
+      "type"       : "integer",
+      "required"   : true
+    },
+    "modificationTime":
+    {
+      "description": "The modification time.",
+      "type"       : "integer",
+      "required"   : true
+    },
+    "owner":
+    {
+      "description": "The user who is the owner.",
+      "type"       : "string",
+      "required"   : true
+    },
+    "pathSuffix":
+    {
+      "description": "The path suffix.",
+      "type"       : "string",
+      "required"   : true
+    },
+    "permission":
+    {
+      "description": "The permission represented as a octal string.",
+      "type"       : "string",
+      "required"   : true
+    },
+    "replication":
+    {
+      "description": "The number of replication of a file.",
+      "type"       : "integer",
+      "required"   : true
+    },
+   "symlink":                                         //an optional property
+    {
+      "description": "The link target of a symlink.",
+      "type"       : "string"
+    },
+   "type":
+    {
+      "description": "The type of the path object.",
+      "enum"       : ["FILE", "DIRECTORY", "SYMLINK"],
+      "required"   : true
+    }
+  }
+};
+</source>
+        </section>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="FileStatuses">
+        <title>FileStatuses JSON Schema</title>
+<p>
+  A <code>FileStatuses</code> JSON object represents an array of <code>FileStatus</code> JSON objects.
+</p>
+<source>
+{
+  "name"      : "FileStatuses",
+  "properties":
+  {
+    "FileStatuses":
+    {
+      "type"      : "object",
+      "properties":
+      {
+        "FileStatus":
+        {
+          "description": "An array of FileStatus",
+          "type"       : "array",
+          "items"      : fileStatusProperties      //See <a href="#fileStatusProperties">FileStatus Properties</a>
+        }
+      }
+    }
+  }
+}
+</source>
+<p>
+  See also:
+  <a href="#LISTSTATUS"><code>LISTSTATUS</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/FileStatus">FileStatus</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="long">
+        <title>Long JSON Schema</title>
+<source>
+{
+  "name"      : "long",
+  "properties":
+  {
+    "long":
+    {
+      "description": "A long integer value",
+      "type"       : "integer",
+      "required"   : true
+    }
+  }
+}
+</source>
+<p>
+  See also:
+  <a href="#RENEWDELEGATIONTOKEN"><code>RENEWDELEGATIONTOKEN</code></a>,
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="Path">
+        <title>Path JSON Schema</title>
+<source>
+{
+  "name"      : "Path",
+  "properties":
+  {
+    "Path":
+    {
+      "description": "The string representation a Path.",
+      "type"       : "string",
+      "required"   : true
+    }
+  }
+}
+</source>
+<p>
+  See also:
+  <a href="#GETHOMEDIRECTORY"><code>GETHOMEDIRECTORY</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/Path">Path</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="RemoteException">
+        <title>RemoteException JSON Schema</title>
+<source>
+{
+  "name"      : "RemoteException",
+  "properties":
+  {
+    "RemoteException":
+    {
+      "type"      : "object",
+      "properties":
+      {
+        "exception":
+        {
+          "description": "Name of the exception",
+          "type"       : "string",
+          "required"   : true
+        },
+        "message":
+        {
+          "description": "Exception message",
+          "type"       : "string",
+          "required"   : true
+        },
+        "javaClassName":                                     //an optional property
+        {
+          "description": "Java class name of the exception",
+          "type"       : "string",
+        }
+      }
+    }
+  }
+}
+</source>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="Token">
+        <title>Token JSON Schema</title>
+<source>
+{
+  "name"      : "Token",
+  "properties":
+  {
+    "Token":
+    {
+      "type"      : "object",
+      "properties":
+      {
+        "urlString":
+        {
+          "description": "A delegation token encoded as a URL safe string.",
+          "type"       : "string",
+          "required"   : true
+        }
+      }
+    }
+  }
+}
+</source>
+<p>
+  See also:
+  <a href="#GETDELEGATIONTOKEN"><code>GETDELEGATIONTOKEN</code></a>,
+  the note in <a href="#delegation">Delegation</a>.
+</p>
+      </section>
+    </section>
+<!-- ***************************************************************************** -->
+<!-- ***************************************************************************** -->
+    <section id="ParameterDictionary">
+      <title>HTTP Query Parameter Dictionary</title>
+      <section id="accesstime">
+        <title>Access Time</title>
+<table>
+  <tr><td>Name</td><td><code>accesstime</code></td></tr>
+  <tr><td>Description</td><td>The access time of a file/directory.</td></tr>
+  <tr><td>Type</td><td>long</td></tr>
+  <tr><td>Default Value</td><td>-1 (means keeping it unchanged)</td></tr>
+  <tr><td>Valid Values</td><td>-1 or a timestamp</td></tr>
+  <tr><td>Syntax</td><td>Any integer.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#SETTIMES"><code>SETTIMES</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="blocksize">
+        <title>Block Size</title>
+<table>
+  <tr><td>Name</td><td><code>blocksize</code></td></tr>
+  <tr><td>Description</td><td>The block size of a file.</td></tr>
+  <tr><td>Type</td><td>long</td></tr>
+  <tr><td>Default Value</td><td>Specified in the configuration.</td></tr>
+  <tr><td>Valid Values</td><td>&gt; 0</td></tr>
+  <tr><td>Syntax</td><td>Any integer.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#CREATE"><code>CREATE</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="buffersize">
+        <title>Buffer Size</title>
+<table>
+  <tr><td>Name</td><td><code>buffersize</code></td></tr>
+  <tr><td>Description</td><td>The size of the buffer used in transferring data.</td></tr>
+  <tr><td>Type</td><td>int</td></tr>
+  <tr><td>Default Value</td><td>Specified in the configuration.</td></tr>
+  <tr><td>Valid Values</td><td>&gt; 0</td></tr>
+  <tr><td>Syntax</td><td>Any integer.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#CREATE"><code>CREATE</code></a>,
+  <a href="#APPEND"><code>APPEND</code></a>,
+  <a href="#OPEN"><code>OPEN</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="delegation">
+        <title>Delegation</title>
+<table>
+  <tr><td>Name</td><td><code>delegation</code></td></tr>
+  <tr><td>Description</td><td>The delegation token used for authentication.</td></tr>
+  <tr><td>Type</td><td>String</td></tr>
+  <tr><td>Default Value</td><td>&lt;empty&gt;</td></tr>
+  <tr><td>Valid Values</td><td>An encoded token.</td></tr>
+  <tr><td>Syntax</td><td>See the note below.</td></tr>
+</table>
+<p>
+  <strong>Note</strong> that delegation tokens are encoded as a URL safe string;
+  see <code>encodeToUrlString()</code>
+  and <code>decodeFromUrlString(String)</code>
+  in <code>org.apache.hadoop.security.token.Token</code> for the details of the encoding.
+</p>
+<p>
+  See also:
+  <a href="#Authentication">Authentication</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="destination">
+        <title>Destination</title>
+<table>
+  <tr><td>Name</td><td><code>destination</code></td></tr>
+  <tr><td>Description</td><td>The destination path used in <a href="#RENAME">RENAME</a>.</td></tr>
+  <tr><td>Type</td><td>Path</td></tr>
+  <tr><td>Default Value</td><td>&lt;empty&gt; (an invalid path)</td></tr>
+  <tr><td>Valid Values</td><td>An absolute FileSystem path without scheme and authority.</td></tr>
+  <tr><td>Syntax</td><td>Any path.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#RENAME"><code>RENAME</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="doas">
+        <title>Do As</title>
+<table>
+  <tr><td>Name</td><td><code>doas</code></td></tr>
+  <tr><td>Description</td><td>Allowing a proxy user to do as another user.</td></tr>
+  <tr><td>Type</td><td>String</td></tr>
+  <tr><td>Default Value</td><td>null</td></tr>
+  <tr><td>Valid Values</td><td>Any valid username.</td></tr>
+  <tr><td>Syntax</td><td>Any string.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#ProxyUsers">Proxy Users</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="group">
+        <title>Group</title>
+<table>
+  <tr><td>Name</td><td><code>group</code></td></tr>
+  <tr><td>Description</td><td>The name of a group.</td></tr>
+  <tr><td>Type</td><td>String</td></tr>
+  <tr><td>Default Value</td><td>&lt;empty&gt; (means keeping it unchanged)</td></tr>
+  <tr><td>Valid Values</td><td>Any valid group name.</td></tr>
+  <tr><td>Syntax</td><td>Any string.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#SETOWNER"><code>SETOWNER</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="length">
+        <title>Length</title>
+<table>
+  <tr><td>Name</td><td><code>length</code></td></tr>
+  <tr><td>Description</td><td>The number of bytes to be processed.</td></tr>
+  <tr><td>Type</td><td>long</td></tr>
+  <tr><td>Default Value</td><td>null (means the entire file)</td></tr>
+  <tr><td>Valid Values</td><td>&gt;= 0 or null</td></tr>
+  <tr><td>Syntax</td><td>Any integer.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#OPEN"><code>OPEN</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="modificationtime">
+        <title>Modification Time</title>
+<table>
+  <tr><td>Name</td><td><code>modificationtime</code></td></tr>
+  <tr><td>Description</td><td>The modification time of a file/directory.</td></tr>
+  <tr><td>Type</td><td>long</td></tr>
+  <tr><td>Default Value</td><td>-1 (means keeping it unchanged)</td></tr>
+  <tr><td>Valid Values</td><td>-1 or a timestamp</td></tr>
+  <tr><td>Syntax</td><td>Any integer.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#SETTIMES"><code>SETTIMES</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="offset">
+        <title>Offset</title>
+<table>
+  <tr><td>Name</td><td><code>offset</code></td></tr>
+  <tr><td>Description</td><td>The starting byte position.</td></tr>
+  <tr><td>Type</td><td>long</td></tr>
+  <tr><td>Default Value</td><td>0</td></tr>
+  <tr><td>Valid Values</td><td>&gt;= 0</td></tr>
+  <tr><td>Syntax</td><td>Any integer.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#OPEN"><code>OPEN</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="op">
+        <title>Op</title>
+<table>
+  <tr><td>Name</td><td><code>op</code></td></tr>
+  <tr><td>Description</td><td>The name of the operation to be executed.</td></tr>
+  <tr><td>Type</td><td>enum</td></tr>
+  <tr><td>Default Value</td><td>null (an invalid value)</td></tr>
+  <tr><td>Valid Values</td><td>Any valid operation name.</td></tr>
+  <tr><td>Syntax</td><td>Any string.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#Operations">Operations</a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="overwrite">
+        <title>Overwrite</title>
+<table>
+  <tr><td>Name</td><td><code>overwrite</code></td></tr>
+  <tr><td>Description</td><td>If a file already exists, should it be overwritten?</td></tr>
+  <tr><td>Type</td><td>boolean</td></tr>
+  <tr><td>Default Value</td><td>false</td></tr>
+  <tr><td>Valid Values</td><td>true | false</td></tr>
+  <tr><td>Syntax</td><td>true | false</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#CREATE"><code>CREATE</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="owner">
+        <title>Owner</title>
+<table>
+  <tr><td>Name</td><td><code>owner</code></td></tr>
+  <tr><td>Description</td><td>The username who is the owner of a file/directory.</td></tr>
+  <tr><td>Type</td><td>String</td></tr>
+  <tr><td>Default Value</td><td>&lt;empty&gt; (means keeping it unchanged)</td></tr>
+  <tr><td>Valid Values</td><td>Any valid username.</td></tr>
+  <tr><td>Syntax</td><td>Any string.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#SETOWNER"><code>SETOWNER</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="permission">
+        <title>Permission</title>
+<table>
+  <tr><td>Name</td><td><code>permission</code></td></tr>
+  <tr><td>Description</td><td>The permission of a file/directory.</td></tr>
+  <tr><td>Type</td><td>Octal</td></tr>
+  <tr><td>Default Value</td><td>755</td></tr>
+  <tr><td>Valid Values</td><td>0 - 1777</td></tr>
+  <tr><td>Syntax</td><td>Any radix-8 integer (leading zeros may be omitted.)</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#CREATE"><code>CREATE</code></a>,
+  <a href="#MKDIRS"><code>MKDIRS</code></a>,
+  <a href="#SETPERMISSION"><code>SETPERMISSION</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="recursive">
+        <title>Recursive</title>
+<table>
+  <tr><td>Name</td><td><code>recursive</code></td></tr>
+  <tr><td>Description</td><td>Should the operation act on the content in the subdirectories?</td></tr>
+  <tr><td>Type</td><td>boolean</td></tr>
+  <tr><td>Default Value</td><td>false</td></tr>
+  <tr><td>Valid Values</td><td>true | false</td></tr>
+  <tr><td>Syntax</td><td>true | false</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#RENAME"><code>RENAME</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="renewer">
+        <title>Renewer</title>
+<table>
+  <tr><td>Name</td><td><code>renewer</code></td></tr>
+  <tr><td>Description</td><td>The username of the renewer of a delegation token.</td></tr>
+  <tr><td>Type</td><td>String</td></tr>
+  <tr><td>Default Value</td><td>&lt;empty&gt; (means the current user)</td></tr>
+  <tr><td>Valid Values</td><td>Any valid username.</td></tr>
+  <tr><td>Syntax</td><td>Any string.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#GETDELEGATIONTOKEN"><code>GETDELEGATIONTOKEN</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="replication">
+        <title>Replication</title>
+<table>
+  <tr><td>Name</td><td><code>replication</code></td></tr>
+  <tr><td>Description</td><td>The number of replications of a file.</td></tr>
+  <tr><td>Type</td><td>short</td></tr>
+  <tr><td>Default Value</td><td>Specified in the configuration.</td></tr>
+  <tr><td>Valid Values</td><td>&gt; 0</td></tr>
+  <tr><td>Syntax</td><td>Any integer.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#CREATE"><code>CREATE</code></a>,
+  <a href="#SETREPLICATION"><code>SETREPLICATION</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="token">
+        <title>Token</title>
+<table>
+  <tr><td>Name</td><td><code>token</code></td></tr>
+  <tr><td>Description</td><td>The delegation token used for the operation.</td></tr>
+  <tr><td>Type</td><td>String</td></tr>
+  <tr><td>Default Value</td><td>&lt;empty&gt;</td></tr>
+  <tr><td>Valid Values</td><td>An encoded token.</td></tr>
+  <tr><td>Syntax</td><td>See the note in <a href="#delegation">Delegation</a>.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#RENEWDELEGATIONTOKEN"><code>RENEWDELEGATIONTOKEN</code></a>,
+  <a href="#CANCELDELEGATIONTOKEN"><code>CANCELDELEGATIONTOKEN</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="user.name">
+        <title>Username</title>
+<table>
+  <tr><td>Name</td><td><code>user.name</code></td></tr>
+  <tr><td>Description</td><td>The authenticated user; see <a href="#Authentication">Authentication</a>.</td></tr>
+  <tr><td>Type</td><td>String</td></tr>
+  <tr><td>Default Value</td><td>null</td></tr>
+  <tr><td>Valid Values</td><td>Any valid username.</td></tr>
+  <tr><td>Syntax</td><td>Any string.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#Authentication">Authentication</a>
+</p>
+      </section>
+    </section>
+  </body>
+</document>

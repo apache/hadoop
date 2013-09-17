@@ -1,0 +1,221 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are public and stable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *stable* .proto interface.
+ */
+
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "YarnServiceProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.yarn;
+
+import "Security.proto";
+import "yarn_protos.proto";
+
+//////////////////////////////////////////////////////
+/////// AM_RM_Protocol ///////////////////////////////
+//////////////////////////////////////////////////////
+message RegisterApplicationMasterRequestProto {
+  optional string host = 1;
+  optional int32 rpc_port = 2;
+  optional string tracking_url = 3;
+}
+
+message RegisterApplicationMasterResponseProto {
+  optional ResourceProto maximumCapability = 1;
+  optional bytes client_to_am_token_master_key = 2;
+  repeated ApplicationACLMapProto application_ACLs = 3;
+}
+
+message FinishApplicationMasterRequestProto {
+  optional string diagnostics = 1;
+  optional string tracking_url = 2;
+  optional FinalApplicationStatusProto final_application_status = 3;
+}
+
+message FinishApplicationMasterResponseProto {
+  optional bool isUnregistered = 1 [default = false];
+}
+
+message AllocateRequestProto {
+  repeated ResourceRequestProto ask = 1;
+  repeated ContainerIdProto release = 2;
+  optional ResourceBlacklistRequestProto blacklist_request = 3;
+  optional int32 response_id = 4;
+  optional float progress = 5;
+}
+
+message NMTokenProto {
+  optional NodeIdProto nodeId = 1; 
+  optional hadoop.common.TokenProto token = 2;
+}
+
+message AllocateResponseProto {
+  optional AMCommandProto a_m_command = 1;
+  optional int32 response_id = 2;
+  repeated ContainerProto allocated_containers = 3;
+  repeated ContainerStatusProto completed_container_statuses = 4;
+  optional ResourceProto limit = 5;
+  repeated NodeReportProto updated_nodes = 6;
+  optional int32 num_cluster_nodes = 7;
+  optional PreemptionMessageProto preempt = 8;
+  repeated NMTokenProto nm_tokens = 9;
+}
+
+//////////////////////////////////////////////////////
+/////// client_RM_Protocol ///////////////////////////
+//////////////////////////////////////////////////////
+
+message GetNewApplicationRequestProto {
+}
+
+message GetNewApplicationResponseProto {
+  optional ApplicationIdProto application_id = 1;
+  optional ResourceProto maximumCapability = 2;
+}
+
+message GetApplicationReportRequestProto {
+  optional ApplicationIdProto application_id = 1;
+}
+
+message GetApplicationReportResponseProto {
+  optional ApplicationReportProto application_report = 1;
+}
+
+message SubmitApplicationRequestProto {
+  optional ApplicationSubmissionContextProto application_submission_context= 1;
+}
+
+message SubmitApplicationResponseProto {
+}
+
+message KillApplicationRequestProto {
+  optional ApplicationIdProto application_id = 1;
+}
+
+message KillApplicationResponseProto {
+}
+
+message GetClusterMetricsRequestProto {
+}
+
+message GetClusterMetricsResponseProto {
+  optional YarnClusterMetricsProto cluster_metrics = 1;
+}
+
+message GetApplicationsRequestProto {
+  repeated string application_types = 1;
+  repeated YarnApplicationStateProto application_states = 2;
+}
+
+message GetApplicationsResponseProto {
+  repeated ApplicationReportProto applications = 1;
+}
+
+message GetClusterNodesRequestProto {
+  repeated NodeStateProto nodeStates = 1;
+}
+
+message GetClusterNodesResponseProto {
+  repeated NodeReportProto nodeReports = 1;
+}
+
+message GetQueueInfoRequestProto {
+  optional string queueName = 1;
+  optional bool includeApplications = 2;
+  optional bool includeChildQueues = 3;
+  optional bool recursive = 4;
+}
+
+message GetQueueInfoResponseProto {
+  optional QueueInfoProto queueInfo = 1;
+}
+
+message GetQueueUserAclsInfoRequestProto {
+}
+
+message GetQueueUserAclsInfoResponseProto {
+  repeated QueueUserACLInfoProto queueUserAcls = 1;
+}
+
+
+//////////////////////////////////////////////////////
+/////// client_NM_Protocol ///////////////////////////
+//////////////////////////////////////////////////////
+
+message StartContainerRequestProto {
+  optional ContainerLaunchContextProto container_launch_context = 1;
+  optional hadoop.common.TokenProto container_token = 2;
+}
+
+message StartContainerResponseProto {
+  repeated StringBytesMapProto services_meta_data = 1;
+}
+
+message StopContainerRequestProto {
+  optional ContainerIdProto container_id = 1;
+}
+
+message StopContainerResponseProto {
+}
+
+message GetContainerStatusRequestProto {
+  optional ContainerIdProto container_id = 1;
+}
+
+message GetContainerStatusResponseProto {
+  optional ContainerStatusProto status = 1;
+}
+
+//// bulk API records
+message StartContainersRequestProto {
+  repeated StartContainerRequestProto start_container_request = 1;
+}
+
+message ContainerExceptionMapProto {
+  optional ContainerIdProto container_id = 1;
+  optional SerializedExceptionProto exception = 2;
+}
+
+message StartContainersResponseProto {
+  repeated StringBytesMapProto services_meta_data = 1;
+  repeated ContainerIdProto succeeded_requests = 2;
+  repeated ContainerExceptionMapProto failed_requests = 3;
+}
+
+message StopContainersRequestProto {
+  repeated ContainerIdProto container_id = 1;
+}
+
+message StopContainersResponseProto {
+  repeated ContainerIdProto succeeded_requests = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
+message GetContainerStatusesRequestProto {
+  repeated ContainerIdProto container_id = 1;
+}
+
+message GetContainerStatusesResponseProto {
+  repeated ContainerStatusProto status = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}

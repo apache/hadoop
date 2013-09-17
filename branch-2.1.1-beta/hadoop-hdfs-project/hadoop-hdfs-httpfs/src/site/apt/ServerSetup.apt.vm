@@ -1,0 +1,121 @@
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~ http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License.
+
+  ---
+  Hadoop HDFS over HTTP ${project.version} - Server Setup
+  ---
+  ---
+  ${maven.build.timestamp}
+
+Hadoop HDFS over HTTP ${project.version} - Server Setup
+
+  \[ {{{./index.html}Go Back}} \]
+
+  This page explains how to quickly setup HttpFS with Pseudo authentication
+  against a Hadoop cluster with Pseudo authentication.
+
+* Requirements
+
+    * Java 6+
+
+    * Maven 3+
+
+* Install HttpFS
+
++---+
+~ $ tar xzf  httpfs-${project.version}.tar.gz
++---+
+
+* Configure HttpFS
+
+  By default, HttpFS assumes that Hadoop configuration files
+  (<<<core-site.xml & hdfs-site.xml>>>) are in the HttpFS
+  configuration directory.
+
+  If this is not the case, add to the <<<httpfs-site.xml>>> file the
+  <<<httpfs.hadoop.config.dir>>> property set to the location
+  of the Hadoop configuration directory.
+
+* Configure Hadoop
+
+  Edit Hadoop <<<core-site.xml>>> and defined the Unix user that will
+  run the HttpFS server as a proxyuser. For example:
+
++---+
+  ...
+  <property>
+    <name>hadoop.proxyuser.#HTTPFSUSER#.hosts</name>
+    <value>httpfs-host.foo.com</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.#HTTPFSUSER#.groups</name>
+    <value>*</value>
+  </property>
+  ...
++---+
+
+  IMPORTANT: Replace <<<#HTTPFSUSER#>>> with the Unix user that will
+  start the HttpFS server.
+
+* Restart Hadoop
+
+  You need to restart Hadoop for the proxyuser configuration ot become
+  active.
+
+* Start/Stop HttpFS
+
+  To start/stop HttpFS use HttpFS's bin/httpfs.sh script. For example:
+
++---+
+httpfs-${project.version} $ bin/httpfs.sh start
++---+
+
+  NOTE: Invoking the script without any parameters list all possible
+  parameters (start, stop, run, etc.). The <<<httpfs.sh>>> script is a wrapper
+  for Tomcat's <<<catalina.sh>>> script that sets the environment variables
+  and Java System properties required to run HttpFS server.
+
+* Test HttpFS is working
+
++---+
+~ $ curl -i "http://<HTTPFSHOSTNAME>:14000?user.name=babu&op=homedir"
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"homeDir":"http:\/\/<HTTPFS_HOST>:14000\/user\/babu"}
++---+
+
+* Embedded Tomcat Configuration
+
+  To configure the embedded Tomcat go to the <<<tomcat/conf>>>.
+
+  HttpFS preconfigures the HTTP and Admin ports in Tomcat's <<<server.xml>>> to
+  14000 and 14001.
+
+  Tomcat logs are also preconfigured to go to HttpFS's <<<logs/>>> directory.
+
+  The following environment variables (which can be set in HttpFS's
+  <<<conf/httpfs-env.sh>>> script) can be used to alter those values:
+
+  * HTTPFS_HTTP_PORT
+
+  * HTTPFS_ADMIN_PORT
+
+  * HTTPFS_LOG
+
+* HttpFS Configuration
+
+  HttpFS supports the following {{{./httpfs-default.html}configuration properties}}
+  in the HttpFS's <<<conf/httpfs-site.xml>>> configuration file.
+
+  \[ {{{./index.html}Go Back}} \]

@@ -1,0 +1,47 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This file contains protocol buffers that are used by bkjournal
+// mostly for storing data in zookeeper
+
+option java_package = "org.apache.hadoop.contrib.bkjournal";
+option java_outer_classname = "BKJournalProtos";
+option java_generate_equals_and_hash = true;
+package hadoop.hdfs;
+import "hdfs.proto";
+
+message VersionProto {
+  required int32 layoutVersion = 1;
+  optional NamespaceInfoProto namespaceInfo = 2;
+}
+
+message EditLogLedgerProto {
+  required int32 dataLayoutVersion = 1;
+  required int64 ledgerId = 2;
+  required int64 firstTxId = 3;
+  optional int64 lastTxId = 4;
+}
+
+message MaxTxIdProto {
+  required int64 txId = 1;
+}
+
+message CurrentInprogressProto {
+  required string path = 1;
+  optional string hostname = 2;
+}

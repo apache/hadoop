@@ -1,0 +1,253 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and stable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *stable* .proto interface.
+ */
+
+// This file contains protocol buffers that are used throughout HDFS -- i.e.
+// by the client, server, and data transfer protocols.
+
+option java_package = "org.apache.hadoop.hdfs.protocol.proto";
+option java_outer_classname = "NamenodeProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.hdfs;
+
+import "hdfs.proto";
+
+/**
+ * Get list of blocks for a given datanode with the total length 
+ * of adding up to given size
+ * datanode - Datanode ID to get list of block from
+ * size - size to which the block lengths must add up to
+ */
+message GetBlocksRequestProto {
+  required DatanodeIDProto datanode = 1; // Datanode ID
+  required uint64 size = 2;              // Size in bytes
+}
+
+ 
+/**
+ * blocks - List of returned blocks
+ */
+message GetBlocksResponseProto {
+  required BlocksWithLocationsProto blocks = 1; // List of blocks
+}
+
+/**
+ * void request
+ */
+message GetBlockKeysRequestProto {
+}
+
+/**
+ * keys - Information about block keys at the active namenode
+ */
+message GetBlockKeysResponseProto {
+  optional ExportedBlockKeysProto keys = 1;
+}
+
+/**
+ * void request
+ */
+message GetTransactionIdRequestProto {
+}
+
+/**
+ * txId - Transaction ID of the most recently persisted edit log record
+ */
+message GetTransactionIdResponseProto {
+  required uint64 txId = 1;   // Transaction ID
+}
+
+/**
+ * void request
+ */
+message RollEditLogRequestProto {
+}
+
+/**
+ * signature - A unique token to identify checkpoint transaction
+ */
+message RollEditLogResponseProto {
+  required CheckpointSignatureProto signature = 1;
+}
+
+/**
+ * void request
+ */
+message GetMostRecentCheckpointTxIdRequestProto {
+}
+
+message GetMostRecentCheckpointTxIdResponseProto{
+  required uint64 txId = 1;
+}
+
+/**
+ * registration - Namenode reporting the error
+ * errorCode - error code indicating the error
+ * msg - Free text description of the error
+ */
+message ErrorReportRequestProto {
+  required NamenodeRegistrationProto registration = 1; // Registration info
+  required uint32 errorCode = 2;  // Error code
+  required string msg = 3;        // Error message
+}
+
+/**
+ * void response
+ */
+message ErrorReportResponseProto {
+}
+
+/**
+ * registration - Information of the namenode registering with primary namenode
+ */
+message RegisterRequestProto {
+  required NamenodeRegistrationProto registration = 1; // Registration info
+}
+
+/**
+ * registration - Updated registration information of the newly registered
+ *                datanode.
+ */
+message RegisterResponseProto {
+  required NamenodeRegistrationProto registration = 1; // Registration info
+}
+
+/**
+ * Start checkpoint request
+ * registration - Namenode that is starting the checkpoint
+ */
+message StartCheckpointRequestProto {
+  required NamenodeRegistrationProto registration = 1; // Registration info
+}
+
+/**
+ * command - Command returned by the active namenode to be
+ *           be handled by the caller.
+ */
+message StartCheckpointResponseProto {
+  required NamenodeCommandProto command = 1;
+}
+
+/**
+ * End or finalize the previously started checkpoint
+ * registration - Namenode that is ending the checkpoint
+ * signature - unique token to identify checkpoint transaction,
+ *             that was received when checkpoint was started.
+ */
+message EndCheckpointRequestProto {
+  required NamenodeRegistrationProto registration = 1; // Registration info
+  required CheckpointSignatureProto signature = 2;
+}
+
+/**
+ * void response
+ */
+message EndCheckpointResponseProto {
+}
+
+/**
+ * sinceTxId - return the editlog information for transactions >= sinceTxId
+ */
+message GetEditLogManifestRequestProto {
+  required uint64 sinceTxId = 1;  // Transaction ID
+}
+
+/**
+ * manifest - Enumeration of editlogs from namenode for 
+ *            logs >= sinceTxId in the request
+ */
+message GetEditLogManifestResponseProto {
+  required RemoteEditLogManifestProto manifest = 1; 
+}
+
+/**
+ * Protocol used by the sub-ordinate namenode to send requests
+ * the active/primary namenode.
+ *
+ * See the request and response for details of rpc call.
+ */
+service NamenodeProtocolService {
+  /**
+   * Get list of blocks for a given datanode with length
+   * of blocks adding up to given size.
+   */
+  rpc getBlocks(GetBlocksRequestProto) returns(GetBlocksResponseProto);
+
+  /**
+   * Get the current block keys
+   */
+  rpc getBlockKeys(GetBlockKeysRequestProto) returns(GetBlockKeysResponseProto);
+
+  /**
+   * Get the transaction ID of the most recently persisted editlog record
+   */
+  rpc getTransactionId(GetTransactionIdRequestProto) 
+      returns(GetTransactionIdResponseProto);
+
+  /**
+   * Get the transaction ID of the most recently persisted editlog record
+   */
+  rpc getMostRecentCheckpointTxId(GetMostRecentCheckpointTxIdRequestProto) 
+      returns(GetMostRecentCheckpointTxIdResponseProto);
+
+  /**
+   * Close the current editlog and open a new one for checkpointing purposes
+   */
+  rpc rollEditLog(RollEditLogRequestProto) returns(RollEditLogResponseProto);
+
+  /**
+   * Request info about the version running on this NameNode
+   */
+  rpc versionRequest(VersionRequestProto) returns(VersionResponseProto);
+
+  /**
+   * Report from a sub-ordinate namenode of an error to the active namenode.
+   * Active namenode may decide to unregister the reporting namenode 
+   * depending on the error.
+   */
+  rpc errorReport(ErrorReportRequestProto) returns(ErrorReportResponseProto);
+
+  /**
+   * Request to register a sub-ordinate namenode
+   */
+  rpc registerSubordinateNamenode(RegisterRequestProto) returns(RegisterResponseProto);
+
+  /**
+   * Request to start a checkpoint. 
+   */
+  rpc startCheckpoint(StartCheckpointRequestProto) 
+      returns(StartCheckpointResponseProto);
+
+  /**
+   * End of finalize the previously started checkpoint
+   */
+  rpc endCheckpoint(EndCheckpointRequestProto) 
+      returns(EndCheckpointResponseProto);
+
+  /**
+   * Get editlog manifests from the active namenode for all the editlogs
+   */
+  rpc getEditLogManifest(GetEditLogManifestRequestProto) 
+      returns(GetEditLogManifestResponseProto);
+}

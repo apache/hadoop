@@ -1,0 +1,1945 @@
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  ResourceManager REST API's.
+  ---
+  ---
+  ${maven.build.timestamp}
+
+ResourceManager REST API's.
+
+  \[ {{{./index.html}Go Back}} \]
+
+%{toc|section=1|fromDepth=0|toDepth=2}
+
+* Overview
+
+  The ResourceManager REST API's allow the user to get information about the cluster - status on the cluster, metrics on the cluster, scheduler information, information about nodes in the cluster, and information about applications on the cluster.
+  
+* Cluster Information API
+
+  The cluster information resource provides overall information about the cluster. 
+
+** URI
+
+  Both of the following URI's give you the cluster information.
+
+------
+  * http://<rm http address:port>/ws/v1/cluster
+  * http://<rm http address:port>/ws/v1/cluster/info
+------
+
+** HTTP Operations Supported
+
+------
+  * GET
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of the <clusterInfo> object
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| id            | long         | The cluster id |
+*---------------+--------------+-------------------------------+
+| startedOn     | long         | The time the cluster started (in ms since epoch)|
+*---------------+--------------+-------------------------------+
+| state         | string | The ResourceManager state - valid values are: NOTINITED, INITED, STARTED, STOPPED|
+*---------------+--------------+-------------------------------+
+| resourceManagerVersion | string  | Version of the ResourceManager |
+*---------------+--------------+-------------------------------+
+| resourceManagerBuildVersion | string  | ResourceManager build string with build version, user, and checksum |
+*---------------+--------------+-------------------------------+
+| resourceManagerVersionBuiltOn | string  | Timestamp when ResourceManager was built (in ms since epoch)|
+*---------------+--------------+-------------------------------+
+| hadoopVersion | string  | Version of hadoop common |
+*---------------+--------------+-------------------------------+
+| hadoopBuildVersion | string  | Hadoop common build string with build version, user, and checksum |
+*---------------+--------------+-------------------------------+
+| hadoopVersionBuiltOn | string  | Timestamp when hadoop common was built(in ms since epoch)|
+*---------------+--------------+-------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/info
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "clusterInfo":
+  {
+    "id":1324053971963,
+    "startedOn":1324053971963,
+    "state":"STARTED",
+    "resourceManagerVersion":"0.23.1-SNAPSHOT",
+    "resourceManagerBuildVersion":"0.23.1-SNAPSHOT from 1214049 by user1 source checksum 050cd664439d931c8743a6428fd6a693",
+    "resourceManagerVersionBuiltOn":"Tue Dec 13 22:12:48 CST 2011",
+    "hadoopVersion":"0.23.1-SNAPSHOT",
+    "hadoopBuildVersion":"0.23.1-SNAPSHOT from 1214049 by user1 source checksum 11458df3bb77342dca5f917198fad328",
+    "hadoopVersionBuiltOn":"Tue Dec 13 22:12:26 CST 2011"
+  }
+}
++---+
+
+  <<XML response>>
+
+  HTTP Request:
+
+-----
+  Accept: application/xml
+  GET http://<rm http address:port>/ws/v1/cluster/info
+-----
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 712
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<clusterInfo>
+  <id>1324053971963</id>
+  <startedOn>1324053971963</startedOn>
+  <state>STARTED</state>
+  <resourceManagerVersion>0.23.1-SNAPSHOT</resourceManagerVersion>
+  <resourceManagerBuildVersion>0.23.1-SNAPSHOT from 1214049 by user1 source checksum 050cd664439d931c8743a6428fd6a693</resourceManagerBuildVersion>
+  <resourceManagerVersionBuiltOn>Tue Dec 13 22:12:48 CST 2011</resourceManagerVersionBuiltOn>
+  <hadoopVersion>0.23.1-SNAPSHOT</hadoopVersion>
+  <hadoopBuildVersion>0.23.1-SNAPSHOT from 1214049 by user1 source checksum 11458df3bb77342dca5f917198fad328</hadoopBuildVersion>
+  <hadoopVersionBuiltOn>Tue Dec 13 22:12:48 CST 2011</hadoopVersionBuiltOn>
+</clusterInfo>
++---+
+
+* Cluster Metrics API
+
+  The cluster metrics resource provides some overall metrics about the cluster. More detailed metrics should be retrieved from the jmx interface.
+
+** URI
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/metrics
+------
+
+** HTTP Operations Supported 
+
+------
+  * GET
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of the <clusterMetrics> object
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type  || Description                   |
+*---------------+--------------+-------------------------------+
+| appsSubmitted | int | The number of applications submitted |
+*---------------+--------------+-------------------------------+
+| appsCompleted | int | The number of applications completed |
+*---------------+--------------+-------------------------------+
+| appsPending | int | The number of applications pending |
+*---------------+--------------+-------------------------------+
+| appsRunning | int | The number of applications running |
+*---------------+--------------+-------------------------------+
+| appsFailed | int | The number of applications failed |
+*---------------+--------------+-------------------------------+
+| appsKilled | int | The number of applications killed |
+*---------------+--------------+-------------------------------+
+| reservedMB    | long         | The amount of memory reserved in MB |
+*---------------+--------------+-------------------------------+
+| availableMB   | long         | The amount of memory available in MB |
+*---------------+--------------+-------------------------------+
+| allocatedMB   | long         | The amount of memory allocated in MB |
+*---------------+--------------+-------------------------------+
+| totalMB       | long         | The amount of total memory in MB |
+*---------------+--------------+-------------------------------+
+| containersAllocated | int | The number of containers allocated |
+*---------------+--------------+-------------------------------+
+| containersReserved | int | The number of containers reserved |
+*---------------+--------------+-------------------------------+
+| containersPending | int | The number of containers pending |
+*---------------+--------------+-------------------------------+
+| totalNodes | int | The total number of nodes |
+*---------------+--------------+-------------------------------+
+| activeNodes | int | The number of active nodes |
+*---------------+--------------+-------------------------------+
+| lostNodes | int | The number of lost nodes |
+*---------------+--------------+-------------------------------+
+| unhealthyNodes | int | The number of unhealthy nodes |
+*---------------+--------------+-------------------------------+
+| decommissionedNodes | int | The number of nodes decommissioned |
+*---------------+--------------+-------------------------------+
+| rebootedNodes | int | The number of nodes rebooted |
+*---------------+--------------+-------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/metrics
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+  {
+    "clusterMetrics":{
+      "appsSubmitted":0,
+      "appsCompleted":0,
+      "appsPending":0,
+      "appsRunning":0,
+      "appsFailed":0,
+      "appsKilled":0,
+      "reservedMB":0,
+      "availableMB":17408,
+      "allocatedMB":0,
+      "containersAllocated":0,
+      "containersReserved":0,
+      "containersPending":0,
+      "totalMB":17408,
+      "totalNodes":1,
+      "lostNodes":0,
+      "unhealthyNodes":0,
+      "decommissionedNodes":0,
+      "rebootedNodes":0,
+      "activeNodes":1
+    }
+  }
++---+
+
+  <<XML response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/metrics
+  Accept: application/xml
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 432
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<clusterMetrics>
+  <appsSubmitted>0</appsSubmitted>
+  <appsCompleted>0</appsCompleted>
+  <appsPending>0</appsPending>
+  <appsRunning>0</appsRunning>
+  <appsFailed>0</appsFailed>
+  <appsKilled>0</appsKilled>
+  <reservedMB>0</reservedMB>
+  <availableMB>17408</availableMB>
+  <allocatedMB>0</allocatedMB>
+  <containersAllocated>0</containersAllocated>
+  <containersReserved>0</containersReserved>
+  <containersPending>0</containersPending>
+  <totalMB>17408</totalMB>
+  <totalNodes>1</totalNodes>
+  <lostNodes>0</lostNodes>
+  <unhealthyNodes>0</unhealthyNodes>
+  <decommissionedNodes>0</decommissionedNodes>
+  <rebootedNodes>0</rebootedNodes>
+  <activeNodes>1</activeNodes>
+</clusterMetrics>
++---+
+
+* Cluster Scheduler API
+
+  A scheduler resource contains information about the current scheduler configured in a cluster. It currently supports both the Fifo and Capacity Scheduler. You will get different information depending on which scheduler is configured so be sure to look at the type information.
+
+** URI
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/scheduler
+------
+
+** HTTP Operations Supported 
+
+------
+  * GET
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Capacity Scheduler API
+
+  The capacity scheduler supports hierarchical queues. This one request will print information about all the queues and any subqueues they have.
+  Queues that can actually have jobs submitted to them are referred to as leaf queues. These queues have additional data associated with them.
+
+** Elements of the <schedulerInfo> object
+
+*---------------+--------------+-------------------------------+
+|| Item          || Data Type  || Description                   |
+*---------------+--------------+-------------------------------+
+| type | string | Scheduler type - capacityScheduler|
+*---------------+--------------+-------------------------------+
+| capacity | float | Configured queue capacity in percentage relative to its parent queue |
+*---------------+--------------+-------------------------------+
+| usedCapacity | float | Used queue capacity in percentage |
+*---------------+--------------+-------------------------------+
+| maxCapacity | float | Configured maximum queue capacity in percentage relative to its parent queue|
+*---------------+--------------+-------------------------------+
+| queueName | string | Name of the queue |
+*---------------+--------------+-------------------------------+
+| queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of queue resources|
+*---------------+--------------+-------------------------------+
+
+** Elements of the queues object for a Parent queue
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| capacity | float | Configured queue capacity in percentage relative to its parent queue |
+*---------------+--------------+-------------------------------+
+| usedCapacity | float | Used queue capacity in percentage |
+*---------------+--------------+-------------------------------+
+| maxCapacity | float | Configured maximum queue capacity in percentage relative to its parent queue |
+*---------------+--------------+-------------------------------+
+| absoluteCapacity | float | Absolute capacity percentage this queue can use of entire cluster | 
+*---------------+--------------+-------------------------------+
+| absoluteMaxCapacity | float | Absolute maximum capacity percentage this queue can use of the entire cluster | 
+*---------------+--------------+-------------------------------+
+| absoluteUsedCapacity | float | Absolute used capacity percentage this queue is using of the entire cluster |
+*---------------+--------------+-------------------------------+
+| numApplications | int | The number of applications currently in the queue |
+*---------------+--------------+-------------------------------+
+| usedResources | string | A string describing the current resources used by the queue |
+*---------------+--------------+-------------------------------+
+| queueName | string | The name of the queue |
+*---------------+--------------+-------------------------------+
+| state | string of QueueState | The state of the queue |
+*---------------+--------------+-------------------------------+
+| queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of sub-queue information|
+*---------------+--------------+-------------------------------+
+| resourcesUsed | A single resource object | The total amount of resources used by this queue |
+*---------------+--------------+-------------------------------+
+
+** Elements of the queues object for a Leaf queue - contains all elements in parent plus the following:
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| type | String | type of the queue - capacitySchedulerLeafQueueInfo |
+*---------------+--------------+-------------------------------+
+| numActiveApplications | int | The number of active applications in this queue |
+*---------------+--------------+-------------------------------+
+| numPendingApplications | int | The number of pending applications in this queue |
+*---------------+--------------+-------------------------------+
+| numContainers | int | The number of containers being used |
+*---------------+--------------+-------------------------------+
+| maxApplications | int | The maximum number of applications this queue can have |
+*---------------+--------------+-------------------------------+
+| maxApplicationsPerUser | int | The maximum number of applications per user this queue can have |
+*---------------+--------------+-------------------------------+
+| maxActiveApplications | int | The maximum number of active applications this queue can have |
+*---------------+--------------+-------------------------------+
+| maxActiveApplicationsPerUser | int | The maximum number of active applications per user this queue can have|
+*---------------+--------------+-------------------------------+
+| userLimit | int | The minimum user limit percent set in the configuration |
+*---------------+--------------+-------------------------------+
+| userLimitFactor | float | The user limit factor set in the configuration |
+*---------------+--------------+-------------------------------+
+| users | array of users(JSON)/zero or more user objects(XML) | A collection of user objects containing resources used |
+*---------------+--------------+-------------------------------+
+
+** Elements of the user object for users:
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| username | String | The username of the user using the resources |
+*---------------+--------------+-------------------------------+
+| resourcesUsed | A single resource object | The amount of resources used by the user in this queue |
+*---------------+--------------+-------------------------------+
+| numActiveApplications | int | The number of active applications for this user in this queue |
+*---------------+--------------+-------------------------------+
+| numPendingApplications | int | The number of pending applications for this user in this queue |
+*---------------+--------------+-------------------------------+
+
+** Elements of the resource object for resourcesUsed in user and queues:
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| memory | int | The amount of memory used (in MB) |
+*---------------+--------------+-------------------------------+
+| vCores | int | The number of virtual cores |
+*---------------+--------------+-------------------------------+
+
+*** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/scheduler
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+    "scheduler": {
+        "schedulerInfo": {
+            "capacity": 100.0, 
+            "maxCapacity": 100.0, 
+            "queueName": "root", 
+            "queues": {
+                "queue": [
+                    {
+                        "absoluteCapacity": 10.5, 
+                        "absoluteMaxCapacity": 50.0, 
+                        "absoluteUsedCapacity": 0.0, 
+                        "capacity": 10.5, 
+                        "maxCapacity": 50.0, 
+                        "numApplications": 0, 
+                        "queueName": "a", 
+                        "queues": {
+                            "queue": [
+                                {
+                                    "absoluteCapacity": 3.15, 
+                                    "absoluteMaxCapacity": 25.0, 
+                                    "absoluteUsedCapacity": 0.0, 
+                                    "capacity": 30.000002, 
+                                    "maxCapacity": 50.0, 
+                                    "numApplications": 0, 
+                                    "queueName": "a1", 
+                                    "queues": {
+                                        "queue": [
+                                            {
+                                                "absoluteCapacity": 2.6775, 
+                                                "absoluteMaxCapacity": 25.0, 
+                                                "absoluteUsedCapacity": 0.0, 
+                                                "capacity": 85.0, 
+                                                "maxActiveApplications": 1, 
+                                                "maxActiveApplicationsPerUser": 1, 
+                                                "maxApplications": 267, 
+                                                "maxApplicationsPerUser": 267, 
+                                                "maxCapacity": 100.0, 
+                                                "numActiveApplications": 0, 
+                                                "numApplications": 0, 
+                                                "numContainers": 0, 
+                                                "numPendingApplications": 0, 
+                                                "queueName": "a1a", 
+                                                "resourcesUsed": {
+                                                    "memory": 0, 
+                                                    "vCores": 0
+                                                }, 
+                                                "state": "RUNNING", 
+                                                "type": "capacitySchedulerLeafQueueInfo", 
+                                                "usedCapacity": 0.0, 
+                                                "usedResources": "<memory:0, vCores:0>", 
+                                                "userLimit": 100, 
+                                                "userLimitFactor": 1.0, 
+                                                "users": null
+                                            }, 
+                                            {
+                                                "absoluteCapacity": 0.47250003, 
+                                                "absoluteMaxCapacity": 25.0, 
+                                                "absoluteUsedCapacity": 0.0, 
+                                                "capacity": 15.000001, 
+                                                "maxActiveApplications": 1, 
+                                                "maxActiveApplicationsPerUser": 1, 
+                                                "maxApplications": 47, 
+                                                "maxApplicationsPerUser": 47, 
+                                                "maxCapacity": 100.0, 
+                                                "numActiveApplications": 0, 
+                                                "numApplications": 0, 
+                                                "numContainers": 0, 
+                                                "numPendingApplications": 0, 
+                                                "queueName": "a1b", 
+                                                "resourcesUsed": {
+                                                    "memory": 0, 
+                                                    "vCores": 0
+                                                }, 
+                                                "state": "RUNNING", 
+                                                "type": "capacitySchedulerLeafQueueInfo", 
+                                                "usedCapacity": 0.0, 
+                                                "usedResources": "<memory:0, vCores:0>", 
+                                                "userLimit": 100, 
+                                                "userLimitFactor": 1.0, 
+                                                "users": null
+                                            }
+                                        ]
+                                    }, 
+                                    "resourcesUsed": {
+                                        "memory": 0, 
+                                        "vCores": 0
+                                    }, 
+                                    "state": "RUNNING", 
+                                    "usedCapacity": 0.0, 
+                                    "usedResources": "<memory:0, vCores:0>"
+                                }, 
+                                {
+                                    "absoluteCapacity": 7.35, 
+                                    "absoluteMaxCapacity": 50.0, 
+                                    "absoluteUsedCapacity": 0.0, 
+                                    "capacity": 70.0, 
+                                    "maxActiveApplications": 1, 
+                                    "maxActiveApplicationsPerUser": 100, 
+                                    "maxApplications": 735, 
+                                    "maxApplicationsPerUser": 73500, 
+                                    "maxCapacity": 100.0, 
+                                    "numActiveApplications": 0, 
+                                    "numApplications": 0, 
+                                    "numContainers": 0, 
+                                    "numPendingApplications": 0, 
+                                    "queueName": "a2", 
+                                    "resourcesUsed": {
+                                        "memory": 0, 
+                                        "vCores": 0
+                                    }, 
+                                    "state": "RUNNING", 
+                                    "type": "capacitySchedulerLeafQueueInfo", 
+                                    "usedCapacity": 0.0, 
+                                    "usedResources": "<memory:0, vCores:0>", 
+                                    "userLimit": 100, 
+                                    "userLimitFactor": 100.0, 
+                                    "users": null
+                                }
+                            ]
+                        }, 
+                        "resourcesUsed": {
+                            "memory": 0, 
+                            "vCores": 0
+                        }, 
+                        "state": "RUNNING", 
+                        "usedCapacity": 0.0, 
+                        "usedResources": "<memory:0, vCores:0>"
+                    }, 
+                    {
+                        "absoluteCapacity": 89.5, 
+                        "absoluteMaxCapacity": 100.0, 
+                        "absoluteUsedCapacity": 0.0, 
+                        "capacity": 89.5, 
+                        "maxCapacity": 100.0, 
+                        "numApplications": 2, 
+                        "queueName": "b", 
+                        "queues": {
+                            "queue": [
+                                {
+                                    "absoluteCapacity": 53.7, 
+                                    "absoluteMaxCapacity": 100.0, 
+                                    "absoluteUsedCapacity": 0.0, 
+                                    "capacity": 60.000004, 
+                                    "maxActiveApplications": 1, 
+                                    "maxActiveApplicationsPerUser": 100, 
+                                    "maxApplications": 5370, 
+                                    "maxApplicationsPerUser": 537000, 
+                                    "maxCapacity": 100.0, 
+                                    "numActiveApplications": 1, 
+                                    "numApplications": 2, 
+                                    "numContainers": 0, 
+                                    "numPendingApplications": 1, 
+                                    "queueName": "b1", 
+                                    "resourcesUsed": {
+                                        "memory": 0, 
+                                        "vCores": 0
+                                    }, 
+                                    "state": "RUNNING", 
+                                    "type": "capacitySchedulerLeafQueueInfo", 
+                                    "usedCapacity": 0.0, 
+                                    "usedResources": "<memory:0, vCores:0>", 
+                                    "userLimit": 100, 
+                                    "userLimitFactor": 100.0, 
+                                    "users": {
+                                        "user": [
+                                            {
+                                                "numActiveApplications": 0, 
+                                                "numPendingApplications": 1, 
+                                                "resourcesUsed": {
+                                                    "memory": 0, 
+                                                    "vCores": 0
+                                                }, 
+                                                "username": "user2"
+                                            }, 
+                                            {
+                                                "numActiveApplications": 1, 
+                                                "numPendingApplications": 0, 
+                                                "resourcesUsed": {
+                                                    "memory": 0, 
+                                                    "vCores": 0
+                                                }, 
+                                                "username": "user1"
+                                            }
+                                        ]
+                                    }
+                                }, 
+                                {
+                                    "absoluteCapacity": 35.3525, 
+                                    "absoluteMaxCapacity": 100.0, 
+                                    "absoluteUsedCapacity": 0.0, 
+                                    "capacity": 39.5, 
+                                    "maxActiveApplications": 1, 
+                                    "maxActiveApplicationsPerUser": 100, 
+                                    "maxApplications": 3535, 
+                                    "maxApplicationsPerUser": 353500, 
+                                    "maxCapacity": 100.0, 
+                                    "numActiveApplications": 0, 
+                                    "numApplications": 0, 
+                                    "numContainers": 0, 
+                                    "numPendingApplications": 0, 
+                                    "queueName": "b2", 
+                                    "resourcesUsed": {
+                                        "memory": 0, 
+                                        "vCores": 0
+                                    }, 
+                                    "state": "RUNNING", 
+                                    "type": "capacitySchedulerLeafQueueInfo", 
+                                    "usedCapacity": 0.0, 
+                                    "usedResources": "<memory:0, vCores:0>", 
+                                    "userLimit": 100, 
+                                    "userLimitFactor": 100.0, 
+                                    "users": null
+                                }, 
+                                {
+                                    "absoluteCapacity": 0.4475, 
+                                    "absoluteMaxCapacity": 100.0, 
+                                    "absoluteUsedCapacity": 0.0, 
+                                    "capacity": 0.5, 
+                                    "maxActiveApplications": 1, 
+                                    "maxActiveApplicationsPerUser": 100, 
+                                    "maxApplications": 44, 
+                                    "maxApplicationsPerUser": 4400, 
+                                    "maxCapacity": 100.0, 
+                                    "numActiveApplications": 0, 
+                                    "numApplications": 0, 
+                                    "numContainers": 0, 
+                                    "numPendingApplications": 0, 
+                                    "queueName": "b3", 
+                                    "resourcesUsed": {
+                                        "memory": 0, 
+                                        "vCores": 0
+                                    }, 
+                                    "state": "RUNNING", 
+                                    "type": "capacitySchedulerLeafQueueInfo", 
+                                    "usedCapacity": 0.0, 
+                                    "usedResources": "<memory:0, vCores:0>", 
+                                    "userLimit": 100, 
+                                    "userLimitFactor": 100.0, 
+                                    "users": null
+                                }
+                            ]
+                        }, 
+                        "resourcesUsed": {
+                            "memory": 0, 
+                            "vCores": 0
+                        }, 
+                        "state": "RUNNING", 
+                        "usedCapacity": 0.0, 
+                        "usedResources": "<memory:0, vCores:0>"
+                    }
+                ]
+            }, 
+            "type": "capacityScheduler", 
+            "usedCapacity": 0.0
+        }
+    }
+}
++---+
+
+  <<XML response>>
+
+  HTTP Request:
+
+-----
+  Accept: application/xml
+  GET http://<rm http address:port>/ws/v1/cluster/scheduler
+-----
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 5778
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<scheduler>
+  <schedulerInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="capacityScheduler">
+    <capacity>100.0</capacity>
+    <usedCapacity>0.0</usedCapacity>
+    <maxCapacity>100.0</maxCapacity>
+    <queueName>root</queueName>
+    <queues>
+      <queue>
+        <capacity>10.5</capacity>
+        <usedCapacity>0.0</usedCapacity>
+        <maxCapacity>50.0</maxCapacity>
+        <absoluteCapacity>10.5</absoluteCapacity>
+        <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
+        <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+        <numApplications>0</numApplications>
+        <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+        <queueName>a</queueName>
+        <state>RUNNING</state>
+        <queues>
+          <queue>
+            <capacity>30.000002</capacity>
+            <usedCapacity>0.0</usedCapacity>
+            <maxCapacity>50.0</maxCapacity>
+            <absoluteCapacity>3.15</absoluteCapacity>
+            <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
+            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+            <numApplications>0</numApplications>
+            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+            <queueName>a1</queueName>
+            <state>RUNNING</state>
+            <queues>
+              <queue xsi:type="capacitySchedulerLeafQueueInfo">
+                <capacity>85.0</capacity>
+                <usedCapacity>0.0</usedCapacity>
+                <maxCapacity>100.0</maxCapacity>
+                <absoluteCapacity>2.6775</absoluteCapacity>
+                <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
+                <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+                <numApplications>0</numApplications>
+                <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+                <queueName>a1a</queueName>
+                <state>RUNNING</state>
+                <resourcesUsed>
+                  <memory>0</memory>
+                  <vCores>0</vCores>
+                </resourcesUsed>
+                <numActiveApplications>0</numActiveApplications>
+                <numPendingApplications>0</numPendingApplications>
+                <numContainers>0</numContainers>
+                <maxApplications>267</maxApplications>
+                <maxApplicationsPerUser>267</maxApplicationsPerUser>
+                <maxActiveApplications>1</maxActiveApplications>
+                <maxActiveApplicationsPerUser>1</maxActiveApplicationsPerUser>
+                <userLimit>100</userLimit>
+                <users/>
+                <userLimitFactor>1.0</userLimitFactor>
+              </queue>
+              <queue xsi:type="capacitySchedulerLeafQueueInfo">
+                <capacity>15.000001</capacity>
+                <usedCapacity>0.0</usedCapacity>
+                <maxCapacity>100.0</maxCapacity>
+                <absoluteCapacity>0.47250003</absoluteCapacity>
+                <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
+                <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+                <numApplications>0</numApplications>
+                <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+                <queueName>a1b</queueName>
+                <state>RUNNING</state>
+                <resourcesUsed>
+                  <memory>0</memory>
+                  <vCores>0</vCores>
+                </resourcesUsed>
+                <numActiveApplications>0</numActiveApplications>
+                <numPendingApplications>0</numPendingApplications>
+                <numContainers>0</numContainers>
+                <maxApplications>47</maxApplications>
+                <maxApplicationsPerUser>47</maxApplicationsPerUser>
+                <maxActiveApplications>1</maxActiveApplications>
+                <maxActiveApplicationsPerUser>1</maxActiveApplicationsPerUser>
+                <userLimit>100</userLimit>
+                <users/>
+                <userLimitFactor>1.0</userLimitFactor>
+              </queue>
+            </queues>
+            <resourcesUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+            </resourcesUsed>
+          </queue>
+          <queue xsi:type="capacitySchedulerLeafQueueInfo">
+            <capacity>70.0</capacity>
+            <usedCapacity>0.0</usedCapacity>
+            <maxCapacity>100.0</maxCapacity>
+            <absoluteCapacity>7.35</absoluteCapacity>
+            <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
+            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+            <numApplications>0</numApplications>
+            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+            <queueName>a2</queueName>
+            <state>RUNNING</state>
+            <resourcesUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+            </resourcesUsed>
+            <numActiveApplications>0</numActiveApplications>
+            <numPendingApplications>0</numPendingApplications>
+            <numContainers>0</numContainers>
+            <maxApplications>735</maxApplications>
+            <maxApplicationsPerUser>73500</maxApplicationsPerUser>
+            <maxActiveApplications>1</maxActiveApplications>
+            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
+            <userLimit>100</userLimit>
+            <users/>
+            <userLimitFactor>100.0</userLimitFactor>
+          </queue>
+        </queues>
+        <resourcesUsed>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </resourcesUsed>
+      </queue>
+      <queue>
+        <capacity>89.5</capacity>
+        <usedCapacity>0.0</usedCapacity>
+        <maxCapacity>100.0</maxCapacity>
+        <absoluteCapacity>89.5</absoluteCapacity>
+        <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+        <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+        <numApplications>2</numApplications>
+        <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+        <queueName>b</queueName>
+        <state>RUNNING</state>
+        <queues>
+          <queue xsi:type="capacitySchedulerLeafQueueInfo">
+            <capacity>60.000004</capacity>
+            <usedCapacity>0.0</usedCapacity>
+            <maxCapacity>100.0</maxCapacity>
+            <absoluteCapacity>53.7</absoluteCapacity>
+            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+            <numApplications>2</numApplications>
+            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+            <queueName>b1</queueName>
+            <state>RUNNING</state>
+            <resourcesUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+            </resourcesUsed>
+            <numActiveApplications>1</numActiveApplications>
+            <numPendingApplications>1</numPendingApplications>
+            <numContainers>0</numContainers>
+            <maxApplications>5370</maxApplications>
+            <maxApplicationsPerUser>537000</maxApplicationsPerUser>
+            <maxActiveApplications>1</maxActiveApplications>
+            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
+            <userLimit>100</userLimit>
+            <users>
+              <user>
+                <username>user2</username>
+                <resourcesUsed>
+                  <memory>0</memory>
+                  <vCores>0</vCores>
+                </resourcesUsed>
+                <numPendingApplications>1</numPendingApplications>
+                <numActiveApplications>0</numActiveApplications>
+              </user>
+              <user>
+                <username>user1</username>
+                <resourcesUsed>
+                  <memory>0</memory>
+                  <vCores>0</vCores>
+                </resourcesUsed>
+                <numPendingApplications>0</numPendingApplications>
+                <numActiveApplications>1</numActiveApplications>
+              </user>
+            </users>
+            <userLimitFactor>100.0</userLimitFactor>
+          </queue>
+          <queue xsi:type="capacitySchedulerLeafQueueInfo">
+            <capacity>39.5</capacity>
+            <usedCapacity>0.0</usedCapacity>
+            <maxCapacity>100.0</maxCapacity>
+            <absoluteCapacity>35.3525</absoluteCapacity>
+            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+            <numApplications>0</numApplications>
+            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+            <queueName>b2</queueName>
+            <state>RUNNING</state>
+            <resourcesUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+            </resourcesUsed>
+            <numActiveApplications>0</numActiveApplications>
+            <numPendingApplications>0</numPendingApplications>
+            <numContainers>0</numContainers>
+            <maxApplications>3535</maxApplications>
+            <maxApplicationsPerUser>353500</maxApplicationsPerUser>
+            <maxActiveApplications>1</maxActiveApplications>
+            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
+            <userLimit>100</userLimit>
+            <users/>
+            <userLimitFactor>100.0</userLimitFactor>
+          </queue>
+          <queue xsi:type="capacitySchedulerLeafQueueInfo">
+            <capacity>0.5</capacity>
+            <usedCapacity>0.0</usedCapacity>
+            <maxCapacity>100.0</maxCapacity>
+            <absoluteCapacity>0.4475</absoluteCapacity>
+            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+            <numApplications>0</numApplications>
+            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+            <queueName>b3</queueName>
+            <state>RUNNING</state>
+            <resourcesUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+            </resourcesUsed>
+            <numActiveApplications>0</numActiveApplications>
+            <numPendingApplications>0</numPendingApplications>
+            <numContainers>0</numContainers>
+            <maxApplications>44</maxApplications>
+            <maxApplicationsPerUser>4400</maxApplicationsPerUser>
+            <maxActiveApplications>1</maxActiveApplications>
+            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
+            <userLimit>100</userLimit>
+            <users/>
+            <userLimitFactor>100.0</userLimitFactor>
+          </queue>
+        </queues>
+        <resourcesUsed>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </resourcesUsed>
+      </queue>
+    </queues>
+  </schedulerInfo>
+</scheduler>
++---+
+
+** Fifo Scheduler API
+
+** Elements of the <schedulerInfo> object
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| type | string | Scheduler type - fifoScheduler |
+*---------------+--------------+-------------------------------+
+| capacity | float | Queue capacity in percentage |
+*---------------+--------------+-------------------------------+
+| usedCapacity | float | Used queue capacity in percentage |
+*---------------+--------------+-------------------------------+
+| qstate | string | State of the queue - valid values are: STOPPED, RUNNING|
+*---------------+--------------+-------------------------------+
+| minQueueMemoryCapacity | int | Minimum queue memory capacity |
+*---------------+--------------+-------------------------------+
+| maxQueueMemoryCapacity | int | Maximum queue memory capacity |
+*---------------+--------------+-------------------------------+
+| numNodes | int | The total number of nodes |
+*---------------+--------------+-------------------------------+
+| usedNodeCapacity | int | The used node capacity |
+*---------------+--------------+-------------------------------+
+| availNodeCapacity | int | The available node capacity |
+*---------------+--------------+-------------------------------+
+| totalNodeCapacity | int | The total node capacity |
+*---------------+--------------+-------------------------------+
+| numContainers | int | The number of containers |
+*---------------+--------------+-------------------------------+
+
+*** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/scheduler
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "scheduler":
+  {
+    "schedulerInfo":
+    {
+      "type":"fifoScheduler",
+      "capacity":1,
+      "usedCapacity":"NaN",
+      "qstate":"RUNNING",
+      "minQueueMemoryCapacity":1024,
+      "maxQueueMemoryCapacity":10240,
+      "numNodes":0,
+      "usedNodeCapacity":0,
+      "availNodeCapacity":0,
+      "totalNodeCapacity":0,
+      "numContainers":0
+    }
+  }
+}
++---+
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/scheduler
+  Accept: application/xml
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 432
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<scheduler>
+  <schedulerInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="fifoScheduler">
+    <capacity>1.0</capacity>
+    <usedCapacity>NaN</usedCapacity>
+    <qstate>RUNNING</qstate>
+    <minQueueMemoryCapacity>1024</minQueueMemoryCapacity>
+    <maxQueueMemoryCapacity>10240</maxQueueMemoryCapacity>
+    <numNodes>0</numNodes>
+    <usedNodeCapacity>0</usedNodeCapacity>
+    <availNodeCapacity>0</availNodeCapacity>
+    <totalNodeCapacity>0</totalNodeCapacity>
+    <numContainers>0</numContainers>
+  </schedulerInfo>
+</scheduler>
++---+
+
+* Cluster Applications API
+
+  With the Applications API, you can obtain a collection of resources, each of which represents an application. When you run a GET operation on this resource, you obtain a collection of Application Objects. 
+
+** URI
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/apps
+------
+
+** HTTP Operations Supported 
+
+------
+  * GET
+------
+
+** Query Parameters Supported
+
+  Multiple parameters can be specified.  The started and finished times have a begin and end parameter to allow you to specify ranges.  For example, one could request all applications that started between 1:00am and 2:00pm on 12/19/2011 with startedTimeBegin=1324256400&startedTimeEnd=1324303200. If the Begin parameter is not specified, it defaults to 0, and if the End parameter is not specified, it defaults to infinity.
+
+------
+  * state [deprecated] - state of the application
+  * states - applications matching the given application states, specified as a comma-separated list.
+  * finalStatus - the final status of the application - reported by the application itself
+  * user - user name
+  * queue - queue name
+  * limit - total number of app objects to be returned
+  * startedTimeBegin - applications with start time beginning with this time, specified in ms since epoch
+  * startedTimeEnd - applications with start time ending with this time, specified in ms since epoch
+  * finishedTimeBegin - applications with finish time beginning with this time, specified in ms since epoch
+  * finishedTimeEnd - applications with finish time ending with this time, specified in ms since epoch
+  * applicationTypes - applications matching the given application types, specified as a comma-separated list.
+------
+
+** Elements of the <apps> (Applications) object
+
+  When you make a request for the list of applications, the information will be returned as a collection of app objects. 
+  See also {{Application API}} for syntax of the app object.
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| app | array of app objects(JSON)/zero or more application objects(XML) | The collection of application objects |
+*---------------+--------------+--------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/apps
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "apps":
+  {
+    "app":
+    [
+       {
+          "finishedTime" : 1326815598530,
+          "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326815542473_0001_01_000001",
+          "trackingUI" : "History",
+          "state" : "FINISHED",
+          "user" : "user1",
+          "id" : "application_1326815542473_0001",
+          "clusterId" : 1326815542473,
+          "finalStatus" : "SUCCEEDED",
+          "amHostHttpAddress" : "host.domain.com:8042",
+          "progress" : 100,
+          "name" : "word count",
+          "startedTime" : 1326815573334,
+          "elapsedTime" : 25196,
+          "diagnostics" : "",
+          "trackingUrl" : "http://host.domain.com:8088/proxy/application_1326815542473_0001/jobhistory/job/job_1326815542473_1_1",
+          "queue" : "default"
+       },
+       {
+          "finishedTime" : 1326815789546,
+          "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326815542473_0002_01_000001",
+          "trackingUI" : "History",
+          "state" : "FINISHED",
+          "user" : "user1",
+          "id" : "application_1326815542473_0002",
+          "clusterId" : 1326815542473,
+          "finalStatus" : "SUCCEEDED",
+          "amHostHttpAddress" : "host.domain.com:8042",
+          "progress" : 100,
+          "name" : "Sleep job",
+          "startedTime" : 1326815641380,
+          "elapsedTime" : 148166,
+          "diagnostics" : "",
+          "trackingUrl" : "http://host.domain.com:8088/proxy/application_1326815542473_0002/jobhistory/job/job_1326815542473_2_2",
+          "queue" : "default"
+       } 
+    ]
+  }
+}
++---+
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/apps
+  Accept: application/xml
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 2459
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<apps>
+  <app>
+    <id>application_1326815542473_0001</id>
+    <user>user1</user>
+    <name>word count</name>
+    <applicationType>MAPREDUCE</applicationType>
+    <queue>default</queue>
+    <state>FINISHED</state>
+    <finalStatus>SUCCEEDED</finalStatus>
+    <progress>100.0</progress>
+    <trackingUI>History</trackingUI>
+    <trackingUrl>http://host.domain.com:8088/proxy/application_1326815542473_0001/jobhistory/job
+/job_1326815542473_1_1</trackingUrl>
+    <diagnostics/>
+    <clusterId>1326815542473</clusterId>
+    <startedTime>1326815573334</startedTime>
+    <finishedTime>1326815598530</finishedTime>
+    <elapsedTime>25196</elapsedTime>
+    <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0001
+_01_000001</amContainerLogs>
+    <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+  </app>
+  <app>
+    <id>application_1326815542473_0002</id>
+    <user>user1</user>
+    <name>Sleep job</name>
+    <applicationType>YARN</applicationType>
+    <queue>default</queue>
+    <state>FINISHED</state>
+    <finalStatus>SUCCEEDED</finalStatus>
+    <progress>100.0</progress>
+    <trackingUI>History</trackingUI>
+    <trackingUrl>http://host.domain.com:8088/proxy/application_1326815542473_0002/jobhistory/job/job_1326815542473_2_2</trackingUrl>
+    <diagnostics/>
+    <clusterId>1326815542473</clusterId>
+    <startedTime>1326815641380</startedTime>
+    <finishedTime>1326815789546</finishedTime>
+    <elapsedTime>148166</elapsedTime>
+    <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0002_01_000001</amContainerLogs>
+    <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+  </app>
+</apps>
+
++---+
+
+* Cluster Application Statistics API
+
+  With the Application Statistics API, you can obtain a collection of triples, each of which contains the application type, the application state and the number of applications of this type and this state in ResourceManager context. Note that with the performance concern, we currently only support at most one applicationType per query. We may support multiple applicationTypes per query as well as more statistics in the future. When you run a GET operation on this resource, you obtain a collection of statItem objects. 
+
+** URI
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/appstatistics
+------
+
+** HTTP Operations Supported
+
+------
+  * GET
+------
+
+** Query Parameters Required
+
+  Two paramters can be specified. The parameters are case insensitive.
+
+------
+  * states - states of the applications, specified as a comma-separated list. If states is not provided, the API will enumerate all application states and return the counts of them.
+  * applicationTypes - types of the applications, specified as a comma-separated list. If applicationTypes is not provided, the API will count the applications of any application type. In this case, the response shows * to indicate any application type. Note that we only support at most one applicationType temporarily. Otherwise, users will expect an BadRequestException.
+------
+
+** Elements of the <appStatInfo> (statItems) object
+
+  When you make a request for the list of statistics items, the information will be returned as a collection of statItem objects
+
+*-----------+----------------------------------------------------------------------+-------------------------------------+
+|| Item     || Data Type                                                           || Description                        |
+*-----------+----------------------------------------------------------------------+-------------------------------------+
+| statItem  | array of statItem objects(JSON)/zero or more statItem objects(XML)   | The collection of statItem objects  |
+*-----------+----------------------------------------------------------------------+-------------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/appstatistics?states=accepted,running,finished&applicationTypes=mapreduce
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "appStatInfo":
+  {
+    "statItem":
+    [
+       {
+          "state" : "accepted",
+          "type" : "mapreduce",
+          "count" : 4
+       },
+       {
+          "state" : "running",
+          "type" : "mapreduce",
+          "count" : 1
+       },
+       {
+          "state" : "finished",
+          "type" : "mapreduce",
+          "count" : 7
+       }
+    ]
+  }
+}
++---+
+
+  <<XML response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/appstatistics?states=accepted,running,finished&applicationTypes=mapreduce
+  Accept: application/xml
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 2459
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appStatInfo>
+  <statItem>
+    <state>accepted</state>
+    <type>mapreduce</type>
+    <count>4</count>
+  </statItem>
+  <statItem>
+    <state>running</state>
+    <type>mapreduce</type>
+    <count>1</count>
+  </statItem>
+  <statItem>
+    <state>finished</state>
+    <type>mapreduce</type>
+    <count>7</count>
+  </statItem>
+</appStatInfo>
++---+
+
+* Cluster {Application API}
+
+  An application resource contains information about a particular application that was submitted to a cluster.
+
+** URI
+
+  Use the following URI to obtain an app object, from a application identified by the {appid} value. 
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/apps/{appid}
+------
+
+** HTTP Operations Supported 
+
+------
+  * GET
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of the <app> (Application) object
+
+  Note that depending on security settings a user might not be able to see all the fields. 
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| id | string  | The application id | 
+*---------------+--------------+--------------------------------+
+| user | string  | The user who started the application |
+*---------------+--------------+--------------------------------+
+| name | string  | The application name |
+*---------------+--------------+--------------------------------+
+| Application Type | string  | The application type |
+*---------------+--------------+--------------------------------+
+| queue | string  | The queue the application was submitted to|
+*---------------+--------------+--------------------------------+
+| state         | string | The application state according to the ResourceManager - valid values are: NEW, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED|
+*---------------+--------------+--------------------------------+
+| finalStatus | string | The final status of the application if finished - reported by the application itself - valid values are: UNDEFINED, SUCCEEDED, FAILED, KILLED|
+*---------------+--------------+--------------------------------+
+| progress | float | The progress of the application as a percent | 
+*---------------+--------------+--------------------------------+
+| trackingUI | string | Where the tracking url is currently pointing  - History (for history server) or ApplicationMaster |
+*---------------+--------------+--------------------------------+
+| trackingUrl | string | The web URL that can be used to track the application |
+*---------------+--------------+--------------------------------+
+| diagnostics | string | Detailed diagnostics information |
+*---------------+--------------+--------------------------------+
+| clusterId | long | The cluster id |
+*---------------+--------------+--------------------------------+
+| startedTime | long | The time in which application started (in ms since epoch)|
+*---------------+--------------+--------------------------------+
+| finishedTime | long | The time in which the application finished (in ms since epoch) |
+*---------------+--------------+--------------------------------+
+| elapsedTime | long | The elapsed time since the application started (in ms)|
+*---------------+--------------+--------------------------------+
+| amContainerLogs | string | The URL of the application master container logs|
+*---------------+--------------+--------------------------------+
+| amHostHttpAddress | string | The nodes http address of the application master |
+*---------------+--------------+--------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1326821518301_0005
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+   "app" : {
+      "finishedTime" : 1326824991300,
+      "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001",
+      "trackingUI" : "History",
+      "state" : "FINISHED",
+      "user" : "user1",
+      "id" : "application_1326821518301_0005",
+      "clusterId" : 1326821518301,
+      "finalStatus" : "SUCCEEDED",
+      "amHostHttpAddress" : "host.domain.com:8042",
+      "progress" : 100,
+      "name" : "Sleep job",
+      "applicationType" : "Yarn",
+      "startedTime" : 1326824544552,
+      "elapsedTime" : 446748,
+      "diagnostics" : "",
+      "trackingUrl" : "http://host.domain.com:8088/proxy/application_1326821518301_0005/jobhistory/job/job_1326821518301_5_5",
+      "queue" : "a1"
+   }
+}
++---+
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1326821518301_0005
+  Accept: application/xml
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 847
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app>
+  <id>application_1326821518301_0005</id>
+  <user>user1</user>
+  <name>Sleep job</name>
+  <queue>a1</queue>
+  <state>FINISHED</state>
+  <finalStatus>SUCCEEDED</finalStatus>
+  <progress>100.0</progress>
+  <trackingUI>History</trackingUI>
+  <trackingUrl>http://host.domain.com:8088/proxy/application_1326821518301_0005/jobhistory/job/job_1326821518301_5_5</trackingUrl>
+  <diagnostics/>
+  <clusterId>1326821518301</clusterId>
+  <startedTime>1326824544552</startedTime>
+  <finishedTime>1326824991300</finishedTime>
+  <elapsedTime>446748</elapsedTime>
+  <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001</amContainerLogs>
+  <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+</app>
++---+
+
+* Cluster Application Attempts API
+
+  With the application attempts API, you can obtain a collection of resources that represent an application attempt.  When you run a GET operation on this resource, you obtain a collection of App Attempt Objects. 
+
+** URI
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/appattempts
+------
+
+** HTTP Operations Supported 
+
+------
+  * GET
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of the <appAttempts> object
+
+  When you make a request for the list of app attempts, the information will be returned as an array of app attempt objects. 
+
+  appAttempts:
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| appAttempt | array of app attempt objects(JSON)/zero or more app attempt objects(XML) | The collection of app attempt objects |
+*---------------+--------------+--------------------------------+
+
+** Elements of the <appAttempt> object
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| id | string | The app attempt id |
+*---------------+--------------+--------------------------------+
+| nodeId | string | The node id of the node the attempt ran on|
+*---------------+--------------+--------------------------------+
+| nodeHttpAddress | string | The node http address of the node the attempt ran on|
+*---------------+--------------+--------------------------------+
+| logsLink | string | The http link to the app attempt logs |
+*---------------+--------------+--------------------------------+
+| containerId | string | The id of the container for the app attempt |
+*---------------+--------------+--------------------------------+
+| startTime | long | The start time of the attempt (in ms since epoch)|
+*---------------+--------------+--------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1326821518301_0005/appattempts
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+   "appAttempts" : {
+      "appAttempt" : [
+         {
+            "nodeId" : "host.domain.com:8041",
+            "nodeHttpAddress" : "host.domain.com:8042",
+            "startTime" : 1326381444693,
+            "id" : 1,
+            "logsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001/user1",
+            "containerId" : "container_1326821518301_0005_01_000001"
+         }
+      ]
+   }
+}
++---+
+
+  <<XML response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1326821518301_0005/appattempts
+  Accept: application/xml
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 575
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appAttempts>
+  <appttempt>
+    <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
+    <nodeId>host.domain.com:8041</nodeId>
+    <id>1</id>
+    <startTime>1326381444693</startTime>
+    <containerId>container_1326821518301_0005_01_000001</containerId>
+    <logsLink>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001/user1</logsLink>
+  </appAttempt>
+</appAttempts>
++---+
+
+* Cluster Nodes API
+
+  With the Nodes API, you can obtain a collection of resources, each of which represents a node. When you run a GET operation on this resource, you obtain a collection of Node Objects. 
+
+** URI
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/nodes
+------
+
+** HTTP Operations Supported 
+
+------
+  * GET
+------
+
+** Query Parameters Supported
+
+------
+  * state - the state of the node
+  * healthy - true or false 
+------
+
+** Elements of the <nodes> object
+
+  When you make a request for the list of nodes, the information will be returned as a collection of node objects. 
+  See also {{Node API}} for syntax of the node object.
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| node | array of node objects(JSON)/zero or more node objects(XML) | A collection of node objects |
+*---------------+--------------+-------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/nodes
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "nodes":
+  {
+    "node":
+    [
+      {
+        "rack":"\/default-rack",
+        "state":"NEW",
+        "id":"h2:1235",
+        "nodeHostName":"h2",
+        "nodeHTTPAddress":"h2:2",
+        "healthStatus":"Healthy",
+        "lastHealthUpdate":1324056895432,
+        "healthReport":"Healthy",
+        "numContainers":0,
+        "usedMemoryMB":0
+        "availMemoryMB":8192
+      },
+      {
+        "rack":"\/default-rack",
+        "state":"NEW",
+        "id":"h1:1234",
+        "nodeHostName":"h1",
+        "nodeHTTPAddress":"h1:2",
+        "healthStatus":"Healthy",
+        "lastHealthUpdate":1324056895092,
+        "healthReport":"Healthy",
+        "numContainers":0,
+        "usedMemoryMB":0,
+        "availMemoryMB":8192
+      }
+    ]
+  }
+}
++---+
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/nodes
+  Accept: application/xml
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 1104
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<nodes>
+  <node>
+    <rack>/default-rack</rack>
+    <state>RUNNING</state>
+    <id>h2:1234</id>
+    <nodeHostName>h2</nodeHostName>
+    <nodeHTTPAddress>h2:2</nodeHTTPAddress>
+    <healthStatus>Healthy</healthStatus>
+    <lastHealthUpdate>1324333268447</lastHealthUpdate>
+    <healthReport>Healthy</healthReport>
+    <numContainers>0</numContainers>
+    <usedMemoryMB>0</usedMemoryMB>
+    <availMemoryMB>5120</availMemoryMB>
+  </node>
+  <node>
+    <rack>/default-rack</rack>
+    <state>RUNNING</state>
+    <id>h1:1234</id>
+    <nodeHostName>h1</nodeHostName>
+    <nodeHTTPAddress>h1:2</nodeHTTPAddress>
+    <healthStatus>Healthy</healthStatus>
+    <lastHealthUpdate>1324333268447</lastHealthUpdate>
+    <healthReport>Healthy</healthReport>
+    <numContainers>0</numContainers>
+    <usedMemoryMB>0</usedMemoryMB>
+    <availMemoryMB>5120</availMemoryMB>
+  </node>
+</nodes>
++---+
+
+
+* Cluster {Node API}
+
+  A node resource contains information about a node in the cluster.  
+
+** URI
+
+  Use the following URI to obtain a Node Object, from a node identified by the {nodeid} value. 
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/nodes/{nodeid}
+------
+
+** HTTP Operations Supported 
+
+------
+  * GET
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of the <node> object
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| rack | string | The rack location of this node |
+*---------------+--------------+-------------------------------+
+| state | string | State of the node - valid values are: NEW, RUNNING, UNHEALTHY, DECOMMISSIONED, LOST, REBOOTED |
+*---------------+--------------+-------------------------------+
+| id | string  | The node id |
+*---------------+--------------+-------------------------------+
+| nodeHostName | string  | The host name of the node|
+*---------------+--------------+-------------------------------+
+| nodeHTTPAddress | string  | The nodes HTTP address|
+*---------------+--------------+-------------------------------+
+| healthStatus | string  | The health status of the node - Healthy or Unhealthy |
+*---------------+--------------+-------------------------------+
+| healthReport | string  | A detailed health report |
+*---------------+--------------+-------------------------------+
+| lastHealthUpdate | long | The last time the node reported its health (in ms since epoch)|
+*---------------+--------------+-------------------------------+
+| usedMemoryMB | long | The total about of memory currently used on the node (in MB)|
+*---------------+--------------+-------------------------------+
+| availMemoryMB | long | The total amount of memory currently available on the node (in MB)|
+*---------------+--------------+-------------------------------+
+| numContainers | int | The total number of containers currently running on the node|
+*---------------+--------------+-------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/nodes/h2:1235
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "node":
+  {
+    "rack":"\/default-rack",
+    "state":"NEW",
+    "id":"h2:1235",
+    "nodeHostName":"h2",
+    "nodeHTTPAddress":"h2:2",
+    "healthStatus":"Healthy",
+    "lastHealthUpdate":1324056895432,
+    "healthReport":"Healthy",
+    "numContainers":0,
+    "usedMemoryMB":0,
+    "availMemoryMB":5120
+  }
+}
++---+
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/node/h2:1235
+  Accept: application/xml
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 552
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<node>
+  <rack>/default-rack</rack>
+  <state>NEW</state>
+  <id>h2:1235</id>
+  <nodeHostName>h2</nodeHostName>
+  <nodeHTTPAddress>h2:2</nodeHTTPAddress>
+  <healthStatus>Healthy</healthStatus>
+  <lastHealthUpdate>1324333268447</lastHealthUpdate>
+  <healthReport>Healthy</healthReport>
+  <numContainers>0</numContainers>
+  <usedMemoryMB>0</usedMemoryMB>
+  <availMemoryMB>5120</availMemoryMB>
+</node>
++---+
+

@@ -1,0 +1,59 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "YarnServerNodemanagerServiceProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.yarn;
+
+import "yarn_protos.proto";
+
+enum ResourceStatusTypeProto {
+  FETCH_PENDING = 1;
+  FETCH_SUCCESS = 2;
+  FETCH_FAILURE = 3;
+}
+
+message LocalResourceStatusProto {
+  optional LocalResourceProto resource = 1;
+  optional ResourceStatusTypeProto status = 2;
+  optional URLProto localPath = 3;
+  optional int64 localSize = 4;
+  optional SerializedExceptionProto exception = 5;
+}
+
+message LocalizerStatusProto {
+  optional string localizer_id = 1;
+  repeated LocalResourceStatusProto resources = 2;
+}
+
+enum LocalizerActionProto {
+  LIVE = 1;
+  DIE = 2;
+}
+
+message ResourceLocalizationSpecProto {
+  optional LocalResourceProto resource = 1;
+  optional URLProto destination_directory = 2;
+}
+
+message LocalizerHeartbeatResponseProto {
+  optional LocalizerActionProto action = 1;
+  repeated ResourceLocalizationSpecProto resources = 2;
+}

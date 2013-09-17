@@ -1,0 +1,162 @@
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <head>
+    <title>Usage </title>
+  </head>
+  <body>
+    <section name="Basic Usage">
+        <p>The most common invocation of DistCp is an inter-cluster copy:</p>
+        <p><code>bash$ hadoop jar hadoop-distcp.jar hdfs://nn1:8020/foo/bar \</code><br/>
+           <code>                    hdfs://nn2:8020/bar/foo</code></p>
+
+        <p>This will expand the namespace under <code>/foo/bar</code> on nn1
+        into a temporary file, partition its contents among a set of map
+        tasks, and start a copy on each TaskTracker from nn1 to nn2.</p>
+
+        <p>One can also specify multiple source directories on the command
+        line:</p>
+        <p><code>bash$ hadoop jar hadoop-distcp.jar hdfs://nn1:8020/foo/a \</code><br/>
+           <code> hdfs://nn1:8020/foo/b \</code><br/>
+           <code> hdfs://nn2:8020/bar/foo</code></p>
+
+        <p>Or, equivalently, from a file using the <code>-f</code> option:<br/>
+        <code>bash$ hadoop jar hadoop-distcp.jar -f hdfs://nn1:8020/srclist \</code><br/>
+        <code> hdfs://nn2:8020/bar/foo</code><br/></p>
+
+        <p>Where <code>srclist</code> contains<br/>
+        <code>hdfs://nn1:8020/foo/a</code><br/>
+        <code>hdfs://nn1:8020/foo/b</code></p>
+
+        <p>When copying from multiple sources, DistCp will abort the copy with
+        an error message if two sources collide, but collisions at the
+        destination are resolved per the <a href="#options">options</a>
+        specified. By default, files already existing at the destination are
+        skipped (i.e. not replaced by the source file). A count of skipped
+        files is reported at the end of each job, but it may be inaccurate if a
+        copier failed for some subset of its files, but succeeded on a later
+        attempt.</p>
+
+        <p>It is important that each TaskTracker can reach and communicate with
+        both the source and destination file systems. For HDFS, both the source
+        and destination must be running the same version of the protocol or use
+        a backwards-compatible protocol (see <a href="#cpver">Copying Between
+        Versions</a>).</p>
+
+        <p>After a copy, it is recommended that one generates and cross-checks
+        a listing of the source and destination to verify that the copy was
+        truly successful. Since DistCp employs both Map/Reduce and the
+        FileSystem API, issues in or between any of the three could adversely
+        and silently affect the copy. Some have had success running with
+        <code>-update</code> enabled to perform a second pass, but users should
+        be acquainted with its semantics before attempting this.</p>
+
+        <p>It's also worth noting that if another client is still writing to a
+        source file, the copy will likely fail. Attempting to overwrite a file
+        being written at the destination should also fail on HDFS. If a source
+        file is (re)moved before it is copied, the copy will fail with a
+        FileNotFoundException.</p>
+
+        <p>Please refer to the detailed Command Line Reference for information
+        on all the options available in DistCp.</p>
+        
+    </section>
+    <section name="Update and Overwrite">
+
+        <p><code>-update</code> is used to copy files from source that don't
+        exist at the target, or have different contents. <code>-overwrite</code>
+        overwrites target-files even if they exist at the source, or have the
+        same contents.</p>
+
+        <p><br/>Update and Overwrite options warrant special attention, since their
+        handling of source-paths varies from the defaults in a very subtle manner.
+        Consider a copy from <code>/source/first/</code> and
+        <code>/source/second/</code> to <code>/target/</code>, where the source
+        paths have the following contents:</p>
+
+        <p><code>hdfs://nn1:8020/source/first/1</code><br/>
+           <code>hdfs://nn1:8020/source/first/2</code><br/>
+           <code>hdfs://nn1:8020/source/second/10</code><br/>
+           <code>hdfs://nn1:8020/source/second/20</code><br/></p>
+
+        <p><br/>When DistCp is invoked without <code>-update</code> or
+        <code>-overwrite</code>, the DistCp defaults would create directories
+        <code>first/</code> and <code>second/</code>, under <code>/target</code>.
+        Thus:<br/></p>
+
+        <p><code>distcp hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target</code></p>
+        <p><br/>would yield the following contents in <code>/target</code>: </p>
+
+        <p><code>hdfs://nn2:8020/target/first/1</code><br/>
+           <code>hdfs://nn2:8020/target/first/2</code><br/>
+           <code>hdfs://nn2:8020/target/second/10</code><br/>
+           <code>hdfs://nn2:8020/target/second/20</code><br/></p>
+
+        <p><br/>When either <code>-update</code> or <code>-overwrite</code> is
+            specified, the <strong>contents</strong> of the source-directories
+            are copied to target, and not the source directories themselves. Thus: </p>
+
+        <p><code>distcp -update hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target</code></p>
+
+        <p><br/>would yield the following contents in <code>/target</code>: </p>
+
+        <p><code>hdfs://nn2:8020/target/1</code><br/>
+           <code>hdfs://nn2:8020/target/2</code><br/>
+           <code>hdfs://nn2:8020/target/10</code><br/>
+           <code>hdfs://nn2:8020/target/20</code><br/></p>
+
+        <p><br/>By extension, if both source folders contained a file with the same
+        name (say, <code>0</code>), then both sources would map an entry to
+        <code>/target/0</code> at the destination. Rather than to permit this
+        conflict, DistCp will abort.</p>
+
+        <p><br/>Now, consider the following copy operation:</p>
+
+        <p><code>distcp hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target</code></p>
+
+        <p><br/>With sources/sizes:</p>
+
+        <p><code>hdfs://nn1:8020/source/first/1     32</code><br/>
+           <code>hdfs://nn1:8020/source/first/2     32</code><br/>
+           <code>hdfs://nn1:8020/source/second/10   64</code><br/>
+           <code>hdfs://nn1:8020/source/second/20   32</code><br/></p>
+
+        <p><br/>And destination/sizes:</p>
+
+        <p><code>hdfs://nn2:8020/target/1   32</code><br/>
+           <code>hdfs://nn2:8020/target/10  32</code><br/>
+           <code>hdfs://nn2:8020/target/20  64</code><br/></p>
+
+        <p><br/>Will effect: </p>
+
+        <p><code>hdfs://nn2:8020/target/1   32</code><br/>
+           <code>hdfs://nn2:8020/target/2   32</code><br/>
+           <code>hdfs://nn2:8020/target/10  64</code><br/>
+           <code>hdfs://nn2:8020/target/20  32</code><br/></p>
+
+        <p><br/><code>1</code> is skipped because the file-length and contents match.
+        <code>2</code> is copied because it doesn't exist at the target.
+        <code>10</code> and <code>20</code> are overwritten since the contents
+        don't match the source. </p>
+
+        <p>If <code>-update</code> is used, <code>1</code> is overwritten as well.</p>
+
+    </section>
+  </body>
+
+</document>
