@@ -70,6 +70,9 @@ Release 2.1.1-beta - 2013-09-23
     HADOOP-9962. in order to avoid dependency divergence within Hadoop itself 
     lets enable DependencyConvergence. (rvs via tucu)
 
+    HADOOP-9487 Deprecation warnings in Configuration should go to their
+    own log or otherwise be suppressible (Chu Tong via stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
