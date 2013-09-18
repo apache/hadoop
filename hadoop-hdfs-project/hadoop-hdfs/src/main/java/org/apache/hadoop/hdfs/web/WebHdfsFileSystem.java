@@ -192,10 +192,10 @@ public class WebHdfsFileSystem extends FileSystem
     this.retryPolicy = 
         RetryUtils.getDefaultRetryPolicy(
             conf, 
-            DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_ENABLED_KEY, 
-            DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_ENABLED_DEFAULT, 
-            DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_SPEC_KEY,
-            DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_SPEC_DEFAULT,
+            DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_POLICY_ENABLED_KEY,
+            DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_POLICY_ENABLED_DEFAULT,
+            DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_POLICY_SPEC_KEY,
+            DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT,
             SafeModeException.class);
     this.workingDir = getHomeDirectory();
 
