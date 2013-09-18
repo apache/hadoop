@@ -164,6 +164,9 @@ Release 2.3.0 - UNRELEASED
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
 
+    MAPREDUCE-5487. In task processes, JobConf is unnecessarily loaded again
+    in Limits (Sandy Ryza)
+
   BUG FIXES
 
     MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
