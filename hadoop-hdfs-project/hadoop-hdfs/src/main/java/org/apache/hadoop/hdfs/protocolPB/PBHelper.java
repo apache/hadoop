@@ -94,6 +94,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto.File
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageIDsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto;
@@ -744,7 +745,8 @@ public class PBHelper {
     for (int i = 0; i < blocks.length; i++) {
       builder.addBlocks(PBHelper.convert(blocks[i]));
     }
-    builder.addAllTargets(PBHelper.convert(cmd.getTargets()));
+    builder.addAllTargets(convert(cmd.getTargets()))
+           .addAllTargetStorageIDs(convert(cmd.getTargetStorageIDs()));
     return builder.build();
   }
 
@@ -753,6 +755,15 @@ public class PBHelper {
     for (int i = 0; i < targets.length; i++) {
       ret[i] = DatanodeInfosProto.newBuilder()
           .addAllDatanodes(PBHelper.convert(targets[i])).build();
+    }
+    return Arrays.asList(ret);
+  }
+
+  private static List<StorageIDsProto> convert(String[][] targetStorageIDs) {
+    StorageIDsProto[] ret = new StorageIDsProto[targetStorageIDs.length];
+    for (int i = 0; i < targetStorageIDs.length; i++) {
+      ret[i] = StorageIDsProto.newBuilder()
+          .addAllStorageIDs(Arrays.asList(targetStorageIDs[i])).build();
     }
     return Arrays.asList(ret);
   }
@@ -831,6 +842,14 @@ public class PBHelper {
     for (int i = 0; i < targetList.size(); i++) {
       targets[i] = PBHelper.convert(targetList.get(i));
     }
+
+    List<StorageIDsProto> targetStorageIDsList = blkCmd.getTargetStorageIDsList();
+    String[][] targetStorageIDs = new String[targetStorageIDsList.size()][];
+    for(int i = 0; i < targetStorageIDs.length; i++) {
+      List<String> storageIDs = targetStorageIDsList.get(i).getStorageIDsList();
+      targetStorageIDs[i] = storageIDs.toArray(new String[storageIDs.size()]);
+    }
+
     int action = DatanodeProtocol.DNA_UNKNOWN;
     switch (blkCmd.getAction()) {
     case TRANSFER:
@@ -843,7 +862,8 @@ public class PBHelper {
       action = DatanodeProtocol.DNA_SHUTDOWN;
       break;
     }
-    return new BlockCommand(action, blkCmd.getBlockPoolId(), blocks, targets);
+    return new BlockCommand(action, blkCmd.getBlockPoolId(), blocks, targets,
+        targetStorageIDs);
   }
 
   public static DatanodeInfo[] convert(DatanodeInfosProto datanodeInfosProto) {

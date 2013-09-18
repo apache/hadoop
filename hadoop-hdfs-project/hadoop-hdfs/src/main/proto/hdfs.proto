@@ -122,6 +122,13 @@ enum StorageTypeProto {
 }
 
 /**
+ * A list of storage IDs. 
+ */
+message StorageIDsProto {
+  repeated string storageIDs = 1;
+}
+
+/**
  * A LocatedBlock gives information about a block and its location.
  */ 
 message LocatedBlockProto {

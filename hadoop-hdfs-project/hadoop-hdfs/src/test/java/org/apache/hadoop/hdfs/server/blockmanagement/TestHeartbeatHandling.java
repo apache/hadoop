@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.junit.Test;
 
 /**
@@ -62,6 +63,8 @@ public class TestHeartbeatHandling {
       final DatanodeRegistration nodeReg =
         DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
       final DatanodeDescriptor dd = NameNodeAdapter.getDatanode(namesystem, nodeReg);
+      final String storageID = DatanodeStorage.newStorageID();
+      dd.updateStorage(new DatanodeStorage(storageID));
 
       final int REMAINING_BLOCKS = 1;
       final int MAX_REPLICATE_LIMIT =
@@ -69,7 +72,7 @@ public class TestHeartbeatHandling {
       final int MAX_INVALIDATE_LIMIT = DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT;
       final int MAX_INVALIDATE_BLOCKS = 2*MAX_INVALIDATE_LIMIT+REMAINING_BLOCKS;
       final int MAX_REPLICATE_BLOCKS = 2*MAX_REPLICATE_LIMIT+REMAINING_BLOCKS;
-      final DatanodeDescriptor[] ONE_TARGET = new DatanodeDescriptor[1];
+      final DatanodeStorageInfo[] ONE_TARGET = {dd.getStorageInfo(storageID)};
 
       try {
         namesystem.writeLock();
@@ -143,12 +146,15 @@ public class TestHeartbeatHandling {
       final DatanodeRegistration nodeReg1 =
         DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
       final DatanodeDescriptor dd1 = NameNodeAdapter.getDatanode(namesystem, nodeReg1);
+      dd1.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
       final DatanodeRegistration nodeReg2 =
         DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(1), poolId);
       final DatanodeDescriptor dd2 = NameNodeAdapter.getDatanode(namesystem, nodeReg2);
+      dd2.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
       final DatanodeRegistration nodeReg3 = 
         DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(2), poolId);
       final DatanodeDescriptor dd3 = NameNodeAdapter.getDatanode(namesystem, nodeReg3);
+      dd3.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
 
       try {
         namesystem.writeLock();
@@ -162,9 +168,9 @@ public class TestHeartbeatHandling {
           dd2.setLastUpdate(System.currentTimeMillis());
           dd3.setLastUpdate(System.currentTimeMillis());
           final DatanodeStorageInfo[] storages = {
-              dd1.getStorageInfos().iterator().next(),
-              dd2.getStorageInfos().iterator().next(),
-              dd3.getStorageInfos().iterator().next()};
+              dd1.getStorageInfos()[0],
+              dd2.getStorageInfos()[0],
+              dd3.getStorageInfos()[0]};
           BlockInfoUnderConstruction blockInfo = new BlockInfoUnderConstruction(
               new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), 3,
               BlockUCState.UNDER_RECOVERY, storages);

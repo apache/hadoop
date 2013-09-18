@@ -566,7 +566,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
-      final DatanodeInfo[] existings, final DatanodeInfo[] excludes,
+      final DatanodeInfo[] existings, final String[] existingStorageIDs,
+      final DatanodeInfo[] excludes,
       final int numAdditionalNodes, final String clientName
       ) throws IOException {
     if (LOG.isDebugEnabled()) {
@@ -587,8 +588,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         excludeSet.add(node);
       }
     }
-    return namesystem.getAdditionalDatanode(src, blk,
-        existings, excludeSet, numAdditionalNodes, clientName);
+    return namesystem.getAdditionalDatanode(src, blk, existings,
+        existingStorageIDs, excludeSet, numAdditionalNodes, clientName);
   }
   /**
    * The client needs to give up on the block.

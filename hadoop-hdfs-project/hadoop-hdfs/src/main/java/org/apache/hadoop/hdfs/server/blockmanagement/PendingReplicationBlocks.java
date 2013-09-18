@@ -76,7 +76,7 @@ class PendingReplicationBlocks {
    * @param block The corresponding block
    * @param targets The DataNodes where replicas of the block should be placed
    */
-  void increment(Block block, DatanodeDescriptor[] targets) {
+  void increment(Block block, DatanodeStorageInfo[] targets) {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found == null) {
@@ -95,14 +95,14 @@ class PendingReplicationBlocks {
    * 
    * @param The DataNode that finishes the replication
    */
-  void decrement(Block block, DatanodeDescriptor dn) {
+  void decrement(Block block, DatanodeDescriptor dn, String storageID) {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found != null) {
         if(LOG.isDebugEnabled()) {
           LOG.debug("Removing pending replication for " + block);
         }
-        found.decrementReplicas(dn);
+        found.decrementReplicas(dn.getStorageInfo(storageID));
         if (found.getNumReplicas() <= 0) {
           pendingReplications.remove(block);
         }
@@ -174,12 +174,12 @@ class PendingReplicationBlocks {
    */
   static class PendingBlockInfo {
     private long timeStamp;
-    private final List<DatanodeDescriptor> targets;
+    private final List<DatanodeStorageInfo> targets;
 
-    PendingBlockInfo(DatanodeDescriptor[] targets) {
+    PendingBlockInfo(DatanodeStorageInfo[] targets) {
       this.timeStamp = now();
-      this.targets = targets == null ? new ArrayList<DatanodeDescriptor>()
-          : new ArrayList<DatanodeDescriptor>(Arrays.asList(targets));
+      this.targets = targets == null ? new ArrayList<DatanodeStorageInfo>()
+          : new ArrayList<DatanodeStorageInfo>(Arrays.asList(targets));
     }
 
     long getTimeStamp() {
@@ -190,16 +190,16 @@ class PendingReplicationBlocks {
       timeStamp = now();
     }
 
-    void incrementReplicas(DatanodeDescriptor... newTargets) {
+    void incrementReplicas(DatanodeStorageInfo... newTargets) {
       if (newTargets != null) {
-        for (DatanodeDescriptor dn : newTargets) {
+        for (DatanodeStorageInfo dn : newTargets) {
           targets.add(dn);
         }
       }
     }
 
-    void decrementReplicas(DatanodeDescriptor dn) {
-      targets.remove(dn);
+    void decrementReplicas(DatanodeStorageInfo storage) {
+      targets.remove(storage);
     }
 
     int getNumReplicas() {

@@ -335,7 +335,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public LocatedBlock getAdditionalDatanode(String src, ExtendedBlock blk,
-      DatanodeInfo[] existings, DatanodeInfo[] excludes,
+      DatanodeInfo[] existings, String[] existingStorageIDs,
+      DatanodeInfo[] excludes,
       int numAdditionalNodes, String clientName) throws AccessControlException,
       FileNotFoundException, SafeModeException, UnresolvedLinkException,
       IOException {
@@ -344,6 +345,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setSrc(src)
         .setBlk(PBHelper.convert(blk))
         .addAllExistings(PBHelper.convert(existings))
+        .addAllExistingStorageIDs(Arrays.asList(existingStorageIDs))
         .addAllExcludes(PBHelper.convert(excludes))
         .setNumAdditionalNodes(numAdditionalNodes)
         .setClientName(clientName)

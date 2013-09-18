@@ -45,6 +45,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
@@ -473,8 +474,8 @@ public class BlockManager {
   private void dumpBlockMeta(Block block, PrintWriter out) {
     List<DatanodeDescriptor> containingNodes =
                                       new ArrayList<DatanodeDescriptor>();
-    List<DatanodeDescriptor> containingLiveReplicasNodes =
-      new ArrayList<DatanodeDescriptor>();
+    List<DatanodeStorageInfo> containingLiveReplicasNodes =
+      new ArrayList<DatanodeStorageInfo>();
     
     NumberReplicas numReplicas = new NumberReplicas();
     // source node returned is not used
@@ -774,7 +775,7 @@ public class BlockManager {
       final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)blk;
       final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
       final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
-      return LocatedBlock.createLocatedBlock(eb, storages, pos, false);
+      return new LocatedBlock(eb, storages, pos, false);
     }
 
     // get block locations
@@ -789,14 +790,14 @@ public class BlockManager {
     final int numNodes = blocksMap.numNodes(blk);
     final boolean isCorrupt = numCorruptNodes == numNodes;
     final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
-    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
+    final DatanodeStorageInfo[] machines = new DatanodeStorageInfo[numMachines];
     int j = 0;
     if (numMachines > 0) {
       for(DatanodeStorageInfo storage : blocksMap.getStorages(blk)) {
         final DatanodeDescriptor d = storage.getDatanodeDescriptor();
         final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
         if (isCorrupt || (!isCorrupt && !replicaCorrupt))
-          machines[j++] = d;
+          machines[j++] = storage;
       }
     }
     assert j == machines.length :
@@ -1195,7 +1196,7 @@ public class BlockManager {
   @VisibleForTesting
   int computeReplicationWorkForBlocks(List<List<Block>> blocksToReplicate) {
     int requiredReplication, numEffectiveReplicas;
-    List<DatanodeDescriptor> containingNodes, liveReplicaNodes;
+    List<DatanodeDescriptor> containingNodes;
     DatanodeDescriptor srcNode;
     BlockCollection bc = null;
     int additionalReplRequired;
@@ -1220,7 +1221,7 @@ public class BlockManager {
 
             // get a source data-node
             containingNodes = new ArrayList<DatanodeDescriptor>();
-            liveReplicaNodes = new ArrayList<DatanodeDescriptor>();
+            List<DatanodeStorageInfo> liveReplicaNodes = new ArrayList<DatanodeStorageInfo>();
             NumberReplicas numReplicas = new NumberReplicas();
             srcNode = chooseSourceDatanode(
                 block, containingNodes, liveReplicaNodes, numReplicas,
@@ -1279,7 +1280,7 @@ public class BlockManager {
     namesystem.writeLock();
     try {
       for(ReplicationWork rw : work){
-        DatanodeDescriptor[] targets = rw.targets;
+        final DatanodeStorageInfo[] targets = rw.targets;
         if(targets == null || targets.length == 0){
           rw.targets = null;
           continue;
@@ -1317,7 +1318,8 @@ public class BlockManager {
 
           if ( (numReplicas.liveReplicas() >= requiredReplication) &&
                (!blockHasEnoughRacks(block)) ) {
-            if (rw.srcNode.getNetworkLocation().equals(targets[0].getNetworkLocation())) {
+            if (rw.srcNode.getNetworkLocation().equals(
+                targets[0].getDatanodeDescriptor().getNetworkLocation())) {
               //No use continuing, unless a new rack in this case
               continue;
             }
@@ -1327,8 +1329,8 @@ public class BlockManager {
           rw.srcNode.addBlockToBeReplicated(block, targets);
           scheduledWork++;
 
-          for (DatanodeDescriptor dn : targets) {
-            dn.incBlocksScheduled();
+          for (DatanodeStorageInfo storage : targets) {
+            storage.getDatanodeDescriptor().incBlocksScheduled();
           }
 
           // Move the block-replication into a "pending" state.
@@ -1354,7 +1356,7 @@ public class BlockManager {
     if (blockLog.isInfoEnabled()) {
       // log which blocks have been scheduled for replication
       for(ReplicationWork rw : work){
-        DatanodeDescriptor[] targets = rw.targets;
+        DatanodeStorageInfo[] targets = rw.targets;
         if (targets != null && targets.length != 0) {
           StringBuilder targetList = new StringBuilder("datanode(s)");
           for (int k = 0; k < targets.length; k++) {
@@ -1383,15 +1385,16 @@ public class BlockManager {
    * @see BlockPlacementPolicy#chooseTarget(String, int, Node,
    *      List, boolean, Set, long)
    */
-  public DatanodeDescriptor[] chooseTarget(final String src,
+  public DatanodeStorageInfo[] chooseTarget(final String src,
       final int numOfReplicas, final DatanodeDescriptor client,
       final Set<Node> excludedNodes,
       final long blocksize, List<String> favoredNodes) throws IOException {
     List<DatanodeDescriptor> favoredDatanodeDescriptors = 
         getDatanodeDescriptors(favoredNodes);
-    final DatanodeDescriptor targets[] = blockplacement.chooseTarget(src,
+    final DatanodeStorageInfo[] targets = blockplacement.chooseTarget(src,
         numOfReplicas, client, excludedNodes, blocksize, 
-        favoredDatanodeDescriptors);
+        // TODO: get storage type from file
+        favoredDatanodeDescriptors, StorageType.DEFAULT);
     if (targets.length < minReplication) {
       throw new IOException("File " + src + " could only be replicated to "
           + targets.length + " nodes instead of minReplication (="
@@ -1452,12 +1455,11 @@ public class BlockManager {
    *         the given block
    */
    @VisibleForTesting
-   DatanodeDescriptor chooseSourceDatanode(
-                                    Block block,
-                                    List<DatanodeDescriptor> containingNodes,
-                                    List<DatanodeDescriptor> nodesContainingLiveReplicas,
-                                    NumberReplicas numReplicas,
-                                    int priority) {
+   DatanodeDescriptor chooseSourceDatanode(Block block,
+       List<DatanodeDescriptor> containingNodes,
+       List<DatanodeStorageInfo>  nodesContainingLiveReplicas,
+       NumberReplicas numReplicas,
+       int priority) {
     containingNodes.clear();
     nodesContainingLiveReplicas.clear();
     DatanodeDescriptor srcNode = null;
@@ -1478,7 +1480,7 @@ public class BlockManager {
       else if (excessBlocks != null && excessBlocks.contains(block)) {
         excess++;
       } else {
-        nodesContainingLiveReplicas.add(node);
+        nodesContainingLiveReplicas.add(storage);
         live++;
       }
       containingNodes.add(node);
@@ -1621,7 +1623,8 @@ public class BlockManager {
 
       // To minimize startup time, we discard any second (or later) block reports
       // that we receive while still in startup phase.
-      final DatanodeStorageInfo storageInfo = node.getStorageInfo(storage.getStorageID());
+      final DatanodeStorageInfo storageInfo = node.updateStorage(storage);
+      LOG.info("XXX storageInfo=" + storageInfo + ", storage=" + storage);
       if (namesystem.isInStartupSafeMode()
           && storageInfo.getBlockReportCount() > 0) {
         blockLog.info("BLOCK* processReport: "
@@ -2636,7 +2639,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     //
     // Modify the blocks->datanode map and node's map.
     //
-    pendingReplications.decrement(block, node);
+    pendingReplications.decrement(block, node, storageID);
     processAndHandleReportedBlock(node, storageID, block, ReplicaState.FINALIZED,
         delHintNode);
   }
@@ -3225,24 +3228,24 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
 
     private DatanodeDescriptor srcNode;
     private List<DatanodeDescriptor> containingNodes;
-    private List<DatanodeDescriptor> liveReplicaNodes;
+    private List<DatanodeStorageInfo> liveReplicaStorages;
     private int additionalReplRequired;
 
-    private DatanodeDescriptor targets[];
+    private DatanodeStorageInfo targets[];
     private int priority;
 
     public ReplicationWork(Block block,
         BlockCollection bc,
         DatanodeDescriptor srcNode,
         List<DatanodeDescriptor> containingNodes,
-        List<DatanodeDescriptor> liveReplicaNodes,
+        List<DatanodeStorageInfo> liveReplicaStorages,
         int additionalReplRequired,
         int priority) {
       this.block = block;
       this.bc = bc;
       this.srcNode = srcNode;
       this.containingNodes = containingNodes;
-      this.liveReplicaNodes = liveReplicaNodes;
+      this.liveReplicaStorages = liveReplicaStorages;
       this.additionalReplRequired = additionalReplRequired;
       this.priority = priority;
       this.targets = null;
@@ -3251,8 +3254,8 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     private void chooseTargets(BlockPlacementPolicy blockplacement,
         Set<Node> excludedNodes) {
       targets = blockplacement.chooseTarget(bc.getName(),
-          additionalReplRequired, srcNode, liveReplicaNodes, false,
-          excludedNodes, block.getNumBytes());
+          additionalReplRequired, srcNode, liveReplicaStorages, false,
+          excludedNodes, block.getNumBytes(), StorageType.DEFAULT);
     }
   }
 

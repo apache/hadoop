@@ -860,9 +860,35 @@ public class DFSTestUtil {
 
   public static DatanodeStorageInfo createDatanodeStorageInfo(
       String storageID, String ip) {
+    return createDatanodeStorageInfo(storageID, ip, "defaultRack");
+  }
+  public static DatanodeStorageInfo[] createDatanodeStorageInfos(String[] racks) {
+    return createDatanodeStorageInfos(racks.length, racks);
+  }
+  public static DatanodeStorageInfo[] createDatanodeStorageInfos(int n, String... racks) {
+    DatanodeStorageInfo[] storages = new DatanodeStorageInfo[n];
+    for(int i = storages.length; i > 0; ) {
+      final String storageID = "s" + i;
+      final String ip = i + "." + i + "." + i + "." + i;
+      i--;
+      final String rack = i < racks.length? racks[i]: "defaultRack";
+      storages[i] = createDatanodeStorageInfo(storageID, ip, rack);
+    }
+    return storages;
+  }
+  public static DatanodeStorageInfo createDatanodeStorageInfo(
+      String storageID, String ip, String rack) {
+    final DatanodeStorage storage = new DatanodeStorage(storageID);
     return new DatanodeStorageInfo(
-        getDatanodeDescriptor(ip, "defaultRack"),
-        new DatanodeStorage(storageID));
+        BlockManagerTestUtil.getDatanodeDescriptor(ip, rack, storage), storage);
+  }
+  public static DatanodeDescriptor[] toDatanodeDescriptor(
+      DatanodeStorageInfo[] storages) {
+    DatanodeDescriptor[] datanodes = new DatanodeDescriptor[storages.length];
+    for(int i = 0; i < datanodes.length; i++) {
+      datanodes[i] = storages[i].getDatanodeDescriptor();
+    }
+    return datanodes;
   }
 
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,

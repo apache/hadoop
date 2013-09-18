@@ -227,10 +227,16 @@ public class BlockManagerTestUtil {
   
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
       String rackLocation, boolean initializeStorage) {
+    return getDatanodeDescriptor(ipAddr, rackLocation,
+        initializeStorage? new DatanodeStorage(DatanodeStorage.newStorageID()): null);
+  }
+
+  public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
+      String rackLocation, DatanodeStorage storage) {
       DatanodeDescriptor dn = DFSTestUtil.getDatanodeDescriptor(ipAddr,
           DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT, rackLocation);
-      if (initializeStorage) {
-        dn.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
+      if (storage != null) {
+        dn.updateStorage(storage);
       }
       return dn;
   }

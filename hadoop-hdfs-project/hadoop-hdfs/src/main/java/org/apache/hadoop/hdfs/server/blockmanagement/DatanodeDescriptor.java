@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -54,9 +55,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
   @InterfaceStability.Evolving
   public static class BlockTargetPair {
     public final Block block;
-    public final DatanodeDescriptor[] targets;    
+    public final DatanodeStorageInfo[] targets;    
 
-    BlockTargetPair(Block block, DatanodeDescriptor[] targets) {
+    BlockTargetPair(Block block, DatanodeStorageInfo[] targets) {
       this.block = block;
       this.targets = targets;
     }
@@ -215,14 +216,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return false;
   }
 
-  public DatanodeStorageInfo getStorageInfo(String storageID) {
+  DatanodeStorageInfo getStorageInfo(String storageID) {
     synchronized (storageMap) {
       return storageMap.get(storageID);
     }
   }
-  public Collection<DatanodeStorageInfo> getStorageInfos() {
+  DatanodeStorageInfo[] getStorageInfos() {
     synchronized (storageMap) {
-      return new ArrayList<DatanodeStorageInfo>(storageMap.values());
+      final Collection<DatanodeStorageInfo> storages = storageMap.values();
+      return storages.toArray(new DatanodeStorageInfo[storages.size()]);
     }
   }
 
@@ -252,14 +254,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
       return s.removeBlock(b);
     }
     return false;
-  }
-
-  /**
-   * Used for testing only
-   * @return the head of the blockList
-   */
-  protected BlockInfo getHead(){
-    return getBlockIterator().next();
   }
 
   /**
@@ -325,20 +319,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   private static class BlockIterator implements Iterator<BlockInfo> {
-    private final int maxIndex;
     private int index = 0;
-    private List<Iterator<BlockInfo>> iterators = new ArrayList<Iterator<BlockInfo>>();
+    private final List<Iterator<BlockInfo>> iterators;
     
-    private BlockIterator(final Iterable<DatanodeStorageInfo> storages) {
+    private BlockIterator(final DatanodeStorageInfo... storages) {
+      List<Iterator<BlockInfo>> iterators = new ArrayList<Iterator<BlockInfo>>();
       for (DatanodeStorageInfo e : storages) {
         iterators.add(e.getBlockIterator());
       }
-      maxIndex = iterators.size() - 1;
-    }
-
-    private BlockIterator(final DatanodeStorageInfo storage) {
-      iterators.add(storage.getBlockIterator());
-      maxIndex = iterators.size() - 1;
+      this.iterators = Collections.unmodifiableList(iterators);
     }
 
     @Override
@@ -359,7 +348,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
     
     private void update() {
-      while(index < maxIndex && !iterators.get(index).hasNext()) {
+      while(index < iterators.size() - 1 && !iterators.get(index).hasNext()) {
         index++;
       }
     }
@@ -375,7 +364,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Store block replication work.
    */
-  void addBlockToBeReplicated(Block block, DatanodeDescriptor[] targets) {
+  void addBlockToBeReplicated(Block block, DatanodeStorageInfo[] targets) {
     assert(block != null && targets != null && targets.length > 0);
     replicateBlocks.offer(new BlockTargetPair(block, targets));
   }

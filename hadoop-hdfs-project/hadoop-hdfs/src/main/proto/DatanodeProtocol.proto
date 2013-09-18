@@ -105,10 +105,12 @@ message BlockCommandProto {
     INVALIDATE = 2; // Invalidate blocks
     SHUTDOWN = 3; // Shutdown the datanode
   }
+
   required Action action = 1;
   required string blockPoolId = 2;
   repeated BlockProto blocks = 3;
   repeated DatanodeInfosProto targets = 4;
+  repeated StorageIDsProto targetStorageIDs = 5;
 }
 
 /**

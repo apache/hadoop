@@ -59,18 +59,18 @@ public class LocatedBlock {
     this(b, locs, null, null, startOffset, corrupt);
   }
 
-  public static LocatedBlock createLocatedBlock(ExtendedBlock b,
-      DatanodeStorageInfo[] storages, long startOffset, boolean corrupt) {
-    final DatanodeInfo[] locs = new DatanodeInfo[storages.length];
-    final String[] storageIDs = new String[storages.length];
-    final StorageType[] storageType = new StorageType[storages.length];
-    for(int i = 0; i < storages.length; i++) {
-      locs[i] = storages[i].getDatanodeDescriptor();
-      storageIDs[i] = storages[i].getStorageID();
-      storageType[i] = storages[i].getStorageType();
-    }
-    return new LocatedBlock(b, locs, storageIDs, storageType, startOffset, corrupt);
+  public LocatedBlock(ExtendedBlock b, DatanodeStorageInfo[] storages) {
+    this(b, storages, -1, false); // startOffset is unknown
   }
+
+  public LocatedBlock(ExtendedBlock b, DatanodeStorageInfo[] storages,
+      long startOffset, boolean corrupt) {
+    this(b, DatanodeStorageInfo.toDatanodeInfos(storages),
+        DatanodeStorageInfo.toStorageIDs(storages),
+        DatanodeStorageInfo.toStorageTypes(storages),
+        startOffset, corrupt); // startOffset is unknown
+  }
+
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, String[] storageIDs,
                       StorageType[] storageTypes, long startOffset,
                       boolean corrupt) {

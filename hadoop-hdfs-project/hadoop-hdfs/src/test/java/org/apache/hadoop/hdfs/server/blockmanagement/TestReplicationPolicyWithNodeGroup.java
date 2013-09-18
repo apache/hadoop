@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
@@ -57,41 +58,57 @@ public class TestReplicationPolicyWithNodeGroup {
   private BlockPlacementPolicy replicator;
   private static final String filename = "/dummyfile.txt";
 
-  private final static DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
-      DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1/n1"),
-      DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1/n1"),
-      DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1/r1/n2"),
-      DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/d1/r2/n3"),
-      DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/d1/r2/n3"),
-      DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/d1/r2/n4"),
-      DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/d2/r3/n5"),
-      DFSTestUtil.getDatanodeDescriptor("8.8.8.8", "/d2/r3/n6")
-  };
-  
-  private final static DatanodeDescriptor dataNodesInBoundaryCase[] = 
-          new DatanodeDescriptor[] {
-      DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1/n1"),
-      DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1/n1"),
-      DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1/r1/n1"),
-      DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/d1/r1/n2"),
-      DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/d1/r2/n3"),
-      DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/d1/r2/n3")
-  };
-  
-  private final static DatanodeDescriptor dataNodesInMoreTargetsCase[] =
-          new DatanodeDescriptor[] {
-      DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/r1/n1"),
-      DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/r1/n1"),
-      DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/r1/n2"),
-      DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/r1/n2"),
-      DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/r1/n3"),
-      DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/r1/n3"),
-      DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/r2/n4"),
-      DFSTestUtil.getDatanodeDescriptor("8.8.8.8", "/r2/n4"),
-      DFSTestUtil.getDatanodeDescriptor("9.9.9.9", "/r2/n5"),
-      DFSTestUtil.getDatanodeDescriptor("10.10.10.10", "/r2/n5"),
-      DFSTestUtil.getDatanodeDescriptor("11.11.11.11", "/r2/n6"),
-      DFSTestUtil.getDatanodeDescriptor("12.12.12.12", "/r2/n6"),
+  private static final DatanodeStorageInfo[] storages;
+  private static final DatanodeDescriptor[] dataNodes;
+  static {
+    final String[] racks = {
+        "/d1/r1/n1",
+        "/d1/r1/n1",
+        "/d1/r1/n2",
+        "/d1/r2/n3",
+        "/d1/r2/n3",
+        "/d1/r2/n4",
+        "/d2/r3/n5",
+        "/d2/r3/n6"
+    };
+    storages = DFSTestUtil.createDatanodeStorageInfos(racks);
+    dataNodes = DFSTestUtil.toDatanodeDescriptor(storages);
+  }
+
+  private static final DatanodeStorageInfo[] storagesInBoundaryCase;
+  private static final DatanodeDescriptor[] dataNodesInBoundaryCase;
+  static {
+    final String[] racksInBoundaryCase = {
+        "/d1/r1/n1",
+        "/d1/r1/n1",
+        "/d1/r1/n1",
+        "/d1/r1/n2",
+        "/d1/r2/n3",
+        "/d1/r2/n3"
+    };
+    storagesInBoundaryCase = DFSTestUtil.createDatanodeStorageInfos(racksInBoundaryCase);
+    dataNodesInBoundaryCase = DFSTestUtil.toDatanodeDescriptor(storagesInBoundaryCase);
+  }
+
+  private static final DatanodeStorageInfo[] storagesInMoreTargetsCase;
+  private final static DatanodeDescriptor[] dataNodesInMoreTargetsCase;
+  static {
+    final String[] racksInMoreTargetsCase = {
+        "/r1/n1",
+        "/r1/n1",
+        "/r1/n2",
+        "/r1/n2",
+        "/r1/n3",
+        "/r1/n3",
+        "/r2/n4",
+        "/r2/n4",
+        "/r2/n5",
+        "/r2/n5",
+        "/r2/n6",
+        "/r2/n6"
+    };
+    storagesInMoreTargetsCase = DFSTestUtil.createDatanodeStorageInfos(racksInMoreTargetsCase);
+    dataNodesInMoreTargetsCase = DFSTestUtil.toDatanodeDescriptor(storagesInMoreTargetsCase);
   };
 
   private final static DatanodeDescriptor NODE = 
@@ -142,11 +159,12 @@ public class TestReplicationPolicyWithNodeGroup {
    * Return false if two targets are found on the same NodeGroup.
    */
   private static boolean checkTargetsOnDifferentNodeGroup(
-      DatanodeDescriptor[] targets) {
+      DatanodeStorageInfo[] targets) {
     if(targets.length == 0)
       return true;
     Set<String> targetSet = new HashSet<String>();
-    for(DatanodeDescriptor node:targets) {
+    for(DatanodeStorageInfo storage:targets) {
+      final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       String nodeGroup = NetworkTopology.getLastHalf(node.getNetworkLocation());
       if(targetSet.contains(nodeGroup)) {
         return false;
@@ -156,34 +174,50 @@ public class TestReplicationPolicyWithNodeGroup {
     }
     return true;
   }
-  
-  private DatanodeDescriptor[] chooseTarget(int numOfReplicas) {
+
+  private boolean isOnSameRack(DatanodeStorageInfo left, DatanodeStorageInfo right) {
+    return isOnSameRack(left.getDatanodeDescriptor(), right);
+  }
+
+  private boolean isOnSameRack(DatanodeDescriptor left, DatanodeStorageInfo right) {
+    return cluster.isOnSameRack(left, right.getDatanodeDescriptor());
+  }
+
+  private boolean isOnSameNodeGroup(DatanodeStorageInfo left, DatanodeStorageInfo right) {
+    return isOnSameNodeGroup(left.getDatanodeDescriptor(), right);
+  }
+
+  private boolean isOnSameNodeGroup(DatanodeDescriptor left, DatanodeStorageInfo right) {
+    return cluster.isOnSameNodeGroup(left, right.getDatanodeDescriptor());
+  }
+
+  private DatanodeStorageInfo[] chooseTarget(int numOfReplicas) {
     return chooseTarget(numOfReplicas, dataNodes[0]);
   }
 
-  private DatanodeDescriptor[] chooseTarget(int numOfReplicas,
+  private DatanodeStorageInfo[] chooseTarget(int numOfReplicas,
       DatanodeDescriptor writer) {
     return chooseTarget(numOfReplicas, writer,
-        new ArrayList<DatanodeDescriptor>());
+        new ArrayList<DatanodeStorageInfo>());
   }
 
-  private DatanodeDescriptor[] chooseTarget(int numOfReplicas,
-      List<DatanodeDescriptor> chosenNodes) {
+  private DatanodeStorageInfo[] chooseTarget(int numOfReplicas,
+      List<DatanodeStorageInfo> chosenNodes) {
     return chooseTarget(numOfReplicas, dataNodes[0], chosenNodes);
   }
 
-  private DatanodeDescriptor[] chooseTarget(int numOfReplicas,
-      DatanodeDescriptor writer, List<DatanodeDescriptor> chosenNodes) {
+  private DatanodeStorageInfo[] chooseTarget(int numOfReplicas,
+      DatanodeDescriptor writer, List<DatanodeStorageInfo> chosenNodes) {
     return chooseTarget(numOfReplicas, writer, chosenNodes, null);
   }
 
-  private DatanodeDescriptor[] chooseTarget(
+  private DatanodeStorageInfo[] chooseTarget(
       int numOfReplicas,
       DatanodeDescriptor writer,
-      List<DatanodeDescriptor> chosenNodes,
+      List<DatanodeStorageInfo> chosenNodes,
       Set<Node> excludedNodes) {
     return replicator.chooseTarget(filename, numOfReplicas, writer, chosenNodes,
-        false, excludedNodes, BLOCK_SIZE);
+        false, excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
   }
 
   /**
@@ -201,32 +235,36 @@ public class TestReplicationPolicyWithNodeGroup {
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 
         HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 4, 0); // overloaded
 
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
     assertEquals(targets.length, 0);
 
     targets = chooseTarget(1);
     assertEquals(targets.length, 1);
-    assertEquals(targets[0], dataNodes[0]);
+    assertEquals(storages[0], targets[0]);
+
 
     targets = chooseTarget(2);
     assertEquals(targets.length, 2);
-    assertEquals(targets[0], dataNodes[0]);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertEquals(storages[0], targets[0]);
+
+    assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(3);
     assertEquals(targets.length, 3);
-    assertEquals(targets[0], dataNodes[0]);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
-    assertFalse(cluster.isOnSameNodeGroup(targets[1], targets[2]));
+    assertEquals(storages[0], targets[0]);
+
+    assertFalse(isOnSameRack(targets[0], targets[1]));
+    assertTrue(isOnSameRack(targets[1], targets[2]));
+    assertFalse(isOnSameNodeGroup(targets[1], targets[2]));
 
     targets = chooseTarget(4);
     assertEquals(targets.length, 4);
-    assertEquals(targets[0], dataNodes[0]);
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]) ||
-               cluster.isOnSameRack(targets[2], targets[3]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
+    assertEquals(storages[0], targets[0]);
+
+    assertTrue(isOnSameRack(targets[1], targets[2]) ||
+               isOnSameRack(targets[2], targets[3]));
+    assertFalse(isOnSameRack(targets[0], targets[2]));
     // Make sure no more than one replicas are on the same nodegroup 
     verifyNoTwoTargetsOnSameNodeGroup(targets);
 
@@ -235,10 +273,10 @@ public class TestReplicationPolicyWithNodeGroup {
         HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0); 
   }
 
-  private void verifyNoTwoTargetsOnSameNodeGroup(DatanodeDescriptor[] targets) {
+  private void verifyNoTwoTargetsOnSameNodeGroup(DatanodeStorageInfo[] targets) {
     Set<String> nodeGroupSet = new HashSet<String>();
-    for (DatanodeDescriptor target: targets) {
-      nodeGroupSet.add(target.getNetworkLocation());
+    for (DatanodeStorageInfo target: targets) {
+      nodeGroupSet.add(target.getDatanodeDescriptor().getNetworkLocation());
     }
     assertEquals(nodeGroupSet.size(), targets.length);
   }
@@ -253,36 +291,37 @@ public class TestReplicationPolicyWithNodeGroup {
    */
   @Test
   public void testChooseTarget2() throws Exception {
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     BlockPlacementPolicyDefault repl = (BlockPlacementPolicyDefault)replicator;
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
 
     Set<Node> excludedNodes = new HashSet<Node>();
     excludedNodes.add(dataNodes[1]); 
     targets = repl.chooseTarget(filename, 4, dataNodes[0], chosenNodes, false, 
-        excludedNodes, BLOCK_SIZE);
+        excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
     assertEquals(targets.length, 4);
-    assertEquals(targets[0], dataNodes[0]);
+    assertEquals(storages[0], targets[0]);
+
     assertTrue(cluster.isNodeGroupAware());
     // Make sure no replicas are on the same nodegroup 
     for (int i=1;i<4;i++) {
-      assertFalse(cluster.isOnSameNodeGroup(targets[0], targets[i]));
+      assertFalse(isOnSameNodeGroup(targets[0], targets[i]));
     }
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]) ||
-               cluster.isOnSameRack(targets[2], targets[3]));
-    assertFalse(cluster.isOnSameRack(targets[1], targets[3]));
+    assertTrue(isOnSameRack(targets[1], targets[2]) ||
+               isOnSameRack(targets[2], targets[3]));
+    assertFalse(isOnSameRack(targets[1], targets[3]));
 
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.add(dataNodes[1]); 
-    chosenNodes.add(dataNodes[2]);
+    chosenNodes.add(storages[2]);
     targets = repl.chooseTarget(filename, 1, dataNodes[0], chosenNodes, true,
-        excludedNodes, BLOCK_SIZE);
+        excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
     System.out.println("targets=" + Arrays.asList(targets));
     assertEquals(2, targets.length);
     //make sure that the chosen node is in the target.
     int i = 0;
-    for(; i < targets.length && !dataNodes[2].equals(targets[i]); i++);
+    for(; i < targets.length && !storages[2].equals(targets[i]); i++);
     assertTrue(i < targets.length);
   }
 
@@ -301,32 +340,32 @@ public class TestReplicationPolicyWithNodeGroup {
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0); // no space
 
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
     assertEquals(targets.length, 0);
 
     targets = chooseTarget(1);
     assertEquals(targets.length, 1);
-    assertEquals(targets[0], dataNodes[1]);
+    assertEquals(storages[1], targets[0]);
 
     targets = chooseTarget(2);
     assertEquals(targets.length, 2);
-    assertEquals(targets[0], dataNodes[1]);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertEquals(storages[1], targets[0]);
+    assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(3);
     assertEquals(targets.length, 3);
-    assertEquals(targets[0], dataNodes[1]);
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertEquals(storages[1], targets[0]);
+    assertTrue(isOnSameRack(targets[1], targets[2]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(4);
     assertEquals(targets.length, 4);
-    assertEquals(targets[0], dataNodes[1]);
+    assertEquals(storages[1], targets[0]);
     assertTrue(cluster.isNodeGroupAware());
     verifyNoTwoTargetsOnSameNodeGroup(targets);
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]) ||
-               cluster.isOnSameRack(targets[2], targets[3]));
+    assertTrue(isOnSameRack(targets[1], targets[2]) ||
+               isOnSameRack(targets[2], targets[3]));
 
     dataNodes[0].updateHeartbeat(
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
@@ -351,28 +390,28 @@ public class TestReplicationPolicyWithNodeGroup {
           (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0);
     }
 
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
     assertEquals(targets.length, 0);
 
     targets = chooseTarget(1);
     assertEquals(targets.length, 1);
-    assertFalse(cluster.isOnSameRack(targets[0], dataNodes[0]));
+    assertFalse(isOnSameRack(dataNodes[0], targets[0]));
 
     targets = chooseTarget(2);
     assertEquals(targets.length, 2);
-    assertFalse(cluster.isOnSameRack(targets[0], dataNodes[0]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertFalse(isOnSameRack(dataNodes[0], targets[0]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(3);
     assertEquals(targets.length, 3);
     for(int i=0; i<3; i++) {
-      assertFalse(cluster.isOnSameRack(targets[i], dataNodes[0]));
+      assertFalse(isOnSameRack(dataNodes[0], targets[i]));
     }
     verifyNoTwoTargetsOnSameNodeGroup(targets);
-    assertTrue(cluster.isOnSameRack(targets[0], targets[1]) ||
-               cluster.isOnSameRack(targets[1], targets[2]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
+    assertTrue(isOnSameRack(targets[0], targets[1]) ||
+               isOnSameRack(targets[1], targets[2]));
+    assertFalse(isOnSameRack(targets[0], targets[2]));
   }
 
   /**
@@ -385,7 +424,7 @@ public class TestReplicationPolicyWithNodeGroup {
   @Test
   public void testChooseTarget5() throws Exception {
     setupDataNodeCapacity();
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, NODE);
     assertEquals(targets.length, 0);
 
@@ -394,12 +433,12 @@ public class TestReplicationPolicyWithNodeGroup {
 
     targets = chooseTarget(2, NODE);
     assertEquals(targets.length, 2);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(3, NODE);
     assertEquals(targets.length, 3);
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertTrue(isOnSameRack(targets[1], targets[2]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
     verifyNoTwoTargetsOnSameNodeGroup(targets);
   }
 
@@ -413,27 +452,27 @@ public class TestReplicationPolicyWithNodeGroup {
   @Test
   public void testRereplicate1() throws Exception {
     setupDataNodeCapacity();
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
-    chosenNodes.add(dataNodes[0]);
-    DatanodeDescriptor[] targets;
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    chosenNodes.add(storages[0]);
+    DatanodeStorageInfo[] targets;
     
     targets = chooseTarget(0, chosenNodes);
     assertEquals(targets.length, 0);
     
     targets = chooseTarget(1, chosenNodes);
     assertEquals(targets.length, 1);
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
+    assertFalse(isOnSameRack(dataNodes[0], targets[0]));
     
     targets = chooseTarget(2, chosenNodes);
     assertEquals(targets.length, 2);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertTrue(isOnSameRack(dataNodes[0], targets[0]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
     
     targets = chooseTarget(3, chosenNodes);
     assertEquals(targets.length, 3);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameNodeGroup(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
+    assertTrue(isOnSameRack(dataNodes[0], targets[0]));
+    assertFalse(isOnSameNodeGroup(dataNodes[0], targets[0]));
+    assertFalse(isOnSameRack(targets[0], targets[2]));
   }
 
   /**
@@ -446,22 +485,22 @@ public class TestReplicationPolicyWithNodeGroup {
   @Test
   public void testRereplicate2() throws Exception {
     setupDataNodeCapacity();
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
-    chosenNodes.add(dataNodes[0]);
-    chosenNodes.add(dataNodes[1]);
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    chosenNodes.add(storages[0]);
+    chosenNodes.add(storages[1]);
 
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, chosenNodes);
     assertEquals(targets.length, 0);
 
     targets = chooseTarget(1, chosenNodes);
     assertEquals(targets.length, 1);
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
+    assertFalse(isOnSameRack(dataNodes[0], targets[0]));
 
     targets = chooseTarget(2, chosenNodes);
     assertEquals(targets.length, 2);
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]) && 
-        cluster.isOnSameRack(dataNodes[0], targets[1]));
+    assertFalse(isOnSameRack(dataNodes[0], targets[0]) && 
+        isOnSameRack(dataNodes[0], targets[1]));
   }
 
   /**
@@ -474,33 +513,33 @@ public class TestReplicationPolicyWithNodeGroup {
   @Test
   public void testRereplicate3() throws Exception {
     setupDataNodeCapacity();
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
-    chosenNodes.add(dataNodes[0]);
-    chosenNodes.add(dataNodes[3]);
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    chosenNodes.add(storages[0]);
+    chosenNodes.add(storages[3]);
 
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, chosenNodes);
     assertEquals(targets.length, 0);
 
     targets = chooseTarget(1, chosenNodes);
     assertEquals(targets.length, 1);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameRack(dataNodes[3], targets[0]));
+    assertTrue(isOnSameRack(dataNodes[0], targets[0]));
+    assertFalse(isOnSameRack(dataNodes[3], targets[0]));
 
     targets = chooseTarget(1, dataNodes[3], chosenNodes);
     assertEquals(targets.length, 1);
-    assertTrue(cluster.isOnSameRack(dataNodes[3], targets[0]));
-    assertFalse(cluster.isOnSameNodeGroup(dataNodes[3], targets[0]));
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
+    assertTrue(isOnSameRack(dataNodes[3], targets[0]));
+    assertFalse(isOnSameNodeGroup(dataNodes[3], targets[0]));
+    assertFalse(isOnSameRack(dataNodes[0], targets[0]));
 
     targets = chooseTarget(2, chosenNodes);
     assertEquals(targets.length, 2);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameNodeGroup(dataNodes[0], targets[0]));
+    assertTrue(isOnSameRack(dataNodes[0], targets[0]));
+    assertFalse(isOnSameNodeGroup(dataNodes[0], targets[0]));
 
     targets = chooseTarget(2, dataNodes[3], chosenNodes);
     assertEquals(targets.length, 2);
-    assertTrue(cluster.isOnSameRack(dataNodes[3], targets[0]));
+    assertTrue(isOnSameRack(dataNodes[3], targets[0]));
   }
   
   /**
@@ -583,7 +622,7 @@ public class TestReplicationPolicyWithNodeGroup {
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
     }
 
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, dataNodesInBoundaryCase[0]);
     assertEquals(targets.length, 0);
     
@@ -592,7 +631,7 @@ public class TestReplicationPolicyWithNodeGroup {
 
     targets = chooseTarget(2, dataNodesInBoundaryCase[0]);
     assertEquals(targets.length, 2);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
     
     targets = chooseTarget(3, dataNodesInBoundaryCase[0]);
     assertEquals(targets.length, 3);
@@ -613,15 +652,13 @@ public class TestReplicationPolicyWithNodeGroup {
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
     }
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
-    chosenNodes.add(dataNodesInBoundaryCase[0]);
-    chosenNodes.add(dataNodesInBoundaryCase[5]);
-    DatanodeDescriptor[] targets;
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    chosenNodes.add(storagesInBoundaryCase[0]);
+    chosenNodes.add(storagesInBoundaryCase[5]);
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(1, dataNodesInBoundaryCase[0], chosenNodes);
-    assertFalse(cluster.isOnSameNodeGroup(targets[0], 
-        dataNodesInBoundaryCase[0]));
-    assertFalse(cluster.isOnSameNodeGroup(targets[0],
-        dataNodesInBoundaryCase[5]));
+    assertFalse(isOnSameNodeGroup(dataNodesInBoundaryCase[0], targets[0]));
+    assertFalse(isOnSameNodeGroup(dataNodesInBoundaryCase[5], targets[0]));
     assertTrue(checkTargetsOnDifferentNodeGroup(targets));
   }
   
@@ -654,7 +691,7 @@ public class TestReplicationPolicyWithNodeGroup {
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
     }
 
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     // Test normal case -- 3 replicas
     targets = chooseTarget(3, dataNodesInMoreTargetsCase[0]);
     assertEquals(targets.length, 3);

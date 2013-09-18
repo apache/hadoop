@@ -835,16 +835,6 @@ public class Balancer {
                         DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_DEFAULT));
   }
   
-  /* Shuffle datanode array */
-  static private void shuffleArray(DatanodeInfo[] datanodes) {
-    for (int i=datanodes.length; i>1; i--) {
-      int randomIndex = DFSUtil.getRandom().nextInt(i);
-      DatanodeInfo tmp = datanodes[randomIndex];
-      datanodes[randomIndex] = datanodes[i-1];
-      datanodes[i-1] = tmp;
-    }
-  }
-  
   /* Given a data node set, build a network topology and decide
    * over-utilized datanodes, above average utilized datanodes, 
    * below average utilized datanodes, and underutilized datanodes. 
@@ -874,8 +864,7 @@ public class Balancer {
      * an increasing order or a decreasing order.
      */  
     long overLoadedBytes = 0L, underLoadedBytes = 0L;
-    shuffleArray(datanodes);
-    for (DatanodeInfo datanode : datanodes) {
+    for (DatanodeInfo datanode : DFSUtil.shuffle(datanodes)) {
       if (datanode.isDecommissioned() || datanode.isDecommissionInProgress()) {
         continue; // ignore decommissioning or decommissioned nodes
       }

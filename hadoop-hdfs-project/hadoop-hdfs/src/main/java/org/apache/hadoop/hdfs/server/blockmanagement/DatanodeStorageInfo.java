@@ -32,7 +32,9 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
  * by this class.
  */
 public class DatanodeStorageInfo {
-  static DatanodeInfo[] toDatanodeInfos(DatanodeStorageInfo[] storages) {
+  public static final DatanodeStorageInfo[] EMPTY_ARRAY = {};
+
+  public static DatanodeInfo[] toDatanodeInfos(DatanodeStorageInfo[] storages) {
     return toDatanodeInfos(Arrays.asList(storages));
   }
   static DatanodeInfo[] toDatanodeInfos(List<DatanodeStorageInfo> storages) {
@@ -41,6 +43,22 @@ public class DatanodeStorageInfo {
       datanodes[i] = storages.get(i).getDatanodeDescriptor();
     }
     return datanodes;
+  }
+
+  public static String[] toStorageIDs(DatanodeStorageInfo[] storages) {
+    String[] storageIDs = new String[storages.length];
+    for(int i = 0; i < storageIDs.length; i++) {
+      storageIDs[i] = storages[i].getStorageID();
+    }
+    return storageIDs;
+  }
+
+  public static StorageType[] toStorageTypes(DatanodeStorageInfo[] storages) {
+    StorageType[] storageTypes = new StorageType[storages.length];
+    for(int i = 0; i < storageTypes.length; i++) {
+      storageTypes[i] = storages[i].getStorageType();
+    }
+    return storageTypes;
   }
 
   /**
@@ -207,6 +225,22 @@ public class DatanodeStorageInfo {
     return dn;
   }
   
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    } else if (obj == null || !(obj instanceof DatanodeStorageInfo)) {
+      return false;
+    }
+    final DatanodeStorageInfo that = (DatanodeStorageInfo)obj;
+    return this.storageID.equals(that.storageID);
+  }
+
+  @Override
+  public int hashCode() {
+    return storageID.hashCode();
+  }
+
   @Override
   public String toString() {
     return "[" + storageType + "]" + storageID + ":" + state;

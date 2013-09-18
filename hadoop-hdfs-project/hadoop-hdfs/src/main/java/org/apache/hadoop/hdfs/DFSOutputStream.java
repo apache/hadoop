@@ -913,7 +913,8 @@ public class DFSOutputStream extends FSOutputSummer
       //get a new datanode
       final DatanodeInfo[] original = nodes;
       final LocatedBlock lb = dfsClient.namenode.getAdditionalDatanode(
-          src, block, nodes, failed.toArray(new DatanodeInfo[failed.size()]),
+          src, block, nodes, storageIDs,
+          failed.toArray(new DatanodeInfo[failed.size()]),
           1, dfsClient.clientName);
       nodes = lb.getLocations();
 

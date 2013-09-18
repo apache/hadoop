@@ -23,3 +23,6 @@ IMPROVEMENTS:
     fix a synchronization problem in DatanodeStorageInfo.  (szetszwo)
 
     HDFS-5157. Add StorageType to FsVolume.  (Junping Du via szetszwo)
+
+    HDFS-4990. Change BlockPlacementPolicy to choose storages instead of
+    datanodes.  (szetszwo)

@@ -141,6 +141,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -2495,14 +2496,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     // choose targets for the new block to be allocated.
-    // TODO: chooseTarget(..) should be changed to return DatanodeStorageInfo's
-    final DatanodeDescriptor chosenDatanodes[] = getBlockManager().chooseTarget( 
+    final DatanodeStorageInfo targets[] = getBlockManager().chooseTarget( 
         src, replication, clientNode, excludedNodes, blockSize, favoredNodes);
-    final DatanodeStorageInfo[] targets = new DatanodeStorageInfo[chosenDatanodes.length];
-    for(int i = 0; i < targets.length; i++) {
-      final DatanodeDescriptor dd = chosenDatanodes[i];
-      targets[i] = dd.getStorageInfos().iterator().next(); 
-    }
 
     // Part II.
     // Allocate a new block, add it to the INode and the BlocksMap. 
@@ -2644,7 +2639,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   LocatedBlock makeLocatedBlock(Block blk, DatanodeStorageInfo[] locs,
                                         long offset) throws IOException {
-    LocatedBlock lBlk = LocatedBlock.createLocatedBlock(
+    LocatedBlock lBlk = new LocatedBlock(
         getExtendedBlock(blk), locs, offset, false);
     getBlockManager().setBlockToken(
         lBlk, BlockTokenSecretManager.AccessMode.WRITE);
@@ -2653,7 +2648,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /** @see NameNode#getAdditionalDatanode(String, ExtendedBlock, DatanodeInfo[], DatanodeInfo[], int, String) */
   LocatedBlock getAdditionalDatanode(String src, final ExtendedBlock blk,
-      final DatanodeInfo[] existings,  final Set<Node> excludes,
+      final DatanodeInfo[] existings, final String[] storageIDs,
+      final Set<Node> excludes,
       final int numAdditionalNodes, final String clientName
       ) throws IOException {
     //check if the feature is enabled
@@ -2661,7 +2657,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     final DatanodeDescriptor clientnode;
     final long preferredblocksize;
-    final List<DatanodeDescriptor> chosen;
+    final List<DatanodeStorageInfo> chosen;
     checkOperation(OperationCategory.READ);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
@@ -2679,23 +2675,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       clientnode = file.getClientNode();
       preferredblocksize = file.getPreferredBlockSize();
 
-      //find datanode descriptors
-      chosen = new ArrayList<DatanodeDescriptor>();
-      for(DatanodeInfo d : existings) {
-        final DatanodeDescriptor descriptor = blockManager.getDatanodeManager(
-            ).getDatanode(d);
-        if (descriptor != null) {
-          chosen.add(descriptor);
-        }
-      }
+      //find datanode storages
+      final DatanodeManager dm = blockManager.getDatanodeManager();
+      chosen = Arrays.asList(dm.getDatanodeStorageInfos(existings, storageIDs));
     } finally {
       readUnlock();
     }
 
     // choose new datanodes.
-    final DatanodeInfo[] targets = blockManager.getBlockPlacementPolicy(
+    final DatanodeStorageInfo[] targets = blockManager.getBlockPlacementPolicy(
         ).chooseTarget(src, numAdditionalNodes, clientnode, chosen, true,
-        excludes, preferredblocksize);
+            // TODO: get storage type from the file
+        excludes, preferredblocksize, StorageType.DEFAULT);
     final LocatedBlock lb = new LocatedBlock(blk, targets);
     blockManager.setBlockToken(lb, AccessMode.COPY);
     return lb;
@@ -5634,9 +5625,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       for (int i = 0; i < blocks.length; i++) {
         ExtendedBlock blk = blocks[i].getBlock();
         DatanodeInfo[] nodes = blocks[i].getLocations();
+        String[] storageIDs = blocks[i].getStorageIDs();
         for (int j = 0; j < nodes.length; j++) {
-          //TODO: add "storageID to LocatedBlock
-          blockManager.findAndMarkBlockAsCorrupt(blk, nodes[j], "STORAGE_ID", 
+          blockManager.findAndMarkBlockAsCorrupt(blk, nodes[j], storageIDs[j], 
               "client machine reported it");
         }
       }
