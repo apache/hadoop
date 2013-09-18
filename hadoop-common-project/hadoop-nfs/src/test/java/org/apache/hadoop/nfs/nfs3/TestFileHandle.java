@@ -33,7 +33,7 @@ public class TestFileHandle {
 
     // Deserialize it back 
     FileHandle handle2 = new FileHandle();
-    handle2.deserialize(xdr);
+    handle2.deserialize(xdr.asReadOnlyWrap());
     Assert.assertEquals(handle.getFileId(), 1024);
   }
 }

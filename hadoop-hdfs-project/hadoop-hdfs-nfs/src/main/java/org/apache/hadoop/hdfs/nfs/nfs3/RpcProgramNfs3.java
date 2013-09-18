@@ -98,7 +98,6 @@ import org.apache.hadoop.nfs.nfs3.response.RENAME3Response;
 import org.apache.hadoop.nfs.nfs3.response.RMDIR3Response;
 import org.apache.hadoop.nfs.nfs3.response.SETATTR3Response;
 import org.apache.hadoop.nfs.nfs3.response.SYMLINK3Response;
-import org.apache.hadoop.nfs.nfs3.response.VoidResponse;
 import org.apache.hadoop.nfs.nfs3.response.WRITE3Response;
 import org.apache.hadoop.nfs.nfs3.response.WccAttr;
 import org.apache.hadoop.nfs.nfs3.response.WccData;
@@ -108,12 +107,13 @@ import org.apache.hadoop.oncrpc.RpcDeniedReply;
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.RpcReply;
 import org.apache.hadoop.oncrpc.XDR;
-import org.apache.hadoop.oncrpc.security.CredentialsSys;
 import org.apache.hadoop.oncrpc.security.Credentials;
-import org.apache.hadoop.oncrpc.security.Verifier;
+import org.apache.hadoop.oncrpc.security.CredentialsSys;
+import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
 import org.apache.hadoop.oncrpc.security.SysSecurityHandler;
-import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
+import org.apache.hadoop.oncrpc.security.Verifier;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.security.AccessControlException;
 import org.jboss.netty.channel.Channel;
 
@@ -209,7 +209,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS NULL");
     }
-    return new VoidResponse(Nfs3Status.NFS3_OK);
+    return new NFS3Response(Nfs3Status.NFS3_OK);
   }
 
   @Override
@@ -1790,9 +1790,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
             + rpcCall.getCredential().getFlavor()
             + " is not AUTH_SYS or RPCSEC_GSS.");
         XDR reply = new XDR();
-        reply = RpcDeniedReply.voidReply(reply, xid,
+        RpcDeniedReply rdr = new RpcDeniedReply(xid,
             RpcReply.ReplyState.MSG_ACCEPTED,
-            RpcDeniedReply.RejectState.AUTH_ERROR);
+            RpcDeniedReply.RejectState.AUTH_ERROR, new VerifierNone());
+        rdr.write(reply);
         return reply;
       }
     }
@@ -1857,11 +1858,13 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       response = commit(xdr, securityHandler, client);
     } else {
       // Invalid procedure
-      RpcAcceptedReply.voidReply(out, xid,
-          RpcAcceptedReply.AcceptState.PROC_UNAVAIL);
+      RpcAcceptedReply.getInstance(xid,
+          RpcAcceptedReply.AcceptState.PROC_UNAVAIL, new VerifierNone()).write(
+          out);
     }
     if (response != null) {
-      out = response.send(out, xid);
+      // TODO: currently we just return VerifierNone
+      out = response.writeHeaderAndResponse(out, xid, new VerifierNone());
     }
 
     return out;

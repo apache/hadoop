@@ -26,6 +26,8 @@ import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.oncrpc.RegistrationClient;
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.CredentialsNone;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.portmap.PortmapMapping;
 import org.apache.hadoop.portmap.PortmapRequest;
 
@@ -78,11 +80,8 @@ public class TestPortmapRegister {
   
   static void createPortmapXDRheader(XDR xdr_out, int procedure) {
     // TODO: Move this to RpcRequest
-    RpcCall.write(xdr_out, 0, 100000, 2, procedure);
-    xdr_out.writeInt(0); //no auth
-    xdr_out.writeInt(0);
-    xdr_out.writeInt(0);
-    xdr_out.writeInt(0);
+    RpcCall.getInstance(0, 100000, 2, procedure, new CredentialsNone(),
+        new VerifierNone()).write(xdr_out);
     
     /*
     xdr_out.putInt(1); //unix auth

@@ -21,10 +21,7 @@ import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.RpcUtil;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
-import org.apache.hadoop.oncrpc.security.Credentials;
-import org.apache.hadoop.oncrpc.security.Verifier;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
 import org.apache.hadoop.portmap.PortmapInterface.Procedure;
 
 /**
@@ -37,16 +34,12 @@ public class PortmapRequest {
 
   public static XDR create(PortmapMapping mapping) {
     XDR request = new XDR();
-    RpcCall.write(request,
+    RpcCall call = RpcCall.getInstance(
         RpcUtil.getNewXid(String.valueOf(RpcProgramPortmap.PROGRAM)),
         RpcProgramPortmap.PROGRAM, RpcProgramPortmap.VERSION,
-        Procedure.PMAPPROC_SET.getValue());
-    request.writeInt(AuthFlavor.AUTH_NONE.getValue());
-    Credentials credential = new CredentialsNone();
-    credential.write(request);
-    request.writeInt(AuthFlavor.AUTH_NONE.getValue());
-    Verifier verifier = new VerifierNone();
-    verifier.write(request);
+        Procedure.PMAPPROC_SET.getValue(), new CredentialsNone(),
+        new VerifierNone());
+    call.write(request);
     return mapping.serialize(request);
   }
 }

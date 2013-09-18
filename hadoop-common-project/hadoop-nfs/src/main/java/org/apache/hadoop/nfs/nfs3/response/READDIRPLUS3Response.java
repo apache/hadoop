@@ -25,6 +25,7 @@ import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.Verifier;
 
 /**
  * READDIRPLUS3 Response
@@ -92,8 +93,8 @@ public class READDIRPLUS3Response  extends NFS3Response {
   }
   
   @Override
-  public XDR send(XDR out, int xid) {
-    super.send(out, xid);
+  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
+    super.writeHeaderAndResponse(out, xid, verifier);
     out.writeBoolean(true); // attributes follow
     if (postOpDirAttr == null) {
       postOpDirAttr = new Nfs3FileAttributes();

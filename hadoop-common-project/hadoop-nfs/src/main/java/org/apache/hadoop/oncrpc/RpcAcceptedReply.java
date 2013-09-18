@@ -18,8 +18,6 @@
 package org.apache.hadoop.oncrpc;
 
 import org.apache.hadoop.oncrpc.security.Verifier;
-import org.apache.hadoop.oncrpc.security.RpcAuthInfo;
-import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
 
 /** 
  * Represents RPC message MSG_ACCEPTED reply body. See RFC 1831 for details.
@@ -43,43 +41,42 @@ public class RpcAcceptedReply extends RpcReply {
       return ordinal();
     }
   };
+  
+  public static RpcAcceptedReply getAcceptInstance(int xid, 
+      Verifier verifier) {
+    return getInstance(xid, AcceptState.SUCCESS, verifier);
+  }
+  
+  public static RpcAcceptedReply getInstance(int xid, AcceptState state,
+      Verifier verifier) {
+    return new RpcAcceptedReply(xid, ReplyState.MSG_ACCEPTED, verifier,
+        state);
+  }
 
-  private final RpcAuthInfo verifier;
   private final AcceptState acceptState;
 
-  RpcAcceptedReply(int xid, RpcMessage.Type messageType, ReplyState state,
-      RpcAuthInfo verifier, AcceptState acceptState) {
-    super(xid, messageType, state);
-    this.verifier = verifier;
+  RpcAcceptedReply(int xid, ReplyState state, Verifier verifier,
+      AcceptState acceptState) {
+    super(xid, state, verifier);
     this.acceptState = acceptState;
   }
 
-  public static RpcAcceptedReply read(int xid, RpcMessage.Type messageType,
-      ReplyState replyState, XDR xdr) {
+  public static RpcAcceptedReply read(int xid, ReplyState replyState, XDR xdr) {
     Verifier verifier = Verifier.readFlavorAndVerifier(xdr);
     AcceptState acceptState = AcceptState.fromValue(xdr.readInt());
-    return new RpcAcceptedReply(xid, messageType, replyState, verifier,
-        acceptState);
-  }
-
-  public RpcAuthInfo getVerifier() {
-    return verifier;
+    return new RpcAcceptedReply(xid, replyState, verifier, acceptState);
   }
 
   public AcceptState getAcceptState() {
     return acceptState;
   }
   
-  public static XDR voidReply(XDR xdr, int xid) {
-    return voidReply(xdr, xid, AcceptState.SUCCESS);
-  }
-  
-  public static XDR voidReply(XDR xdr, int xid, AcceptState acceptState) {
+  @Override
+  public XDR write(XDR xdr) {
     xdr.writeInt(xid);
-    xdr.writeInt(RpcMessage.Type.RPC_REPLY.getValue());
-    xdr.writeInt(ReplyState.MSG_ACCEPTED.getValue());
-    xdr.writeInt(AuthFlavor.AUTH_NONE.getValue());
-    xdr.writeVariableOpaque(new byte[0]);
+    xdr.writeInt(messageType.getValue());
+    xdr.writeInt(replyState.getValue());
+    Verifier.writeFlavorAndVerifier(verifier, xdr);
     xdr.writeInt(acceptState.getValue());
     return xdr;
   }

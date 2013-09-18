@@ -363,9 +363,28 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-9908. Fix NPE when versioninfo properties file is missing (todd)
 
-Release 2.1.1-beta - UNRELEASED
+    HADOOP-9350. Hadoop not building against Java7 on OSX
+    (Robert Kanter via stevel)
+
+Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.1.1-beta - 2013-09-23
+
+  INCOMPATIBLE CHANGES
+
+    HADOOP-9944. Fix RpcRequestHeaderProto.callId to be sint32 rather than
+    uint32 since ipc.Client.CONNECTION_CONTEXT_CALL_ID is signed (i.e. -3) 
+    (acmurthy)
 
   NEW FEATURES
 
@@ -410,6 +429,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9962. in order to avoid dependency divergence within Hadoop itself 
     lets enable DependencyConvergence. (rvs via tucu)
+
+    HADOOP-9669. Reduce the number of byte array creations and copies in
+    XDR data manipulation. (Haohui Mai via brandonli)
 
   OPTIMIZATIONS
 
@@ -467,9 +489,6 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9557. hadoop-client excludes commons-httpclient. (Lohit Vijayarenu via
     cnauroth)
-
-    HADOOP-9350. Hadoop not building against Java7 on OSX
-    (Robert Kanter via stevel)
 
     HADOOP-9961. versions of a few transitive dependencies diverged between hadoop 
     subprojects. (rvs via tucu)

@@ -49,6 +49,7 @@ import org.apache.hadoop.nfs.nfs3.response.WRITE3Response;
 import org.apache.hadoop.nfs.nfs3.response.WccAttr;
 import org.apache.hadoop.nfs.nfs3.response.WccData;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.jboss.netty.channel.Channel;
 
 /**
@@ -291,7 +292,8 @@ class OpenFileCtx {
         WccData fileWcc = new WccData(latestAttr.getWccAttr(), latestAttr);
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO,
             fileWcc, 0, request.getStableHow(), Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
+        Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+            new XDR(), xid, new VerifierNone()), xid);
       } else {
         // Handle repeated write requests(same xid or not).
         // If already replied, send reply again. If not replied, drop the
@@ -313,7 +315,8 @@ class OpenFileCtx {
             WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
                 fileWcc, request.getCount(), request.getStableHow(),
                 Nfs3Constant.WRITE_COMMIT_VERF);
-            Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
+            Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+                new XDR(), xid, new VerifierNone()), xid);
           }
           updateLastAccessTime();
           
@@ -367,7 +370,8 @@ class OpenFileCtx {
         WccData fileWcc = new WccData(preOpAttr, postOpAttr);
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
+        Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+            new XDR(), xid, new VerifierNone()), xid);
         writeCtx.setReplied(true);
       }
 
@@ -392,7 +396,8 @@ class OpenFileCtx {
         WccData fileWcc = new WccData(preOpAttr, postOpAttr);
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
+        Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+            new XDR(), xid, new VerifierNone()), xid);
         writeCtx.setReplied(true);
       }
 
@@ -418,7 +423,8 @@ class OpenFileCtx {
       }
       
       updateLastAccessTime();
-      Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
+      Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+          new XDR(), xid, new VerifierNone()), xid);
     }
   }
   
@@ -707,7 +713,8 @@ class OpenFileCtx {
         WccData fileWcc = new WccData(preOpAttr, latestAttr);
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
+        Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+            new XDR(), xid, new VerifierNone()), xid);
       }
 
     } catch (IOException e) {
@@ -715,7 +722,8 @@ class OpenFileCtx {
           + offset + " and length " + data.length, e);
       if (!writeCtx.getReplied()) {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO);
-        Nfs3Utils.writeChannel(channel, response.send(new XDR(), xid), xid);
+        Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+            new XDR(), xid, new VerifierNone()), xid);
         // Keep stream open. Either client retries or SteamMonitor closes it.
       }
 
@@ -752,8 +760,9 @@ class OpenFileCtx {
         WccData fileWcc = new WccData(preOpAttr, latestAttr);
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO,
             fileWcc, 0, writeCtx.getStableHow(), Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(writeCtx.getChannel(),
-            response.send(new XDR(), writeCtx.getXid()), writeCtx.getXid());
+        Nfs3Utils.writeChannel(writeCtx.getChannel(), response
+            .writeHeaderAndResponse(new XDR(), writeCtx.getXid(),
+                new VerifierNone()), writeCtx.getXid());
       }
     }
     

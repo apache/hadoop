@@ -19,6 +19,7 @@ package org.apache.hadoop.oncrpc;
 
 
 import org.apache.hadoop.oncrpc.RpcReply.ReplyState;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,8 +40,12 @@ public class TestRpcReply {
   
   @Test
   public void testRpcReply() {
-    RpcReply reply = new RpcReply(0, RpcMessage.Type.RPC_REPLY, ReplyState.MSG_ACCEPTED) {
-      // Anonymous class
+    RpcReply reply = new RpcReply(0, ReplyState.MSG_ACCEPTED,
+        new VerifierNone()) {
+          @Override
+          public XDR write(XDR xdr) {
+            return null;
+          }
     };
     Assert.assertEquals(0, reply.getXid());
     Assert.assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());

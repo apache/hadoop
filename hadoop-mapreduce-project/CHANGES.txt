@@ -164,6 +164,9 @@ Release 2.3.0 - UNRELEASED
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
 
+    MAPREDUCE-5487. In task processes, JobConf is unnecessarily loaded again
+    in Limits (Sandy Ryza)
+
   BUG FIXES
 
     MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
@@ -175,7 +178,19 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5404. HSAdminServer does not use ephemeral ports in minicluster
     mode (Ted Yu via jlowe)
 
-Release 2.1.1-beta - UNRELEASED
+Release 2.2.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
 

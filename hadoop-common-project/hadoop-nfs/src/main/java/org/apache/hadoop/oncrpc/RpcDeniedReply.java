@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
+import org.apache.hadoop.oncrpc.security.Verifier;
 
 /** 
  * Represents RPC message MSG_DENIED reply body. See RFC 1831 for details.
@@ -40,16 +40,16 @@ public class RpcDeniedReply extends RpcReply {
 
   private final RejectState rejectState;
 
-  RpcDeniedReply(int xid, RpcMessage.Type messageType, ReplyState replyState,
-      RejectState rejectState) {
-    super(xid, messageType, replyState);
+  public RpcDeniedReply(int xid, ReplyState replyState,
+      RejectState rejectState, Verifier verifier) {
+    super(xid, replyState, verifier);
     this.rejectState = rejectState;
   }
 
-  public static RpcDeniedReply read(int xid, RpcMessage.Type messageType,
-      ReplyState replyState, XDR xdr) {
+  public static RpcDeniedReply read(int xid, ReplyState replyState, XDR xdr) {
+    Verifier verifier = Verifier.readFlavorAndVerifier(xdr);
     RejectState rejectState = RejectState.fromValue(xdr.readInt());
-    return new RpcDeniedReply(xid, messageType, replyState, rejectState);
+    return new RpcDeniedReply(xid, replyState, rejectState, verifier);
   }
 
   public RejectState getRejectState() {
@@ -59,17 +59,17 @@ public class RpcDeniedReply extends RpcReply {
   @Override
   public String toString() {
     return new StringBuffer().append("xid:").append(xid)
-        .append(",messageType:").append(messageType).append("rejectState:")
+        .append(",messageType:").append(messageType).append("verifier_flavor:")
+        .append(verifier.getFlavor()).append("rejectState:")
         .append(rejectState).toString();
   }
   
-  public static XDR voidReply(XDR xdr, int xid, ReplyState msgAccepted,
-      RejectState rejectState) {
+  @Override
+  public XDR write(XDR xdr) {
     xdr.writeInt(xid);
-    xdr.writeInt(RpcMessage.Type.RPC_REPLY.getValue());
-    xdr.writeInt(msgAccepted.getValue());
-    xdr.writeInt(AuthFlavor.AUTH_NONE.getValue());
-    xdr.writeVariableOpaque(new byte[0]);
+    xdr.writeInt(messageType.getValue());
+    xdr.writeInt(replyState.getValue());
+    Verifier.writeFlavorAndVerifier(verifier, xdr);
     xdr.writeInt(rejectState.getValue());
     return xdr;
   }
