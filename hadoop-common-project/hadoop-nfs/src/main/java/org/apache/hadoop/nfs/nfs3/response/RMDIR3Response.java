@@ -18,6 +18,7 @@
 package org.apache.hadoop.nfs.nfs3.response;
 
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.Verifier;
 
 /**
  * RMDIR3 Response
@@ -39,8 +40,8 @@ public class RMDIR3Response extends NFS3Response {
   }
 
   @Override
-  public XDR send(XDR out, int xid) {
-    super.send(out, xid);
+  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
+    super.writeHeaderAndResponse(out, xid, verifier);
     dirWcc.serialize(out);
     return out;
   }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.nfs.nfs3.response;
 
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.Verifier;
 
 /**
  * REMOVE3 Response
@@ -35,8 +36,8 @@ public class REMOVE3Response extends NFS3Response {
   }
   
   @Override
-  public XDR send(XDR out, int xid) {
-    super.send(out, xid);
+  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
+    super.writeHeaderAndResponse(out, xid, verifier);
     if (dirWcc == null) {
       dirWcc = new WccData(null, null);
     }

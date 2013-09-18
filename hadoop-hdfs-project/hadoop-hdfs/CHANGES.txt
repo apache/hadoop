@@ -396,6 +396,9 @@ Release 2.1.1-beta - 2013-09-23
 
     HDFS-4680. Audit logging of delegation tokens for MR tracing. (Andrew Wang)
 
+    HDFS-5212. Refactor RpcMessage and NFS3Response to support different 
+    types of authentication information. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES

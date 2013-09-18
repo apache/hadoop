@@ -47,7 +47,7 @@ public class TestRpcAcceptedReply {
   @Test
   public void testConstructor() {
     Verifier verifier = new VerifierNone();
-    RpcAcceptedReply reply = new RpcAcceptedReply(0, RpcMessage.Type.RPC_REPLY,
+    RpcAcceptedReply reply = new RpcAcceptedReply(0, 
         ReplyState.MSG_ACCEPTED, verifier, AcceptState.SUCCESS);
     assertEquals(0, reply.getXid());
     assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());

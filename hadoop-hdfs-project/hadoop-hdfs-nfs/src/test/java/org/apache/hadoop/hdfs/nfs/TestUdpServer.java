@@ -27,6 +27,8 @@ import java.net.UnknownHostException;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.CredentialsNone;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 
 // TODO: convert this to Junit
 public class TestUdpServer {
@@ -82,7 +84,8 @@ public class TestUdpServer {
   
   static void createPortmapXDRheader(XDR xdr_out, int procedure) {
     // Make this a method
-    RpcCall.write(xdr_out, 0, 100000, 2, procedure);
+    RpcCall.getInstance(0, 100000, 2, procedure, new CredentialsNone(),
+        new VerifierNone()).write(xdr_out);
   }
  
   static void testGetportMount() {

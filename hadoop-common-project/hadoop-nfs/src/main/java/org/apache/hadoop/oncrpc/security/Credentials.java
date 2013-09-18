@@ -45,6 +45,22 @@ public abstract class Credentials extends RpcAuthInfo {
     return credentials;
   }
   
+  /**
+   * Write AuthFlavor and the credentials to the XDR
+   */
+  public static void writeFlavorAndCredentials(Credentials cred, XDR xdr) {
+    if (cred instanceof CredentialsNone) {
+      xdr.writeInt(AuthFlavor.AUTH_NONE.getValue());
+    } else if (cred instanceof CredentialsSys) {
+      xdr.writeInt(AuthFlavor.AUTH_SYS.getValue());
+    } else if (cred instanceof CredentialsGSS) {
+      xdr.writeInt(AuthFlavor.RPCSEC_GSS.getValue());
+    } else {
+      throw new UnsupportedOperationException("Cannot recognize the verifier");
+    }
+    cred.write(xdr);
+  }
+  
   protected int mCredentialsLength;
   
   protected Credentials(AuthFlavor flavor) {

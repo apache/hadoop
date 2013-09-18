@@ -38,6 +38,8 @@ import org.apache.hadoop.oncrpc.RpcReply;
 import org.apache.hadoop.oncrpc.SimpleTcpClient;
 import org.apache.hadoop.oncrpc.SimpleTcpClientHandler;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.CredentialsNone;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -58,15 +60,9 @@ public class TestOutOfOrderWrite {
 
   static XDR create() {
     XDR request = new XDR();
-    RpcCall.write(request, 0x8000004c, Nfs3Constant.PROGRAM,
-        Nfs3Constant.VERSION, Nfs3Constant.NFSPROC3.CREATE.getValue());
-
-    // credentials
-    request.writeInt(0); // auth null
-    request.writeInt(0); // length zero
-    // verifier
-    request.writeInt(0); // auth null
-    request.writeInt(0); // length zero
+    RpcCall.getInstance(0x8000004c, Nfs3Constant.PROGRAM, Nfs3Constant.VERSION,
+        Nfs3Constant.NFSPROC3.CREATE.getValue(), new CredentialsNone(),
+        new VerifierNone()).write(request);
 
     SetAttr3 objAttr = new SetAttr3();
     CREATE3Request createReq = new CREATE3Request(new FileHandle("/"),
@@ -78,15 +74,10 @@ public class TestOutOfOrderWrite {
   static XDR write(FileHandle handle, int xid, long offset, int count,
       byte[] data) {
     XDR request = new XDR();
-    RpcCall.write(request, xid, Nfs3Constant.PROGRAM, Nfs3Constant.VERSION,
-        Nfs3Constant.NFSPROC3.WRITE.getValue());
+    RpcCall.getInstance(xid, Nfs3Constant.PROGRAM, Nfs3Constant.VERSION,
+        Nfs3Constant.NFSPROC3.CREATE.getValue(), new CredentialsNone(),
+        new VerifierNone()).write(request);
 
-    // credentials
-    request.writeInt(0); // auth null
-    request.writeInt(0); // length zero
-    // verifier
-    request.writeInt(0); // auth null
-    request.writeInt(0); // length zero
     WRITE3Request write1 = new WRITE3Request(handle, offset, count,
         WriteStableHow.UNSTABLE, ByteBuffer.wrap(data));
     write1.serialize(request);

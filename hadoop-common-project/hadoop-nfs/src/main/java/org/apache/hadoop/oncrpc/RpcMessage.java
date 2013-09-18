@@ -50,6 +50,8 @@ public abstract class RpcMessage {
     this.messageType = messageType;
   }
   
+  public abstract XDR write(XDR xdr);
+  
   public int getXid() {
     return xid;
   }
