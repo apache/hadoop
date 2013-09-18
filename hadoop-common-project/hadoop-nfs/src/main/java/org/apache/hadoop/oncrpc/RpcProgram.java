@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
 import org.apache.hadoop.oncrpc.RpcCallCache.CacheEntry;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.portmap.PortmapMapping;
 import org.apache.hadoop.portmap.PortmapRequest;
 import org.jboss.netty.channel.Channel;
@@ -163,13 +164,17 @@ public abstract class RpcProgram {
   
   private XDR programMismatch(XDR out, RpcCall call) {
     LOG.warn("Invalid RPC call program " + call.getProgram());
-    RpcAcceptedReply.voidReply(out, call.getXid(), AcceptState.PROG_UNAVAIL);
+    RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
+        AcceptState.PROG_UNAVAIL, new VerifierNone());
+    reply.write(out);
     return out;
   }
   
   private XDR programVersionMismatch(XDR out, RpcCall call) {
     LOG.warn("Invalid RPC call version " + call.getVersion());
-    RpcAcceptedReply.voidReply(out, call.getXid(), AcceptState.PROG_MISMATCH);
+    RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
+        AcceptState.PROG_MISMATCH, new VerifierNone());
+    reply.write(out);
     out.writeInt(lowProgVersion);
     out.writeInt(highProgVersion);
     return out;

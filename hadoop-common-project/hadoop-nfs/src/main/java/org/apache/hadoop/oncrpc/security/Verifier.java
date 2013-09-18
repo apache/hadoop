@@ -20,10 +20,11 @@ package org.apache.hadoop.oncrpc.security;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
 
-/** 
- * Base class for verifier. Currently we only support 3 types of auth flavors: 
- * {@link AuthFlavor#AUTH_NONE}, {@link AuthFlavor#AUTH_SYS}, 
- * and {@link AuthFlavor#RPCSEC_GSS}.
+/**
+ * Base class for verifier. Currently our authentication only supports 3 types
+ * of auth flavors: {@link AuthFlavor#AUTH_NONE}, {@link AuthFlavor#AUTH_SYS},
+ * and {@link AuthFlavor#RPCSEC_GSS}. Thus for verifier we only need to handle
+ * AUTH_NONE and RPCSEC_GSS
  */
 public abstract class Verifier extends RpcAuthInfo {
 
@@ -31,6 +32,7 @@ public abstract class Verifier extends RpcAuthInfo {
     super(flavor);
   }
 
+  /** Read both AuthFlavor and the verifier from the XDR */
   public static Verifier readFlavorAndVerifier(XDR xdr) {
     AuthFlavor flavor = AuthFlavor.fromValue(xdr.readInt());
     final Verifier verifer;
@@ -45,5 +47,20 @@ public abstract class Verifier extends RpcAuthInfo {
     verifer.read(xdr);
     return verifer;
   }
+  
+  /**
+   * Write AuthFlavor and the verifier to the XDR
+   */
+  public static void writeFlavorAndVerifier(Verifier verifier, XDR xdr) {
+    if (verifier instanceof VerifierNone) {
+      xdr.writeInt(AuthFlavor.AUTH_NONE.getValue());
+    } else if (verifier instanceof VerifierGSS) {
+      xdr.writeInt(AuthFlavor.RPCSEC_GSS.getValue());
+    } else {
+      throw new UnsupportedOperationException("Cannot recognize the verifier");
+    }
+    verifier.write(xdr);
+  }  
+ 
   
 }
