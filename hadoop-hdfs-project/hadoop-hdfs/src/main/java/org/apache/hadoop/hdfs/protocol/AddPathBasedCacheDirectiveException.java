@@ -75,6 +75,16 @@ public abstract class AddPathBasedCacheDirectiveException extends IOException {
     }
   }
 
+  public static class PathAlreadyExistsInPoolError
+      extends AddPathBasedCacheDirectiveException {
+    private static final long serialVersionUID = 1L;
+
+    public PathAlreadyExistsInPoolError(PathBasedCacheDirective directive) {
+      super("path " + directive.getPath() + " already exists in pool " +
+          directive.getPool(), directive);
+    }
+  }
+
   public static class UnexpectedAddPathBasedCacheDirectiveException
       extends AddPathBasedCacheDirectiveException {
     private static final long serialVersionUID = 1L;

@@ -20,9 +20,11 @@ package org.apache.hadoop.hdfs.protocol;
 import java.io.IOException;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ComparisonChain;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.EmptyPathError;
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPoolNameError;
@@ -31,7 +33,9 @@ import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.Inval
 /**
  * A directive to add a path to a cache pool.
  */
-public class PathBasedCacheDirective implements Comparable<PathBasedCacheDirective> {
+@InterfaceStability.Evolving
+@InterfaceAudience.Public
+public class PathBasedCacheDirective {
   private final String path;
 
   private final String pool;
@@ -76,26 +80,24 @@ public class PathBasedCacheDirective implements Comparable<PathBasedCacheDirecti
   }
 
   @Override
-  public int compareTo(PathBasedCacheDirective rhs) {
-    return ComparisonChain.start().
-        compare(pool, rhs.getPool()).
-        compare(path, rhs.getPath()).
-        result();
+  public boolean equals(Object o) {
+    if (o == null) {
+      return false;
+    }
+    if (getClass() != o.getClass()) {
+      return false;
+    }
+    PathBasedCacheDirective other = (PathBasedCacheDirective)o;
+    return new EqualsBuilder().append(getPath(), other.getPath()).
+        append(getPool(), other.getPool()).
+        isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().append(path).append(pool).hashCode();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    try {
-      PathBasedCacheDirective other = (PathBasedCacheDirective)o;
-      return other.compareTo(this) == 0;
-    } catch (ClassCastException e) {
-      return false;
-    }
+    return new HashCodeBuilder().append(getPath()).
+        append(getPool()).
+        hashCode();
   }
 
   @Override

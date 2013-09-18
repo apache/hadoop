@@ -39,10 +39,10 @@ import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.Inval
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPathNameError;
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.PoolWritePermissionDeniedError;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheEntryException.InvalidIdException;
+import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.InvalidIdException;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
-import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheEntryException.NoSuchIdException;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
+import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.NoSuchIdException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -94,7 +94,7 @@ public class TestPathBasedCacheRequests {
     MiniDFSCluster cluster = null;
     // set low limits here for testing purposes
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES, 2);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES, 2);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DESCRIPTORS_NUM_RESPONSES, 2);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     NamenodeProtocols proto = cluster.getNameNodeRpc();
@@ -132,17 +132,14 @@ public class TestPathBasedCacheRequests {
   }
 
   private static void validateListAll(
-      RemoteIterator<PathBasedCacheEntry> iter,
+      RemoteIterator<PathBasedCacheDescriptor> iter,
       long id0, long id1, long id2) throws Exception {
-    Assert.assertEquals(new PathBasedCacheEntry(id0,
-        new PathBasedCacheDirective("/alpha", "pool1")),
-        iter.next());
-    Assert.assertEquals(new PathBasedCacheEntry(id1,
-        new PathBasedCacheDirective("/beta", "pool2")),
-        iter.next());
-    Assert.assertEquals(new PathBasedCacheEntry(id2,
-        new PathBasedCacheDirective("/gamma", "pool1")),
-        iter.next());
+    Assert.assertEquals(new PathBasedCacheDescriptor(id0,
+        "/alpha", "pool1"), iter.next());
+    Assert.assertEquals(new PathBasedCacheDescriptor(id1,
+        "/beta", "pool2"), iter.next());
+    Assert.assertEquals(new PathBasedCacheDescriptor(id2,
+        "/gamma", "pool1"), iter.next());
     Assert.assertFalse(iter.hasNext());
   }
 
@@ -164,11 +161,11 @@ public class TestPathBasedCacheRequests {
       proto.addCachePool(new CachePoolInfo("pool4").
           setMode(new FsPermission((short)0)));
 
-      List<Fallible<PathBasedCacheEntry>> addResults1 = 
+      List<Fallible<PathBasedCacheDescriptor>> addResults1 = 
         unprivilegedUser.doAs(new PrivilegedExceptionAction<
-            List<Fallible<PathBasedCacheEntry>>>() {
+            List<Fallible<PathBasedCacheDescriptor>>>() {
           @Override
-          public List<Fallible<PathBasedCacheEntry>> run() throws IOException {
+          public List<Fallible<PathBasedCacheDescriptor>> run() throws IOException {
             return proto.addPathBasedCacheDirectives(Arrays.asList(
               new PathBasedCacheDirective[] {
                 new PathBasedCacheDirective("/alpha", "pool1"),
@@ -212,7 +209,7 @@ public class TestPathBasedCacheRequests {
             //instanceof PoolWritePermissionDeniedError);
       }
 
-      List<Fallible<PathBasedCacheEntry>> addResults2 = 
+      List<Fallible<PathBasedCacheDescriptor>> addResults2 = 
           proto.addPathBasedCacheDirectives(Arrays.asList(
             new PathBasedCacheDirective[] {
         new PathBasedCacheDirective("/alpha", "pool1"),
@@ -240,20 +237,20 @@ public class TestPathBasedCacheRequests {
       long ids2[] = new long[1];
       ids2[0] = addResults2.get(3).get().getEntryId();
 
-      RemoteIterator<PathBasedCacheEntry> iter =
-          proto.listPathBasedCacheEntries(0, null, null);
+      RemoteIterator<PathBasedCacheDescriptor> iter =
+          proto.listPathBasedCacheDescriptors(0, null, null);
       validateListAll(iter, ids1[0], ids1[1], ids2[0]);
-      iter = proto.listPathBasedCacheEntries(0, null, null);
+      iter = proto.listPathBasedCacheDescriptors(0, null, null);
       validateListAll(iter, ids1[0], ids1[1], ids2[0]);
-      iter = proto.listPathBasedCacheEntries(0, "pool3", null);
+      iter = proto.listPathBasedCacheDescriptors(0, "pool3", null);
       Assert.assertFalse(iter.hasNext());
-      iter = proto.listPathBasedCacheEntries(0, "pool2", null);
+      iter = proto.listPathBasedCacheDescriptors(0, "pool2", null);
       Assert.assertEquals(addResults1.get(1).get(),
           iter.next());
       Assert.assertFalse(iter.hasNext());
 
       List<Fallible<Long>> removeResults1 = 
-          proto.removePathBasedCacheEntries(Arrays.asList(
+          proto.removePathBasedCacheDescriptors(Arrays.asList(
             new Long[] { ids1[1], -42L, 999999L }));
       Assert.assertEquals(Long.valueOf(ids1[1]),
           removeResults1.get(0).get());
@@ -269,7 +266,7 @@ public class TestPathBasedCacheRequests {
       } catch (IOException ioe) {
         Assert.assertTrue(ioe.getCause() instanceof NoSuchIdException);
       }
-      iter = proto.listPathBasedCacheEntries(0, "pool2", null);
+      iter = proto.listPathBasedCacheDescriptors(0, "pool2", null);
       Assert.assertFalse(iter.hasNext());
     } finally {
       if (cluster != null) { cluster.shutdown(); }

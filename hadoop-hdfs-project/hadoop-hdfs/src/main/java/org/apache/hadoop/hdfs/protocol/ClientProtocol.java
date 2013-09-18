@@ -1106,7 +1106,7 @@ public interface ClientProtocol {
    *         could not be added.
    */
   @AtMostOnce
-  public List<Fallible<PathBasedCacheEntry>>
+  public List<Fallible<PathBasedCacheDescriptor>>
     addPathBasedCacheDirectives(List<PathBasedCacheDirective> directives)
       throws IOException;
 
@@ -1118,7 +1118,7 @@ public interface ClientProtocol {
    *         ID, or an IOException describing why the ID could not be removed.
    */
   @AtMostOnce
-  public List<Fallible<Long>> removePathBasedCacheEntries(List<Long> ids)
+  public List<Fallible<Long>> removePathBasedCacheDescriptors(List<Long> ids)
       throws IOException;
 
   /**
@@ -1126,13 +1126,13 @@ public interface ClientProtocol {
    * from the server.
    * 
    * @param prevId The last listed entry ID, or -1 if this is the first call to
-   *          listPathBasedCacheEntries.
+   *          listPathBasedCacheDescriptors.
    * @param pool The cache pool to list, or null to list all pools.
    * @param path The path name to list, or null to list all paths.
-   * @return A RemoteIterator which returns PathBasedCacheEntry objects.
+   * @return A RemoteIterator which returns PathBasedCacheDescriptor objects.
    */
   @Idempotent
-  public RemoteIterator<PathBasedCacheEntry> listPathBasedCacheEntries(long prevId,
+  public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(long prevId,
       String pool, String path) throws IOException;
   
   /**

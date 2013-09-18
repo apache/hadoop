@@ -18,53 +18,60 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.server.namenode.CachePool;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 
 import com.google.common.base.Preconditions;
 
 /**
- * Represents an entry in the PathBasedCache on the NameNode.
- *
- * This is an implementation class, not part of the public API.
+ * A directive in a cache pool that includes an identifying ID number.
  */
-@InterfaceAudience.Private
-public final class PathBasedCacheEntry {
+@InterfaceStability.Evolving
+@InterfaceAudience.Public
+public final class PathBasedCacheDescriptor extends PathBasedCacheDirective {
   private final long entryId;
-  private final String path;
-  private final CachePool pool;
 
-  public PathBasedCacheEntry(long entryId, String path, CachePool pool) {
+  public PathBasedCacheDescriptor(long entryId, String path, String pool) {
+    super(path, pool);
     Preconditions.checkArgument(entryId > 0);
     this.entryId = entryId;
-    Preconditions.checkNotNull(path);
-    this.path = path;
-    Preconditions.checkNotNull(pool);
-    this.pool = pool;
   }
 
   public long getEntryId() {
     return entryId;
   }
 
-  public String getPath() {
-    return path;
+  @Override
+  public boolean equals(Object o) {
+    if (o == null) {
+      return false;
+    }
+    if (getClass() != o.getClass()) {
+      return false;
+    }
+    PathBasedCacheDescriptor other = (PathBasedCacheDescriptor)o;
+    return new EqualsBuilder().append(entryId, other.entryId).
+        append(getPath(), other.getPath()).
+        append(getPool(), other.getPool()).
+        isEquals();
   }
 
-  public CachePool getPool() {
-    return pool;
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder().append(entryId).
+        append(getPath()).
+        append(getPool()).
+        hashCode();
   }
 
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
     builder.append("{ entryId:").append(entryId).
-      append(", path:").append(path).
-      append(", pool:").append(pool).
+      append(", path:").append(getPath()).
+      append(", pool:").append(getPool()).
       append(" }");
     return builder.toString();
-  }
-
-  public PathBasedCacheDescriptor getDescriptor() {
-    return new PathBasedCacheDescriptor(entryId, path, pool.getName());
   }
 };

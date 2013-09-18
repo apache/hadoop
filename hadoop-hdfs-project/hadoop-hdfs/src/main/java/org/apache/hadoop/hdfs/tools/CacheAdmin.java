@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.tools.TableListing.Justification;
 import org.apache.hadoop.util.Fallible;
 import org.apache.hadoop.util.StringUtils;
@@ -100,10 +100,10 @@ public class CacheAdmin {
           new LinkedList<PathBasedCacheDirective>();
       PathBasedCacheDirective directive = new PathBasedCacheDirective(path, poolName);
       directives.add(directive);
-      List<Fallible<PathBasedCacheEntry>> results =
+      List<Fallible<PathBasedCacheDescriptor>> results =
           dfs.addPathBasedCacheDirective(directives);
       try {
-        PathBasedCacheEntry entry = results.get(0).get();
+        PathBasedCacheDescriptor entry = results.get(0).get();
         System.out.println("Added PathBasedCache entry " + entry.getEntryId());
         return 0;
       } catch (IOException e) {
@@ -155,7 +155,7 @@ public class CacheAdmin {
       DistributedFileSystem dfs = getDFS();
       List<Long> ids = new LinkedList<Long>();
       ids.add(id);
-      List<Fallible<Long>> results = dfs.removePathBasedCacheEntries(ids);
+      List<Fallible<Long>> results = dfs.removePathBasedCacheDescriptors(ids);
       try {
         Long resultId = results.get(0).get();
         System.out.println("Removed PathBasedCache entry " + resultId);
@@ -208,15 +208,13 @@ public class CacheAdmin {
           addField("PATH", Justification.LEFT).
           build();
       DistributedFileSystem dfs = getDFS();
-      RemoteIterator<PathBasedCacheEntry> iter =
-          dfs.listPathBasedCacheEntries(poolFilter, pathFilter);
+      RemoteIterator<PathBasedCacheDescriptor> iter =
+          dfs.listPathBasedCacheDescriptors(poolFilter, pathFilter);
       int numEntries = 0;
       while (iter.hasNext()) {
-        PathBasedCacheEntry entry = iter.next();
+        PathBasedCacheDescriptor entry = iter.next();
         String row[] = new String[] {
-            "" + entry.getEntryId(),
-            entry.getDirective().getPool(),
-            entry.getDirective().getPath(),
+            "" + entry.getEntryId(), entry.getPool(), entry.getPath(),
         };
         tableListing.addRow(row);
         numEntries++;

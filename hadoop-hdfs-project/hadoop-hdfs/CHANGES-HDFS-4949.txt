@@ -39,6 +39,9 @@ HDFS-4949 (Unreleased)
     HDFS-5197. Document dfs.cachereport.intervalMsec in hdfs-default.xml.
     (cnauroth)
 
+    HDFS-5213. Separate PathBasedCacheEntry and PathBasedCacheDirectiveWithId.
+    (Contributed by Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES

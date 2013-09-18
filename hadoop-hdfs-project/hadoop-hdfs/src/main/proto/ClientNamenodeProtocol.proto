@@ -382,37 +382,38 @@ enum AddPathBasedCacheDirectiveErrorProto {
   INVALID_PATH_NAME_ERROR = -3;
   INVALID_POOL_NAME_ERROR = -4;
   ADD_PERMISSION_DENIED_ERROR = -5;
+  PATH_ALREADY_EXISTS_IN_POOL_ERROR = -6;
 }
 
-message RemovePathBasedCacheEntriesRequestProto {
+message RemovePathBasedCacheDescriptorsRequestProto {
   repeated int64 elements = 1 [packed=true];
 }
 
-message RemovePathBasedCacheEntriesResponseProto {
+message RemovePathBasedCacheDescriptorsResponseProto {
   repeated int64 results = 1 [packed=true];
 }
 
-enum RemovePathBasedCacheEntryErrorProto {
+enum RemovePathBasedCacheDescriptorErrorProto {
   UNEXPECTED_REMOVE_ERROR = -1;
   INVALID_CACHED_PATH_ID_ERROR = -2;
   NO_SUCH_CACHED_PATH_ID_ERROR = -3;
   REMOVE_PERMISSION_DENIED_ERROR = -4;
 }
 
-message ListPathBasedCacheEntriesRequestProto {
+message ListPathBasedCacheDescriptorsRequestProto {
   required int64 prevId = 1;
   optional string pool = 2;
   optional string path = 3;
 }
 
-message ListPathBasedCacheEntriesElementProto {
+message ListPathBasedCacheDescriptorsElementProto {
   required int64 id = 1;
   required string pool = 2;
   required string path = 3;
 }
 
-message ListPathBasedCacheEntriesResponseProto {
-  repeated ListPathBasedCacheEntriesElementProto elements = 1;
+message ListPathBasedCacheDescriptorsResponseProto {
+  repeated ListPathBasedCacheDescriptorsElementProto elements = 1;
   required bool hasMore = 2;
 }
 
@@ -645,10 +646,10 @@ service ClientNamenodeProtocol {
   rpc getFileInfo(GetFileInfoRequestProto) returns(GetFileInfoResponseProto);
   rpc addPathBasedCacheDirectives(AddPathBasedCacheDirectivesRequestProto)
       returns (AddPathBasedCacheDirectivesResponseProto);
-  rpc removePathBasedCacheEntries(RemovePathBasedCacheEntriesRequestProto)
-      returns (RemovePathBasedCacheEntriesResponseProto);
-  rpc listPathBasedCacheEntries(ListPathBasedCacheEntriesRequestProto)
-      returns (ListPathBasedCacheEntriesResponseProto);
+  rpc removePathBasedCacheDescriptors(RemovePathBasedCacheDescriptorsRequestProto)
+      returns (RemovePathBasedCacheDescriptorsResponseProto);
+  rpc listPathBasedCacheDescriptors(ListPathBasedCacheDescriptorsRequestProto)
+      returns (ListPathBasedCacheDescriptorsResponseProto);
   rpc addCachePool(AddCachePoolRequestProto)
       returns(AddCachePoolResponseProto);
   rpc modifyCachePool(ModifyCachePoolRequestProto)

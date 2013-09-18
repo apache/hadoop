@@ -200,9 +200,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES =
       "dfs.namenode.list.cache.pools.num.responses";
   public static final int     DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES_DEFAULT = 100;
-  public static final String  DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES =
-      "dfs.namenode.list.cache.directives.num.responses";
-  public static final int     DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES_DEFAULT = 100;
+  public static final String  DFS_NAMENODE_LIST_CACHE_DESCRIPTORS_NUM_RESPONSES =
+      "dfs.namenode.list.cache.descriptors.num.responses";
+  public static final int     DFS_NAMENODE_LIST_CACHE_DESCRIPTORS_NUM_RESPONSES_DEFAULT = 100;
 
   // Whether to enable datanode's stale state detection and usage for reads
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY = "dfs.namenode.avoid.read.stale.datanode";

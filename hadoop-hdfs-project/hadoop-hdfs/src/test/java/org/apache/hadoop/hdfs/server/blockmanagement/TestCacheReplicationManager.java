@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -151,12 +151,11 @@ public class TestCacheReplicationManager {
       List<PathBasedCacheDirective> toAdd =
           new ArrayList<PathBasedCacheDirective>();
       toAdd.add(new PathBasedCacheDirective(paths.get(i), pool));
-      List<Fallible<PathBasedCacheEntry>> fallibles =
+      List<Fallible<PathBasedCacheDescriptor>> fallibles =
           nnRpc.addPathBasedCacheDirectives(toAdd);
       assertEquals("Unexpected number of fallibles",
           1, fallibles.size());
-      PathBasedCacheEntry entry = fallibles.get(0).get();
-      PathBasedCacheDirective directive = entry.getDirective();
+      PathBasedCacheDescriptor directive = fallibles.get(0).get();
       assertEquals("Directive does not match requested path", paths.get(i),
           directive.getPath());
       assertEquals("Directive does not match requested pool", pool,
@@ -165,13 +164,13 @@ public class TestCacheReplicationManager {
       waitForExpectedNumCachedBlocks(expected);
     }
     // Uncache and check each path in sequence
-    RemoteIterator<PathBasedCacheEntry> entries =
-        nnRpc.listPathBasedCacheEntries(0, null, null);
+    RemoteIterator<PathBasedCacheDescriptor> entries =
+        nnRpc.listPathBasedCacheDescriptors(0, null, null);
     for (int i=0; i<numFiles; i++) {
-      PathBasedCacheEntry entry = entries.next();
+      PathBasedCacheDescriptor entry = entries.next();
       List<Long> toRemove = new ArrayList<Long>();
       toRemove.add(entry.getEntryId());
-      List<Fallible<Long>> fallibles = nnRpc.removePathBasedCacheEntries(toRemove);
+      List<Fallible<Long>> fallibles = nnRpc.removePathBasedCacheDescriptors(toRemove);
       assertEquals("Unexpected number of fallibles", 1, fallibles.size());
       Long l = fallibles.get(0).get();
       assertEquals("Removed entryId does not match requested",

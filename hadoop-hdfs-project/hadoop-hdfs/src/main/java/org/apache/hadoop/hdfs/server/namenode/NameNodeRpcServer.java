@@ -61,7 +61,7 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -1213,19 +1213,19 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public List<Fallible<PathBasedCacheEntry>> addPathBasedCacheDirectives(
+  public List<Fallible<PathBasedCacheDescriptor>> addPathBasedCacheDirectives(
       List<PathBasedCacheDirective> paths) throws IOException {
     return namesystem.addPathBasedCacheDirectives(paths);
   }
 
   @Override
-  public List<Fallible<Long>> removePathBasedCacheEntries(List<Long> ids)
+  public List<Fallible<Long>> removePathBasedCacheDescriptors(List<Long> ids)
       throws IOException {
-    return namesystem.removePathBasedCacheEntries(ids);
+    return namesystem.removePathBasedCacheDescriptors(ids);
   }
 
   private class ServerSidePathBasedCacheEntriesIterator
-      extends BatchedRemoteIterator<Long, PathBasedCacheEntry> {
+      extends BatchedRemoteIterator<Long, PathBasedCacheDescriptor> {
 
     private final String pool;
 
@@ -1239,19 +1239,19 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
 
     @Override
-    public BatchedEntries<PathBasedCacheEntry> makeRequest(
+    public BatchedEntries<PathBasedCacheDescriptor> makeRequest(
         Long nextKey) throws IOException {
-      return namesystem.listPathBasedCacheEntries(nextKey, pool, path);
+      return namesystem.listPathBasedCacheDescriptors(nextKey, pool, path);
     }
 
     @Override
-    public Long elementToPrevKey(PathBasedCacheEntry entry) {
+    public Long elementToPrevKey(PathBasedCacheDescriptor entry) {
       return entry.getEntryId();
     }
   }
   
   @Override
-  public RemoteIterator<PathBasedCacheEntry> listPathBasedCacheEntries(long prevId,
+  public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(long prevId,
       String pool, String path) throws IOException {
     return new ServerSidePathBasedCacheEntriesIterator(prevId, pool, path);
   }

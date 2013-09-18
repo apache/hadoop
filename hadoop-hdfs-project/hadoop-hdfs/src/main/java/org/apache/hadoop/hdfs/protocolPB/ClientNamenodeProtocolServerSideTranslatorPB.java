@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.Empty
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPathNameError;
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPoolNameError;
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.PoolWritePermissionDeniedError;
+import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.PathAlreadyExistsInPoolError;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
@@ -40,10 +41,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
-import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheEntryException.InvalidIdException;
-import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheEntryException.NoSuchIdException;
-import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheEntryException.RemovePermissionDeniedException;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
+import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.InvalidIdException;
+import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.NoSuchIdException;
+import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.RemovePermissionDeniedException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
@@ -115,9 +116,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCa
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathBasedCacheEntriesElementProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathBasedCacheEntriesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathBasedCacheEntriesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathBasedCacheDescriptorsElementProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathBasedCacheDescriptorsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathBasedCacheDescriptorsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MkdirsRequestProto;
@@ -131,9 +132,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Refres
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCachePoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCachePoolResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemovePathBasedCacheEntriesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemovePathBasedCacheEntriesResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemovePathBasedCacheEntryErrorProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemovePathBasedCacheDescriptorsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemovePathBasedCacheDescriptorsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemovePathBasedCacheDescriptorErrorProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2RequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2ResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameRequestProto;
@@ -1048,13 +1049,13 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         PathBasedCacheDirectiveProto proto = request.getElements(i);
         input.add(new PathBasedCacheDirective(proto.getPath(), proto.getPool()));
       }
-      List<Fallible<PathBasedCacheEntry>> output = server.addPathBasedCacheDirectives(input);
+      List<Fallible<PathBasedCacheDescriptor>> output = server.addPathBasedCacheDirectives(input);
       AddPathBasedCacheDirectivesResponseProto.Builder builder =
          AddPathBasedCacheDirectivesResponseProto.newBuilder();
       for (int idx = 0; idx < output.size(); idx++) {
         try {
-          PathBasedCacheEntry entry = output.get(idx).get();
-          builder.addResults(entry.getEntryId());
+          PathBasedCacheDescriptor directive = output.get(idx).get();
+          builder.addResults(directive.getEntryId());
         } catch (IOException ioe) {
           if (ioe.getCause() instanceof EmptyPathError) {
             builder.addResults(AddPathBasedCacheDirectiveErrorProto.
@@ -1068,6 +1069,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           } else if (ioe.getCause() instanceof PoolWritePermissionDeniedError) {
             builder.addResults(AddPathBasedCacheDirectiveErrorProto.
                 ADD_PERMISSION_DENIED_ERROR_VALUE);
+          } else if (ioe.getCause() instanceof PathAlreadyExistsInPoolError) {
+            builder.addResults(AddPathBasedCacheDirectiveErrorProto.
+                PATH_ALREADY_EXISTS_IN_POOL_ERROR_VALUE);
           } else {
             builder.addResults(AddPathBasedCacheDirectiveErrorProto.
                 UNEXPECTED_ADD_ERROR_VALUE);
@@ -1081,29 +1085,29 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public RemovePathBasedCacheEntriesResponseProto removePathBasedCacheEntries(
-      RpcController controller, RemovePathBasedCacheEntriesRequestProto request)
+  public RemovePathBasedCacheDescriptorsResponseProto removePathBasedCacheDescriptors(
+      RpcController controller, RemovePathBasedCacheDescriptorsRequestProto request)
       throws ServiceException {
     try {
       List<Fallible<Long>> output =
-         server.removePathBasedCacheEntries(request.getElementsList());
-      RemovePathBasedCacheEntriesResponseProto.Builder builder =
-         RemovePathBasedCacheEntriesResponseProto.newBuilder();
+         server.removePathBasedCacheDescriptors(request.getElementsList());
+      RemovePathBasedCacheDescriptorsResponseProto.Builder builder =
+         RemovePathBasedCacheDescriptorsResponseProto.newBuilder();
       for (int idx = 0; idx < output.size(); idx++) {
         try {
           long id = output.get(idx).get();
           builder.addResults(id);
         } catch (InvalidIdException ioe) {
-          builder.addResults(RemovePathBasedCacheEntryErrorProto.
+          builder.addResults(RemovePathBasedCacheDescriptorErrorProto.
               INVALID_CACHED_PATH_ID_ERROR_VALUE);
         } catch (NoSuchIdException ioe) {
-          builder.addResults(RemovePathBasedCacheEntryErrorProto.
+          builder.addResults(RemovePathBasedCacheDescriptorErrorProto.
               NO_SUCH_CACHED_PATH_ID_ERROR_VALUE);
         } catch (RemovePermissionDeniedException ioe) {
-          builder.addResults(RemovePathBasedCacheEntryErrorProto.
+          builder.addResults(RemovePathBasedCacheDescriptorErrorProto.
               REMOVE_PERMISSION_DENIED_ERROR_VALUE);
         } catch (IOException ioe) {
-          builder.addResults(RemovePathBasedCacheEntryErrorProto.
+          builder.addResults(RemovePathBasedCacheDescriptorErrorProto.
               UNEXPECTED_REMOVE_ERROR_VALUE);
         }
       }
@@ -1114,31 +1118,32 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public ListPathBasedCacheEntriesResponseProto listPathBasedCacheEntries(
-      RpcController controller, ListPathBasedCacheEntriesRequestProto request)
+  public ListPathBasedCacheDescriptorsResponseProto listPathBasedCacheDescriptors(
+      RpcController controller, ListPathBasedCacheDescriptorsRequestProto request)
           throws ServiceException {
     try {
-      RemoteIterator<PathBasedCacheEntry> iter =
-         server.listPathBasedCacheEntries(request.getPrevId(),
+      RemoteIterator<PathBasedCacheDescriptor> iter =
+         server.listPathBasedCacheDescriptors(request.getPrevId(),
              request.hasPool() ? request.getPool() : null,
              request.hasPath() ? request.getPath() : null);
-      ListPathBasedCacheEntriesResponseProto.Builder builder =
-          ListPathBasedCacheEntriesResponseProto.newBuilder();
+      ListPathBasedCacheDescriptorsResponseProto.Builder builder =
+          ListPathBasedCacheDescriptorsResponseProto.newBuilder();
       long prevId = 0;
       while (iter.hasNext()) {
-        PathBasedCacheEntry entry = iter.next();
+        PathBasedCacheDescriptor directive = iter.next();
         builder.addElements(
-            ListPathBasedCacheEntriesElementProto.newBuilder().
-              setId(entry.getEntryId()).
-              setPath(entry.getDirective().getPath()).
-              setPool(entry.getDirective().getPool()));
-        prevId = entry.getEntryId();
+            ListPathBasedCacheDescriptorsElementProto.newBuilder().
+              setId(directive.getEntryId()).
+              setPath(directive.getPath()).
+              setPool(directive.getPool()));
+        prevId = directive.getEntryId();
       }
       if (prevId == 0) {
         builder.setHasMore(false);
       } else {
-        iter = server.listPathBasedCacheEntries(prevId, request.getPool(),
-            request.getPath());
+        iter = server.listPathBasedCacheDescriptors(prevId, 
+            request.hasPool() ? request.getPool() : null,
+            request.hasPath() ? request.getPath() : null);
         builder.setHasMore(iter.hasNext());
       }
       return builder.build();

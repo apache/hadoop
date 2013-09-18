@@ -68,7 +68,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
@@ -1591,7 +1591,7 @@ public class DistributedFileSystem extends FileSystem {
    *         PathBasedCache entry, or an IOException describing why the directive
    *         could not be added.
    */
-  public List<Fallible<PathBasedCacheEntry>>
+  public List<Fallible<PathBasedCacheDescriptor>>
       addPathBasedCacheDirective(List<PathBasedCacheDirective> directives)
           throws IOException {
     return dfs.namenode.addPathBasedCacheDirectives(directives);
@@ -1605,8 +1605,8 @@ public class DistributedFileSystem extends FileSystem {
    *         ID, or an IOException describing why the ID could not be removed.
    */
   public List<Fallible<Long>>
-      removePathBasedCacheEntries(List<Long> ids) throws IOException {
-    return dfs.namenode.removePathBasedCacheEntries(ids);
+      removePathBasedCacheDescriptors(List<Long> ids) throws IOException {
+    return dfs.namenode.removePathBasedCacheDescriptors(ids);
   }
   
   /**
@@ -1615,11 +1615,11 @@ public class DistributedFileSystem extends FileSystem {
    * 
    * @param pool The cache pool to list, or null to list all pools.
    * @param path The path name to list, or null to list all paths.
-   * @return A RemoteIterator which returns PathBasedCacheEntry objects.
+   * @return A RemoteIterator which returns PathBasedCacheDescriptor objects.
    */
-  public RemoteIterator<PathBasedCacheEntry> listPathBasedCacheEntries(
+  public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(
       String pool, String path) throws IOException {
-    return dfs.namenode.listPathBasedCacheEntries(0, pool, path);
+    return dfs.namenode.listPathBasedCacheDescriptors(0, pool, path);
   }
 
   /**
