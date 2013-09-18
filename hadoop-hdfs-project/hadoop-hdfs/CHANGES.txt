@@ -125,6 +125,9 @@ Release 2.1.1-beta - 2013-09-23
 
     HDFS-5199 Add more debug trace for NFS READ and WRITE. (brandonli)
 
+    HDFS-5122. Support failover and retry in WebHdfsFileSystem for NN HA.
+    (Haohui Mai via jing9)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may
