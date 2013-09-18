@@ -38,7 +38,7 @@ public class TestCredentialsSys {
     credential.write(xdr);
     
     CredentialsSys newCredential = new CredentialsSys();
-    newCredential.read(xdr);
+    newCredential.read(xdr.asReadOnlyWrap());
     
     assertEquals(0, newCredential.getUID());
     assertEquals(1, newCredential.getGID());

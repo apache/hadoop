@@ -39,7 +39,7 @@ public class TestNfsTime {
     t1.serialize(xdr);
     
     // Deserialize it back
-    NfsTime t2 = NfsTime.deserialize(xdr);
+    NfsTime t2 = NfsTime.deserialize(xdr.asReadOnlyWrap());
     
     // Ensure the NfsTimes are equal
     Assert.assertEquals(t1, t2);
