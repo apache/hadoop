@@ -39,6 +39,12 @@ import org.jboss.netty.channel.Channel;
 public class Nfs3Utils {
   public final static String INODEID_PATH_PREFIX = "/.reserved/.inodes/";
 
+  
+  public final static String READ_RPC_START =  "READ_RPC_CALL_START____";
+  public final static String READ_RPC_END =    "READ_RPC_CALL_END______";
+  public final static String WRITE_RPC_START = "WRITE_RPC_CALL_START____";
+  public final static String WRITE_RPC_END =   "WRITE_RPC_CALL_END______";
+  
   public static String getFileIdPath(FileHandle handle) {
     return getFileIdPath(handle.getFileId());
   }
@@ -102,7 +108,10 @@ public class Nfs3Utils {
   /**
    * Send a write response to the netty network socket channel
    */
-  public static void writeChannel(Channel channel, XDR out) {
+  public static void writeChannel(Channel channel, XDR out, int xid) {
+    if (RpcProgramNfs3.LOG.isDebugEnabled()) {
+      RpcProgramNfs3.LOG.debug(WRITE_RPC_END + xid);
+    }
     ChannelBuffer outBuf = XDR.writeMessageTcp(out, true);
     channel.write(outBuf);
   }
