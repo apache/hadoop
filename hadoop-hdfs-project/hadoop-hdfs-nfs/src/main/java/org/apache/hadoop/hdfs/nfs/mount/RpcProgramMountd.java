@@ -40,6 +40,7 @@ import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.jboss.netty.channel.Channel;
 
 /**
@@ -88,7 +89,8 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     if (LOG.isDebugEnabled()) {
       LOG.debug("MOUNT NULLOP : " + " client: " + client);
     }
-    return RpcAcceptedReply.voidReply(out, xid);
+    return RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(
+        out);
   }
 
   @Override
@@ -155,7 +157,7 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     
     String host = client.getHostName();
     mounts.remove(new MountEntry(host, path));
-    RpcAcceptedReply.voidReply(out, xid);
+    RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(out);
     return out;
   }
 
@@ -165,7 +167,8 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
       LOG.debug("MOUNT UMNTALL : " + " client: " + client);
     }
     mounts.clear();
-    return RpcAcceptedReply.voidReply(out, xid);
+    return RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(
+        out);
   }
 
   @Override
@@ -190,8 +193,9 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
       out = MountResponse.writeExportList(out, xid, exports, hostsMatchers);
     } else {
       // Invalid procedure
-      RpcAcceptedReply.voidReply(out, xid,
-          RpcAcceptedReply.AcceptState.PROC_UNAVAIL);
+      RpcAcceptedReply.getInstance(xid,
+          RpcAcceptedReply.AcceptState.PROC_UNAVAIL, new VerifierNone()).write(
+          out);
     }  
     return out;
   }

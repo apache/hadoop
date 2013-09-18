@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.oncrpc.security.CredentialsNone;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.jboss.netty.buffer.ByteBufferBackedChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
@@ -55,7 +57,8 @@ public class TestFrameDecoder {
         InetAddress client, Channel channel) {
       // Get the final complete request and return a void response.
       result = in;
-      return RpcAcceptedReply.voidReply(out, 1234);
+      RpcAcceptedReply.getAcceptInstance(1234, new VerifierNone()).write(out);
+      return out;
     }
 
     @Override
@@ -161,7 +164,8 @@ public class TestFrameDecoder {
 
   static void createPortmapXDRheader(XDR xdr_out, int procedure) {
     // Make this a method
-    RpcCall.write(xdr_out, 0, 100000, 2, procedure);
+    RpcCall.getInstance(0, 100000, 2, procedure, new CredentialsNone(),
+        new VerifierNone()).write(xdr_out);
   }
 
   static XDR createGetportMount() {

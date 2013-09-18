@@ -26,7 +26,10 @@ import org.junit.Test;
 public class TestRpcMessage {
   private RpcMessage getRpcMessage(int xid, RpcMessage.Type msgType) {
     return new RpcMessage(xid, msgType) {
-      // Anonymous class
+      @Override
+      public XDR write(XDR xdr) {
+        return null;
+      }
     };
   }
   
