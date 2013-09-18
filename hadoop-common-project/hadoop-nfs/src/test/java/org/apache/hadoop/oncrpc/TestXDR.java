@@ -17,23 +17,35 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import static org.junit.Assert.assertTrue;
-
-import java.util.Arrays;
-
 import org.junit.Test;
 
-/**
- * Tests for {@link XDR}
- */
+import junit.framework.Assert;
+
 public class TestXDR {
-  /**
-   * Test {@link XDR#append(byte[], byte[])}
-   */
+  private void serializeInt(int times) {
+    XDR w = new XDR();
+    for (int i = 0; i < times; ++i)
+      w.writeInt(23);
+
+    XDR r = w.asReadOnlyWrap();
+    for (int i = 0; i < times; ++i)
+      Assert.assertEquals(r.readInt(), 23);
+  }
+
+  private void serializeLong(int times) {
+    XDR w = new XDR();
+    for (int i = 0; i < times; ++i)
+      w.writeLongAsHyper(23);
+
+    XDR r = w.asReadOnlyWrap();
+    for (int i = 0; i < times; ++i)
+      Assert.assertEquals(r.readHyper(), 23);
+  }
+
   @Test
-  public void testAppendBytes() {
-    byte[] arr1 = new byte[] {0, 1};
-    byte[] arr2 = new byte[] {2, 3};
-    assertTrue(Arrays.equals(new byte[]{0, 1, 2, 3}, XDR.append(arr1, arr2)));
+  public void testPerformance() {
+    final int TEST_TIMES = 8 << 20;
+    serializeInt(TEST_TIMES);
+    serializeLong(TEST_TIMES);
   }
 }

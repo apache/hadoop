@@ -73,6 +73,9 @@ Release 2.1.1-beta - 2013-09-23
     HADOOP-9487 Deprecation warnings in Configuration should go to their
     own log or otherwise be suppressible (Chu Tong via stevel)
 
+    HADOOP-9669. Reduce the number of byte array creations and copies in
+    XDR data manipulation. (Haohui Mai via brandonli)
+
   OPTIMIZATIONS
 
   BUG FIXES
