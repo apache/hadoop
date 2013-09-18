@@ -57,8 +57,7 @@ public class SimpleUdpClient {
     clientSocket.receive(receivePacket);
 
     // Check reply status
-    XDR xdr = new XDR();
-    xdr.writeFixedOpaque(Arrays.copyOfRange(receiveData, 0,
+    XDR xdr = new XDR(Arrays.copyOfRange(receiveData, 0,
         receivePacket.getLength()));
     RpcReply reply = RpcReply.read(xdr);
     if (reply.getState() != RpcReply.ReplyState.MSG_ACCEPTED) {
