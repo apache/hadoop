@@ -276,12 +276,40 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_ENABLED = RM_HA_PREFIX + "enabled";
   public static final boolean DEFAULT_RM_HA_ENABLED = false;
   
+
+  ////////////////////////////////
+  // RM state store configs
+  ////////////////////////////////
   /** The class to use as the persistent store.*/
   public static final String RM_STORE = RM_PREFIX + "store.class";
   
   /** URI for FileSystemRMStateStore */
   public static final String FS_RM_STATE_STORE_URI =
                                            RM_PREFIX + "fs.state-store.uri";
+  /**
+   * Comma separated host:port pairs, each corresponding to a ZK server for
+   * ZKRMStateStore
+   */
+  public static final String ZK_STATE_STORE_PREFIX =
+      RM_PREFIX + "zk.state-store.";
+  public static final String ZK_RM_STATE_STORE_NUM_RETRIES =
+      ZK_STATE_STORE_PREFIX + "num-retries";
+  public static final int DEFAULT_ZK_RM_STATE_STORE_NUM_RETRIES = 3;
+  public static final String ZK_RM_STATE_STORE_ADDRESS =
+      ZK_STATE_STORE_PREFIX + "address";
+  /** Timeout in millisec for ZK server connection for ZKRMStateStore */
+  public static final String ZK_RM_STATE_STORE_TIMEOUT_MS =
+      ZK_STATE_STORE_PREFIX + "timeout.ms";
+  public static final int DEFAULT_ZK_RM_STATE_STORE_TIMEOUT_MS = 60000;
+  /** Parent znode path under which ZKRMStateStore will create znodes */
+  public static final String ZK_RM_STATE_STORE_PARENT_PATH =
+      ZK_STATE_STORE_PREFIX + "parent-path";
+  public static final String DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH = "/rmstore";
+  /** ACL for znodes in ZKRMStateStore */
+  public static final String ZK_RM_STATE_STORE_ACL =
+      ZK_STATE_STORE_PREFIX + "acl";
+  public static final String DEFAULT_ZK_RM_STATE_STORE_ACL =
+      "world:anyone:rwcda";
 
   /** The maximum number of completed applications RM keeps. */ 
   public static final String RM_MAX_COMPLETED_APPLICATIONS =

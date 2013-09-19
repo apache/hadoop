@@ -259,6 +259,51 @@
   </property>
 
   <property>
+    <description>Host:Port of the ZooKeeper server where RM state will 
+    be stored. This must be supplied when using
+    org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
+    as the value for yarn.resourcemanager.store.class</description>
+    <name>yarn.resourcemanager.zk.state-store.address</name>
+    <!--value>127.0.0.1:2181</value-->
+  </property>
+
+  <property>
+    <description>Number of times ZKRMStateStore tries to connect to
+    ZooKeeper. This may be supplied when using
+    org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
+    as the value for yarn.resourcemanager.store.class</description>
+    <name>yarn.resourcemanager.zk.state-store.num-retries</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>Full path of the ZooKeeper znode where RM state will be
+    stored. This must be supplied when using
+    org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
+    as the value for yarn.resourcemanager.store.class</description>
+    <name>yarn.resourcemanager.zk.state-store.parent-path</name>
+    <value>/rmstore</value>
+  </property>
+
+  <property>
+    <description>Timeout when connecting to ZooKeeper.
+    This may be supplied when using
+    org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
+    as the value for yarn.resourcemanager.store.class</description>
+    <name>yarn.resourcemanager.zk.state-store.timeout.ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>ACL's to be used for ZooKeeper znodes.
+    This may be supplied when using
+    org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
+    as the value for yarn.resourcemanager.store.class</description>
+    <name>yarn.resourcemanager.zk.state-store.acl</name>
+    <value>world:anyone:rwcda</value>
+  </property>
+
+  <property>
     <description>URI pointing to the location of the FileSystem path where
     RM state will be stored. This must be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore
