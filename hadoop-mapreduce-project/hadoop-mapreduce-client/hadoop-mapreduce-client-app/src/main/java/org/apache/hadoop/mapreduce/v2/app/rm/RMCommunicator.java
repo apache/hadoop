@@ -28,7 +28,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -36,12 +38,10 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
-import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
-import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
+import org.apache.hadoop.mapreduce.v2.app.webapp.WebAppUtil;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -57,8 +57,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-
-import com.sun.research.ws.wadl.Response;
 
 /**
  * Registers/unregisters to RM and sends heartbeats to RM.
@@ -148,7 +146,13 @@ public abstract class RMCommunicator extends AbstractService
       if (serviceAddr != null) {
         request.setHost(serviceAddr.getHostName());
         request.setRpcPort(serviceAddr.getPort());
-        request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
+        String scheme = "http://";
+        if (getConfig().getBoolean(MRConfig.SSL_ENABLED_KEY,
+            MRConfig.SSL_ENABLED_KEY_DEFAULT)) {
+          scheme = "https://";
+        }
+        request.setTrackingUrl(scheme + serviceAddr.getHostName() + ":"
+            + clientService.getHttpPort());
       }
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
@@ -190,10 +194,11 @@ public abstract class RMCommunicator extends AbstractService
       }
       LOG.info("Setting job diagnostics to " + sb.toString());
 
-      String historyUrl = JobHistoryUtils.getHistoryUrl(getConfig(),
-          context.getApplicationID());
+      String historyUrl =
+          WebAppUtil.getSchemePrefix()
+              + JobHistoryUtils.getHistoryUrl(getConfig(),
+                  context.getApplicationID());
       LOG.info("History url is " + historyUrl);
-
       FinishApplicationMasterRequest request =
           FinishApplicationMasterRequest.newInstance(finishState,
             sb.toString(), historyUrl);

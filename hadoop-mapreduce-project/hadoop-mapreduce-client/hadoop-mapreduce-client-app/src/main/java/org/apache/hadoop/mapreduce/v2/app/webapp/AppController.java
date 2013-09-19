@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.View;
 
+import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 
 /**
@@ -50,6 +51,7 @@ import com.google.inject.Inject;
  */
 public class AppController extends Controller implements AMParams {
   private static final Log LOG = LogFactory.getLog(AppController.class);
+  private static final Joiner JOINER = Joiner.on("");
   
   protected final App app;
   
@@ -58,7 +60,9 @@ public class AppController extends Controller implements AMParams {
     super(ctx);
     this.app = app;
     set(APP_ID, app.context.getApplicationID().toString());
-    set(RM_WEB, YarnConfiguration.getRMWebAppURL(conf));
+    set(RM_WEB,
+        JOINER.join(WebAppUtil.getSchemePrefix(),
+            YarnConfiguration.getRMWebAppHostAndPort(conf)));
   }
 
   @Inject
