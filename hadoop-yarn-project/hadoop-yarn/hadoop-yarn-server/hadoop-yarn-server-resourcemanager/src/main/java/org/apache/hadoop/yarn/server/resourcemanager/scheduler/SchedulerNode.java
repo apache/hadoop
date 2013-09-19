@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * Represents a YARN Cluster Node from the viewpoint of the scheduler.
@@ -30,10 +31,17 @@ import org.apache.hadoop.yarn.api.records.Resource;
 public abstract class SchedulerNode {
 
   /**
-   * Get hostname.
-   * @return hostname
+   * Get the name of the node for scheduling matching decisions.
+   * <p/>
+   * Typically this is the 'hostname' reported by the node, but it could be 
+   * configured to be 'hostname:port' reported by the node via the 
+   * {@link YarnConfiguration#RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME} constant.
+   * The main usecase of this is Yarn minicluster to be able to differentiate
+   * node manager instances by their port number.
+   * 
+   * @return name of the node for scheduling matching decisions.
    */
-  public abstract String getHostName();
+  public abstract String getNodeName();
   
   /**
    * Get rackname.
@@ -59,4 +67,9 @@ public abstract class SchedulerNode {
    */
   public abstract int getNumContainers();
 
+  /**
+   * Get total resources on the node.
+   * @return total resources on the node.
+   */
+  public abstract Resource getTotalResource();
 }

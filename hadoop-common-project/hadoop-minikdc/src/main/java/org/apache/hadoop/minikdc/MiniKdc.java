@@ -37,7 +37,7 @@ import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
 import org.apache.directory.server.core.partition.ldif.LdifPartition;
 import org.apache.directory.server.kerberos.kdc.KdcServer;
 import org.apache.directory.server.kerberos.shared.crypto.encryption.KerberosKeyFactory;
-import org.apache.directory.server.kerberos.shared.keytab.HackedKeytab;
+import org.apache.directory.server.kerberos.shared.keytab.Keytab;
 import org.apache.directory.server.kerberos.shared.keytab.KeytabEntry;
 import org.apache.directory.server.protocol.shared.transport.TcpTransport;
 import org.apache.directory.server.protocol.shared.transport.UdpTransport;
@@ -59,6 +59,7 @@ import java.io.FileReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.text.MessageFormat;
@@ -432,6 +433,17 @@ public class MiniKdc {
 
     System.setProperty("sun.security.krb5.debug", conf.getProperty(DEBUG,
             "false"));
+
+    // refresh the config
+    Class<?> classRef;
+    if (System.getProperty("java.vendor").contains("IBM")) {
+      classRef = Class.forName("com.ibm.security.krb5.internal.Config");
+    } else {
+      classRef = Class.forName("sun.security.krb5.Config");
+    }
+    Method refreshMethod = classRef.getMethod("refresh", new Class[0]);
+    refreshMethod.invoke(classRef, new Object[0]);
+
     LOG.info("MiniKdc listening at port: {}", getPort());
     LOG.info("MiniKdc setting JVM krb5.conf to: {}",
             krb5conf.getAbsolutePath());
@@ -514,7 +526,7 @@ public class MiniKdc {
   public void createPrincipal(File keytabFile, String ... principals)
           throws Exception {
     String generatedPassword = UUID.randomUUID().toString();
-    HackedKeytab keytab = new HackedKeytab();
+    Keytab keytab = new Keytab();
     List<KeytabEntry> entries = new ArrayList<KeytabEntry>();
     for (String principal : principals) {
       createPrincipal(principal, generatedPassword);
@@ -529,6 +541,6 @@ public class MiniKdc {
       }
     }
     keytab.setEntries(entries);
-    keytab.write(keytabFile, principals.length);
+    keytab.write(keytabFile);
   }
 }

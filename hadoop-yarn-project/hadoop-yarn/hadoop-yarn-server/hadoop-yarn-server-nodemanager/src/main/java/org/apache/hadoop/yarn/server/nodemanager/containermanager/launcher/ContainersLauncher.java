@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
@@ -64,6 +66,7 @@ public class ContainersLauncher extends AbstractService
   private final Context context;
   private final ContainerExecutor exec;
   private final Dispatcher dispatcher;
+  private final ContainerManagerImpl containerManager;
 
   private LocalDirsHandlerService dirsHandler;
   @VisibleForTesting
@@ -88,12 +91,14 @@ public class ContainersLauncher extends AbstractService
 
 
   public ContainersLauncher(Context context, Dispatcher dispatcher,
-      ContainerExecutor exec, LocalDirsHandlerService dirsHandler) {
+      ContainerExecutor exec, LocalDirsHandlerService dirsHandler,
+      ContainerManagerImpl containerManager) {
     super("containers-launcher");
     this.exec = exec;
     this.context = context;
     this.dispatcher = dispatcher;
     this.dirsHandler = dirsHandler;
+    this.containerManager = containerManager;
   }
 
   @Override
@@ -127,7 +132,7 @@ public class ContainersLauncher extends AbstractService
 
         ContainerLaunch launch =
             new ContainerLaunch(context, getConfig(), dispatcher, exec, app,
-              event.getContainer(), dirsHandler);
+              event.getContainer(), dirsHandler, containerManager);
         running.put(containerId,
             new RunningContainer(containerLauncher.submit(launch), 
                 launch));
@@ -149,7 +154,8 @@ public class ContainersLauncher extends AbstractService
               dispatcher.getEventHandler().handle(
                   new ContainerExitEvent(containerId,
                       ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
-                      ExitCode.TERMINATED.getExitCode(),
+                      Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() : 
+                        ExitCode.TERMINATED.getExitCode(),
                       "Container terminated before launch."));
             }
           }

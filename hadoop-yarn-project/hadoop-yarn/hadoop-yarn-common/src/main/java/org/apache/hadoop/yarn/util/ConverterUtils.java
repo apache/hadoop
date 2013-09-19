@@ -198,7 +198,8 @@ public class ConverterUtils {
     Iterator<String> it = _split(appIdStr).iterator();
     if (!it.next().equals(APPLICATION_PREFIX)) {
       throw new IllegalArgumentException("Invalid ApplicationId prefix: "
-          + appIdStr);
+          + appIdStr + ". The valid ApplicationId should start with prefix "
+          + APPLICATION_PREFIX);
     }
     try {
       return toApplicationId(it);

@@ -1107,10 +1107,11 @@ ResourceManager REST API's.
 
 ** Query Parameters Supported
 
-  Multiple paramters can be specified.  The started and finished times have a begin and end parameter to allow you to specify ranges.  For example, one could request all applications that started between 1:00am and 2:00pm on 12/19/2011 with startedTimeBegin=1324256400&startedTimeEnd=1324303200. If the Begin parameter is not specfied, it defaults to 0, and if the End parameter is not specified, it defaults to infinity.
+  Multiple parameters can be specified.  The started and finished times have a begin and end parameter to allow you to specify ranges.  For example, one could request all applications that started between 1:00am and 2:00pm on 12/19/2011 with startedTimeBegin=1324256400&startedTimeEnd=1324303200. If the Begin parameter is not specified, it defaults to 0, and if the End parameter is not specified, it defaults to infinity.
 
 ------
-  * state - state of the application 
+  * state [deprecated] - state of the application
+  * states - applications matching the given application states, specified as a comma-separated list.
   * finalStatus - the final status of the application - reported by the application itself
   * user - user name
   * queue - queue name

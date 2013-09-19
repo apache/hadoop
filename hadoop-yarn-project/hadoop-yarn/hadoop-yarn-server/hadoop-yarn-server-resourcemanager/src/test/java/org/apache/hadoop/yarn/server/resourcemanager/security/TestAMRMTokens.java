@@ -38,6 +38,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -46,6 +48,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -80,6 +84,7 @@ public class TestAMRMTokens {
    * 
    * @throws Exception
    */
+  @SuppressWarnings("unchecked")
   @Test
   public void testTokenExpiry() throws Exception {
 
@@ -133,6 +138,20 @@ public class TestAMRMTokens {
       finishAMRequest.setDiagnostics("diagnostics");
       finishAMRequest.setTrackingUrl("url");
       rmClient.finishApplicationMaster(finishAMRequest);
+
+      // Send RMAppAttemptEventType.CONTAINER_FINISHED to transit RMAppAttempt
+      // from Finishing state to Finished State. Both AMRMToken and
+      // ClientToAMToken will be removed.
+      ContainerStatus containerStatus =
+          BuilderUtils.newContainerStatus(attempt.getMasterContainer().getId(),
+              ContainerState.COMPLETE,
+              "AM Container Finished", 0);
+      rm.getRMContext()
+          .getDispatcher()
+          .getEventHandler()
+          .handle(
+              new RMAppAttemptContainerFinishedEvent(applicationAttemptId,
+                  containerStatus));
 
       // Now simulate trying to allocate. RPC call itself should throw auth
       // exception.

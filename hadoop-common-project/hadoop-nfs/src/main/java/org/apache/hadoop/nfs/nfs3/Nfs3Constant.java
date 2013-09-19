@@ -189,4 +189,23 @@ public class Nfs3Constant {
   public final static int CREATE_UNCHECKED = 0;
   public final static int CREATE_GUARDED = 1;
   public final static int CREATE_EXCLUSIVE = 2;
+  
+  public static final String EXPORTS_ALLOWED_HOSTS_SEPARATOR = ";";
+  /** Allowed hosts for nfs exports */
+  public static final String EXPORTS_ALLOWED_HOSTS_KEY = "dfs.nfs.exports.allowed.hosts";
+  public static final String EXPORTS_ALLOWED_HOSTS_KEY_DEFAULT = "* rw";
+  /** Size for nfs exports cache */
+  public static final String EXPORTS_CACHE_SIZE_KEY = "dfs.nfs.exports.cache.size";
+  public static final int EXPORTS_CACHE_SIZE_DEFAULT = 512;
+  /** Expiration time for nfs exports cache entry */
+  public static final String EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY = "dfs.nfs.exports.cache.expirytime.millis";
+  public static final long EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT = 15 * 60 * 1000; // 15 min
+
+  public static final String FILE_DUMP_DIR_KEY = "dfs.nfs3.dump.dir";
+  public static final String FILE_DUMP_DIR_DEFAULT = "/tmp/.hdfs-nfs";
+  public static final String ENABLE_FILE_DUMP_KEY = "dfs.nfs3.enableDump";
+  public static final boolean ENABLE_FILE_DUMP_DEFAULT = true;
+  
+  public final static String UNKNOWN_USER = "nobody";
+  public final static String UNKNOWN_GROUP = "nobody";
 }

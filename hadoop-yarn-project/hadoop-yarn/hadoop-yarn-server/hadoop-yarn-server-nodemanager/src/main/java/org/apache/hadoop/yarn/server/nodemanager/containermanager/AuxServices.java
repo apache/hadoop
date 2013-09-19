@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
+import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
+import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
 
 public class AuxServices extends AbstractService
     implements ServiceStateChangeListener, EventHandler<AuxServicesEvent> {
@@ -178,7 +180,21 @@ public class AuxServices extends AbstractService
           .getApplicationID()));
       }
       break;
-    default:
+    case CONTAINER_INIT:
+      for (AuxiliaryService serv : serviceMap.values()) {
+        serv.initializeContainer(new ContainerInitializationContext(
+            event.getUser(), event.getContainer().getContainerId(),
+            event.getContainer().getResource()));
+      }
+      break;
+    case CONTAINER_STOP:
+      for (AuxiliaryService serv : serviceMap.values()) {
+        serv.stopContainer(new ContainerTerminationContext(
+            event.getUser(), event.getContainer().getContainerId(),
+            event.getContainer().getResource()));
+      }
+      break;
+      default:
       throw new RuntimeException("Unknown type: " + event.getType());
     }
   }

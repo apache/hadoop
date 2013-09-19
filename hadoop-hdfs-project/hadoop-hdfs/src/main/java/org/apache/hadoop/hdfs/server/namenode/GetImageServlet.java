@@ -310,11 +310,14 @@ public class GetImageServlet extends HttpServlet {
   
   static String getParamStringToPutImage(long txid,
       InetSocketAddress imageListenAddress, Storage storage) {
-    
+    String machine = !imageListenAddress.isUnresolved()
+        && imageListenAddress.getAddress().isAnyLocalAddress() ? null
+        : imageListenAddress.getHostName();
     return "putimage=1" +
       "&" + TXID_PARAM + "=" + txid +
       "&port=" + imageListenAddress.getPort() +
-      "&" + STORAGEINFO_PARAM + "=" +
+      (machine != null ? "&machine=" + machine : "")
+      + "&" + STORAGEINFO_PARAM + "=" +
       storage.toColonSeparatedString();
   }
 
@@ -341,10 +344,6 @@ public class GetImageServlet extends HttpServlet {
       Map<String, String[]> pmap = request.getParameterMap();
       isGetImage = isGetEdit = isPutImage = fetchLatest = false;
       remoteport = 0;
-      machineName = request.getRemoteHost();
-      if (InetAddresses.isInetAddress(machineName)) {
-        machineName = NetUtils.getHostNameOfIP(machineName);
-      }
 
       for (Map.Entry<String, String[]> entry : pmap.entrySet()) {
         String key = entry.getKey();
@@ -369,8 +368,17 @@ public class GetImageServlet extends HttpServlet {
           txId = ServletUtil.parseLongParam(request, TXID_PARAM);
         } else if (key.equals("port")) { 
           remoteport = new Integer(val[0]).intValue();
+        } else if (key.equals("machine")) {
+          machineName = val[0];
         } else if (key.equals(STORAGEINFO_PARAM)) {
           storageInfoString = val[0];
+        }
+      }
+
+      if (machineName == null) {
+        machineName = request.getRemoteHost();
+        if (InetAddresses.isInetAddress(machineName)) {
+          machineName = NetUtils.getHostNameOfIP(machineName);
         }
       }
 

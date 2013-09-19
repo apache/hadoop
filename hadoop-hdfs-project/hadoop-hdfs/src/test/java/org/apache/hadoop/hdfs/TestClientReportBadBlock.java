@@ -71,10 +71,6 @@ public class TestClientReportBadBlock {
 
   @Before
   public void startUpCluster() throws IOException {
-    if (System.getProperty("test.build.data") == null) { // to allow test to be
-      // run outside of Ant
-      System.setProperty("test.build.data", "build/test/data");
-    }
     // disable block scanner
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); 
     

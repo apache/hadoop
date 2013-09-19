@@ -515,8 +515,13 @@ abstract public class Shell {
       } catch (IOException ioe) {
         LOG.warn("Error while closing the input stream", ioe);
       }
-      if (!completed.get()) {
-        errThread.interrupt();
+      try {
+        if (!completed.get()) {
+          errThread.interrupt();
+          errThread.join();
+        }
+      } catch (InterruptedException ie) {
+        LOG.warn("Interrupted while joining errThread");
       }
       try {
         errReader.close();
@@ -535,6 +540,13 @@ abstract public class Shell {
   protected abstract void parseExecResult(BufferedReader lines)
   throws IOException;
 
+  /** 
+   * Get the environment variable
+   */
+  public String getEnvironment(String env) {
+    return environment.get(env);
+  }
+  
   /** get the current sub-process executing the given command 
    * @return process executing the command
    */

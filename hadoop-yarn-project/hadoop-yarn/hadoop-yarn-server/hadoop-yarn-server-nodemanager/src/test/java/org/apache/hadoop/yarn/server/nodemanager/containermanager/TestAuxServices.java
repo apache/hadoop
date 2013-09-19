@@ -22,6 +22,7 @@ import static org.apache.hadoop.service.Service.STATE.INITED;
 import static org.apache.hadoop.service.Service.STATE.STARTED;
 import static org.apache.hadoop.service.Service.STATE.STOPPED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -34,11 +35,21 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
+import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
+import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+    .Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+    .ContainerImpl;
 import org.junit.Test;
 
 public class TestAuxServices {
@@ -52,8 +63,10 @@ public class TestAuxServices {
     private int remaining_stop;
     private ByteBuffer meta = null;
     private ArrayList<Integer> stoppedApps;
+    private ContainerId containerId;
+    private Resource resource;
 
-    LightService(String name, char idef, int expected_appId) {
+         LightService(String name, char idef, int expected_appId) {
       this(name, idef, expected_appId, null);
     } 
     LightService(String name, char idef, int expected_appId, ByteBuffer meta) {
@@ -95,7 +108,22 @@ public class TestAuxServices {
     public ByteBuffer getMetaData() {
       return meta;
     }
-  }
+
+    @Override
+    public void initializeContainer(
+        ContainerInitializationContext initContainerContext) {
+      containerId = initContainerContext.getContainerId();
+      resource = initContainerContext.getResource();
+    }
+
+    @Override
+    public void stopContainer(
+        ContainerTerminationContext stopContainerContext) {
+      containerId = stopContainerContext.getContainerId();
+      resource = stopContainerContext.getResource();
+    }
+
+ }
 
   static class ServiceA extends LightService {
     public ServiceA() { 
@@ -141,6 +169,35 @@ public class TestAuxServices {
       ArrayList<Integer> appIds = ((LightService)serv).getAppIdsStopped();
       assertEquals("app not properly stopped", 1, appIds.size());
       assertTrue("wrong app stopped", appIds.contains((Integer)66));
+    }
+
+    for (AuxiliaryService serv : servs) {
+      assertNull(((LightService) serv).containerId);
+      assertNull(((LightService) serv).resource);
+    }
+
+
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId1, 1);
+    ContainerTokenIdentifier cti = new ContainerTokenIdentifier(
+        ContainerId.newInstance(attemptId, 1), "", "",
+        Resource.newInstance(1, 1), 0,0,0);
+    Container container = new ContainerImpl(null, null, null, null, null, cti);
+    ContainerId containerId = container.getContainerId();
+    Resource resource = container.getResource();
+    event = new AuxServicesEvent(AuxServicesEventType.CONTAINER_INIT,container);
+    aux.handle(event);
+    for (AuxiliaryService serv : servs) {
+      assertEquals(containerId, ((LightService) serv).containerId);
+      assertEquals(resource, ((LightService) serv).resource);
+      ((LightService) serv).containerId = null;
+      ((LightService) serv).resource = null;
+    }
+
+    event = new AuxServicesEvent(AuxServicesEventType.CONTAINER_STOP, container);
+    aux.handle(event);
+    for (AuxiliaryService serv : servs) {
+      assertEquals(containerId, ((LightService) serv).containerId);
+      assertEquals(resource, ((LightService) serv).resource);
     }
   }
 

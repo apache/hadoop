@@ -19,22 +19,27 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -44,19 +49,24 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Before;
@@ -523,6 +533,65 @@ public class TestCapacityScheduler {
       //different clusterId
       assertTrue(appComparator.compare(app1, app3) < 0);
       assertTrue(appComparator.compare(app2, app3) < 0);
+    }
+
+    @Test
+    public void testConcurrentAccessOnApplications() throws Exception {
+      CapacityScheduler cs = new CapacityScheduler();
+      verifyConcurrentAccessOnApplications(
+          cs.applications, FiCaSchedulerApp.class);
+    }
+
+    public static <T extends SchedulerApplication>
+        void verifyConcurrentAccessOnApplications(
+            final Map<ApplicationAttemptId, T> applications, Class<T> clazz)
+                throws Exception {
+      final int size = 10000;
+      final ApplicationId appId = ApplicationId.newInstance(0, 0);
+      final Constructor<T> ctor = clazz.getDeclaredConstructor(
+          ApplicationAttemptId.class, String.class, Queue.class,
+          ActiveUsersManager.class, RMContext.class);
+
+      ApplicationAttemptId appAttemptId0
+          = ApplicationAttemptId.newInstance(appId, 0);
+      applications.put(appAttemptId0, ctor.newInstance(
+              appAttemptId0, null, mock(Queue.class), null, null));
+      assertNotNull(applications.get(appAttemptId0));
+
+      // Imitating the thread of scheduler that will add and remove apps
+      final AtomicBoolean finished = new AtomicBoolean(false);
+      final AtomicBoolean failed = new AtomicBoolean(false);
+      Thread t = new Thread() {
+
+        @Override
+        public void run() {
+          for (int i = 1; i <= size; ++i) {
+            ApplicationAttemptId appAttemptId
+                = ApplicationAttemptId.newInstance(appId, i);
+            try {
+              applications.put(appAttemptId, ctor.newInstance(
+                  appAttemptId, null, mock(Queue.class), null, null));
+            } catch (Exception e) {
+              failed.set(true);
+              finished.set(true);
+              return;
+            }
+          }
+          for (int i = 1; i <= size; ++i) {
+            ApplicationAttemptId appAttemptId
+                = ApplicationAttemptId.newInstance(appId, i);
+            applications.remove(appAttemptId);
+          }
+          finished.set(true);
+        }
+      };
+      t.start();
+
+      // Imitating the thread of rmappattempt that will get the app
+      while (!finished.get()) {
+        assertNotNull(applications.get(appAttemptId0));
+      }
+      assertFalse(failed.get());
     }
 
 }

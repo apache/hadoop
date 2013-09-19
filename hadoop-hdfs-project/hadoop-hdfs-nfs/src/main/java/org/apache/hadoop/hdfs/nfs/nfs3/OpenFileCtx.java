@@ -32,7 +32,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
@@ -70,7 +69,7 @@ class OpenFileCtx {
   // The stream write-back status. True means one thread is doing write back.
   private boolean asyncStatus;
 
-  private final FSDataOutputStream fos;
+  private final HdfsDataOutputStream fos;
   private final Nfs3FileAttributes latestAttr;
   private long nextOffset;
 
@@ -114,7 +113,7 @@ class OpenFileCtx {
     return nonSequentialWriteInMemory;
   }
   
-  OpenFileCtx(FSDataOutputStream fos, Nfs3FileAttributes latestAttr,
+  OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
       String dumpFilePath) {
     this.fos = fos;
     this.latestAttr = latestAttr;
@@ -127,6 +126,9 @@ class OpenFileCtx {
     nonSequentialWriteInMemory = 0;
     this.dumpFilePath = dumpFilePath;  
     enabledDump = dumpFilePath == null ? false: true;
+    nextOffset = latestAttr.getSize();
+    assert(nextOffset == this.fos.getPos());
+
     ctxLock = new ReentrantLock(true);
   }
 
@@ -438,7 +440,7 @@ class OpenFileCtx {
     FSDataInputStream fis = null;
     try {
       // Sync file data and length to avoid partial read failure
-      ((HdfsDataOutputStream) fos).hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
+      fos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
       
       fis = new FSDataInputStream(dfsClient.open(path));
       readCount = fis.read(offset, readbuffer, 0, count);
@@ -527,7 +529,7 @@ class OpenFileCtx {
     int ret = COMMIT_WAIT;
     try {
       // Sync file data and length
-      ((HdfsDataOutputStream) fos).hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
+      fos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
       // Nothing to do for metadata since attr related change is pass-through
       ret = COMMIT_FINISHED;
     } catch (IOException e) {
@@ -686,12 +688,14 @@ class OpenFileCtx {
 
     try {
       fos.write(data, 0, count);
-
-      if (fos.getPos() != (offset + count)) {
+      
+      long flushedOffset = getFlushedOffset();
+      if (flushedOffset != (offset + count)) {
         throw new IOException("output stream is out of sync, pos="
-            + fos.getPos() + " and nextOffset should be" + (offset + count));
+            + flushedOffset + " and nextOffset should be"
+            + (offset + count));
       }
-      nextOffset = fos.getPos();
+      nextOffset = flushedOffset;
 
       // Reduce memory occupation size if request was allowed dumped
       if (writeCtx.getDataState() == DataState.ALLOW_DUMP) {

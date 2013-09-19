@@ -93,7 +93,13 @@ public class TestNMWebServicesApps extends JerseyTest {
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
     protected void configureServlets() {
-      nmContext = new NodeManager.NMContext(null, null);
+      conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
+      conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
+      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
+      healthChecker.init(conf);
+      dirsHandler = healthChecker.getDiskHandler();
+      aclsManager = new ApplicationACLsManager(conf);
+      nmContext = new NodeManager.NMContext(null, null, dirsHandler, aclsManager);
       NodeId nodeId = NodeId.newInstance("testhost.foo.com", 9999);
       ((NodeManager.NMContext)nmContext).setNodeId(nodeId);
       resourceView = new ResourceView() {
@@ -119,12 +125,6 @@ public class TestNMWebServicesApps extends JerseyTest {
           return true;
         }
       };
-      conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
-      conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
-      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
-      healthChecker.init(conf);
-      dirsHandler = healthChecker.getDiskHandler();
-      aclsManager = new ApplicationACLsManager(conf);
       nmWebApp = new NMWebApp(resourceView, aclsManager, dirsHandler);
       bind(JAXBContextResolver.class);
       bind(NMWebServices.class);

@@ -55,6 +55,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
+import org.apache.hadoop.mapreduce.v2.app.client.MRClientService;
 import org.apache.hadoop.mapreduce.v2.app.commit.CommitterEvent;
 import org.apache.hadoop.mapreduce.v2.app.commit.CommitterEventHandler;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -603,7 +604,7 @@ public class MRApp extends MRAppMaster {
 
   @Override
   protected ClientService createClientService(AppContext context) {
-    return new ClientService(){
+    return new MRClientService(context) {
       @Override
       public InetSocketAddress getBindAddress() {
         return NetUtils.createSocketAddr("localhost:9876");

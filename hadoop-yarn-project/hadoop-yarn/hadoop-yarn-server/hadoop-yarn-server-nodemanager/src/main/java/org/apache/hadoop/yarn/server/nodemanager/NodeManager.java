@@ -123,7 +123,8 @@ public class NodeManager extends CompositeService
   protected NMContext createNMContext(
       NMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInNM nmTokenSecretManager) {
-    return new NMContext(containerTokenSecretManager, nmTokenSecretManager);
+    return new NMContext(containerTokenSecretManager, nmTokenSecretManager,
+        dirsHandler, aclsManager);
   }
 
   protected void doSecureLogin() throws IOException {
@@ -142,9 +143,6 @@ public class NodeManager extends CompositeService
     NMTokenSecretManagerInNM nmTokenSecretManager =
         new NMTokenSecretManagerInNM();
     
-    this.context =
-        createNMContext(containerTokenSecretManager, nmTokenSecretManager);
-
     this.aclsManager = new ApplicationACLsManager(conf);
 
     ContainerExecutor exec = ReflectionUtils.newInstance(
@@ -165,7 +163,9 @@ public class NodeManager extends CompositeService
     addService(nodeHealthChecker);
     dirsHandler = nodeHealthChecker.getDiskHandler();
 
-
+    this.context = createNMContext(containerTokenSecretManager,
+        nmTokenSecretManager);
+    
     nodeStatusUpdater =
         createNodeStatusUpdater(context, dispatcher, nodeHealthChecker);
 
@@ -319,14 +319,19 @@ public class NodeManager extends CompositeService
     private final NMContainerTokenSecretManager containerTokenSecretManager;
     private final NMTokenSecretManagerInNM nmTokenSecretManager;
     private ContainerManagementProtocol containerManager;
+    private final LocalDirsHandlerService dirsHandler;
+    private final ApplicationACLsManager aclsManager;
     private WebServer webServer;
     private final NodeHealthStatus nodeHealthStatus = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);
-
+        
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
-        NMTokenSecretManagerInNM nmTokenSecretManager) {
+        NMTokenSecretManagerInNM nmTokenSecretManager,
+        LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager) {
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.nmTokenSecretManager = nmTokenSecretManager;
+      this.dirsHandler = dirsHandler;
+      this.aclsManager = aclsManager;
       this.nodeHealthStatus.setIsNodeHealthy(true);
       this.nodeHealthStatus.setHealthReport("Healthy");
       this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
@@ -385,6 +390,16 @@ public class NodeManager extends CompositeService
 
     public void setNodeId(NodeId nodeId) {
       this.nodeId = nodeId;
+    }
+
+    @Override
+    public LocalDirsHandlerService getLocalDirsHandler() {
+      return dirsHandler;
+    }
+    
+    @Override
+    public ApplicationACLsManager getApplicationACLsManager() {
+      return aclsManager;
     }
   }
 

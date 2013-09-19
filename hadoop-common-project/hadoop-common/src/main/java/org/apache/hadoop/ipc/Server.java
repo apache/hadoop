@@ -1311,7 +1311,15 @@ public abstract class Server {
           Throwable cause = e;
           while (cause != null) {
             if (cause instanceof InvalidToken) {
-              sendToClient = (InvalidToken) cause;
+              // FIXME: hadoop method signatures are restricting the SASL
+              // callbacks to only returning InvalidToken, but some services
+              // need to throw other exceptions (ex. NN + StandyException),
+              // so for now we'll tunnel the real exceptions via an
+              // InvalidToken's cause which normally is not set 
+              if (cause.getCause() != null) {
+                cause = cause.getCause();
+              }
+              sendToClient = (IOException) cause;
               break;
             }
             cause = cause.getCause();

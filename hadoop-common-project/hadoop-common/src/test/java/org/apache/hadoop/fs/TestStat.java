@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
@@ -25,10 +27,11 @@ import java.io.FileNotFoundException;
 import java.io.StringReader;
 
 import org.apache.hadoop.conf.Configuration;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestStat {
+public class TestStat extends FileSystemTestHelper {
 
   private static Stat stat;
 
@@ -112,11 +115,34 @@ public class TestStat {
 
   @Test(timeout=10000)
   public void testStatFileNotFound() throws Exception {
+    Assume.assumeTrue(Stat.isAvailable());
     try {
       stat.getFileStatus();
       fail("Expected FileNotFoundException");
     } catch (FileNotFoundException e) {
       // expected
     }
+  }
+  
+  @Test(timeout=10000)
+  public void testStatEnvironment() throws Exception {
+    assertEquals(stat.getEnvironment("LANG"), "C");
+  }
+
+  @Test(timeout=10000)
+  public void testStat() throws Exception {
+    Assume.assumeTrue(Stat.isAvailable());
+    FileSystem fs = FileSystem.getLocal(new Configuration());
+    Path testDir = new Path(getTestRootPath(fs), "teststat");
+    fs.mkdirs(testDir);
+    Path sub1 = new Path(testDir, "sub1");
+    Path sub2 = new Path(testDir, "sub2");
+    fs.mkdirs(sub1);
+    fs.createSymlink(sub1, sub2, false);
+    FileStatus stat1 = new Stat(sub1, 4096l, false, fs).getFileStatus();
+    FileStatus stat2 = new Stat(sub2, 0, false, fs).getFileStatus();
+    assertTrue(stat1.isDirectory());
+    assertFalse(stat2.isDirectory());
+    fs.delete(testDir, true);
   }
 }

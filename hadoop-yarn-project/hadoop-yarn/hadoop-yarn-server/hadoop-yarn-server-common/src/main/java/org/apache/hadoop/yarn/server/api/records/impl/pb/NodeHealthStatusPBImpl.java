@@ -22,6 +22,8 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProto
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 
+import com.google.protobuf.TextFormat;
+
 public class NodeHealthStatusPBImpl extends NodeHealthStatus {
 
   private NodeHealthStatusProto.Builder builder;
@@ -62,7 +64,7 @@ public class NodeHealthStatusPBImpl extends NodeHealthStatus {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToProto() {

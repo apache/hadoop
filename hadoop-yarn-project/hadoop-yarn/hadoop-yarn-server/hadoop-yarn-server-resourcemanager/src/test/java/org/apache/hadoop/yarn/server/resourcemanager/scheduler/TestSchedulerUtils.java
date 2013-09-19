@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
@@ -40,6 +41,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
@@ -351,4 +356,26 @@ public class TestSchedulerUtils {
         RMAppAttemptState.LAUNCHED);
   }
 
+  @Test
+  public void testComparePriorities(){
+    Priority high = Priority.newInstance(1);
+    Priority low = Priority.newInstance(2);
+    assertTrue(high.compareTo(low) > 0);
+  }
+
+  @Test
+  public void testCreateAbnormalContainerStatus() {
+    ContainerStatus cd = SchedulerUtils.createAbnormalContainerStatus(
+        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
+    Assert.assertEquals(ContainerExitStatus.ABORTED, cd.getExitStatus());
+  }
+
+  @Test
+  public void testCreatePreemptedContainerStatus() {
+    ContainerStatus cd = SchedulerUtils.createPreemptedContainerStatus(
+        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
+    Assert.assertEquals(ContainerExitStatus.PREEMPTED, cd.getExitStatus());
+  }
 }

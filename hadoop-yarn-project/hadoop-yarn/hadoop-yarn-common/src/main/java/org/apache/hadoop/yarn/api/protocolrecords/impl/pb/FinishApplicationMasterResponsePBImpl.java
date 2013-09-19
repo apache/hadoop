@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterResponseProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class FinishApplicationMasterResponsePBImpl extends FinishApplicationMasterResponse {
@@ -63,6 +65,6 @@ public class FinishApplicationMasterResponsePBImpl extends FinishApplicationMast
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 }  

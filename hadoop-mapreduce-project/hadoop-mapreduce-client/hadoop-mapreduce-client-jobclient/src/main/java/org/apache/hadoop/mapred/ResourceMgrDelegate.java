@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
@@ -118,8 +120,10 @@ public class ResourceMgrDelegate extends YarnClient {
     try {
       Set<String> appTypes = new HashSet<String>(1);
       appTypes.add(MRJobConfig.MR_APPLICATION_TYPE);
+      EnumSet<YarnApplicationState> appStates =
+          EnumSet.noneOf(YarnApplicationState.class);
       return TypeConverter.fromYarnApps(
-          client.getApplications(appTypes), this.conf);
+          client.getApplications(appTypes, appStates), this.conf);
     } catch (YarnException e) {
       throw new IOException(e);
     }
@@ -299,9 +303,25 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
-  public List<ApplicationReport> getApplications(
-      Set<String> applicationTypes) throws YarnException, IOException {
+  public List<ApplicationReport> getApplications(Set<String> applicationTypes)
+      throws YarnException,
+      IOException {
     return client.getApplications(applicationTypes);
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(
+      EnumSet<YarnApplicationState> applicationStates) throws YarnException,
+      IOException {
+    return client.getApplications(applicationStates);
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(
+      Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates)
+      throws YarnException, IOException {
+    return client.getApplications(applicationTypes, applicationStates);
   }
 
   @Override

@@ -145,7 +145,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
   protected ContainersLauncher createContainersLauncher(Context context,
       ContainerExecutor exec) {
     return new ContainersLauncher(context, super.dispatcher, exec,
-                                  super.dirsHandler) {
+                                  super.dirsHandler, this) {
       @Override
       public void handle(ContainersLauncherEvent event) {
         Container container = event.getContainer();

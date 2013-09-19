@@ -82,8 +82,10 @@ public class NameNodeMetrics {
   @Metric("Cache report") MutableRate cacheReport;
   MutableQuantiles[] cacheReportQuantiles;
 
-  @Metric("Duration in SafeMode at startup") MutableGaugeInt safeModeTime;
-  @Metric("Time loading FS Image at startup") MutableGaugeInt fsImageLoadTime;
+  @Metric("Duration in SafeMode at startup in msec")
+  MutableGaugeInt safeModeTime;
+  @Metric("Time loading FS Image at startup in msec")
+  MutableGaugeInt fsImageLoadTime;
 
   NameNodeMetrics(String processName, String sessionId, int[] intervals) {
     registry.tag(ProcessName, processName).tag(SessionId, sessionId);

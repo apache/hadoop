@@ -101,8 +101,12 @@ public class HttpServerFunctionalTest extends Assert {
     String webapps = System.getProperty(TEST_BUILD_WEBAPPS, BUILD_WEBAPPS_DIR);
     File testWebappDir = new File(webapps +
         File.separatorChar + TEST);
+    try {
     if (!testWebappDir.exists()) {
-      fail("Test webapp dir " + testWebappDir + " missing");
+      fail("Test webapp dir " + testWebappDir.getCanonicalPath() + " missing");
+    }
+    }
+    catch (IOException e) {
     }
   }
 
@@ -116,7 +120,8 @@ public class HttpServerFunctionalTest extends Assert {
   public static HttpServer createServer(String host, int port)
       throws IOException {
     prepareTestWebapp();
-    return new HttpServer(TEST, host, port, true);
+    return new HttpServer.Builder().setName(TEST).setBindAddress(host)
+        .setPort(port).setFindPort(true).build();
   }
 
   /**
@@ -126,7 +131,8 @@ public class HttpServerFunctionalTest extends Assert {
    * @throws IOException if it could not be created
    */
   public static HttpServer createServer(String webapp) throws IOException {
-    return new HttpServer(webapp, "0.0.0.0", 0, true);
+    return new HttpServer.Builder().setName(webapp).setBindAddress("0.0.0.0")
+        .setPort(0).setFindPort(true).build();
   }
   /**
    * Create an HttpServer instance for the given webapp
@@ -137,13 +143,16 @@ public class HttpServerFunctionalTest extends Assert {
    */
   public static HttpServer createServer(String webapp, Configuration conf)
       throws IOException {
-    return new HttpServer(webapp, "0.0.0.0", 0, true, conf);
+    return new HttpServer.Builder().setName(webapp).setBindAddress("0.0.0.0")
+        .setPort(0).setFindPort(true).setConf(conf).build();
   }
 
   public static HttpServer createServer(String webapp, Configuration conf, AccessControlList adminsAcl)
       throws IOException {
-    return new HttpServer(webapp, "0.0.0.0", 0, true, conf, adminsAcl);
+    return new HttpServer.Builder().setName(webapp).setBindAddress("0.0.0.0")
+        .setPort(0).setFindPort(true).setConf(conf).setACL(adminsAcl).build();
   }
+  
   /**
    * Create an HttpServer instance for the given webapp
    * @param webapp the webapp to work with
@@ -154,7 +163,8 @@ public class HttpServerFunctionalTest extends Assert {
    */
   public static HttpServer createServer(String webapp, Configuration conf,
       String[] pathSpecs) throws IOException {
-    return new HttpServer(webapp, "0.0.0.0", 0, true, conf, pathSpecs);
+    return new HttpServer.Builder().setName(webapp).setBindAddress("0.0.0.0")
+        .setPort(0).setFindPort(true).setConf(conf).setPathSpec(pathSpecs).build();
   }
 
   /**

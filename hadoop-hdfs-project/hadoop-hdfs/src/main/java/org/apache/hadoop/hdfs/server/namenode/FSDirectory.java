@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapsho
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.util.ByteArray;
+import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -949,7 +950,7 @@ public class FSDirectory implements Closeable {
         if (removedDst != null) {
           undoRemoveDst = false;
           BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-          List<INode> removedINodes = new ArrayList<INode>();
+          List<INode> removedINodes = new ChunkedArrayList<INode>();
           filesDeleted = removedDst.cleanSubtree(null,
               dstIIP.getLatestSnapshot(), collectedBlocks, removedINodes, true)
               .get(Quota.NAMESPACE);
@@ -1409,7 +1410,7 @@ public class FSDirectory implements Closeable {
       QuotaExceededException, SnapshotAccessControlException {
     assert hasWriteLock();
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-    List<INode> removedINodes = new ArrayList<INode>();
+    List<INode> removedINodes = new ChunkedArrayList<INode>();
 
     final INodesInPath inodesInPath = rootDir.getINodesInPath4Write(
         normalizePath(src), false);
@@ -2139,6 +2140,10 @@ public class FSDirectory implements Closeable {
   /** Verify if the snapshot name is legal. */
   void verifySnapshotName(String snapshotName, String path)
       throws PathComponentTooLongException {
+    if (snapshotName.contains(Path.SEPARATOR)) {
+      throw new HadoopIllegalArgumentException(
+          "Snapshot name cannot contain \"" + Path.SEPARATOR + "\"");
+    }
     final byte[] bytes = DFSUtil.string2Bytes(snapshotName);
     verifyINodeName(bytes);
     verifyMaxComponentLength(bytes, path, 0);
@@ -2772,6 +2777,19 @@ public class FSDirectory implements Closeable {
       throw new FileNotFoundException(
           "File for given inode path does not exist: " + src);
     }
+    
+    // Handle single ".." for NFS lookup support.
+    if ((pathComponents.length > 4)
+        && DFSUtil.bytes2String(pathComponents[4]).equals("..")) {
+      INode parent = inode.getParent();
+      if (parent == null || parent.getId() == INodeId.ROOT_INODE_ID) {
+        // inode is root, or its parent is root.
+        return Path.SEPARATOR;
+      } else {
+        return parent.getFullPathName();
+      }
+    }
+
     StringBuilder path = id == INodeId.ROOT_INODE_ID ? new StringBuilder()
         : new StringBuilder(inode.getFullPathName());
     for (int i = 4; i < pathComponents.length; i++) {

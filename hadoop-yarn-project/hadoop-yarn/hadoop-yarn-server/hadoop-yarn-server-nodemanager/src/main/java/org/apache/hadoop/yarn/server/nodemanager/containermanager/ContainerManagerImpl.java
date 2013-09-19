@@ -85,7 +85,6 @@ import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
-import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -193,12 +192,6 @@ public class ContainerManagerImpl extends CompositeService implements
     super.serviceInit(conf);
   }
 
-  private void addIfService(Object object) {
-    if (object instanceof Service) {
-      addService((Service) object);
-    }
-  }
-
   protected LogHandler createLogHandler(Configuration conf, Context context,
       DeletionService deletionService) {
     if (conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
@@ -223,7 +216,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   protected ContainersLauncher createContainersLauncher(Context context,
       ContainerExecutor exec) {
-    return new ContainersLauncher(context, this.dispatcher, exec, dirsHandler);
+    return new ContainersLauncher(context, this.dispatcher, exec, dirsHandler, this);
   }
 
   @Override
@@ -417,7 +410,7 @@ public class ContainerManagerImpl extends CompositeService implements
       }
     }
 
-    return StartContainersResponse.newInstance(auxiliaryServices.getMetaData(),
+    return StartContainersResponse.newInstance(getAuxServiceMetaData(),
       succeededContainers, failedContainers);
   }
 
@@ -475,8 +468,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
     // Create the application
     Application application =
-        new ApplicationImpl(dispatcher, this.aclsManager, user, applicationID,
-          credentials, context);
+        new ApplicationImpl(dispatcher, user, applicationID, credentials, context);
     if (null == context.getApplications().putIfAbsent(applicationID,
       application)) {
       LOG.info("Creating a new application reference for app " + applicationID);
@@ -767,4 +759,7 @@ public class ContainerManagerImpl extends CompositeService implements
     return this.context;
   }
 
+  public Map<String, ByteBuffer> getAuxServiceMetaData() {
+    return this.auxiliaryServices.getMetaData();
+  }
 }

@@ -49,6 +49,7 @@ public class FiCaSchedulerNode extends SchedulerNode {
 
   private Resource availableResource = recordFactory.newRecordInstance(Resource.class);
   private Resource usedResource = recordFactory.newRecordInstance(Resource.class);
+  private Resource totalResourceCapability;
 
   private volatile int numContainers;
 
@@ -59,11 +60,20 @@ public class FiCaSchedulerNode extends SchedulerNode {
     new HashMap<ContainerId, RMContainer>();
   
   private final RMNode rmNode;
+  private final String nodeName;
 
-  public FiCaSchedulerNode(RMNode node) {
+  public FiCaSchedulerNode(RMNode node, boolean usePortForNodeName) {
     this.rmNode = node;
     this.availableResource.setMemory(node.getTotalCapability().getMemory());
     this.availableResource.setVirtualCores(node.getTotalCapability().getVirtualCores());
+    totalResourceCapability =
+        Resource.newInstance(node.getTotalCapability().getMemory(), node
+            .getTotalCapability().getVirtualCores());
+    if (usePortForNodeName) {
+      nodeName = rmNode.getHostName() + ":" + node.getNodeID().getPort();
+    } else {
+      nodeName = rmNode.getHostName();
+    }
   }
 
   public RMNode getRMNode() {
@@ -79,8 +89,8 @@ public class FiCaSchedulerNode extends SchedulerNode {
   }
 
   @Override
-  public String getHostName() {
-    return this.rmNode.getHostName();
+  public String getNodeName() {
+    return nodeName;
   }
 
   @Override
@@ -118,6 +128,11 @@ public class FiCaSchedulerNode extends SchedulerNode {
   @Override
   public synchronized Resource getUsedResource() {
     return this.usedResource;
+  }
+
+  @Override
+  public Resource getTotalResource() {
+    return this.totalResourceCapability;
   }
 
   private synchronized boolean isValidContainer(Container c) {    

@@ -147,7 +147,7 @@ public class IdUserGroup {
 
   synchronized public String getUserName(int uid, String unknown) {
     checkAndUpdateMaps();
-    String uname = uidNameMap.get(Integer.valueOf(uid));
+    String uname = uidNameMap.get(uid);
     if (uname == null) {
       uname = unknown;
     }
@@ -156,7 +156,7 @@ public class IdUserGroup {
 
   synchronized public String getGroupName(int gid, String unknown) {
     checkAndUpdateMaps();
-    String gname = gidNameMap.get(Integer.valueOf(gid));
+    String gname = gidNameMap.get(gid);
     if (gname == null) {
       gname = unknown;
     }

@@ -47,6 +47,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.ConfServlet;
@@ -66,9 +67,12 @@ import org.mortbay.io.Buffer;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.MimeTypes;
+import org.mortbay.jetty.RequestLog;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.handler.ContextHandler;
 import org.mortbay.jetty.handler.ContextHandlerCollection;
+import org.mortbay.jetty.handler.RequestLogHandler;
+import org.mortbay.jetty.handler.HandlerCollection;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.security.SslSocketConnector;
 import org.mortbay.jetty.servlet.Context;
@@ -119,18 +123,117 @@ public class HttpServer implements FilterContainer {
   protected final Map<Context, Boolean> defaultContexts =
       new HashMap<Context, Boolean>();
   protected final List<String> filterNames = new ArrayList<String>();
-  private static final int MAX_RETRIES = 10;
   static final String STATE_DESCRIPTION_ALIVE = " - alive";
   static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
 
   private final boolean listenerStartedExternally;
   
+  /**
+   * Class to construct instances of HTTP server with specific options.
+   */
+  public static class Builder {
+    String name;
+    String bindAddress;
+    Integer port;
+    Boolean findPort;
+    Configuration conf;
+    Connector connector;
+    String[] pathSpecs;
+    AccessControlList adminsAcl;
+    boolean securityEnabled = false;
+    String usernameConfKey = null;
+    String keytabConfKey = null;
+    
+    public Builder setName(String name){
+      this.name = name;
+      return this;
+    }
+    
+    public Builder setBindAddress(String bindAddress){
+      this.bindAddress = bindAddress;
+      return this;
+    }
+    
+    public Builder setPort(int port) {
+      this.port = port;
+      return this;
+    }
+    
+    public Builder setFindPort(boolean findPort) {
+      this.findPort = findPort;
+      return this;
+    }
+    
+    public Builder setConf(Configuration conf) {
+      this.conf = conf;
+      return this;
+    }
+    
+    public Builder setConnector(Connector connector) {
+      this.connector = connector;
+      return this;
+    }
+    
+    public Builder setPathSpec(String[] pathSpec) {
+      this.pathSpecs = pathSpec;
+      return this;
+    }
+    
+    public Builder setACL(AccessControlList acl) {
+      this.adminsAcl = acl;
+      return this;
+    }
+    
+    public Builder setSecurityEnabled(boolean securityEnabled) {
+      this.securityEnabled = securityEnabled;
+      return this;
+    }
+    
+    public Builder setUsernameConfKey(String usernameConfKey) {
+      this.usernameConfKey = usernameConfKey;
+      return this;
+    }
+    
+    public Builder setKeytabConfKey(String keytabConfKey) {
+      this.keytabConfKey = keytabConfKey;
+      return this;
+    }
+    
+    public HttpServer build() throws IOException {
+      if (this.name == null) {
+        throw new HadoopIllegalArgumentException("name is not set");
+      }
+      if (this.bindAddress == null) {
+        throw new HadoopIllegalArgumentException("bindAddress is not set");
+      }
+      if (this.port == null) {
+        throw new HadoopIllegalArgumentException("port is not set");
+      }
+      if (this.findPort == null) {
+        throw new HadoopIllegalArgumentException("findPort is not set");
+      }
+      
+      if (this.conf == null) {
+        conf = new Configuration();
+      }
+      
+      HttpServer server = new HttpServer(this.name, this.bindAddress, this.port,
+      this.findPort, this.conf, this.adminsAcl, this.connector, this.pathSpecs);
+      if (this.securityEnabled) {
+        server.initSpnego(this.conf, this.usernameConfKey, this.keytabConfKey);
+      }
+      return server;
+    }
+  }
+  
   /** Same as this(name, bindAddress, port, findPort, null); */
+  @Deprecated
   public HttpServer(String name, String bindAddress, int port, boolean findPort
       ) throws IOException {
     this(name, bindAddress, port, findPort, new Configuration());
   }
-
+  
+  @Deprecated
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, Connector connector) throws IOException {
     this(name, bindAddress, port, findPort, conf, null, connector, null);
@@ -150,6 +253,7 @@ public class HttpServer implements FilterContainer {
    * @param pathSpecs Path specifications that this httpserver will be serving. 
    *        These will be added to any filters.
    */
+  @Deprecated
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, String[] pathSpecs) throws IOException {
     this(name, bindAddress, port, findPort, conf, null, null, pathSpecs);
@@ -164,11 +268,13 @@ public class HttpServer implements FilterContainer {
    *        increment by 1 until it finds a free port.
    * @param conf Configuration 
    */
+  @Deprecated
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf) throws IOException {
     this(name, bindAddress, port, findPort, conf, null, null, null);
   }
 
+  @Deprecated
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, AccessControlList adminsAcl) 
       throws IOException {
@@ -186,6 +292,7 @@ public class HttpServer implements FilterContainer {
    * @param conf Configuration 
    * @param adminsAcl {@link AccessControlList} of the admins
    */
+  @Deprecated
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, AccessControlList adminsAcl, 
       Connector connector) throws IOException {
@@ -251,7 +358,18 @@ public class HttpServer implements FilterContainer {
 
     final String appDir = getWebAppsPath(name);
     ContextHandlerCollection contexts = new ContextHandlerCollection();
-    webServer.setHandler(contexts);
+    RequestLog requestLog = HttpRequestLog.getRequestLog(name);
+
+    if (requestLog != null) {
+      RequestLogHandler requestLogHandler = new RequestLogHandler();
+      requestLogHandler.setRequestLog(requestLog);
+      HandlerCollection handlers = new HandlerCollection();
+      handlers.setHandlers(new Handler[] {requestLogHandler, contexts});
+      webServer.setHandler(handlers);
+    }
+    else {
+      webServer.setHandler(contexts);
+    }
 
     webAppContext = new WebAppContext();
     webAppContext.setDisplayName(name);
@@ -529,7 +647,7 @@ public class HttpServer implements FilterContainer {
   /**
    * Define a filter for a context and set up default url mappings.
    */
-  protected void defineFilter(Context ctx, String name,
+  public void defineFilter(Context ctx, String name,
       String classname, Map<String,String> parameters, String[] urls) {
 
     FilterHolder holder = new FilterHolder();
@@ -568,6 +686,10 @@ public class HttpServer implements FilterContainer {
    */
   public Object getAttribute(String name) {
     return webAppContext.getAttribute(name);
+  }
+  
+  public WebAppContext getWebAppContext(){
+    return this.webAppContext;
   }
 
   /**

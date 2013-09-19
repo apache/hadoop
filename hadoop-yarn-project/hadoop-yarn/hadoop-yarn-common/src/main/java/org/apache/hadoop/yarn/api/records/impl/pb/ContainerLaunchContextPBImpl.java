@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.StringLocalResourceMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.TextFormat;
 
 @Private
 @Unstable
@@ -89,7 +90,7 @@ extends ContainerLaunchContext {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   protected final ByteBuffer convertFromProtoFormat(ByteString byteString) {

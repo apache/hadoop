@@ -61,8 +61,10 @@ esac
 
 if [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "queue" ] ; then
   CLASS=org.apache.hadoop.mapred.JobQueueClient
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "pipes" ] ; then
   CLASS=org.apache.hadoop.mapred.pipes.Submitter
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"

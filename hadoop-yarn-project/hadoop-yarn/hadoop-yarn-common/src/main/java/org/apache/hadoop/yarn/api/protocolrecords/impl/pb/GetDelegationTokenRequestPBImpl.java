@@ -23,6 +23,8 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequest
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class GetDelegationTokenRequestPBImpl extends GetDelegationTokenRequest {
@@ -86,7 +88,7 @@ public class GetDelegationTokenRequestPBImpl extends GetDelegationTokenRequest {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {

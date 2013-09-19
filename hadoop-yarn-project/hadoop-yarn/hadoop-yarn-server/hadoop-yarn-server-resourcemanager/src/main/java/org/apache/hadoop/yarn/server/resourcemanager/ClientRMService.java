@@ -43,10 +43,10 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -73,6 +73,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
@@ -157,9 +158,6 @@ public class ClientRMService extends AbstractService implements
     this.server.start();
     clientBindAddress = conf.updateConnectAddr(YarnConfiguration.RM_ADDRESS,
                                                server.getListenerAddress());
-    // enable RM to short-circuit token operations directly to itself
-    RMDelegationTokenIdentifier.Renewer.setSecretManager(
-        rmDTSecretManager, clientBindAddress);
     super.serviceStart();
   }
 
@@ -245,7 +243,8 @@ public class ClientRMService extends AbstractService implements
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
         ApplicationAccessType.VIEW_APP, applicationId);
     ApplicationReport report =
-        application.createAndGetApplicationReport(allowAccess);
+        application.createAndGetApplicationReport(callerUGI.getUserName(),
+            allowAccess);
 
     GetApplicationReportResponse response = recordFactory
         .newRecordInstance(GetApplicationReportResponse.class);
@@ -353,9 +352,8 @@ public class ClientRMService extends AbstractService implements
       RMAuditLogger.logFailure(callerUGI.getUserName(),
           AuditConstants.KILL_APP_REQUEST, "UNKNOWN", "ClientRMService",
           "Trying to kill an absent application", applicationId);
-      throw RPCUtil
-          .getRemoteException("Trying to kill an absent application "
-              + applicationId);
+      throw new ApplicationNotFoundException("Trying to kill an absent"
+          + " application " + applicationId);
     }
 
     if (!checkAccess(callerUGI, application.getUser(),
@@ -395,7 +393,6 @@ public class ClientRMService extends AbstractService implements
   @Override
   public GetApplicationsResponse getApplications(
       GetApplicationsRequest request) throws YarnException {
-
     UserGroupInformation callerUGI;
     try {
       callerUGI = UserGroupInformation.getCurrentUser();
@@ -405,16 +402,27 @@ public class ClientRMService extends AbstractService implements
     }
 
     Set<String> applicationTypes = request.getApplicationTypes();
-    boolean bypassFilter = applicationTypes.isEmpty();
+    EnumSet<YarnApplicationState> applicationStates =
+        request.getApplicationStates();
+
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
     for (RMApp application : this.rmContext.getRMApps().values()) {
-      if (!(bypassFilter || applicationTypes.contains(application
-          .getApplicationType()))) {
-        continue;
+      if (applicationTypes != null && !applicationTypes.isEmpty()) {
+        if (!applicationTypes.contains(application.getApplicationType())) {
+          continue;
+        }
+      }
+
+      if (applicationStates != null && !applicationStates.isEmpty()) {
+        if (!applicationStates.contains(RMServerUtils
+            .createApplicationState(application.getState()))) {
+          continue;
+        }
       }
       boolean allowAccess = checkAccess(callerUGI, application.getUser(),
           ApplicationAccessType.VIEW_APP, application.getApplicationId());
-      reports.add(application.createAndGetApplicationReport(allowAccess));
+      reports.add(application.createAndGetApplicationReport(
+          callerUGI.getUserName(), allowAccess));
     }
 
     GetApplicationsResponse response =
@@ -460,7 +468,7 @@ public class ClientRMService extends AbstractService implements
             apps.size());
         for (RMApp app : apps) {
           if (app.getQueue().equals(queueInfo.getQueueName())) {
-            appReports.add(app.createAndGetApplicationReport(true));
+            appReports.add(app.createAndGetApplicationReport(null, true));
           }
         }
       }

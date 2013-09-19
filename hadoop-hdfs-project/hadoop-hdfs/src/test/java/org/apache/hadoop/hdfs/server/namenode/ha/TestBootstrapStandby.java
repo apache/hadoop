@@ -24,8 +24,6 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,8 +43,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 
 public class TestBootstrapStandby {
   private static final Log LOG = LogFactory.getLog(TestBootstrapStandby.class);
@@ -60,8 +56,8 @@ public class TestBootstrapStandby {
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10002)));
+        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(20001))
+        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(20002)));
     
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(topology)
@@ -107,7 +103,7 @@ public class TestBootstrapStandby {
     // Should have copied over the namespace from the active
     FSImageTestUtil.assertNNHasCheckpoints(cluster, 1,
         ImmutableList.of(0));
-    assertNNFilesMatch();
+    FSImageTestUtil.assertNNFilesMatch(cluster);
 
     // We should now be able to start the standby successfully.
     cluster.restartNameNode(1);
@@ -138,7 +134,7 @@ public class TestBootstrapStandby {
     // Should have copied over the namespace from the active
     FSImageTestUtil.assertNNHasCheckpoints(cluster, 1,
         ImmutableList.of((int)expectedCheckpointTxId));
-    assertNNFilesMatch();
+    FSImageTestUtil.assertNNFilesMatch(cluster);
 
     // We should now be able to start the standby successfully.
     cluster.restartNameNode(1);
@@ -207,18 +203,6 @@ public class TestBootstrapStandby {
         new String[]{"-force"},
         cluster.getConfiguration(1));
     assertEquals(0, rc);
-  }
-  
-  private void assertNNFilesMatch() throws Exception {
-    List<File> curDirs = Lists.newArrayList();
-    curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 0));
-    curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 1));
-    
-    // Ignore seen_txid file, since the newly bootstrapped standby
-    // will have a higher seen_txid than the one it bootstrapped from.
-    Set<String> ignoredFiles = ImmutableSet.of("seen_txid");
-    FSImageTestUtil.assertParallelFilesAreIdentical(curDirs,
-        ignoredFiles);
   }
 
   private void removeStandbyNameDirs() {

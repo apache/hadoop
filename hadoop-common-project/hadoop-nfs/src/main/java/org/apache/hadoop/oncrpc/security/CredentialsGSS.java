@@ -15,28 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.directory.server.kerberos.shared.keytab;
+package org.apache.hadoop.oncrpc.security;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import org.apache.hadoop.oncrpc.XDR;
 
-//This is a hack for ApacheDS 2.0.0-M14 to be able to create
-//keytab files with more than one principal.
-//It needs to be in this package because the KeytabEncoder class is package 
-// private.
-//This class can be removed once jira DIRSERVER-1882
-// (https://issues.apache.org/jira/browse/DIRSERVER-1882) solved
-public class HackedKeytab extends Keytab {
+/** Credential used by RPCSEC_GSS */
+public class CredentialsGSS extends Credentials {
 
-  private byte[] keytabVersion = VERSION_52;
+  public CredentialsGSS() {
+    super(AuthFlavor.RPCSEC_GSS);
+  }
 
-  public void write( File file, int principalCount ) throws IOException
-  {
-    HackedKeytabEncoder writer = new HackedKeytabEncoder();
-    ByteBuffer buffer = writer.write( keytabVersion, getEntries(),
-            principalCount );
-    writeFile( buffer, file );
+  @Override
+  public void read(XDR xdr) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void write(XDR xdr) {
+    // TODO Auto-generated method stub
+    
   }
 
 }

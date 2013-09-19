@@ -91,7 +91,7 @@ import static org.mockito.Mockito.*;
  */
 public class TestFsck {
   static final String auditLogFile = System.getProperty("test.build.dir",
-      "build/test") + "/audit.log";
+      "build/test") + "/TestFsck-audit.log";
   
   // Pattern for: 
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
@@ -153,13 +153,14 @@ public class TestFsck {
       String outStr = runFsck(conf, 0, true, "/");
       verifyAuditLogs();
       assertEquals(aTime, fs.getFileStatus(file).getAccessTime());
-      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       System.out.println(outStr);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       if (fs != null) {try{fs.close();} catch(Exception e){}}
       cluster.shutdown();
       
       // restart the cluster; bring up namenode but not the data nodes
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(false).build();
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0).format(false).build();
       outStr = runFsck(conf, 1, true, "/");
       // expect the result is corrupt
       assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
@@ -194,18 +195,30 @@ public class TestFsck {
     // Turn off the logs
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
     logger.setLevel(Level.OFF);
-    
-    // Audit log should contain one getfileinfo and one fsck
-    BufferedReader reader = new BufferedReader(new FileReader(auditLogFile));
-    String line = reader.readLine();
-    assertNotNull(line);
-    assertTrue("Expected getfileinfo event not found in audit log",
-        getfileinfoPattern.matcher(line).matches());
-    line = reader.readLine();
-    assertNotNull(line);
-    assertTrue("Expected fsck event not found in audit log",
-        fsckPattern.matcher(line).matches());
-    assertNull("Unexpected event in audit log", reader.readLine());
+
+    BufferedReader reader = null;
+    try {
+      // Audit log should contain one getfileinfo and one fsck
+      reader = new BufferedReader(new FileReader(auditLogFile));
+      String line = reader.readLine();
+      assertNotNull(line);
+      assertTrue("Expected getfileinfo event not found in audit log",
+          getfileinfoPattern.matcher(line).matches());
+      line = reader.readLine();
+      assertNotNull(line);
+      assertTrue("Expected fsck event not found in audit log", fsckPattern
+          .matcher(line).matches());
+      assertNull("Unexpected event in audit log", reader.readLine());
+    } finally {
+      // Close the reader and remove the appender to release the audit log file
+      // handle after verifying the content of the file.
+      if (reader != null) {
+        reader.close();
+      }
+      if (logger != null) {
+        logger.removeAllAppenders();
+      }
+    }
   }
   
   @Test
@@ -963,9 +976,9 @@ public class TestFsck {
       String outStr = runFsck(conf, 0, true, "/");
       verifyAuditLogs();
       assertEquals(aTime, fc.getFileStatus(symlink).getAccessTime());
-      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
-      assertTrue(outStr.contains("Total symlinks:\t\t1\n"));
       System.out.println(outStr);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+      assertTrue(outStr.contains("Total symlinks:\t\t1"));
       util.cleanup(fs, fileName);
     } finally {
       if (fs != null) {try{fs.close();} catch(Exception e){}}

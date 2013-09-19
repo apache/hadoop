@@ -15,46 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.hdfs.web;
-
-import java.io.IOException;
-import java.net.URL;
-import java.net.URLConnection;
+package org.apache.hadoop.hdfs.qjournal.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Utilities for handling URLs
+ * This is the JMX management interface for JournalNode information
  */
-@InterfaceAudience.LimitedPrivate({"HDFS"})
-@InterfaceStability.Unstable
-public class URLUtils {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public interface JournalNodeMXBean {
+  
   /**
-   * Timeout for socket connects and reads
-   */
-  public static int SOCKET_TIMEOUT = 1*60*1000; // 1 minute
-
-  /**
-   * Opens a url with read and connect timeouts
-   * @param url to open
-   * @return URLConnection
-   * @throws IOException
-   */
-  public static URLConnection openConnection(URL url) throws IOException {
-    URLConnection connection = url.openConnection();
-    setTimeouts(connection);
-    return connection;    
-  }
-
-  /**
-   * Sets timeout parameters on the given URLConnection.
+   * Get status information (e.g., whether formatted) of JournalNode's journals.
    * 
-   * @param connection URLConnection to set
+   * @return A string presenting status for each journal
    */
-  static void setTimeouts(URLConnection connection) {
-    connection.setConnectTimeout(SOCKET_TIMEOUT);
-    connection.setReadTimeout(SOCKET_TIMEOUT);
-  }
+  public String getJournalsStatus();
 }

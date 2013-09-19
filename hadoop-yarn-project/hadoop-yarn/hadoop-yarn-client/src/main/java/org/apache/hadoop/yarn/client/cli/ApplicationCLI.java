@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DecimalFormat;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,6 +29,7 @@ import java.util.Set;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -35,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
@@ -48,6 +51,10 @@ public class ApplicationCLI extends YarnCLI {
     System.getProperty("line.separator");
 
   private static final String APP_TYPE_CMD = "appTypes";
+  private static final String APP_STATE_CMD ="appStates";
+  private static final String ALLSTATES_OPTION = "ALL";
+
+  private boolean allAppStates;
 
   public static void main(String[] args) throws Exception {
     ApplicationCLI cli = new ApplicationCLI();
@@ -64,21 +71,38 @@ public class ApplicationCLI extends YarnCLI {
     Options opts = new Options();
     opts.addOption(STATUS_CMD, true, "Prints the status of the application.");
     opts.addOption(LIST_CMD, false, "List applications from the RM. " +
-        "Supports optional use of --appTypes to filter applications " +
-        "based on application type.");
+        "Supports optional use of -appTypes to filter applications " +
+        "based on application type, " +
+        "and -appStates to filter applications based on application state");
     opts.addOption(KILL_CMD, true, "Kills the application.");
     opts.addOption(HELP_CMD, false, "Displays help for all commands.");
-    Option appTypeOpt = new Option(APP_TYPE_CMD, true,
-        "Works with --list to filter applications based on their type.");
+    Option appTypeOpt = new Option(APP_TYPE_CMD, true, "Works with -list to " +
+        "filter applications based on " +
+        "input comma-separated list of application types.");
     appTypeOpt.setValueSeparator(',');
     appTypeOpt.setArgs(Option.UNLIMITED_VALUES);
-    appTypeOpt.setArgName("Comma-separated list of application types");
+    appTypeOpt.setArgName("Types");
     opts.addOption(appTypeOpt);
+    Option appStateOpt = new Option(APP_STATE_CMD, true, "Works with -list " +
+        "to filter applications based on input comma-separated list of " +
+        "application states. " + getAllValidApplicationStates());
+    appStateOpt.setValueSeparator(',');
+    appStateOpt.setArgs(Option.UNLIMITED_VALUES);
+    appStateOpt.setArgName("States");
+    opts.addOption(appStateOpt);
     opts.getOption(KILL_CMD).setArgName("Application ID");
     opts.getOption(STATUS_CMD).setArgName("Application ID");
-    CommandLine cliParser = new GnuParser().parse(opts, args);
 
     int exitCode = -1;
+    CommandLine cliParser = null;
+    try {
+      cliParser = new GnuParser().parse(opts, args);
+    } catch (MissingArgumentException ex) {
+      sysout.println("Missing argument for options");
+      printUsage(opts);
+      return exitCode;
+    }
+
     if (cliParser.hasOption(STATUS_CMD)) {
       if (args.length != 2) {
         printUsage(opts);
@@ -86,18 +110,44 @@ public class ApplicationCLI extends YarnCLI {
       }
       printApplicationReport(cliParser.getOptionValue(STATUS_CMD));
     } else if (cliParser.hasOption(LIST_CMD)) {
+      allAppStates = false;
       Set<String> appTypes = new HashSet<String>();
       if(cliParser.hasOption(APP_TYPE_CMD)) {
         String[] types = cliParser.getOptionValues(APP_TYPE_CMD);
         if (types != null) {
           for (String type : types) {
             if (!type.trim().isEmpty()) {
-              appTypes.add(type.trim());
+              appTypes.add(type.toUpperCase().trim());
             }
           }
         }
       }
-      listApplications(appTypes);
+
+      EnumSet<YarnApplicationState> appStates =
+          EnumSet.noneOf(YarnApplicationState.class);
+      if (cliParser.hasOption(APP_STATE_CMD)) {
+        String[] states = cliParser.getOptionValues(APP_STATE_CMD);
+        if (states != null) {
+          for (String state : states) {
+            if (!state.trim().isEmpty()) {
+              if (state.trim().equalsIgnoreCase(ALLSTATES_OPTION)) {
+                allAppStates = true;
+                break;
+              }
+              try {
+                appStates.add(YarnApplicationState.valueOf(state.toUpperCase()
+                    .trim()));
+              } catch (IllegalArgumentException ex) {
+                sysout.println("The application state " + state
+                    + " is invalid.");
+                sysout.println(getAllValidApplicationStates());
+                return exitCode;
+              }
+            }
+          }
+        }
+      }
+      listApplications(appTypes, appStates);
     } else if (cliParser.hasOption(KILL_CMD)) {
       if (args.length != 2) {
         printUsage(opts);
@@ -126,19 +176,35 @@ public class ApplicationCLI extends YarnCLI {
 
   /**
    * Lists the applications matching the given application Types
-   * present in the Resource Manager
+   * And application States present in the Resource Manager
    * 
    * @param appTypes
+   * @param appStates
    * @throws YarnException
    * @throws IOException
    */
-  private void listApplications(Set<String> appTypes)
-      throws YarnException, IOException {
+  private void listApplications(Set<String> appTypes,
+      EnumSet<YarnApplicationState> appStates) throws YarnException,
+      IOException {
     PrintWriter writer = new PrintWriter(sysout);
-    List<ApplicationReport> appsReport =
-        client.getApplications(appTypes);
+    if (allAppStates) {
+      for(YarnApplicationState appState : YarnApplicationState.values()) {
+        appStates.add(appState);
+      }
+    } else {
+      if (appStates.isEmpty()) {
+        appStates.add(YarnApplicationState.RUNNING);
+        appStates.add(YarnApplicationState.ACCEPTED);
+        appStates.add(YarnApplicationState.SUBMITTED);
+      }
+    }
 
-    writer.println("Total Applications:" + appsReport.size());
+    List<ApplicationReport> appsReport =
+        client.getApplications(appTypes, appStates);
+
+    writer
+        .println("Total number of applications (application-types: " + appTypes
+            + " and states: " + appStates + ")" + ":" + appsReport.size());
     writer.printf(APPLICATIONS_PATTERN, "Application-Id",
         "Application-Name","Application-Type", "User", "Queue", 
         "State", "Final-State","Progress", "Tracking-URL");
@@ -164,8 +230,15 @@ public class ApplicationCLI extends YarnCLI {
   private void killApplication(String applicationId)
       throws YarnException, IOException {
     ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
-    sysout.println("Killing application " + applicationId);
-    client.killApplication(appId);
+    ApplicationReport appReport = client.getApplicationReport(appId);
+    if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED
+        || appReport.getYarnApplicationState() == YarnApplicationState.KILLED
+        || appReport.getYarnApplicationState() == YarnApplicationState.FAILED) {
+      sysout.println("Application " + applicationId + " has already finished ");
+    } else {
+      sysout.println("Killing application " + applicationId);
+      client.killApplication(appId);
+    }
   }
 
   /**
@@ -221,4 +294,16 @@ public class ApplicationCLI extends YarnCLI {
     sysout.println(baos.toString("UTF-8"));
   }
 
+  private String getAllValidApplicationStates() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("The valid application state can be"
+        + " one of the following: ");
+    sb.append(ALLSTATES_OPTION + ",");
+    for (YarnApplicationState appState : YarnApplicationState
+        .values()) {
+      sb.append(appState+",");
+    }
+    String output = sb.toString();
+    return output.substring(0, output.length()-1);
+  }
 }

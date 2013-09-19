@@ -89,8 +89,8 @@ public class TestStandbyCheckpoints {
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10002)));
+        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10061))
+        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10062)));
     
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(topology)

@@ -55,7 +55,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
   private static final String enableDebugLogging =
     "For more information, please enable DEBUG log level on "
-    + LOG.getClass().getName();
+    + BlockPlacementPolicy.class.getName();
 
   protected boolean considerLoad; 
   private boolean preferLocalNode = true;

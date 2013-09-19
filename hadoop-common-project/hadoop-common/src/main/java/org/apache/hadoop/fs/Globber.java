@@ -85,7 +85,7 @@ class Globber {
   /**
    * Translate an absolute path into a list of path components.
    * We merge double slashes into a single slash here.
-   * The first path component (i.e. root) does not get an entry in the list.
+   * POSIX root path, i.e. '/', does not get an entry in the list.
    */
   private static List<String> getPathComponents(String path)
       throws IOException {
@@ -99,24 +99,24 @@ class Globber {
   }
 
   private String schemeFromPath(Path path) throws IOException {
-    String scheme = pathPattern.toUri().getScheme();
+    String scheme = path.toUri().getScheme();
     if (scheme == null) {
       if (fs != null) {
         scheme = fs.getUri().getScheme();
       } else {
-        scheme = fc.getFSofPath(path).getUri().getScheme();
+        scheme = fc.getDefaultFileSystem().getUri().getScheme();
       }
     }
     return scheme;
   }
 
   private String authorityFromPath(Path path) throws IOException {
-    String authority = pathPattern.toUri().getAuthority();
+    String authority = path.toUri().getAuthority();
     if (authority == null) {
       if (fs != null) {
         authority = fs.getUri().getAuthority();
       } else {
-        authority = fc.getFSofPath(path).getUri().getAuthority();
+        authority = fc.getDefaultFileSystem().getUri().getAuthority();
       }
     }
     return authority ;
@@ -143,8 +143,8 @@ class Globber {
       // Get the absolute path for this flattened pattern.  We couldn't do 
       // this prior to flattening because of patterns like {/,a}, where which
       // path you go down influences how the path must be made absolute.
-      Path absPattern =
-          fixRelativePart(new Path(flatPattern .isEmpty() ? "." : flatPattern ));
+      Path absPattern = fixRelativePart(new Path(
+          flatPattern.isEmpty() ? Path.CUR_DIR : flatPattern));
       // Now we break the flattened, absolute pattern into path components.
       // For example, /a/*/c would be broken into the list [a, *, c]
       List<String> components =
@@ -152,9 +152,19 @@ class Globber {
       // Starting out at the root of the filesystem, we try to match
       // filesystem entries against pattern components.
       ArrayList<FileStatus> candidates = new ArrayList<FileStatus>(1);
-      candidates.add(new FileStatus(0, true, 0, 0, 0,
-          new Path(scheme, authority, "/")));
-
+      if (Path.WINDOWS && !components.isEmpty()
+          && Path.isWindowsAbsolutePath(absPattern.toUri().getPath(), true)) {
+        // On Windows the path could begin with a drive letter, e.g. /E:/foo.
+        // We will skip matching the drive letter and start from listing the
+        // root of the filesystem on that drive.
+        String driveLetter = components.remove(0);
+        candidates.add(new FileStatus(0, true, 0, 0, 0, new Path(scheme,
+            authority, Path.SEPARATOR + driveLetter + Path.SEPARATOR)));
+      } else {
+        candidates.add(new FileStatus(0, true, 0, 0, 0,
+            new Path(scheme, authority, Path.SEPARATOR)));
+      }
+      
       for (String component : components) {
         ArrayList<FileStatus> newCandidates =
             new ArrayList<FileStatus>(candidates.size());

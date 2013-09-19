@@ -394,12 +394,12 @@ public class TestDirectoryScanner {
     
     @Override
     public String getBasePath() {
-      return "/base";
+      return (new File("/base")).getAbsolutePath();
     }
     
     @Override
     public String getPath(String bpid) throws IOException {
-      return "/base/current/" + bpid;
+      return (new File("/base/current/" + bpid)).getAbsolutePath();
     }
 
     @Override
@@ -416,8 +416,6 @@ public class TestDirectoryScanner {
       
   void testScanInfoObject(long blockId, File blockFile, File metaFile)
       throws Exception {
-    assertEquals("/base/current/" + BPID_1 + "/finalized",
-        TEST_VOLUME.getFinalizedDir(BPID_1).getAbsolutePath());
     DirectoryScanner.ScanInfo scanInfo =
         new DirectoryScanner.ScanInfo(blockId, blockFile, metaFile, TEST_VOLUME);
     assertEquals(blockId, scanInfo.getBlockId());

@@ -30,7 +30,11 @@ import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import java.io.File;
 import java.security.Principal;
-import java.util.*;
+import java.util.Set;
+import java.util.Map;
+import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Arrays;
 
 public class TestMiniKdc extends KerberosSecurityTestcase {
 
@@ -137,7 +141,7 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
               subject.getPrincipals().iterator().next().getClass());
       Assert.assertEquals(principal + "@" + kdc.getRealm(),
               subject.getPrincipals().iterator().next().getName());
-      loginContext.login();
+      loginContext.logout();
 
       //server login
       subject = new Subject(false, principals, new HashSet<Object>(),
@@ -151,7 +155,7 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
               subject.getPrincipals().iterator().next().getClass());
       Assert.assertEquals(principal + "@" + kdc.getRealm(),
               subject.getPrincipals().iterator().next().getName());
-      loginContext.login();
+      loginContext.logout();
 
     } finally {
       if (loginContext != null) {

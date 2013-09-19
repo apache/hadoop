@@ -20,6 +20,8 @@ package org.apache.hadoop.fs;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
 
@@ -62,6 +64,10 @@ public class Stat extends Shell {
     this.path = new Path(qualified.toUri().getPath());
     this.blockSize = blockSize;
     this.dereference = deref;
+    // LANG = C setting
+    Map<String, String> env = new HashMap<String, String>();
+    env.put("LANG", "C");
+    setEnvironment(env);
   }
 
   public FileStatus getFileStatus() throws IOException {
@@ -74,7 +80,7 @@ public class Stat extends Shell {
    * @return
    */
   public static boolean isAvailable() {
-    if (Shell.LINUX || Shell.FREEBSD) {
+    if (Shell.LINUX || Shell.FREEBSD || Shell.MAC) {
       return true;
     }
     return false;
@@ -94,7 +100,7 @@ public class Stat extends Shell {
     if (Shell.LINUX) {
       return new String[] {
           "stat", derefFlag + "c", "%s,%F,%Y,%X,%a,%U,%G,%N", path.toString() };
-    } else if (Shell.FREEBSD) {
+    } else if (Shell.FREEBSD || Shell.MAC) {
       return new String[] {
           "stat", derefFlag + "f", "%z,%HT,%m,%a,%Op,%Su,%Sg,`link' -> `%Y'",
           path.toString() };

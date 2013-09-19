@@ -15,14 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.oncrpc;
+package org.apache.hadoop.oncrpc.security;
 
-import java.util.Arrays;
+import org.apache.hadoop.oncrpc.XDR;
 
 /**
- *  Authentication Info as defined in RFC 1831
+ *  Authentication Info. Base class of Verifier and Credential.
  */
-public class RpcAuthInfo {
+public abstract class RpcAuthInfo {
   /** Different types of authentication as defined in RFC 1831 */
   public enum AuthFlavor {
     AUTH_NONE(0),
@@ -52,26 +52,19 @@ public class RpcAuthInfo {
   }
   
   private final AuthFlavor flavor;
-  private final byte[] body;
   
-  protected RpcAuthInfo(AuthFlavor flavor, byte[] body) {
+  protected RpcAuthInfo(AuthFlavor flavor) {
     this.flavor = flavor;
-    this.body = body;
   }
   
-  public static RpcAuthInfo read(XDR xdr) {
-    int type = xdr.readInt();
-    AuthFlavor flavor = AuthFlavor.fromValue(type);
-    byte[] body = xdr.readVariableOpaque();
-    return new RpcAuthInfo(flavor, body);
-  }
+  /** Load auth info */
+  public abstract void read(XDR xdr);
+  
+  /** Write auth info */
+  public abstract void write(XDR xdr);
   
   public AuthFlavor getFlavor() {
     return flavor;
-  }
-
-  public byte[] getBody() {
-    return Arrays.copyOf(body, body.length);
   }
   
   @Override

@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 public class ClientToAMTokenSecretManager extends
     BaseClientToAMTokenSecretManager {
 
-  // Only one client-token and one master-key for AM
+  // Only one master-key for AM
   private SecretKey masterKey;
 
   public ClientToAMTokenSecretManager(
@@ -53,7 +53,7 @@ public class ClientToAMTokenSecretManager extends
 
   @Override
   public SecretKey getMasterKey(ApplicationAttemptId applicationAttemptID) {
-    // Only one client-token and one master-key for AM, just return that.
+    // Only one master-key for AM, just return that.
     return this.masterKey;
   }
 

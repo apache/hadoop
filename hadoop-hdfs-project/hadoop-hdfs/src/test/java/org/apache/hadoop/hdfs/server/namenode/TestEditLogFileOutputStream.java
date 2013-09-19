@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
@@ -34,8 +35,7 @@ import org.junit.Test;
  * Test the EditLogFileOutputStream
  */
 public class TestEditLogFileOutputStream {
-  private final static File TEST_DIR =
-      new File(System.getProperty("test.build.data", "/tmp"));
+  private final static File TEST_DIR = PathUtils.getTestDir(TestEditLogFileOutputStream.class);
   private static final File TEST_EDITS =
       new File(TEST_DIR, "testEditLogFileOutput.log");
   final static int MIN_PREALLOCATION_LENGTH =

@@ -143,6 +143,7 @@ import org.apache.hadoop.util.Fallible;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 
 /**
@@ -225,6 +226,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
     InetSocketAddress serviceRpcAddr = nn.getServiceRpcServerAddress(conf);
     if (serviceRpcAddr != null) {
+      String bindHost = nn.getServiceRpcServerBindHost(conf);
+      if (bindHost == null) {
+        bindHost = serviceRpcAddr.getHostName();
+      }
+      LOG.info("Service RPC server is binding to " + bindHost + ":" +
+          serviceRpcAddr.getPort());
+
       int serviceHandlerCount =
         conf.getInt(DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
                     DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
@@ -232,7 +240,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           .setProtocol(
               org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
           .setInstance(clientNNPbService)
-          .setBindAddress(serviceRpcAddr.getHostName())
+          .setBindAddress(bindHost)
           .setPort(serviceRpcAddr.getPort())
           .setNumHandlers(serviceHandlerCount)
           .setVerbose(false)
@@ -253,7 +261,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
       DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class, 
           getUserMappingService, serviceRpcServer);
   
-      serviceRPCAddress = serviceRpcServer.getListenerAddress();
+      // Update the address with the correct port
+      InetSocketAddress listenAddr = serviceRpcServer.getListenerAddress();
+      serviceRPCAddress = new InetSocketAddress(
+            serviceRpcAddr.getHostName(), listenAddr.getPort());
       nn.setRpcServiceServerAddress(conf, serviceRPCAddress);
     } else {
       serviceRpcServer = null;
@@ -261,11 +272,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
 
     InetSocketAddress rpcAddr = nn.getRpcServerAddress(conf);
+    String bindHost = nn.getRpcServerBindHost(conf);
+    if (bindHost == null) {
+      bindHost = rpcAddr.getHostName();
+    }
+    LOG.info("RPC server is binding to " + bindHost + ":" + rpcAddr.getPort());
+
     clientRpcServer = new RPC.Builder(conf)
         .setProtocol(
             org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
         .setInstance(clientNNPbService)
-        .setBindAddress(rpcAddr.getHostName())
+        .setBindAddress(bindHost)
         .setPort(rpcAddr.getPort())
         .setNumHandlers(handlerCount)
         .setVerbose(false)
@@ -297,7 +314,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
-    clientRpcAddress = clientRpcServer.getListenerAddress();
+    InetSocketAddress listenAddr = clientRpcServer.getListenerAddress();
+      clientRpcAddress = new InetSocketAddress(
+          rpcAddr.getHostName(), listenAddr.getPort());
     nn.setRpcServerAddress(conf, clientRpcAddress);
     
     minimumDataNodeVersion = conf.get(
@@ -321,6 +340,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
         NSQuotaExceededException.class,
         DSQuotaExceededException.class);
  }
+
+  /** Allow access to the client RPC server for testing */
+  @VisibleForTesting
+  RPC.Server getClientRpcServer() {
+    return clientRpcServer;
+  }
   
   /**
    * Start client and service RPC servers.

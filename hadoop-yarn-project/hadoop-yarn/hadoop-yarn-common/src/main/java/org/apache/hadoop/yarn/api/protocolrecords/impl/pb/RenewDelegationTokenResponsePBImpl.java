@@ -23,6 +23,8 @@ import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRespo
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class RenewDelegationTokenResponsePBImpl extends 
@@ -66,7 +68,7 @@ public class RenewDelegationTokenResponsePBImpl extends
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void maybeInitBuilder() {
