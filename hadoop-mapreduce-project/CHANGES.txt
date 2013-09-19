@@ -56,6 +56,9 @@ Release 2.2.0 - UNRELEASED
     MAPREDUCE-5504. mapred queue -info inconsistent with types (Kousuke Saruta
     via tgraves)
 
+    MAPREDUCE-5488. Changed MR client to keep trying to reach the application
+    when it sees that on attempt's AM is down. (Jian He via vinodkv)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES

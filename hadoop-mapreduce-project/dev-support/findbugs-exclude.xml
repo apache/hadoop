@@ -496,6 +496,12 @@
       <Field name="sslFileBufferSize" />
      <Bug pattern="IS2_INCONSISTENT_SYNC" />
    </Match> 
+
+   <Match>
+     <Class name="org.apache.hadoop.mapred.ClientServiceDelegate" />
+      <Method name="invoke" />
+     <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD" />
+   </Match>
    
   <Match>
     <Class name="org.apache.hadoop.mapreduce.util.ProcessTree" />

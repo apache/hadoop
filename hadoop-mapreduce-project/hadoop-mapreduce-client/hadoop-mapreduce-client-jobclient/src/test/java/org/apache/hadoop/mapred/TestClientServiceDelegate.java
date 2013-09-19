@@ -141,6 +141,48 @@ public class TestClientServiceDelegate {
   }
 
   @Test
+  public void testRetriesOnAMConnectionFailures() throws Exception {
+    if (!isAMReachableFromClient) {
+      return;
+    }
+
+    ResourceMgrDelegate rm = mock(ResourceMgrDelegate.class);
+    when(rm.getApplicationReport(TypeConverter.toYarn(oldJobId).getAppId()))
+      .thenReturn(getRunningApplicationReport("am1", 78));
+
+    // throw exception in 1st, 2nd, 3rd and 4th call of getJobReport, and
+    // succeed in the 5th call.
+    final MRClientProtocol amProxy = mock(MRClientProtocol.class);
+    when(amProxy.getJobReport(any(GetJobReportRequest.class)))
+      .thenThrow(new RuntimeException("11"))
+      .thenThrow(new RuntimeException("22"))
+      .thenThrow(new RuntimeException("33"))
+      .thenThrow(new RuntimeException("44")).thenReturn(getJobReportResponse());
+    Configuration conf = new YarnConfiguration();
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
+    conf.setBoolean(MRJobConfig.JOB_AM_ACCESS_DISABLED,
+      !isAMReachableFromClient);
+    ClientServiceDelegate clientServiceDelegate =
+        new ClientServiceDelegate(conf, rm, oldJobId, null) {
+          @Override
+          MRClientProtocol instantiateAMProxy(
+              final InetSocketAddress serviceAddr) throws IOException {
+            super.instantiateAMProxy(serviceAddr);
+            return amProxy;
+          }
+        };
+
+    JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
+
+    Assert.assertNotNull(jobStatus);
+    // assert maxClientRetry is not decremented.
+    Assert.assertEquals(conf.getInt(MRJobConfig.MR_CLIENT_MAX_RETRIES,
+      MRJobConfig.DEFAULT_MR_CLIENT_MAX_RETRIES), clientServiceDelegate
+      .getMaxClientRetry());
+    verify(amProxy, times(5)).getJobReport(any(GetJobReportRequest.class));
+  }
+
+  @Test
   public void testHistoryServerNotConfigured() throws Exception {
     //RM doesn't have app report and job History Server is not configured
     ClientServiceDelegate clientServiceDelegate = getClientServiceDelegate(
