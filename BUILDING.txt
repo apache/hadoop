@@ -155,7 +155,7 @@ Handling out of memory errors in builds
 
 If the build process fails with an out of memory error, you should be able to fix
 it by increasing the memory used by maven -which can be done via the environment
-variable MAVEN_OPTS. 
+variable MAVEN_OPTS.
 
 Here is an example setting to allocate between 256 and 512 MB of heap space to
 Maven
