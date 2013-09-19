@@ -86,12 +86,12 @@ public class TaskPage extends AppView {
         .append(ta.getState().toString()).append("\",\"")
 
         .append(nodeHttpAddr == null ? "N/A" :
-          "<a class='nodelink' href='" + HttpConfig.getSchemePrefix() + nodeHttpAddr + "'>"
+          "<a class='nodelink' href='" + WebAppUtil.getSchemePrefix() + nodeHttpAddr + "'>"
           + nodeHttpAddr + "</a>")
         .append("\",\"")
 
         .append(ta.getAssignedContainerId() == null ? "N/A" :
-          "<a class='logslink' href='" + url(HttpConfig.getSchemePrefix(), nodeHttpAddr, "node"
+          "<a class='logslink' href='" + url(WebAppUtil.getSchemePrefix(), nodeHttpAddr, "node"
             , "containerlogs", ta.getAssignedContainerIdStr(), app.getJob()
             .getUserName()) + "'>logs</a>")
           .append("\",\"")

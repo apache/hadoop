@@ -91,6 +91,8 @@ public abstract class FinishApplicationMasterRequest {
 
   /**
    * Get the <em>tracking URL</em> for the <code>ApplicationMaster</code>.
+   * This url if contains scheme then that will be used by resource manager
+   * web application proxy otherwise it will default to http.
    * @return <em>tracking URL</em>for the <code>ApplicationMaster</code>
    */
   @Public
@@ -99,6 +101,8 @@ public abstract class FinishApplicationMasterRequest {
 
   /**
    * Set the <em>tracking URL</em>for the <code>ApplicationMaster</code>
+   * This url if contains scheme then that will be used by resource manager
+   * web application proxy otherwise it will default to http.
    * @param url <em>tracking URL</em>for the
    *                   <code>ApplicationMaster</code>
    */
