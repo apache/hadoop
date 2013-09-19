@@ -73,11 +73,13 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9865.  FileContext#globStatus has a regression with respect to
     relative path.  (Chuan Lin via Colin Patrick McCabe)
 
-
     HADOOP-9909. org.apache.hadoop.fs.Stat should permit other LANG.
     (Shinichi Yamashita via Andrew Wang)
 
     HADOOP-9908. Fix NPE when versioninfo properties file is missing (todd)
+
+    HADOOP-9929. Insufficient permissions for a path reported as File Not
+    Found.  (Contributed by Colin Patrick McCabe)
 
 Release 2.2.0 - UNRELEASED
 
