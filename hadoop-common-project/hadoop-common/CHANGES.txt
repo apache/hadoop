@@ -366,6 +366,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9350. Hadoop not building against Java7 on OSX
     (Robert Kanter via stevel)
 
+    HADOOP-9929. Insufficient permissions for a path reported as file not found.
+    (Contributed by Colin Patrick McCabe)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
