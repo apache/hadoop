@@ -26,8 +26,10 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 import javax.crypto.SecretKey;
@@ -40,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
@@ -67,13 +70,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+
+import org.apache.zookeeper.ZooKeeper;
+
 import org.junit.Test;
 
-public class TestRMStateStore {
+public class TestRMStateStore extends ClientBaseWithFixes{
 
   public static final Log LOG = LogFactory.getLog(TestRMStateStore.class);
 
-  class TestDispatcher implements Dispatcher, EventHandler<RMAppAttemptStoredEvent> {
+  static class TestDispatcher implements
+      Dispatcher, EventHandler<RMAppAttemptStoredEvent> {
 
     ApplicationAttemptId attemptId;
     Exception storedException;
@@ -82,7 +89,8 @@ public class TestRMStateStore {
 
     @SuppressWarnings("rawtypes")
     @Override
-    public void register(Class<? extends Enum> eventType, EventHandler handler) {
+    public void register(Class<? extends Enum> eventType,
+                         EventHandler handler) {
     }
 
     @Override
@@ -109,15 +117,58 @@ public class TestRMStateStore {
   }
 
   @Test
+  public void testZKRMStateStoreRealZK() throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+    testRMAppStateStore(zkTester);
+    testRMDTSecretManagerStateStore(zkTester);
+  }
+
+  @Test
   public void testFSRMStateStore() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
       TestFSRMStateStoreTester fsTester = new TestFSRMStateStoreTester(cluster);
       testRMAppStateStore(fsTester);
       testRMDTSecretManagerStateStore(fsTester);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  class TestZKRMStateStoreTester implements RMStateStoreHelper {
+    ZooKeeper client;
+    ZKRMStateStore store;
+
+    class TestZKRMStateStore extends ZKRMStateStore {
+      public TestZKRMStateStore(Configuration conf, String workingZnode)
+          throws Exception {
+        init(conf);
+        start();
+        assertTrue(znodeWorkingPath.equals(workingZnode));
+      }
+
+      @Override
+      public ZooKeeper getNewZooKeeper() throws IOException {
+        return client;
+      }
+    }
+
+    public RMStateStore getRMStateStore() throws Exception {
+      String workingZnode = "/Test";
+      YarnConfiguration conf = new YarnConfiguration();
+      conf.set(YarnConfiguration.ZK_RM_STATE_STORE_ADDRESS, hostPort);
+      conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
+      this.client = createClient();
+      this.store = new TestZKRMStateStore(conf, workingZnode);
+      return this.store;
+    }
+
+    @Override
+    public boolean isFinalStateValid() throws Exception {
+      List<String> nodes = client.getChildren(store.znodeWorkingPath, false);
+      return nodes.size() == 1;
     }
   }
 
@@ -149,7 +200,8 @@ public class TestRMStateStore {
     @Override
     public RMStateStore getRMStateStore() throws Exception {
       YarnConfiguration conf = new YarnConfiguration();
-      conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI, workingDirPathURI.toString());
+      conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI,
+          workingDirPathURI.toString());
       this.store = new TestFileSystemRMStore(conf);
       return store;
     }
@@ -158,11 +210,7 @@ public class TestRMStateStore {
     public boolean isFinalStateValid() throws Exception {
       FileSystem fs = cluster.getFileSystem();
       FileStatus[] files = fs.listStatus(workingDirPathURI);
-      if(files.length == 1) {
-        // only store root directory should exist
-        return true;
-      }
-      return false;
+      return files.length == 1;
     }
   }
 
@@ -183,9 +231,10 @@ public class TestRMStateStore {
     dispatcher.notified = false;
   }
 
-  void storeApp(RMStateStore store, ApplicationId appId, long time)
-                                                              throws Exception {
-    ApplicationSubmissionContext context = new ApplicationSubmissionContextPBImpl();
+  void storeApp(
+      RMStateStore store, ApplicationId appId, long time) throws Exception {
+    ApplicationSubmissionContext context =
+        new ApplicationSubmissionContextPBImpl();
     context.setApplicationId(appId);
 
     RMApp mockApp = mock(RMApp.class);
@@ -216,7 +265,8 @@ public class TestRMStateStore {
     return container.getId();
   }
 
-  void testRMAppStateStore(RMStateStoreHelper stateStoreHelper) throws Exception {
+  void testRMAppStateStore(RMStateStoreHelper stateStoreHelper)
+      throws Exception {
     long submitTime = System.currentTimeMillis();
     Configuration conf = new YarnConfiguration();
     RMStateStore store = stateStoreHelper.getRMStateStore();
@@ -271,7 +321,8 @@ public class TestRMStateStore {
     RMApp mockRemovedApp = mock(RMApp.class);
     HashMap<ApplicationAttemptId, RMAppAttempt> attempts =
                               new HashMap<ApplicationAttemptId, RMAppAttempt>();
-    ApplicationSubmissionContext context = new ApplicationSubmissionContextPBImpl();
+    ApplicationSubmissionContext context =
+        new ApplicationSubmissionContextPBImpl();
     context.setApplicationId(appIdRemoved);
     when(mockRemovedApp.getSubmitTime()).thenReturn(submitTime);
     when(mockRemovedApp.getApplicationSubmissionContext()).thenReturn(context);
@@ -288,7 +339,8 @@ public class TestRMStateStore {
     // load state
     store = stateStoreHelper.getRMStateStore();
     RMState state = store.loadState();
-    Map<ApplicationId, ApplicationState> rmAppState = state.getApplicationState();
+    Map<ApplicationId, ApplicationState> rmAppState =
+        state.getApplicationState();
 
     ApplicationState appState = rmAppState.get(appId1);
     // app is loaded
@@ -362,7 +414,8 @@ public class TestRMStateStore {
         store.loadState().getRMDTSecretManagerState();
     Assert.assertEquals(token1, secretManagerState.getTokenState());
     Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
-    Assert.assertEquals(sequenceNumber, secretManagerState.getDTSequenceNumber());
+    Assert.assertEquals(sequenceNumber,
+        secretManagerState.getDTSequenceNumber());
   }
 
   private Token<AMRMTokenIdentifier> generateAMRMToken(
