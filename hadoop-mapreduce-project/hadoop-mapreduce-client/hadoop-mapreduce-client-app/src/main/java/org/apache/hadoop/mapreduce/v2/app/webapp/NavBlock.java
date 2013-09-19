@@ -63,7 +63,7 @@ public class NavBlock extends HtmlBlock {
           li().a(url("conf", jobid), "Configuration")._().
           li().a(url("tasks", jobid, "m"), "Map tasks")._().
           li().a(url("tasks", jobid, "r"), "Reduce tasks")._().
-          li().a(".logslink", url(HttpConfig.getSchemePrefix(),
+          li().a(".logslink", url(WebAppUtil.getSchemePrefix(),
               nodeHttpAddress, "node",
               "containerlogs", thisAmInfo.getContainerId().toString(), 
               app.getJob().getUserName()), 

@@ -290,6 +290,20 @@
 </property>
 
 <property>
+  <name>mapreduce.ssl.enabled</name>
+  <value>false</value>
+  <description>
+	If enabled, MapReduce application master's http server will be
+	started with SSL enabled. Map reduce AM by default doesn't support SSL.
+	If MapReduce jobs want SSL support, it is the user's responsibility to
+	create and manage certificates, keystores and trust-stores with appropriate
+	permissions. This is only for MapReduce application master and is not used
+	by job history server. To enable encrypted shuffle this property is not
+	required, instead refer to (mapreduce.shuffle.ssl.enabled) property.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.shuffle.ssl.file.buffer.size</name>
   <value>65536</value>
   <description>Buffer size for reading spills from file when using SSL.

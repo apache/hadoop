@@ -15,38 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.http;
+package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
-/**
- * Singleton to get access to Http related configuration.
- */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public class HttpConfig {
-  private static boolean sslEnabled;
-
-  static {
-    Configuration conf = new Configuration();
-    sslEnabled = conf.getBoolean(
-        CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_KEY,
-        CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_DEFAULT);
+public class WebAppUtil {
+  private static boolean isSSLEnabledInYARN;
+  
+  public static void setSSLEnabledInYARN(boolean isSSLEnabledInYARN) {
+    WebAppUtil.isSSLEnabledInYARN = isSSLEnabledInYARN;
   }
-
-  public static void setSecure(boolean secure) {
-    sslEnabled = secure;
+  
+  public static boolean isSSLEnabledInYARN() {
+    return isSSLEnabledInYARN;
   }
-
-  public static boolean isSecure() {
-    return sslEnabled;
-  }
-
+  
   public static String getSchemePrefix() {
-    return (isSecure()) ? "https://" : "http://";
+    if (isSSLEnabledInYARN) {
+      return "https://";
+    } else {
+      return "http://";
+    }
   }
-
 }

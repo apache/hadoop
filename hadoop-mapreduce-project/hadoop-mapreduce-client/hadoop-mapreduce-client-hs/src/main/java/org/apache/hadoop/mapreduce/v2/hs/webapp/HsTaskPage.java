@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
+import org.apache.hadoop.mapreduce.v2.app.webapp.WebAppUtil;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.util.Times;
@@ -148,7 +149,7 @@ public class HsTaskPage extends HsView {
         .append(sortId + " ").append(taid).append("\",\"")
         .append(ta.getState().toString()).append("\",\"")
 
-        .append("<a class='nodelink' href='" + HttpConfig.getSchemePrefix() + nodeHttpAddr + "'>")
+        .append("<a class='nodelink' href='" + WebAppUtil.getSchemePrefix() + nodeHttpAddr + "'>")
         .append(nodeRackName + "/" + nodeHttpAddr + "</a>\",\"")
 
         .append("<a class='logslink' href='").append(url("logs", nodeIdString

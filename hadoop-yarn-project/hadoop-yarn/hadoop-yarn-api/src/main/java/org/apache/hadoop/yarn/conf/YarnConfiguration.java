@@ -26,6 +26,8 @@ import java.util.Arrays;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -865,7 +867,8 @@ public class YarnConfiguration extends Configuration {
   }
   
   public static String getRMWebAppURL(Configuration conf) {
-    return JOINER.join("http://", getRMWebAppHostAndPort(conf));
+    return JOINER.join(HttpConfig.getSchemePrefix(),
+        getRMWebAppHostAndPort(conf));
   }
   
 }

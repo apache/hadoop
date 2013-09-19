@@ -126,6 +126,9 @@ Release 2.1.1-beta - 2013-09-23
     YARN-1001. Added a web-service to get statistics about per application-type
     per state for consumption by downstream projects. (Zhijie Shen via vinodkv)
 
+    YARN-1203. Changed YARN web-app proxy to handle http and https URLs from
+    AM registration and finish correctly. (Omkar Vinit Joshi via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

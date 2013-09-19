@@ -196,6 +196,11 @@ Release 2.2.0 - UNRELEASED
     MAPREDUCE-5488. Changed MR client to keep trying to reach the application
     when it sees that on attempt's AM is down. (Jian He via vinodkv)
 
+    MAPREDUCE-5515. Fixed MR AM's webapp to depend on a new config
+    mapreduce.ssl.enabled to enable https and disabling it by default as MR AM
+    needs to set up its own certificates etc and not depend on clusters'.
+    (Omkar Vinit Joshi via vinodkv)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
