@@ -330,6 +330,9 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-9802. Support Snappy codec on Windows. (cnauroth)
 
+    HADOOP-9791. Add a test case covering long paths for new FileUtil access
+    check methods (ivanmi)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a
