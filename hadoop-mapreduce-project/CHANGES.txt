@@ -53,6 +53,9 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-5504. mapred queue -info inconsistent with types (Kousuke Saruta
+    via tgraves)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
@@ -1239,6 +1242,9 @@ Release 0.23.10 - UNRELEASED
     failures (Sandy Ryza via jlowe)
 
     MAPREDUCE-5475. MRClientService does not verify ACLs properly (jlowe)
+
+    MAPREDUCE-5504. mapred queue -info inconsistent with types (Kousuke Saruta
+    via tgraves)
 
 Release 0.23.9 - 2013-07-08
 
