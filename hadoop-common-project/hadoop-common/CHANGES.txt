@@ -369,6 +369,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9929. Insufficient permissions for a path reported as file not found.
     (Contributed by Colin Patrick McCabe)
 
+    HADOOP-9791. Add a test case covering long paths for new FileUtil access
+    check methods (ivanmi)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
