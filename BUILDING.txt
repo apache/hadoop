@@ -4,8 +4,8 @@ Build instructions for Hadoop
 Requirements:
 
 * Unix System
-* JDK 1.6
-* Maven 3.0
+* JDK 1.6+
+* Maven 3.0 or later
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.5.0
 * CMake 2.6 or newer (if compiling native code)
@@ -146,6 +146,21 @@ Create source and binary distributions with native code and documentation:
 Create a local staging version of the website (in /tmp/hadoop-site)
 
   $ mvn clean site; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
+
+----------------------------------------------------------------------------------
+
+Handling out of memory errors in builds
+
+----------------------------------------------------------------------------------
+
+If the build process fails with an out of memory error, you should be able to fix
+it by increasing the memory used by maven -which can be done via the environment
+variable MAVEN_OPTS.
+
+Here is an example setting to allocate between 256 and 512 MB of heap space to
+Maven
+
+export MAVEN_OPTS="-Xms256m -Xmx512m"
 
 ----------------------------------------------------------------------------------
 
