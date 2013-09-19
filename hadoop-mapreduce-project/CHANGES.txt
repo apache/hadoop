@@ -40,6 +40,9 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5475. MRClientService does not verify ACLs properly (jlowe)
 
+    MAPREDUCE-5504. mapred queue -info inconsistent with types (Kousuke Saruta
+    via tgraves)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES

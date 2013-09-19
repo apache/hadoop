@@ -468,7 +468,7 @@ public class TypeConverter {
     QueueInfo toReturn = new QueueInfo(queueInfo.getQueueName(), "Capacity: " +
       queueInfo.getCapacity() * 100 + ", MaximumCapacity: " +
       (queueInfo.getMaximumCapacity() < 0 ? "UNDEFINED" :
-        queueInfo.getMaximumCapacity()) + ", CurrentCapacity: " +
+        queueInfo.getMaximumCapacity() * 100) + ", CurrentCapacity: " +
       queueInfo.getCurrentCapacity() * 100, fromYarn(queueInfo.getQueueState()),
       TypeConverter.fromYarnApps(queueInfo.getApplications(), conf));
     List<QueueInfo> childQueues = new ArrayList<QueueInfo>();
