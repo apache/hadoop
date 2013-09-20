@@ -20,8 +20,8 @@ package org.apache.hadoop.nfs.nfs3;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mount.MountdBase;
-import org.apache.hadoop.oncrpc.RpcFrameDecoder;
 import org.apache.hadoop.oncrpc.RpcProgram;
+import org.apache.hadoop.oncrpc.RpcUtil;
 import org.apache.hadoop.oncrpc.SimpleTcpServer;
 import org.apache.hadoop.oncrpc.SimpleTcpServerHandler;
 import org.apache.hadoop.portmap.PortmapMapping;
@@ -68,7 +68,8 @@ public abstract class Nfs3Base {
         return new ChannelPipelineFactory() {
           @Override
           public ChannelPipeline getPipeline() {
-            return Channels.pipeline(new RpcFrameDecoder(),
+            return Channels.pipeline(
+                RpcUtil.constructRpcFrameDecoder(),
                 new SimpleTcpServerHandler(rpcProgram));
           }
         };
