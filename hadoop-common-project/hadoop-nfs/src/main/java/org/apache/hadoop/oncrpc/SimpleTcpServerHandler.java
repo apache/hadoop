@@ -44,7 +44,7 @@ public class SimpleTcpServerHandler extends SimpleChannelHandler {
   @Override
   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
     ChannelBuffer buf = (ChannelBuffer) e.getMessage();
-    XDR request = new XDR(buf.array());
+    XDR request = new XDR(buf.toByteBuffer().asReadOnlyBuffer(), XDR.State.READING);
     
     InetAddress remoteInetAddr = ((InetSocketAddress) ctx.getChannel()
         .getRemoteAddress()).getAddress();

@@ -366,6 +366,9 @@ Release 2.1.1-beta - 2013-09-23
 
     HDFS-5199 Add more debug trace for NFS READ and WRITE. (brandonli)
 
+    HDFS-5234 Move RpcFrameDecoder out of the public API.
+    (Haohui Mai via brandonli)
+
   IMPROVEMENTS
 
     HDFS-4513. Clarify in the WebHDFS REST API that all JSON respsonses may

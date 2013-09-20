@@ -57,7 +57,8 @@ public class SimpleTcpServer {
     return new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() {
-        return Channels.pipeline(new RpcFrameDecoder(),
+        return Channels.pipeline(
+            RpcUtil.constructRpcFrameDecoder(),
             new SimpleTcpServerHandler(rpcProgram));
       }
     };

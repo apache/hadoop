@@ -46,7 +46,7 @@ public final class XDR {
 
   private ByteBuffer buf;
 
-  private enum State {
+  public enum State {
     READING, WRITING,
   }
 
@@ -66,7 +66,7 @@ public final class XDR {
     this(DEFAULT_INITIAL_CAPACITY);
   }
 
-  private XDR(ByteBuffer buf, State state) {
+  public XDR(ByteBuffer buf, State state) {
     this.buf = buf;
     this.state = state;
   }
