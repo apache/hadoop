@@ -109,7 +109,7 @@ public class InterDatanodeProtocolTranslatorPB implements
         .setNewLength(newLength).setRecoveryId(recoveryId).build();
     try {
       return rpcProxy.updateReplicaUnderRecovery(NULL_CONTROLLER, req
-          ).getStorageID();
+          ).getStorageUuid();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

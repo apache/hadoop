@@ -26,3 +26,5 @@ IMPROVEMENTS:
 
     HDFS-4990. Change BlockPlacementPolicy to choose storages instead of
     datanodes.  (szetszwo)
+
+    HDFS-5232. Protocol changes to transmit StorageUuid. (Arpit Agarwal)

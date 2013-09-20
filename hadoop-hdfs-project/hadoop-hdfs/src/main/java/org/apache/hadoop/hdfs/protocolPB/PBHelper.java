@@ -94,7 +94,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto.File
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlocksProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageIDsProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto;
@@ -226,7 +226,7 @@ public class PBHelper {
 
   // DatanodeId
   public static DatanodeID convert(DatanodeIDProto dn) {
-    return new DatanodeID(dn.getIpAddr(), dn.getHostName(), dn.getStorageID(),
+    return new DatanodeID(dn.getIpAddr(), dn.getHostName(), dn.getDatanodeUuid(),
         dn.getXferPort(), dn.getInfoPort(), dn.getIpcPort());
   }
 
@@ -234,7 +234,7 @@ public class PBHelper {
     return DatanodeIDProto.newBuilder()
         .setIpAddr(dn.getIpAddr())
         .setHostName(dn.getHostName())
-        .setStorageID(dn.getStorageID())
+        .setDatanodeUuid(dn.getStorageID())
         .setXferPort(dn.getXferPort())
         .setInfoPort(dn.getInfoPort())
         .setIpcPort(dn.getIpcPort()).build();
@@ -276,11 +276,11 @@ public class PBHelper {
   public static BlockWithLocationsProto convert(BlockWithLocations blk) {
     return BlockWithLocationsProto.newBuilder()
         .setBlock(convert(blk.getBlock()))
-        .addAllStorageIDs(Arrays.asList(blk.getStorageIDs())).build();
+        .addAllStorageUuids(Arrays.asList(blk.getStorageIDs())).build();
   }
 
   public static BlockWithLocations convert(BlockWithLocationsProto b) {
-    return new BlockWithLocations(convert(b.getBlock()), b.getStorageIDsList()
+    return new BlockWithLocations(convert(b.getBlock()), b.getStorageUuidsList()
         .toArray(new String[0]));
   }
 
@@ -746,7 +746,7 @@ public class PBHelper {
       builder.addBlocks(PBHelper.convert(blocks[i]));
     }
     builder.addAllTargets(convert(cmd.getTargets()))
-           .addAllTargetStorageIDs(convert(cmd.getTargetStorageIDs()));
+           .addAllTargetStorageUuids(convert(cmd.getTargetStorageIDs()));
     return builder.build();
   }
 
@@ -759,11 +759,11 @@ public class PBHelper {
     return Arrays.asList(ret);
   }
 
-  private static List<StorageIDsProto> convert(String[][] targetStorageIDs) {
-    StorageIDsProto[] ret = new StorageIDsProto[targetStorageIDs.length];
-    for (int i = 0; i < targetStorageIDs.length; i++) {
-      ret[i] = StorageIDsProto.newBuilder()
-          .addAllStorageIDs(Arrays.asList(targetStorageIDs[i])).build();
+  private static List<StorageUuidsProto> convert(String[][] targetStorageUuids) {
+    StorageUuidsProto[] ret = new StorageUuidsProto[targetStorageUuids.length];
+    for (int i = 0; i < targetStorageUuids.length; i++) {
+      ret[i] = StorageUuidsProto.newBuilder()
+          .addAllStorageUuids(Arrays.asList(targetStorageUuids[i])).build();
     }
     return Arrays.asList(ret);
   }
@@ -843,10 +843,10 @@ public class PBHelper {
       targets[i] = PBHelper.convert(targetList.get(i));
     }
 
-    List<StorageIDsProto> targetStorageIDsList = blkCmd.getTargetStorageIDsList();
-    String[][] targetStorageIDs = new String[targetStorageIDsList.size()][];
+    List<StorageUuidsProto> targetStorageUuidsList = blkCmd.getTargetStorageUuidsList();
+    String[][] targetStorageIDs = new String[targetStorageUuidsList.size()][];
     for(int i = 0; i < targetStorageIDs.length; i++) {
-      List<String> storageIDs = targetStorageIDsList.get(i).getStorageIDsList();
+      List<String> storageIDs = targetStorageUuidsList.get(i).getStorageUuidsList();
       targetStorageIDs[i] = storageIDs.toArray(new String[storageIDs.size()]);
     }
 
@@ -1375,7 +1375,7 @@ public class PBHelper {
     return DatanodeStorageProto.newBuilder()
         .setState(PBHelper.convertState(s.getState()))
         .setStorageType(PBHelper.convertStorageType(s.getStorageType()))
-        .setStorageID(s.getStorageID()).build();
+        .setStorageUuid(s.getStorageID()).build();
   }
 
   private static StorageState convertState(State state) {
@@ -1406,11 +1406,11 @@ public class PBHelper {
 
   public static DatanodeStorage convert(DatanodeStorageProto s) {
     if (s.hasStorageType()) {
-      return new DatanodeStorage(s.getStorageID(),
+      return new DatanodeStorage(s.getStorageUuid(),
                                  PBHelper.convertState(s.getState()),
                                  PBHelper.convertType(s.getStorageType()));
     } else {
-      return new DatanodeStorage(s.getStorageID(),
+      return new DatanodeStorage(s.getStorageUuid(),
                                  PBHelper.convertState(s.getState()));
     }
   }
@@ -1440,7 +1440,7 @@ public class PBHelper {
     return StorageReportProto.newBuilder()
         .setBlockPoolUsed(r.getBlockPoolUsed()).setCapacity(r.getCapacity())
         .setDfsUsed(r.getDfsUsed()).setRemaining(r.getRemaining())
-        .setStorageID(r.getStorageID()).build();
+        .setStorageUuid(r.getStorageID()).build();
   }
 
   public static JournalInfo convert(JournalInfoProto info) {

@@ -141,7 +141,7 @@ message GetAdditionalDatanodeRequestProto {
   repeated DatanodeInfoProto excludes = 4;
   required uint32 numAdditionalNodes = 5;
   required string clientName = 6;
-  repeated string existingStorageIDs = 7;
+  repeated string existingStorageUuids = 7;
 }
 
 message GetAdditionalDatanodeResponseProto {

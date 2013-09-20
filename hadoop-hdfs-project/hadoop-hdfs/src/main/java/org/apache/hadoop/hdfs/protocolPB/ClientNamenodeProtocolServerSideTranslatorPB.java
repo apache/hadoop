@@ -405,7 +405,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       List<DatanodeInfoProto> existingList = req.getExistingsList();
-      List<String> existingStorageIDsList = req.getExistingStorageIDsList();
+      List<String> existingStorageIDsList = req.getExistingStorageUuidsList();
       List<DatanodeInfoProto> excludesList = req.getExcludesList();
       LocatedBlock result = server.getAdditionalDatanode(req.getSrc(),
           PBHelper.convert(req.getBlk()),

@@ -345,7 +345,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setSrc(src)
         .setBlk(PBHelper.convert(blk))
         .addAllExistings(PBHelper.convert(existings))
-        .addAllExistingStorageIDs(Arrays.asList(existingStorageIDs))
+        .addAllExistingStorageUuids(Arrays.asList(existingStorageIDs))
         .addAllExcludes(PBHelper.convert(excludes))
         .setNumAdditionalNodes(numAdditionalNodes)
         .setClientName(clientName)

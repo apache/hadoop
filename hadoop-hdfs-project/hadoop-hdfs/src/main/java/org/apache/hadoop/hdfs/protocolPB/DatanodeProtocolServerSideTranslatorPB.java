@@ -104,7 +104,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
       StorageReport[] report = new StorageReport[list.size()];
       int i = 0;
       for (StorageReportProto p : list) {
-        report[i++] = new StorageReport(p.getStorageID(), p.getFailed(),
+        report[i++] = new StorageReport(p.getStorageUuid(), p.getFailed(),
             p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
             p.getBlockPoolUsed());
       }
@@ -174,7 +174,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
       for (int j = 0; j < list.size(); j++) {
         rdBlocks[j] = PBHelper.convert(list.get(j));
       }
-      info[i] = new StorageReceivedDeletedBlocks(sBlock.getStorageID(), rdBlocks);
+      info[i] = new StorageReceivedDeletedBlocks(sBlock.getStorageUuid(), rdBlocks);
     }
     try {
       impl.blockReceivedAndDeleted(PBHelper.convert(request.getRegistration()),
