@@ -33,8 +33,8 @@ import org.apache.hadoop.nfs.nfs3.request.SetAttr3;
 import org.apache.hadoop.nfs.nfs3.request.WRITE3Request;
 import org.apache.hadoop.oncrpc.RegistrationClient;
 import org.apache.hadoop.oncrpc.RpcCall;
-import org.apache.hadoop.oncrpc.RpcFrameDecoder;
 import org.apache.hadoop.oncrpc.RpcReply;
+import org.apache.hadoop.oncrpc.RpcUtil;
 import org.apache.hadoop.oncrpc.SimpleTcpClient;
 import org.apache.hadoop.oncrpc.SimpleTcpClientHandler;
 import org.apache.hadoop.oncrpc.XDR;
@@ -136,8 +136,9 @@ public class TestOutOfOrderWrite {
     protected ChannelPipelineFactory setPipelineFactory() {
       this.pipelineFactory = new ChannelPipelineFactory() {
         public ChannelPipeline getPipeline() {
-          return Channels.pipeline(new RpcFrameDecoder(), new WriteHandler(
-              request));
+          return Channels.pipeline(
+              RpcUtil.constructRpcFrameDecoder(),
+              new WriteHandler(request));
         }
       };
       return this.pipelineFactory;
