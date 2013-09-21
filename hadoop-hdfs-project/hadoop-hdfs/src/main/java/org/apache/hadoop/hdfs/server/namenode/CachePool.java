@@ -24,9 +24,9 @@ import javax.annotation.Nonnull;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -161,14 +161,5 @@ public final class CachePool {
         append(", mode:").append(mode).
         append(", weight:").append(weight).
         append(" }").toString();
-  }
-
-  public static void validateName(String name) throws IOException {
-    if (name.isEmpty()) {
-      // Empty pool names are not allowed because they would be highly
-      // confusing.  They would also break the ability to list all pools
-      // by starting with prevKey = ""
-      throw new IOException("invalid empty cache pool name");
-    }
   }
 }

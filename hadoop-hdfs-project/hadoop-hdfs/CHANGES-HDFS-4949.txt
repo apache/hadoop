@@ -42,6 +42,9 @@ HDFS-4949 (Unreleased)
     HDFS-5213. Separate PathBasedCacheEntry and PathBasedCacheDirectiveWithId.
     (Contributed by Colin Patrick McCabe)
 
+    HDFS-5236. Change PathBasedCacheDirective APIs to be a single value
+    rather than batch. (Contributed by Andrew Wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

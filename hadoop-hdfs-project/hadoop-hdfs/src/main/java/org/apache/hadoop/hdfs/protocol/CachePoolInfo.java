@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.protocol;
 
+import java.io.IOException;
+
 import javax.annotation.Nullable;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
@@ -126,5 +128,21 @@ public class CachePoolInfo {
         append(mode).
         append(weight).
         hashCode();
+  }
+
+  public static void validate(CachePoolInfo info) throws IOException {
+    if (info == null) {
+      throw new IOException("CachePoolInfo is null");
+    }
+    validateName(info.poolName);
+  }
+
+  public static void validateName(String poolName) throws IOException {
+    if (poolName == null || poolName.isEmpty()) {
+      // Empty pool names are not allowed because they would be highly
+      // confusing.  They would also break the ability to list all pools
+      // by starting with prevKey = ""
+      throw new IOException("invalid empty cache pool name");
+    }
   }
 }

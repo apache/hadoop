@@ -36,12 +36,11 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.nativeio.NativeIO;
-import org.apache.hadoop.util.Fallible;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -148,17 +147,13 @@ public class TestCacheReplicationManager {
     waitForExpectedNumCachedBlocks(expected);
     // Cache and check each path in sequence
     for (int i=0; i<numFiles; i++) {
-      List<PathBasedCacheDirective> toAdd =
-          new ArrayList<PathBasedCacheDirective>();
-      toAdd.add(new PathBasedCacheDirective(paths.get(i), pool));
-      List<Fallible<PathBasedCacheDescriptor>> fallibles =
-          nnRpc.addPathBasedCacheDirectives(toAdd);
-      assertEquals("Unexpected number of fallibles",
-          1, fallibles.size());
-      PathBasedCacheDescriptor directive = fallibles.get(0).get();
-      assertEquals("Directive does not match requested path", paths.get(i),
+      PathBasedCacheDirective directive = new PathBasedCacheDirective(paths
+          .get(i), pool);
+      PathBasedCacheDescriptor descriptor =
+          nnRpc.addPathBasedCacheDirective(directive);
+      assertEquals("Descriptor does not match requested path", paths.get(i),
           directive.getPath());
-      assertEquals("Directive does not match requested pool", pool,
+      assertEquals("Descriptor does not match requested pool", pool,
           directive.getPool());
       expected += numBlocksPerFile;
       waitForExpectedNumCachedBlocks(expected);
@@ -167,14 +162,8 @@ public class TestCacheReplicationManager {
     RemoteIterator<PathBasedCacheDescriptor> entries =
         nnRpc.listPathBasedCacheDescriptors(0, null, null);
     for (int i=0; i<numFiles; i++) {
-      PathBasedCacheDescriptor entry = entries.next();
-      List<Long> toRemove = new ArrayList<Long>();
-      toRemove.add(entry.getEntryId());
-      List<Fallible<Long>> fallibles = nnRpc.removePathBasedCacheDescriptors(toRemove);
-      assertEquals("Unexpected number of fallibles", 1, fallibles.size());
-      Long l = fallibles.get(0).get();
-      assertEquals("Removed entryId does not match requested",
-          entry.getEntryId(), l.longValue());
+      PathBasedCacheDescriptor descriptor = entries.next();
+      nnRpc.removePathBasedCacheDescriptor(descriptor.getEntryId());
       expected -= numBlocksPerFile;
       waitForExpectedNumCachedBlocks(expected);
     }

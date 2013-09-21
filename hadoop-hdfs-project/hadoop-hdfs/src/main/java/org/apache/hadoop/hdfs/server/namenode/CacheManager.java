@@ -47,7 +47,6 @@ import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.I
 import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.NoSuchIdException;
 import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.UnexpectedRemovePathBasedCacheDescriptorException;
 import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.RemovePermissionDeniedException;
-import org.apache.hadoop.util.Fallible;
 
 /**
  * The Cache Manager handles caching on DataNodes.
@@ -136,25 +135,24 @@ public final class CacheManager {
     return null;
   }
 
-  private synchronized Fallible<PathBasedCacheDescriptor> addDirective(
-        PathBasedCacheDirective directive, FSPermissionChecker pc) {
+  public synchronized PathBasedCacheDescriptor addDirective(
+      PathBasedCacheDirective directive, FSPermissionChecker pc)
+      throws IOException {
     CachePool pool = cachePools.get(directive.getPool());
     if (pool == null) {
       LOG.info("addDirective " + directive + ": pool not found.");
-      return new Fallible<PathBasedCacheDescriptor>(
-          new InvalidPoolNameError(directive));
+      throw new InvalidPoolNameError(directive);
     }
     if ((pc != null) && (!pc.checkPermission(pool, FsAction.WRITE))) {
       LOG.info("addDirective " + directive + ": write permission denied.");
-      return new Fallible<PathBasedCacheDescriptor>(
-          new PoolWritePermissionDeniedError(directive));
+      throw new PoolWritePermissionDeniedError(directive);
     }
     try {
       directive.validate();
     } catch (IOException ioe) {
       LOG.info("addDirective " + directive + ": validation failed: "
           + ioe.getClass().getName() + ": " + ioe.getMessage());
-      return new Fallible<PathBasedCacheDescriptor>(ioe);
+      throw ioe;
     }
     
     // Check if we already have this entry.
@@ -162,8 +160,7 @@ public final class CacheManager {
     if (existing != null) {
       LOG.info("addDirective " + directive + ": there is an " +
           "existing directive " + existing + " in this pool.");
-      return new Fallible<PathBasedCacheDescriptor>(
-          existing.getDescriptor());
+      return existing.getDescriptor();
     }
     // Add a new entry with the next available ID.
     PathBasedCacheEntry entry;
@@ -171,8 +168,7 @@ public final class CacheManager {
       entry = new PathBasedCacheEntry(getNextEntryId(),
           directive.getPath(), pool);
     } catch (IOException ioe) {
-      return new Fallible<PathBasedCacheDescriptor>(
-          new UnexpectedAddPathBasedCacheDirectiveException(directive));
+      throw new UnexpectedAddPathBasedCacheDirectiveException(directive);
     }
     LOG.info("addDirective " + directive + ": added cache directive "
         + directive);
@@ -202,56 +198,42 @@ public final class CacheManager {
     } catch (IOException ioe) {
       LOG.info("addDirective " + directive +": failed to cache file: " +
           ioe.getClass().getName() +": " + ioe.getMessage());
-      return new Fallible<PathBasedCacheDescriptor>(ioe);
+      throw ioe;
     }
-    return new Fallible<PathBasedCacheDescriptor>(
-        entry.getDescriptor());
+    return entry.getDescriptor();
   }
 
-  public synchronized List<Fallible<PathBasedCacheDescriptor>> addDirectives(
-      List<PathBasedCacheDirective> directives, FSPermissionChecker pc) {
-    ArrayList<Fallible<PathBasedCacheDescriptor>> results = 
-        new ArrayList<Fallible<PathBasedCacheDescriptor>>(directives.size());
-    for (PathBasedCacheDirective directive: directives) {
-      results.add(addDirective(directive, pc));
-    }
-    return results;
-  }
-
-  private synchronized Fallible<Long> removeDescriptor(long id,
-        FSPermissionChecker pc) {
+  public synchronized void removeDescriptor(long id, FSPermissionChecker pc)
+      throws IOException {
     // Check for invalid IDs.
     if (id <= 0) {
       LOG.info("removeDescriptor " + id + ": invalid non-positive " +
           "descriptor ID.");
-      return new Fallible<Long>(new InvalidIdException(id));
+      throw new InvalidIdException(id);
     }
     // Find the entry.
     PathBasedCacheEntry existing = entriesById.get(id);
     if (existing == null) {
       LOG.info("removeDescriptor " + id + ": entry not found.");
-      return new Fallible<Long>(new NoSuchIdException(id));
+      throw new NoSuchIdException(id);
     }
     CachePool pool = cachePools.get(existing.getDescriptor().getPool());
     if (pool == null) {
       LOG.info("removeDescriptor " + id + ": pool not found for directive " +
         existing.getDescriptor());
-      return new Fallible<Long>(
-          new UnexpectedRemovePathBasedCacheDescriptorException(id));
+      throw new UnexpectedRemovePathBasedCacheDescriptorException(id);
     }
     if ((pc != null) && (!pc.checkPermission(pool, FsAction.WRITE))) {
       LOG.info("removeDescriptor " + id + ": write permission denied to " +
           "pool " + pool + " for entry " + existing);
-      return new Fallible<Long>(
-          new RemovePermissionDeniedException(id));
+      throw new RemovePermissionDeniedException(id);
     }
     
     // Remove the corresponding entry in entriesByPath.
     String path = existing.getDescriptor().getPath();
     List<PathBasedCacheEntry> entries = entriesByPath.get(path);
     if (entries == null || !entries.remove(existing)) {
-      return new Fallible<Long>(
-          new UnexpectedRemovePathBasedCacheDescriptorException(id));
+      throw new UnexpectedRemovePathBasedCacheDescriptorException(id);
     }
     if (entries.size() == 0) {
       entriesByPath.remove(path);
@@ -268,20 +250,9 @@ public final class CacheManager {
     } catch (IOException e) {
       LOG.warn("removeDescriptor " + id + ": failure while setting cache"
           + " replication factor", e);
-      return new Fallible<Long>(e);
+      throw e;
     }
     LOG.info("removeDescriptor successful for PathCacheEntry id " + id);
-    return new Fallible<Long>(id);
-  }
-
-  public synchronized List<Fallible<Long>> removeDescriptors(List<Long> ids,
-      FSPermissionChecker pc) {
-    ArrayList<Fallible<Long>> results = 
-        new ArrayList<Fallible<Long>>(ids.size());
-    for (Long id : ids) {
-      results.add(removeDescriptor(id, pc));
-    }
-    return results;
   }
 
   public synchronized BatchedListEntries<PathBasedCacheDescriptor> 
@@ -329,8 +300,8 @@ public final class CacheManager {
    */
   public synchronized void addCachePool(CachePoolInfo info)
       throws IOException {
+    CachePoolInfo.validate(info);
     String poolName = info.getPoolName();
-    CachePool.validateName(poolName);
     CachePool pool = cachePools.get(poolName);
     if (pool != null) {
       throw new IOException("cache pool " + poolName + " already exists.");
@@ -352,10 +323,8 @@ public final class CacheManager {
    */
   public synchronized void modifyCachePool(CachePoolInfo info)
       throws IOException {
+    CachePoolInfo.validate(info);
     String poolName = info.getPoolName();
-    if (poolName.isEmpty()) {
-      throw new IOException("invalid empty cache pool name");
-    }
     CachePool pool = cachePools.get(poolName);
     if (pool == null) {
       throw new IOException("cache pool " + poolName + " does not exist.");
@@ -401,9 +370,10 @@ public final class CacheManager {
    */
   public synchronized void removeCachePool(String poolName)
       throws IOException {
+    CachePoolInfo.validateName(poolName);
     CachePool pool = cachePools.remove(poolName);
     if (pool == null) {
-      throw new IOException("can't remove nonexistent cache pool " + poolName);
+      throw new IOException("can't remove non-existent cache pool " + poolName);
     }
     
     // Remove entries using this pool

@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -48,7 +47,6 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
-import org.apache.hadoop.util.Fallible;
 
 /**********************************************************************
  * ClientProtocol is used by user code via 
@@ -1098,28 +1096,24 @@ public interface ClientProtocol {
       String fromSnapshot, String toSnapshot) throws IOException;
 
   /**
-   * Add some PathBasedCache directives to the CacheManager.
+   * Add a PathBasedCache entry to the CacheManager.
    * 
-   * @param directives A list of PathBasedCache directives to be added.
-   * @return A Fallible list, where each element is either a successfully addded
-   *         PathBasedCache entry, or an IOException describing why the directive
-   *         could not be added.
+   * @param directive A PathBasedCacheDirective to be added
+   * @return A PathBasedCacheDescriptor associated with the added directive
+   * @throws IOException if the directive could not be added
    */
   @AtMostOnce
-  public List<Fallible<PathBasedCacheDescriptor>>
-    addPathBasedCacheDirectives(List<PathBasedCacheDirective> directives)
-      throws IOException;
+  public PathBasedCacheDescriptor addPathBasedCacheDirective(
+      PathBasedCacheDirective directive) throws IOException;
 
   /**
-   * Remove some PathBasedCache entries from the CacheManager.
+   * Remove a PathBasedCacheDescriptor from the CacheManager.
    * 
-   * @param ids A list of all the entry IDs to be removed from the CacheManager.
-   * @return A Fallible list where each element is either a successfully removed
-   *         ID, or an IOException describing why the ID could not be removed.
+   * @param id of a PathBasedCacheDescriptor
+   * @throws IOException if the cache descriptor could not be removed
    */
   @AtMostOnce
-  public List<Fallible<Long>> removePathBasedCacheDescriptors(List<Long> ids)
-      throws IOException;
+  public void removePathBasedCacheDescriptor(Long id) throws IOException;
 
   /**
    * List the set of cached paths of a cache pool. Incrementally fetches results
@@ -1132,9 +1126,9 @@ public interface ClientProtocol {
    * @return A RemoteIterator which returns PathBasedCacheDescriptor objects.
    */
   @Idempotent
-  public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(long prevId,
-      String pool, String path) throws IOException;
-  
+  public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(
+      long prevId, String pool, String path) throws IOException;
+
   /**
    * Add a new cache pool.
    * 

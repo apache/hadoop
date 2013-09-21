@@ -79,7 +79,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.Fallible;
 import org.apache.hadoop.util.Progressable;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -1584,29 +1583,26 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Add some PathBasedCache directives.
+   * Add a new PathBasedCacheDirective.
    * 
-   * @param directives A list of PathBasedCache directives to be added.
-   * @return A Fallible list, where each element is either a successfully addded
-   *         PathBasedCache entry, or an IOException describing why the directive
-   *         could not be added.
+   * @param directive A PathBasedCacheDirectives to add
+   * @return PathBasedCacheDescriptor associated with the added directive
+   * @throws IOException if the directive could not be added
    */
-  public List<Fallible<PathBasedCacheDescriptor>>
-      addPathBasedCacheDirective(List<PathBasedCacheDirective> directives)
-          throws IOException {
-    return dfs.namenode.addPathBasedCacheDirectives(directives);
+  public PathBasedCacheDescriptor addPathBasedCacheDirective(
+      PathBasedCacheDirective directive) throws IOException {
+    return dfs.addPathBasedCacheDirective(directive);
   }
   
   /**
-   * Remove some PathBasedCache entries.
+   * Remove a PathBasedCacheDescriptor.
    * 
-   * @param ids A list of all the entry IDs to be removed.
-   * @return A Fallible list where each element is either a successfully removed
-   *         ID, or an IOException describing why the ID could not be removed.
+   * @param descriptor PathBasedCacheDescriptor to remove
+   * @throws IOException if the descriptor could not be removed
    */
-  public List<Fallible<Long>>
-      removePathBasedCacheDescriptors(List<Long> ids) throws IOException {
-    return dfs.namenode.removePathBasedCacheDescriptors(ids);
+  public void removePathBasedCacheDescriptor(PathBasedCacheDescriptor descriptor)
+      throws IOException {
+    dfs.removePathBasedCacheDescriptor(descriptor);
   }
   
   /**
@@ -1619,43 +1615,46 @@ public class DistributedFileSystem extends FileSystem {
    */
   public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(
       String pool, String path) throws IOException {
-    return dfs.namenode.listPathBasedCacheDescriptors(0, pool, path);
+    return dfs.listPathBasedCacheDescriptors(pool, path);
   }
 
   /**
    * Add a cache pool.
    *
-   * @param req
+   * @param info
    *          The request to add a cache pool.
    * @throws IOException 
    *          If the request could not be completed.
    */
   public void addCachePool(CachePoolInfo info) throws IOException {
-    dfs.namenode.addCachePool(info);
+    CachePoolInfo.validate(info);
+    dfs.addCachePool(info);
   }
 
   /**
    * Modify an existing cache pool.
    *
-   * @param req
+   * @param info
    *          The request to modify a cache pool.
    * @throws IOException 
    *          If the request could not be completed.
    */
   public void modifyCachePool(CachePoolInfo info) throws IOException {
-    dfs.namenode.modifyCachePool(info);
+    CachePoolInfo.validate(info);
+    dfs.modifyCachePool(info);
   }
     
   /**
    * Remove a cache pool.
    *
-   * @param cachePoolName
+   * @param poolName
    *          Name of the cache pool to remove.
    * @throws IOException 
    *          if the cache pool did not exist, or could not be removed.
    */
-  public void removeCachePool(String name) throws IOException {
-    dfs.namenode.removeCachePool(name);
+  public void removeCachePool(String poolName) throws IOException {
+    CachePoolInfo.validateName(poolName);
+    dfs.removeCachePool(poolName);
   }
 
   /**
@@ -1667,6 +1666,6 @@ public class DistributedFileSystem extends FileSystem {
    *          If there was an error listing cache pools.
    */
   public RemoteIterator<CachePoolInfo> listCachePools() throws IOException {
-    return dfs.namenode.listCachePools("");
+    return dfs.listCachePools();
   }
 }

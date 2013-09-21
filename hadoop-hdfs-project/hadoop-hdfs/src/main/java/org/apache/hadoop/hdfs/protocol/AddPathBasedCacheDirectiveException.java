@@ -25,24 +25,20 @@ import java.io.IOException;
 public abstract class AddPathBasedCacheDirectiveException extends IOException {
   private static final long serialVersionUID = 1L;
 
-  private final PathBasedCacheDirective directive;
-  
-  public AddPathBasedCacheDirectiveException(String description,
-      PathBasedCacheDirective directive) {
+  public AddPathBasedCacheDirectiveException(String description) {
     super(description);
-    this.directive = directive;
-  }
-
-  public PathBasedCacheDirective getDirective() {
-    return directive;
   }
 
   public static final class EmptyPathError
       extends AddPathBasedCacheDirectiveException {
     private static final long serialVersionUID = 1L;
 
+    public EmptyPathError(String msg) {
+      super(msg);
+    }
+
     public EmptyPathError(PathBasedCacheDirective directive) {
-      super("empty path in directive " + directive, directive);
+      this("empty path in directive " + directive);
     }
   }
 
@@ -50,9 +46,12 @@ public abstract class AddPathBasedCacheDirectiveException extends IOException {
       extends AddPathBasedCacheDirectiveException {
     private static final long serialVersionUID = 1L;
 
+    public InvalidPathNameError(String msg) {
+      super(msg);
+    }
+
     public InvalidPathNameError(PathBasedCacheDirective directive) {
-      super("can't handle non-absolute path name " + directive.getPath(),
-          directive);
+      this("can't handle invalid path name " + directive.getPath());
     }
   }
 
@@ -60,8 +59,12 @@ public abstract class AddPathBasedCacheDirectiveException extends IOException {
       extends AddPathBasedCacheDirectiveException {
     private static final long serialVersionUID = 1L;
 
+    public InvalidPoolNameError(String msg) {
+      super(msg);
+    }
+
     public InvalidPoolNameError(PathBasedCacheDirective directive) {
-      super("invalid pool name '" + directive.getPool() + "'", directive);
+      this("invalid pool name '" + directive.getPool() + "'");
     }
   }
 
@@ -69,9 +72,12 @@ public abstract class AddPathBasedCacheDirectiveException extends IOException {
       extends AddPathBasedCacheDirectiveException {
     private static final long serialVersionUID = 1L;
 
+    public PoolWritePermissionDeniedError(String msg) {
+      super(msg);
+    }
+
     public PoolWritePermissionDeniedError(PathBasedCacheDirective directive) {
-      super("write permission denied for pool '" + directive.getPool() + "'",
-            directive);
+      this("write permission denied for pool '" + directive.getPool() + "'");
     }
   }
 
@@ -79,9 +85,13 @@ public abstract class AddPathBasedCacheDirectiveException extends IOException {
       extends AddPathBasedCacheDirectiveException {
     private static final long serialVersionUID = 1L;
 
+    public PathAlreadyExistsInPoolError(String msg) {
+      super(msg);
+    }
+
     public PathAlreadyExistsInPoolError(PathBasedCacheDirective directive) {
-      super("path " + directive.getPath() + " already exists in pool " +
-          directive.getPool(), directive);
+      this("path " + directive.getPath() + " already exists in pool " +
+          directive.getPool());
     }
   }
 
@@ -89,10 +99,14 @@ public abstract class AddPathBasedCacheDirectiveException extends IOException {
       extends AddPathBasedCacheDirectiveException {
     private static final long serialVersionUID = 1L;
 
+    public UnexpectedAddPathBasedCacheDirectiveException(String msg) {
+      super(msg);
+    }
+
     public UnexpectedAddPathBasedCacheDirectiveException(
         PathBasedCacheDirective directive) {
-      super("encountered an unexpected error when trying to " +
-          "add PathBasedCache directive " + directive, directive);
+      this("encountered an unexpected error when trying to " +
+          "add PathBasedCache directive " + directive);
     }
   }
-};
+}

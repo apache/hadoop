@@ -19,31 +19,26 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
 
-import com.google.common.base.Preconditions;
-
 /**
  * An exception which occurred when trying to remove a PathBasedCache entry.
  */
 public abstract class RemovePathBasedCacheDescriptorException extends IOException {
   private static final long serialVersionUID = 1L;
 
-  private final long entryId;
-
-  public RemovePathBasedCacheDescriptorException(String description, long entryId) {
+  public RemovePathBasedCacheDescriptorException(String description) {
     super(description);
-    this.entryId = entryId;
-  }
-    
-  public long getEntryId() {
-    return this.entryId;
   }
 
   public final static class InvalidIdException
       extends RemovePathBasedCacheDescriptorException {
     private static final long serialVersionUID = 1L;
 
+    public InvalidIdException(String msg) {
+      super(msg);
+    }
+
     public InvalidIdException(long entryId) {
-      super("invalid PathBasedCacheDescriptor id " + entryId, entryId);
+      this("invalid PathBasedCacheDescriptor id " + entryId);
     }
   }
 
@@ -51,9 +46,13 @@ public abstract class RemovePathBasedCacheDescriptorException extends IOExceptio
       extends RemovePathBasedCacheDescriptorException {
     private static final long serialVersionUID = 1L;
 
+    public RemovePermissionDeniedException(String msg) {
+      super(msg);
+    }
+
     public RemovePermissionDeniedException(long entryId) {
-      super("permission denied when trying to remove " + 
-          "PathBasedCacheDescriptor id " + entryId, entryId);
+      this("permission denied when trying to remove " + 
+          "PathBasedCacheDescriptor id " + entryId);
     }
   }
 
@@ -61,9 +60,12 @@ public abstract class RemovePathBasedCacheDescriptorException extends IOExceptio
       extends RemovePathBasedCacheDescriptorException {
     private static final long serialVersionUID = 1L;
 
+    public NoSuchIdException(String msg) {
+      super(msg);
+    }
+
     public NoSuchIdException(long entryId) {
-      super("there is no PathBasedCacheDescriptor with id " + entryId,
-          entryId);
+      this("there is no PathBasedCacheDescriptor with id " + entryId);
     }
   }
 
@@ -71,9 +73,13 @@ public abstract class RemovePathBasedCacheDescriptorException extends IOExceptio
       extends RemovePathBasedCacheDescriptorException {
     private static final long serialVersionUID = 1L;
 
+    public UnexpectedRemovePathBasedCacheDescriptorException(String msg) {
+      super(msg);
+    }
+
     public UnexpectedRemovePathBasedCacheDescriptorException(long id) {
-      super("encountered an unexpected error when trying to " +
-          "remove PathBasedCacheDescriptor with id " + id, id);
+      this("encountered an unexpected error when trying to " +
+          "remove PathBasedCacheDescriptor with id " + id);
     }
   }
 }

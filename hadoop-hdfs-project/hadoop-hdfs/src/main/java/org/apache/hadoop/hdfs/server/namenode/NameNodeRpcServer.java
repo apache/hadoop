@@ -139,7 +139,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetUserMappingsProtocolService;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
-import org.apache.hadoop.util.Fallible;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 
@@ -1238,15 +1237,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public List<Fallible<PathBasedCacheDescriptor>> addPathBasedCacheDirectives(
-      List<PathBasedCacheDirective> paths) throws IOException {
-    return namesystem.addPathBasedCacheDirectives(paths);
+  public PathBasedCacheDescriptor addPathBasedCacheDirective(
+      PathBasedCacheDirective path) throws IOException {
+    return namesystem.addPathBasedCacheDirective(path);
   }
 
   @Override
-  public List<Fallible<Long>> removePathBasedCacheDescriptors(List<Long> ids)
-      throws IOException {
-    return namesystem.removePathBasedCacheDescriptors(ids);
+  public void removePathBasedCacheDescriptor(Long id) throws IOException {
+    namesystem.removePathBasedCacheDescriptor(id);
   }
 
   private class ServerSidePathBasedCacheEntriesIterator

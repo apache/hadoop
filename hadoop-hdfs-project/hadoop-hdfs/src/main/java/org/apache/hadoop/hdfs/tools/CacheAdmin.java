@@ -22,15 +22,13 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.tools.TableListing.Justification;
-import org.apache.hadoop.util.Fallible;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -96,21 +94,14 @@ public class CacheAdmin {
       }
         
       DistributedFileSystem dfs = getDFS();
-      List<PathBasedCacheDirective> directives =
-          new LinkedList<PathBasedCacheDirective>();
-      PathBasedCacheDirective directive = new PathBasedCacheDirective(path, poolName);
-      directives.add(directive);
-      List<Fallible<PathBasedCacheDescriptor>> results =
-          dfs.addPathBasedCacheDirective(directives);
-      try {
-        PathBasedCacheDescriptor entry = results.get(0).get();
-        System.out.println("Added PathBasedCache entry " + entry.getEntryId());
-        return 0;
-      } catch (IOException e) {
-        System.err.println("Error adding cache directive " + directive + ": " +
-          e.getMessage());
-        return 1;
-      }
+      PathBasedCacheDirective directive =
+          new PathBasedCacheDirective(path, poolName);
+
+      PathBasedCacheDescriptor descriptor =
+          dfs.addPathBasedCacheDirective(directive);
+      System.out.println("Added PathBasedCache entry "
+          + descriptor.getEntryId());
+      return 0;
     }
   }
 
@@ -153,18 +144,10 @@ public class CacheAdmin {
         return 1;
       }
       DistributedFileSystem dfs = getDFS();
-      List<Long> ids = new LinkedList<Long>();
-      ids.add(id);
-      List<Fallible<Long>> results = dfs.removePathBasedCacheDescriptors(ids);
-      try {
-        Long resultId = results.get(0).get();
-        System.out.println("Removed PathBasedCache entry " + resultId);
-        return 0;
-      } catch (IOException e) {
-        System.err.println("Error removing cache directive " + id + ": " +
-          e.getMessage());
-        return 1;
-      }
+      dfs.removePathBasedCacheDescriptor(new PathBasedCacheDescriptor(id, null,
+          null));
+      System.out.println("Removed PathBasedCache directive " + id);
+      return 0;
     }
   }
 

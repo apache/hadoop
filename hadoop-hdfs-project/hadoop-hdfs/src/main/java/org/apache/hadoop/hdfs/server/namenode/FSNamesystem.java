@@ -132,7 +132,6 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -232,7 +231,6 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.Fallible;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
@@ -6884,18 +6882,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  @SuppressWarnings("unchecked")
-  List<Fallible<PathBasedCacheDescriptor>> addPathBasedCacheDirectives(
-      List<PathBasedCacheDirective> directives) throws IOException {
+  PathBasedCacheDescriptor addPathBasedCacheDirective(
+      PathBasedCacheDirective directive) throws IOException {
     CacheEntryWithPayload retryCacheEntry =
         RetryCache.waitForCompletion(retryCache, null);
     if (retryCacheEntry != null && retryCacheEntry.isSuccess()) {
-      return (List<Fallible<PathBasedCacheDescriptor>>) retryCacheEntry.getPayload();
+      return (PathBasedCacheDescriptor) retryCacheEntry.getPayload();
     }
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     boolean success = false;
-    List<Fallible<PathBasedCacheDescriptor>> results = null;
+    PathBasedCacheDescriptor result = null;
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
@@ -6904,8 +6901,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException(
             "Cannot add PathBasedCache directive", safeMode);
       }
-      results = cacheManager.addDirectives(directives, pc);
-      //getEditLog().logAddPathBasedCacheDirectives(results); FIXME: HDFS-5119
+      result = cacheManager.addDirective(directive, pc);
+      //getEditLog().logAddPathBasedCacheDirective(result); FIXME: HDFS-5119
       success = true;
     } finally {
       writeUnlock();
@@ -6913,24 +6910,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         getEditLog().logSync();
       }
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "addPathBasedCacheDirectives", null, null, null);
+        logAuditEvent(success, "addPathBasedCacheDirective", null, null, null);
       }
-      RetryCache.setState(retryCacheEntry, success, results);
+      RetryCache.setState(retryCacheEntry, success, result);
     }
-    return results;
+    return result;
   }
 
-  @SuppressWarnings("unchecked")
-  List<Fallible<Long>> removePathBasedCacheDescriptors(List<Long> ids) throws IOException {
-    CacheEntryWithPayload retryCacheEntry =
-        RetryCache.waitForCompletion(retryCache, null);
+  void removePathBasedCacheDescriptor(Long id) throws IOException {
+    CacheEntry retryCacheEntry = RetryCache.waitForCompletion(retryCache);
     if (retryCacheEntry != null && retryCacheEntry.isSuccess()) {
-      return (List<Fallible<Long>>) retryCacheEntry.getPayload();
+      return;
     }
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     boolean success = false;
-    List<Fallible<Long>> results = null;
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
@@ -6939,22 +6933,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException(
             "Cannot remove PathBasedCache directives", safeMode);
       }
-      results = cacheManager.removeDescriptors(ids, pc);
+      cacheManager.removeDescriptor(id, pc);
       //getEditLog().logRemovePathBasedCacheEntries(results); FIXME: HDFS-5119
       success = true;
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "removePathBasedCacheDescriptors", null, null, null);
+        logAuditEvent(success, "removePathBasedCacheDescriptors", null, null,
+            null);
       }
-      RetryCache.setState(retryCacheEntry, success, results);
+      RetryCache.setState(retryCacheEntry, success);
     }
     getEditLog().logSync();
-    return results;
   }
 
-  BatchedListEntries<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(long startId,
-      String pool, String path) throws IOException {
+  BatchedListEntries<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(
+      long startId, String pool, String path) throws IOException {
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     BatchedListEntries<PathBasedCacheDescriptor> results;
@@ -6963,12 +6957,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean success = false;
     try {
       checkOperation(OperationCategory.READ);
-      results = cacheManager.listPathBasedCacheDescriptors(startId, pool, path, pc);
+      results =
+          cacheManager.listPathBasedCacheDescriptors(startId, pool, path, pc);
       success = true;
     } finally {
       readUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "listPathBasedCacheDescriptors", null, null, null);
+        logAuditEvent(success, "listPathBasedCacheDescriptors", null, null,
+            null);
       }
     }
     return results;
