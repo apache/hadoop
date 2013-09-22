@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -380,16 +379,16 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   private final Map<String, Map<Block, BInfo>> blockMap
       = new HashMap<String, Map<Block,BInfo>>();
   private final SimulatedStorage storage;
-  private final String storageId;
+  private final String datanodeUuid;
   
   public SimulatedFSDataset(DataStorage storage, Configuration conf) {
     if (storage != null) {
       storage.createStorageID();
-      this.storageId = storage.getStorageID();
+      this.datanodeUuid = storage.getStorageID();
     } else {
-      this.storageId = "unknownStorageId-" + UUID.randomUUID();
+      this.datanodeUuid = "unknownStorageId-" + UUID.randomUUID();
     }
-    registerMBean(storageId);
+    registerMBean(datanodeUuid);
     this.storage = new SimulatedStorage(
         conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY));
   }
@@ -884,7 +883,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public String getStorageInfo() {
-    return "Simulated FSDataset-" + storageId;
+    return "Simulated FSDataset-" + datanodeUuid;
   }
   
   @Override
@@ -911,7 +910,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   public String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
                                         long recoveryId,
                                         long newlength) {
-    return storageId;
+    return datanodeUuid;
   }
 
   @Override // FsDatasetSpi

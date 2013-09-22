@@ -418,9 +418,9 @@ public class DatanodeManager {
   }
 
 
-  /** Get a datanode descriptor given corresponding storageID */
-  DatanodeDescriptor getDatanode(final String storageID) {
-    return datanodeMap.get(storageID);
+  /** Get a datanode descriptor given corresponding DatanodeUUID */
+  DatanodeDescriptor getDatanode(final String datanodeUuid) {
+    return datanodeMap.get(datanodeUuid);
   }
 
   /**
@@ -432,7 +432,7 @@ public class DatanodeManager {
    */
   public DatanodeDescriptor getDatanode(DatanodeID nodeID
       ) throws UnregisteredNodeException {
-    final DatanodeDescriptor node = getDatanode(nodeID.getStorageID());
+    final DatanodeDescriptor node = getDatanode(nodeID.getDatanodeUuid());
     if (node == null) 
       return null;
     if (!node.getXferAddr().equals(nodeID.getXferAddr())) {
@@ -536,7 +536,7 @@ public class DatanodeManager {
     // remove  from host2DatanodeMap the datanodeDescriptor removed
     // from datanodeMap before adding node to host2DatanodeMap.
     synchronized(datanodeMap) {
-      host2DatanodeMap.remove(datanodeMap.put(node.getStorageID(), node));
+      host2DatanodeMap.remove(datanodeMap.put(node.getDatanodeUuid(), node));
     }
 
     networktopology.add(node); // may throw InvalidTopologyException
@@ -551,7 +551,7 @@ public class DatanodeManager {
 
   /** Physically remove node from datanodeMap. */
   private void wipeDatanode(final DatanodeID node) {
-    final String key = node.getStorageID();
+    final String key = node.getDatanodeUuid();
     synchronized (datanodeMap) {
       host2DatanodeMap.remove(datanodeMap.remove(key));
     }
@@ -774,9 +774,9 @@ public class DatanodeManager {
       }
         
       NameNode.stateChangeLog.info("BLOCK* registerDatanode: from "
-          + nodeReg + " storage " + nodeReg.getStorageID());
+          + nodeReg + " storage " + nodeReg.getDatanodeUuid());
   
-      DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
+      DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getDatanodeUuid());
       DatanodeDescriptor nodeN = host2DatanodeMap.getDatanodeByXferAddr(
           nodeReg.getIpAddr(), nodeReg.getXferPort());
         
@@ -811,7 +811,7 @@ public class DatanodeManager {
          */        
           NameNode.stateChangeLog.info("BLOCK* registerDatanode: " + nodeS
               + " is replaced by " + nodeReg + " with the same storageID "
-              + nodeReg.getStorageID());
+              + nodeReg.getDatanodeUuid());
         }
         
         boolean success = false;
@@ -846,14 +846,14 @@ public class DatanodeManager {
       } 
   
       // this is a new datanode serving a new data storage
-      if ("".equals(nodeReg.getStorageID())) {
+      if ("".equals(nodeReg.getDatanodeUuid())) {
         // this data storage has never been registered
         // it is either empty or was created by pre-storageID version of DFS
-        nodeReg.setStorageID(DatanodeStorage.newStorageID());
+        nodeReg.setDatanodeUuid(DatanodeStorage.newStorageID());
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug(
               "BLOCK* NameSystem.registerDatanode: "
-              + "new storageID " + nodeReg.getStorageID() + " assigned.");
+              + "new Datanode UUID " + nodeReg.getDatanodeUuid() + " assigned.");
         }
       }
       

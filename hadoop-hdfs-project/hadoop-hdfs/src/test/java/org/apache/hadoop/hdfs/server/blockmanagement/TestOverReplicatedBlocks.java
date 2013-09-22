@@ -155,7 +155,7 @@ public class TestOverReplicatedBlocks {
       DataNode lastDN = cluster.getDataNodes().get(3);
       DatanodeRegistration dnReg = DataNodeTestUtils.getDNRegistrationForBP(
           lastDN, namesystem.getBlockPoolId());
-      String lastDNid = dnReg.getStorageID();
+      String lastDNid = dnReg.getDatanodeUuid();
 
       final Path fileName = new Path("/foo2");
       DFSTestUtil.createFile(fs, fileName, SMALL_FILE_LENGTH, (short)4, 0L);

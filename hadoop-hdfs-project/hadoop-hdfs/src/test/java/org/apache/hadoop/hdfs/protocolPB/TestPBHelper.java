@@ -145,7 +145,7 @@ public class TestPBHelper {
   void compare(DatanodeID dn, DatanodeID dn2) {
     assertEquals(dn.getIpAddr(), dn2.getIpAddr());
     assertEquals(dn.getHostName(), dn2.getHostName());
-    assertEquals(dn.getStorageID(), dn2.getStorageID());
+    assertEquals(dn.getDatanodeUuid(), dn2.getDatanodeUuid());
     assertEquals(dn.getXferPort(), dn2.getXferPort());
     assertEquals(dn.getInfoPort(), dn2.getInfoPort());
     assertEquals(dn.getIpcPort(), dn2.getIpcPort());

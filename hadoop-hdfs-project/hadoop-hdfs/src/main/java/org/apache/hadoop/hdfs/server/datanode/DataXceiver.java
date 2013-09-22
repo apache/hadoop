@@ -284,7 +284,7 @@ class DataXceiver extends Receiver implements Runnable {
         BlockSender.ClientTraceLog.info(String.format(
             "src: 127.0.0.1, dest: 127.0.0.1, op: REQUEST_SHORT_CIRCUIT_FDS," +
             " blockid: %s, srvID: %s, success: %b",
-            blk.getBlockId(), dnR.getStorageID(), (fis != null)
+            blk.getBlockId(), dnR.getDatanodeUuid(), (fis != null)
           ));
       }
       if (fis != null) {
@@ -317,7 +317,7 @@ class DataXceiver extends Receiver implements Runnable {
       clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
         ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
             "%d", "HDFS_READ", clientName, "%d",
-            dnR.getStorageID(), block, "%d")
+            dnR.getDatanodeUuid(), block, "%d")
         : dnR + " Served block " + block + " to " +
             remoteAddress;
 

@@ -292,7 +292,7 @@ public class JsonUtil {
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("ipAddr", datanodeinfo.getIpAddr());
     m.put("hostName", datanodeinfo.getHostName());
-    m.put("storageID", datanodeinfo.getStorageID());
+    m.put("storageID", datanodeinfo.getDatanodeUuid());
     m.put("xferPort", datanodeinfo.getXferPort());
     m.put("infoPort", datanodeinfo.getInfoPort());
     m.put("ipcPort", datanodeinfo.getIpcPort());

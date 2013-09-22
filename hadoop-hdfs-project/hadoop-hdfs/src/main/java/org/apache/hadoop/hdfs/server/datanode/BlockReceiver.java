@@ -1079,7 +1079,7 @@ class BlockReceiver implements Closeable {
             .getBlockPoolId());
         ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT, inAddr,
             myAddr, block.getNumBytes(), "HDFS_WRITE", clientname, offset,
-            dnR.getStorageID(), block, endTime - startTime));
+            dnR.getDatanodeUuid(), block, endTime - startTime));
       } else {
         LOG.info("Received " + block + " size " + block.getNumBytes()
             + " from " + inAddr);

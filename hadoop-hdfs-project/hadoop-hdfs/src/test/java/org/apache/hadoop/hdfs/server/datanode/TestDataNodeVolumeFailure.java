@@ -153,7 +153,7 @@ public class TestDataNodeVolumeFailure {
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(bpid);
     final StorageBlockReport[] report = {
         new StorageBlockReport(
-            new DatanodeStorage(dnR.getStorageID()),
+            new DatanodeStorage(dnR.getDatanodeUuid()),
             DataNodeTestUtils.getFSDataset(dn).getBlockReport(bpid
                 ).getBlockListAsLongs())
     };

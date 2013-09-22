@@ -989,7 +989,7 @@ public class BlockManager {
     }
 
     node.resetBlocks();
-    invalidateBlocks.remove(node.getStorageID());
+    invalidateBlocks.remove(node.getDatanodeUuid());
     
     // If the DN hasn't block-reported since the most recent
     // failover, then we may have been holding up on processing
@@ -1472,7 +1472,7 @@ public class BlockManager {
     for(DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       LightWeightLinkedSet<Block> excessBlocks =
-        excessReplicateMap.get(node.getStorageID());
+        excessReplicateMap.get(node.getDatanodeUuid());
       if ((nodesCorrupt != null) && (nodesCorrupt.contains(node)))
         corrupt++;
       else if (node.isDecommissionInProgress() || node.isDecommissioned())
@@ -1901,7 +1901,7 @@ public class BlockManager {
     }
 
     // Ignore replicas already scheduled to be removed from the DN
-    if(invalidateBlocks.contains(dn.getStorageID(), block)) {
+    if(invalidateBlocks.contains(dn.getDatanodeUuid(), block)) {
 /*  TODO: following assertion is incorrect, see HDFS-2668
 assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         + " in recentInvalidatesSet should not appear in DN " + dn; */
@@ -2441,7 +2441,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         return;
       }
       LightWeightLinkedSet<Block> excessBlocks = excessReplicateMap.get(cur
-          .getStorageID());
+          .getDatanodeUuid());
       if (excessBlocks == null || !excessBlocks.contains(block)) {
         if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
           // exclude corrupt replicas
@@ -2530,10 +2530,10 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
 
   private void addToExcessReplicate(DatanodeInfo dn, Block block) {
     assert namesystem.hasWriteLock();
-    LightWeightLinkedSet<Block> excessBlocks = excessReplicateMap.get(dn.getStorageID());
+    LightWeightLinkedSet<Block> excessBlocks = excessReplicateMap.get(dn.getDatanodeUuid());
     if (excessBlocks == null) {
       excessBlocks = new LightWeightLinkedSet<Block>();
-      excessReplicateMap.put(dn.getStorageID(), excessBlocks);
+      excessReplicateMap.put(dn.getDatanodeUuid(), excessBlocks);
     }
     if (excessBlocks.add(block)) {
       excessBlocksCount.incrementAndGet();
@@ -2581,7 +2581,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       // in "excess" there.
       //
       LightWeightLinkedSet<Block> excessBlocks = excessReplicateMap.get(node
-          .getStorageID());
+          .getDatanodeUuid());
       if (excessBlocks != null) {
         if (excessBlocks.remove(block)) {
           excessBlocksCount.decrementAndGet();
@@ -2590,7 +2590,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
                 + block + " is removed from excessBlocks");
           }
           if (excessBlocks.size() == 0) {
-            excessReplicateMap.remove(node.getStorageID());
+            excessReplicateMap.remove(node.getDatanodeUuid());
           }
         }
       }
@@ -2760,7 +2760,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         decommissioned++;
       } else {
         LightWeightLinkedSet<Block> blocksExcess = excessReplicateMap.get(node
-            .getStorageID());
+            .getDatanodeUuid());
         if (blocksExcess != null && blocksExcess.contains(b)) {
           excess++;
         } else {

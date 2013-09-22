@@ -198,7 +198,7 @@ public class TestPendingReplication {
           DatanodeRegistration dnR = datanodes.get(i).getDNRegistrationForBP(
               poolId);
           StorageReceivedDeletedBlocks[] report = { 
-              new StorageReceivedDeletedBlocks(dnR.getStorageID(),
+              new StorageReceivedDeletedBlocks(dnR.getDatanodeUuid(),
               new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
                   blocks[0], BlockStatus.RECEIVED_BLOCK, "") }) };
           cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, report);
@@ -215,7 +215,7 @@ public class TestPendingReplication {
           DatanodeRegistration dnR = datanodes.get(i).getDNRegistrationForBP(
               poolId);
           StorageReceivedDeletedBlocks[] report = 
-            { new StorageReceivedDeletedBlocks(dnR.getStorageID(),
+            { new StorageReceivedDeletedBlocks(dnR.getDatanodeUuid(),
               new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
                   blocks[0], BlockStatus.RECEIVED_BLOCK, "") }) };
           cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, report);

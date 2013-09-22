@@ -750,7 +750,7 @@ public class DataNode extends Configured
     }
     DatanodeID dnId = new DatanodeID(
         streamingAddr.getAddress().getHostAddress(), hostName, 
-        getStorageId(), getXferPort(), getInfoPort(), getIpcPort());
+        getDatanodeUuid(), getXferPort(), getInfoPort(), getIpcPort());
     return new DatanodeRegistration(dnId, storageInfo, 
         new ExportedBlockKeys(), VersionInfo.getVersion());
   }
@@ -770,13 +770,13 @@ public class DataNode extends Configured
 
     if (storage.getStorageID().equals("")) {
       // This is a fresh datanode, persist the NN-provided storage ID
-      storage.setStorageID(bpRegistration.getStorageID());
+      storage.setStorageID(bpRegistration.getDatanodeUuid());
       storage.writeAll();
-      LOG.info("New storage id " + bpRegistration.getStorageID()
+      LOG.info("New storage id " + bpRegistration.getDatanodeUuid()
           + " is assigned to data-node " + bpRegistration);
-    } else if(!storage.getStorageID().equals(bpRegistration.getStorageID())) {
+    } else if(!storage.getStorageID().equals(bpRegistration.getDatanodeUuid())) {
       throw new IOException("Inconsistent storage IDs. Name-node returned "
-          + bpRegistration.getStorageID() 
+          + bpRegistration.getDatanodeUuid()
           + ". Expecting " + storage.getStorageID());
     }
     
@@ -925,7 +925,7 @@ public class DataNode extends Configured
     return streamingAddr.getPort();
   }
   
-  String getStorageId() {
+  String getDatanodeUuid() {
     return storage.getStorageID();
   }
 
@@ -940,7 +940,7 @@ public class DataNode extends Configured
   /**
    * NB: The datanode can perform data transfer on the streaming
    * address however clients are given the IPC IP address for data
-   * transfer, and that may be a different address.
+   * transfer, and that may be a   different address.
    * 
    * @return socket address for data transfer
    */
@@ -1016,7 +1016,7 @@ public class DataNode extends Configured
   
   public static void setNewStorageID(DatanodeID dnId) {
     LOG.info("Datanode is " + dnId);
-    dnId.setStorageID(DatanodeStorage.newStorageID());
+    dnId.setDatanodeUuid(DatanodeStorage.newStorageID());
   }
   
   /** Ensure the authentication method is kerberos */
@@ -1818,7 +1818,7 @@ public class DataNode extends Configured
   @Override
   public String toString() {
     return "DataNode{data=" + data + ", localName='" + getDisplayName()
-        + "', storageID='" + getStorageId() + "', xmitsInProgress="
+        + "', storageID='" + getDatanodeUuid() + "', xmitsInProgress="
         + xmitsInProgress.get() + "}";
   }
 

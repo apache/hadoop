@@ -551,7 +551,7 @@ public class Balancer {
     
     /* Get the storage id of the datanode */
     protected String getStorageID() {
-      return datanode.getStorageID();
+      return datanode.getDatanodeUuid();
     }
     
     /** Decide if still need to move more bytes */
@@ -895,7 +895,7 @@ public class Balancer {
               datanodeS.utilization)*datanodeS.datanode.getCapacity()/100.0);
         }
       }
-      this.datanodes.put(datanode.getStorageID(), datanodeS);
+      this.datanodes.put(datanode.getDatanodeUuid(), datanodeS);
     }
 
     //logging
