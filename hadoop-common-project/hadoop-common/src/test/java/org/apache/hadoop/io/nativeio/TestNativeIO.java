@@ -280,6 +280,45 @@ public class TestNativeIO {
     FileUtil.setExecutable(testFile, true);
     assertTrue(NativeIO.Windows.access(testFile.getAbsolutePath(),
         NativeIO.Windows.AccessRight.ACCESS_EXECUTE));
+
+    // Validate that access checks work as expected for long paths
+
+    // Assemble a path longer then 260 chars (MAX_PATH)
+    String testFileRelativePath = "";
+    for (int i = 0; i < 15; ++i) {
+      testFileRelativePath += "testfileaccessfolder\\";
+    }
+    testFileRelativePath += "testfileaccess";
+    testFile = new File(TEST_DIR, testFileRelativePath);
+    assertTrue(testFile.getParentFile().mkdirs());
+    assertTrue(testFile.createNewFile());
+
+    // Validate ACCESS_READ
+    FileUtil.setReadable(testFile, false);
+    assertFalse(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_READ));
+
+    FileUtil.setReadable(testFile, true);
+    assertTrue(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_READ));
+
+    // Validate ACCESS_WRITE
+    FileUtil.setWritable(testFile, false);
+    assertFalse(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_WRITE));
+
+    FileUtil.setWritable(testFile, true);
+    assertTrue(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_WRITE));
+
+    // Validate ACCESS_EXECUTE
+    FileUtil.setExecutable(testFile, false);
+    assertFalse(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_EXECUTE));
+
+    FileUtil.setExecutable(testFile, true);
+    assertTrue(NativeIO.Windows.access(testFile.getAbsolutePath(),
+        NativeIO.Windows.AccessRight.ACCESS_EXECUTE));
   }
 
   @Test (timeout = 30000)

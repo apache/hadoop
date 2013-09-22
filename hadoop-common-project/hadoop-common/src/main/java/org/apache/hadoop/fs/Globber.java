@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,26 +51,26 @@ class Globber {
     this.filter = filter;
   }
 
-  private FileStatus getFileStatus(Path path) {
+  private FileStatus getFileStatus(Path path) throws IOException {
     try {
       if (fs != null) {
         return fs.getFileStatus(path);
       } else {
         return fc.getFileStatus(path);
       }
-    } catch (IOException e) {
+    } catch (FileNotFoundException e) {
       return null;
     }
   }
 
-  private FileStatus[] listStatus(Path path) {
+  private FileStatus[] listStatus(Path path) throws IOException {
     try {
       if (fs != null) {
         return fs.listStatus(path);
       } else {
         return fc.util().listStatus(path);
       }
-    } catch (IOException e) {
+    } catch (FileNotFoundException e) {
       return new FileStatus[0];
     }
   }

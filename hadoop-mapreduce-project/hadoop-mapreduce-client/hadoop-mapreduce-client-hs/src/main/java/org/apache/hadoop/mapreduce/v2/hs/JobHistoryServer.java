@@ -24,8 +24,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.v2.app.webapp.WebAppUtil;
 import org.apache.hadoop.mapreduce.v2.hs.server.HSAdminServer;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -73,6 +75,10 @@ public class JobHistoryServer extends CompositeService {
 
     config.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
+    // This is required for WebApps to use https if enabled.
+    WebAppUtil.setSSLEnabledInYARN(conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_KEY,
+        CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_DEFAULT));
     try {
       doSecureLogin(conf);
     } catch(IOException ie) {

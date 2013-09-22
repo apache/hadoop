@@ -15,36 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.oncrpc;
+package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import org.junit.Assert;
-import org.junit.Test;
 
-public class TestXDR {
-  private void serializeInt(int times) {
-    XDR w = new XDR();
-    for (int i = 0; i < times; ++i)
-      w.writeInt(23);
-
-    XDR r = w.asReadOnlyWrap();
-    for (int i = 0; i < times; ++i)
-      Assert.assertEquals(r.readInt(), 23);
+public class WebAppUtil {
+  private static boolean isSSLEnabledInYARN;
+  
+  public static void setSSLEnabledInYARN(boolean isSSLEnabledInYARN) {
+    WebAppUtil.isSSLEnabledInYARN = isSSLEnabledInYARN;
   }
-
-  private void serializeLong(int times) {
-    XDR w = new XDR();
-    for (int i = 0; i < times; ++i)
-      w.writeLongAsHyper(23);
-
-    XDR r = w.asReadOnlyWrap();
-    for (int i = 0; i < times; ++i)
-      Assert.assertEquals(r.readHyper(), 23);
+  
+  public static boolean isSSLEnabledInYARN() {
+    return isSSLEnabledInYARN;
   }
-
-  @Test
-  public void testPerformance() {
-    final int TEST_TIMES = 8 << 20;
-    serializeInt(TEST_TIMES);
-    serializeLong(TEST_TIMES);
+  
+  public static String getSchemePrefix() {
+    if (isSSLEnabledInYARN) {
+      return "https://";
+    } else {
+      return "http://";
+    }
   }
 }

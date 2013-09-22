@@ -104,7 +104,7 @@ public class JobBlock extends HtmlBlock {
       table.tr().
         td(String.valueOf(attempt.getAttemptId())).
         td(new Date(attempt.getStartTime()).toString()).
-        td().a(".nodelink", url(HttpConfig.getSchemePrefix(),
+        td().a(".nodelink", url(WebAppUtil.getSchemePrefix(),
             attempt.getNodeHttpAddress()),
             attempt.getNodeHttpAddress())._().
         td().a(".logslink", url(attempt.getLogsLink()), 

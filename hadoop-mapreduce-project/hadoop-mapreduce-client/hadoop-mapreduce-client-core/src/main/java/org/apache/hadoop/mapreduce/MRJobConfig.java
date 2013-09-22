@@ -357,7 +357,7 @@ public interface MRJobConfig {
   public static final int DEFAULT_MR_CLIENT_TO_AM_IPC_MAX_RETRIES = 3;
   
   /**
-   * The number of client retries to the RM/HS/AM before throwing exception.
+   * The number of client retries to the RM/HS before throwing exception.
    */
   public static final String MR_CLIENT_MAX_RETRIES = 
     MR_PREFIX + "client.max-retries";

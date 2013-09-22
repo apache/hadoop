@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.http;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -38,8 +37,7 @@ public class HttpConfig {
         CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_DEFAULT);
   }
 
-  @VisibleForTesting
-  static void setSecure(boolean secure) {
+  public static void setSecure(boolean secure) {
     sslEnabled = secure;
   }
 
