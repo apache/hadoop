@@ -55,6 +55,9 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+    YARN-1128. FifoPolicy.computeShares throws NPE on empty list of Schedulables
+    (Karthik Kambatla via Sandy Ryza)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
