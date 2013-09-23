@@ -97,7 +97,7 @@ public class AsyncDataService {
   void writeAsync(OpenFileCtx openFileCtx) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Scheduling write back task for fileId: "
-          + openFileCtx.copyLatestAttr().getFileId());
+          + openFileCtx.getLatestAttr().getFileId());
     }
     WriteBackTask wbTask = new WriteBackTask(openFileCtx);
     execute(wbTask);
@@ -125,7 +125,7 @@ public class AsyncDataService {
     public String toString() {
       // Called in AsyncDataService.execute for displaying error messages.
       return "write back data for fileId"
-          + openFileCtx.copyLatestAttr().getFileId() + " with nextOffset "
+          + openFileCtx.getLatestAttr().getFileId() + " with nextOffset "
           + openFileCtx.getNextOffset();
     }
 

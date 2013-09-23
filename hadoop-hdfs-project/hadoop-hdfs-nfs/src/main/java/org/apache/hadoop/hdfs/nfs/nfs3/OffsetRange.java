@@ -17,19 +17,34 @@
  */
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
+import java.util.Comparator;
+
+import com.google.common.base.Preconditions;
+
 /**
  * OffsetRange is the range of read/write request. A single point (e.g.,[5,5])
  * is not a valid range.
  */
-public class OffsetRange implements Comparable<OffsetRange> {
+public class OffsetRange {
+  
+  public static final Comparator<OffsetRange> ReverseComparatorOnMin = 
+      new Comparator<OffsetRange>() {
+    @Override
+    public int compare(OffsetRange o1, OffsetRange o2) {
+      if (o1.getMin() == o2.getMin()) {
+        return o1.getMax() < o2.getMax() ? 
+            1 : (o1.getMax() > o2.getMax() ? -1 : 0);
+      } else {
+        return o1.getMin() < o2.getMin() ? 1 : -1;
+      }
+    }
+  };
+  
   private final long min;
   private final long max;
 
   OffsetRange(long min, long max) {
-    if ((min >= max) || (min < 0) || (max < 0)) {
-      throw new IllegalArgumentException("Wrong offset range: (" + min + ","
-          + max + ")");
-    }
+    Preconditions.checkArgument(min >= 0 && max >= 0 && min < max);
     this.min = min;
     this.max = max;
   }
@@ -49,24 +64,10 @@ public class OffsetRange implements Comparable<OffsetRange> {
 
   @Override
   public boolean equals(Object o) {
-    assert (o instanceof OffsetRange);
-    OffsetRange range = (OffsetRange) o;
-    return (min == range.getMin()) && (max == range.getMax());
-  }
-
-  private static int compareTo(long left, long right) {
-    if (left < right) {
-      return -1;
-    } else if (left > right) {
-      return 1;
-    } else {
-      return 0;
+    if (o instanceof OffsetRange) {
+      OffsetRange range = (OffsetRange) o;
+      return (min == range.getMin()) && (max == range.getMax());
     }
-  }
-
-  @Override
-  public int compareTo(OffsetRange other) {
-    final int d = compareTo(min, other.getMin());
-    return d != 0 ? d : compareTo(max, other.getMax());
+    return false;
   }
 }
