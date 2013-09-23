@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 
@@ -51,8 +52,9 @@ public class TestOffsetRange {
     OffsetRange r3 = new OffsetRange(1, 3);
     OffsetRange r4 = new OffsetRange(3, 4);
 
-    assertTrue(r2.compareTo(r3) == 0);
-    assertTrue(r2.compareTo(r1) == 1);
-    assertTrue(r2.compareTo(r4) == -1);
+    assertEquals(0, OffsetRange.ReverseComparatorOnMin.compare(r2, r3));
+    assertEquals(0, OffsetRange.ReverseComparatorOnMin.compare(r2, r2));
+    assertTrue(OffsetRange.ReverseComparatorOnMin.compare(r2, r1) < 0);
+    assertTrue(OffsetRange.ReverseComparatorOnMin.compare(r2, r4) > 0);
   }
 }
