@@ -414,6 +414,9 @@ Release 2.1.1-beta - 2013-09-23
     HDFS-5212. Refactor RpcMessage and NFS3Response to support different 
     types of authentication information. (jing9)
 
+    HDFS-4971. Move IO operations out of locking in OpenFileCtx. (brandonli and
+    jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES

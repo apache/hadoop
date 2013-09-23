@@ -67,8 +67,8 @@ public class WriteManager {
    */
   private long streamTimeout;
   
-  public static final long DEFAULT_STREAM_TIMEOUT = 10 * 1000; // 10 second
-  public static final long MINIMIUM_STREAM_TIMEOUT = 1 * 1000; // 1 second
+  public static final long DEFAULT_STREAM_TIMEOUT = 10 * 60 * 1000; //10 minutes
+  public static final long MINIMIUM_STREAM_TIMEOUT = 10 * 1000; //10 seconds
   
   void addOpenFileStream(FileHandle h, OpenFileCtx ctx) {
     openFileMap.put(h, ctx);
@@ -215,6 +215,10 @@ public class WriteManager {
         LOG.info("Inactive stream, fileId=" + fileHandle.getFileId()
             + " commitOffset=" + commitOffset);
         return true;
+      } else if (ret == OpenFileCtx.COMMIT_INACTIVE_WITH_PENDING_WRITE) {
+        LOG.info("Inactive stream with pending writes, fileId="
+            + fileHandle.getFileId() + " commitOffset=" + commitOffset);
+        return false;
       }
       assert (ret == OpenFileCtx.COMMIT_WAIT || ret == OpenFileCtx.COMMIT_ERROR);
       if (ret == OpenFileCtx.COMMIT_ERROR) {
