@@ -6049,7 +6049,7 @@
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -touchz /dir0/file0</command>
         <command>-fs NAMENODE -touchz /dir0/file1</command>
-        <command>-fs NAMENODE -setrep -R 2 /dir0</command>
+        <command>-fs NAMENODE -setrep 2 /dir0</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r /user</command>
@@ -6072,7 +6072,7 @@
         <command>-fs NAMENODE -mkdir -p dir0</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/file1</command>
-        <command>-fs NAMENODE -setrep -R 2 dir0</command>
+        <command>-fs NAMENODE -setrep 2 dir0</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r /user</command>
@@ -6089,6 +6089,24 @@
       </comparators>
     </test>
     
+    <test> <!-- TESTED -->
+      <description>setrep: -R ignored for existing file</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -touchz dir0/file0</command>
+        <command>-fs NAMENODE -setrep -R 2 dir0/file0</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^Replication 2 set: dir0/file0</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
     <test> <!-- TESTED -->
       <description>setrep: non existent file (absolute path)</description>
       <test-commands>
@@ -6145,7 +6163,7 @@
         <command>-fs NAMENODE -mkdir hdfs:///dir0/</command>
         <command>-fs NAMENODE -touchz hdfs:///dir0/file0</command>
         <command>-fs NAMENODE -touchz hdfs:///dir0/file1</command>
-        <command>-fs NAMENODE -setrep -R 2 hdfs:///dir0</command>
+        <command>-fs NAMENODE -setrep 2 hdfs:///dir0</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r hdfs:///*</command>
@@ -6203,7 +6221,7 @@
         <command>-fs NAMENODE -mkdir -p NAMENODE/dir0</command>
         <command>-fs NAMENODE -touchz NAMENODE/dir0/file0</command>
         <command>-fs NAMENODE -touchz NAMENODE/dir0/file1</command>
-        <command>-fs NAMENODE -setrep -R 2 NAMENODE/dir0</command>
+        <command>-fs NAMENODE -setrep 2 NAMENODE/dir0</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r NAMENODE/*</command>
