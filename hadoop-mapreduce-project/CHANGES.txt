@@ -178,6 +178,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5404. HSAdminServer does not use ephemeral ports in minicluster
     mode (Ted Yu via jlowe)
 
+    MAPREDUCE-5522. Incorrect oreder expected from JobQueueInfo (Jinghui Wang
+    via bobby)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
