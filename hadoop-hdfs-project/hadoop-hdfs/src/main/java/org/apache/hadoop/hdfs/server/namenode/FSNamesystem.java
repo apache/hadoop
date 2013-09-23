@@ -6873,10 +6873,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
           sb.append(trackingId);
         }
-        auditLog.info(sb);
+        logAuditMessage(sb.toString());
       }
     }
 
+    public void logAuditMessage(String message) {
+      auditLog.info(message);
+    }
   }
 
 }
