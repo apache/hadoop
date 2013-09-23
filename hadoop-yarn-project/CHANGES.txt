@@ -29,7 +29,7 @@ Release 2.3.0 - UNRELEASED
     (Niranjan Singh via Sandy Ryza)
 
     YARN-1188. The context of QueueMetrics becomes default when using
-    FairScheduler (Akira Ajisaka via Sandy Ryza)
+    FairScheduler (Tsuyoshi Ozawa via Sandy Ryza)
 
 Release 2.2.0 - UNRELEASED
 
