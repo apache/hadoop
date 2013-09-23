@@ -145,6 +145,28 @@ public class KeyStoreTestUtil {
     saveKeyStore(ks, filename, password);
   }
 
+  /**
+   * Creates a keystore with a single key and saves it to a file.
+   * 
+   * @param filename String file to save
+   * @param password String store password to set on keystore
+   * @param keyPassword String key password to set on key
+   * @param alias String alias to use for the key
+   * @param privateKey Key to save in keystore
+   * @param cert Certificate to use as certificate chain associated to key
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException if there is an I/O error saving the file
+   */
+  public static void createKeyStore(String filename,
+                                    String password, String keyPassword, String alias,
+                                    Key privateKey, Certificate cert)
+    throws GeneralSecurityException, IOException {
+    KeyStore ks = createEmptyKeyStore();
+    ks.setKeyEntry(alias, privateKey, keyPassword.toCharArray(),
+                   new Certificate[]{cert});
+    saveKeyStore(ks, filename, password);
+  }
+
   public static void createTrustStore(String filename,
                                       String password, String alias,
                                       Certificate cert)
@@ -178,6 +200,19 @@ public class KeyStoreTestUtil {
     f.delete();
   }
 
+  /**
+   * Performs complete setup of SSL configuration in preparation for testing an
+   * SSLFactory.  This includes keys, certs, keystores, truststores, the server
+   * SSL configuration file, the client SSL configuration file, and the master
+   * configuration file read by the SSLFactory.
+   * 
+   * @param keystoresDir String directory to save keystores
+   * @param sslConfDir String directory to save SSL configuration files
+   * @param conf Configuration master configuration to be used by an SSLFactory,
+   *   which will be mutated by this method
+   * @param useClientCert boolean true to make the client present a cert in the
+   *   SSL handshake
+   */
   public static void setupSSLConfig(String keystoresDir, String sslConfDir,
                                     Configuration conf, boolean useClientCert)
     throws Exception {
@@ -213,53 +248,13 @@ public class KeyStoreTestUtil {
 
     KeyStoreTestUtil.createTrustStore(trustKS, trustPassword, certs);
 
-    Configuration clientSSLConf = new Configuration(false);
-    clientSSLConf.set(FileBasedKeyStoresFactory.resolvePropertyName(
-      SSLFactory.Mode.CLIENT,
-      FileBasedKeyStoresFactory.SSL_KEYSTORE_LOCATION_TPL_KEY), clientKS);
-    clientSSLConf.set(FileBasedKeyStoresFactory.resolvePropertyName(
-      SSLFactory.Mode.CLIENT,
-      FileBasedKeyStoresFactory.SSL_KEYSTORE_PASSWORD_TPL_KEY), clientPassword);
-    clientSSLConf.set(FileBasedKeyStoresFactory.resolvePropertyName(
-      SSLFactory.Mode.CLIENT,
-      FileBasedKeyStoresFactory.SSL_TRUSTSTORE_LOCATION_TPL_KEY), trustKS);
-    clientSSLConf.set(FileBasedKeyStoresFactory.resolvePropertyName(
-      SSLFactory.Mode.CLIENT,
-      FileBasedKeyStoresFactory.SSL_TRUSTSTORE_PASSWORD_TPL_KEY), trustPassword);
-    clientSSLConf.set(FileBasedKeyStoresFactory.resolvePropertyName(
-      SSLFactory.Mode.CLIENT,
-      FileBasedKeyStoresFactory.SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY), "1000");
+    Configuration clientSSLConf = createClientSSLConfig(clientKS, clientPassword,
+      clientPassword, trustKS);
+    Configuration serverSSLConf = createServerSSLConfig(serverKS, serverPassword,
+      serverPassword, trustKS);
 
-    Configuration serverSSLConf = new Configuration(false);
-    serverSSLConf.set(FileBasedKeyStoresFactory.resolvePropertyName(
-      SSLFactory.Mode.SERVER,
-      FileBasedKeyStoresFactory.SSL_KEYSTORE_LOCATION_TPL_KEY), serverKS);
-    serverSSLConf.set(FileBasedKeyStoresFactory.resolvePropertyName(
-      SSLFactory.Mode.SERVER,
-      FileBasedKeyStoresFactory.SSL_KEYSTORE_PASSWORD_TPL_KEY), serverPassword);
-    serverSSLConf.set(FileBasedKeyStoresFactory.resolvePropertyName(
-      SSLFactory.Mode.SERVER,
-      FileBasedKeyStoresFactory.SSL_TRUSTSTORE_LOCATION_TPL_KEY), trustKS);
-    serverSSLConf.set(FileBasedKeyStoresFactory.resolvePropertyName(
-      SSLFactory.Mode.SERVER,
-      FileBasedKeyStoresFactory.SSL_TRUSTSTORE_PASSWORD_TPL_KEY), trustPassword);
-    serverSSLConf.set(FileBasedKeyStoresFactory.resolvePropertyName(
-      SSLFactory.Mode.SERVER,
-      FileBasedKeyStoresFactory.SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY), "1000");
-
-    Writer writer = new FileWriter(sslClientConfFile);
-    try {
-      clientSSLConf.writeXml(writer);
-    } finally {
-      writer.close();
-    }
-
-    writer = new FileWriter(sslServerConfFile);
-    try {
-      serverSSLConf.writeXml(writer);
-    } finally {
-      writer.close();
-    }
+    saveConfig(sslClientConfFile, clientSSLConf);
+    saveConfig(sslServerConfFile, serverSSLConf);
 
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "ALLOW_ALL");
     conf.set(SSLFactory.SSL_CLIENT_CONF_KEY, sslClientConfFile.getName());
@@ -267,4 +262,101 @@ public class KeyStoreTestUtil {
     conf.setBoolean(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY, useClientCert);
   }
 
+  /**
+   * Creates SSL configuration for a client.
+   * 
+   * @param clientKS String client keystore file
+   * @param password String store password, or null to avoid setting store
+   *   password
+   * @param keyPassword String key password, or null to avoid setting key
+   *   password
+   * @param trustKS String truststore file
+   * @return Configuration for client SSL
+   */
+  public static Configuration createClientSSLConfig(String clientKS,
+      String password, String keyPassword, String trustKS) {
+    Configuration clientSSLConf = createSSLConfig(SSLFactory.Mode.CLIENT,
+      clientKS, password, keyPassword, trustKS);
+    return clientSSLConf;
+  }
+
+  /**
+   * Creates SSL configuration for a server.
+   * 
+   * @param serverKS String server keystore file
+   * @param password String store password, or null to avoid setting store
+   *   password
+   * @param keyPassword String key password, or null to avoid setting key
+   *   password
+   * @param trustKS String truststore file
+   * @return Configuration for server SSL
+   */
+  public static Configuration createServerSSLConfig(String serverKS,
+      String password, String keyPassword, String trustKS) throws IOException {
+    Configuration serverSSLConf = createSSLConfig(SSLFactory.Mode.SERVER,
+      serverKS, password, keyPassword, trustKS);
+    return serverSSLConf;
+  }
+
+  /**
+   * Creates SSL configuration.
+   * 
+   * @param mode SSLFactory.Mode mode to configure
+   * @param keystore String keystore file
+   * @param password String store password, or null to avoid setting store
+   *   password
+   * @param keyPassword String key password, or null to avoid setting key
+   *   password
+   * @param trustKS String truststore file
+   * @return Configuration for SSL
+   */
+  private static Configuration createSSLConfig(SSLFactory.Mode mode,
+      String keystore, String password, String keyPassword, String trustKS) {
+    String trustPassword = "trustP";
+
+    Configuration sslConf = new Configuration(false);
+    if (keystore != null) {
+      sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
+        FileBasedKeyStoresFactory.SSL_KEYSTORE_LOCATION_TPL_KEY), keystore);
+    }
+    if (password != null) {
+      sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
+        FileBasedKeyStoresFactory.SSL_KEYSTORE_PASSWORD_TPL_KEY), password);
+    }
+    if (keyPassword != null) {
+      sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
+        FileBasedKeyStoresFactory.SSL_KEYSTORE_KEYPASSWORD_TPL_KEY),
+        keyPassword);
+    }
+    if (trustKS != null) {
+      sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
+        FileBasedKeyStoresFactory.SSL_TRUSTSTORE_LOCATION_TPL_KEY), trustKS);
+    }
+    if (trustPassword != null) {
+      sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
+        FileBasedKeyStoresFactory.SSL_TRUSTSTORE_PASSWORD_TPL_KEY),
+        trustPassword);
+    }
+    sslConf.set(FileBasedKeyStoresFactory.resolvePropertyName(mode,
+      FileBasedKeyStoresFactory.SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY), "1000");
+
+    return sslConf;
+  }
+
+  /**
+   * Saves configuration to a file.
+   * 
+   * @param file File to save
+   * @param conf Configuration contents to write to file
+   * @throws IOException if there is an I/O error saving the file
+   */
+  public static void saveConfig(File file, Configuration conf)
+      throws IOException {
+    Writer writer = new FileWriter(file);
+    try {
+      conf.writeXml(writer);
+    } finally {
+      writer.close();
+    }
+  }
 }
