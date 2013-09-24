@@ -952,6 +952,9 @@ Release 2.1.0-beta - 2013-08-22
     HDFS-5016. Deadlock in pipeline recovery causes Datanode to be marked dead.
     (suresh)
 
+    HDFS-5228. The RemoteIterator returned by DistributedFileSystem.listFiles
+    may throw NullPointerException.  (szetszwo and cnauroth via szetszwo)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
