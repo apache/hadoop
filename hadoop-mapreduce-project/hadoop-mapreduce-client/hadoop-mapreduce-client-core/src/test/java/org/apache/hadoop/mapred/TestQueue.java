@@ -128,10 +128,15 @@ public class TestQueue {
       assertEquals(secondSubQueue.getJobQueueInfo().getChildren().size(), 0);
       // test
       assertEquals(manager.getSchedulerInfo("first"), "queueInfo");
-      assertEquals(manager.getJobQueueInfos()[0].getQueueName(), secondSubQueue
-          .getJobQueueInfo().getQueueName());
-      assertEquals(manager.getJobQueueInfos()[1].getQueueName(), firstSubQueue
-          .getJobQueueInfo().getQueueName());
+      Set<String> queueJobQueueInfos = new HashSet<String>();
+      for(JobQueueInfo jobInfo : manager.getJobQueueInfos()){
+    	  queueJobQueueInfos.add(jobInfo.getQueueName());
+      }
+      Set<String> rootJobQueueInfos = new HashSet<String>();
+      for(Queue queue : root.getChildren()){
+    	  rootJobQueueInfos.add(queue.getJobQueueInfo().getQueueName());
+      }
+      assertEquals(queueJobQueueInfos, rootJobQueueInfos);
       // test getJobQueueInfoMapping
       assertEquals(
           manager.getJobQueueInfoMapping().get("first").getQueueName(), "first");

@@ -43,6 +43,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1060. Two tests in TestFairScheduler are missing @Test annotation
     (Niranjan Singh via Sandy Ryza)
 
+    YARN-1188. The context of QueueMetrics becomes default when using
+    FairScheduler (Tsuyoshi Ozawa via Sandy Ryza)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

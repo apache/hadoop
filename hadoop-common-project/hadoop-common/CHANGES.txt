@@ -499,6 +499,9 @@ Release 2.1.1-beta - 2013-09-23
     HADOOP-9961. versions of a few transitive dependencies diverged between hadoop 
     subprojects. (rvs via tucu)
 
+    HADOOP-9977. Hadoop services won't start with different keypass and
+    keystorepass when https is enabled. (cnauroth)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES

@@ -29,12 +29,19 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.File;
 import java.net.URL;
 import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
+import java.util.Collections;
+import java.util.Map;
 
 public class TestSSLFactory {
 
   private static final String BASEDIR =
     System.getProperty("test.build.dir", "target/test-dir") + "/" +
     TestSSLFactory.class.getSimpleName();
+  private static final String KEYSTORES_DIR =
+    new File(BASEDIR).getAbsolutePath();
+  private String sslConfsDir;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -46,18 +53,16 @@ public class TestSSLFactory {
   private Configuration createConfiguration(boolean clientCert)
     throws Exception {
     Configuration conf = new Configuration();
-    String keystoresDir = new File(BASEDIR).getAbsolutePath();
-    String sslConfsDir = KeyStoreTestUtil.getClasspathDir(TestSSLFactory.class);
-    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfsDir, conf, clientCert);
+    KeyStoreTestUtil.setupSSLConfig(KEYSTORES_DIR, sslConfsDir, conf,
+      clientCert);
     return conf;
   }
 
   @After
   @Before
   public void cleanUp() throws Exception {
-    String keystoresDir = new File(BASEDIR).getAbsolutePath();
-    String sslConfsDir = KeyStoreTestUtil.getClasspathDir(TestSSLFactory.class);
-    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfsDir);
+    sslConfsDir = KeyStoreTestUtil.getClasspathDir(TestSSLFactory.class);
+    KeyStoreTestUtil.cleanupSSLConfig(KEYSTORES_DIR, sslConfsDir);
   }
 
   @Test(expected = IllegalStateException.class)
@@ -181,4 +186,90 @@ public class TestSSLFactory {
     }
   }
 
+  @Test
+  public void testServerDifferentPasswordAndKeyPassword() throws Exception {
+    checkSSLFactoryInitWithPasswords(SSLFactory.Mode.SERVER, "password",
+      "keyPassword", "password", "keyPassword");
+  }
+
+  @Test
+  public void testServerKeyPasswordDefaultsToPassword() throws Exception {
+    checkSSLFactoryInitWithPasswords(SSLFactory.Mode.SERVER, "password",
+      "password", "password", null);
+  }
+
+  @Test
+  public void testClientDifferentPasswordAndKeyPassword() throws Exception {
+    checkSSLFactoryInitWithPasswords(SSLFactory.Mode.CLIENT, "password",
+      "keyPassword", "password", "keyPassword");
+  }
+
+  @Test
+  public void testClientKeyPasswordDefaultsToPassword() throws Exception {
+    checkSSLFactoryInitWithPasswords(SSLFactory.Mode.CLIENT, "password",
+      "password", "password", null);
+  }
+
+  /**
+   * Checks that SSLFactory initialization is successful with the given
+   * arguments.  This is a helper method for writing test cases that cover
+   * different combinations of settings for the store password and key password.
+   * It takes care of bootstrapping a keystore, a truststore, and SSL client or
+   * server configuration.  Then, it initializes an SSLFactory.  If no exception
+   * is thrown, then initialization was successful.
+   * 
+   * @param mode SSLFactory.Mode mode to test
+   * @param password String store password to set on keystore
+   * @param keyPassword String key password to set on keystore
+   * @param confPassword String store password to set in SSL config file, or null
+   *   to avoid setting in SSL config file
+   * @param confKeyPassword String key password to set in SSL config file, or
+   *   null to avoid setting in SSL config file
+   * @throws Exception for any error
+   */
+  private void checkSSLFactoryInitWithPasswords(SSLFactory.Mode mode,
+      String password, String keyPassword, String confPassword,
+      String confKeyPassword) throws Exception {
+    String keystore = new File(KEYSTORES_DIR, "keystore.jks").getAbsolutePath();
+    String truststore = new File(KEYSTORES_DIR, "truststore.jks")
+      .getAbsolutePath();
+    String trustPassword = "trustP";
+
+    // Create keys, certs, keystore, and truststore.
+    KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
+    X509Certificate cert = KeyStoreTestUtil.generateCertificate("CN=Test",
+      keyPair, 30, "SHA1withRSA");
+    KeyStoreTestUtil.createKeyStore(keystore, password, keyPassword, "Test",
+      keyPair.getPrivate(), cert);
+    Map<String, X509Certificate> certs = Collections.singletonMap("server",
+      cert);
+    KeyStoreTestUtil.createTrustStore(truststore, trustPassword, certs);
+
+    // Create SSL configuration file, for either server or client.
+    final String sslConfFileName;
+    final Configuration sslConf;
+    if (mode == SSLFactory.Mode.SERVER) {
+      sslConfFileName = "ssl-server.xml";
+      sslConf = KeyStoreTestUtil.createServerSSLConfig(keystore, confPassword,
+        confKeyPassword, truststore);
+    } else {
+      sslConfFileName = "ssl-client.xml";
+      sslConf = KeyStoreTestUtil.createClientSSLConfig(keystore, confPassword,
+        confKeyPassword, truststore);
+    }
+    KeyStoreTestUtil.saveConfig(new File(sslConfsDir, sslConfFileName), sslConf);
+
+    // Create the master configuration for use by the SSLFactory, which by
+    // default refers to the ssl-server.xml or ssl-client.xml created above.
+    Configuration conf = new Configuration();
+    conf.setBoolean(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY, true);
+
+    // Try initializing an SSLFactory.
+    SSLFactory sslFactory = new SSLFactory(mode, conf);
+    try {
+      sslFactory.init();
+    } finally {
+      sslFactory.destroy();
+    }
+  }
 }

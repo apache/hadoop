@@ -27,6 +27,8 @@ import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
 import org.jboss.netty.channel.Channel;
 
+import com.google.common.base.Preconditions;
+
 /**
  * WriteCtx saves the context of one write request, such as request, channel,
  * xid and reply status.
@@ -49,13 +51,21 @@ class WriteCtx {
   private final long offset;
   private final int count;
   private final WriteStableHow stableHow;
-  private byte[] data;
+  private volatile byte[] data;
   
   private final Channel channel;
   private final int xid;
   private boolean replied;
 
-  private DataState dataState;
+  /** 
+   * Data belonging to the same {@link OpenFileCtx} may be dumped to a file. 
+   * After being dumped to the file, the corresponding {@link WriteCtx} records 
+   * the dump file and the offset.  
+   */
+  private RandomAccessFile raf;
+  private long dumpFileOffset;
+  
+  private volatile DataState dataState;
 
   public DataState getDataState() {
     return dataState;
@@ -64,12 +74,13 @@ class WriteCtx {
   public void setDataState(DataState dataState) {
     this.dataState = dataState;
   }
-
-  private RandomAccessFile raf;
-  private long dumpFileOffset;
   
-  // Return the dumped data size
-  public long dumpData(FileOutputStream dumpOut, RandomAccessFile raf)
+  /** 
+   * Writing the data into a local file. After the writing, if 
+   * {@link #dataState} is still ALLOW_DUMP, set {@link #data} to null and set 
+   * {@link #dataState} to DUMPED.
+   */
+  long dumpData(FileOutputStream dumpOut, RandomAccessFile raf)
       throws IOException {
     if (dataState != DataState.ALLOW_DUMP) {
       if (LOG.isTraceEnabled()) {
@@ -84,46 +95,61 @@ class WriteCtx {
     if (LOG.isDebugEnabled()) {
       LOG.debug("After dump, new dumpFileOffset:" + dumpFileOffset);
     }
-    data = null;
-    dataState = DataState.DUMPED;
-    return count;
+    // it is possible that while we dump the data, the data is also being
+    // written back to HDFS. After dump, if the writing back has not finished
+    // yet, we change its flag to DUMPED and set the data to null. Otherwise
+    // this WriteCtx instance should have been removed from the buffer.
+    if (dataState == DataState.ALLOW_DUMP) {
+      synchronized (this) {
+        if (dataState == DataState.ALLOW_DUMP) {
+          data = null;
+          dataState = DataState.DUMPED;
+          return count;
+        }
+      }
+    }
+    return 0;
   }
 
-  public FileHandle getHandle() {
+  FileHandle getHandle() {
     return handle;
   }
   
-  public long getOffset() {
+  long getOffset() {
     return offset;
   }
 
-  public int getCount() {
+  int getCount() {
     return count;
   }
 
-  public WriteStableHow getStableHow() {
+  WriteStableHow getStableHow() {
     return stableHow;
   }
 
-  public byte[] getData() throws IOException {
+  byte[] getData() throws IOException {
     if (dataState != DataState.DUMPED) {
-      if (data == null) {
-        throw new IOException("Data is not dumpted but has null:" + this);
-      }
-    } else {
-      // read back
-      if (data != null) {
-        throw new IOException("Data is dumpted but not null");
-      }
-      data = new byte[count];
-      raf.seek(dumpFileOffset);
-      int size = raf.read(data, 0, count);
-      if (size != count) {
-        throw new IOException("Data count is " + count + ", but read back "
-            + size + "bytes");
+      synchronized (this) {
+        if (dataState != DataState.DUMPED) {
+          Preconditions.checkState(data != null);
+          return data;
+        }
       }
     }
+    // read back from dumped file
+    this.loadData();
     return data;
+  }
+
+  private void loadData() throws IOException {
+    Preconditions.checkState(data == null);
+    data = new byte[count];
+    raf.seek(dumpFileOffset);
+    int size = raf.read(data, 0, count);
+    if (size != count) {
+      throw new IOException("Data count is " + count + ", but read back "
+          + size + "bytes");
+    }
   }
 
   Channel getChannel() {
