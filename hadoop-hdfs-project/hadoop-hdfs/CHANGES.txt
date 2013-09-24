@@ -494,6 +494,8 @@ Release 2.1.1-beta - 2013-09-23
     HDFS-5231. Fix broken links in the document of HDFS Federation. (Haohui Mai
     via jing9)
 
+    HDFS-5249. Fix dumper thread which may die silently. (brandonli)
+
 Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
