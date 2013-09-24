@@ -60,14 +60,10 @@ public class CleanupQueue {
     final Configuration conf;
     final UserGroupInformation ugi;
     final JobID jobIdTokenRenewalToCancel;
+    FileSystem fs;
 
     public PathDeletionContext(Path fullPath, Configuration conf) {
-      this(fullPath, conf, null, null);
-    }
-
-    public PathDeletionContext(Path fullPath, Configuration conf,
-        UserGroupInformation ugi) {
-      this(fullPath, conf, ugi, null);
+      this(fullPath, conf, null, null, null);
     }
     
     /**
@@ -86,11 +82,12 @@ public class CleanupQueue {
      *                                  <code>null</code>
      */
     public PathDeletionContext(Path fullPath, Configuration conf,
-        UserGroupInformation ugi, JobID jobIdTokenRenewalToCancel) {
+        UserGroupInformation ugi, JobID jobIdTokenRenewalToCancel, FileSystem fs) {
       this.fullPath = fullPath;
       this.conf = conf;
       this.ugi = ugi;
       this.jobIdTokenRenewalToCancel = jobIdTokenRenewalToCancel;
+      this.fs = fs;
     }
     
     protected Path getPathForCleanup() {
@@ -106,7 +103,7 @@ public class CleanupQueue {
       (ugi == null ? UserGroupInformation.getLoginUser() : ugi).doAs(
           new PrivilegedExceptionAction<Object>() {
             public Object run() throws IOException {
-              FileSystem fs = p.getFileSystem(conf);
+              fs = (fs == null ?  p.getFileSystem(conf) : fs);
               try {
                 fs.delete(p, true);
                 return null;

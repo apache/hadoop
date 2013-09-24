@@ -139,6 +139,9 @@ Release 1.3.0 - unreleased
     FileSystem#close can cause return of a closed DistributedFileSystem instance
     from the FileSystem cache. (cnauroth)
 
+    MAPREDUCE-5508. JobTracker memory leak caused by unreleased FileSystem
+    objects in JobInProgress#cleanupJob. (Xi Fang via cnauroth)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES
