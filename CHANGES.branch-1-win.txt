@@ -498,3 +498,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     HDFS-5211. Race condition between DistributedFileSystem#close and
     FileSystem#close can cause return of a closed DistributedFileSystem instance
     from the FileSystem cache. (cnauroth)
+
+    MAPREDUCE-5351. Fixed a memory leak in JobTracker due to stable FS objects in
+    FSCache. (Sandy Ryza via acmurthy)

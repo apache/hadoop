@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -105,8 +106,17 @@ public class CleanupQueue {
       (ugi == null ? UserGroupInformation.getLoginUser() : ugi).doAs(
           new PrivilegedExceptionAction<Object>() {
             public Object run() throws IOException {
-             p.getFileSystem(conf).delete(p, true);
-             return null;
+              FileSystem fs = p.getFileSystem(conf);
+              try {
+                fs.delete(p, true);
+                return null;
+              } finally {
+                // So that we don't leave an entry in the FileSystem cache for
+                // every UGI that a job is submitted with.
+                if (ugi != null) {
+                  fs.close();
+                }
+              }
             }
           });
       
