@@ -29,6 +29,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 
@@ -62,7 +63,7 @@ public class WebAppProxy extends AbstractService {
           CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION +
           " of " + auth);
     }
-    String proxy = YarnConfiguration.getProxyHostAndPort(conf);
+    String proxy = WebAppUtils.getProxyHostAndPort(conf);
     String[] proxyParts = proxy.split(":");
     proxyHost = proxyParts[0];
 
