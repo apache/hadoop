@@ -221,6 +221,10 @@ Release 2.1.1-beta - 2013-09-23
 
     MAPREDUCE-5379. Include token tracking ids in jobconf. (kkambatl via tucu)
 
+    MAPREDUCE-5523. Added separate configuration properties for https for JHS 
+    without which even when https is enabled, it starts on http port itself.
+    (Omkar Vinit Joshi via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5446. TestJobHistoryEvents and TestJobHistoryParsing have race

@@ -28,10 +28,12 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapred.LocalContainerLauncher;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.v2.app.webapp.WebAppUtil;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
@@ -43,6 +45,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.hamcrest.core.IsEqual;
 
 /**
  * Configures and starts the MR-specific components in the YARN cluster.
@@ -155,8 +159,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
           // pick free random ports.
           getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
             hostname + ":0");
-          getConfig().set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
-            hostname + ":0");
+          WebAppUtil.setJHSWebAppURLWithoutScheme(getConfig(), hostname + ":0");
           getConfig().set(JHAdminConfig.JHS_ADMIN_ADDRESS,
             hostname + ":0");
         }
@@ -182,17 +185,17 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
       //need to do this because historyServer.init creates a new Configuration
       getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
                       historyServer.getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
-      getConfig().set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
-                      historyServer.getConfig().get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS));
+      WebAppUtil.setJHSWebAppURLWithoutScheme(getConfig(),
+          WebAppUtil.getJHSWebAppURLWithoutScheme(historyServer.getConfig())); 
 
       LOG.info("MiniMRYARN ResourceManager address: " +
                getConfig().get(YarnConfiguration.RM_ADDRESS));
       LOG.info("MiniMRYARN ResourceManager web address: " +
-               getConfig().get(YarnConfiguration.RM_WEBAPP_ADDRESS));
+               WebAppUtils.getRMWebAppURLWithoutScheme(getConfig()));
       LOG.info("MiniMRYARN HistoryServer address: " +
                getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
       LOG.info("MiniMRYARN HistoryServer web address: " +
-               getConfig().get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS));
+               JHAdminConfig.getResolvedMRHistoryWebAppURLWithoutScheme(getConfig()));
     }
 
     @Override

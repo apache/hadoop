@@ -135,6 +135,10 @@ Release 2.1.1-beta - 2013-09-23
     YARN-1203. Changed YARN web-app proxy to handle http and https URLs from
     AM registration and finish correctly. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-1204. Added separate configuration properties for https for RM and NM
+    without which servers enabled with https will also start on http ports.
+    (Omkar Vinit Joshi via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

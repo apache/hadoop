@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
@@ -88,6 +89,7 @@ import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -441,12 +443,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
 
       if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
-        String hostname = getConfig().get(YarnConfiguration.RM_WEBAPP_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS);
-        hostname = (hostname.contains(":")) ? hostname.substring(0, hostname.indexOf(":")) : hostname;
         int port = webApp.port();
-        String resolvedAddress = hostname + ":" + port;
-        conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, resolvedAddress);
+        WebAppUtils.setRMWebAppPort(conf, port);
       }
 
       super.serviceStart();
@@ -704,10 +702,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
                 YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(
                 YarnConfiguration.RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
-            .at(this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)); 
-    String proxyHostAndPort = YarnConfiguration.getProxyHostAndPort(conf);
-    if(YarnConfiguration.getRMWebAppHostAndPort(conf).
+            .at(WebAppUtils.getRMWebAppURLWithoutScheme(conf)); 
+    String proxyHostAndPort = WebAppUtils.getProxyHostAndPort(conf);
+    if(WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf).
         equals(proxyHostAndPort)) {
       AppReportFetcher fetcher = new AppReportFetcher(conf, getClientRMService());
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, 
@@ -904,7 +901,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     // recover applications
     rmAppManager.recover(state);
   }
-  
+
   public static void main(String argv[]) {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(ResourceManager.class, argv, LOG);

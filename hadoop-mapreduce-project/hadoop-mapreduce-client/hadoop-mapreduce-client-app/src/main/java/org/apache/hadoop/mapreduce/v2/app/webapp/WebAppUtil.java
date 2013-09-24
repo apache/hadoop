@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+
 
 public class WebAppUtil {
   private static boolean isSSLEnabledInYARN;
@@ -34,6 +38,23 @@ public class WebAppUtil {
       return "https://";
     } else {
       return "http://";
+    }
+  }
+  
+  public static void setJHSWebAppURLWithoutScheme(Configuration conf,
+      String hostAddress) {
+    if (HttpConfig.isSecure()) {
+      conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_HTTPS_ADDRESS, hostAddress);
+    } else {
+      conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, hostAddress);
+    }
+  }
+  
+  public static String getJHSWebAppURLWithoutScheme(Configuration conf) {
+    if (HttpConfig.isSecure()) {
+      return conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_HTTPS_ADDRESS);
+    } else {
+      return conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS);
     }
   }
 }

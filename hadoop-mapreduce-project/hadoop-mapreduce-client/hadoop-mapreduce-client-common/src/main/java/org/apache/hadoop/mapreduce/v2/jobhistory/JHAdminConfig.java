@@ -18,8 +18,15 @@
 
 package org.apache.hadoop.mapreduce.v2.jobhistory;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.net.NetUtils;
 
 /**
  * Stores Job History configuration keys that can be set by administrators of
@@ -130,6 +137,13 @@ public class JHAdminConfig {
   public static final String DEFAULT_MR_HISTORY_WEBAPP_ADDRESS =
     "0.0.0.0:" + DEFAULT_MR_HISTORY_WEBAPP_PORT;
   
+  /**The https address the history server webapp is on.*/
+  public static final String MR_HISTORY_WEBAPP_HTTPS_ADDRESS =
+      MR_HISTORY_PREFIX + "webapp.https.address";
+  public static final int DEFAULT_MR_HISTORY_WEBAPP_HTTPS_PORT = 19890;
+  public static final String DEFAULT_MR_HISTORY_WEBAPP_HTTPS_ADDRESS =
+      "0.0.0.0:" + DEFAULT_MR_HISTORY_WEBAPP_HTTPS_PORT;
+  
   /**The kerberos principal to be used for spnego filter for history server*/
   public static final String MR_WEBAPP_SPNEGO_USER_NAME_KEY =
       MR_HISTORY_PREFIX + "webapp.spnego-principal";
@@ -159,5 +173,37 @@ public class JHAdminConfig {
    * conflicts.
    */
   public static boolean DEFAULT_MR_HISTORY_MINICLUSTER_FIXED_PORTS = false;
+
+  public static String getResolvedMRHistoryWebAppURLWithoutScheme(
+      Configuration conf) {
+    InetSocketAddress address = null;
+    if (HttpConfig.isSecure()) {
+      address =
+          conf.getSocketAddr(JHAdminConfig.MR_HISTORY_WEBAPP_HTTPS_ADDRESS,
+              JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_ADDRESS,
+              JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_PORT);
+    } else {
+      address =
+          conf.getSocketAddr(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+              JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS,
+              JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT);    }
+    address = NetUtils.getConnectAddress(address);
+    StringBuffer sb = new StringBuffer();
+    InetAddress resolved = address.getAddress();
+    if (resolved == null || resolved.isAnyLocalAddress() || 
+        resolved.isLoopbackAddress()) {
+      String lh = address.getHostName();
+      try {
+        lh = InetAddress.getLocalHost().getCanonicalHostName();
+      } catch (UnknownHostException e) {
+        //Ignore and fallback.
+      }
+      sb.append(lh);
+    } else {
+      sb.append(address.getHostName());
+    }
+    sb.append(":").append(address.getPort());
+    return sb.toString();
+  }
 
 }
