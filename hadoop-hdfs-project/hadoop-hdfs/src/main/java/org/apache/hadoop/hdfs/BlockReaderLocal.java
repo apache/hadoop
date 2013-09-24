@@ -548,46 +548,28 @@ class BlockReaderLocal implements BlockReader {
   }
 
   @Override
-  public boolean readZeroCopy(HdfsZeroCopyCursor cursor,
-        LocatedBlock curBlock, long blockPos, int toRead,
-        ClientMmapManager mmapManager) {
+  public ClientMmap getClientMmap(LocatedBlock curBlock,
+      ClientMmapManager mmapManager) {
     if (clientMmap == null) {
       if (mmapDisabled) {
-        return false;
+        return null;
       }
       try {
         clientMmap = mmapManager.fetch(datanodeID, block, dataIn);
         if (clientMmap == null) {
           mmapDisabled = true;
-          return false;
+          return null;
         }
       } catch (InterruptedException e) {
         LOG.error("Interrupted while setting up mmap for " + filename, e);
         Thread.currentThread().interrupt();
-        return false;
+        return null;
       } catch (IOException e) {
         LOG.error("unable to set up mmap for " + filename, e);
         mmapDisabled = true;
-        return false;
+        return null;
       }
     }
-    long limit = blockPos + toRead;
-    if (limit > Integer.MAX_VALUE) {
-      /*
-       * In Java, ByteBuffers use a 32-bit length, capacity, offset, etc.
-       * This limits our mmap'ed regions to 2 GB in length.
-       * TODO: we can implement zero-copy for larger blocks by doing multiple
-       * mmaps.
-       */
-      mmapDisabled = true;
-      clientMmap.unref();
-      clientMmap = null;
-      return false;
-    }
-    ByteBuffer mmapBuffer = clientMmap.getMappedByteBuffer().duplicate();
-    mmapBuffer.position((int)blockPos);
-    mmapBuffer.limit((int)limit);
-    cursor.setMmap(clientMmap, mmapBuffer);
-    return true;
+    return clientMmap;
   }
 }

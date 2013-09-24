@@ -45,6 +45,9 @@ HDFS-4949 (Unreleased)
     HDFS-5236. Change PathBasedCacheDirective APIs to be a single value
     rather than batch. (Contributed by Andrew Wang)
 
+    HDFS-5191. Revisit zero-copy API in FSDataInputStream to make it more
+    intuitive.  (Contributed by Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES

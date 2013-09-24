@@ -36,6 +36,8 @@
 #define EINTERNAL 255 
 #endif
 
+#define ELASTIC_BYTE_BUFFER_POOL_CLASS \
+  "org/apache/hadoop/io/ElasticByteBufferPool"
 
 /** All APIs set errno to meaningful values */
 
@@ -64,6 +66,10 @@ extern  "C" {
     
     struct hdfsFile_internal;
     typedef struct hdfsFile_internal* hdfsFile;
+
+    struct hadoopRzOptions;
+
+    struct hadoopRzBuffer;
 
     /**
      * Determine if a file is open for read.
@@ -683,86 +689,104 @@ extern  "C" {
     int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime);
 
     /**
-     * Create a zero-copy cursor object.
+     * Allocate a zero-copy options structure.
      *
-     * @param file        The file to use for zero-copy reads.
+     * You must free all options structures allocated with this function using
+     * hadoopRzOptionsFree.
      *
-     * @return            The zero-copy cursor, or NULL + errno on failure.
+     * @return            A zero-copy options structure, or NULL if one could
+     *                    not be allocated.  If NULL is returned, errno will
+     *                    contain the error number.
      */
-    struct hadoopZeroCopyCursor* hadoopZeroCopyCursorAlloc(hdfsFile file);
+    struct hadoopRzOptions *hadoopRzOptionsAlloc(void);
 
     /**
-     * Set the fallback buffer which will be used by the zero copy object.
+     * Determine whether we should skip checksums in read0.
      *
-     * You are responsible for ensuring that this buffer stays valid until you
-     * either set a different buffer by calling this function again, or free the
-     * zero-copy cursor.
+     * @param opts        The options structure.
+     * @param skip        Nonzero to skip checksums sometimes; zero to always
+     *                    check them.
      *
-     * @param zcursor     The zero-copy cursor.
-     * @param cbuf        The buffer to use.
-     * @param size        Size of the buffer.
-     *
-     * @return            0 on success.  -1 on error.  Errno will be set on
-     *                    error. 
+     * @return            0 on success; -1 plus errno on failure.
      */
-    int hadoopZeroCopyCursorSetFallbackBuffer(
-              struct hadoopZeroCopyCursor* zcursor, void *cbuf, uint32_t size);
+    int hadoopRzOptionsSetSkipChecksum(
+            struct hadoopRzOptions *opts, int skip);
 
     /**
-     * Set whether our cursor should skip checksums or not.
+     * Set the ByteBufferPool to use with read0.
      *
-     * @param zcursor        The cursor
-     * @param skipChecksums  Nonzero to skip checksums.
+     * @param opts        The options structure.
+     * @param className   If this is NULL, we will not use any
+     *                    ByteBufferPool.  If this is non-NULL, it will be
+     *                    treated as the name of the pool class to use.
+     *                    For example, you can use
+     *                    ELASTIC_BYTE_BUFFER_POOL_CLASS.
      *
-     * @return               -1 on error, 0 otherwise.
+     * @return            0 if the ByteBufferPool class was found and
+     *                    instantiated;
+     *                    -1 plus errno otherwise.
      */
-    int hadoopZeroCopyCursorSetSkipChecksums(
-            struct hadoopZeroCopyCursor* zcursor, int skipChecksums);
+    int hadoopRzOptionsSetByteBufferPool(
+            struct hadoopRzOptions *opts, const char *className);
 
     /**
-     * Set whether our cursor should allow short reads to occur.
-     * Short reads will always occur if there is not enough data to read
-     * (i.e., at EOF), but normally we don't return them when reading other
-     * parts of the file.
+     * Free a hadoopRzOptionsFree structure.
      *
-     * @param zcursor        The cursor
-     * @param skipChecksums  Nonzero to skip checksums.
-     *
-     * @return               -1 on error, 0 otherwise.
+     * @param opts        The options structure to free.
+     *                    Any associated ByteBufferPool will also be freed.
      */
-    int hadoopZeroCopyCursorSetAllowShortReads(
-                struct hadoopZeroCopyCursor* zcursor, int allowShort);
+    void hadoopRzOptionsFree(struct hadoopRzOptions *opts);
 
     /**
-     * Free zero-copy cursor.
+     * Perform a byte buffer read.
+     * If possible, this will be a zero-copy (mmap) read.
      *
-     * This will dispose of the cursor allocated by hadoopZeroCopyCursorAlloc, as
-     * well as any memory map that we have created.  You must be done with the
-     * data returned from hadoopZeroCopyRead before calling this.
+     * @param file       The file to read from.
+     * @param opts       An options structure created by hadoopRzOptionsAlloc.
+     * @param maxLength  The maximum length to read.  We may read fewer bytes
+     *                   than this length.
      *
-     * @param zcursor     The zero-copy cursor.
+     * @return           On success, returns a new hadoopRzBuffer.
+     *                   This buffer will continue to be valid and readable
+     *                   until it is released by readZeroBufferFree.  Failure to
+     *                   release a buffer will lead to a memory leak.
+     *
+     *                   NULL plus an errno code on an error.
+     *                   errno = EOPNOTSUPP indicates that we could not do a
+     *                   zero-copy read, and there was no ByteBufferPool
+     *                   supplied.
      */
-    void hadoopZeroCopyCursorFree(struct hadoopZeroCopyCursor *zcursor);
+    struct hadoopRzBuffer* hadoopReadZero(hdfsFile file,
+            struct hadoopRzOptions *opts, int32_t maxLength);
 
-    /*
-     * Perform a zero-copy read.
+    /**
+     * Determine the length of the buffer returned from readZero.
      *
-     * @param zcursor     The zero-copy cursor object.
-     * @param toRead      The maximum amount to read.
-     * @param data        (out param) on succesful return, a pointer to the
-     *                    data.  This pointer will remain valid until the next
-     *                    call to hadoopZeroCopyRead, or until
-     *                    hadoopZeroCopyCursorFree is called on zcursor.
-     *
-     * @return            -2 if zero-copy is unavailable, and 
-     *                    -1 if there was an error.  errno will be the error.
-     *                    0 if we hit end-of-file without reading anything.
-     *                    The positive number of bytes read otherwise.  Short
-     *                        reads will happen only if EOF is reached.
-     *                    The amount read otherwise.
+     * @param buffer     a buffer returned from readZero.
+     * @return           the length of the buffer.
      */
-    int32_t hadoopZeroCopyRead(struct hadoopZeroCopyCursor *zcursor,
-                             int32_t toRead, const void **data);
+    int32_t hadoopRzBufferLength(const struct hadoopRzBuffer *buffer);
+
+    /**
+     * Get a pointer to the raw buffer returned from readZero.
+     *
+     * To find out how many bytes this buffer contains, call
+     * hadoopRzBufferLength.
+     *
+     * @param buffer     a buffer returned from readZero.
+     * @return           a pointer to the start of the buffer.  This will be
+     *                   NULL when end-of-file has been reached.
+     */
+    const void *hadoopRzBufferGet(const struct hadoopRzBuffer *buffer);
+
+    /**
+     * Release a buffer obtained through readZero.
+     *
+     * @param file       The hdfs stream that created this buffer.  This must be
+     *                   the same stream you called hadoopReadZero on.
+     * @param buffer     The buffer to release.
+     */
+    void hadoopRzBufferFree(hdfsFile file, struct hadoopRzBuffer *buffer);
 
 #ifdef __cplusplus
 }

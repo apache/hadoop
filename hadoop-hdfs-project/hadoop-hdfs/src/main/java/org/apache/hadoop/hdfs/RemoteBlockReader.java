@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.ClientMmap;
 import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -489,9 +490,8 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   }
 
   @Override
-  public boolean readZeroCopy(HdfsZeroCopyCursor buffers,
-      LocatedBlock curBlock, long blockPos, int toRead,
+  public ClientMmap getClientMmap(LocatedBlock curBlock,
       ClientMmapManager mmapManager) {
-    return false;
+    return null;
   }
 }

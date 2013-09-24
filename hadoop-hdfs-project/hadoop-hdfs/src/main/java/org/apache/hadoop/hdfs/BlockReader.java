@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.ByteBufferReadable;
+import org.apache.hadoop.hdfs.client.ClientMmap;
 import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
  * from a single datanode.
  */
 public interface BlockReader extends ByteBufferReadable {
+  
 
   /* same interface as inputStream java.io.InputStream#read()
    * used by DFSInputStream#read()
@@ -85,19 +87,12 @@ public interface BlockReader extends ByteBufferReadable {
   boolean isShortCircuit();
 
   /**
-   * Do a zero-copy read with the current block reader.
+   * Get a ClientMmap object for this BlockReader.
    *
-   * We assume that the calling code has done bounds checking, and won't ask 
-   * us for more bytes than are supposed to be visible (or are in the file).
-   *
-   * @param buffers       The zero-copy buffers object.
    * @param curBlock      The current block.
-   * @param blockPos      Position in the current block to start reading at.
-   * @param toRead        The number of bytes to read from the block.
-   * 
-   * @return              true if the read was done, false otherwise.
+   * @return              The ClientMmap object, or null if mmap is not
+   *                      supported.
    */
-  boolean readZeroCopy(HdfsZeroCopyCursor buffers,
-        LocatedBlock curBlock, long blockPos, int toRead,
+  ClientMmap getClientMmap(LocatedBlock curBlock,
         ClientMmapManager mmapManager);
 }

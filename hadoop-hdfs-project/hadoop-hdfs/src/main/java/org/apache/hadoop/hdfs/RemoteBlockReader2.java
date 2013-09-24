@@ -29,6 +29,7 @@ import java.nio.channels.ReadableByteChannel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.client.ClientMmap;
 import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -454,9 +455,8 @@ public class RemoteBlockReader2  implements BlockReader {
   }
 
   @Override
-  public boolean readZeroCopy(HdfsZeroCopyCursor buffers,
-      LocatedBlock curBlock, long blockPos, int toRead,
+  public ClientMmap getClientMmap(LocatedBlock curBlock,
       ClientMmapManager manager) {
-    return false;
+    return null;
   }
 }

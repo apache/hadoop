@@ -647,3 +647,34 @@ done:
     (*env)->DeleteLocalRef(env, jvalue);
     return jthr;
 }
+
+jthrowable fetchEnumInstance(JNIEnv *env, const char *className,
+                         const char *valueName, jobject *out)
+{
+    jclass clazz;
+    jfieldID fieldId;
+    jobject jEnum;
+    char prettyClass[256];
+
+    clazz = (*env)->FindClass(env, className);
+    if (!clazz) {
+        return newRuntimeError(env, "fetchEnum(%s, %s): failed to find class.",
+                className, valueName);
+    }
+    if (snprintf(prettyClass, sizeof(prettyClass), "L%s;", className)
+          >= sizeof(prettyClass)) {
+        return newRuntimeError(env, "fetchEnum(%s, %s): class name too long.",
+                className, valueName);
+    }
+    fieldId = (*env)->GetStaticFieldID(env, clazz, valueName, prettyClass);
+    if (!fieldId) {
+        return getPendingExceptionAndClear(env);
+    }
+    jEnum = (*env)->GetStaticObjectField(env, clazz, fieldId);
+    if (!jEnum) {
+        return getPendingExceptionAndClear(env);
+    }
+    *out = jEnum;
+    return NULL;
+}
+

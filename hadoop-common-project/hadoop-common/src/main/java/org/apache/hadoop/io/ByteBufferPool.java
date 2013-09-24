@@ -15,30 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.io;
 
-package org.apache.hadoop.fs;
-
-import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-/**
- * Supports zero-copy reads.
- */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public interface SupportsZeroCopy {
+@InterfaceAudience.Public
+@InterfaceStability.Stable
+public interface ByteBufferPool {
   /**
-   * Get a zero-copy cursor to use for zero-copy reads.
+   * Get a new direct ByteBuffer.  The pool can provide this from
+   * removing a buffer from its internal cache, or by allocating a 
+   * new buffer.
    *
-   * @throws IOException
-   *     If there was an error creating the ZeroCopyCursor
-   * @throws UnsupportedOperationException
-   *     If this stream does not support zero-copy reads.
-   *     This is used, for example, when one stream wraps another
-   *     which may or may not support ZCR.
+   * @param direct     Whether the buffer should be direct.
+   * @param minLength  The minimum length the buffer will have.
+   * @return           A new ByteBuffer.  This ByteBuffer must be direct.
+   *                   Its capacity can be less than what was requested, but
+   *                   must be at least 1 byte.
    */
-  public ZeroCopyCursor createZeroCopyCursor()
-      throws IOException, ZeroCopyUnavailableException;
+  ByteBuffer getBuffer(boolean direct, int length);
+
+  /**
+   * Release a buffer back to the pool.
+   * The pool may choose to put this buffer into its cache.
+   *
+   * @param buffer    a direct bytebuffer
+   */
+  void putBuffer(ByteBuffer buffer);
 }

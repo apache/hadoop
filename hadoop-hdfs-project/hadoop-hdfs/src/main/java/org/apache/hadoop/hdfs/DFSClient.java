@@ -2610,7 +2610,8 @@ public class DFSClient implements java.io.Closeable {
     return defaultWriteCachingStrategy;
   }
 
-  ClientMmapManager getMmapManager() {
+  @VisibleForTesting
+  public ClientMmapManager getMmapManager() {
     return mmapManager;
   }
 }

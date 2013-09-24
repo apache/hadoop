@@ -140,6 +140,21 @@ int javaObjectIsOfClass(JNIEnv *env, jobject obj, const char *name);
 jthrowable hadoopConfSetStr(JNIEnv *env, jobject jConfiguration,
         const char *key, const char *value);
 
+/**
+ * Fetch an instance of an Enum.
+ *
+ * @param env               The JNI environment.
+ * @param className         The enum class name.
+ * @param valueName         The name of the enum value
+ * @param out               (out param) on success, a local reference to an
+ *                          instance of the enum object.  (Since Java enums are
+ *                          singletones, this is also the only instance.)
+ *
+ * @return                  NULL on success; exception otherwise
+ */
+jthrowable fetchEnumInstance(JNIEnv *env, const char *className,
+                             const char *valueName, jobject *out);
+
 #endif /*LIBHDFS_JNI_HELPER_H*/
 
 /**

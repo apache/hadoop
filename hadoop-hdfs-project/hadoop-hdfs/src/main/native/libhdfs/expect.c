@@ -32,6 +32,22 @@ int expectFileStats(hdfsFile file,
 {
     struct hdfsReadStatistics *stats = NULL;
     EXPECT_ZERO(hdfsFileGetReadStatistics(file, &stats));
+    fprintf(stderr, "expectFileStats(expectedTotalBytesRead=%"PRId64", "
+            "expectedTotalLocalBytesRead=%"PRId64", "
+            "expectedTotalShortCircuitBytesRead=%"PRId64", "
+            "expectedTotalZeroCopyBytesRead=%"PRId64", "
+            "totalBytesRead=%"PRId64", "
+            "totalLocalBytesRead=%"PRId64", "
+            "totalShortCircuitBytesRead=%"PRId64", "
+            "totalZeroCopyBytesRead=%"PRId64")\n",
+            expectedTotalBytesRead,
+            expectedTotalLocalBytesRead,
+            expectedTotalShortCircuitBytesRead,
+            expectedTotalZeroCopyBytesRead,
+            stats->totalBytesRead,
+            stats->totalLocalBytesRead,
+            stats->totalShortCircuitBytesRead,
+            stats->totalZeroCopyBytesRead);
     if (expectedTotalBytesRead != UINT64_MAX) {
         EXPECT_INT64_EQ(expectedTotalBytesRead, stats->totalBytesRead);
     }

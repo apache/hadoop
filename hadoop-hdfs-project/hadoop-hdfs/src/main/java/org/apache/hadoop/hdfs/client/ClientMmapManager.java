@@ -361,6 +361,10 @@ public class ClientMmapManager implements Closeable {
       }
       waitable.provide(mmap);
     }
+    if (LOG.isDebugEnabled()) {
+      LOG.info("created a new ClientMmap for block " + key.block +
+          " on datanode " + key.datanode);
+    }
     return mmap;
   }
 
@@ -403,8 +407,10 @@ public class ClientMmapManager implements Closeable {
     finally {
       lock.unlock();
     }
-    LOG.debug("reusing existing mmap with datanodeID=" + datanodeID +
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("reusing existing mmap with datanodeID=" + datanodeID +
               ", " + "block=" + block);
+    }
     return mmap;
   }
 

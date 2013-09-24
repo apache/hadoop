@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.ZeroCopyUnavailableException;
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 @InterfaceStability.Unstable
 public abstract class FSInputStream extends InputStream
-    implements Seekable, PositionedReadable, SupportsZeroCopy {
+    implements Seekable, PositionedReadable {
   /**
    * Seek to the given offset from the start of the file.
    * The next read() will be from that location.  Can't
@@ -87,12 +87,5 @@ public abstract class FSInputStream extends InputStream
   public void readFully(long position, byte[] buffer)
     throws IOException {
     readFully(position, buffer, 0, buffer.length);
-  }
-
-  @Override
-  public ZeroCopyCursor createZeroCopyCursor() 
-      throws IOException, ZeroCopyUnavailableException {
-    throw new ZeroCopyUnavailableException("zero copy is not implemented " +
-                                           "for this filesystem type.");
   }
 }

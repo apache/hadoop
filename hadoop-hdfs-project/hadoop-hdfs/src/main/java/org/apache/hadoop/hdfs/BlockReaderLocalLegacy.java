@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.apache.hadoop.hdfs.client.ClientMmap;
 import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -705,9 +706,8 @@ class BlockReaderLocalLegacy implements BlockReader {
   }
 
   @Override
-  public boolean readZeroCopy(HdfsZeroCopyCursor buffers,
-      LocatedBlock curBlock, long blockPos, int toRead,
+  public ClientMmap getClientMmap(LocatedBlock curBlock,
       ClientMmapManager mmapManager) {
-    return false;
+    return null;
   }
 }

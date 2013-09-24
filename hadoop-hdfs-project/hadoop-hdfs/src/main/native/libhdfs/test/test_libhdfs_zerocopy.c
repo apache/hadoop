@@ -81,40 +81,49 @@ static void printBuf(const uint8_t *buf, size_t len)
 static int doTestZeroCopyReads(hdfsFS fs, const char *fileName)
 {
     hdfsFile file = NULL;
-    struct hadoopZeroCopyCursor *zcursor = NULL;
-    uint8_t *backingBuffer = NULL, *block;
-    const void *zcPtr;
+    struct hadoopRzOptions *opts = NULL;
+    struct hadoopRzBuffer *buffer = NULL;
+    uint8_t *block;
 
     file = hdfsOpenFile(fs, fileName, O_RDONLY, 0, 0, 0);
     EXPECT_NONNULL(file);
-    zcursor = hadoopZeroCopyCursorAlloc(file);
-    EXPECT_NONNULL(zcursor);
+    opts = hadoopRzOptionsAlloc();
+    EXPECT_NONNULL(opts);
+    EXPECT_ZERO(hadoopRzOptionsSetSkipChecksum(opts, 1));
     /* haven't read anything yet */
     EXPECT_ZERO(expectFileStats(file, 0LL, 0LL, 0LL, 0LL));
     block = getZeroCopyBlockData(0);
     EXPECT_NONNULL(block);
     /* first read is half of a block. */
+    buffer = hadoopReadZero(file, opts, TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2);
+    EXPECT_NONNULL(buffer);
     EXPECT_INT_EQ(TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2,
-          hadoopZeroCopyRead(zcursor,
-                  TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2, &zcPtr));
-    EXPECT_ZERO(memcmp(zcPtr, block, TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2));
+          hadoopRzBufferLength(buffer));
+    EXPECT_ZERO(memcmp(hadoopRzBufferGet(buffer), block,
+          TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2));
+    hadoopRzBufferFree(file, buffer);
     /* read the next half of the block */
+    buffer = hadoopReadZero(file, opts, TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2);
+    EXPECT_NONNULL(buffer);
     EXPECT_INT_EQ(TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2,
-          hadoopZeroCopyRead(zcursor,
-                  TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2, &zcPtr));
-    EXPECT_ZERO(memcmp(zcPtr, block + (TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2),
-                       TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2));
+          hadoopRzBufferLength(buffer));
+    EXPECT_ZERO(memcmp(hadoopRzBufferGet(buffer),
+          block + (TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2),
+          TEST_ZEROCOPY_FULL_BLOCK_SIZE / 2));
+    hadoopRzBufferFree(file, buffer);
     free(block);
     EXPECT_ZERO(expectFileStats(file, TEST_ZEROCOPY_FULL_BLOCK_SIZE, 
               TEST_ZEROCOPY_FULL_BLOCK_SIZE,
               TEST_ZEROCOPY_FULL_BLOCK_SIZE,
               TEST_ZEROCOPY_FULL_BLOCK_SIZE));
     /* Now let's read just a few bytes. */
-    EXPECT_INT_EQ(SMALL_READ_LEN,
-                  hadoopZeroCopyRead(zcursor, SMALL_READ_LEN, &zcPtr));
+    buffer = hadoopReadZero(file, opts, SMALL_READ_LEN);
+    EXPECT_NONNULL(buffer);
+    EXPECT_INT_EQ(SMALL_READ_LEN, hadoopRzBufferLength(buffer));
     block = getZeroCopyBlockData(1);
     EXPECT_NONNULL(block);
-    EXPECT_ZERO(memcmp(block, zcPtr, SMALL_READ_LEN));
+    EXPECT_ZERO(memcmp(block, hadoopRzBufferGet(buffer), SMALL_READ_LEN));
+    hadoopRzBufferFree(file, buffer);
     EXPECT_INT_EQ(TEST_ZEROCOPY_FULL_BLOCK_SIZE + SMALL_READ_LEN,
                   hdfsTell(fs, file));
     EXPECT_ZERO(expectFileStats(file,
@@ -123,37 +132,36 @@ static int doTestZeroCopyReads(hdfsFS fs, const char *fileName)
           TEST_ZEROCOPY_FULL_BLOCK_SIZE + SMALL_READ_LEN,
           TEST_ZEROCOPY_FULL_BLOCK_SIZE + SMALL_READ_LEN));
 
-    /* Try to read a full block's worth of data.  This will cross the block
-     * boundary, which means we have to fall back to non-zero-copy reads.
-     * However, because we don't have a backing buffer, the fallback will fail
-     * with EPROTONOSUPPORT. */
-    EXPECT_INT_EQ(-1, 
-          hadoopZeroCopyRead(zcursor, TEST_ZEROCOPY_FULL_BLOCK_SIZE, &zcPtr));
+    /* Clear 'skip checksums' and test that we can't do zero-copy reads any
+     * more.  Since there is no ByteBufferPool set, we should fail with
+     * EPROTONOSUPPORT.
+     */
+    EXPECT_ZERO(hadoopRzOptionsSetSkipChecksum(opts, 0));
+    EXPECT_NULL(hadoopReadZero(file, opts, TEST_ZEROCOPY_FULL_BLOCK_SIZE));
     EXPECT_INT_EQ(EPROTONOSUPPORT, errno);
 
-    /* Now set a backing buffer and try again.  It should succeed this time. */
-    backingBuffer = malloc(ZC_BUF_LEN);
-    EXPECT_NONNULL(backingBuffer);
-    EXPECT_ZERO(hadoopZeroCopyCursorSetFallbackBuffer(zcursor,
-                                          backingBuffer, ZC_BUF_LEN));
-    EXPECT_INT_EQ(TEST_ZEROCOPY_FULL_BLOCK_SIZE, 
-          hadoopZeroCopyRead(zcursor, TEST_ZEROCOPY_FULL_BLOCK_SIZE, &zcPtr));
+    /* Now set a ByteBufferPool and try again.  It should succeed this time. */
+    EXPECT_ZERO(hadoopRzOptionsSetByteBufferPool(opts,
+          ELASTIC_BYTE_BUFFER_POOL_CLASS));
+    buffer = hadoopReadZero(file, opts, TEST_ZEROCOPY_FULL_BLOCK_SIZE);
+    EXPECT_NONNULL(buffer);
+    EXPECT_INT_EQ(TEST_ZEROCOPY_FULL_BLOCK_SIZE, hadoopRzBufferLength(buffer));
     EXPECT_ZERO(expectFileStats(file,
           (2 * TEST_ZEROCOPY_FULL_BLOCK_SIZE) + SMALL_READ_LEN,
           (2 * TEST_ZEROCOPY_FULL_BLOCK_SIZE) + SMALL_READ_LEN,
           (2 * TEST_ZEROCOPY_FULL_BLOCK_SIZE) + SMALL_READ_LEN,
           TEST_ZEROCOPY_FULL_BLOCK_SIZE + SMALL_READ_LEN));
-    EXPECT_ZERO(memcmp(block + SMALL_READ_LEN, zcPtr,
+    EXPECT_ZERO(memcmp(block + SMALL_READ_LEN, hadoopRzBufferGet(buffer),
         TEST_ZEROCOPY_FULL_BLOCK_SIZE - SMALL_READ_LEN));
     free(block);
     block = getZeroCopyBlockData(2);
     EXPECT_NONNULL(block);
-    EXPECT_ZERO(memcmp(block, zcPtr +
+    EXPECT_ZERO(memcmp(block, hadoopRzBufferGet(buffer) +
         (TEST_ZEROCOPY_FULL_BLOCK_SIZE - SMALL_READ_LEN), SMALL_READ_LEN));
+    hadoopRzBufferFree(file, buffer);
     free(block);
-    hadoopZeroCopyCursorFree(zcursor);
+    hadoopRzOptionsFree(opts);
     EXPECT_ZERO(hdfsCloseFile(fs, file));
-    free(backingBuffer);
     return 0;
 }
 
