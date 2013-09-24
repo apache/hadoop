@@ -327,6 +327,9 @@ Release 2.2.0 - UNRELEASED
 
     HDFS-5139. Remove redundant -R option from setrep.
 
+    HDFS-5251. Race between the initialization of NameNode and the http
+    server. (Haohui Mai via suresh)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
