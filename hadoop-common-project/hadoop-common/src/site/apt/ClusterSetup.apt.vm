@@ -311,7 +311,7 @@ Hadoop MapReduce Next Generation - Cluster Setup
 | | | Only applicable if log-aggregation is enabled. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.nodemanager.aux-services>>> | | |
-| | mapreduce.shuffle  | |
+| | mapreduce_shuffle  | |
 | | | Shuffle service that needs to be set for Map Reduce applications. |
 *-------------------------+-------------------------+------------------------+
 
