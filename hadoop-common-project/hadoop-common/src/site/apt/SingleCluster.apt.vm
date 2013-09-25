@@ -140,7 +140,7 @@ Add the following configs to your <<<yarn-site.xml>>>
 
   <property>
     <name>yarn.nodemanager.aux-services</name>
-    <value>mapreduce.shuffle</value>
+    <value>mapreduce_shuffle</value>
     <description>shuffle service that needs to be set for Map Reduce to run </description>
   </property>
 +---+

@@ -56,6 +56,18 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+Release 2.1.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
     MAPREDUCE-5504. mapred queue -info inconsistent with types (Kousuke Saruta
     via tgraves)
 

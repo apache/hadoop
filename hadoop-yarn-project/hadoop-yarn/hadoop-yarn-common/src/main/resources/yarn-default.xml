@@ -705,9 +705,10 @@
   </property>
 
   <property>
+    <description>the valid service name should only contain a-zA-Z0-9_ and can not start with numbers</description>
     <name>yarn.nodemanager.aux-services</name>
     <value></value>
-    <!-- <value>mapreduce.shuffle</value> -->
+    <!--<value>mapreduce_shuffle</value>-->
   </property>
 
   <property>
@@ -763,7 +764,7 @@
   
   <!--Map Reduce configuration-->
   <property>
-    <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+    <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
     <value>org.apache.hadoop.mapred.ShuffleHandler</value>
   </property>
 

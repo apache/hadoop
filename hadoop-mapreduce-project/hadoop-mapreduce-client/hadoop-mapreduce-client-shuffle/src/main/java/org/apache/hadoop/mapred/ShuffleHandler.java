@@ -146,7 +146,7 @@ public class ShuffleHandler extends AuxiliaryService {
   private ReadaheadPool readaheadPool = ReadaheadPool.getInstance();
 
   public static final String MAPREDUCE_SHUFFLE_SERVICEID =
-      "mapreduce.shuffle";
+      "mapreduce_shuffle";
 
   private static final Map<String,String> userRsrc =
     new ConcurrentHashMap<String,String>();
