@@ -294,9 +294,11 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0, applicationAttempt.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
     if (UserGroupInformation.isSecurityEnabled()) {
-      verify(clientToAMTokenManager).registerApplication(
+      verify(clientToAMTokenManager).createMasterKey(
           applicationAttempt.getAppAttemptId());
-      assertNotNull(applicationAttempt.createClientToken("some client"));
+      // can't create ClientToken as at this time ClientTokenMasterKey has
+      // not been registered in the SecretManager
+      assertNull(applicationAttempt.createClientToken("some client"));
     }
     assertNull(applicationAttempt.createClientToken(null));
     assertNotNull(applicationAttempt.getAMRMToken());
@@ -428,7 +430,11 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.LAUNCHED, 
         applicationAttempt.getAppAttemptState());
     assertEquals(container, applicationAttempt.getMasterContainer());
-    
+    if (UserGroupInformation.isSecurityEnabled()) {
+      // ClientTokenMasterKey has been registered in SecretManager, it's able to
+      // create ClientToken now
+      assertNotNull(applicationAttempt.createClientToken("some client"));
+    }
     // TODO - need to add more checks relevant to this state
   }
 
@@ -561,6 +567,11 @@ public class TestRMAppAttemptTransitions {
   }
   
   private void launchApplicationAttempt(Container container) {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      // Before LAUNCHED state, can't create ClientToken as at this time
+      // ClientTokenMasterKey has not been registered in the SecretManager
+      assertNull(applicationAttempt.createClientToken("some client"));
+    }
     applicationAttempt.handle(
         new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(), 
             RMAppAttemptEventType.LAUNCHED));

@@ -501,6 +501,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     proxiedTrackingUrl = origTrackingUrl;
   }
 
+  // This is only used for RMStateStore. Normal operation must invoke the secret
+  // manager to get the key and not use the local key directly.
   @Override
   public SecretKey getClientTokenMasterKey() {
     return this.clientTokenMasterKey;
@@ -734,9 +736,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           .registerAppAttempt(appAttempt.applicationAttemptId);
 
       if (UserGroupInformation.isSecurityEnabled()) {
-        appAttempt.clientTokenMasterKey = appAttempt.rmContext
-            .getClientToAMTokenSecretManager()
-            .registerApplication(appAttempt.applicationAttemptId);
+        appAttempt.clientTokenMasterKey =
+            appAttempt.rmContext.getClientToAMTokenSecretManager()
+              .createMasterKey(appAttempt.applicationAttemptId);
       }
 
       // create AMRMToken
@@ -922,6 +924,12 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
                             RMAppAttemptEvent event) {
       // Register with AMLivelinessMonitor
       appAttempt.attemptLaunched();
+
+      // register the ClientTokenMasterKey after it is saved in the store,
+      // otherwise client may hold an invalid ClientToken after RM restarts.
+      appAttempt.rmContext.getClientToAMTokenSecretManager()
+      .registerApplication(appAttempt.getAppAttemptId(),
+        appAttempt.getClientTokenMasterKey());
     }
   }
   

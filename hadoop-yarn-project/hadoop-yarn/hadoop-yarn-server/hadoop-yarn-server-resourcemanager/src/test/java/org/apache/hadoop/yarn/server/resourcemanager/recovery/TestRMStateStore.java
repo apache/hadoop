@@ -289,7 +289,7 @@ public class TestRMStateStore extends ClientBaseWithFixes{
     HashSet<Token<?>> attemptTokenSet1 = new HashSet<Token<?>>();
     attemptTokenSet1.add(appAttemptToken1);
     SecretKey clientTokenKey1 =
-        clientToAMTokenMgr.registerApplication(attemptId1);
+        clientToAMTokenMgr.createMasterKey(attemptId1);
 
     ContainerId containerId1 = storeAttempt(store, attemptId1,
           "container_1352994193343_0001_01_000001",
@@ -305,7 +305,7 @@ public class TestRMStateStore extends ClientBaseWithFixes{
     HashSet<Token<?>> attemptTokenSet2 = new HashSet<Token<?>>();
     attemptTokenSet2.add(appAttemptToken2);
     SecretKey clientTokenKey2 =
-        clientToAMTokenMgr.registerApplication(attemptId2);
+        clientToAMTokenMgr.createMasterKey(attemptId2);
 
     ContainerId containerId2 = storeAttempt(store, attemptId2,
           "container_1352994193343_0001_02_000001",
