@@ -2868,9 +2868,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     BlockInfo b = dir.addBlock(src, inodesInPath, newBlock, targets);
     NameNode.stateChangeLog.info("BLOCK* allocateBlock: " + src + ". "
         + getBlockPoolId() + " " + b);
-    for (DatanodeStorageInfo storage : targets) {
-      storage.getDatanodeDescriptor().incBlocksScheduled();
-    }
+    DatanodeStorageInfo.incrementBlocksScheduled(targets);
     return b;
   }
 

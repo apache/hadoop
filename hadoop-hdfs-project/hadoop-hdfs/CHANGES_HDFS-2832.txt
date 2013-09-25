@@ -30,3 +30,6 @@ IMPROVEMENTS:
     HDFS-5232. Protocol changes to transmit StorageUuid. (Arpit Agarwal)
 
     HDFS-5233. Use Datanode UUID to identify Datanodes. (Arpit Agarwal)
+
+    HDFS-5222. Move block schedule information from DatanodeDescriptor to
+    DatanodeStorageInfo.  (szetszwo)

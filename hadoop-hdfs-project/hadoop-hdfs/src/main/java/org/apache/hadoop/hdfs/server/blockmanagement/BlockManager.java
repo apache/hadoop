@@ -1328,10 +1328,7 @@ public class BlockManager {
           // Add block to the to be replicated list
           rw.srcNode.addBlockToBeReplicated(block, targets);
           scheduledWork++;
-
-          for (DatanodeStorageInfo storage : targets) {
-            storage.getDatanodeDescriptor().incBlocksScheduled();
-          }
+          DatanodeStorageInfo.incrementBlocksScheduled(targets);
 
           // Move the block-replication into a "pending" state.
           // The reason we use 'pending' is so we can retry
@@ -2621,10 +2618,10 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   @VisibleForTesting
   void addBlock(DatanodeDescriptor node, String storageID, Block block, String delHint)
       throws IOException {
-    // decrement number of blocks scheduled to this datanode.
+    // Decrement number of blocks scheduled to this storage.
     // for a retry request (of DatanodeProtocol#blockReceivedAndDeleted with 
     // RECEIVED_BLOCK), we currently also decrease the approximate number. 
-    node.decBlocksScheduled();
+    node.getStorageInfo(storageID).decrementBlocksScheduled();
 
     // get the deletion hint node
     DatanodeDescriptor delHintNode = null;

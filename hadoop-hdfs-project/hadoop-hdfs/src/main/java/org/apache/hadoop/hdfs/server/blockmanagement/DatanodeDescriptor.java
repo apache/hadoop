@@ -125,15 +125,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /** A set of blocks to be invalidated by this datanode */
   private LightWeightHashSet<Block> invalidateBlocks = new LightWeightHashSet<Block>();
 
-  /* Variables for maintaining number of blocks scheduled to be written to
-   * this datanode. This count is approximate and might be slightly bigger
-   * in case of errors (e.g. datanode does not report if an error occurs
-   * while writing the block).
-   */
-  private int currApproxBlocksScheduled = 0;
-  private int prevApproxBlocksScheduled = 0;
-  private long lastBlocksScheduledRollTime = 0;
-  private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
   private int volumeFailures = 0;
   
   /** 
@@ -313,9 +304,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     setLastUpdate(Time.now());    
     this.volumeFailures = volFailures;
     for(DatanodeStorageInfo storage : getStorageInfos()) {
-      storage.receivedHeartbeat();
+      storage.receivedHeartbeat(getLastUpdate());
     }
-    rollBlocksScheduled(getLastUpdate());
   }
 
   private static class BlockIterator implements Iterator<BlockInfo> {
@@ -437,38 +427,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * to this datanode.
    */
   public int getBlocksScheduled() {
-    return currApproxBlocksScheduled + prevApproxBlocksScheduled;
-  }
-  
-  /**
-   * Increments counter for number of blocks scheduled. 
-   */
-  public void incBlocksScheduled() {
-    currApproxBlocksScheduled++;
-  }
-  
-  /**
-   * Decrements counter for number of blocks scheduled.
-   */
-  void decBlocksScheduled() {
-    if (prevApproxBlocksScheduled > 0) {
-      prevApproxBlocksScheduled--;
-    } else if (currApproxBlocksScheduled > 0) {
-      currApproxBlocksScheduled--;
-    } 
-    // its ok if both counters are zero.
-  }
-  
-  /**
-   * Adjusts curr and prev number of blocks scheduled every few minutes.
-   */
-  private void rollBlocksScheduled(long now) {
-    if ((now - lastBlocksScheduledRollTime) > 
-        BLOCKS_SCHEDULED_ROLL_INTERVAL) {
-      prevApproxBlocksScheduled = currApproxBlocksScheduled;
-      currApproxBlocksScheduled = 0;
-      lastBlocksScheduledRollTime = now;
+    int n = 0;
+    for(DatanodeStorageInfo storage : getStorageInfos()) {
+      n += storage.getBlocksScheduled();
     }
+    return n;
   }
   
   @Override
