@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -288,4 +290,33 @@ public class TestAuxServices {
     assertTrue(aux.getServices().isEmpty());
   }
 
+  @Test
+  public void testValidAuxServiceName() {
+    final AuxServices aux = new AuxServices();
+    Configuration conf = new Configuration();
+    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES, new String[] {"Asrv1", "Bsrv_2"});
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Asrv1"),
+        ServiceA.class, Service.class);
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Bsrv_2"),
+        ServiceB.class, Service.class);
+    try {
+      aux.init(conf);
+    } catch (Exception ex) {
+      Assert.fail("Should not receive the exception.");
+    }
+
+    //Test bad auxService Name
+    final AuxServices aux1 = new AuxServices();
+    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES, new String[] {"1Asrv1"});
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "1Asrv1"),
+        ServiceA.class, Service.class);
+    try {
+      aux1.init(conf);
+      Assert.fail("Should receive the exception.");
+    } catch (Exception ex) {
+      assertTrue(ex.getMessage().contains("The ServiceName: 1Asrv1 set in " +
+          "yarn.nodemanager.aux-services is invalid.The valid service name " +
+          "should only contain a-zA-Z0-9_ and can not start with numbers"));
+    }
+  }
 }

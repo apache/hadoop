@@ -325,6 +325,18 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+Release 2.1.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
     HDFS-5139. Remove redundant -R option from setrep.
 
     HDFS-5251. Race between the initialization of NameNode and the http

@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +41,8 @@ import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
 
+import com.google.common.base.Preconditions;
+
 public class AuxServices extends AbstractService
     implements ServiceStateChangeListener, EventHandler<AuxServicesEvent> {
 
@@ -47,6 +50,8 @@ public class AuxServices extends AbstractService
 
   protected final Map<String,AuxiliaryService> serviceMap;
   protected final Map<String,ByteBuffer> serviceMetaData;
+
+  private final Pattern p = Pattern.compile("^[A-Za-z_]+[A-Za-z0-9_]*$");
 
   public AuxServices() {
     super(AuxServices.class.getName());
@@ -90,6 +95,13 @@ public class AuxServices extends AbstractService
         YarnConfiguration.NM_AUX_SERVICES);
     for (final String sName : auxNames) {
       try {
+        Preconditions
+            .checkArgument(
+                validateAuxServiceName(sName),
+                "The ServiceName: " + sName + " set in " +
+                YarnConfiguration.NM_AUX_SERVICES +" is invalid." +
+                "The valid service name should only contain a-zA-Z0-9_ " +
+                "and can not start with numbers");
         Class<? extends AuxiliaryService> sClass = conf.getClass(
               String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, sName), null,
               AuxiliaryService.class);
@@ -199,4 +211,10 @@ public class AuxServices extends AbstractService
     }
   }
 
+  private boolean validateAuxServiceName(String name) {
+    if (name == null || name.trim().isEmpty()) {
+      return false;
+    }
+    return p.matcher(name).matches();
+  }
 }

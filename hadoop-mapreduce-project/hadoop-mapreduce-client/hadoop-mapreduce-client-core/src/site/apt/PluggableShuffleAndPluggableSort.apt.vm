@@ -83,14 +83,14 @@ Hadoop MapReduce Next Generation - Pluggable Shuffle and Pluggable Sort
 *--------------------------------------+---------------------+-----------------+
 | <<Property>>                         | <<Default Value>>   | <<Explanation>> |
 *--------------------------------------+---------------------+-----------------+
-| <<<yarn.nodemanager.aux-services>>> | <<<...,mapreduce.shuffle>>>  | The auxiliary service name |
+| <<<yarn.nodemanager.aux-services>>> | <<<...,mapreduce_shuffle>>>  | The auxiliary service name |
 *--------------------------------------+---------------------+-----------------+
-| <<<yarn.nodemanager.aux-services.mapreduce.shuffle.class>>>   | <<<org.apache.hadoop.mapred.ShuffleHandler>>> | The auxiliary service class to use |
+| <<<yarn.nodemanager.aux-services.mapreduce_shuffle.class>>>   | <<<org.apache.hadoop.mapred.ShuffleHandler>>> | The auxiliary service class to use |
 *--------------------------------------+---------------------+-----------------+
 
   <<IMPORTANT:>> If setting an auxiliary service in addition the default 
-  <<<mapreduce.shuffle>>> service, then a new service key should be added to the
+  <<<mapreduce_shuffle>>> service, then a new service key should be added to the
   <<<yarn.nodemanager.aux-services>>> property, for example <<<mapred.shufflex>>>.
   Then the property defining the corresponding class must be
-  <<<yarn.nodemanager.aux-services.mapreduce.shufflex.class>>>.
+  <<<yarn.nodemanager.aux-services.mapreduce_shufflex.class>>>.
   
