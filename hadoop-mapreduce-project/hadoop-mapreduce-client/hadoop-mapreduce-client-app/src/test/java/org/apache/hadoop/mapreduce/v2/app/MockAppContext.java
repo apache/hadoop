@@ -135,4 +135,11 @@ public class MockAppContext implements AppContext {
   public boolean isLastAMRetry() {
     return false;
   }
+
+  @Override
+  public boolean safeToReportTerminationToUser() {
+    // bogus - Not Required
+    return true;
+  }
+
 }

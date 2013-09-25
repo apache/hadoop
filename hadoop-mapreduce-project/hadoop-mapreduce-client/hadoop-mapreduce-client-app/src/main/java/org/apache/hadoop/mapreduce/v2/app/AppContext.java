@@ -63,4 +63,7 @@ public interface AppContext {
   ClientToAMTokenSecretManager getClientToAMTokenSecretManager();
 
   boolean isLastAMRetry();
+
+  boolean safeToReportTerminationToUser();
+
 }

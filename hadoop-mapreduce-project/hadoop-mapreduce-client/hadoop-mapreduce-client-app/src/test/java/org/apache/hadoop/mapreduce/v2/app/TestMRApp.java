@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobStartEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobUpdatedNodesEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
@@ -372,6 +373,19 @@ public class TestMRApp {
 
     //this must lead to job error
     app.waitForState(job, JobState.ERROR);
+  }
+
+  @SuppressWarnings("resource")
+  @Test
+  public void testJobSuccess() throws Exception {
+    MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true, false);
+    JobImpl job = (JobImpl) app.submit(new Configuration());
+    app.waitForInternalState(job, JobStateInternal.SUCCEEDED);
+    // AM is not unregistered
+    Assert.assertEquals(JobState.RUNNING, job.getState());
+    // imitate that AM is unregistered
+    app.safeToReportTerminationToUser.set(true);
+    app.waitForState(job, JobState.SUCCEEDED);
   }
 
   @Test
