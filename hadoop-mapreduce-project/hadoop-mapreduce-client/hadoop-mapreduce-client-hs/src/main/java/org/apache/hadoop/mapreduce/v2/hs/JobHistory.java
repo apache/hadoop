@@ -321,4 +321,11 @@ public class JobHistory extends AbstractService implements HistoryContext {
     // bogus - Not Required
     return false;
   }
+
+  @Override
+  public boolean safeToReportTerminationToUser() {
+    // bogus - Not Required
+    return true;
+  }
+
 }

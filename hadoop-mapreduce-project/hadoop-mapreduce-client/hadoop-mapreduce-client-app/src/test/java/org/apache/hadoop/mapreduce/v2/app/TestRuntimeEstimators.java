@@ -867,5 +867,12 @@ public class TestRuntimeEstimators {
     public boolean isLastAMRetry() {
       return false;
     }
+
+    @Override
+    public boolean safeToReportTerminationToUser() {
+      // bogus - Not Required
+      return true;
+    }
+
   }
 }

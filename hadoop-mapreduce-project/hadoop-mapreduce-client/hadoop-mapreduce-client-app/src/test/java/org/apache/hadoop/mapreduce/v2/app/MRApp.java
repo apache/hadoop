@@ -136,10 +136,21 @@ public class MRApp extends MRAppMaster {
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, Clock clock, boolean shutdown) {
+    this(maps, reduces, autoComplete, testName, cleanOnStart, 1, clock,
+        shutdown);
+  }
+
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart) {
     this(maps, reduces, autoComplete, testName, cleanOnStart, 1);
   }
-  
+
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, boolean shutdown) {
+    this(maps, reduces, autoComplete, testName, cleanOnStart, 1, shutdown);
+  }
+
   @Override
   protected void initJobCredentialsAndUGI(Configuration conf) {
     // Fake a shuffle secret that normally is provided by the job client.
@@ -170,22 +181,42 @@ public class MRApp extends MRAppMaster {
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, int startCount, boolean shutdown) {
+    this(maps, reduces, autoComplete, testName, cleanOnStart, startCount,
+        new SystemClock(), shutdown);
+  }
+
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, int startCount, Clock clock, boolean shutdown) {
+    this(getApplicationAttemptId(applicationId, startCount), getContainerId(
+      applicationId, startCount), maps, reduces, autoComplete, testName,
+      cleanOnStart, startCount, clock, shutdown);
+  }
+
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount, Clock clock) {
     this(getApplicationAttemptId(applicationId, startCount), getContainerId(
       applicationId, startCount), maps, reduces, autoComplete, testName,
-      cleanOnStart, startCount, clock);
+      cleanOnStart, startCount, clock, true);
+  }
+
+  public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
+      int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, int startCount, boolean shutdown) {
+    this(appAttemptId, amContainerId, maps, reduces, autoComplete, testName,
+        cleanOnStart, startCount, new SystemClock(), shutdown);
   }
 
   public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
       int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount) {
     this(appAttemptId, amContainerId, maps, reduces, autoComplete, testName,
-        cleanOnStart, startCount, new SystemClock());
+        cleanOnStart, startCount, new SystemClock(), true);
   }
 
   public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
       int maps, int reduces, boolean autoComplete, String testName,
-      boolean cleanOnStart, int startCount, Clock clock) {
+      boolean cleanOnStart, int startCount, Clock clock, boolean shutdown) {
     super(appAttemptId, amContainerId, NM_HOST, NM_PORT, NM_HTTP_PORT, clock, System
         .currentTimeMillis(), MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
     this.testWorkDir = new File("target", testName);
@@ -204,6 +235,9 @@ public class MRApp extends MRAppMaster {
     this.maps = maps;
     this.reduces = reduces;
     this.autoComplete = autoComplete;
+    // If safeToReportTerminationToUser is set to true, we can verify whether
+    // the job can reaches the final state when MRAppMaster shuts down.
+    this.safeToReportTerminationToUser.set(shutdown);
   }
 
   @Override
