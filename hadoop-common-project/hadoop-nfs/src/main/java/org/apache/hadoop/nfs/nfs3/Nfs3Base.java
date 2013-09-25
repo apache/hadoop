@@ -19,6 +19,7 @@ package org.apache.hadoop.nfs.nfs3;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mount.MountdBase;
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.RpcUtil;
@@ -38,6 +39,7 @@ public abstract class Nfs3Base {
   public static final Log LOG = LogFactory.getLog(Nfs3Base.class);
   private final MountdBase mountd;
   private final RpcProgram rpcProgram;
+  private final int nfsPort;
   
   public MountdBase getMountBase() {
     return mountd;
@@ -47,9 +49,17 @@ public abstract class Nfs3Base {
     return rpcProgram;
   }
 
+  protected Nfs3Base(MountdBase mountd, RpcProgram program, Configuration conf) {
+    this.mountd = mountd;
+    this.rpcProgram = program;
+    this.nfsPort = conf.getInt("nfs3.server.port", Nfs3Constant.PORT);
+    LOG.info("NFS server port set to: "+nfsPort);
+  }
+
   protected Nfs3Base(MountdBase mountd, RpcProgram program) {
     this.mountd = mountd;
     this.rpcProgram = program;
+    this.nfsPort = Nfs3Constant.PORT;
   }
 
   public void start(boolean register) {
@@ -61,7 +71,7 @@ public abstract class Nfs3Base {
   }
 
   private void startTCPServer() {
-    SimpleTcpServer tcpServer = new SimpleTcpServer(Nfs3Constant.PORT,
+    SimpleTcpServer tcpServer = new SimpleTcpServer(nfsPort,
         rpcProgram, 0) {
       @Override
       public ChannelPipelineFactory getPipelineFactory() {

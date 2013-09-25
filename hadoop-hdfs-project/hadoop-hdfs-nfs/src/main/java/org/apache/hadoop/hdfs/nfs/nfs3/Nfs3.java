@@ -42,7 +42,7 @@ public class Nfs3 extends Nfs3Base {
   }
 
   public Nfs3(List<String> exports, Configuration config) throws IOException {
-    super(new Mountd(exports, config), new RpcProgramNfs3(config));
+    super(new Mountd(exports, config), new RpcProgramNfs3(config), config);
   }
 
   public static void main(String[] args) throws IOException {
