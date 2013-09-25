@@ -76,7 +76,8 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
   public RpcProgramMountd(List<String> exports, Configuration config)
       throws IOException {
     // Note that RPC cache is not enabled
-    super("mountd", "localhost", PORT, PROGRAM, VERSION_1, VERSION_3, 0);
+    super("mountd", "localhost", config.getInt("nfs3.mountd.port", PORT),
+        PROGRAM, VERSION_1, VERSION_3, 0);
     
     this.hostsMatcher = NfsExports.getInstance(config);
     this.mounts = Collections.synchronizedList(new ArrayList<MountEntry>());
