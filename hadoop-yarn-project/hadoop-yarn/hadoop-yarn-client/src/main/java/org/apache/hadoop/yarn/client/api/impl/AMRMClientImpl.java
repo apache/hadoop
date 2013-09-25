@@ -166,7 +166,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   protected void serviceStart() throws Exception {
     final YarnConfiguration conf = new YarnConfiguration(getConfig());
     try {
-      rmClient = ClientRMProxy.createRMProxy(conf, ApplicationMasterProtocol.class);
+      rmClient =
+          ClientRMProxy.createRMProxy(conf, ApplicationMasterProtocol.class);
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }
