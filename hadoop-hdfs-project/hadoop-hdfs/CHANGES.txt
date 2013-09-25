@@ -335,6 +335,9 @@ Release 2.1.2 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-5246. Make Hadoop nfs server port and mount daemon port
+    configurable. (Jinghui Wang via brandonli)
+
   BUG FIXES
 
     HDFS-5139. Remove redundant -R option from setrep.
