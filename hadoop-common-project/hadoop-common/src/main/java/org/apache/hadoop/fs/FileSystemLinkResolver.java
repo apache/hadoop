@@ -72,7 +72,9 @@ public abstract class FileSystemLinkResolver<T> {
     int count = 0;
     T in = null;
     Path p = path;
-    FileSystem fs = FileSystem.getFSofPath(p, filesys.getConf());
+    // Assumes path belongs to this FileSystem.
+    // Callers validate this by passing paths through FileSystem#checkPath
+    FileSystem fs = filesys;
     for (boolean isLink = true; isLink;) {
       try {
         in = doCall(p);

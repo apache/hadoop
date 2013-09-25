@@ -27,6 +27,9 @@ Release 2.1.2 - UNRELEASED
     HADOOP-9776. HarFileSystem.listStatus() returns invalid authority if port
     number is empty. (Shanyu Zhao via ivanmi)
 
+    HADOOP-9761.  ViewFileSystem#rename fails when using DistributedFileSystem.
+    (Andrew Wang via Colin Patrick McCabe)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
