@@ -641,6 +641,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
   private ScheduledFuture failWaitTriggerScheduledFuture;
 
+  private JobState lastNonFinalState = JobState.NEW;
+
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
       Configuration conf, EventHandler eventHandler,
       TaskAttemptListener taskAttemptListener,
@@ -928,7 +930,14 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public JobState getState() {
     readLock.lock();
     try {
-      return getExternalState(getInternalState());
+      JobState state = getExternalState(getInternalState());
+      if (!appContext.safeToReportTerminationToUser()
+          && (state == JobState.SUCCEEDED || state == JobState.FAILED
+          || state == JobState.KILLED || state == JobState.ERROR)) {
+        return lastNonFinalState;
+      } else {
+        return state;
+      }
     } finally {
       readLock.unlock();
     }
@@ -972,11 +981,21 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       if (oldState != getInternalState()) {
         LOG.info(jobId + "Job Transitioned from " + oldState + " to "
                  + getInternalState());
+        rememberLastNonFinalState(oldState);
       }
     }
     
     finally {
       writeLock.unlock();
+    }
+  }
+
+  private void rememberLastNonFinalState(JobStateInternal stateInternal) {
+    JobState state = getExternalState(stateInternal);
+    // if state is not the final state, set lastNonFinalState
+    if (state != JobState.SUCCEEDED && state != JobState.FAILED
+        && state != JobState.KILLED && state != JobState.ERROR) {
+      lastNonFinalState = state;
     }
   }
 
