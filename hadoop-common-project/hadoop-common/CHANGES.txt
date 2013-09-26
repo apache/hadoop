@@ -395,6 +395,9 @@ Release 2.1.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9948. Add a config value to CLITestHelper to skip tests on Windows.
+    (Chuan Liu via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

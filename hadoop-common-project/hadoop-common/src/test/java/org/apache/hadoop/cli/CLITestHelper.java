@@ -21,11 +21,10 @@ package org.apache.hadoop.cli;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.cli.util.*;
-import org.apache.hadoop.cli.util.CLITestCmd;
-import org.apache.hadoop.cli.util.CLICommand;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -369,6 +368,7 @@ public class CLITestHelper {
     CLITestData td = null;
     ArrayList<CLICommand> testCommands = null;
     ArrayList<CLICommand> cleanupCommands = null;
+    boolean runOnWindows = true;
     
     @Override
     public void startDocument() throws SAXException {
@@ -399,6 +399,8 @@ public class CLITestHelper {
         throws SAXException {
       if (qName.equals("description")) {
         td.setTestDesc(charString);
+      } else if (qName.equals("windows")) {
+          runOnWindows = Boolean.parseBoolean(charString);
       } else if (qName.equals("test-commands")) {
         td.setTestCommands(testCommands);
         testCommands = null;
@@ -420,8 +422,11 @@ public class CLITestHelper {
       } else if (qName.equals("expected-output")) {
         comparatorData.setExpectedOutput(charString);
       } else if (qName.equals("test")) {
-        testsFromConfigFile.add(td);
+        if (!Shell.WINDOWS || runOnWindows) {
+          testsFromConfigFile.add(td);
+        }
         td = null;
+        runOnWindows = true;
       } else if (qName.equals("mode")) {
         testMode = charString;
         if (!testMode.equals(TESTMODE_NOCOMPARE) &&
