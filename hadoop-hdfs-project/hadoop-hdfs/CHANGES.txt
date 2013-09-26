@@ -35,6 +35,9 @@ Release 2.1.2 - UNRELEASED
     HDFS-5258. Skip tests in TestHDFSCLI that are not applicable on Windows.
     (Chuan Liu via cnauroth)
 
+    HDFS-5186. TestFileJournalManager fails on Windows due to file handle leaks.
+    (Chuan Liu via cnauroth)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
