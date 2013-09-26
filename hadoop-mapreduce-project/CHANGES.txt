@@ -181,6 +181,8 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5522. Incorrect oreder expected from JobQueueInfo (Jinghui Wang
     via bobby)
 
+    MAPREDUCE-5514. Fix TestRMContainerAllocator. (Zhijie Shen via acmurthy) 
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
