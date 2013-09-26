@@ -994,7 +994,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
   }
 
-  static final class AMRegisteredTransition extends BaseTransition {
+  private static final class AMRegisteredTransition extends BaseTransition {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
@@ -1003,7 +1003,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           = (RMAppAttemptRegistrationEvent) event;
       appAttempt.host = registrationEvent.getHost();
       appAttempt.rpcPort = registrationEvent.getRpcport();
-      appAttempt.origTrackingUrl = registrationEvent.getTrackingurl();
+      appAttempt.origTrackingUrl =
+          sanitizeTrackingUrl(registrationEvent.getTrackingurl());
       appAttempt.proxiedTrackingUrl = 
         appAttempt.generateProxyUriWithoutScheme(appAttempt.origTrackingUrl);
 
@@ -1138,7 +1139,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       RMAppAttemptUnregistrationEvent unregisterEvent
         = (RMAppAttemptUnregistrationEvent) event;
       appAttempt.diagnostics.append(unregisterEvent.getDiagnostics());
-      appAttempt.origTrackingUrl = unregisterEvent.getTrackingUrl();
+      appAttempt.origTrackingUrl =
+          sanitizeTrackingUrl(unregisterEvent.getTrackingUrl());
       appAttempt.proxiedTrackingUrl = 
         appAttempt.generateProxyUriWithoutScheme(appAttempt.origTrackingUrl);
       appAttempt.finalStatus = unregisterEvent.getFinalApplicationStatus();
@@ -1291,5 +1293,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     // Remove the AppAttempt from the AMRMTokenSecretManager
     appAttempt.rmContext.getAMRMTokenSecretManager()
       .applicationMasterFinished(appAttempt.getAppAttemptId());
+  }
+
+  private static String sanitizeTrackingUrl(String url) {
+    return (url == null || url.trim().isEmpty()) ? "N/A" : url;
   }
 }
