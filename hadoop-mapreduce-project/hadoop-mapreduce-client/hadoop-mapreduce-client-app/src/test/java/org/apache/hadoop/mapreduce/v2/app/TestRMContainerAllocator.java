@@ -432,9 +432,19 @@ public class TestRMContainerAllocator {
   }
 
   private static class MyResourceManager extends MockRM {
+
+    private static long fakeClusterTimeStamp = System.currentTimeMillis();
     
     public MyResourceManager(Configuration conf) {
       super(conf);
+    }
+
+    @Override
+    public void serviceStart() throws Exception {
+      super.serviceStart();
+      // Ensure that the application attempt IDs for all the tests are the same
+      // The application attempt IDs will be used as the login user names
+      MyResourceManager.setClusterTimeStamp(fakeClusterTimeStamp);
     }
 
     @Override
