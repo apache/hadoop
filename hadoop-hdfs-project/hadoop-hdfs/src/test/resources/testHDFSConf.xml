@@ -896,6 +896,7 @@
 
     <test> <!-- TESTED -->
       <description>ls: Negative test for quoted /*/* globbing </description>
+      <windows>false</windows>
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -mkdir /dir0/dir1</command>
@@ -915,6 +916,7 @@
 
     <test> <!-- TESTED -->
       <description>ls: Test for quoted globbing </description>
+      <windows>false</windows>
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -mkdir /dir0/\*</command>
@@ -935,6 +937,7 @@
 
     <test> <!-- TESTED -->
       <description>rm: Test for quoted globbing </description>
+      <windows>false</windows>
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -mkdir /dir0/\*</command>
