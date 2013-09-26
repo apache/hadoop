@@ -31,7 +31,7 @@ public interface ByteBufferPool {
    * new buffer.
    *
    * @param direct     Whether the buffer should be direct.
-   * @param minLength  The minimum length the buffer will have.
+   * @param length     The minimum length the buffer will have.
    * @return           A new ByteBuffer.  This ByteBuffer must be direct.
    *                   Its capacity can be less than what was requested, but
    *                   must be at least 1 byte.

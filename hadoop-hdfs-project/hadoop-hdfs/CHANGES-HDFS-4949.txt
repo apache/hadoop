@@ -64,3 +64,5 @@ HDFS-4949 (Unreleased)
 
     HDFS-5210. Fix some failing unit tests on HDFS-4949 branch.
     (Contributed by Andrew Wang)
+
+    HDFS-5266. ElasticByteBufferPool#Key does not implement equals. (cnauroth)

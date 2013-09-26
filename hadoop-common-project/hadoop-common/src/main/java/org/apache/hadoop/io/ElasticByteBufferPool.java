@@ -52,6 +52,16 @@ public final class ElasticByteBufferPool implements ByteBufferPool {
           compare(insertionTime, other.insertionTime).
           result();
     }
+
+    @Override
+    public boolean equals(Object rhs) {
+      try {
+        Key o = (Key)rhs;
+        return (compareTo(o) == 0);
+      } catch (ClassCastException e) {
+        return false;
+      }
+    }
   }
 
   private final TreeMap<Key, ByteBuffer> buffers =
