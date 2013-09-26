@@ -37,6 +37,8 @@ Release 2.1.2 - UNRELEASED
     MAPREDUCE-5505. Clients should be notified job finished only after job
     successfully unregistered (Zhijie Shen via bikas)
 
+    MAPREDUCE-5503. Fixed a test issue in TestMRJobClient. (Jian He via vinodkv)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
