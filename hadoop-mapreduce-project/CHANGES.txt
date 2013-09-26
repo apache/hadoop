@@ -193,6 +193,18 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+Release 2.1.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
     MAPREDUCE-5504. mapred queue -info inconsistent with types (Kousuke Saruta
     via tgraves)
 
@@ -203,6 +215,11 @@ Release 2.2.0 - UNRELEASED
     mapreduce.ssl.enabled to enable https and disabling it by default as MR AM
     needs to set up its own certificates etc and not depend on clusters'.
     (Omkar Vinit Joshi via vinodkv)
+
+    MAPREDUCE-5505. Clients should be notified job finished only after job
+    successfully unregistered (Zhijie Shen via bikas)
+
+    MAPREDUCE-5503. Fixed a test issue in TestMRJobClient. (Jian He via vinodkv)
 
 Release 2.1.1-beta - 2013-09-23
 
@@ -220,6 +237,10 @@ Release 2.1.1-beta - 2013-09-23
     (Jian He via vinodkv)
 
     MAPREDUCE-5379. Include token tracking ids in jobconf. (kkambatl via tucu)
+
+    MAPREDUCE-5523. Added separate configuration properties for https for JHS 
+    without which even when https is enabled, it starts on http port itself.
+    (Omkar Vinit Joshi via vinodkv)
 
   OPTIMIZATIONS
 

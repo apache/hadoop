@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
@@ -39,7 +40,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 /**
  * Embedded Yarn minicluster for testcases that need to interact with a cluster.
@@ -204,8 +205,7 @@ public class MiniYARNCluster extends CompositeService {
               hostname + ":0");
           getConfig().set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
               hostname + ":0");
-          getConfig().set(YarnConfiguration.RM_WEBAPP_ADDRESS,
-              hostname + ":0");
+          WebAppUtils.setRMWebAppHostnameAndPort(getConfig(), hostname, 0);
         }
         resourceManager = new ResourceManager() {
           @Override
@@ -238,7 +238,7 @@ public class MiniYARNCluster extends CompositeService {
       LOG.info("MiniYARN ResourceManager address: " +
                getConfig().get(YarnConfiguration.RM_ADDRESS));
       LOG.info("MiniYARN ResourceManager web address: " +
-               getConfig().get(YarnConfiguration.RM_WEBAPP_ADDRESS));
+               WebAppUtils.getRMWebAppURLWithoutScheme(getConfig()));
     }
 
     @Override
@@ -317,8 +317,9 @@ public class MiniYARNCluster extends CompositeService {
                         MiniYARNCluster.getHostname() + ":0");
         getConfig().set(YarnConfiguration.NM_LOCALIZER_ADDRESS,
                         MiniYARNCluster.getHostname() + ":0");
-        getConfig().set(YarnConfiguration.NM_WEBAPP_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
+        WebAppUtils
+            .setNMWebAppHostNameAndPort(getConfig(),
+                MiniYARNCluster.getHostname(), 0);
 
         // Disable resource checks by default
         if (!getConfig().getBoolean(

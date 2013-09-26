@@ -199,9 +199,9 @@ class OpenFileCtx {
         try {
           synchronized (this) {
             // check if alive again
-          Preconditions.checkState(dumpFile.createNewFile(),
-              "The dump file should not exist: %s", dumpFilePath);
-          dumpOut = new FileOutputStream(dumpFile);
+            Preconditions.checkState(dumpFile.createNewFile(),
+                "The dump file should not exist: %s", dumpFilePath);
+            dumpOut = new FileOutputStream(dumpFile);
           }
         } catch (IOException e) {
           LOG.error("Got failure when creating dump stream " + dumpFilePath, e);
@@ -239,6 +239,10 @@ class OpenFileCtx {
           && nonSequentialWriteInMemory.get() > 0) {
         OffsetRange key = it.next();
         WriteCtx writeCtx = pendingWrites.get(key);
+        if (writeCtx == null) {
+          // This write was just deleted
+          continue;
+        }
         try {
           long dumpedDataSize = writeCtx.dumpData(dumpOut, raf);
           if (dumpedDataSize > 0) {
@@ -262,16 +266,30 @@ class OpenFileCtx {
     @Override
     public void run() {
       while (activeState && enabledDump) {
-        if (nonSequentialWriteInMemory.get() >= DUMP_WRITE_WATER_MARK) {
-          dump();
-        }
-        synchronized (OpenFileCtx.this) {
-          if (nonSequentialWriteInMemory.get() < DUMP_WRITE_WATER_MARK) {
-            try {
-              OpenFileCtx.this.wait();
-            } catch (InterruptedException e) {
+        try {
+          if (nonSequentialWriteInMemory.get() >= DUMP_WRITE_WATER_MARK) {
+            dump();
+          }
+          synchronized (OpenFileCtx.this) {
+            if (nonSequentialWriteInMemory.get() < DUMP_WRITE_WATER_MARK) {
+              try {
+                OpenFileCtx.this.wait();
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Dumper woke up");
+                }
+              } catch (InterruptedException e) {
+                LOG.info("Dumper is interrupted, dumpFilePath= "
+                    + OpenFileCtx.this.dumpFilePath);
+              }
             }
           }
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Dumper checking OpenFileCtx activeState: " + activeState
+                + " enabledDump: " + enabledDump);
+          }
+        } catch (Throwable t) {
+          LOG.info("Dumper get Throwable: " + t + ". dumpFilePath: "
+              + OpenFileCtx.this.dumpFilePath);
         }
       }
     }

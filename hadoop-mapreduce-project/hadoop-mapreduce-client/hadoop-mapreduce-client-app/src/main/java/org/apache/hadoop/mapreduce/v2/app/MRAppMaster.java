@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -208,6 +209,10 @@ public class MRAppMaster extends CompositeService {
   JobStateInternal forcedState = null;
 
   private long recoveredJobStartTime = 0;
+
+  @VisibleForTesting
+  protected AtomicBoolean safeToReportTerminationToUser =
+      new AtomicBoolean(false);
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
@@ -554,8 +559,10 @@ public class MRAppMaster extends CompositeService {
       LOG.info("Calling stop for all the services");
       MRAppMaster.this.stop();
 
-      // TODO: Stop ClientService last, since only ClientService should wait for
-      // some time so clients can know the final states. Will be removed once RM come on.
+      // Except ClientService, other services are already stopped, it is safe to
+      // let clients know the final states. ClientService should wait for some
+      // time so clients have enough time to know the final states.
+      safeToReportTerminationToUser.set(true);
       try {
         Thread.sleep(5000);
       } catch (InterruptedException e) {
@@ -963,6 +970,11 @@ public class MRAppMaster extends CompositeService {
     @Override
     public boolean isLastAMRetry(){
       return isLastAMRetry;
+    }
+
+    @Override
+    public boolean safeToReportTerminationToUser() {
+      return safeToReportTerminationToUser.get();
     }
   }
 

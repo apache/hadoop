@@ -221,6 +221,17 @@ public class TestHarFileSystemBasics {
     hfs.initialize(uri, new Configuration());
   }
 
+  @Test
+  public void testPositiveListFilesNotEndInColon() throws Exception {
+    // re-initialize the har file system with host name
+    // make sure the qualified path name does not append ":" at the end of host name
+    final URI uri = new URI("har://file-localhost" + harPath.toString());
+    harFileSystem.initialize(uri, conf);
+    Path p1 = new Path("har://file-localhost" + harPath.toString());
+    Path p2 = harFileSystem.makeQualified(p1);
+    assertTrue(p2.toUri().toString().startsWith("har://file-localhost/"));
+  }
+
   // ========== Negative:
 
   @Test

@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 public class WebAppProxyServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
@@ -94,7 +95,7 @@ public class WebAppProxyServlet extends HttpServlet {
         conf.getInstances(YarnConfiguration.YARN_TRACKING_URL_GENERATOR,
             TrackingUriPlugin.class);
     this.rmAppPageUrlBase = StringHelper.pjoin(
-        YarnConfiguration.getRMWebAppURL(conf), "cluster", "app");
+        WebAppUtils.getResolvedRMWebAppURLWithScheme(conf), "cluster", "app");
   }
 
   /**

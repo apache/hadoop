@@ -26,7 +26,7 @@ import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 public class AmFilterInitializer extends FilterInitializer {
   private static final String FILTER_NAME = "AM_PROXY_FILTER";
@@ -35,7 +35,7 @@ public class AmFilterInitializer extends FilterInitializer {
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {
     Map<String, String> params = new HashMap<String, String>();
-    String proxy = YarnConfiguration.getProxyHostAndPort(conf);
+    String proxy = WebAppUtils.getProxyHostAndPort(conf);
     String[] parts = proxy.split(":");
     params.put(AmIpFilter.PROXY_HOST, parts[0]);
     params.put(AmIpFilter.PROXY_URI_BASE,

@@ -283,8 +283,9 @@ public class HarFileSystem extends FilterFileSystem {
   private String getHarAuth(URI underLyingUri) {
     String auth = underLyingUri.getScheme() + "-";
     if (underLyingUri.getHost() != null) {
-      auth += underLyingUri.getHost() + ":";
+      auth += underLyingUri.getHost();
       if (underLyingUri.getPort() != -1) {
+        auth += ":";
         auth +=  underLyingUri.getPort();
       }
     }

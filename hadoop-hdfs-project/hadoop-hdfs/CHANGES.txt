@@ -325,7 +325,25 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+Release 2.1.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+    HDFS-5246. Make Hadoop nfs server port and mount daemon port
+    configurable. (Jinghui Wang via brandonli)
+
+  BUG FIXES
+
     HDFS-5139. Remove redundant -R option from setrep.
+
+    HDFS-5251. Race between the initialization of NameNode and the http
+    server. (Haohui Mai via suresh)
 
 Release 2.1.1-beta - 2013-09-23
 
@@ -493,6 +511,8 @@ Release 2.1.1-beta - 2013-09-23
 
     HDFS-5231. Fix broken links in the document of HDFS Federation. (Haohui Mai
     via jing9)
+
+    HDFS-5249. Fix dumper thread which may die silently. (brandonli)
 
 Release 2.1.0-beta - 2013-08-22
 
@@ -946,6 +966,9 @@ Release 2.1.0-beta - 2013-08-22
 
     HDFS-5016. Deadlock in pipeline recovery causes Datanode to be marked dead.
     (suresh)
+
+    HDFS-5228. The RemoteIterator returned by DistributedFileSystem.listFiles
+    may throw NullPointerException.  (szetszwo and cnauroth via szetszwo)
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 

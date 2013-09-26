@@ -26,19 +26,14 @@ import java.util.Arrays;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 
-import com.google.common.base.Joiner;
-
 @Public
 @Evolving
 public class YarnConfiguration extends Configuration {
-
-  private static final Joiner JOINER = Joiner.on("");
 
   private static final String YARN_DEFAULT_XML_FILE = "yarn-default.xml";
   private static final String YARN_SITE_XML_FILE = "yarn-site.xml";
@@ -162,6 +157,14 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_WEBAPP_PORT = 8088;
   public static final String DEFAULT_RM_WEBAPP_ADDRESS = "0.0.0.0:" +
     DEFAULT_RM_WEBAPP_PORT;
+  
+  /** The https address of the RM web application.*/
+  public static final String RM_WEBAPP_HTTPS_ADDRESS =
+      RM_PREFIX + "webapp.https.address";
+  
+  public static final int DEFAULT_RM_WEBAPP_HTTPS_PORT = 8090;
+  public static final String DEFAULT_RM_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
+      + DEFAULT_RM_WEBAPP_HTTPS_PORT;
   
   public static final String RM_RESOURCE_TRACKER_ADDRESS =
     RM_PREFIX + "resource-tracker.address";
@@ -548,6 +551,13 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_WEBAPP_ADDRESS = "0.0.0.0:" +
     DEFAULT_NM_WEBAPP_PORT;
   
+  /** NM Webapp https address.**/
+  public static final String NM_WEBAPP_HTTPS_ADDRESS = NM_PREFIX
+      + "webapp.https.address";
+  public static final int DEFAULT_NM_WEBAPP_HTTPS_PORT = 8044;
+  public static final String DEFAULT_NM_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
+      + DEFAULT_NM_WEBAPP_HTTPS_PORT; 
+  
   /** How often to monitor containers.*/
   public final static String NM_CONTAINER_MON_INTERVAL_MS =
     NM_PREFIX + "container-monitor.interval-ms";
@@ -833,42 +843,4 @@ public class YarnConfiguration extends Configuration {
       this.reloadConfiguration();
     }
   }
-
-  public static String getProxyHostAndPort(Configuration conf) {
-    String addr = conf.get(PROXY_ADDRESS);
-    if(addr == null || addr.isEmpty()) {
-      addr = getRMWebAppHostAndPort(conf);
-    }
-    return addr;
-  }
-  
-  public static String getRMWebAppHostAndPort(Configuration conf) {
-    InetSocketAddress address = conf.getSocketAddr(
-        YarnConfiguration.RM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
-    address = NetUtils.getConnectAddress(address);
-    StringBuffer sb = new StringBuffer();
-    InetAddress resolved = address.getAddress();
-    if (resolved == null || resolved.isAnyLocalAddress() || 
-        resolved.isLoopbackAddress()) {
-      String lh = address.getHostName();
-      try {
-        lh = InetAddress.getLocalHost().getCanonicalHostName();
-      } catch (UnknownHostException e) {
-        //Ignore and fallback.
-      }
-      sb.append(lh);
-    } else {
-      sb.append(address.getHostName());
-    }
-    sb.append(":").append(address.getPort());
-    return sb.toString();
-  }
-  
-  public static String getRMWebAppURL(Configuration conf) {
-    return JOINER.join(HttpConfig.getSchemePrefix(),
-        getRMWebAppHostAndPort(conf));
-  }
-  
 }

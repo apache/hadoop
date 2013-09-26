@@ -18,8 +18,13 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
-import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.*;
-import static org.mockito.Mockito.*;
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.LOADING_EDITS;
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.LOADING_FSIMAGE;
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.SAFEMODE;
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.SAVING_CHECKPOINT;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.List;
@@ -105,6 +110,11 @@ public class TestNameNodeJspHelper {
     Assert.assertTrue(containsMatch(contents,
       SAVING_CHECKPOINT.getDescription()));
     Assert.assertTrue(containsMatch(contents, SAFEMODE.getDescription()));
+  }
+
+  @Test
+  public void testGetRollingUpgradeText() {
+    Assert.assertEquals("", NamenodeJspHelper.getRollingUpgradeText(null));
   }
 
   /**
