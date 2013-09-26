@@ -145,7 +145,7 @@ public class TestNodeStatusUpdater {
       .byteValue() }));
     return masterKey;
   }
-  
+
   private class MyResourceTracker implements ResourceTracker {
 
     private final Context context;
@@ -471,6 +471,7 @@ public class TestNodeStatusUpdater {
     public NodeAction heartBeatNodeAction = NodeAction.NORMAL;
     public NodeAction registerNodeAction = NodeAction.NORMAL;
     public String shutDownMessage = "";
+    public String rmVersion = "3.0.1";
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
@@ -483,6 +484,7 @@ public class TestNodeStatusUpdater {
       response.setContainerTokenMasterKey(createMasterKey());
       response.setNMTokenMasterKey(createMasterKey());
       response.setDiagnosticsMessage(shutDownMessage);
+      response.setRMVersion(rmVersion);
       return response;
     }
     @Override
@@ -1178,6 +1180,44 @@ public class TestNodeStatusUpdater {
     Assert.assertTrue(((MyNodeManager2) nm).isStopped);
     Assert.assertTrue("calculate heartBeatCount based on" +
         " connectionWaitSecs and RetryIntervalSecs", heartBeatID == 2);
+  }
+
+  @Test
+  public void testRMVersionLessThanMinimum() throws InterruptedException {
+    final AtomicInteger numCleanups = new AtomicInteger(0);
+    YarnConfiguration conf = createNMConfig();
+    conf.set(YarnConfiguration.NM_RESOURCEMANAGER_MINIMUM_VERSION, "3.0.0");
+    nm = new NodeManager() {
+      @Override
+      protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+                                                          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+        MyNodeStatusUpdater myNodeStatusUpdater = new MyNodeStatusUpdater(
+            context, dispatcher, healthChecker, metrics);
+        MyResourceTracker2 myResourceTracker2 = new MyResourceTracker2();
+        myResourceTracker2.heartBeatNodeAction = NodeAction.NORMAL;
+        myResourceTracker2.rmVersion = "3.0.0";
+        myNodeStatusUpdater.resourceTracker = myResourceTracker2;
+        return myNodeStatusUpdater;
+      }
+
+      @Override
+      protected void cleanupContainers(NodeManagerEventType eventType) {
+        super.cleanupContainers(NodeManagerEventType.SHUTDOWN);
+        numCleanups.incrementAndGet();
+      }
+    };
+
+    nm.init(conf);
+    nm.start();
+
+    // NM takes a while to reach the STARTED state.
+    int waitCount = 0;
+    while (nm.getServiceState() != STATE.STARTED && waitCount++ != 20) {
+      LOG.info("Waiting for NM to stop..");
+      Thread.sleep(1000);
+    }
+    Assert.assertTrue(nm.getServiceState() == STATE.STARTED);
+    nm.stop();
   }
 
   private class MyNMContext extends NMContext {
