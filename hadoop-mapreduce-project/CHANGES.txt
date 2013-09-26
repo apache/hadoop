@@ -46,6 +46,9 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-5543. In-memory map outputs can be leaked after shuffle completes
     in 0.23 (Jason Lowe via jeagles)
 
+    MAPREDUCE-5513. ConcurrentModificationException in JobControl (Robert
+    Parker via jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
