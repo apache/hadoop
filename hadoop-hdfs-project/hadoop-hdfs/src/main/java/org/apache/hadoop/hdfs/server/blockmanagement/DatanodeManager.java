@@ -887,7 +887,12 @@ public class DatanodeManager {
       // If the network location is invalid, clear the cached mappings
       // so that we have a chance to re-add this DataNode with the
       // correct network location later.
-      dnsToSwitchMapping.reloadCachedMappings();
+      List<String> invalidNodeNames = new ArrayList<String>(3);
+      // clear cache for nodes in IP or Hostname
+      invalidNodeNames.add(nodeReg.getIpAddr());
+      invalidNodeNames.add(nodeReg.getHostName());
+      invalidNodeNames.add(nodeReg.getPeerHostName());
+      dnsToSwitchMapping.reloadCachedMappings(invalidNodeNames);
       throw e;
     }
   }

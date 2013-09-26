@@ -98,6 +98,10 @@ public class TestJobHistoryParsing {
     @Override
     public void reloadCachedMappings() {
     }
+
+    @Override
+    public void reloadCachedMappings(List<String> names) {	
+    }
   }
 
   @Test(timeout = 50000)

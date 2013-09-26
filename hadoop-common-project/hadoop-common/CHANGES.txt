@@ -333,6 +333,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9915.  o.a.h.fs.Stat support on Mac OS X  (Binglin Chang via Colin
     Patrick McCabe)
 
+    HADOOP-9998.  Provide methods to clear only part of the DNSToSwitchMapping.
+    (Junping Du via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
