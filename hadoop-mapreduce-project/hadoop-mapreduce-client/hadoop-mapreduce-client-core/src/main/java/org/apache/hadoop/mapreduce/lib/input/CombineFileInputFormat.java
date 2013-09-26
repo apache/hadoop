@@ -203,13 +203,13 @@ public abstract class CombineFileInputFormat<K, V>
                             maxSize);
     }
     if (minSizeRack != 0 && maxSize != 0 && minSizeRack > maxSize) {
-      throw new IOException("Minimum split size per rack" + minSizeRack +
+      throw new IOException("Minimum split size per rack " + minSizeRack +
                             " cannot be larger than maximum split size " +
                             maxSize);
     }
     if (minSizeRack != 0 && minSizeNode > minSizeRack) {
-      throw new IOException("Minimum split size per node" + minSizeNode +
-                            " cannot be smaller than minimum split " +
+      throw new IOException("Minimum split size per node " + minSizeNode +
+                            " cannot be larger than minimum split " +
                             "size per rack " + minSizeRack);
     }
 

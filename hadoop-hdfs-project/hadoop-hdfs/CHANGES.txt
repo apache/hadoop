@@ -120,6 +120,9 @@ Trunk (Unreleased)
 
     HDFS-4904. Remove JournalService. (Arpit Agarwal via cnauroth)
 
+    HDFS-5041. Add the time of last heartbeat to dead server Web UI (Shinichi
+    Yamashita via brandonli)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -344,6 +347,12 @@ Release 2.1.2 - UNRELEASED
 
     HDFS-5251. Race between the initialization of NameNode and the http
     server. (Haohui Mai via suresh)
+
+    HDFS-5258. Skip tests in TestHDFSCLI that are not applicable on Windows.
+    (Chuan Liu via cnauroth)
+
+    HDFS-5186. TestFileJournalManager fails on Windows due to file handle leaks.
+    (Chuan Liu via cnauroth)
 
 Release 2.1.1-beta - 2013-09-23
 

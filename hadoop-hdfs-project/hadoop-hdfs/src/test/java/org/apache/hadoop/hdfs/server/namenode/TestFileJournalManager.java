@@ -86,24 +86,27 @@ public class TestFileJournalManager {
     EditLogInputStream elis = null;
     try {
       while ((elis = allStreams.poll()) != null) {
-        elis.skipUntil(txId);
-        while (true) {
-          FSEditLogOp op = elis.readOp();
-          if (op == null) {
-            break;
+        try {
+          elis.skipUntil(txId);
+          while (true) {
+            FSEditLogOp op = elis.readOp();
+            if (op == null) {
+              break;
+            }
+            if (abortOnGap && (op.getTransactionId() != txId)) {
+              LOG.info("getNumberOfTransactions: detected gap at txId "
+                  + fromTxId);
+              return numTransactions;
+            }
+            txId = op.getTransactionId() + 1;
+            numTransactions++;
           }
-          if (abortOnGap && (op.getTransactionId() != txId)) {
-            LOG.info("getNumberOfTransactions: detected gap at txId " +
-                fromTxId);
-            return numTransactions;
-          }
-          txId = op.getTransactionId() + 1;
-          numTransactions++;
+        } finally {
+          IOUtils.cleanup(LOG, elis);
         }
       }
     } finally {
       IOUtils.cleanup(LOG, allStreams.toArray(new EditLogInputStream[0]));
-      IOUtils.cleanup(LOG, elis);
     }
     return numTransactions;
   }

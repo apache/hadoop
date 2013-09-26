@@ -269,7 +269,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_SKIP, execTime);
   }
 
-  @Test (timeout = 3000)
+  @Test (timeout = 6000)
   public void testAppend() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();

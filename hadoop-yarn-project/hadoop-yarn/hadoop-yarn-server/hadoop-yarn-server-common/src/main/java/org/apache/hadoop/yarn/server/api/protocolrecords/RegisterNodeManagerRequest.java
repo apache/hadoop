@@ -25,8 +25,10 @@ public interface RegisterNodeManagerRequest {
   NodeId getNodeId();
   int getHttpPort();
   Resource getResource();
+  String getNMVersion();
   
   void setNodeId(NodeId nodeId);
   void setHttpPort(int port);
   void setResource(Resource resource);
+  void setNMVersion(String version);
 }

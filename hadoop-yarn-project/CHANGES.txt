@@ -36,6 +36,9 @@ Release 2.3.0 - UNRELEASED
     YARN-353. Add Zookeeper-based store implementation for RMStateStore.
     (Bikas Saha, Jian He and Karthik Kambatla via hitesh)
 
+    YARN-819. ResourceManager and NodeManager should check for a minimum allowed
+    version (Robert Parker via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -82,6 +85,9 @@ Release 2.1.2 - UNRELEASED
 
     YARN-49. Improve distributed shell application to work on a secure cluster.
     (Vinod Kumar Vavilapalli via hitesh)
+
+    YARN-1157. Fixed ResourceManager UI to behave correctly when apps like
+    distributed-shell do not set tracking urls. (Xuan Gong via vinodkv)
 
 Release 2.1.1-beta - 2013-09-23
 

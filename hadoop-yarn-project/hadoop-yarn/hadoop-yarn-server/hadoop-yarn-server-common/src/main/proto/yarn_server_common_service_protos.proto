@@ -29,6 +29,7 @@ message RegisterNodeManagerRequestProto {
   optional NodeIdProto node_id = 1;
   optional int32 http_port = 3;
   optional ResourceProto resource = 4;
+  optional string nm_version = 5;
 }
 
 message RegisterNodeManagerResponseProto {
@@ -37,6 +38,7 @@ message RegisterNodeManagerResponseProto {
   optional NodeActionProto nodeAction = 3;
   optional int64 rm_identifier = 4;
   optional string diagnostics_message = 5;
+  optional string rm_version = 6;
 }
 
 message NodeHeartbeatRequestProto {
@@ -44,7 +46,6 @@ message NodeHeartbeatRequestProto {
   optional MasterKeyProto last_known_container_token_master_key = 2;
   optional MasterKeyProto last_known_nm_token_master_key = 3;
 }
-
 
 message NodeHeartbeatResponseProto {
   optional int32 response_id = 1;
