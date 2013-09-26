@@ -162,5 +162,12 @@ public class TableMapping extends CachedDNSToSwitchMapping {
         }
       }
     }
+
+    @Override
+    public void reloadCachedMappings(List<String> names) {
+      // TableMapping has to reload all mappings at once, so no chance to 
+      // reload mappings on specific nodes
+      reloadCachedMappings();
+    }
   }
 }

@@ -67,6 +67,10 @@ public class TestRackResolver {
     public void reloadCachedMappings() {
       // nothing to do here, since RawScriptBasedMapping has no cache.
     }
+
+    @Override
+    public void reloadCachedMappings(List<String> names) {
+    }
   }
 
   @Test

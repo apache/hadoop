@@ -152,4 +152,10 @@ public class StaticMapping extends AbstractDNSToSwitchMapping  {
     // reloadCachedMappings does nothing for StaticMapping; there is
     // nowhere to reload from since all data is in memory.
   }
+
+  @Override
+  public void reloadCachedMappings(List<String> names) {
+    // reloadCachedMappings does nothing for StaticMapping; there is
+    // nowhere to reload from since all data is in memory.
+  }
 }

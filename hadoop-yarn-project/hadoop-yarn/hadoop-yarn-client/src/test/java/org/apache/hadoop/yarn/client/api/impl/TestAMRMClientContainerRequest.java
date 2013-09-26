@@ -215,6 +215,10 @@ public class TestAMRMClientContainerRequest {
 
     @Override
     public void reloadCachedMappings() {}
+
+    @Override
+    public void reloadCachedMappings(List<String> names) {
+    }
   }
   
   private void verifyResourceRequest(
