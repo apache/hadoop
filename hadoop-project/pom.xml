@@ -59,6 +59,9 @@
     <hadoop.common.build.dir>${basedir}/../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
+    <!-- avro version -->
+    <avro.version>1.7.4</avro.version>
+
     <!-- jersey version -->
     <jersey.version>1.9</jersey.version>
 
@@ -623,7 +626,7 @@
       <dependency>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro</artifactId>
-        <version>1.7.4</version>
+        <version>${avro.version}</version>
       </dependency>
       <dependency>
         <groupId>net.sf.kosmosfs</groupId>
@@ -791,7 +794,7 @@
         <plugin>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro-maven-plugin</artifactId>
-          <version>1.5.3</version>
+          <version>${avro.version}</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo.jspc</groupId>
