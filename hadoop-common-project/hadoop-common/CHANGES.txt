@@ -398,6 +398,9 @@ Release 2.1.2 - UNRELEASED
     HADOOP-9948. Add a config value to CLITestHelper to skip tests on Windows.
     (Chuan Liu via cnauroth)
 
+    HADOOP-9976. Different versions of avro and avro-maven-plugin (Karthik
+    Kambatla via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
