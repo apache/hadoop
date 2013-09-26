@@ -356,8 +356,11 @@ public class MergeManager<K, V> {
     
     List<MapOutput<K, V>> memory = 
       new ArrayList<MapOutput<K, V>>(inMemoryMergedMapOutputs);
+    inMemoryMergedMapOutputs.clear();
     memory.addAll(inMemoryMapOutputs);
+    inMemoryMapOutputs.clear();
     List<Path> disk = getDiskMapOutputs();
+    onDiskMapOutputs.clear();
     return finalMerge(jobConf, rfs, memory, disk);
   }
 
@@ -671,7 +674,8 @@ public class MergeManager<K, V> {
     }
   }
 
-  private RawKeyValueIterator finalMerge(JobConf job, FileSystem fs,
+  @VisibleForTesting
+  RawKeyValueIterator finalMerge(JobConf job, FileSystem fs,
                                        List<MapOutput<K,V>> inMemoryMapOutputs,
                                        List<Path> onDiskMapOutputs
                                        ) throws IOException {
