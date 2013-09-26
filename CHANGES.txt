@@ -40,6 +40,9 @@ Release 1.3.0 - unreleased
     HDFS-5038. Backport several branch-2 APIs (FileSystem#newInstance, 
     DFSClient#getNamenode, and FileStatus#isDirectory) to branch-1. (jing9)
 
+    HDFS-5245. shouldRetry() in WebHDFSFileSystem generates excessive warnings.
+    (Haohui Mai via jing9)
+
   BUG FIXES
 
     HADOOP-9863. Backport HADOOP-8686 to support BigEndian on ppc64. 

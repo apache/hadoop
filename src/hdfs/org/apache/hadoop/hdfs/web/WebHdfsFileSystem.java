@@ -502,7 +502,11 @@ public class WebHdfsFileSystem extends FileSystem
             return;
           }
         } catch(Exception e) {
-          LOG.warn("Original exception is ", ioe);
+          /**
+           * In this case the retry policy has decided that it won't retry.
+           * Swallow the exception to avoid excessive warnings in the logs.
+           */
+          // LOG.warn("Original exception is ", ioe);
           throw toIOException(e);
         }
       }
