@@ -30,6 +30,7 @@ import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -785,9 +786,13 @@ class NamenodeJspHelper {
        */
 
       generateNodeDataHeader(out, d, suffix, alive, nnHttpPort, nnaddr);
+      long currentTime = Time.now();
+      long timestamp = d.getLastUpdate();
       if (!alive) {
-        out.print("<td class=\"decommissioned\"> " + 
-            d.isDecommissioned() + "\n");
+        out.print("<td class=\"lastcontact\"> "
+            + new Date(timestamp) 
+            + "<td class=\"decommissioned\"> "
+            + d.isDecommissioned() + "\n");
         return;
       }
 
@@ -800,9 +805,6 @@ class NamenodeJspHelper {
       String percentRemaining = fraction2String(d.getRemainingPercent());
 
       String adminState = d.getAdminState().toString();
-
-      long timestamp = d.getLastUpdate();
-      long currentTime = Time.now();
       
       long bpUsed = d.getBlockPoolUsed();
       String percentBpUsed = fraction2String(d.getBlockPoolUsedPercent());
@@ -953,6 +955,8 @@ class NamenodeJspHelper {
                 + "<th " + nodeHeaderStr("node")
                 + "> Node <th " + nodeHeaderStr("address")
                 + "> Transferring<br>Address <th "
+                + nodeHeaderStr("lastcontact")
+                + "> Last <br>Contact <th "
                 + nodeHeaderStr("decommissioned")
                 + "> Decommissioned\n");
 
