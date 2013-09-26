@@ -83,6 +83,9 @@ Release 2.1.2 - UNRELEASED
     YARN-49. Improve distributed shell application to work on a secure cluster.
     (Vinod Kumar Vavilapalli via hitesh)
 
+    YARN-1157. Fixed ResourceManager UI to behave correctly when apps like
+    distributed-shell do not set tracking urls. (Xuan Gong via vinodkv)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
