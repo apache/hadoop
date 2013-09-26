@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -405,6 +406,16 @@ public class SchedulerApp {
       this.reservedContainers.remove(priority);
     }
     
+    // reservedContainer should not be null here
+    if (reservedContainer == null) {
+      String errorMesssage =
+          "Application " + getApplicationId() + " is trying to unreserve "
+              + " on node " + node + ", currently has "
+              + reservedContainers.size() + " at priority " + priority
+              + "; currentReservation " + currentReservation;
+      LOG.warn(errorMesssage);
+      throw new YarnException(errorMesssage);
+    }
     // Reset the re-reservation count
     resetReReservations(priority);
 

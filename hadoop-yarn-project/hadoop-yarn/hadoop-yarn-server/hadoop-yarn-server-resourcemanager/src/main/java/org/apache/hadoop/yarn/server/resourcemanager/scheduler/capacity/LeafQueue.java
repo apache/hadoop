@@ -785,9 +785,10 @@ public class LeafQueue implements CSQueue {
     if (reservedContainer != null) {
       SchedulerApp application = 
           getApplication(reservedContainer.getApplicationAttemptId());
-      return 
-          assignReservedContainer(application, node, reservedContainer, 
-              clusterResource); 
+      synchronized (application) {
+        return assignReservedContainer(application, node, reservedContainer,
+          clusterResource);
+      }
     }
     
     // Try to assign containers to applications in order
