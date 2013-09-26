@@ -139,6 +139,21 @@ public class RegisterNodeManagerRequestPBImpl extends ProtoBase<RegisterNodeMana
     builder.setHttpPort(httpPort);
   }
 
+  @Override
+  public String getNMVersion() {
+    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasNmVersion()) {
+      return "";
+    }
+    return (p.getNmVersion());
+  }
+
+  @Override
+  public void setNMVersion(String version) {
+    maybeInitBuilder();
+    builder.setNmVersion(version);
+  }
+
   private NodeIdPBImpl convertFromProtoFormat(NodeIdProto p) {
     return new NodeIdPBImpl(p);
   }

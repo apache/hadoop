@@ -359,6 +359,14 @@
   </property>
 
   <property>
+    <description>The minimum allowed version of a connecting nodemanager.  The valid values are
+      NONE (no version checking), EqualToRM (the nodemanager's version is equal to
+      or greater than the RM version), or a Version String.</description>
+    <name>yarn.resourcemanager.nodemanager.minimum.version</name>
+    <value>NONE</value>
+  </property>
+
+  <property>
     <description>Enable a set of periodic monitors (specified in
         yarn.resourcemanager.scheduler.monitor.policies) that affect the
         scheduler.</description>
@@ -735,6 +743,14 @@
     <description>Time interval, in seconds, between each NM attempt to connect to RM.</description>
     <name>yarn.nodemanager.resourcemanager.connect.retry_interval.secs</name>
     <value>30</value>
+  </property>
+
+  <property>
+    <description>The minimum allowed version of a resourcemanager that a nodemanager will connect to.  
+      The valid values are NONE (no version checking), EqualToNM (the resourcemanager's version is 
+      equal to or greater than the NM version), or a Version String.</description>
+    <name>yarn.nodemanager.resourcemanager.minimum.version</name>
+    <value>NONE</value>
   </property>
 
   <property>

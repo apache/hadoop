@@ -36,6 +36,9 @@ Release 2.3.0 - UNRELEASED
     YARN-353. Add Zookeeper-based store implementation for RMStateStore.
     (Bikas Saha, Jian He and Karthik Kambatla via hitesh)
 
+    YARN-819. ResourceManager and NodeManager should check for a minimum allowed
+    version (Robert Parker via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES

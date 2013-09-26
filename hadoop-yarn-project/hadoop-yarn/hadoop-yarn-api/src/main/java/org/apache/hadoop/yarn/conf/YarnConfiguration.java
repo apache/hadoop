@@ -362,6 +362,13 @@ public class YarnConfiguration extends Configuration {
   
   public static final long DEFAULT_RM_NMTOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
       24 * 60 * 60;
+
+  public static final String RM_NODEMANAGER_MINIMUM_VERSION =
+      RM_PREFIX + "nodemanager.minimum.version";
+
+  public static final String DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION =
+      "NONE";
+
   ////////////////////////////////
   // Node Manager Configs
   ////////////////////////////////
@@ -459,6 +466,10 @@ public class YarnConfiguration extends Configuration {
   /** Where to store container logs.*/
   public static final String NM_LOG_DIRS = NM_PREFIX + "log-dirs";
   public static final String DEFAULT_NM_LOG_DIRS = "/tmp/logs";
+
+  public static final String NM_RESOURCEMANAGER_MINIMUM_VERSION =
+      NM_PREFIX + "resourcemanager.minimum.version";
+  public static final String DEFAULT_NM_RESOURCEMANAGER_MINIMUM_VERSION = "NONE";
 
   /** Interval at which the delayed token removal thread runs */
   public static final String RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS =
