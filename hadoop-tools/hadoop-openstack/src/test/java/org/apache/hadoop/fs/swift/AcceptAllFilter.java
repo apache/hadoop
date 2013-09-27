@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,35 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
+package org.apache.hadoop.fs.swift;
 
-import java.io.*;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 
 /**
- *  Stream that permits seeking.
+ * A path filter that accepts everything
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface Seekable {
-  /**
-   * Seek to the given offset from the start of the file.
-   * The next read() will be from that location.  Can't
-   * seek past the end of the file.
-   */
-  void seek(long pos) throws IOException;
-  
-  /**
-   * Return the current offset from the start of the file
-   */
-  long getPos() throws IOException;
-
-  /**
-   * Seeks a different copy of the data.  Returns true if 
-   * found a new source, false otherwise.
-   */
-  @InterfaceAudience.Private
-  boolean seekToNewSource(long targetPos) throws IOException;
+public class AcceptAllFilter implements PathFilter {
+  @Override
+  public boolean accept(Path file) {
+    return true;
+  }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,35 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
-
-import java.io.*;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+package org.apache.hadoop.fs.swift.exceptions;
 
 /**
- *  Stream that permits seeking.
+ * Exception raised when an attempt is made to use a closed stream
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface Seekable {
-  /**
-   * Seek to the given offset from the start of the file.
-   * The next read() will be from that location.  Can't
-   * seek past the end of the file.
-   */
-  void seek(long pos) throws IOException;
-  
-  /**
-   * Return the current offset from the start of the file
-   */
-  long getPos() throws IOException;
+public class SwiftConnectionClosedException extends SwiftException {
 
-  /**
-   * Seeks a different copy of the data.  Returns true if 
-   * found a new source, false otherwise.
-   */
-  @InterfaceAudience.Private
-  boolean seekToNewSource(long targetPos) throws IOException;
+  public static final String MESSAGE =
+    "Connection to Swift service has been closed";
+
+  public SwiftConnectionClosedException() {
+    super(MESSAGE);
+  }
+
+  public SwiftConnectionClosedException(String reason) {
+    super(MESSAGE + ": " + reason);
+  }
+
 }

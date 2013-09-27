@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,35 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
 
-import java.io.*;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+package org.apache.hadoop.fs.swift.auth;
 
 /**
- *  Stream that permits seeking.
+ * Class that represents authentication request to Openstack Keystone.
+ * Contains basic authentication information.
+ * THIS FILE IS MAPPED BY JACKSON TO AND FROM JSON.
+ * DO NOT RENAME OR MODIFY FIELDS AND THEIR ACCESSORS.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface Seekable {
-  /**
-   * Seek to the given offset from the start of the file.
-   * The next read() will be from that location.  Can't
-   * seek past the end of the file.
-   */
-  void seek(long pos) throws IOException;
-  
-  /**
-   * Return the current offset from the start of the file
-   */
-  long getPos() throws IOException;
+public class AuthenticationRequest {
 
   /**
-   * Seeks a different copy of the data.  Returns true if 
-   * found a new source, false otherwise.
+   * tenant name
    */
-  @InterfaceAudience.Private
-  boolean seekToNewSource(long targetPos) throws IOException;
+  protected String tenantName;
+
+  public AuthenticationRequest() {
+  }
+
+  /**
+   * @return tenant name for Keystone authorization
+   */
+  public String getTenantName() {
+    return tenantName;
+  }
+
+  /**
+   * @param tenantName tenant name for authorization
+   */
+  public void setTenantName(String tenantName) {
+    this.tenantName = tenantName;
+  }
+
+  @Override
+  public String toString() {
+    return "AuthenticationRequest{" +
+           "tenantName='" + tenantName + '\'' +
+           '}';
+  }
 }

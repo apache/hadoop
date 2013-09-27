@@ -944,14 +944,20 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
       rename(src, dst, false, true, false, Rename.NONE);
       Assert.fail("Expected exception was not thrown");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+      IOException ioException = unwrapException(e);
+      if (!(ioException instanceof FileNotFoundException)) {
+        throw ioException;
+      }
     }
 
     try {
       rename(src, dst, false, true, false, Rename.OVERWRITE);
       Assert.fail("Expected exception was not thrown");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+      IOException ioException = unwrapException(e);
+      if (!(ioException instanceof FileNotFoundException)) {
+        throw ioException;
+      }
     }
   }
 

@@ -15,35 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
 
-import java.io.*;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+package org.apache.hadoop.fs.swift.exceptions;
 
 /**
- *  Stream that permits seeking.
+ * Thrown to indicate that connection is lost or failed to be made
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface Seekable {
-  /**
-   * Seek to the given offset from the start of the file.
-   * The next read() will be from that location.  Can't
-   * seek past the end of the file.
-   */
-  void seek(long pos) throws IOException;
-  
-  /**
-   * Return the current offset from the start of the file
-   */
-  long getPos() throws IOException;
+public class SwiftConnectionException extends SwiftException {
+  public SwiftConnectionException() {
+  }
 
-  /**
-   * Seeks a different copy of the data.  Returns true if 
-   * found a new source, false otherwise.
-   */
-  @InterfaceAudience.Private
-  boolean seekToNewSource(long targetPos) throws IOException;
+  public SwiftConnectionException(String message) {
+    super(message);
+  }
+
+  public SwiftConnectionException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~  or more contributor license agreements.  See the NOTICE file
+  ~  distributed with this work for additional information
+  ~  regarding copyright ownership.  The ASF licenses this file
+  ~  to you under the Apache License, Version 2.0 (the
+  ~  "License"); you may not use this file except in compliance
+  ~  with the License.  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  -->
+
+<html>
+<head>
+    <title>Swift Filesystem Client for Apache Hadoop</title>
+</head>
+<body>
+
+<h1>
+    Swift Filesystem Client for Apache Hadoop
+</h1>
+
+<h2>Introduction</h2>
+
+<div>This package provides support in Apache Hadoop for the OpenStack Swift
+    Key-Value store, allowing client applications -including MR Jobs- to
+    read and write data in Swift.
+</div>
+
+<div>Design Goals</div>
+<ol>
+    <li>Give clients access to SwiftFS files, similar to S3n:</li>
+    <li>maybe: support a Swift Block store -- at least until Swift's
+        support for &gt;5GB files has stabilized.
+    </li>
+    <li>Support for data-locality if the Swift FS provides file location information</li>
+    <li>Support access to multiple Swift filesystems in the same client/task.</li>
+    <li>Authenticate using the Keystone APIs.</li>
+    <li>Avoid dependency on unmaintained libraries.</li>
+</ol>
+
+
+<h2>Supporting multiple Swift Filesystems</h2>
+
+The goal of supporting multiple swift filesystems simultaneously changes how
+clusters are named and authenticated. In Hadoop's S3 and S3N filesystems, the "bucket" into
+which objects are stored is directly named in the URL, such as
+<code>s3n://bucket/object1</code>. The Hadoop configuration contains a
+single set of login credentials for S3 (username and key), which are used to
+authenticate the HTTP operations.
+
+For swift, we need to know not only which "container" name, but which credentials
+to use to authenticate with it -and which URL to use for authentication.
+
+This has led to a different design pattern from S3, as instead of simple bucket names,
+the hostname of an S3 container is two-level, the name of the service provider
+being the second path: <code>swift://bucket.service/</code>
+
+The <code>service</code> portion of this domainame is used as a reference into
+the client settings -and so identify the service provider of that container.
+
+
+<h2>Testing</h2>
+
+<div>
+    The client code can be tested against public or private Swift instances; the
+    public services are (at the time of writing -January 2013-), Rackspace and
+    HP Cloud. Testing against both instances is how interoperability
+    can be verified.
+</div>
+
+</body>
+</html>

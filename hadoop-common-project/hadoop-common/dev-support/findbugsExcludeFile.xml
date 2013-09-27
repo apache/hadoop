@@ -348,4 +348,20 @@
        <Method name="waitForServiceToStop" />
        <Bug code="JLM" />
      </Match>
- </FindBugsFilter>
+
+  <!--
+  OpenStack Swift FS module -closes streams in a different method
+  from where they are opened.
+  -->
+    <Match>
+      <Class name="org.apache.hadoop.fs.swift.snative.SwiftNativeOutputStream"/>
+      <Method name="uploadFileAttempt"/>
+      <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
+    </Match>
+    <Match>
+      <Class name="org.apache.hadoop.fs.swift.snative.SwiftNativeOutputStream"/>
+      <Method name="uploadFilePartAttempt"/>
+      <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
+    </Match>
+
+</FindBugsFilter>

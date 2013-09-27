@@ -15,35 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
 
-import java.io.*;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+package org.apache.hadoop.fs.swift.auth;
 
 /**
- *  Stream that permits seeking.
+ * This class is used for correct hierarchy mapping of
+ * Keystone authentication model and java code
+ * THIS FILE IS MAPPED BY JACKSON TO AND FROM JSON.
+ * DO NOT RENAME OR MODIFY FIELDS AND THEIR ACCESSORS.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface Seekable {
-  /**
-   * Seek to the given offset from the start of the file.
-   * The next read() will be from that location.  Can't
-   * seek past the end of the file.
-   */
-  void seek(long pos) throws IOException;
-  
-  /**
-   * Return the current offset from the start of the file
-   */
-  long getPos() throws IOException;
+public class AuthenticationWrapper {
 
   /**
-   * Seeks a different copy of the data.  Returns true if 
-   * found a new source, false otherwise.
+   * authentication response field
    */
-  @InterfaceAudience.Private
-  boolean seekToNewSource(long targetPos) throws IOException;
+  private AuthenticationResponse access;
+
+  /**
+   * @return authentication response
+   */
+  public AuthenticationResponse getAccess() {
+    return access;
+  }
+
+  /**
+   * @param access sets authentication response
+   */
+  public void setAccess(AuthenticationResponse access) {
+    this.access = access;
+  }
 }

@@ -15,35 +15,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
 
-import java.io.*;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+package org.apache.hadoop.fs.swift.auth;
 
 /**
- *  Stream that permits seeking.
+ * This class is used for correct hierarchy mapping of
+ * Keystone authentication model and java code.
+ * THIS FILE IS MAPPED BY JACKSON TO AND FROM JSON.
+ * DO NOT RENAME OR MODIFY FIELDS AND THEIR ACCESSORS.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface Seekable {
+public class AuthenticationRequestWrapper {
   /**
-   * Seek to the given offset from the start of the file.
-   * The next read() will be from that location.  Can't
-   * seek past the end of the file.
+   * authentication request
    */
-  void seek(long pos) throws IOException;
-  
-  /**
-   * Return the current offset from the start of the file
-   */
-  long getPos() throws IOException;
+  private AuthenticationRequest auth;
 
   /**
-   * Seeks a different copy of the data.  Returns true if 
-   * found a new source, false otherwise.
+   * default constructor used for json parsing
    */
-  @InterfaceAudience.Private
-  boolean seekToNewSource(long targetPos) throws IOException;
+  public AuthenticationRequestWrapper() {
+  }
+
+  /**
+   * @param auth authentication requests
+   */
+  public AuthenticationRequestWrapper(AuthenticationRequest auth) {
+    this.auth = auth;
+  }
+
+  /**
+   * @return authentication request
+   */
+  public AuthenticationRequest getAuth() {
+    return auth;
+  }
+
+  /**
+   * @param auth authentication request
+   */
+  public void setAuth(AuthenticationRequest auth) {
+    this.auth = auth;
+  }
 }

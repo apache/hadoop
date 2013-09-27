@@ -77,6 +77,12 @@
       <type>pom</type>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-openstack</artifactId>
+      <scope>compile</scope>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
 
   <build>

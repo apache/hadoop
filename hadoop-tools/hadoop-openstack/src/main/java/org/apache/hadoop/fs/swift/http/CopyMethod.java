@@ -15,35 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
 
-import java.io.*;
+package org.apache.hadoop.fs.swift.http;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.commons.httpclient.methods.EntityEnclosingMethod;
 
 /**
- *  Stream that permits seeking.
+ * Implementation for SwiftRestClient to make copy requests.
+ * COPY is a method that came with WebDAV (RFC2518), and is not something that
+ * can be handled by all proxies en-route to a filesystem.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface Seekable {
-  /**
-   * Seek to the given offset from the start of the file.
-   * The next read() will be from that location.  Can't
-   * seek past the end of the file.
-   */
-  void seek(long pos) throws IOException;
-  
-  /**
-   * Return the current offset from the start of the file
-   */
-  long getPos() throws IOException;
+class CopyMethod extends EntityEnclosingMethod {
+
+  public CopyMethod(String uri) {
+    super(uri);
+  }
 
   /**
-   * Seeks a different copy of the data.  Returns true if 
-   * found a new source, false otherwise.
+   * @return http method name
    */
-  @InterfaceAudience.Private
-  boolean seekToNewSource(long targetPos) throws IOException;
+  @Override
+  public String getName() {
+    return "COPY";
+  }
 }
