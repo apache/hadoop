@@ -18,6 +18,8 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5411. Refresh size of loaded job cache on history server (Ashwin
     Shankar via jlowe)
 
+    MAPREDUCE-5332. Support token-preserving restart of history server (jlowe)
+
   IMPROVEMENTS
 
     MAPREDUCE-434. LocalJobRunner limited to single reducer (Sandy Ryza and

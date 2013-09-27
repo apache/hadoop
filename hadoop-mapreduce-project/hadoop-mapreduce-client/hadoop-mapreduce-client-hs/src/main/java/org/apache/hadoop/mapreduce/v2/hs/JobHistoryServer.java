@@ -28,11 +28,13 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.app.webapp.WebAppUtil;
+import org.apache.hadoop.mapreduce.v2.hs.HistoryServerStateStoreService.HistoryServerState;
 import org.apache.hadoop.mapreduce.v2.hs.server.HSAdminServer;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -64,6 +66,46 @@ public class JobHistoryServer extends CompositeService {
   private JHSDelegationTokenSecretManager jhsDTSecretManager;
   private AggregatedLogDeletionService aggLogDelService;
   private HSAdminServer hsAdminServer;
+  private HistoryServerStateStoreService stateStore;
+
+  // utility class to start and stop secret manager as part of service
+  // framework and implement state recovery for secret manager on startup
+  private class HistoryServerSecretManagerService
+      extends AbstractService {
+
+    public HistoryServerSecretManagerService() {
+      super(HistoryServerSecretManagerService.class.getName());
+    }
+
+    @Override
+    protected void serviceStart() throws Exception {
+      boolean recoveryEnabled = getConfig().getBoolean(
+          JHAdminConfig.MR_HS_RECOVERY_ENABLE,
+          JHAdminConfig.DEFAULT_MR_HS_RECOVERY_ENABLE);
+      if (recoveryEnabled) {
+        assert stateStore.isInState(STATE.STARTED);
+        HistoryServerState state = stateStore.loadState();
+        jhsDTSecretManager.recover(state);
+      }
+
+      try {
+        jhsDTSecretManager.startThreads();
+      } catch(IOException io) {
+        LOG.error("Error while starting the Secret Manager threads", io);
+        throw io;
+      }
+
+      super.serviceStart();
+    }
+
+    @Override
+    protected void serviceStop() throws Exception {
+      if (jhsDTSecretManager != null) {
+        jhsDTSecretManager.stopThreads();
+      }
+      super.serviceStop();
+    }
+  }
 
   public JobHistoryServer() {
     super(JobHistoryServer.class.getName());
@@ -86,11 +128,14 @@ public class JobHistoryServer extends CompositeService {
     }
     jobHistoryService = new JobHistory();
     historyContext = (HistoryContext)jobHistoryService;
-    this.jhsDTSecretManager = createJHSSecretManager(conf);
+    stateStore = createStateStore(conf);
+    this.jhsDTSecretManager = createJHSSecretManager(conf, stateStore);
     clientService = new HistoryClientService(historyContext, 
         this.jhsDTSecretManager);
     aggLogDelService = new AggregatedLogDeletionService();
     hsAdminServer = new HSAdminServer(aggLogDelService, jobHistoryService);
+    addService(stateStore);
+    addService(new HistoryServerSecretManagerService());
     addService(jobHistoryService);
     addService(clientService);
     addService(aggLogDelService);
@@ -99,7 +144,7 @@ public class JobHistoryServer extends CompositeService {
   }
 
   protected JHSDelegationTokenSecretManager createJHSSecretManager(
-      Configuration conf) {
+      Configuration conf, HistoryServerStateStoreService store) {
     long secretKeyInterval = 
         conf.getLong(MRConfig.DELEGATION_KEY_UPDATE_INTERVAL_KEY, 
                      MRConfig.DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
@@ -111,9 +156,14 @@ public class JobHistoryServer extends CompositeService {
                      MRConfig.DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
       
     return new JHSDelegationTokenSecretManager(secretKeyInterval, 
-        tokenMaxLifetime, tokenRenewInterval, 3600000);
+        tokenMaxLifetime, tokenRenewInterval, 3600000, store);
   }
-  
+
+  protected HistoryServerStateStoreService createStateStore(
+      Configuration conf) {
+    return HistoryServerStateStoreServiceFactory.getStore(conf);
+  }
+
   protected void doSecureLogin(Configuration conf) throws IOException {
     SecurityUtil.login(conf, JHAdminConfig.MR_HISTORY_KEYTAB,
         JHAdminConfig.MR_HISTORY_PRINCIPAL);
@@ -123,20 +173,11 @@ public class JobHistoryServer extends CompositeService {
   protected void serviceStart() throws Exception {
     DefaultMetricsSystem.initialize("JobHistoryServer");
     JvmMetrics.initSingleton("JobHistoryServer", null);
-    try {
-      jhsDTSecretManager.startThreads();
-    } catch(IOException io) {
-      LOG.error("Error while starting the Secret Manager threads", io);
-      throw io;
-    }
     super.serviceStart();
   }
   
   @Override
   protected void serviceStop() throws Exception {
-    if (jhsDTSecretManager != null) {
-      jhsDTSecretManager.stopThreads();
-    }
     DefaultMetricsSystem.shutdown();
     super.serviceStop();
   }

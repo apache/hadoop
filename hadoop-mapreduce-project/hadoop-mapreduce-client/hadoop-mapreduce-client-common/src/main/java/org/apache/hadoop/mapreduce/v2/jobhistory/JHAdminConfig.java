@@ -164,6 +164,27 @@ public class JHAdminConfig {
   public static final String MR_HISTORY_STORAGE =
     MR_HISTORY_PREFIX + "store.class";
 
+  /**
+   * Enable the history server to store server state and recover server state
+   * upon startup.
+   */
+  public static final String MR_HS_RECOVERY_ENABLE =
+      MR_HISTORY_PREFIX + "recovery.enable";
+  public static final boolean DEFAULT_MR_HS_RECOVERY_ENABLE = false;
+
+  /**
+   * The HistoryServerStateStoreService class to store and recover server state
+   */
+  public static final String MR_HS_STATE_STORE =
+      MR_HISTORY_PREFIX + "recovery.store.class";
+
+  /**
+   * The URI where server state will be stored when
+   * HistoryServerFileSystemStateStoreService is configured as the state store
+   */
+  public static final String MR_HS_FS_STATE_STORE_URI =
+      MR_HISTORY_PREFIX + "recovery.store.fs.uri";
+
   /** Whether to use fixed ports with the minicluster. */
   public static final String MR_HISTORY_MINICLUSTER_FIXED_PORTS = MR_HISTORY_PREFIX
        + "minicluster.fixed.ports";
