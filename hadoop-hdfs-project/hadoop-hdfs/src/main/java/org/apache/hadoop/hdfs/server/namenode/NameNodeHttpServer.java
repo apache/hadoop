@@ -100,7 +100,7 @@ public class NameNodeHttpServer {
     if (certSSL) {
       boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
       InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(infoHost + ":" + conf.get(
-        DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, infoHost + ":" + 0));
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, "0"));
       Configuration sslConf = new Configuration(false);
       if (certSSL) {
         sslConf.addResource(conf.get(DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,

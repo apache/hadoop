@@ -115,6 +115,9 @@ Release 2.1.2 - UNRELEASED
 
     HDFS-5268. NFS write commit verifier is not set in a few places (brandonli)
 
+    HDFS-5265. Namenode fails to start when dfs.https.port is unspecified.
+    (Haohui Mai via jing9)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
