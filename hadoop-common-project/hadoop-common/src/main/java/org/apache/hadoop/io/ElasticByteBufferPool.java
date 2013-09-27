@@ -18,6 +18,7 @@
 package org.apache.hadoop.io;
 
 import com.google.common.collect.ComparisonChain;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -55,12 +56,23 @@ public final class ElasticByteBufferPool implements ByteBufferPool {
 
     @Override
     public boolean equals(Object rhs) {
+      if (rhs == null) {
+        return false;
+      }
       try {
         Key o = (Key)rhs;
         return (compareTo(o) == 0);
       } catch (ClassCastException e) {
         return false;
       }
+    }
+
+    @Override
+    public int hashCode() {
+      return new HashCodeBuilder().
+          append(capacity).
+          append(insertionTime).
+          toHashCode();
     }
   }
 
