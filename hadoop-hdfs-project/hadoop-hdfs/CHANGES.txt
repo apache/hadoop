@@ -72,9 +72,6 @@ Release 2.3.0 - UNRELEASED
     HDFS-5170. BlockPlacementPolicyDefault uses the wrong classname when
     alerting to enable debug logging. (Andrew Wang)
 
-    HDFS-5031. BlockScanner scans the block multiple times. (Vinay via Arpit
-    Agarwal)
-
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -112,6 +109,9 @@ Release 2.1.2 - UNRELEASED
 
     HDFS-5186. TestFileJournalManager fails on Windows due to file handle leaks.
     (Chuan Liu via cnauroth)
+
+    HDFS-5031. BlockScanner scans the block multiple times. (Vinay via Arpit
+    Agarwal)
 
 Release 2.1.1-beta - 2013-09-23
 
