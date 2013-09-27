@@ -4,6 +4,9 @@ Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-8545. Filesystem Implementation for OpenStack Swift
+    (Dmitry Mezhensky, David Dobbins, Stevel via stevel)
+
   NEW FEATURES
 
   IMPROVEMENTS
