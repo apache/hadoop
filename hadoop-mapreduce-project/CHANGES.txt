@@ -101,6 +101,9 @@ Release 2.1.2 - UNRELEASED
     TaskAttemptID) by re-introducing missing constructors. (Robert Kanter via
     acmurthy)
 
+    MAPREDUCE-5545. org.apache.hadoop.mapred.TestTaskAttemptListenerImpl.testCommitWindow
+    times out (Robert Kanter via jlowe)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
