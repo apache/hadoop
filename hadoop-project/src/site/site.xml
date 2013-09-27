@@ -95,6 +95,7 @@
       <item name="Fair Scheduler" href="hadoop-yarn/hadoop-yarn-site/FairScheduler.html"/>
       <item name="Web Application Proxy" href="hadoop-yarn/hadoop-yarn-site/WebApplicationProxy.html"/>
       <item name="YARN Commands" href="hadoop-yarn/hadoop-yarn-site/YarnCommands.html"/>
+      <item name="Scheduler Load Simulator" href="hadoop-sls/SchedulerLoadSimulator.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
