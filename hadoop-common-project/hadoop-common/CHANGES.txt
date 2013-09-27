@@ -18,6 +18,9 @@ Release 2.1.2 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
+    (Contributed by Colin Patrick McCabe)
+
   IMPROVEMENTS
 
     HADOOP-9948. Add a config value to CLITestHelper to skip tests on Windows.

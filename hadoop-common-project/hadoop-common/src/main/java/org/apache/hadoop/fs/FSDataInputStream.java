@@ -28,7 +28,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataInputStream extends DataInputStream
-    implements Seekable, PositionedReadable, Closeable, ByteBufferReadable, HasFileDescriptor {
+    implements Seekable, PositionedReadable, Closeable,
+    ByteBufferReadable, HasFileDescriptor, CanSetDropBehind, CanSetReadahead {
 
   public FSDataInputStream(InputStream in)
     throws IOException {
@@ -141,6 +142,29 @@ public class FSDataInputStream extends DataInputStream
       return ((FileInputStream) in).getFD();
     } else {
       return null;
+    }
+  }
+
+  @Override
+  public void setReadahead(Long readahead)
+      throws IOException, UnsupportedOperationException {
+    try {
+      ((CanSetReadahead)in).setReadahead(readahead);
+    } catch (ClassCastException e) {
+      throw new UnsupportedOperationException(
+          "this stream does not support setting the readahead " +
+          "caching strategy.");
+    }
+  }
+
+  @Override
+  public void setDropBehind(Boolean dropBehind)
+      throws IOException, UnsupportedOperationException {
+    try {
+      ((CanSetDropBehind)in).setDropBehind(dropBehind);
+    } catch (ClassCastException e) {
+      throw new UnsupportedOperationException("this stream does not " +
+          "support setting the drop-behind caching setting.");
     }
   }
 }

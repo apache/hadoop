@@ -71,7 +71,7 @@ public class FadvisedFileRegion extends DefaultFileRegion {
     }
     if (manageOsCache && getCount() > 0) {
       try {
-        NativeIO.POSIX.posixFadviseIfPossible(
+        NativeIO.POSIX.posixFadviseIfPossible(identifier,
            fd, getPosition(), getCount(),
            NativeIO.POSIX.POSIX_FADV_DONTNEED);
       } catch (Throwable t) {

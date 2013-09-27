@@ -824,7 +824,8 @@ public class HarFileSystem extends FilterFileSystem {
     /**
      * Create an input stream that fakes all the reads/positions/seeking.
      */
-    private static class HarFsInputStream extends FSInputStream {
+    private static class HarFsInputStream extends FSInputStream
+        implements CanSetDropBehind, CanSetReadahead {
       private long position, start, end;
       //The underlying data input stream that the
       // underlying filesystem will return.
@@ -971,7 +972,18 @@ public class HarFileSystem extends FilterFileSystem {
       public void readFully(long pos, byte[] b) throws IOException {
           readFully(pos, b, 0, b.length);
       }
-      
+
+      @Override
+      public void setReadahead(Long readahead)
+          throws IOException, UnsupportedEncodingException {
+        underLyingStream.setReadahead(readahead);
+      }
+
+      @Override
+      public void setDropBehind(Boolean dropBehind)
+          throws IOException, UnsupportedEncodingException {
+        underLyingStream.setDropBehind(dropBehind);
+      }
     }
   
     /**

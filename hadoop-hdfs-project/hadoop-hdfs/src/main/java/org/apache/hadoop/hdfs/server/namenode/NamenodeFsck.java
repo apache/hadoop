@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
@@ -574,8 +575,8 @@ public class NamenodeFsck {
         blockReader = BlockReaderFactory.newBlockReader(dfs.getConf(),
             file, block, lblock.getBlockToken(), 0, -1, true, "fsck",
             TcpPeerServer.peerFromSocketAndKey(s, namenode.getRpcServer().
-                getDataEncryptionKey()),
-            chosenNode, null, null, null, false);
+                getDataEncryptionKey()), chosenNode, null, null, null, 
+                false, CachingStrategy.newDropBehind());
         
       }  catch (IOException ex) {
         // Put chosen node into dead list, continue
