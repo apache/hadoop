@@ -39,6 +39,7 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenR
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.hs.HistoryServerStateStoreService;
 import org.apache.hadoop.mapreduce.v2.hs.JHSDelegationTokenSecretManager;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
@@ -87,10 +88,11 @@ public class TestJHSSecurity {
           // no keytab based login
         };
 
+        @Override
         protected JHSDelegationTokenSecretManager createJHSSecretManager(
-            Configuration conf) {
+            Configuration conf, HistoryServerStateStoreService store) {
           return new JHSDelegationTokenSecretManager(initialInterval, 
-              maxLifetime, renewInterval, 3600000);
+              maxLifetime, renewInterval, 3600000, store);
         }
       };
 //      final JobHistoryServer jobHistoryServer = jhServer;

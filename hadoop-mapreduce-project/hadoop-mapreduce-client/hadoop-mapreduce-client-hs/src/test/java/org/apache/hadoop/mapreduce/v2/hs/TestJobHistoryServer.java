@@ -72,7 +72,7 @@ public class TestJobHistoryServer {
     Configuration config = new Configuration();
     historyServer.init(config);
     assertEquals(STATE.INITED, historyServer.getServiceState());
-    assertEquals(4, historyServer.getServices().size());
+    assertEquals(6, historyServer.getServices().size());
     HistoryClientService historyService = historyServer.getClientService();
     assertNotNull(historyServer.getClientService());
     assertEquals(STATE.INITED, historyService.getServiceState());
