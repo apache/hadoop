@@ -517,7 +517,7 @@ public class DataNode extends Configured
       directoryScanner.start();
     } else {
       LOG.info("Periodic Directory Tree Verification scan is disabled because " +
-               reason);
+                   reason);
     }
   }
   
@@ -750,7 +750,7 @@ public class DataNode extends Configured
     }
     DatanodeID dnId = new DatanodeID(
         streamingAddr.getAddress().getHostAddress(), hostName, 
-        getDatanodeUuid(), getXferPort(), getInfoPort(), getIpcPort());
+        storage.getDatanodeUuid(), getXferPort(), getInfoPort(), getIpcPort());
     return new DatanodeRegistration(dnId, storageInfo, 
         new ExportedBlockKeys(), VersionInfo.getVersion());
   }
@@ -768,16 +768,16 @@ public class DataNode extends Configured
       id = bpRegistration;
     }
 
-    if (storage.getStorageID().equals("")) {
-      // This is a fresh datanode, persist the NN-provided storage ID
-      storage.setStorageID(bpRegistration.getDatanodeUuid());
+    if (storage.getDatanodeUuid() == null) {
+      // This is a fresh datanode, persist the NN-provided Datanode ID
+      storage.setDatanodeUuid(bpRegistration.getDatanodeUuid());
       storage.writeAll();
-      LOG.info("New storage id " + bpRegistration.getDatanodeUuid()
-          + " is assigned to data-node " + bpRegistration);
-    } else if(!storage.getStorageID().equals(bpRegistration.getDatanodeUuid())) {
-      throw new IOException("Inconsistent storage IDs. Name-node returned "
+      LOG.info("Datanode ID " + bpRegistration.getDatanodeUuid()
+          + " is assigned to new storage " + bpRegistration);
+    } else if(!storage.getDatanodeUuid().equals(bpRegistration.getDatanodeUuid())) {
+      throw new IOException("Inconsistent Datanode IDs. Name-node returned "
           + bpRegistration.getDatanodeUuid()
-          + ". Expecting " + storage.getStorageID());
+          + ". Expecting " + storage.getDatanodeUuid());
     }
     
     registerBlockPoolWithSecretManager(bpRegistration, blockPoolId);
@@ -925,10 +925,6 @@ public class DataNode extends Configured
     return streamingAddr.getPort();
   }
   
-  String getDatanodeUuid() {
-    return storage.getStorageID();
-  }
-
   /**
    * @return name useful for logging
    */
@@ -1012,11 +1008,6 @@ public class DataNode extends Configured
     
   DataNodeMetrics getMetrics() {
     return metrics;
-  }
-  
-  public static void setNewStorageID(DatanodeID dnId) {
-    LOG.info("Datanode is " + dnId);
-    dnId.setDatanodeUuid(DatanodeStorage.newStorageID());
   }
   
   /** Ensure the authentication method is kerberos */
@@ -1818,7 +1809,7 @@ public class DataNode extends Configured
   @Override
   public String toString() {
     return "DataNode{data=" + data + ", localName='" + getDisplayName()
-        + "', storageID='" + getDatanodeUuid() + "', xmitsInProgress="
+        + "', datanodeUuid='" + storage.getDatanodeUuid() + "', xmitsInProgress="
         + xmitsInProgress.get() + "}";
   }
 
@@ -1872,7 +1863,6 @@ public class DataNode extends Configured
   }
 
   /**
-   * This method is used for testing. 
    * Examples are adding and deleting blocks directly.
    * The most common usage will be when the data node's storage is simulated.
    * 
@@ -2423,6 +2413,10 @@ public class DataNode extends Configured
   
   public DNConf getDnConf() {
     return dnConf;
+  }
+
+  public String getDatanodeUuid() {
+    return id == null ? null : id.getDatanodeUuid();
   }
 
   boolean shouldRun() {

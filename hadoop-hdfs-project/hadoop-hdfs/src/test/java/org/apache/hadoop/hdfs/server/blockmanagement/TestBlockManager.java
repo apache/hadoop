@@ -527,6 +527,8 @@ public class TestBlockManager {
   public void testSafeModeIBR() throws Exception {
     DatanodeDescriptor node = spy(nodes.get(0));
     DatanodeStorageInfo ds = node.getStorageInfos()[0];
+
+    // TODO: Needs to be fixed. DatanodeUuid is not storageID.
     node.setDatanodeUuid(ds.getStorageID());
 
     node.isAlive = true;
@@ -571,7 +573,10 @@ public class TestBlockManager {
   public void testSafeModeIBRAfterIncremental() throws Exception {
     DatanodeDescriptor node = spy(nodes.get(0));
     DatanodeStorageInfo ds = node.getStorageInfos()[0];
+
+    // TODO: Needs to be fixed. DatanodeUuid is not storageID.
     node.setDatanodeUuid(ds.getStorageID());
+
     node.isAlive = true;
 
     DatanodeRegistration nodeReg =

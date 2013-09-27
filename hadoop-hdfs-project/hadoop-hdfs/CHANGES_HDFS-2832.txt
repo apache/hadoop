@@ -33,3 +33,6 @@ IMPROVEMENTS:
 
     HDFS-5222. Move block schedule information from DatanodeDescriptor to
     DatanodeStorageInfo.  (szetszwo)
+
+    HDFS-4988. Datanode must support all the volumes as individual storages.
+    (Arpit Agarwal)

@@ -420,6 +420,10 @@ public class DatanodeManager {
 
   /** Get a datanode descriptor given corresponding DatanodeUUID */
   DatanodeDescriptor getDatanode(final String datanodeUuid) {
+    if (datanodeUuid == null) {
+      return null;
+    }
+
     return datanodeMap.get(datanodeUuid);
   }
 
@@ -776,7 +780,7 @@ public class DatanodeManager {
       NameNode.stateChangeLog.info("BLOCK* registerDatanode: from "
           + nodeReg + " storage " + nodeReg.getDatanodeUuid());
   
-      DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getDatanodeUuid());
+      DatanodeDescriptor nodeS = getDatanode(nodeReg.getDatanodeUuid());
       DatanodeDescriptor nodeN = host2DatanodeMap.getDatanodeByXferAddr(
           nodeReg.getIpAddr(), nodeReg.getXferPort());
         
@@ -843,13 +847,13 @@ public class DatanodeManager {
           }
         }
         return;
-      } 
-  
-      // this is a new datanode serving a new data storage
-      if ("".equals(nodeReg.getDatanodeUuid())) {
-        // this data storage has never been registered
-        // it is either empty or was created by pre-storageID version of DFS
-        nodeReg.setDatanodeUuid(DatanodeStorage.newStorageID());
+      }
+
+      // This is a new datanode.
+      if (nodeReg.getDatanodeUuid() == null ||
+          nodeReg.getDatanodeUuid().isEmpty()) {
+        // this data node has never been registered
+        nodeReg.generateNewDatanodeUuid();
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug(
               "BLOCK* NameSystem.registerDatanode: "

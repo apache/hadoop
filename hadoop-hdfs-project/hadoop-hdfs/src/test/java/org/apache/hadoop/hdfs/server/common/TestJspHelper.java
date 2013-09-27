@@ -445,9 +445,9 @@ public class TestJspHelper {
 
   @Test
   public void testSortNodeByFields() throws Exception {
-    DatanodeID dnId1 = new DatanodeID("127.0.0.1", "localhost1", "storage1",
+    DatanodeID dnId1 = new DatanodeID("127.0.0.1", "localhost1", "datanode1",
         1234, 2345, 3456);
-    DatanodeID dnId2 = new DatanodeID("127.0.0.2", "localhost2", "storage2",
+    DatanodeID dnId2 = new DatanodeID("127.0.0.2", "localhost2", "datanode2",
         1235, 2346, 3457);
     DatanodeDescriptor dnDesc1 = new DatanodeDescriptor(dnId1, "rack1", 1024,
         100, 924, 100, 10, 2);

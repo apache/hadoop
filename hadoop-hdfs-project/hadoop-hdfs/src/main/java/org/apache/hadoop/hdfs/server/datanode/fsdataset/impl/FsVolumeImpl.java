@@ -290,7 +290,7 @@ class FsVolumeImpl implements FsVolumeSpi {
     }
   }
 
-  String getStorageID() {
+  public String getStorageID() {
     return storageID;
   }
   

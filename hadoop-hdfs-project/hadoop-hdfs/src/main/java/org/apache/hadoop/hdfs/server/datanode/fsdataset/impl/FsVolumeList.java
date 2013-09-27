@@ -18,10 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -93,26 +90,36 @@ class FsVolumeList {
     return remaining;
   }
     
-  void getVolumeMap(ReplicaMap volumeMap) throws IOException {
+  void initializeReplicaMaps(Map<FsVolumeImpl, ReplicaMap> perVolumeReplicaMap,
+                             ReplicaMap globalReplicaMap,
+                             Object mutex) throws IOException {
     for (FsVolumeImpl v : volumes) {
-      v.getVolumeMap(volumeMap);
+      ReplicaMap rMap = new ReplicaMap(mutex);
+      v.getVolumeMap(rMap);
+      perVolumeReplicaMap.put(v, rMap);
+      globalReplicaMap.addAll(rMap);
     }
   }
   
-  void getVolumeMap(String bpid, ReplicaMap volumeMap) throws IOException {
+  void getAllVolumesMap(String bpid, ReplicaMap volumeMap) throws IOException {
     long totalStartTime = System.currentTimeMillis();
     for (FsVolumeImpl v : volumes) {
-      FsDatasetImpl.LOG.info("Adding replicas to map for block pool " + bpid +
-          " on volume " + v + "...");
-      long startTime = System.currentTimeMillis();
-      v.getVolumeMap(bpid, volumeMap);
-      long timeTaken = System.currentTimeMillis() - startTime;
-      FsDatasetImpl.LOG.info("Time to add replicas to map for block pool " + bpid +
-          " on volume " + v + ": " + timeTaken + "ms");
+      getVolumeMap(bpid, v, volumeMap);
     }
     long totalTimeTaken = System.currentTimeMillis() - totalStartTime;
     FsDatasetImpl.LOG.info("Total time to add all replicas to map: "
         + totalTimeTaken + "ms");
+  }
+
+  void getVolumeMap(String bpid, FsVolumeImpl volume, ReplicaMap volumeMap)
+      throws IOException {
+    FsDatasetImpl.LOG.info("Adding replicas to map for block pool " + bpid +
+                               " on volume " + volume + "...");
+    long startTime = System.currentTimeMillis();
+    volume.getVolumeMap(bpid, volumeMap);
+    long timeTaken = System.currentTimeMillis() - startTime;
+    FsDatasetImpl.LOG.info("Time to add replicas to map for block pool " + bpid +
+                               " on volume " + volume + ": " + timeTaken + "ms");
   }
     
   /**

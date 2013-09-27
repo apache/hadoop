@@ -41,13 +41,7 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
@@ -805,7 +799,8 @@ public class DFSTestUtil {
   }
   
   private static DatanodeID getDatanodeID(String ipAddr) {
-    return new DatanodeID(ipAddr, "localhost", "",
+    return new DatanodeID(ipAddr, "localhost",
+        UUID.randomUUID().toString(),
         DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
@@ -816,8 +811,8 @@ public class DFSTestUtil {
   }
 
   public static DatanodeID getLocalDatanodeID(int port) {
-    return new DatanodeID("127.0.0.1", "localhost", "",
-        port, port, port);
+    return new DatanodeID("127.0.0.1", "localhost",
+        UUID.randomUUID().toString(), port, port, port);
   }
 
   public static DatanodeDescriptor getLocalDatanodeDescriptor() {
@@ -838,8 +833,9 @@ public class DFSTestUtil {
 
   public static DatanodeInfo getDatanodeInfo(String ipAddr, 
       String host, int port) {
-    return new DatanodeInfo(new DatanodeID(ipAddr, host, "",
-        port, DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+    return new DatanodeInfo(new DatanodeID(ipAddr, host,
+        UUID.randomUUID().toString(), port,
+        DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT));
   }
 
@@ -893,7 +889,8 @@ public class DFSTestUtil {
 
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
       int port, String rackLocation) {
-    DatanodeID dnId = new DatanodeID(ipAddr, "host", "", port,
+    DatanodeID dnId = new DatanodeID(ipAddr, "host",
+        UUID.randomUUID().toString(), port,
         DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
     return new DatanodeDescriptor(dnId, rackLocation);

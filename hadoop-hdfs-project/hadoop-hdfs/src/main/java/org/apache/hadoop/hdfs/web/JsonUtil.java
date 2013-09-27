@@ -289,6 +289,7 @@ public class JsonUtil {
       return null;
     }
 
+    // TODO: Fix storageID
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("ipAddr", datanodeinfo.getIpAddr());
     m.put("hostName", datanodeinfo.getHostName());
@@ -314,6 +315,7 @@ public class JsonUtil {
       return null;
     }
 
+    // TODO: Fix storageID
     return new DatanodeInfo(
         (String)m.get("ipAddr"),
         (String)m.get("hostName"),

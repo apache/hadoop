@@ -840,9 +840,9 @@ public class NNThroughputBenchmark implements Tool {
               "", getNodePort(dnIdx),
               DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
               DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT),
-          new DataStorage(nsInfo, ""),
+          new DataStorage(nsInfo),
           new ExportedBlockKeys(), VersionInfo.getVersion());
-      DataNode.setNewStorageID(dnRegistration);
+      // TODO: Fix NNThroughputBenchmark.
       // register datanode
       dnRegistration = nameNodeProto.registerDatanode(dnRegistration);
       //first block reports
@@ -939,7 +939,7 @@ public class NNThroughputBenchmark implements Tool {
           DatanodeInfo dnInfo = blockTargets[t];
           DatanodeRegistration receivedDNReg;
           receivedDNReg = new DatanodeRegistration(dnInfo,
-            new DataStorage(nsInfo, dnInfo.getDatanodeUuid()),
+            new DataStorage(nsInfo),
             new ExportedBlockKeys(), VersionInfo.getVersion());
           ReceivedDeletedBlockInfo[] rdBlocks = {
             new ReceivedDeletedBlockInfo(

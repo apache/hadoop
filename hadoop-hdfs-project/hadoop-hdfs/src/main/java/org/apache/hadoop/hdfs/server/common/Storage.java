@@ -236,6 +236,9 @@ public abstract class Storage extends StorageInfo {
     final boolean useLock;        // flag to enable storage lock
     final StorageDirType dirType; // storage dir type
     FileLock lock;                // storage lock
+
+    //TODO HDFS-2832: Consider moving this out of StorageDirectory.
+    String storageUuid = null;      // Storage directory identifier.
     
     public StorageDirectory(File dir) {
       // default dirType is null
@@ -246,6 +249,14 @@ public abstract class Storage extends StorageInfo {
       this(dir, dirType, true);
     }
     
+    public void setStorageUuid(String storageUuid) {
+      this.storageUuid = storageUuid;
+    }
+
+    public String getStorageUuid() {
+      return storageUuid;
+    }
+
     /**
      * Constructor
      * @param dir directory corresponding to the storage

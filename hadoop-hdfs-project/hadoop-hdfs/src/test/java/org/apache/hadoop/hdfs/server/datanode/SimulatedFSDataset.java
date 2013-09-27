@@ -383,8 +383,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   
   public SimulatedFSDataset(DataStorage storage, Configuration conf) {
     if (storage != null) {
-      storage.createStorageID();
-      this.datanodeUuid = storage.getStorageID();
+      for (int i = 0; i < storage.getNumStorageDirs(); ++i) {
+        storage.createStorageID(storage.getStorageDir(i));
+      }
+      this.datanodeUuid = storage.getDatanodeUuid();
     } else {
       this.datanodeUuid = "unknownStorageId-" + UUID.randomUUID();
     }
@@ -457,6 +459,15 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       }
     }
     return new BlockListAsLongs(blocks, null);
+  }
+
+  @Override
+  public synchronized Map<String, BlockListAsLongs> getBlockReports(
+      String bpid) {
+    Map<String, BlockListAsLongs> reports =
+        new HashMap<String, BlockListAsLongs>();
+    reports.put("", getBlockReport(bpid));
+    return reports;
   }
 
   @Override // FSDatasetMBean
@@ -910,6 +921,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   public String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
                                         long recoveryId,
                                         long newlength) {
+    // Caller does not care about the exact Storage UUID returned.
     return datanodeUuid;
   }
 
@@ -961,11 +973,6 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override
   public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks)
       throws IOException {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public String[] getBlockPoolList() {
     throw new UnsupportedOperationException();
   }
 

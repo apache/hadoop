@@ -172,7 +172,7 @@ public class TestDatanodeRegistration {
 
       // register a datanode
       DatanodeID dnId = new DatanodeID(DN_IP_ADDR, DN_HOSTNAME,
-          "fake-storage-id", DN_XFER_PORT, DN_INFO_PORT, DN_IPC_PORT);
+          "fake-datanode-id", DN_XFER_PORT, DN_INFO_PORT, DN_IPC_PORT);
       long nnCTime = cluster.getNamesystem().getFSImage().getStorage()
           .getCTime();
       StorageInfo mockStorageInfo = mock(StorageInfo.class);
@@ -188,7 +188,7 @@ public class TestDatanodeRegistration {
 
       // register the same datanode again with a different storage ID
       dnId = new DatanodeID(DN_IP_ADDR, DN_HOSTNAME,
-          "changed-fake-storage-id", DN_XFER_PORT, DN_INFO_PORT, DN_IPC_PORT);
+          "changed-fake-datanode-id", DN_XFER_PORT, DN_INFO_PORT, DN_IPC_PORT);
       dnReg = new DatanodeRegistration(dnId,
           mockStorageInfo, null, VersionInfo.getVersion());
       rpcServer.registerDatanode(dnReg);

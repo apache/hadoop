@@ -453,7 +453,7 @@ public class UpgradeUtilities {
    */
   public static void createDataNodeVersionFile(File[] parent,
       StorageInfo version, String bpid, String bpidToWrite) throws IOException {
-    DataStorage storage = new DataStorage(version, "doNotCare");
+    DataStorage storage = new DataStorage(version);
 
     File[] versionFiles = new File[parent.length];
     for (int i = 0; i < parent.length; i++) {

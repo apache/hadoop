@@ -92,9 +92,6 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /** @return a volume information map (name => info). */
   public Map<String, Object> getVolumeInfoMap();
 
-  /** @return a list of block pools. */
-  public String[] getBlockPoolList();
-
   /** @return a list of finalized blocks for the given block pool. */
   public List<Block> getFinalizedBlocks(String bpid);
 
@@ -262,12 +259,20 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   public void unfinalizeBlock(ExtendedBlock b) throws IOException;
 
   /**
+   * TODO HDFS-2832: Deprecate this when we fix tests.
    * Returns the block report - the full list of blocks stored under a 
    * block pool
    * @param bpid Block Pool Id
    * @return - the block report - the full list of blocks stored
    */
   public BlockListAsLongs getBlockReport(String bpid);
+
+  /**
+   * Returns one block report per volume.
+   * @param bpid Block Pool Id
+   * @return - a map of StorageID to block report for the volume.
+   */
+  public Map<String, BlockListAsLongs> getBlockReports(String bpid);
 
   /** Does the dataset contain the block? */
   public boolean contains(ExtendedBlock block);
