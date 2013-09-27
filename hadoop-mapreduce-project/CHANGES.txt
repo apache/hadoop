@@ -97,6 +97,10 @@ Release 2.1.2 - UNRELEASED
     MAPREDUCE-5513. ConcurrentModificationException in JobControl (Robert
     Parker via jlowe)
 
+    MAPREDUCE-5531. Fix compat with hadoop-1 in mapreduce.(TaskID,
+    TaskAttemptID) by re-introducing missing constructors. (Robert Kanter via
+    acmurthy)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
