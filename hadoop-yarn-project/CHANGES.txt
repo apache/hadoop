@@ -24,6 +24,8 @@ Release 2.3.0 - UNRELEASED
     YARN-649. Added a new NM web-service to serve container logs in plain text
     over HTTP. (Sandy Ryza via vinodkv)
 
+    YARN-1021. Yarn Scheduler Load Simulator. (ywskycn via tucu)
+
   IMPROVEMENTS
 
     YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)

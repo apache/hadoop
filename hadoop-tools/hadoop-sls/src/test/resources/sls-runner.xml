@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+<configuration>
+
+  <!-- SLSRunner configuration -->
+  <property>
+    <name>yarn.sls.runner.pool.size</name>
+    <value>100</value>
+  </property>
+  
+  <!-- Nodes configuration -->
+  <property>
+    <name>yarn.sls.nm.memory.mb</name>
+    <value>10240</value>
+  </property>
+  <property>
+    <name>yarn.sls.nm.vcores</name>
+    <value>10</value>
+  </property>
+  <property>
+    <name>yarn.sls.nm.heartbeat.interval.ms</name>
+    <value>1000</value>
+  </property>
+  
+  <!-- Apps configuration -->
+  <property>
+    <name>yarn.sls.am.heartbeat.interval.ms</name>
+    <value>1000</value>
+  </property>
+  <property>
+    <name>yarn.sls.am.type.mapreduce</name>
+    <value>org.apache.hadoop.yarn.sls.appmaster.MRAMSimulator</value>
+  </property>
+
+  <!-- Containers configuration -->
+  <property>
+    <name>yarn.sls.container.memory.mb</name>
+    <value>1024</value>
+  </property>
+  <property>
+    <name>yarn.sls.container.vcores</name>
+    <value>1</value>
+  </property>
+
+  <!--  metrics  -->
+  <property>
+    <name>yarn.sls.metrics.switch</name>
+    <value>ON</value>
+  </property>
+  <property>
+    <name>yarn.sls.metrics.web.address.port</name>
+    <value>10001</value>
+  </property>
+  <property>
+    <name>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler</name>
+    <value>org.apache.hadoop.yarn.sls.scheduler.FifoSchedulerMetrics</value>
+  </property>
+  <property>
+    <name>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</name>
+    <value>org.apache.hadoop.yarn.sls.scheduler.FairSchedulerMetrics</value>
+  </property>
+  <property>
+    <name>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</name>
+    <value>org.apache.hadoop.yarn.sls.scheduler.CapacitySchedulerMetrics</value>
+  </property>
+  
+</configuration>
