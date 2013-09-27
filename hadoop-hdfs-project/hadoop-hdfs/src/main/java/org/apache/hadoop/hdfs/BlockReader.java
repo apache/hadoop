@@ -20,12 +20,16 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.ByteBufferReadable;
+import org.apache.hadoop.hdfs.client.ClientMmap;
+import org.apache.hadoop.hdfs.client.ClientMmapManager;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 
 /**
  * A BlockReader is responsible for reading a single block
  * from a single datanode.
  */
 public interface BlockReader extends ByteBufferReadable {
+  
 
   /* same interface as inputStream java.io.InputStream#read()
    * used by DFSInputStream#read()
@@ -81,4 +85,14 @@ public interface BlockReader extends ByteBufferReadable {
    *                      All short-circuit reads are also local.
    */
   boolean isShortCircuit();
+
+  /**
+   * Get a ClientMmap object for this BlockReader.
+   *
+   * @param curBlock      The current block.
+   * @return              The ClientMmap object, or null if mmap is not
+   *                      supported.
+   */
+  ClientMmap getClientMmap(LocatedBlock curBlock,
+        ClientMmapManager mmapManager);
 }

@@ -1415,4 +1415,32 @@
 	  linearly increases.
 	</description>
 </property>
+
+<property>
+  <name>dfs.client.mmap.cache.size</name>
+  <value>1024</value>
+  <description>
+    When zero-copy reads are used, the DFSClient keeps a cache of recently used
+    memory mapped regions.  This parameter controls the maximum number of
+    entries that we will keep in that cache.
+
+    If this is set to 0, we will not allow mmap.
+
+    The larger this number is, the more file descriptors we will potentially
+    use for memory-mapped files.  mmaped files also use virtual address space.
+    You may need to increase your ulimit virtual address space limits before
+    increasing the client mmap cache size.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.mmap.cache.timeout.ms</name>
+  <value>900000</value>
+  <description>
+    The minimum length of time that we will keep an mmap entry in the cache
+    between uses.  If an entry is in the cache longer than this, and nobody
+    uses it, it will be removed by a background thread.
+  </description>
+</property>
+
 </configuration>

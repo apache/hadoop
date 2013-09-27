@@ -250,6 +250,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5122. Support failover and retry in WebHdfsFileSystem for NN HA.
     (Haohui Mai via jing9)
 
+    HDFS-4953. Enable HDFS local reads via mmap.
+    (Colin Patrick McCabe via wang).
+
   IMPROVEMENTS
 
     HDFS-4657.  Limit the number of blocks logged by the NN after a block
@@ -291,6 +294,12 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5240. Separate formatting from logging in the audit logger API (daryn)
 
+    HDFS-5191. Revisit zero-copy API in FSDataInputStream to make it more
+    intuitive.  (Contributed by Colin Patrick McCabe)
+
+    HDFS-5260. Merge zero-copy memory-mapped HDFS client reads to trunk and
+    branch-2. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -315,6 +324,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5031. BlockScanner scans the block multiple times. (Vinay via Arpit
     Agarwal)
+
+    HDFS-5266. ElasticByteBufferPool#Key does not implement equals. (cnauroth)
 
 Release 2.2.0 - UNRELEASED
 
