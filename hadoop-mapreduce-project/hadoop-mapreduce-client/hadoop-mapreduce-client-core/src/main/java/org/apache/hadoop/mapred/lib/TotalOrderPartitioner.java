@@ -22,6 +22,7 @@ package org.apache.hadoop.mapred.lib;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Partitioner;
 
@@ -41,4 +42,30 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
     super.setConf(job);
   }
 
+  /**
+   * Set the path to the SequenceFile storing the sorted partition keyset.
+   * It must be the case that for <tt>R</tt> reduces, there are <tt>R-1</tt>
+   * keys in the SequenceFile.
+   * @deprecated Use 
+   * {@link #setPartitionFile(Configuration, Path)}
+   * instead
+   */
+  @Deprecated
+  public static void setPartitionFile(JobConf job, Path p) {
+    org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner.
+            setPartitionFile(job, p);
+  }
+
+  /**
+   * Get the path to the SequenceFile storing the sorted partition keyset.
+   * @see #setPartitionFile(JobConf,Path)
+   * @deprecated Use 
+   * {@link #getPartitionFile(Configuration)}
+   * instead
+   */
+  @Deprecated
+  public static String getPartitionFile(JobConf job) {
+    return org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner.
+            getPartitionFile(job);
+  }
 }

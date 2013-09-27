@@ -104,6 +104,10 @@ Release 2.1.2 - UNRELEASED
     MAPREDUCE-5545. org.apache.hadoop.mapred.TestTaskAttemptListenerImpl.testCommitWindow
     times out (Robert Kanter via jlowe)
 
+    MAPREDUCE-5529. Fix compat with hadoop-1 in mapred.TotalOrderPartitioner
+    by re-introducing (get,set)PartitionFile which takes in JobConf. (Robert 
+    Kanter via acmurthy)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
