@@ -289,6 +289,9 @@ Release 2.3.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-8545. Filesystem Implementation for OpenStack Swift
+    (Dmitry Mezhensky, David Dobbins, Stevel via stevel)
+
   IMPROVEMENTS
 
     HADOOP-9784. Add a builder for HttpServer. (Junping Du via llu)
