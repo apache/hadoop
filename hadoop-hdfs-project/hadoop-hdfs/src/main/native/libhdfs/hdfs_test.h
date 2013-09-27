@@ -48,6 +48,15 @@ extern  "C" {
      * @param file     The HDFS file
      */
     void hdfsFileDisableDirectRead(struct hdfsFile_internal *file);
+
+    /**
+     * Disable domain socket security checks.
+     *
+     * @param          0 if domain socket security was disabled;
+     *                 -1 if not.
+     */
+    int hdfsDisableDomainSocketSecurity(void); 
+
 #ifdef __cplusplus
 }
 #endif

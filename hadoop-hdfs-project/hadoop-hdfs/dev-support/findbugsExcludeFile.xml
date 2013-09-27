@@ -330,4 +330,14 @@
        <Method name="setDirInternal" />
        <Bug pattern="DM_STRING_CTOR" />
      </Match>
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.client.ClientMmapManager" />
+      <Method name="create" />
+      <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH" />
+    </Match>
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.client.ClientMmapManager" />
+      <Method name="create" />
+      <Bug pattern="UL_UNRELEASED_LOCK" />
+    </Match>
  </FindBugsFilter>
