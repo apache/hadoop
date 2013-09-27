@@ -422,7 +422,7 @@ class OpenFileCtx {
       LOG.warn("Haven't noticed any partial overwrite for a sequential file"
           + " write requests. Treat it as a real random write, no support.");
       response = new WRITE3Response(Nfs3Status.NFS3ERR_INVAL, wccData, 0,
-          WriteStableHow.UNSTABLE, 0);
+          WriteStableHow.UNSTABLE, Nfs3Constant.WRITE_COMMIT_VERF);
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Process perfectOverWrite");
@@ -559,7 +559,7 @@ class OpenFileCtx {
     if (comparator.compare(readbuffer, 0, readCount, data, 0, count) != 0) {
       LOG.info("Perfect overwrite has different content");
       response = new WRITE3Response(Nfs3Status.NFS3ERR_INVAL, wccData, 0,
-          stableHow, 0);
+          stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
     } else {
       LOG.info("Perfect overwrite has same content,"
           + " updating the mtime, then return success");
@@ -571,12 +571,12 @@ class OpenFileCtx {
         LOG.info("Got error when processing perfect overwrite, path=" + path
             + " error:" + e);
         return new WRITE3Response(Nfs3Status.NFS3ERR_IO, wccData, 0, stableHow,
-            0);
+            Nfs3Constant.WRITE_COMMIT_VERF);
       }
 
       wccData.setPostOpAttr(postOpAttr);
       response = new WRITE3Response(Nfs3Status.NFS3_OK, wccData, count,
-          stableHow, 0);
+          stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
     }
     return response;
   }
