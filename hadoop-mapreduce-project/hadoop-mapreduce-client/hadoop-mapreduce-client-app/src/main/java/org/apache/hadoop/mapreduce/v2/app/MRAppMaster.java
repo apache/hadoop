@@ -531,19 +531,6 @@ public class MRAppMaster extends CompositeService {
     // this is the only job, so shut down the Appmaster
     // note in a workflow scenario, this may lead to creation of a new
     // job (FIXME?)
-    // Send job-end notification
-    if (getConfig().get(MRJobConfig.MR_JOB_END_NOTIFICATION_URL) != null) {
-      try {
-        LOG.info("Job end notification started for jobID : "
-            + job.getReport().getJobId());
-        JobEndNotifier notifier = new JobEndNotifier();
-        notifier.setConf(getConfig());
-        notifier.notify(job.getReport());
-      } catch (InterruptedException ie) {
-        LOG.warn("Job end notification interrupted for jobID : "
-            + job.getReport().getJobId(), ie);
-      }
-    }
 
     try {
       //if isLastAMRetry comes as true, should never set it to false
@@ -559,10 +546,28 @@ public class MRAppMaster extends CompositeService {
       LOG.info("Calling stop for all the services");
       MRAppMaster.this.stop();
 
-      // Except ClientService, other services are already stopped, it is safe to
-      // let clients know the final states. ClientService should wait for some
-      // time so clients have enough time to know the final states.
-      safeToReportTerminationToUser.set(true);
+      if (isLastAMRetry) {
+        // Except ClientService, other services are already stopped, it is safe to
+        // let clients know the final states. ClientService should wait for some
+        // time so clients have enough time to know the final states.
+        safeToReportTerminationToUser.set(true);
+
+        // Send job-end notification when it is safe to report termination to
+        // users and it is the last AM retry
+        if (getConfig().get(MRJobConfig.MR_JOB_END_NOTIFICATION_URL) != null) {
+          try {
+            LOG.info("Job end notification started for jobID : "
+                + job.getReport().getJobId());
+            JobEndNotifier notifier = new JobEndNotifier();
+            notifier.setConf(getConfig());
+            notifier.notify(job.getReport());
+          } catch (InterruptedException ie) {
+            LOG.warn("Job end notification interrupted for jobID : "
+                + job.getReport().getJobId(), ie);
+          }
+        }
+      }
+
       try {
         Thread.sleep(5000);
       } catch (InterruptedException e) {
