@@ -339,6 +339,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9998.  Provide methods to clear only part of the DNSToSwitchMapping.
     (Junping Du via Colin Patrick McCabe)
 
+    HADOOP-10006. Compilation failure in trunk for
+    o.a.h.fs.swift.util.JSONUtil (Junping Du via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
