@@ -151,7 +151,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           .add("trackingUrl", trackingUrl)
           .add("appMasterHost", host)
           .add("startTime", app.getStartTime())
-          .add("finishTime", app.getFinishTime());
+          .add("finishTime", app.getFinishTime())
+          .add("finalStatus", app.getFinalApplicationStatus());
       return summary;
     }
 
