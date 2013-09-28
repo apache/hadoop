@@ -75,6 +75,10 @@ Release 2.1.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-1246. Added application finish-status to ApplicationSummary for the sake
+    of testing given ApplicationHistoryServer is not yet ready. (Arpit Gupta via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
