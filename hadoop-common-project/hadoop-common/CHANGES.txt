@@ -90,6 +90,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9981. globStatus should minimize its listStatus and getFileStatus
     calls.  (Contributed by Colin Patrick McCabe)
 
+    HADOOP-10006. Compilation failure in trunk for
+    o.a.h.fs.swift.util.JSONUtil (Junping Du via stevel)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
