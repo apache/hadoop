@@ -25,22 +25,21 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._ODD;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 
-
 import java.util.Collection;
-
-import com.google.inject.Inject;
 
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Times;
@@ -50,14 +49,19 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
+import com.google.inject.Inject;
+
 public class AppBlock extends HtmlBlock {
 
   private ApplicationACLsManager aclsManager;
+  private QueueACLsManager queueACLsManager;
 
   @Inject
-  AppBlock(ResourceManager rm, ViewContext ctx, ApplicationACLsManager aclsManager) {
+  AppBlock(ResourceManager rm, ViewContext ctx,
+      ApplicationACLsManager aclsManager, QueueACLsManager queueACLsManager) {
     super(ctx);
     this.aclsManager = aclsManager;
+    this.queueACLsManager = queueACLsManager;
   }
 
   @Override
@@ -91,8 +95,10 @@ public class AppBlock extends HtmlBlock {
       callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
     }
     if (callerUGI != null
-        && !this.aclsManager.checkAccess(callerUGI,
-            ApplicationAccessType.VIEW_APP, app.getUser(), appID)) {
+        && !(this.aclsManager.checkAccess(callerUGI,
+                ApplicationAccessType.VIEW_APP, app.getUser(), appID) ||
+             this.queueACLsManager.checkAccess(callerUGI,
+                QueueACL.ADMINISTER_QUEUE, app.getQueue()))) {
       puts("You (User " + remoteUser
           + ") are not authorized to view application " + appID);
       return;
