@@ -242,8 +242,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
   private static HttpServer startHttpServer() throws Exception {
     new File(System.getProperty(
         "build.webapps", "build/webapps") + "/test").mkdirs();
-    HttpServer server = new HttpServer.Builder().setName("test")
-        .setBindAddress("0.0.0.0").setPort(0).setFindPort(true).build();
+    HttpServer server = new HttpServer("test", "0.0.0.0", 0, true);
     server.addServlet("jobend", "/jobend", JobEndServlet.class);
     server.start();
 
