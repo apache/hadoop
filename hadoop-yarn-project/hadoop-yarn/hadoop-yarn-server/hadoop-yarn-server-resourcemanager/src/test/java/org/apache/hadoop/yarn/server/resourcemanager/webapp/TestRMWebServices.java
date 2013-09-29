@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -84,6 +85,7 @@ public class TestRMWebServices extends JerseyTest {
       bind(RMContext.class).toInstance(rm.getRMContext());
       bind(ApplicationACLsManager.class).toInstance(
           rm.getApplicationACLsManager());
+      bind(QueueACLsManager.class).toInstance(rm.getQueueACLsManager());
       serve("/*").with(GuiceContainer.class);
     }
   });

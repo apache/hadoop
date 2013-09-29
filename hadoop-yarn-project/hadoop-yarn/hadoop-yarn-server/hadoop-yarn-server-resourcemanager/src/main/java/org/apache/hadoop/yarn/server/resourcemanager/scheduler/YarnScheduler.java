@@ -25,9 +25,11 @@ import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -134,4 +136,17 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @LimitedPrivate("yarn")
   @Evolving
   QueueMetrics getRootQueueMetrics();
+
+  /**
+   * Check if the user has permission to perform the operation.
+   * If the user has {@link QueueACL#ADMINISTER_QUEUE} permission,
+   * this user can view/modify the applications in this queue
+   * @param callerUGI
+   * @param acl
+   * @param queueName
+   * @return <code>true</code> if the user has the permission,
+   *         <code>false</code> otherwise
+   */
+  boolean checkAccess(UserGroupInformation callerUGI,
+      QueueACL acl, String queueName);
 }

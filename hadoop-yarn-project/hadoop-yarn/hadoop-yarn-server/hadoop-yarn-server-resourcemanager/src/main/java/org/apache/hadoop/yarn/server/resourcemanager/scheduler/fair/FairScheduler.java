@@ -624,7 +624,9 @@ public class FairScheduler implements ResourceScheduler {
 
     // Enforce ACLs
     UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
-    if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi)) {
+
+    if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi)
+        && !queue.hasAccess(QueueACL.ADMINISTER_QUEUE, userUgi)) {
       String msg = "User " + userUgi.getUserName() +
     	        " cannot submit applications to queue " + queue.getName();
       LOG.info(msg);
@@ -632,7 +634,7 @@ public class FairScheduler implements ResourceScheduler {
     	        new RMAppAttemptRejectedEvent(applicationAttemptId, msg));
       return;
     }
-    
+
     queue.addApp(schedulerApp);
     queue.getMetrics().submitApp(user, applicationAttemptId.getAttemptId());
 
@@ -1120,6 +1122,20 @@ public class FairScheduler implements ResourceScheduler {
   @Override
   public int getNumClusterNodes() {
     return nodes.size();
+  }
+
+  @Override
+  public synchronized boolean checkAccess(UserGroupInformation callerUGI,
+      QueueACL acl, String queueName) {
+    FSQueue queue = getQueueManager().getQueue(queueName);
+    if (queue == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("ACL not found for queue access-type " + acl
+            + " for queue " + queueName);
+      }
+      return false;
+    }
+    return queue.hasAccess(acl, callerUGI);
   }
 
 }
