@@ -167,7 +167,7 @@ public class TestClientToAMTokens {
     MockRM rm = new MockRMWithCustomAMLauncher(conf, containerManager) {
       protected ClientRMService createClientRMService() {
         return new ClientRMService(this.rmContext, scheduler,
-          this.rmAppManager, this.applicationACLsManager,
+          this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
           this.rmDTSecretManager);
       };
 

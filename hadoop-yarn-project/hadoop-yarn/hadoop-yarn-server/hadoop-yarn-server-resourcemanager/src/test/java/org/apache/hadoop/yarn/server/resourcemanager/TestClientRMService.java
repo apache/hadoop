@@ -19,9 +19,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -55,12 +58,14 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -78,7 +83,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -119,7 +126,7 @@ public class TestClientRMService {
     MockRM rm = new MockRM() {
       protected ClientRMService createClientRMService() {
         return new ClientRMService(this.rmContext, scheduler,
-          this.rmAppManager, this.applicationACLsManager,
+          this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
           this.rmDTSecretManager);
       };
     };
@@ -183,7 +190,7 @@ public class TestClientRMService {
     when(rmContext.getRMApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, RMApp>());
     ClientRMService rmService = new ClientRMService(rmContext, null, null,
-        null, null);
+        null, null, null);
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     GetApplicationReportRequest request = recordFactory
         .newRecordInstance(GetApplicationReportRequest.class);
@@ -204,7 +211,7 @@ public class TestClientRMService {
     when(rmContext.getRMApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, RMApp>());
     ClientRMService rmService = new ClientRMService(rmContext, null, null,
-        null, null);
+        null, null, null);
     ApplicationId applicationId =
         BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
     KillApplicationRequest request =
@@ -225,7 +232,7 @@ public class TestClientRMService {
     RMContext rmContext = mock(RMContext.class);
     mockRMContext(yarnScheduler, rmContext);
     ClientRMService rmService = new ClientRMService(rmContext, yarnScheduler,
-        null, null, null);
+        null, null, null, null);
     GetQueueInfoRequest request = recordFactory
         .newRecordInstance(GetQueueInfoRequest.class);
     request.setQueueName("testqueue");
@@ -308,7 +315,7 @@ public class TestClientRMService {
 
     RMContext rmContext = mock(RMContext.class);
     ClientRMService rmService = new ClientRMService(
-        rmContext, null, null, null, dtsm);
+        rmContext, null, null, null, null, dtsm);
     rmService.renewDelegationToken(request);
   }
 
@@ -332,9 +339,13 @@ public class TestClientRMService {
     when(
         mockAclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
             ApplicationAccessType.VIEW_APP, null, appId1)).thenReturn(true);
+
+    QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
+    when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
+            any(QueueACL.class), anyString())).thenReturn(true);
     ClientRMService rmService =
         new ClientRMService(rmContext, yarnScheduler, appManager,
-            mockAclsManager, null);
+            mockAclsManager, mockQueueACLsManager, null);
 
     // without name and queue
 
@@ -444,7 +455,8 @@ public class TestClientRMService {
     when(rmContext.getDispatcher().getEventHandler()).thenReturn(eventHandler);
       
     final ClientRMService rmService =
-        new ClientRMService(rmContext, yarnScheduler, appManager, null, null);
+        new ClientRMService(rmContext, yarnScheduler, appManager, null, null,
+            null);
 
     // submit an app and wait for it to block while in app submission
     Thread t = new Thread() {
@@ -490,6 +502,8 @@ public class TestClientRMService {
       throws IOException {
     Dispatcher dispatcher = mock(Dispatcher.class);
     when(rmContext.getDispatcher()).thenReturn(dispatcher);
+    EventHandler eventHandler = mock(EventHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(eventHandler);
     QueueInfo queInfo = recordFactory.newRecordInstance(QueueInfo.class);
     queInfo.setQueueName("testqueue");
     when(yarnScheduler.getQueueInfo(eq("testqueue"), anyBoolean(), anyBoolean()))
@@ -526,9 +540,14 @@ public class TestClientRMService {
       ApplicationId applicationId3, YarnConfiguration config, String queueName) {
     ApplicationSubmissionContext asContext = mock(ApplicationSubmissionContext.class);
     when(asContext.getMaxAppAttempts()).thenReturn(1);
-    return new RMAppImpl(applicationId3, rmContext, config, null, null,
+    RMAppImpl app =  spy(new RMAppImpl(applicationId3, rmContext, config, null, null,
         queueName, asContext, yarnScheduler, null , System
-            .currentTimeMillis(), "YARN");
+            .currentTimeMillis(), "YARN"));
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(applicationId3, 1);
+    RMAppAttemptImpl rmAppAttemptImpl = new RMAppAttemptImpl(attemptId,
+        rmContext, yarnScheduler, null, asContext, config, null);
+    when(app.getCurrentAppAttempt()).thenReturn(rmAppAttemptImpl);
+    return app;
   }
 
   private static YarnScheduler mockYarnScheduler() {

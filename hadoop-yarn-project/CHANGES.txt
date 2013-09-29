@@ -79,6 +79,9 @@ Release 2.1.2 - UNRELEASED
     of testing given ApplicationHistoryServer is not yet ready. (Arpit Gupta via
     vinodkv)
 
+    YARN-899. Added back queue level administrator-acls so that there is no
+    regression w.r.t 1.x. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

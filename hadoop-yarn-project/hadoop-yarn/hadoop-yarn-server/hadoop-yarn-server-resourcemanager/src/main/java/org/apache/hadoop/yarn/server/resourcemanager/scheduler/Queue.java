@@ -64,4 +64,6 @@ public interface Queue {
    * @return queue ACLs for user
    */
   List<QueueUserACLInfo> getQueueUserAclInfo(UserGroupInformation user);
+
+  boolean hasAccess(QueueACL acl, UserGroupInformation user);
 }
