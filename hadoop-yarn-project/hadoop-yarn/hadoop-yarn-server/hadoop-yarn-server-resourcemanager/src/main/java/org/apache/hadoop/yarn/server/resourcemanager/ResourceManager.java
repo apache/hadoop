@@ -258,6 +258,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     this.applicationACLsManager = new ApplicationACLsManager(conf);
 
+    queueACLsManager = createQueueACLsManager(scheduler, conf);
+
     this.rmAppManager = createRMAppManager();
     // Register event handler for RMAppManagerEvents
     this.rmDispatcher.register(RMAppManagerEventType.class,
