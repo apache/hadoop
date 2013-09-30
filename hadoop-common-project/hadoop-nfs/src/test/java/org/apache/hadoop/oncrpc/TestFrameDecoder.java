@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.oncrpc.RpcUtil.RpcFrameDecoder;
@@ -30,6 +29,7 @@ import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.jboss.netty.buffer.ByteBufferBackedChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.junit.Test;
@@ -38,7 +38,7 @@ import org.mockito.Mockito;
 public class TestFrameDecoder {
 
   private static int port = 12345; // some random server port
-  private static XDR result = null;
+  private static int resultSize;
 
   static void testRequest(XDR request) {
     SimpleTcpClient tcpClient = new SimpleTcpClient("localhost", port, request,
@@ -49,18 +49,20 @@ public class TestFrameDecoder {
   static class TestRpcProgram extends RpcProgram {
 
     protected TestRpcProgram(String program, String host, int port,
-        int progNumber, int lowProgVersion, int highProgVersion, int cacheSize) {
-      super(program, host, port, progNumber, lowProgVersion, highProgVersion,
-          cacheSize);
+        int progNumber, int lowProgVersion, int highProgVersion) {
+      super(program, host, port, progNumber, lowProgVersion, highProgVersion);
     }
 
     @Override
-    public XDR handleInternal(RpcCall rpcCall, XDR in, XDR out,
-        InetAddress client, Channel channel) {
-      // Get the final complete request and return a void response.
-      result = in;
-      RpcAcceptedReply.getAcceptInstance(1234, new VerifierNone()).write(out);
-      return out;
+    protected void handleInternal(ChannelHandlerContext ctx, RpcInfo info) {
+      resultSize = info.data().readableBytes();
+      RpcAcceptedReply reply = RpcAcceptedReply.getAcceptInstance(1234,
+          new VerifierNone());
+      XDR out = new XDR();
+      reply.write(out);
+      ChannelBuffer b = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap().buffer());
+      RpcResponse rsp = new RpcResponse(b, info.remoteAddress());
+      RpcUtil.sendRpcResponse(ctx, rsp);
     }
 
     @Override
@@ -147,21 +149,22 @@ public class TestFrameDecoder {
   public void testFrames() {
 
     RpcProgram program = new TestFrameDecoder.TestRpcProgram("TestRpcProgram",
-        "localhost", port, 100000, 1, 2, 100);
+        "localhost", port, 100000, 1, 2);
     SimpleTcpServer tcpServer = new SimpleTcpServer(port, program, 1);
     tcpServer.run();
 
     XDR xdrOut = createGetportMount();
+    int headerSize = xdrOut.size();
     int bufsize = 2 * 1024 * 1024;
     byte[] buffer = new byte[bufsize];
     xdrOut.writeFixedOpaque(buffer);
-    int requestSize = xdrOut.size();
+    int requestSize = xdrOut.size() - headerSize;
 
     // Send the request to the server
     testRequest(xdrOut);
 
     // Verify the server got the request with right size
-    assertTrue(requestSize == result.size());
+    assertEquals(requestSize, resultSize);
   }
 
   static void createPortmapXDRheader(XDR xdr_out, int procedure) {
@@ -173,10 +176,6 @@ public class TestFrameDecoder {
   static XDR createGetportMount() {
     XDR xdr_out = new XDR();
     createPortmapXDRheader(xdr_out, 3);
-    xdr_out.writeInt(0); // AUTH_NULL
-    xdr_out.writeInt(0); // cred len
-    xdr_out.writeInt(0); // verifier AUTH_NULL
-    xdr_out.writeInt(0); // verf len
     return xdr_out;
   }
   /*
