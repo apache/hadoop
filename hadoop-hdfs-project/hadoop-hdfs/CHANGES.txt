@@ -345,6 +345,9 @@ Release 2.1.2 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-5230. Introduce RpcInfo to decouple XDR classes from the RPC API.
+    (Haohui Mai via brandonli)
+
   IMPROVEMENTS
 
     HDFS-5246. Make Hadoop nfs server port and mount daemon port

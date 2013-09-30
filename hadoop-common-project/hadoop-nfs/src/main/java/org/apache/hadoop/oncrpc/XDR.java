@@ -93,6 +93,10 @@ public final class XDR {
     return n;
   }
 
+  public ByteBuffer buffer() {
+    return buf.duplicate();
+  }
+
   public int size() {
     // TODO: This overloading intends to be compatible with the semantics of
     // the previous version of the class. This function should be separated into
@@ -219,7 +223,7 @@ public final class XDR {
     return xdr.buf.remaining() >= len;
   }
 
-  private static byte[] recordMark(int size, boolean last) {
+  static byte[] recordMark(int size, boolean last) {
     byte[] b = new byte[SIZEOF_INT];
     ByteBuffer buf = ByteBuffer.wrap(b);
     buf.putInt(!last ? size : size | 0x80000000);
@@ -259,9 +263,8 @@ public final class XDR {
 
   @VisibleForTesting
   public byte[] getBytes() {
-    ByteBuffer d = buf.duplicate();
-    byte[] b = new byte[d.position()];
-    d.flip();
+    ByteBuffer d = asReadOnlyWrap().buffer();
+    byte[] b = new byte[d.remaining()];
     d.get(b);
 
     return b;
