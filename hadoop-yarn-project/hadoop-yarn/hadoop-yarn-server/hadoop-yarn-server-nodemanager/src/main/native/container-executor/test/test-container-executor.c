@@ -32,14 +32,12 @@
 #define DONT_TOUCH_FILE "dont-touch-me"
 #define NM_LOCAL_DIRS       TEST_ROOT "/local-1," TEST_ROOT "/local-2," \
                TEST_ROOT "/local-3," TEST_ROOT "/local-4," TEST_ROOT "/local-5"
-#define NM_LOG_DIRS         TEST_ROOT "/logdir_1," TEST_ROOT "/logdir_2," \
-                            TEST_ROOT "/logdir_3," TEST_ROOT "/logdir_4"
+#define NM_LOG_DIRS         TEST_ROOT "/logs/userlogs"
 #define ARRAY_SIZE 1000
 
 static char* username = NULL;
-static char* local_dirs = NULL;
-static char* log_dirs = NULL;
-static char* resources = NULL;
+static char** local_dirs = NULL;
+static char** log_dirs = NULL;
 
 /**
  * Run the command using the effective user id.
@@ -119,6 +117,33 @@ void create_nm_roots(char ** nm_roots) {
              strerror(errno));
       exit(1);
     }
+  }
+}
+
+void check_pid_file(const char* pid_file, pid_t mypid) {
+  if(access(pid_file, R_OK) != 0) {
+    printf("FAIL: failed to create pid file %s\n", pid_file);
+    exit(1);
+  }
+  int pidfd = open(pid_file, O_RDONLY);
+  if (pidfd == -1) {
+    printf("FAIL: failed to open pid file %s - %s\n", pid_file, strerror(errno));
+    exit(1);
+  }
+
+  char pidBuf[100];
+  ssize_t bytes = read(pidfd, pidBuf, 100);
+  if (bytes == -1) {
+    printf("FAIL: failed to read from pid file %s - %s\n", pid_file, strerror(errno));
+    exit(1);
+  }
+
+  char myPidBuf[33];
+  snprintf(myPidBuf, 33, "%d", mypid);
+  if (strncmp(pidBuf, myPidBuf, strlen(myPidBuf)) != 0) {
+    printf("FAIL: failed to find matching pid in pid file\n");
+    printf("FAIL: Expected pid %d : Got %.*s", mypid, (int)bytes, pidBuf);
+    exit(1);
   }
 }
 
@@ -227,7 +252,7 @@ void test_check_configuration_permissions() {
 }
 
 void test_delete_container() {
-  if (initialize_user(username, extract_values(local_dirs))) {
+  if (initialize_user(username, local_dirs)) {
     printf("FAIL: failed to initialize user %s\n", username);
     exit(1);
   }
@@ -458,6 +483,9 @@ void test_signal_container_group() {
     exit(0);
   }
   printf("Child container launched as %d\n", child);
+  // there's a race condition for child calling change_user and us 
+  // calling signal_container_as_user, hence sleeping
+  sleep(3);
   if (signal_container_as_user(username, child, SIGKILL) != 0) {
     exit(1);
   }
@@ -522,8 +550,8 @@ void test_init_app() {
     exit(1);
   } else if (child == 0) {
     char *final_pgm[] = {"touch", "my-touch-file", 0};
-    if (initialize_app(username, "app_4", TEST_ROOT "/creds.txt", final_pgm,
-        extract_values(local_dirs), extract_values(log_dirs)) != 0) {
+    if (initialize_app(username, "app_4", TEST_ROOT "/creds.txt",
+                       local_dirs, log_dirs, final_pgm) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
     }
@@ -546,7 +574,7 @@ void test_init_app() {
     exit(1);
   }
   char buffer[100000];
-  sprintf(buffer, "%s/jobToken", app_dir);
+  sprintf(buffer, "%s/creds.txt", app_dir);
   if (access(buffer, R_OK) != 0) {
     printf("FAIL: failed to create credentials %s\n", buffer);
     exit(1);
@@ -557,7 +585,7 @@ void test_init_app() {
     exit(1);
   }
   free(app_dir);
-  app_dir = get_app_log_directory("logs","app_4");
+  app_dir = get_app_log_directory(TEST_ROOT "/logs/userlogs","app_4");
   if (access(app_dir, R_OK) != 0) {
     printf("FAIL: failed to create app log directory %s\n", app_dir);
     exit(1);
@@ -585,6 +613,10 @@ void test_run_container() {
     exit(1);
   }
 
+  char * cgroups_pids[] = { TEST_ROOT "/cgroups-pid1.txt", TEST_ROOT "/cgroups-pid2.txt", 0 };
+  close(creat(cgroups_pids[0], O_RDWR));
+  close(creat(cgroups_pids[1], O_RDWR));
+
   const char* script_name = TEST_ROOT "/container-script";
   FILE* script = fopen(script_name, "w");
   if (script == NULL) {
@@ -610,23 +642,17 @@ void test_run_container() {
   char* container_dir = get_container_work_directory(TEST_ROOT "/local-1", 
 					      username, "app_4", "container_1");
   const char * pid_file = TEST_ROOT "/pid.txt";
+
   pid_t child = fork();
   if (child == -1) {
     printf("FAIL: failed to fork process for init_app - %s\n", 
 	   strerror(errno));
     exit(1);
   } else if (child == 0) {
-    char *key = malloc(strlen(resources));
-    char *value = malloc(strlen(resources));
-    if (get_kv_key(resources, key, strlen(resources)) < 0 ||
-        get_kv_value(resources, key, strlen(resources)) < 0) {
-        printf("FAIL: resources failed - %s\n");
-        exit(1);
-    }
     if (launch_container_as_user(username, "app_4", "container_1", 
           container_dir, script_name, TEST_ROOT "/creds.txt", pid_file,
-          extract_values(local_dirs), extract_values(log_dirs),
-          key, extract_values(value)) != 0) {
+          local_dirs, log_dirs,
+          "cgroups", cgroups_pids) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
     }
@@ -654,38 +680,21 @@ void test_run_container() {
     exit(1);
   }
   free(container_dir);
-  container_dir = get_app_log_directory("logs", "app_4/container_1");
+  container_dir = get_app_log_directory(TEST_ROOT "/logs/userlogs", "app_4/container_1");
   if (access(container_dir, R_OK) != 0) {
     printf("FAIL: failed to create app log directory %s\n", container_dir);
     exit(1);
   }
   free(container_dir);
 
-  if(access(pid_file, R_OK) != 0) {
-    printf("FAIL: failed to create pid file %s\n", pid_file);
-    exit(1);
-  }
-  int pidfd = open(pid_file, O_RDONLY);
-  if (pidfd == -1) {
-    printf("FAIL: failed to open pid file %s - %s\n", pid_file, strerror(errno));
+  if (seteuid(0) != 0) {
+    printf("FAIL: seteuid to root failed - %s\n", strerror(errno));
     exit(1);
   }
 
-  char pidBuf[100];
-  ssize_t bytes = read(pidfd, pidBuf, 100);
-  if (bytes == -1) {
-    printf("FAIL: failed to read from pid file %s - %s\n", pid_file, strerror(errno));
-    exit(1);
-  }
-
-  pid_t mypid = child;
-  char myPidBuf[33];
-  snprintf(myPidBuf, 33, "%d", mypid);
-  if (strncmp(pidBuf, myPidBuf, strlen(myPidBuf)) != 0) {
-    printf("FAIL: failed to find matching pid in pid file\n");
-    printf("FAIL: Expected pid %d : Got %.*s", mypid, (int)bytes, pidBuf);
-    exit(1);
-  }
+  check_pid_file(pid_file, child);
+  check_pid_file(cgroups_pids[0], child);
+  check_pid_file(cgroups_pids[1], child);
 }
 
 int main(int argc, char **argv) {
@@ -707,12 +716,10 @@ int main(int argc, char **argv) {
   }
   read_config(TEST_ROOT "/test.cfg");
 
-  local_dirs = (char *) malloc (sizeof(char) * ARRAY_SIZE);
-  strcpy(local_dirs, NM_LOCAL_DIRS);
-  log_dirs = (char *) malloc (sizeof(char) * ARRAY_SIZE);
-  strcpy(log_dirs, NM_LOG_DIRS);
+  local_dirs = extract_values(strdup(NM_LOCAL_DIRS));
+  log_dirs = extract_values(strdup(NM_LOG_DIRS));
 
-  create_nm_roots(extract_values(local_dirs));
+  create_nm_roots(local_dirs);
 
   if (getuid() == 0 && argc == 2) {
     username = argv[1];
@@ -754,8 +761,6 @@ int main(int argc, char **argv) {
   printf("\nTesting delete_app()\n");
   test_delete_app();
 
-  test_delete_user();
-
   test_check_user();
 
   // the tests that change user need to be run in a subshell, so that
@@ -772,6 +777,9 @@ int main(int argc, char **argv) {
   }
 
   seteuid(0);
+  // test_delete_user must run as root since that's how we use the delete_as_user
+  test_delete_user();
+
   run("rm -fr " TEST_ROOT);
   printf("\nFinished tests\n");
 
