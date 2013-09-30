@@ -347,10 +347,13 @@ Release 2.1.2 - UNRELEASED
 
   IMPROVEMENTS
 
-  OPTIMIZATIONS
-
     HDFS-5246. Make Hadoop nfs server port and mount daemon port
     configurable. (Jinghui Wang via brandonli)
+
+    HDFS-5256. Use guava LoadingCache to implement DFSClientCache. (Haohui Mai
+    via brandonli)
+
+  OPTIMIZATIONS
 
   BUG FIXES
 
