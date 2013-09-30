@@ -17,41 +17,44 @@
  */
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 public class TestDFSClientCache {
   @Test
-  public void testLruTable() throws IOException {
-    DFSClientCache cache = new DFSClientCache(new Configuration(), 3);
-    DFSClient client = Mockito.mock(DFSClient.class);
-    cache.put("a", client);
-    assertTrue(cache.containsKey("a"));
+  public void testEviction() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost");
 
-    cache.put("b", client);
-    cache.put("c", client);
-    cache.put("d", client);
-    assertTrue(cache.usedSize() == 3);
-    assertFalse(cache.containsKey("a"));
+    // Only one entry will be in the cache
+    final int MAX_CACHE_SIZE = 2;
 
-    // Cache should have d,c,b in LRU order
-    assertTrue(cache.containsKey("b"));
-    // Do a lookup to make b the most recently used
-    assertTrue(cache.get("b") != null);
+    DFSClientCache cache = new DFSClientCache(conf, MAX_CACHE_SIZE);
 
-    cache.put("e", client);
-    assertTrue(cache.usedSize() == 3);
-    // c should be replaced with e, and cache has e,b,d
-    assertFalse(cache.containsKey("c"));
-    assertTrue(cache.containsKey("e"));
-    assertTrue(cache.containsKey("b"));
-    assertTrue(cache.containsKey("d"));
+    DFSClient c1 = cache.get("test1");
+    assertTrue(cache.get("test1").toString().contains("ugi=test1"));
+    assertEquals(c1, cache.get("test1"));
+    assertFalse(isDfsClientClose(c1));
+
+    cache.get("test2");
+    assertTrue(isDfsClientClose(c1));
+    assertEquals(MAX_CACHE_SIZE - 1, cache.clientCache.size());
+  }
+
+  private static boolean isDfsClientClose(DFSClient c) {
+    try {
+      c.exists("");
+    } catch (IOException e) {
+      return e.getMessage().equals("Filesystem closed");
+    }
+    return false;
   }
 }
