@@ -192,10 +192,6 @@ public class AppSchedulable extends Schedulable {
       RMContainer rmContainer = app.reserve(node, priority, null,
           container);
       node.reserveResource(app, priority, rmContainer);
-      getMetrics().reserveResource(app.getUser(),
-          container.getResource());
-      scheduler.getRootQueueMetrics().reserveResource(app.getUser(),
-          container.getResource());
     }
 
     else {
@@ -215,8 +211,6 @@ public class AppSchedulable extends Schedulable {
     app.unreserve(node, priority);
     node.unreserveResource(app);
     getMetrics().unreserveResource(
-        app.getUser(), rmContainer.getContainer().getResource());
-    scheduler.getRootQueueMetrics().unreserveResource(
         app.getUser(), rmContainer.getContainer().getResource());
   }
 
