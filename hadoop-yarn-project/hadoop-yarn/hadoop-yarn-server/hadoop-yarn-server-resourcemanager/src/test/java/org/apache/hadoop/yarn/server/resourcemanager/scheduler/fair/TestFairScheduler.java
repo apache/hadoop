@@ -449,6 +449,44 @@ public class TestFairScheduler {
     Assert.assertEquals(3, queueManager.getLeafQueues().size());
   }
 
+  @Test
+  public void testSchedulerRootQueueMetrics() throws InterruptedException {
+	  
+    // Add a node
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Queue 1 requests full capacity of node
+    createSchedulingRequest(1024, "queue1", "user1", 1);
+    scheduler.update();
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
+    scheduler.handle(updateEvent);
+
+    // Now queue 2 requests likewise
+    createSchedulingRequest(1024, "queue2", "user1", 1);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+
+    // Make sure reserved memory gets updated correctly
+    assertEquals(1024, scheduler.rootMetrics.getReservedMB());
+    
+    // Now another node checks in with capacity
+    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+    scheduler.handle(updateEvent2);
+
+
+    // The old reservation should still be there...
+    assertEquals(1024, scheduler.rootMetrics.getReservedMB());
+
+    // ... but it should disappear when we update the first node.
+    scheduler.handle(updateEvent);
+    assertEquals(0, scheduler.rootMetrics.getReservedMB());
+  }
+
   @Test (timeout = 5000)
   public void testSimpleContainerAllocation() {
     // Add a node
