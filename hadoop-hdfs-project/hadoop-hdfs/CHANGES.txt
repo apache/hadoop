@@ -300,6 +300,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5260. Merge zero-copy memory-mapped HDFS client reads to trunk and
     branch-2. (cnauroth)
 
+    HDFS-4517. Cover class RemoteBlockReader with unit tests. (Vadim Bondarev
+    and Dennis Y via kihwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
