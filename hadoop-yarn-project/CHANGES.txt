@@ -83,6 +83,9 @@ Release 2.1.2 - UNRELEASED
     YARN-1157. Fixed ResourceManager UI to behave correctly when apps like
     distributed-shell do not set tracking urls. (Xuan Gong via vinodkv)
 
+    YARN-1221. With Fair Scheduler, reserved MB reported in RM web UI increases
+    indefinitely (Siqi Li via Sandy Ryza)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
