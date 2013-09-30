@@ -18,15 +18,16 @@
 package org.apache.hadoop.oncrpc.security;
 
 import org.apache.hadoop.oncrpc.XDR;
-import org.apache.hadoop.oncrpc.security.RpcAuthInfo.AuthFlavor;
 
 /**
  * Base class for verifier. Currently our authentication only supports 3 types
- * of auth flavors: {@link AuthFlavor#AUTH_NONE}, {@link AuthFlavor#AUTH_SYS},
- * and {@link AuthFlavor#RPCSEC_GSS}. Thus for verifier we only need to handle
+ * of auth flavors: {@link RpcAuthInfo.AuthFlavor#AUTH_NONE}, {@link RpcAuthInfo.AuthFlavor#AUTH_SYS},
+ * and {@link RpcAuthInfo.AuthFlavor#RPCSEC_GSS}. Thus for verifier we only need to handle
  * AUTH_NONE and RPCSEC_GSS
  */
 public abstract class Verifier extends RpcAuthInfo {
+
+  public static final Verifier VERIFIER_NONE = new VerifierNone();
 
   protected Verifier(AuthFlavor flavor) {
     super(flavor);
@@ -61,6 +62,4 @@ public abstract class Verifier extends RpcAuthInfo {
     }
     verifier.write(xdr);
   }  
- 
-  
 }

@@ -22,13 +22,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mount.MountdBase;
 import org.apache.hadoop.oncrpc.RpcProgram;
-import org.apache.hadoop.oncrpc.RpcUtil;
 import org.apache.hadoop.oncrpc.SimpleTcpServer;
-import org.apache.hadoop.oncrpc.SimpleTcpServerHandler;
 import org.apache.hadoop.portmap.PortmapMapping;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
 
 /**
  * Nfs server. Supports NFS v3 using {@link RpcProgram}.
@@ -72,19 +67,7 @@ public abstract class Nfs3Base {
 
   private void startTCPServer() {
     SimpleTcpServer tcpServer = new SimpleTcpServer(nfsPort,
-        rpcProgram, 0) {
-      @Override
-      public ChannelPipelineFactory getPipelineFactory() {
-        return new ChannelPipelineFactory() {
-          @Override
-          public ChannelPipeline getPipeline() {
-            return Channels.pipeline(
-                RpcUtil.constructRpcFrameDecoder(),
-                new SimpleTcpServerHandler(rpcProgram));
-          }
-        };
-      }
-    };
+        rpcProgram, 0);
     tcpServer.run();
   }
 }
