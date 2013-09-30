@@ -155,6 +155,8 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5411. Refresh size of loaded job cache on history server (Ashwin
     Shankar via jlowe)
 
+    MAPREDUCE-5332. Support token-preserving restart of history server (jlowe)
+
   IMPROVEMENTS
 
     MAPREDUCE-434. LocalJobRunner limited to single reducer (Sandy Ryza and
@@ -231,6 +233,21 @@ Release 2.1.2 - UNRELEASED
 
     MAPREDUCE-5513. ConcurrentModificationException in JobControl (Robert
     Parker via jlowe)
+
+    MAPREDUCE-5531. Fix compat with hadoop-1 in mapreduce.(TaskID,
+    TaskAttemptID) by re-introducing missing constructors. (Robert Kanter via
+    acmurthy)
+
+    MAPREDUCE-5545. org.apache.hadoop.mapred.TestTaskAttemptListenerImpl.testCommitWindow
+    times out (Robert Kanter via jlowe)
+
+    MAPREDUCE-5529. Fix compat with hadoop-1 in mapred.TotalOrderPartitioner
+    by re-introducing (get,set)PartitionFile which takes in JobConf. (Robert 
+    Kanter via acmurthy)
+
+    MAPREDUCE-5538. Fixed MR AppMaster to send job-notification URL only after
+    the job is really done - a bug caused by MAPREDUCE-5505. (Zhijie Shen via
+    vinodkv)
 
 Release 2.1.1-beta - 2013-09-23
 

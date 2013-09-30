@@ -90,11 +90,12 @@ public class JSONUtil {
    * @param <T>           type
    * @return deserialized  T object
    */
+  @SuppressWarnings("unchecked")
   public static <T> T toObject(String value,
                                final TypeReference<T> typeReference)
             throws IOException {
     try {
-      return jsonMapper.readValue(value, typeReference);
+      return (T)jsonMapper.readValue(value, typeReference);
     } catch (JsonGenerationException e) {
       throw new SwiftJsonMarshallingException("Error generating response", e);
     } catch (JsonMappingException e) {
@@ -108,11 +109,12 @@ public class JSONUtil {
    * @param <T>            type
    * @return deserialized  T object
    */
+  @SuppressWarnings("unchecked")
   public static <T> T toObject(String value,
                                final CollectionType collectionType)
               throws IOException {
     try {
-      return jsonMapper.readValue(value, collectionType);
+      return (T)jsonMapper.readValue(value, collectionType);
     } catch (JsonGenerationException e) {
       throw new SwiftJsonMarshallingException(e.toString()
                                               + " source: " + value,

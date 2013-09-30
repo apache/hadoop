@@ -250,6 +250,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5122. Support failover and retry in WebHdfsFileSystem for NN HA.
     (Haohui Mai via jing9)
 
+    HDFS-4953. Enable HDFS local reads via mmap.
+    (Colin Patrick McCabe via wang).
+
   IMPROVEMENTS
 
     HDFS-4657.  Limit the number of blocks logged by the NN after a block
@@ -291,6 +294,12 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5240. Separate formatting from logging in the audit logger API (daryn)
 
+    HDFS-5191. Revisit zero-copy API in FSDataInputStream to make it more
+    intuitive.  (Contributed by Colin Patrick McCabe)
+
+    HDFS-5260. Merge zero-copy memory-mapped HDFS client reads to trunk and
+    branch-2. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -316,6 +325,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5031. BlockScanner scans the block multiple times. (Vinay via Arpit
     Agarwal)
 
+    HDFS-5266. ElasticByteBufferPool#Key does not implement equals. (cnauroth)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -336,10 +347,13 @@ Release 2.1.2 - UNRELEASED
 
   IMPROVEMENTS
 
-  OPTIMIZATIONS
-
     HDFS-5246. Make Hadoop nfs server port and mount daemon port
     configurable. (Jinghui Wang via brandonli)
+
+    HDFS-5256. Use guava LoadingCache to implement DFSClientCache. (Haohui Mai
+    via brandonli)
+
+  OPTIMIZATIONS
 
   BUG FIXES
 
@@ -353,6 +367,11 @@ Release 2.1.2 - UNRELEASED
 
     HDFS-5186. TestFileJournalManager fails on Windows due to file handle leaks.
     (Chuan Liu via cnauroth)
+
+    HDFS-5268. NFS write commit verifier is not set in a few places (brandonli)
+
+    HDFS-5265. Namenode fails to start when dfs.https.port is unspecified.
+    (Haohui Mai via jing9)
 
 Release 2.1.1-beta - 2013-09-23
 

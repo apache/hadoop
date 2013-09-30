@@ -1181,4 +1181,28 @@
   <description>ACL of who can be admin of the History server.</description>
 </property>
 
+<property>
+  <name>mapreduce.jobhistory.recovery.enable</name>
+  <value>false</value>
+  <description>Enable the history server to store server state and recover
+  server state upon startup.  If enabled then
+  mapreduce.jobhistory.recovery.store.class must be specified.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.recovery.store.class</name>
+  <value>org.apache.hadoop.mapreduce.v2.hs.HistoryServerFileSystemStateStoreService</value>
+  <description>The HistoryServerStateStoreService class to store history server
+  state for recovery.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.recovery.store.fs.uri</name>
+  <value>${hadoop.tmp.dir}/mapred/history/recoverystore</value>
+  <!--value>hdfs://localhost:9000/mapred/history/recoverystore</value-->
+  <description>The URI where history server state will be stored if
+  HistoryServerFileSystemStateStoreService is configured as the recovery
+  storage class.</description>
+</property>
+
 </configuration>

@@ -19,16 +19,19 @@
 #ifndef LIBHDFS_NATIVE_TESTS_EXPECT_H
 #define LIBHDFS_NATIVE_TESTS_EXPECT_H
 
+#include <inttypes.h>
 #include <stdio.h>
+
+struct hdfsFile_internal;
 
 #define EXPECT_ZERO(x) \
     do { \
         int __my_ret__ = x; \
         if (__my_ret__) { \
             int __my_errno__ = errno; \
-            fprintf(stderr, "TEST_ERROR: failed on line %d with return " \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
 		    "code %d (errno: %d): got nonzero from %s\n", \
-		    __LINE__, __my_ret__, __my_errno__, #x); \
+		    __FILE__, __LINE__, __my_ret__, __my_errno__, #x); \
             return __my_ret__; \
         } \
     } while (0);
@@ -38,9 +41,9 @@
         void* __my_ret__ = x; \
         int __my_errno__ = errno; \
         if (__my_ret__ != NULL) { \
-            fprintf(stderr, "TEST_ERROR: failed on line %d (errno: %d): " \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d (errno: %d): " \
 		    "got non-NULL value %p from %s\n", \
-		    __LINE__, __my_errno__, __my_ret__, #x); \
+		    __FILE__, __LINE__, __my_errno__, __my_ret__, #x); \
             return -1; \
         } \
     } while (0);
@@ -50,8 +53,8 @@
         void* __my_ret__ = x; \
         int __my_errno__ = errno; \
         if (__my_ret__ == NULL) { \
-            fprintf(stderr, "TEST_ERROR: failed on line %d (errno: %d): " \
-		    "got NULL from %s\n", __LINE__, __my_errno__, #x); \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d (errno: %d): " \
+		    "got NULL from %s\n", __FILE__, __LINE__, __my_errno__, #x); \
             return -1; \
         } \
     } while (0);
@@ -61,15 +64,16 @@
         int __my_ret__ = x; \
         int __my_errno__ = errno; \
         if (__my_ret__ != -1) { \
-            fprintf(stderr, "TEST_ERROR: failed on line %d with return " \
-                "code %d (errno: %d): expected -1 from %s\n", __LINE__, \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+                "code %d (errno: %d): expected -1 from %s\n", \
+                    __FILE__, __LINE__, \
                 __my_ret__, __my_errno__, #x); \
             return -1; \
         } \
         if (__my_errno__ != e) { \
-            fprintf(stderr, "TEST_ERROR: failed on line %d with return " \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
                 "code %d (errno: %d): expected errno = %d from %s\n", \
-                __LINE__, __my_ret__, __my_errno__, e, #x); \
+                __FILE__, __LINE__, __my_ret__, __my_errno__, e, #x); \
             return -1; \
 	} \
     } while (0);
@@ -79,9 +83,9 @@
         int __my_ret__ = x; \
         int __my_errno__ = errno; \
         if (!__my_ret__) { \
-            fprintf(stderr, "TEST_ERROR: failed on line %d with return " \
-		    "code %d (errno: %d): got zero from %s\n", __LINE__, \
-                __my_ret__, __my_errno__, #x); \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+              "code %d (errno: %d): got zero from %s\n", __FILE__, __LINE__, \
+              __my_ret__, __my_errno__, #x); \
             return -1; \
         } \
     } while (0);
@@ -91,9 +95,9 @@
         int __my_ret__ = x; \
         int __my_errno__ = errno; \
         if (__my_ret__ < 0) { \
-            fprintf(stderr, "TEST_ERROR: failed on line %d with return " \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
                 "code %d (errno: %d): got negative return from %s\n", \
-		    __LINE__, __my_ret__, __my_errno__, #x); \
+                __FILE__, __LINE__, __my_ret__, __my_errno__, #x); \
             return __my_ret__; \
         } \
     } while (0);
@@ -103,9 +107,21 @@
         int __my_ret__ = y; \
         int __my_errno__ = errno; \
         if (__my_ret__ != (x)) { \
-            fprintf(stderr, "TEST_ERROR: failed on line %d with return " \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
               "code %d (errno: %d): expected %d\n", \
-               __LINE__, __my_ret__, __my_errno__, (x)); \
+               __FILE__, __LINE__, __my_ret__, __my_errno__, (x)); \
+            return -1; \
+        } \
+    } while (0);
+
+#define EXPECT_INT64_EQ(x, y) \
+    do { \
+        int64_t __my_ret__ = y; \
+        int __my_errno__ = errno; \
+        if (__my_ret__ != (x)) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+              "value %"PRId64" (errno: %d): expected %"PRId64"\n", \
+               __FILE__, __LINE__, __my_ret__, __my_errno__, (x)); \
             return -1; \
         } \
     } while (0);
@@ -116,5 +132,18 @@
         break; \
     ret = -errno; \
     } while (ret == -EINTR);
+
+/**
+ * Test that an HDFS file has the given statistics.
+ *
+ * Any parameter can be set to UINT64_MAX to avoid checking it.
+ *
+ * @return 0 on success; error code otherwise
+ */
+int expectFileStats(struct hdfsFile_internal *file,
+      uint64_t expectedTotalBytesRead,
+      uint64_t expectedTotalLocalBytesRead,
+      uint64_t expectedTotalShortCircuitBytesRead,
+      uint64_t expectedTotalZeroCopyBytesRead);
 
 #endif

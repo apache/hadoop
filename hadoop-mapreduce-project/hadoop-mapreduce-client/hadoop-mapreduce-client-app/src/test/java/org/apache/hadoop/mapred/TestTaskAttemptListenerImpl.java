@@ -228,7 +228,7 @@ public class TestTaskAttemptListenerImpl {
     return tce;
   }
 
-  @Test (timeout=1000)
+  @Test (timeout=10000)
   public void testCommitWindow() throws IOException {
     SystemClock clock = new SystemClock();
 

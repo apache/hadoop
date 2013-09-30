@@ -104,6 +104,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -206,7 +207,43 @@ public class DFSClient implements java.io.Closeable {
   private boolean shouldUseLegacyBlockReaderLocal;
   private final CachingStrategy defaultReadCachingStrategy;
   private final CachingStrategy defaultWriteCachingStrategy;
+  private ClientMmapManager mmapManager;
   
+  private static final ClientMmapManagerFactory MMAP_MANAGER_FACTORY =
+      new ClientMmapManagerFactory();
+
+  private static final class ClientMmapManagerFactory {
+    private ClientMmapManager mmapManager = null;
+    /**
+     * Tracks the number of users of mmapManager.
+     */
+    private int refcnt = 0;
+
+    synchronized ClientMmapManager get(Configuration conf) {
+      if (refcnt++ == 0) {
+        mmapManager = ClientMmapManager.fromConf(conf);
+      } else {
+        String mismatches = mmapManager.verifyConfigurationMatches(conf);
+        if (!mismatches.isEmpty()) {
+          LOG.warn("The ClientMmapManager settings you specified " +
+            "have been ignored because another thread created the " +
+            "ClientMmapManager first.  " + mismatches);
+        }
+      }
+      return mmapManager;
+    }
+    
+    synchronized void unref(ClientMmapManager mmapManager) {
+      if (this.mmapManager != mmapManager) {
+        throw new IllegalArgumentException();
+      }
+      if (--refcnt == 0) {
+        IOUtils.cleanup(LOG, mmapManager);
+        mmapManager = null;
+      }
+    }
+  }
+
   /**
    * DFSClient configuration 
    */
@@ -534,6 +571,7 @@ public class DFSClient implements java.io.Closeable {
         new CachingStrategy(readDropBehind, readahead);
     this.defaultWriteCachingStrategy =
         new CachingStrategy(writeDropBehind, readahead);
+    this.mmapManager = MMAP_MANAGER_FACTORY.get(conf);
   }
   
   /**
@@ -738,9 +776,12 @@ public class DFSClient implements java.io.Closeable {
   
   /** Abort and release resources held.  Ignore all errors. */
   void abort() {
+    if (mmapManager != null) {
+      MMAP_MANAGER_FACTORY.unref(mmapManager);
+      mmapManager = null;
+    }
     clientRunning = false;
     closeAllFilesBeingWritten(true);
-
     try {
       // remove reference to this client and stop the renewer,
       // if there is no more clients under the renewer.
@@ -784,6 +825,10 @@ public class DFSClient implements java.io.Closeable {
    */
   @Override
   public synchronized void close() throws IOException {
+    if (mmapManager != null) {
+      MMAP_MANAGER_FACTORY.unref(mmapManager);
+      mmapManager = null;
+    }
     if(clientRunning) {
       closeAllFilesBeingWritten(false);
       clientRunning = false;
@@ -2495,5 +2540,10 @@ public class DFSClient implements java.io.Closeable {
 
   public CachingStrategy getDefaultWriteCachingStrategy() {
     return defaultWriteCachingStrategy;
+  }
+
+  @VisibleForTesting
+  public ClientMmapManager getMmapManager() {
+    return mmapManager;
   }
 }

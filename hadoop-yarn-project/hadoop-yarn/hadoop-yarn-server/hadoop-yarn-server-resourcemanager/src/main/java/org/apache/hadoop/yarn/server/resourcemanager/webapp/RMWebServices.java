@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -57,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -89,14 +91,17 @@ public class RMWebServices {
   private static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
   private final ApplicationACLsManager aclsManager;
+  private final QueueACLsManager queueACLsManager;
 
   private @Context HttpServletResponse response;
 
   @Inject
   public RMWebServices(final ResourceManager rm,
-      final ApplicationACLsManager aclsManager) {
+      final ApplicationACLsManager aclsManager,
+      final QueueACLsManager queueACLsManager) {
     this.rm = rm;
     this.aclsManager = aclsManager;
+    this.queueACLsManager = queueACLsManager;
   }
 
   protected Boolean hasAccess(RMApp app, HttpServletRequest hsr) {
@@ -107,9 +112,10 @@ public class RMWebServices {
       callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
     }
     if (callerUGI != null
-        && !this.aclsManager.checkAccess(callerUGI,
+        && !(this.aclsManager.checkAccess(callerUGI,
             ApplicationAccessType.VIEW_APP, app.getUser(),
-            app.getApplicationId())) {
+            app.getApplicationId()) || this.queueACLsManager.checkAccess(
+            callerUGI, QueueACL.ADMINISTER_QUEUE, app.getQueue()))) {
       return false;
     }
     return true;

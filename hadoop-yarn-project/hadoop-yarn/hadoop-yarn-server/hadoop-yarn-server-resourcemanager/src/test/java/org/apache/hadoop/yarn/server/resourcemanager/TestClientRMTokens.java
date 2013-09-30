@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -424,12 +425,13 @@ public class TestClientRMTokens {
   }
   
   class ClientRMServiceForTest extends ClientRMService {
-    
+
     public ClientRMServiceForTest(Configuration conf,
         ResourceScheduler scheduler,
         RMDelegationTokenSecretManager rmDTSecretManager) {
       super(mock(RMContext.class), scheduler, mock(RMAppManager.class),
-          new ApplicationACLsManager(conf), rmDTSecretManager);
+          new ApplicationACLsManager(conf), new QueueACLsManager(scheduler,
+              conf), rmDTSecretManager);
     }
 
     // Use a random port unless explicitly specified.

@@ -24,6 +24,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -36,11 +37,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ByteBufferReadable;
+import org.apache.hadoop.fs.ByteBufferUtil;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.HasEnhancedByteBufferAccess;
+import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.client.ClientMmap;
 import org.apache.hadoop.hdfs.net.DomainPeer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
@@ -54,12 +59,14 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
+import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.IdentityHashStore;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -69,7 +76,8 @@ import com.google.common.annotations.VisibleForTesting;
  ****************************************************************/
 @InterfaceAudience.Private
 public class DFSInputStream extends FSInputStream
-implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
+implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
+    HasEnhancedByteBufferAccess {
   @VisibleForTesting
   static boolean tcpReadsDisabledForTesting = false;
   private final PeerCache peerCache;
@@ -87,17 +95,28 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
   private CachingStrategy cachingStrategy;
   private final ReadStatistics readStatistics = new ReadStatistics();
 
+  /**
+   * Track the ByteBuffers that we have handed out to readers.
+   * 
+   * The value type can be either ByteBufferPool or ClientMmap, depending on
+   * whether we this is a memory-mapped buffer or not.
+   */
+  private final IdentityHashStore<ByteBuffer, Object>
+      extendedReadBuffers = new IdentityHashStore<ByteBuffer, Object>(0);
+
   public static class ReadStatistics {
     public ReadStatistics() {
       this.totalBytesRead = 0;
       this.totalLocalBytesRead = 0;
       this.totalShortCircuitBytesRead = 0;
+      this.totalZeroCopyBytesRead = 0;
     }
 
     public ReadStatistics(ReadStatistics rhs) {
       this.totalBytesRead = rhs.getTotalBytesRead();
       this.totalLocalBytesRead = rhs.getTotalLocalBytesRead();
       this.totalShortCircuitBytesRead = rhs.getTotalShortCircuitBytesRead();
+      this.totalZeroCopyBytesRead = rhs.getTotalZeroCopyBytesRead();
     }
 
     /**
@@ -123,6 +142,13 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
     public long getTotalShortCircuitBytesRead() {
       return totalShortCircuitBytesRead;
     }
+    
+    /**
+     * @return The total number of zero-copy bytes read.
+     */
+    public long getTotalZeroCopyBytesRead() {
+      return totalZeroCopyBytesRead;
+    }
 
     /**
      * @return The total number of bytes read which were not local.
@@ -145,12 +171,21 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
       this.totalLocalBytesRead += amt;
       this.totalShortCircuitBytesRead += amt;
     }
+
+    void addZeroCopyBytes(long amt) {
+      this.totalBytesRead += amt;
+      this.totalLocalBytesRead += amt;
+      this.totalShortCircuitBytesRead += amt;
+      this.totalZeroCopyBytesRead += amt;
+    }
     
     private long totalBytesRead;
 
     private long totalLocalBytesRead;
 
     private long totalShortCircuitBytesRead;
+
+    private long totalZeroCopyBytesRead;
   }
   
   private final FileInputStreamCache fileInputStreamCache;
@@ -587,6 +622,20 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
     }
     dfsClient.checkOpen();
 
+    if (!extendedReadBuffers.isEmpty()) {
+      final StringBuilder builder = new StringBuilder();
+      extendedReadBuffers.visitAll(new IdentityHashStore.Visitor<ByteBuffer, Object>() {
+        private String prefix = "";
+        @Override
+        public void accept(ByteBuffer k, Object v) {
+          builder.append(prefix).append(k);
+          prefix = ", ";
+        }
+      });
+      DFSClient.LOG.warn("closing file " + src + ", but there are still " +
+          "unreleased ByteBuffers allocated by read().  " +
+          "Please release " + builder.toString() + ".");
+    }
     if (blockReader != null) {
       blockReader.close();
       blockReader = null;
@@ -1392,5 +1441,101 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
       throws IOException {
     this.cachingStrategy.setDropBehind(dropBehind);
     closeCurrentBlockReader();
+  }
+
+  @Override
+  public synchronized ByteBuffer read(ByteBufferPool bufferPool,
+      int maxLength, EnumSet<ReadOption> opts) 
+          throws IOException, UnsupportedOperationException {
+    assert(maxLength > 0);
+    if (((blockReader == null) || (blockEnd == -1)) &&
+          (pos < getFileLength())) {
+      /*
+       * If we don't have a blockReader, or the one we have has no more bytes
+       * left to read, we call seekToBlockSource to get a new blockReader and
+       * recalculate blockEnd.  Note that we assume we're not at EOF here
+       * (we check this above).
+       */
+      if ((!seekToBlockSource(pos)) || (blockReader == null)) {
+        throw new IOException("failed to allocate new BlockReader " +
+            "at position " + pos);
+      }
+    }
+    boolean canSkipChecksums = opts.contains(ReadOption.SKIP_CHECKSUMS);
+    if (canSkipChecksums) {
+      ByteBuffer buffer = tryReadZeroCopy(maxLength);
+      if (buffer != null) {
+        return buffer;
+      }
+    }
+    ByteBuffer buffer = ByteBufferUtil.
+        fallbackRead(this, bufferPool, maxLength);
+    if (buffer != null) {
+      extendedReadBuffers.put(buffer, bufferPool);
+    }
+    return buffer;
+  }
+
+  private synchronized ByteBuffer tryReadZeroCopy(int maxLength)
+      throws IOException {
+    // Java ByteBuffers can't be longer than 2 GB, because they use
+    // 4-byte signed integers to represent capacity, etc.
+    // So we can't mmap the parts of the block higher than the 2 GB offset.
+    // FIXME: we could work around this with multiple memory maps.
+    // See HDFS-5101.
+    long blockEnd32 = Math.min(Integer.MAX_VALUE, blockEnd);
+    long curPos = pos;
+    long blockLeft = blockEnd32 - curPos + 1;
+    if (blockLeft <= 0) {
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("unable to perform a zero-copy read from offset " +
+          curPos + " of " + src + "; blockLeft = " + blockLeft +
+          "; blockEnd32 = " + blockEnd32 + ", blockEnd = " + blockEnd +
+          "; maxLength = " + maxLength);
+      }
+      return null;
+    }
+    int length = Math.min((int)blockLeft, maxLength);
+    long blockStartInFile = currentLocatedBlock.getStartOffset();
+    long blockPos = curPos - blockStartInFile;
+    long limit = blockPos + length;
+    ClientMmap clientMmap =
+        blockReader.getClientMmap(currentLocatedBlock,
+            dfsClient.getMmapManager());
+    if (clientMmap == null) {
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("unable to perform a zero-copy read from offset " +
+          curPos + " of " + src + "; BlockReader#getClientMmap returned " +
+          "null.");
+      }
+      return null;
+    }
+    seek(pos + length);
+    ByteBuffer buffer = clientMmap.getMappedByteBuffer().asReadOnlyBuffer();
+    buffer.position((int)blockPos);
+    buffer.limit((int)limit);
+    clientMmap.ref();
+    extendedReadBuffers.put(buffer, clientMmap);
+    readStatistics.addZeroCopyBytes(length);
+    if (DFSClient.LOG.isDebugEnabled()) {
+      DFSClient.LOG.debug("readZeroCopy read " + maxLength + " bytes from " +
+          "offset " + curPos + " via the zero-copy read path.  " +
+          "blockEnd = " + blockEnd);
+    }
+    return buffer;
+  }
+
+  @Override
+  public synchronized void releaseBuffer(ByteBuffer buffer) {
+    Object val = extendedReadBuffers.remove(buffer);
+    if (val == null) {
+      throw new IllegalArgumentException("tried to release a buffer " +
+          "that was not created by this stream, " + buffer);
+    }
+    if (val instanceof ClientMmap) {
+      ((ClientMmap)val).unref();
+    } else if (val instanceof ByteBufferPool) {
+      ((ByteBufferPool)val).putBuffer(buffer);
+    }
   }
 }

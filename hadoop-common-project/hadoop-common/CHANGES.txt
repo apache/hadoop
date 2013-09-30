@@ -339,11 +339,17 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9998.  Provide methods to clear only part of the DNSToSwitchMapping.
     (Junping Du via Colin Patrick McCabe)
 
+    HADOOP-10006. Compilation failure in trunk for
+    o.a.h.fs.swift.util.JSONUtil (Junping Du via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
 
   BUG FIXES
+
+    HADOOP-9964. Fix deadlocks in TestHttpServer by synchronize
+    ReflectionUtils.printThreadInfo. (Junping Du via llu)
 
     HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
     (Ashwin Shankar via jlowe)

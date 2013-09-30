@@ -1,4 +1,5 @@
 /**
+ * 
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,17 +20,29 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.ByteBufferPool;
+import org.apache.hadoop.fs.ByteBufferUtil;
+import org.apache.hadoop.util.IdentityHashStore;
 
 /** Utility that wraps a {@link FSInputStream} in a {@link DataInputStream}
  * and buffers input through a {@link BufferedInputStream}. */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataInputStream extends DataInputStream
-    implements Seekable, PositionedReadable, Closeable,
-    ByteBufferReadable, HasFileDescriptor, CanSetDropBehind, CanSetReadahead {
+    implements Seekable, PositionedReadable, Closeable, 
+      ByteBufferReadable, HasFileDescriptor, CanSetDropBehind, CanSetReadahead,
+      HasEnhancedByteBufferAccess {
+  /**
+   * Map ByteBuffers that we have handed out to readers to ByteBufferPool 
+   * objects
+   */
+  private final IdentityHashStore<ByteBuffer, ByteBufferPool>
+    extendedReadBuffers
+      = new IdentityHashStore<ByteBuffer, ByteBufferPool>(0);
 
   public FSDataInputStream(InputStream in)
     throws IOException {
@@ -165,6 +178,47 @@ public class FSDataInputStream extends DataInputStream
     } catch (ClassCastException e) {
       throw new UnsupportedOperationException("this stream does not " +
           "support setting the drop-behind caching setting.");
+    }
+  }
+
+  @Override
+  public ByteBuffer read(ByteBufferPool bufferPool, int maxLength,
+      EnumSet<ReadOption> opts) 
+          throws IOException, UnsupportedOperationException {
+    try {
+      return ((HasEnhancedByteBufferAccess)in).read(bufferPool,
+          maxLength, opts);
+    }
+    catch (ClassCastException e) {
+      ByteBuffer buffer = ByteBufferUtil.
+          fallbackRead(this, bufferPool, maxLength);
+      if (buffer != null) {
+        extendedReadBuffers.put(buffer, bufferPool);
+      }
+      return buffer;
+    }
+  }
+
+  private static final EnumSet<ReadOption> EMPTY_READ_OPTIONS_SET =
+      EnumSet.noneOf(ReadOption.class);
+
+  final public ByteBuffer read(ByteBufferPool bufferPool, int maxLength)
+          throws IOException, UnsupportedOperationException {
+    return read(bufferPool, maxLength, EMPTY_READ_OPTIONS_SET);
+  }
+  
+  @Override
+  public void releaseBuffer(ByteBuffer buffer) {
+    try {
+      ((HasEnhancedByteBufferAccess)in).releaseBuffer(buffer);
+    }
+    catch (ClassCastException e) {
+      ByteBufferPool bufferPool = extendedReadBuffers.remove( buffer);
+      if (bufferPool == null) {
+        throw new IllegalArgumentException("tried to release a buffer " +
+            "that was not created by this stream.");
+      }
+      bufferPool.putBuffer(buffer);
     }
   }
 }

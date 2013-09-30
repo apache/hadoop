@@ -175,6 +175,11 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       queueUserAclInfo.setUserAcls(Arrays.asList(QueueACL.values()));
       return Collections.singletonList(queueUserAclInfo);
     }
+
+    @Override
+    public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
+      return getQueueAcls().get(acl).isUserAllowed(user);
+    }
   };
 
   @Override
@@ -834,6 +839,12 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   @Override
   public QueueMetrics getRootQueueMetrics() {
     return DEFAULT_QUEUE.getMetrics();
+  }
+
+  @Override
+  public synchronized boolean checkAccess(UserGroupInformation callerUGI,
+      QueueACL acl, String queueName) {
+    return DEFAULT_QUEUE.hasAccess(acl, callerUGI);
   }
 
 }
