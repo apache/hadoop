@@ -464,7 +464,12 @@ public class FSSchedulerApp extends SchedulerApplication {
    * @param priority The priority of the container scheduled.
    */
   synchronized public void resetSchedulingOpportunities(Priority priority) {
-    lastScheduledContainer.put(priority, System.currentTimeMillis());
+    resetSchedulingOpportunities(priority, System.currentTimeMillis());
+  }
+  // used for continuous scheduling
+  synchronized public void resetSchedulingOpportunities(Priority priority,
+                                                        long currentTimeMs) {
+    lastScheduledContainer.put(priority, currentTimeMs);
     schedulingOpportunities.setCount(priority, 0);
   }
 
@@ -513,6 +518,55 @@ public class FSSchedulerApp extends SchedulerApplication {
     return allowedLocalityLevel.get(priority);
   }
 
+  /**
+   * Return the level at which we are allowed to schedule containers.
+   * Given the thresholds indicating how much time passed before relaxing
+   * scheduling constraints.
+   */
+  public synchronized NodeType getAllowedLocalityLevelByTime(Priority priority,
+          long nodeLocalityDelayMs, long rackLocalityDelayMs,
+          long currentTimeMs) {
+
+    // if not being used, can schedule anywhere
+    if (nodeLocalityDelayMs < 0 || rackLocalityDelayMs < 0) {
+      return NodeType.OFF_SWITCH;
+    }
+
+    // default level is NODE_LOCAL
+    if (! allowedLocalityLevel.containsKey(priority)) {
+      allowedLocalityLevel.put(priority, NodeType.NODE_LOCAL);
+      return NodeType.NODE_LOCAL;
+    }
+
+    NodeType allowed = allowedLocalityLevel.get(priority);
+
+    // if level is already most liberal, we're done
+    if (allowed.equals(NodeType.OFF_SWITCH)) {
+      return NodeType.OFF_SWITCH;
+    }
+
+    // check waiting time
+    long waitTime = currentTimeMs;
+    if (lastScheduledContainer.containsKey(priority)) {
+      waitTime -= lastScheduledContainer.get(priority);
+    } else {
+      waitTime -= appSchedulable.getStartTime();
+    }
+
+    long thresholdTime = allowed.equals(NodeType.NODE_LOCAL) ?
+            nodeLocalityDelayMs : rackLocalityDelayMs;
+
+    if (waitTime > thresholdTime) {
+      if (allowed.equals(NodeType.NODE_LOCAL)) {
+        allowedLocalityLevel.put(priority, NodeType.RACK_LOCAL);
+        resetSchedulingOpportunities(priority, currentTimeMs);
+      } else if (allowed.equals(NodeType.RACK_LOCAL)) {
+        allowedLocalityLevel.put(priority, NodeType.OFF_SWITCH);
+        resetSchedulingOpportunities(priority, currentTimeMs);
+      }
+    }
+    return allowedLocalityLevel.get(priority);
+  }
 
   synchronized public RMContainer allocate(NodeType type, FSSchedulerNode node,
       Priority priority, ResourceRequest request,

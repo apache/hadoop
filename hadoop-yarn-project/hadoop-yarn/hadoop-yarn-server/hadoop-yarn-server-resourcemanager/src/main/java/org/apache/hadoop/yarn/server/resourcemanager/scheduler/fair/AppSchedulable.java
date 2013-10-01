@@ -310,10 +310,19 @@ public class AppSchedulable extends Schedulable {
               + localRequest);
         }
         
-        NodeType allowedLocality = app.getAllowedLocalityLevel(priority,
-            scheduler.getNumClusterNodes(), scheduler.getNodeLocalityThreshold(),
-            scheduler.getRackLocalityThreshold());
-        
+        NodeType allowedLocality;
+        if (scheduler.isContinuousSchedulingEnabled()) {
+          allowedLocality = app.getAllowedLocalityLevelByTime(priority,
+                  scheduler.getNodeLocalityDelayMs(),
+                  scheduler.getRackLocalityDelayMs(),
+                  scheduler.getClock().getTime());
+        } else {
+          allowedLocality = app.getAllowedLocalityLevel(priority,
+                  scheduler.getNumClusterNodes(),
+                  scheduler.getNodeLocalityThreshold(),
+                  scheduler.getRackLocalityThreshold());
+        }
+
         if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
             && localRequest != null && localRequest.getNumContainers() != 0) {
           return assignContainer(node, priority,

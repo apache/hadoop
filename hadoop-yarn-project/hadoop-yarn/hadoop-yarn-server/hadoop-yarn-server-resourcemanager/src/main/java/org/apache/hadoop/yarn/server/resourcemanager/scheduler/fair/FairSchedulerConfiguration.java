@@ -66,6 +66,22 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final float  DEFAULT_LOCALITY_THRESHOLD_RACK =
 		  DEFAULT_LOCALITY_THRESHOLD;
 
+  /** Delay for node locality. */
+  protected static final String LOCALITY_DELAY_NODE_MS = CONF_PREFIX + "locality-delay-node-ms";
+  protected static final long DEFAULT_LOCALITY_DELAY_NODE_MS = -1L;
+
+  /** Delay for rack locality. */
+  protected static final String LOCALITY_DELAY_RACK_MS = CONF_PREFIX + "locality-delay-rack-ms";
+  protected static final long DEFAULT_LOCALITY_DELAY_RACK_MS = -1L;
+
+  /** Enable continuous scheduling or not. */
+  protected static final String CONTINUOUS_SCHEDULING_ENABLED = CONF_PREFIX + "continuous-scheduling-enabled";
+  protected static final boolean DEFAULT_CONTINUOUS_SCHEDULING_ENABLED = false;
+
+  /** Sleep time of each pass in continuous scheduling (5ms in default) */
+  protected static final String CONTINUOUS_SCHEDULING_SLEEP_MS = CONF_PREFIX + "continuous-scheduling-sleep-ms";
+  protected static final int DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS = 5;
+
   /** Whether preemption is enabled. */
   protected static final String  PREEMPTION = CONF_PREFIX + "preemption";
   protected static final boolean DEFAULT_PREEMPTION = false;
@@ -132,6 +148,22 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public float getLocalityThresholdRack() {
     return getFloat(LOCALITY_THRESHOLD_RACK, DEFAULT_LOCALITY_THRESHOLD_RACK);
+  }
+
+  public boolean isContinuousSchedulingEnabled() {
+    return getBoolean(CONTINUOUS_SCHEDULING_ENABLED, DEFAULT_CONTINUOUS_SCHEDULING_ENABLED);
+  }
+
+  public int getContinuousSchedulingSleepMs() {
+    return getInt(CONTINUOUS_SCHEDULING_SLEEP_MS, DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS);
+  }
+
+  public long getLocalityDelayNodeMs() {
+    return getLong(LOCALITY_DELAY_NODE_MS, DEFAULT_LOCALITY_DELAY_NODE_MS);
+  }
+
+  public long getLocalityDelayRackMs() {
+    return getLong(LOCALITY_DELAY_RACK_MS, DEFAULT_LOCALITY_DELAY_RACK_MS);
   }
 
   public boolean getPreemptionEnabled() {
