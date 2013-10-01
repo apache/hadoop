@@ -25,6 +25,8 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-434. LocalJobRunner limited to single reducer (Sandy Ryza and
     Aaron Kimball via Sandy Ryza)
 
+    MAPREDUCE-4421. Run MapReduce framework via the distributed cache (jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)

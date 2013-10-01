@@ -283,7 +283,46 @@ public class TestMRApps {
     assertEquals("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not in the app"
       + " classpath!", expectedAppClasspath, appCp);
   }
-  
+
+  @Test (timeout = 3000000)
+  public void testSetClasspathWithFramework() throws IOException {
+    final String FRAMEWORK_NAME = "some-framework-name";
+    final String FRAMEWORK_PATH = "some-framework-path#" + FRAMEWORK_NAME;
+    Configuration conf = new Configuration();
+    conf.set(MRJobConfig.MAPREDUCE_APPLICATION_FRAMEWORK_PATH, FRAMEWORK_PATH);
+    Map<String, String> env = new HashMap<String, String>();
+    try {
+      MRApps.setClasspath(env, conf);
+      fail("Failed to catch framework path set without classpath change");
+    } catch (IllegalArgumentException e) {
+      assertTrue("Unexpected IllegalArgumentException",
+          e.getMessage().contains("Could not locate MapReduce framework name '"
+              + FRAMEWORK_NAME + "'"));
+    }
+
+    env.clear();
+    final String FRAMEWORK_CLASSPATH = FRAMEWORK_NAME + "/*.jar";
+    conf.set(MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH, FRAMEWORK_CLASSPATH);
+    MRApps.setClasspath(env, conf);
+    final String stdClasspath = StringUtils.join(File.pathSeparator,
+        Arrays.asList("job.jar/job.jar", "job.jar/classes/", "job.jar/lib/*",
+            ApplicationConstants.Environment.PWD.$() + "/*"));
+    String expectedClasspath = StringUtils.join(File.pathSeparator,
+        Arrays.asList(ApplicationConstants.Environment.PWD.$(),
+            FRAMEWORK_CLASSPATH, stdClasspath));
+    assertEquals("Incorrect classpath with framework and no user precedence",
+        expectedClasspath, env.get("CLASSPATH"));
+
+    env.clear();
+    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, true);
+    MRApps.setClasspath(env, conf);
+    expectedClasspath = StringUtils.join(File.pathSeparator,
+        Arrays.asList(ApplicationConstants.Environment.PWD.$(),
+            stdClasspath, FRAMEWORK_CLASSPATH));
+    assertEquals("Incorrect classpath with framework and user precedence",
+        expectedClasspath, env.get("CLASSPATH"));
+  }
+
   @Test (timeout = 30000)
   public void testSetupDistributedCacheEmpty() throws IOException {
     Configuration conf = new Configuration();
