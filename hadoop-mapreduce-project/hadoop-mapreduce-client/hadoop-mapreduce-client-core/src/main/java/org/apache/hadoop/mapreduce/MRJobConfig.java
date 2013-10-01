@@ -650,6 +650,12 @@ public interface MRJobConfig {
       "mapreduce.application.classpath";
 
   /**
+   * Path to MapReduce framework archive
+   */
+  public static final String MAPREDUCE_APPLICATION_FRAMEWORK_PATH =
+      "mapreduce.application.framework.path";
+
+  /**
    * Default CLASSPATH for all YARN MapReduce applications.
    */
   public static final String[] DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH = {

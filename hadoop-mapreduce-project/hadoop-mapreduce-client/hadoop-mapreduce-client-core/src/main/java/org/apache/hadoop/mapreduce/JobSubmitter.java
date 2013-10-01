@@ -39,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -340,11 +341,12 @@ class JobSubmitter {
 
     //validate the jobs output specs 
     checkSpecs(job);
-    
-    Path jobStagingArea = JobSubmissionFiles.getStagingDir(cluster, 
-                                                     job.getConfiguration());
-    //configure the command line options correctly on the submitting dfs
+
     Configuration conf = job.getConfiguration();
+    addMRFrameworkToDistributedCache(conf);
+
+    Path jobStagingArea = JobSubmissionFiles.getStagingDir(cluster, conf);
+    //configure the command line options correctly on the submitting dfs
     InetAddress ip = InetAddress.getLocalHost();
     if (ip != null) {
       submitHostAddress = ip.getHostAddress();
@@ -602,7 +604,6 @@ class JobSubmitter {
   }
 
   //get secret keys and tokens and store them into TokenCache
-  @SuppressWarnings("unchecked")
   private void populateTokenCache(Configuration conf, Credentials credentials) 
   throws IOException{
     readTokensFromFiles(conf, credentials);
@@ -616,6 +617,43 @@ class JobSubmitter {
         ps[i] = new Path(nameNodes[i]);
       }
       TokenCache.obtainTokensForNamenodes(credentials, ps, conf);
+    }
+  }
+
+  @SuppressWarnings("deprecation")
+  private static void addMRFrameworkToDistributedCache(Configuration conf)
+      throws IOException {
+    String framework =
+        conf.get(MRJobConfig.MAPREDUCE_APPLICATION_FRAMEWORK_PATH, "");
+    if (!framework.isEmpty()) {
+      URI uri;
+      try {
+        uri = new URI(framework);
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException("Unable to parse '" + framework
+            + "' as a URI, check the setting for "
+            + MRJobConfig.MAPREDUCE_APPLICATION_FRAMEWORK_PATH, e);
+      }
+
+      String linkedName = uri.getFragment();
+
+      // resolve any symlinks in the URI path so using a "current" symlink
+      // to point to a specific version shows the specific version
+      // in the distributed cache configuration
+      FileSystem fs = FileSystem.get(conf);
+      Path frameworkPath = fs.makeQualified(
+          new Path(uri.getScheme(), uri.getAuthority(), uri.getPath()));
+      FileContext fc = FileContext.getFileContext(frameworkPath.toUri(), conf);
+      frameworkPath = fc.resolvePath(frameworkPath);
+      uri = frameworkPath.toUri();
+      try {
+        uri = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(),
+            null, linkedName);
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException(e);
+      }
+
+      DistributedCache.addCacheArchive(uri, conf);
     }
   }
 }

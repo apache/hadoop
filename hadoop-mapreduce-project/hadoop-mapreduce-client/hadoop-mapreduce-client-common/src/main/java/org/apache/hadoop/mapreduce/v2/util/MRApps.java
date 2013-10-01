@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.util;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -133,6 +134,30 @@ public class MRApps extends Apps {
     return TaskAttemptStateUI.valueOf(attemptStateStr);
   }
 
+  // gets the base name of the MapReduce framework or null if no
+  // framework was configured
+  private static String getMRFrameworkName(Configuration conf) {
+    String frameworkName = null;
+    String framework =
+        conf.get(MRJobConfig.MAPREDUCE_APPLICATION_FRAMEWORK_PATH, "");
+    if (!framework.isEmpty()) {
+      URI uri;
+      try {
+        uri = new URI(framework);
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException("Unable to parse '" + framework
+            + "' as a URI, check the setting for "
+            + MRJobConfig.MAPREDUCE_APPLICATION_FRAMEWORK_PATH, e);
+      }
+
+      frameworkName = uri.getFragment();
+      if (frameworkName == null) {
+        frameworkName = new Path(uri).getName();
+      }
+    }
+    return frameworkName;
+  }
+
   private static void setMRFrameworkClasspath(
       Map<String, String> environment, Configuration conf) throws IOException {
     // Propagate the system classpath when using the mini cluster
@@ -141,18 +166,33 @@ public class MRApps extends Apps {
           System.getProperty("java.class.path"));
     }
 
-    // Add standard Hadoop classes
-    for (String c : conf.getStrings(
-        YarnConfiguration.YARN_APPLICATION_CLASSPATH,
-        YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-      Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
-          .trim());
+    // if the framework is specified then only use the MR classpath
+    String frameworkName = getMRFrameworkName(conf);
+    if (frameworkName == null) {
+      // Add standard Hadoop classes
+      for (String c : conf.getStrings(
+          YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+          YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
+        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
+            .trim());
+      }
     }
+
+    boolean foundFrameworkInClasspath = (frameworkName == null);
     for (String c : conf.getStrings(
         MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
         MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH)) {
       Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
           .trim());
+      if (!foundFrameworkInClasspath) {
+        foundFrameworkInClasspath = c.contains(frameworkName);
+      }
+    }
+
+    if (!foundFrameworkInClasspath) {
+      throw new IllegalArgumentException(
+          "Could not locate MapReduce framework name '" + frameworkName
+          + "' in " + MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH);
     }
     // TODO: Remove duplicates.
   }
