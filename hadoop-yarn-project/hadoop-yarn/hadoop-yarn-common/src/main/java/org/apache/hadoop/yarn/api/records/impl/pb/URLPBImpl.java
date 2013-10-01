@@ -113,6 +113,26 @@ public class URLPBImpl extends URL {
     }
     builder.setScheme((scheme));
   }
+ 
+  @Override
+  public String getUserInfo() {
+    URLProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasUserInfo()) {
+      return null;
+    }
+    return (p.getUserInfo());
+  }
+
+  @Override
+  public void setUserInfo(String userInfo) {
+    maybeInitBuilder();
+    if (userInfo == null) { 
+      builder.clearUserInfo();
+      return;
+    }
+    builder.setUserInfo((userInfo));
+  }
+  
   @Override
   public String getHost() {
     URLProtoOrBuilder p = viaProto ? proto : builder;
