@@ -25,7 +25,6 @@ import java.net.UnknownHostException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 
 /**
@@ -130,6 +129,11 @@ public class JHAdminConfig {
   public static final String MR_HISTORY_PRINCIPAL = 
     MR_HISTORY_PREFIX + "principal";
   
+  /** To enable SSL in MR history server */
+  public static final String MR_HS_SSL_ENABLED = MR_HISTORY_PREFIX
+      + "ssl.enabled";
+  public static boolean DEFAULT_MR_HS_SSL_ENABLED = false;
+  
   /**The address the history server webapp is on.*/
   public static final String MR_HISTORY_WEBAPP_ADDRESS =
     MR_HISTORY_PREFIX + "webapp.address";
@@ -188,43 +192,11 @@ public class JHAdminConfig {
   /** Whether to use fixed ports with the minicluster. */
   public static final String MR_HISTORY_MINICLUSTER_FIXED_PORTS = MR_HISTORY_PREFIX
        + "minicluster.fixed.ports";
-
+  
   /**
    * Default is false to be able to run tests concurrently without port
    * conflicts.
    */
   public static boolean DEFAULT_MR_HISTORY_MINICLUSTER_FIXED_PORTS = false;
-
-  public static String getResolvedMRHistoryWebAppURLWithoutScheme(
-      Configuration conf) {
-    InetSocketAddress address = null;
-    if (HttpConfig.isSecure()) {
-      address =
-          conf.getSocketAddr(JHAdminConfig.MR_HISTORY_WEBAPP_HTTPS_ADDRESS,
-              JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_ADDRESS,
-              JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_PORT);
-    } else {
-      address =
-          conf.getSocketAddr(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
-              JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS,
-              JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT);    }
-    address = NetUtils.getConnectAddress(address);
-    StringBuffer sb = new StringBuffer();
-    InetAddress resolved = address.getAddress();
-    if (resolved == null || resolved.isAnyLocalAddress() || 
-        resolved.isLoopbackAddress()) {
-      String lh = address.getHostName();
-      try {
-        lh = InetAddress.getLocalHost().getCanonicalHostName();
-      } catch (UnknownHostException e) {
-        //Ignore and fallback.
-      }
-      sb.append(lh);
-    } else {
-      sb.append(address.getHostName());
-    }
-    sb.append(":").append(address.getPort());
-    return sb.toString();
-  }
 
 }

@@ -36,6 +36,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AppInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.Times;
@@ -61,7 +62,7 @@ public class AppController extends Controller implements AMParams {
     this.app = app;
     set(APP_ID, app.context.getApplicationID().toString());
     set(RM_WEB,
-        JOINER.join(WebAppUtil.getSchemePrefix(),
+        JOINER.join(MRWebAppUtil.getYARNWebappScheme(),
             WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf)));
   }
 

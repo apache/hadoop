@@ -86,7 +86,7 @@ public interface MRConfig {
   public static final boolean SHUFFLE_SSL_ENABLED_DEFAULT = false;
   
   public static final String SSL_ENABLED_KEY =
-      "mapreduce.ssl.enabled";
+      "mapreduce.am.ssl.enabled";
   
   public static final boolean SSL_ENABLED_KEY_DEFAULT = false;
 

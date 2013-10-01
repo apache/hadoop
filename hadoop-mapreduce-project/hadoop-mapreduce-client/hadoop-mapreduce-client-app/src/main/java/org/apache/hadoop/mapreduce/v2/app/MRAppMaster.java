@@ -105,10 +105,11 @@ import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app.speculate.DefaultSpeculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.Speculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
-import org.apache.hadoop.mapreduce.v2.app.webapp.WebAppUtil;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -1349,12 +1350,8 @@ public class MRAppMaster extends CompositeService {
       // to gain access to keystore file for opening SSL listener. We can trust
       // RM/NM to issue SSL certificates but definitely not MR-AM as it is
       // running in user-land.
-      HttpConfig.setSecure(conf.getBoolean(MRConfig.SSL_ENABLED_KEY,
-          MRConfig.SSL_ENABLED_KEY_DEFAULT));
-      WebAppUtil.setSSLEnabledInYARN(conf.getBoolean(
-          CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_KEY,
-          CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_DEFAULT));
-
+      MRWebAppUtil.initialize(conf);
+      HttpConfig.setSecure(MRWebAppUtil.isSSLEnabledInMRAM());
       // log the system properties
       String systemPropsToLog = MRApps.getSystemPropertiesToLog(conf);
       if (systemPropsToLog != null) {
