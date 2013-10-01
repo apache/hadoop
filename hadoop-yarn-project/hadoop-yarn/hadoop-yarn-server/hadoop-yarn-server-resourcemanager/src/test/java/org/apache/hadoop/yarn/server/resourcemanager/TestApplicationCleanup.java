@@ -88,6 +88,7 @@ public class TestApplicationCleanup {
       conts = am.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>()).getAllocatedContainers();
       contReceived += conts.size();
+      nm1.nodeHeartbeat(true);
     }
     Assert.assertEquals(request, contReceived);
     
@@ -178,6 +179,7 @@ public class TestApplicationCleanup {
           new ArrayList<ContainerId>()).getAllocatedContainers();
       dispatcher.await();
       contReceived += conts.size();
+      nm1.nodeHeartbeat(true);
     }
     Assert.assertEquals(request, contReceived);
 
