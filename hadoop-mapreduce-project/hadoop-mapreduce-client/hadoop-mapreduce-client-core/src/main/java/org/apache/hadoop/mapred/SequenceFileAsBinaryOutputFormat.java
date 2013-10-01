@@ -47,6 +47,13 @@ public class SequenceFileAsBinaryOutputFormat
    */
   static protected class WritableValueBytes extends org.apache.hadoop.mapreduce
       .lib.output.SequenceFileAsBinaryOutputFormat.WritableValueBytes {
+    public WritableValueBytes() {
+      super();
+    }
+
+    public WritableValueBytes(BytesWritable value) {
+      super(value);
+    }
   }
 
   /**
