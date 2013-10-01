@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -39,8 +38,7 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
-import org.apache.hadoop.mapreduce.v2.app.webapp.WebAppUtil;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
+import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -146,13 +144,9 @@ public abstract class RMCommunicator extends AbstractService
       if (serviceAddr != null) {
         request.setHost(serviceAddr.getHostName());
         request.setRpcPort(serviceAddr.getPort());
-        String scheme = "http://";
-        if (getConfig().getBoolean(MRConfig.SSL_ENABLED_KEY,
-            MRConfig.SSL_ENABLED_KEY_DEFAULT)) {
-          scheme = "https://";
-        }
-        request.setTrackingUrl(scheme + serviceAddr.getHostName() + ":"
-            + clientService.getHttpPort());
+        request.setTrackingUrl(MRWebAppUtil
+            .getAMWebappScheme(getConfig())
+            + serviceAddr.getHostName() + ":" + clientService.getHttpPort());
       }
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
@@ -195,9 +189,8 @@ public abstract class RMCommunicator extends AbstractService
       LOG.info("Setting job diagnostics to " + sb.toString());
 
       String historyUrl =
-          WebAppUtil.getSchemePrefix()
-              + JobHistoryUtils.getHistoryUrl(getConfig(),
-                  context.getApplicationID());
+          MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(getConfig(),
+              context.getApplicationID());
       LOG.info("History url is " + historyUrl);
       FinishApplicationMasterRequest request =
           FinishApplicationMasterRequest.newInstance(finishState,
