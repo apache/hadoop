@@ -682,9 +682,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ContainerStatus containerStatus = 
         containerManager.getContainerStatuses(gcsRequest)
           .getContainerStatuses().get(0);
-    int expectedExitCode = Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() :
-      ExitCode.TERMINATED.getExitCode();
-    Assert.assertEquals(expectedExitCode, containerStatus.getExitStatus());
+    Assert.assertEquals(ExitCode.FORCE_KILLED.getExitCode(),
+        containerStatus.getExitStatus());
 
     // Now verify the contents of the file.  Script generates a message when it
     // receives a sigterm so we look for that.  We cannot perform this check on

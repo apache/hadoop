@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
@@ -133,10 +134,22 @@ public class ContainerLaunch implements Callable<Integer> {
     final List<String> command = launchContext.getCommands();
     int ret = -1;
 
+    // CONTAINER_KILLED_ON_REQUEST should not be missed if the container
+    // is already at KILLING
+    if (container.getContainerState() == ContainerState.KILLING) {
+      dispatcher.getEventHandler().handle(
+          new ContainerExitEvent(containerID,
+              ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+              Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() :
+                  ExitCode.TERMINATED.getExitCode(),
+              "Container terminated before launch."));
+      return 0;
+    }
+
     try {
       localResources = container.getLocalizedResources();
       if (localResources == null) {
-        RPCUtil.getRemoteException(
+        throw RPCUtil.getRemoteException(
             "Unable to get local resources when Container " + containerID +
             " is at " + container.getContainerState());
       }

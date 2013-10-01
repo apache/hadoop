@@ -101,7 +101,11 @@ Release 2.1.2 - UNRELEASED
     YARN-1221. With Fair Scheduler, reserved MB reported in RM web UI increases
     indefinitely (Siqi Li via Sandy Ryza)
 
-    YARN-1247. test-container-executor has gotten out of sync with the changes to container-executor. (rvs via tucu)
+    YARN-1247. test-container-executor has gotten out of sync with the changes to
+    container-executor. (rvs via tucu)
+
+    YARN-1070. Fixed race conditions in NodeManager during container-kill.
+    (Zhijie Shen via vinodkv)
 
 Release 2.1.1-beta - 2013-09-23
 
