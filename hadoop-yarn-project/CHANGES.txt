@@ -70,6 +70,8 @@ Release 2.1.2 - UNRELEASED
     YARN-899. Added back queue level administrator-acls so that there is no
     regression w.r.t 1.x. (Xuan Gong via vinodkv)
 
+    YARN-1228. Clean up Fair Scheduler configuration loading. (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES

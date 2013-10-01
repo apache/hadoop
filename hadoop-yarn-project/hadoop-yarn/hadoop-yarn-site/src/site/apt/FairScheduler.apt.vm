@@ -81,7 +81,7 @@ Hadoop MapReduce Next Generation - Fair Scheduler
   distribute the resources assigned to them to their children in the same
   fashion.  Applications may only be scheduled on leaf queues. Queues can be
   specified as children of other queues by placing them as sub-elements of 
-  their parents in the fair scheduler configuration file.
+  their parents in the fair scheduler allocation file.
   
   A queue's name starts with the names of its parents, with periods as
   separators. So a queue named "queue1" under the root queue, would be referred
@@ -118,16 +118,20 @@ Hadoop MapReduce Next Generation - Fair Scheduler
   Customizing the Fair Scheduler typically involves altering two files. First, 
   scheduler-wide options can be set by adding configuration properties in the 
   yarn-site.xml file in your existing configuration directory. Second, in 
-  most cases users will want to create a manifest file listing which queues 
-  exist and their respective weights and capacities. The location of this file 
-  is flexible - but it must be declared in yarn-site.xml.
+  most cases users will want to create an allocation file listing which queues 
+  exist and their respective weights and capacities. The allocation file
+  is reloaded every 10 seconds, allowing changes to be made on the fly.
+
+Properties that can be placed in yarn-site.xml
 
  * <<<yarn.scheduler.fair.allocation.file>>>
 
    * Path to allocation file. An allocation file is an XML manifest describing
      queues and their properties, in addition to certain policy defaults. This file
-     must be in XML format as described in the next section.
-     Defaults to fair-scheduler.xml in configuration directory.
+     must be in the XML format described in the next section. If a relative path is
+     given, the file is searched for on the classpath (which typically includes
+     the Hadoop conf directory).
+     Defaults to fair-scheduler.xml.
 
  * <<<yarn.scheduler.fair.user-as-default-queue>>>
 

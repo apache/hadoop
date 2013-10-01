@@ -20,6 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration.parseResourceConfigValue;
 import static org.junit.Assert.assertEquals;
 
+import java.io.File;
+
+import junit.framework.Assert;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Test;
 
@@ -54,5 +59,16 @@ public class TestFairSchedulerConfiguration {
   @Test(expected = AllocationConfigurationException.class)
   public void testGibberish() throws Exception {
     parseResourceConfigValue("1o24vc0res");
+  }
+  
+  @Test
+  public void testGetAllocationFileFromClasspath() {
+    FairSchedulerConfiguration conf = new FairSchedulerConfiguration(
+        new Configuration());
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        "test-fair-scheduler.xml");
+    File allocationFile = conf.getAllocationFile();
+    Assert.assertEquals("test-fair-scheduler.xml", allocationFile.getName());
+    Assert.assertTrue(allocationFile.exists());
   }
 }
