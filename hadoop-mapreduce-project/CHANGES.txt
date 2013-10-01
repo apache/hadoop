@@ -253,6 +253,8 @@ Release 2.1.2 - UNRELEASED
     SequenceFileAsBinaryOutputFormat.WritableValueBytes by re-introducing
     missing constructors. (Zhijie Shen via acmurthy)
 
+    MAPREDUCE-5544. JobClient#getJob loads job conf twice. (Sandy Ryza)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
