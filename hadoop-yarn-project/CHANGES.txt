@@ -26,6 +26,9 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1021. Yarn Scheduler Load Simulator. (ywskycn via tucu)
 
+    YARN-1010. FairScheduler: decouple container scheduling from nodemanager
+    heartbeats. (Wei Yan via Sandy Ryza)
+
   IMPROVEMENTS
 
     YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)
