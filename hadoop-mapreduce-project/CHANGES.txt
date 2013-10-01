@@ -249,6 +249,10 @@ Release 2.1.2 - UNRELEASED
     the job is really done - a bug caused by MAPREDUCE-5505. (Zhijie Shen via
     vinodkv)
 
+    MAPREDUCE-5551. Fix compat with hadoop-1 in
+    SequenceFileAsBinaryOutputFormat.WritableValueBytes by re-introducing
+    missing constructors. (Zhijie Shen via acmurthy)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
