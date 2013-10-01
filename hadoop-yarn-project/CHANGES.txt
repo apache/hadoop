@@ -39,8 +39,6 @@ Release 2.3.0 - UNRELEASED
     YARN-1188. The context of QueueMetrics becomes default when using
     FairScheduler (Tsuyoshi Ozawa via Sandy Ryza)
 
-    YARN-1215. Yarn URL should include userinfo. (Chuan Liu via cnauroth)
-
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -98,6 +96,8 @@ Release 2.1.2 - UNRELEASED
 
     YARN-1070. Fixed race conditions in NodeManager during container-kill.
     (Zhijie Shen via vinodkv)
+
+    YARN-1215. Yarn URL should include userinfo. (Chuan Liu via cnauroth)
 
 Release 2.1.1-beta - 2013-09-23
 
