@@ -105,6 +105,9 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-8315. Support SASL-authenticated ZooKeeper in ActiveStandbyElector
+    (todd)
+
 Release 2.1.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
