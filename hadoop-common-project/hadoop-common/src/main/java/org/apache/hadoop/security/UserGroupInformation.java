@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1325,7 +1326,14 @@ public class UserGroupInformation {
    * @return Credentials of tokens associated with this user
    */
   public synchronized Credentials getCredentials() {
-    return new Credentials(getCredentialsInternal());
+    Credentials creds = new Credentials(getCredentialsInternal());
+    Iterator<Token<?>> iter = creds.getAllTokens().iterator();
+    while (iter.hasNext()) {
+      if (iter.next() instanceof Token.PrivateToken) {
+        iter.remove();
+      }
+    }
+    return creds;
   }
   
   /**
