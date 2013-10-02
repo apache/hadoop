@@ -342,6 +342,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9063. enhance unit-test coverage of class
     org.apache.hadoop.fs.FileUtil (Ivan A. Veselovsky via jlowe)
 
+    HADOOP-9254. Cover packages org.apache.hadoop.util.bloom,
+    org.apache.hadoop.util.hash (Vadim Bondarev via jlowe)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
