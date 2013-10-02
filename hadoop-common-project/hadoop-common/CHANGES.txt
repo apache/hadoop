@@ -339,6 +339,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10006. Compilation failure in trunk for
     o.a.h.fs.swift.util.JSONUtil (Junping Du via stevel)
 
+    HADOOP-9063. enhance unit-test coverage of class
+    org.apache.hadoop.fs.FileUtil (Ivan A. Veselovsky via jlowe)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
