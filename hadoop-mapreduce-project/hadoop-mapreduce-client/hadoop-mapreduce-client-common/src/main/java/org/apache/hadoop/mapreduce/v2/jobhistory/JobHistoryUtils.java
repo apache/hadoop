@@ -20,11 +20,7 @@ package org.apache.hadoop.mapreduce.v2.jobhistory;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.Calendar;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,13 +41,8 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -125,9 +116,6 @@ public class JobHistoryUtils {
   public static final String TIMESTAMP_DIR_REGEX = "\\d{4}" + "\\" + Path.SEPARATOR +  "\\d{2}" + "\\" + Path.SEPARATOR + "\\d{2}";
   public static final Pattern TIMESTAMP_DIR_PATTERN = Pattern.compile(TIMESTAMP_DIR_REGEX);
   private static final String TIMESTAMP_DIR_FORMAT = "%04d" + File.separator + "%02d" + File.separator + "%02d";
-
-  private static final Splitter ADDR_SPLITTER = Splitter.on(':').trimResults();
-  private static final Joiner JOINER = Joiner.on("");
 
   private static final PathFilter CONF_FILTER = new PathFilter() {
     @Override
@@ -495,36 +483,6 @@ public class JobHistoryUtils {
     }
 
     return result;
-  }
-
-  public static String getHistoryUrl(Configuration conf, ApplicationId appId) 
-       throws UnknownHostException {
-  //construct the history url for job
-    String addr = conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
-        JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
-    Iterator<String> it = ADDR_SPLITTER.split(addr).iterator();
-    it.next(); // ignore the bind host
-    String port = it.next();
-    // Use hs address to figure out the host for webapp
-    addr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
-        JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
-    String host = ADDR_SPLITTER.split(addr).iterator().next();
-    String hsAddress = JOINER.join(host, ":", port);
-    InetSocketAddress address = NetUtils.createSocketAddr(
-      hsAddress, JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT,
-      JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
-    StringBuffer sb = new StringBuffer();
-    if (address.getAddress().isAnyLocalAddress() || 
-        address.getAddress().isLoopbackAddress()) {
-      sb.append(InetAddress.getLocalHost().getCanonicalHostName());
-    } else {
-      sb.append(address.getHostName());
-    }
-    sb.append(":").append(address.getPort());
-    sb.append("/jobhistory/job/");
-    JobID jobId = TypeConverter.fromYarn(appId);
-    sb.append(jobId.toString());
-    return sb.toString();
   }
 
   public static Path getPreviousJobHistoryPath(

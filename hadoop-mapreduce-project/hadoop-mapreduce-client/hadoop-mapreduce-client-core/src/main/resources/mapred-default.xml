@@ -546,7 +546,7 @@
 </property>
 
 <property>
-  <name>mapreduce.ssl.enabled</name>
+  <name>mapreduce.am.ssl.enabled</name>
   <value>false</value>
   <description>
 	If enabled, MapReduce application master's http server will be
@@ -1597,4 +1597,12 @@
   <description>Whether to use fixed ports with the minicluster</description>
 </property>
 
+<property>
+  <name>mapreduce.jobhistory.ssl.enabled</name>
+  <value>false</value>
+  <description>
+    Whether to use SSL for the HTTP endpoints. If set to true, the
+    JobHistoryServer web UIs will be served over HTTPS instead HTTP.
+  </description>
+</property>
 </configuration>

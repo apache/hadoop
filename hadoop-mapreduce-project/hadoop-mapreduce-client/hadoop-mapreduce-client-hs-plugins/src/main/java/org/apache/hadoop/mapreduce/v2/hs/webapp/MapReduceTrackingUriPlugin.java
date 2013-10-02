@@ -24,7 +24,7 @@ import java.net.URISyntaxException;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 
@@ -54,8 +54,7 @@ public class MapReduceTrackingUriPlugin extends TrackingUriPlugin implements
   public URI getTrackingUri(ApplicationId id) throws URISyntaxException {
     String jobSuffix = id.toString().replaceFirst("^application_", "job_");
     String historyServerAddress =
-        this.getConf().get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS);
-    return new URI("http://" + historyServerAddress + "/jobhistory/job/"
-        + jobSuffix);
+        MRWebAppUtil.getJHSWebappURLWithScheme(getConf());
+    return new URI(historyServerAddress + "/jobhistory/job/"+ jobSuffix);
   }
 }
