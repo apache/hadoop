@@ -506,6 +506,14 @@ public class TestResourceTrackerService {
     dispatcher.await();
     Assert.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
     checkUnealthyNMCount(rm, nm2, true, 1);
+    
+    // unhealthy node changed back to healthy
+    nm2 = rm.registerNode("host2:5678", 5120);
+    dispatcher.await();
+    response = nm2.nodeHeartbeat(true);
+    response = nm2.nodeHeartbeat(true);
+    dispatcher.await();
+    Assert.assertEquals(5120 + 5120, metrics.getAvailableMB());
 
     // reconnect of node with changed capability
     nm1 = rm.registerNode("host2:5678", 10240);
