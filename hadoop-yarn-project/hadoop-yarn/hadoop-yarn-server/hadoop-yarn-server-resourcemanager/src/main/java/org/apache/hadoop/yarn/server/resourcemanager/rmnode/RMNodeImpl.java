@@ -460,8 +460,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           && rmNode.getHttpPort() == newNode.getHttpPort()) {
         // Reset heartbeat ID since node just restarted.
         rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
-        rmNode.context.getDispatcher().getEventHandler().handle(
-            new NodeAddedSchedulerEvent(rmNode));
+        if (rmNode.getState() != NodeState.UNHEALTHY) {
+          // Only add new node if old state is not UNHEALTHY
+          rmNode.context.getDispatcher().getEventHandler().handle(
+              new NodeAddedSchedulerEvent(rmNode));
+         }
       } else {
         // Reconnected node differs, so replace old node and start new node
         switch (rmNode.getState()) {
