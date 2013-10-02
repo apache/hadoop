@@ -225,6 +225,7 @@ public final class FileContext {
   private FsPermission umask;
   private final Configuration conf;
   private final UserGroupInformation ugi;
+  final boolean resolveSymlinks;
 
   private FileContext(final AbstractFileSystem defFs,
     final FsPermission theUmask, final Configuration aConf) {
@@ -250,9 +251,12 @@ public final class FileContext {
     if (workingDir == null) {
       workingDir = defaultFS.getHomeDirectory();
     }
+    resolveSymlinks = conf.getBoolean(
+        CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY,
+        CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_DEFAULT);
     util = new Util(); // for the inner class
   }
- 
+
   /* 
    * Remove relative part - return "absolute":
    * If input is relative path ("foo/bar") add wd: ie "/<workingDir>/foo/bar"

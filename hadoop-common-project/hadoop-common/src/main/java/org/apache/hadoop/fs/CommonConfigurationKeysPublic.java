@@ -54,7 +54,11 @@ public class CommonConfigurationKeysPublic {
   public static final String  FS_DF_INTERVAL_KEY = "fs.df.interval"; 
   /** Default value for FS_DF_INTERVAL_KEY */
   public static final long    FS_DF_INTERVAL_DEFAULT = 60000;
-
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY =
+    "fs.client.resolve.remote.symlinks";
+  /** Default value for FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY */
+  public static final boolean FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_DEFAULT = true;
 
   //Defaults are not specified for following keys
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */

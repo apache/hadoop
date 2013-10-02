@@ -1203,6 +1203,17 @@
 </property>
 
 <property>
+  <name>fs.client.resolve.remote.symlinks</name>
+  <value>true</value>
+  <description>
+      Whether to resolve symlinks when accessing a remote Hadoop filesystem.
+      Setting this to false causes an exception to be thrown upon encountering
+      a symlink. This setting does not apply to local filesystems, which
+      automatically resolve local symlinks.
+  </description>
+</property>
+
+<property>
   <name>nfs3.server.port</name>
   <value>2049</value>
   <description>

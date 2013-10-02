@@ -29,6 +29,9 @@ Release 2.1.2 - UNRELEASED
     HADOOP-9976. Different versions of avro and avro-maven-plugin (Karthik
     Kambatla via Sandy Ryza)
 
+    HADOOP-9758. Provide configuration option for FileSystem/FileContext
+    symlink resolution (Andrew Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES

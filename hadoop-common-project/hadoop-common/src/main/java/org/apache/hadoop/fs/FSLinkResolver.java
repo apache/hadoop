@@ -90,6 +90,11 @@ public abstract class FSLinkResolver<T> {
         in = next(fs, p);
         isLink = false;
       } catch (UnresolvedLinkException e) {
+        if (!fc.resolveSymlinks) {
+          throw new IOException("Path " + path + " contains a symlink"
+              + " and symlink resolution is disabled ("
+              + CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY + ").", e);
+        }
         if (count++ > FsConstants.MAX_PATH_LINKS) {
           throw new IOException("Possible cyclic loop while " +
                                 "following symbolic link " + path);
