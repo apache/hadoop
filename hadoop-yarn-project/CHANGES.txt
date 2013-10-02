@@ -44,6 +44,9 @@ Release 2.3.0 - UNRELEASED
     YARN-819. ResourceManager and NodeManager should check for a minimum allowed
     version (Robert Parker via jeagles)
 
+    YARN-677. Increase coverage to FairScheduler (Vadim Bondarev and Dennis Y
+    via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
