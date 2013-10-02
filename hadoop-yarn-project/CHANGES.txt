@@ -60,6 +60,9 @@ Release 2.1.2 - UNRELEASED
 
     YARN-1215. Yarn URL should include userinfo. (Chuan Liu via cnauroth)
 
+    YARN-1262. TestApplicationCleanup relies on all containers assigned in a
+    single heartbeat (Karthik Kambatla via Sandy Ryza)
+
     YARN-1260. Added webapp.http.address to yarn-default.xml so that default
     install with https enabled doesn't have broken link on NM UI. (Omkar Vinit
     Joshi via vinodkv)
