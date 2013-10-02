@@ -382,6 +382,9 @@ Release 2.1.2 - UNRELEASED
     HDFS-5265. Namenode fails to start when dfs.https.port is unspecified.
     (Haohui Mai via jing9)
 
+    HDFS-5255. Distcp job fails with hsftp when https is enabled in insecure
+    cluster. (Arpit Agarwal)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
