@@ -304,7 +304,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         application.showRequests();
 
         // Update application requests
-        application.updateResourceRequests(ask, blacklistAdditions, blacklistRemovals);
+        application.updateResourceRequests(ask);
 
         LOG.debug("allocate: post-update" +
             " applicationId=" + applicationAttemptId + 
@@ -316,13 +316,16 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
             " #ask=" + ask.size());
       }
 
+      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
+
       return new Allocation(
           application.pullNewlyAllocatedContainers(), 
           application.getHeadroom());
     }
   }
 
-  private FiCaSchedulerApp getApplication(
+  @VisibleForTesting
+  FiCaSchedulerApp getApplication(
       ApplicationAttemptId applicationAttemptId) {
     return applications.get(applicationAttemptId);
   }

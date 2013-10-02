@@ -513,7 +513,7 @@ public class TestApplicationLimits {
     app_0_0_requests.add(
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2,
             true, priority_1, recordFactory));
-    app_0_0.updateResourceRequests(app_0_0_requests, null, null);
+    app_0_0.updateResourceRequests(app_0_0_requests);
 
     // Schedule to compute 
     queue.assignContainers(clusterResource, node_0);
@@ -532,7 +532,7 @@ public class TestApplicationLimits {
     app_0_1_requests.add(
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2,
             true, priority_1, recordFactory));
-    app_0_1.updateResourceRequests(app_0_1_requests, null, null);
+    app_0_1.updateResourceRequests(app_0_1_requests);
 
     // Schedule to compute 
     queue.assignContainers(clusterResource, node_0); // Schedule to compute
@@ -551,7 +551,7 @@ public class TestApplicationLimits {
     app_1_0_requests.add(
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2,
             true, priority_1, recordFactory));
-    app_1_0.updateResourceRequests(app_1_0_requests, null, null);
+    app_1_0.updateResourceRequests(app_1_0_requests);
     
     // Schedule to compute 
     queue.assignContainers(clusterResource, node_0); // Schedule to compute
