@@ -16,11 +16,21 @@
  */
 package org.apache.hadoop.security;
 
-import static org.junit.Assert.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.TestSaslRPC;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Shell;
 import org.junit.*;
 
-import static org.mockito.Mockito.*;
-
+import javax.security.auth.Subject;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.LoginContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -29,21 +39,13 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import javax.security.auth.Subject;
-import javax.security.auth.login.AppConfigurationEntry;
-import javax.security.auth.login.LoginContext;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.apache.hadoop.security.authentication.util.KerberosName;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import static org.apache.hadoop.test.MetricsAsserts.*;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
-import org.apache.hadoop.util.Shell;
+import static org.apache.hadoop.ipc.TestSaslRPC.*;
+import static org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
+import static org.apache.hadoop.test.MetricsAsserts.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestUserGroupInformation {
   final private static String USER_NAME = "user1@HADOOP.APACHE.ORG";
@@ -749,5 +751,30 @@ public class TestUserGroupInformation {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
     UserGroupInformation.setLoginUser(ugi);
     assertEquals(ugi, UserGroupInformation.getLoginUser());
+  }
+
+  /**
+   * In some scenario, such as HA, delegation tokens are associated with a
+   * logical name. The tokens are cloned and are associated with the
+   * physical address of the server where the service is provided.
+   * This test ensures cloned delegated tokens are locally used
+   * and are not returned in {@link UserGroupInformation#getCredentials()}
+   */
+  @Test
+  public void testPrivateTokenExclusion() throws Exception  {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    TestTokenIdentifier tokenId = new TestTokenIdentifier();
+    Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(
+            tokenId.getBytes(), "password".getBytes(),
+            tokenId.getKind(), null);
+    ugi.addToken(new Text("regular-token"), token);
+
+    // Now add cloned private token
+    ugi.addToken(new Text("private-token"), new Token.PrivateToken<TestTokenIdentifier>(token));
+    ugi.addToken(new Text("private-token1"), new Token.PrivateToken<TestTokenIdentifier>(token));
+
+    // Ensure only non-private tokens are returned
+    Collection<Token<? extends TokenIdentifier>> tokens = ugi.getCredentials().getAllTokens();
+    assertEquals(1, tokens.size());
   }
 }
