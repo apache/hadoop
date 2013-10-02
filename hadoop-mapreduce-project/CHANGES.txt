@@ -131,6 +131,10 @@ Release 2.1.2 - UNRELEASED
     MAPREDUCE-5459. Update documentation on how to run MRv1 examples on YARN.
     (Zhijie Shen via acmurthy)
 
+    MAPREDUCE-5554. hdfs-site.xml included in hadoop-mapreduce-client-jobclient
+    tests jar is breaking tests for downstream components (Robert Kanter via
+    Sandy Ryza)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
