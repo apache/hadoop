@@ -116,14 +116,11 @@ public class AppSchedulingInfo {
    * The ApplicationMaster is updating resource requirements for the
    * application, by asking for more resources and releasing resources acquired
    * by the application.
-   * 
+   *
    * @param requests resources to be acquired
-   * @param blacklistAdditions resources to be added to the blacklist
-   * @param blacklistRemovals resources to be removed from the blacklist
    */
   synchronized public void updateResourceRequests(
-      List<ResourceRequest> requests,
-      List<String> blacklistAdditions, List<String> blacklistRemovals) {
+      List<ResourceRequest> requests) {
     QueueMetrics metrics = queue.getMetrics();
     
     // Update resource requests
@@ -181,11 +178,16 @@ public class AppSchedulingInfo {
                 lastRequestContainers)));
       }
     }
+  }
 
-    //
-    // Update blacklist
-    //
-    
+  /**
+   * The ApplicationMaster is updating the blacklist
+   *
+   * @param blacklistAdditions resources to be added to the blacklist
+   * @param blacklistRemovals resources to be removed from the blacklist
+   */
+  synchronized public void updateBlacklist(
+      List<String> blacklistAdditions, List<String> blacklistRemovals) {
     // Add to blacklist
     if (blacklistAdditions != null) {
       blacklist.addAll(blacklistAdditions);
