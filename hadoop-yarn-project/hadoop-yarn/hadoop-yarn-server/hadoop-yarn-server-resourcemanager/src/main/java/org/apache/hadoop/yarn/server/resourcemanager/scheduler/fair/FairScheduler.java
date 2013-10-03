@@ -605,7 +605,8 @@ public class FairScheduler implements ResourceScheduler {
    */
   protected synchronized void addApplication(
       ApplicationAttemptId applicationAttemptId, String queueName, String user) {
-    RMApp rmApp = rmContext.getRMApps().get(applicationAttemptId);
+    RMApp rmApp = rmContext.getRMApps().get(
+        applicationAttemptId.getApplicationId());
     FSLeafQueue queue = assignToQueue(rmApp, queueName, user);
 
     FSSchedulerApp schedulerApp =
@@ -657,6 +658,8 @@ public class FairScheduler implements ResourceScheduler {
     
     if (rmApp != null) {
       rmApp.setQueue(queue.getName());
+    } else {
+      LOG.warn("Couldn't find RM app to set queue name on");
     }
     
     return queue;
