@@ -283,8 +283,9 @@ public class TestLeafQueue {
     
     // Setup some nodes
     String host_0 = "127.0.0.1";
-    FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 8*GB);
-    
+    FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0,
+        8*GB);
+
     final int numNodes = 1;
     Resource clusterResource = 
         Resources.createResource(numNodes * (8*GB), numNodes * 16);
@@ -300,7 +301,9 @@ public class TestLeafQueue {
     
     // Only 1 container
     a.assignContainers(clusterResource, node_0);
-    assertEquals(6*GB, a.getMetrics().getAvailableMB());
+    assertEquals(
+        (int)(node_0.getTotalResource().getMemory() * a.getCapacity()) - (1*GB),
+        a.getMetrics().getAvailableMB());
   }
 
   @Test
@@ -405,8 +408,9 @@ public class TestLeafQueue {
     
     // Setup some nodes
     String host_0 = "127.0.0.1";
-    FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 8*GB);
-    
+    FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0,
+        8*GB);
+
     final int numNodes = 1;
     Resource clusterResource = 
         Resources.createResource(numNodes * (8*GB), numNodes * 16);
@@ -493,12 +497,14 @@ public class TestLeafQueue {
       a.completedContainer(clusterResource, app_1, node_0, rmContainer, 
           null, RMContainerEventType.KILL, null);
     }
+
     assertEquals(0*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(0*GB, a.getMetrics().getReservedMB());
     assertEquals(0*GB, a.getMetrics().getAllocatedMB());
-    assertEquals(1*GB, a.getMetrics().getAvailableMB());
+    assertEquals((int)(a.getCapacity() * node_0.getTotalResource().getMemory()),
+        a.getMetrics().getAvailableMB());
   }
   
   @Test
