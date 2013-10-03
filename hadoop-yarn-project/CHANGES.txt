@@ -70,6 +70,9 @@ Release 2.1.2 - UNRELEASED
     install with https enabled doesn't have broken link on NM UI. (Omkar Vinit
     Joshi via vinodkv)
 
+    YARN-1141. Updating resource requests should be decoupled with updating
+    blacklist (Zhijie Shen via bikas)
+
     YARN-876. Node resource is added twice when node comes back from unhealthy
     to healthy. (Peng Zhang via Sandy Ryza)
 
