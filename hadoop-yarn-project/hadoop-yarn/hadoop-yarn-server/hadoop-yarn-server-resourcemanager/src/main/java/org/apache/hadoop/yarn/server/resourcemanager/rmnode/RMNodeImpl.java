@@ -97,6 +97,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   private String healthReport;
   private long lastHealthReportTime;
+  private String nodeManagerVersion;
 
   /* set of containers that have just launched */
   private final Map<ContainerId, ContainerStatus> justLaunchedContainers = 
@@ -172,7 +173,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
-      int cmPort, int httpPort, Node node, Resource capability) {
+      int cmPort, int httpPort, Node node, Resource capability, String nodeManagerVersion) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
@@ -184,6 +185,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.node = node;
     this.healthReport = "Healthy";
     this.lastHealthReportTime = System.currentTimeMillis();
+    this.nodeManagerVersion = nodeManagerVersion;
 
     this.latestNodeHeartBeatResponse.setResponseId(0);
 
@@ -286,6 +288,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  @Override
+  public String getNodeManagerVersion() {
+    return nodeManagerVersion;
   }
 
   @Override

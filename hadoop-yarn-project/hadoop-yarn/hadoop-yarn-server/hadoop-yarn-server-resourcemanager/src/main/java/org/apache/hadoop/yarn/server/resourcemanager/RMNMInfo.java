@@ -90,6 +90,8 @@ public class RMNMInfo implements RMNMInfoBeans {
                         ni.getLastHealthReportTime());
         info.put("HealthReport",
                         ni.getHealthReport());
+        info.put("NodeManagerVersion",
+                ni.getNodeManagerVersion());
         if(report != null) {
           info.put("NumContainers", report.getNumContainers());
           info.put("UsedMemoryMB", report.getUsedResource().getMemory());

@@ -31,6 +31,8 @@ Release 2.3.0 - UNRELEASED
 
     YARN-425. coverage fix for yarn api (Aleksey Gorshkov via jeagles)
 
+    YARN-1199. Make NM/RM Versions Available (Mit Desai via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES

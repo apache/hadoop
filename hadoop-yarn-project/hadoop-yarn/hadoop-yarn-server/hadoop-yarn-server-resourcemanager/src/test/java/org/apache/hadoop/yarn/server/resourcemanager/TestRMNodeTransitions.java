@@ -110,7 +110,7 @@ public class TestRMNodeTransitions {
         new TestSchedulerEventDispatcher());
     
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
-    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null);
+    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
 
   }
   
@@ -166,7 +166,7 @@ public class TestRMNodeTransitions {
     node.handle(new RMNodeEvent(null,RMNodeEventType.STARTED));
     
     NodeId nodeId = BuilderUtils.newNodeId("localhost:1", 1);
-    RMNodeImpl node2 = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null);
+    RMNodeImpl node2 = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
     node2.handle(new RMNodeEvent(null,RMNodeEventType.STARTED));
     
     ContainerId completedContainerIdFromNode1 = BuilderUtils.newContainerId(
@@ -432,7 +432,7 @@ public class TestRMNodeTransitions {
   private RMNodeImpl getRunningNode() {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
-        null, null);
+        null, null, null);
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.STARTED));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     return node;

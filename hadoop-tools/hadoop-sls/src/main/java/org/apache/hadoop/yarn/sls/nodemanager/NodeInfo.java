@@ -147,6 +147,12 @@ public class NodeInfo {
         list2));
       return list;
     }
+
+	@Override
+	public String getNodeManagerVersion() {
+		// TODO Auto-generated method stub
+		return null;
+	}
   }
   
   public static RMNode newNodeInfo(String rackName, String hostName,
