@@ -122,6 +122,10 @@ Release 2.1.2 - UNRELEASED
     YARN-890. Ensure CapacityScheduler doesn't round-up metric for available 
     resources. (Xuan Gong & Hitesh Shah via acmurthy)
 
+    YARN-621. Changed YARN web app to not add paths that can cause duplicate
+    additions of authenticated filters there by causing kerberos replay errors.
+    (Omkar Vinit Joshi via vinodkv)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
