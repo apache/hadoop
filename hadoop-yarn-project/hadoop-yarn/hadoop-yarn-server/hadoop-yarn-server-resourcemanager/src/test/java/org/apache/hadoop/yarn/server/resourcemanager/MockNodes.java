@@ -184,6 +184,11 @@ public class MockNodes {
     }
 
     @Override
+    public String getNodeManagerVersion() {
+      return null;
+    }
+
+    @Override
     public List<UpdatedContainerInfo> pullContainerUpdates() {
       return new ArrayList<UpdatedContainerInfo>();
     }

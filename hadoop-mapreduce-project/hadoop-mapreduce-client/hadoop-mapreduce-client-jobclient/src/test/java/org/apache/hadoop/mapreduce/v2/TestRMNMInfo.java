@@ -120,6 +120,7 @@ public class TestRMNMInfo {
       Assert.assertNotNull(n.get("NodeHTTPAddress"));
       Assert.assertNotNull(n.get("LastHealthUpdate"));
       Assert.assertNotNull(n.get("HealthReport"));
+      Assert.assertNotNull(n.get("NodeManagerVersion"));
       Assert.assertNotNull(n.get("NumContainers"));
       Assert.assertEquals(
               n.get("NodeId") + ": Unexpected number of used containers",
@@ -156,6 +157,7 @@ public class TestRMNMInfo {
       Assert.assertNotNull(n.get("NodeHTTPAddress"));
       Assert.assertNotNull(n.get("LastHealthUpdate"));
       Assert.assertNotNull(n.get("HealthReport"));
+      Assert.assertNotNull(n.get("NodeManagerVersion"));
       Assert.assertNull(n.get("NumContainers"));
       Assert.assertNull(n.get("UsedMemoryMB"));
       Assert.assertNull(n.get("AvailableMemoryMB"));

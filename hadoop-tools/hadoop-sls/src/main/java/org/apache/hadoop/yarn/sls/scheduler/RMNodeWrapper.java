@@ -138,4 +138,10 @@ public class RMNodeWrapper implements RMNode {
     return updates;
   }
 
+@Override
+public String getNodeManagerVersion() {
+	// TODO Auto-generated method stub
+	return null;
+}
+
 }
