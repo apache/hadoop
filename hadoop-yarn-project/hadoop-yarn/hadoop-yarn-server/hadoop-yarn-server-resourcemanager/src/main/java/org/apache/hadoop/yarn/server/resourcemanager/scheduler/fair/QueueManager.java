@@ -109,26 +109,27 @@ public class QueueManager {
     lastSuccessfulReload = scheduler.getClock().getTime();
     lastReloadAttempt = scheduler.getClock().getTime();
     // Create the default queue
-    getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
+    getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME, true);
   }
   
   /**
-   * Get a queue by name, creating it if necessary.  If the queue
-   * is not or can not be a leaf queue, i.e. it already exists as a parent queue,
-   * or one of the parents in its name is already a leaf queue, null is returned.
+   * Get a queue by name, creating it if the create param is true and is necessary.
+   * If the queue is not or can not be a leaf queue, i.e. it already exists as a
+   * parent queue, or one of the parents in its name is already a leaf queue,
+   * null is returned.
    * 
    * The root part of the name is optional, so a queue underneath the root 
    * named "queue1" could be referred to  as just "queue1", and a queue named
    * "queue2" underneath a parent named "parent1" that is underneath the root 
    * could be referred to as just "parent1.queue2".
    */
-  public FSLeafQueue getLeafQueue(String name) {
+  public FSLeafQueue getLeafQueue(String name, boolean create) {
     if (!name.startsWith(ROOT_QUEUE + ".")) {
       name = ROOT_QUEUE + "." + name;
     }
     synchronized (queues) {
       FSQueue queue = queues.get(name);
-      if (queue == null) {
+      if (queue == null && create) {
         FSLeafQueue leafQueue = createLeafQueue(name);
         if (leafQueue == null) {
           return null;
@@ -221,13 +222,6 @@ public class QueueManager {
     synchronized (queues) {
       return queues.containsKey(name);
     }
-  }
-
-  /**
-   * Get the queue for a given AppSchedulable.
-   */
-  public FSLeafQueue getQueueForApp(AppSchedulable app) {
-    return getLeafQueue(app.getApp().getQueueName());
   }
 
   /**
@@ -384,7 +378,7 @@ public class QueueManager {
  
       // Create all queus
       for (String name: queueNamesInAllocFile) {
-        getLeafQueue(name);
+        getLeafQueue(name, true);
       }
       
       // Set custom policies as specified
