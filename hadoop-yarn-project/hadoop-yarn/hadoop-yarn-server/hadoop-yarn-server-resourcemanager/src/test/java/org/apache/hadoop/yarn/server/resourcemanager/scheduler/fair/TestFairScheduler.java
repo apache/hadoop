@@ -436,9 +436,9 @@ public class TestFairScheduler {
     Collection<FSLeafQueue> queues = queueManager.getLeafQueues();
     assertEquals(3, queues.size());
     
-    FSLeafQueue queue1 = queueManager.getLeafQueue("default");
-    FSLeafQueue queue2 = queueManager.getLeafQueue("parent.queue2");
-    FSLeafQueue queue3 = queueManager.getLeafQueue("parent.queue3");
+    FSLeafQueue queue1 = queueManager.getLeafQueue("default", true);
+    FSLeafQueue queue2 = queueManager.getLeafQueue("parent.queue2", true);
+    FSLeafQueue queue3 = queueManager.getLeafQueue("parent.queue3", true);
     assertEquals(capacity / 2, queue1.getFairShare().getMemory());
     assertEquals(capacity / 2, queue1.getMetrics().getFairShareMB());
     assertEquals(capacity / 4, queue2.getFairShare().getMemory());
@@ -450,20 +450,20 @@ public class TestFairScheduler {
   @Test
   public void testHierarchicalQueuesSimilarParents() {
     QueueManager queueManager = scheduler.getQueueManager();
-    FSLeafQueue leafQueue = queueManager.getLeafQueue("parent.child");
+    FSLeafQueue leafQueue = queueManager.getLeafQueue("parent.child", true);
     Assert.assertEquals(2, queueManager.getLeafQueues().size());
     Assert.assertNotNull(leafQueue);
     Assert.assertEquals("root.parent.child", leafQueue.getName());
 
-    FSLeafQueue leafQueue2 = queueManager.getLeafQueue("parent");
+    FSLeafQueue leafQueue2 = queueManager.getLeafQueue("parent", true);
     Assert.assertNull(leafQueue2);
     Assert.assertEquals(2, queueManager.getLeafQueues().size());
     
-    FSLeafQueue leafQueue3 = queueManager.getLeafQueue("parent.child.grandchild");
+    FSLeafQueue leafQueue3 = queueManager.getLeafQueue("parent.child.grandchild", true);
     Assert.assertNull(leafQueue3);
     Assert.assertEquals(2, queueManager.getLeafQueues().size());
     
-    FSLeafQueue leafQueue4 = queueManager.getLeafQueue("parent.sister");
+    FSLeafQueue leafQueue4 = queueManager.getLeafQueue("parent.sister", true);
     Assert.assertNotNull(leafQueue4);
     Assert.assertEquals("root.parent.sister", leafQueue4.getName());
     Assert.assertEquals(3, queueManager.getLeafQueues().size());
@@ -612,9 +612,9 @@ public class TestFairScheduler {
     AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
         createAppAttemptId(1, 1), "default", "user1");
     scheduler.handle(appAddedEvent);
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1")
+    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getAppSchedulables().size());
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("default")
+    assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
         .getAppSchedulables().size());
 
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "false");
@@ -622,11 +622,11 @@ public class TestFairScheduler {
     AppAddedSchedulerEvent appAddedEvent2 = new AppAddedSchedulerEvent(
         createAppAttemptId(2, 1), "default", "user2");
     scheduler.handle(appAddedEvent2);
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1")
+    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getAppSchedulables().size());
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("default")
+    assertEquals(1, scheduler.getQueueManager().getLeafQueue("default", true)
         .getAppSchedulables().size());
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user2")
+    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user2", true)
         .getAppSchedulables().size());
   }
 
@@ -772,7 +772,7 @@ public class TestFairScheduler {
     assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
 
     // That queue should have one app
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1")
+    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getAppSchedulables().size());
 
     AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
@@ -782,7 +782,7 @@ public class TestFairScheduler {
     scheduler.handle(appRemovedEvent1);
 
     // Queue should have no apps
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1")
+    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getAppSchedulables().size());
   }
 
@@ -919,10 +919,10 @@ public class TestFairScheduler {
     
     Collection<FSLeafQueue> leafQueues = queueManager.getLeafQueues();
     Assert.assertEquals(4, leafQueues.size());
-    Assert.assertNotNull(queueManager.getLeafQueue("queueA"));
-    Assert.assertNotNull(queueManager.getLeafQueue("queueB.queueC"));
-    Assert.assertNotNull(queueManager.getLeafQueue("queueB.queueD"));
-    Assert.assertNotNull(queueManager.getLeafQueue("default"));
+    Assert.assertNotNull(queueManager.getLeafQueue("queueA", true));
+    Assert.assertNotNull(queueManager.getLeafQueue("queueB.queueC", true));
+    Assert.assertNotNull(queueManager.getLeafQueue("queueB.queueD", true));
+    Assert.assertNotNull(queueManager.getLeafQueue("default", true));
     // Make sure querying for queues didn't create any new ones:
     Assert.assertEquals(4, leafQueues.size());
   }
@@ -1423,9 +1423,9 @@ public class TestFairScheduler {
     scheduler.update();
 
     FSLeafQueue schedC =
-        scheduler.getQueueManager().getLeafQueue("queueC");
+        scheduler.getQueueManager().getLeafQueue("queueC", true);
     FSLeafQueue schedD =
-        scheduler.getQueueManager().getLeafQueue("queueD");
+        scheduler.getQueueManager().getLeafQueue("queueD", true);
 
     assertTrue(Resources.equals(
         Resources.none(), scheduler.resToPreempt(schedC, clock.getTime())));
@@ -1688,7 +1688,7 @@ public class TestFairScheduler {
     FSSchedulerApp app1 = scheduler.applications.get(attId1);
     FSSchedulerApp app2 = scheduler.applications.get(attId2);
     
-    FSLeafQueue queue1 = scheduler.getQueueManager().getLeafQueue("queue1");
+    FSLeafQueue queue1 = scheduler.getQueueManager().getLeafQueue("queue1", true);
     queue1.setPolicy(new FifoPolicy());
     
     scheduler.update();
@@ -1716,7 +1716,7 @@ public class TestFairScheduler {
   public void testMaxAssign() throws AllocationConfigurationException {
     // set required scheduler configs
     scheduler.assignMultiple = true;
-    scheduler.getQueueManager().getLeafQueue("root.default")
+    scheduler.getQueueManager().getLeafQueue("root.default", true)
         .setPolicy(SchedulingPolicy.getDefault());
 
     RMNode node =
@@ -1793,7 +1793,7 @@ public class TestFairScheduler {
     FSSchedulerApp app3 = scheduler.applications.get(attId3);
     FSSchedulerApp app4 = scheduler.applications.get(attId4);
 
-    scheduler.getQueueManager().getLeafQueue(fifoQueue)
+    scheduler.getQueueManager().getLeafQueue(fifoQueue, true)
         .setPolicy(SchedulingPolicy.parse("fifo"));
     scheduler.update();
 
@@ -2404,5 +2404,47 @@ public class TestFairScheduler {
     } catch(RuntimeException ex) {
       //expected
     }
+  }
+  
+  @Test
+  public void testDontAllowUndeclaredPools() throws Exception{
+    Configuration conf = createConfiguration();
+    conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"jerry\">");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    QueueManager queueManager = scheduler.getQueueManager();
+    queueManager.initialize();
+    
+    FSLeafQueue jerryQueue = queueManager.getLeafQueue("jerry", false);
+    FSLeafQueue defaultQueue = queueManager.getLeafQueue("default", false);
+    
+    // Should get put into jerry
+    createSchedulingRequest(1024, "jerry", "someuser");
+    assertEquals(1, jerryQueue.getAppSchedulables().size());
+
+    // Should get forced into default
+    createSchedulingRequest(1024, "newqueue", "someuser");
+    assertEquals(1, jerryQueue.getAppSchedulables().size());
+    assertEquals(1, defaultQueue.getAppSchedulables().size());
+    
+    // Would get put into someuser because of user-as-default-queue, but should
+    // be forced into default
+    createSchedulingRequest(1024, "default", "someuser");
+    assertEquals(1, jerryQueue.getAppSchedulables().size());
+    assertEquals(2, defaultQueue.getAppSchedulables().size());
+    
+    // Should get put into jerry because of user-as-default-queue
+    createSchedulingRequest(1024, "default", "jerry");
+    assertEquals(2, jerryQueue.getAppSchedulables().size());
+    assertEquals(2, defaultQueue.getAppSchedulables().size());
   }
 }

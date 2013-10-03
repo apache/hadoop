@@ -92,6 +92,9 @@ Release 2.1.2 - UNRELEASED
 
     YARN-1228. Clean up Fair Scheduler configuration loading. (Sandy Ryza)
 
+    YARN-1213. Restore config to ban submitting to undeclared pools in the
+    Fair Scheduler. (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES

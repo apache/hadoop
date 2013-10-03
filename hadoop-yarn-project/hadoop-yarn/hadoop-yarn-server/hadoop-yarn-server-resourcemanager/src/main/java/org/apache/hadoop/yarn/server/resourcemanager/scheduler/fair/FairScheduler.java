@@ -677,10 +677,11 @@ public class FairScheduler implements ResourceScheduler {
       queueName = user;
     }
     
-    FSLeafQueue queue = queueMgr.getLeafQueue(queueName);
+    FSLeafQueue queue = queueMgr.getLeafQueue(queueName,
+        conf.getAllowUndeclaredPools());
     if (queue == null) {
       // queue is not an existing or createable leaf queue
-      queue = queueMgr.getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
+      queue = queueMgr.getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME, false);
     }
     
     if (rmApp != null) {
@@ -726,7 +727,7 @@ public class FairScheduler implements ResourceScheduler {
 
     // Inform the queue
     FSLeafQueue queue = queueMgr.getLeafQueue(application.getQueue()
-        .getQueueName());
+        .getQueueName(), false);
     queue.removeApp(application);
 
     // Remove from our data-structure

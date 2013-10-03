@@ -54,6 +54,11 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final String DEFAULT_ALLOCATION_FILE = "fair-scheduler.xml";
   protected static final String EVENT_LOG_DIR = "eventlog.dir";
 
+  /** Whether pools can be created that were not specified in the FS configuration file
+   */
+  protected static final String ALLOW_UNDECLARED_POOLS = CONF_PREFIX + "allow-undeclared-pools";
+  protected static final boolean DEFAULT_ALLOW_UNDECLARED_POOLS = true;
+  
   /** Whether to use the user name as the queue name (instead of "default") if
    * the request does not specify a queue. */
   protected static final String  USER_AS_DEFAULT_QUEUE = CONF_PREFIX + "user-as-default-queue";
@@ -140,6 +145,10 @@ public class FairSchedulerConfiguration extends Configuration {
       RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES,
       DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES);
     return Resources.createResource(incrementMemory, incrementCores);
+  }
+  
+  public boolean getAllowUndeclaredPools() {
+    return getBoolean(ALLOW_UNDECLARED_POOLS, DEFAULT_ALLOW_UNDECLARED_POOLS);
   }
 
   public boolean getUserAsDefaultQueue() {
