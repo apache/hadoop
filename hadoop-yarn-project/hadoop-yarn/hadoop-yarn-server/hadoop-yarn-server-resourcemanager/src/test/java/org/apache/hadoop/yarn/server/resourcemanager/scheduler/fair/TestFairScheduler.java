@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -603,13 +604,22 @@ public class TestFairScheduler {
     Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
     scheduler.reinitialize(conf, resourceManager.getRMContext());
+    RMContext rmContext = resourceManager.getRMContext();
+    Map<ApplicationId, RMApp> appsMap = rmContext.getRMApps();
+    ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
+    RMApp rmApp = new RMAppImpl(appAttemptId.getApplicationId(), rmContext, conf,
+        null, null, null, ApplicationSubmissionContext.newInstance(null, null,
+            null, null, null, false, false, 0, null, null), null, null, 0, null);
+    appsMap.put(appAttemptId.getApplicationId(), rmApp);
+    
     AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
-        createAppAttemptId(1, 1), "default", "user1");
+        appAttemptId, "default", "user1");
     scheduler.handle(appAddedEvent);
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getAppSchedulables().size());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
         .getAppSchedulables().size());
+    assertEquals("root.user1", rmApp.getQueue());
 
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "false");
     scheduler.reinitialize(conf, resourceManager.getRMContext());
