@@ -1460,9 +1460,18 @@
   <description>CLASSPATH for MR applications. A comma-separated list
   of CLASSPATH entries. If mapreduce.application.framework is set then this
   must specify the appropriate classpath for that archive, and the name of
-  the archive must be present in the classpath.</description>
+  the archive must be present in the classpath. 
+  When this value is empty, the following default CLASSPATH for MR 
+  applications would be used. 
+  For Linux:
+  $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,
+  $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*.
+  For Windows:
+  %HADOOP_MAPRED_HOME%/share/hadoop/mapreduce/*,
+  %HADOOP_MAPRED_HOME%/share/hadoop/mapreduce/lib/*.
+  </description>
    <name>mapreduce.application.classpath</name>
-   <value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*</value>
+   <value></value>
 </property>
 
 <property>

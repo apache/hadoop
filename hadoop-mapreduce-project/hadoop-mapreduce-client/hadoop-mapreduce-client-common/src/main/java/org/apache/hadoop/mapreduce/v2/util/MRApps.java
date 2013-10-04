@@ -49,6 +49,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.ContainerLogAppender;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -181,7 +182,8 @@ public class MRApps extends Apps {
     boolean foundFrameworkInClasspath = (frameworkName == null);
     for (String c : conf.getStrings(
         MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
-        MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH)) {
+        StringUtils.getStrings(
+            MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH))){
       Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
           .trim());
       if (!foundFrameworkInClasspath) {
