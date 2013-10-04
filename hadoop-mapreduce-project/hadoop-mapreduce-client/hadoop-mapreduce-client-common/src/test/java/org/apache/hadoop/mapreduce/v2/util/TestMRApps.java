@@ -192,7 +192,9 @@ public class TestMRApps {
     }
     assertTrue(environment.get("CLASSPATH").contains(yarnAppClasspath));
     String mrAppClasspath = 
-        job.getConfiguration().get(MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH);
+        job.getConfiguration().get(
+            MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
+            MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH);
     if (mrAppClasspath != null) {
       mrAppClasspath = mrAppClasspath.replaceAll(",\\s*", File.pathSeparator)
         .trim();
