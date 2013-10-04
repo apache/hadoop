@@ -542,7 +542,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     // Simulate RM sending an AppFinish event.
     containerManager.handle(new CMgrCompletedAppsEvent(Arrays
-        .asList(new ApplicationId[] { appId })));
+        .asList(new ApplicationId[] { appId }), CMgrCompletedAppsEvent.Reason.ON_SHUTDOWN));
 
     BaseContainerManagerTest.waitForApplicationState(containerManager, 
         cId.getApplicationAttemptId().getApplicationId(),
