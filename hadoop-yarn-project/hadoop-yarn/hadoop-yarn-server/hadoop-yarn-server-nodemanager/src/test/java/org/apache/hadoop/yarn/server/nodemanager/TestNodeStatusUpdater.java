@@ -454,13 +454,13 @@ public class TestNodeStatusUpdater {
 
     @Override
     protected void serviceStop() throws Exception {
+      System.out.println("Called stooppppp");
       super.serviceStop();
       isStopped = true;
-      ConcurrentMap<ContainerId, org.apache.hadoop.yarn.server.nodemanager
-      .containermanager.container.Container> containers =
-          getNMContext().getContainers();
-      // ensure that containers are empty
-      if(!containers.isEmpty()) {
+      ConcurrentMap<ApplicationId, Application> applications =
+          getNMContext().getApplications();
+      // ensure that applications are empty
+      if(!applications.isEmpty()) {
         assertionFailedInThread.set(true);
       }
       syncBarrier.await(10000, TimeUnit.MILLISECONDS);
@@ -859,9 +859,20 @@ public class TestNodeStatusUpdater {
       }
       
       @Override
-      protected void cleanupContainers(NodeManagerEventType eventType) {
-        super.cleanupContainers(NodeManagerEventType.SHUTDOWN);
-        numCleanups.incrementAndGet();
+      protected ContainerManagerImpl createContainerManager(Context context,
+          ContainerExecutor exec, DeletionService del,
+          NodeStatusUpdater nodeStatusUpdater,
+          ApplicationACLsManager aclsManager,
+          LocalDirsHandlerService dirsHandler) {
+        return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
+            metrics, aclsManager, dirsHandler) {
+
+          @Override
+          public void cleanUpApplications(NodeManagerEventType eventType) {
+            super.cleanUpApplications(NodeManagerEventType.SHUTDOWN);
+            numCleanups.incrementAndGet();
+          }
+        };
       }
     };
 
@@ -1161,6 +1172,7 @@ public class TestNodeStatusUpdater {
         .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
         connectionRetryIntervalMs);
     conf.setLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS, 5000);
+    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     CyclicBarrier syncBarrier = new CyclicBarrier(2);
     nm = new MyNodeManager2(syncBarrier, conf);
     nm.init(conf);
@@ -1201,9 +1213,20 @@ public class TestNodeStatusUpdater {
       }
 
       @Override
-      protected void cleanupContainers(NodeManagerEventType eventType) {
-        super.cleanupContainers(NodeManagerEventType.SHUTDOWN);
-        numCleanups.incrementAndGet();
+      protected ContainerManagerImpl createContainerManager(Context context,
+          ContainerExecutor exec, DeletionService del,
+          NodeStatusUpdater nodeStatusUpdater,
+          ApplicationACLsManager aclsManager,
+          LocalDirsHandlerService dirsHandler) {
+        return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
+            metrics, aclsManager, dirsHandler) {
+
+          @Override
+          public void cleanUpApplications(NodeManagerEventType eventType) {
+            super.cleanUpApplications(NodeManagerEventType.SHUTDOWN);
+            numCleanups.incrementAndGet();
+          }
+        };
       }
     };
 
@@ -1345,6 +1368,7 @@ public class TestNodeStatusUpdater {
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
       remoteLogsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, nmLocalDir.getAbsolutePath());
+    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     return conf;
   }
   

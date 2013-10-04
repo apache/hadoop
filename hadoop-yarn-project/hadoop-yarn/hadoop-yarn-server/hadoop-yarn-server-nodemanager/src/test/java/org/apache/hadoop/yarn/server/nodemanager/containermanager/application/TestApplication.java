@@ -586,8 +586,8 @@ public class TestApplication {
     }
 
     public void appFinished() {
-      app.handle(new ApplicationEvent(appId,
-          ApplicationEventType.FINISH_APPLICATION));
+      app.handle(new ApplicationFinishEvent(appId,
+          "Finish Application"));
       drainDispatcherEvents();
     }
 

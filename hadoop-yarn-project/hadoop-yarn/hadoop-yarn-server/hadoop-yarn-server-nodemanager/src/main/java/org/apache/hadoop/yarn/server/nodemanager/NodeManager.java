@@ -19,9 +19,6 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -67,11 +64,6 @@ public class NodeManager extends CompositeService
    * Priority of the NodeManager shutdown hook.
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
-  
-  /**
-   * Extra duration to wait for containers to be killed on shutdown.
-   */
-  private static final int SHUTDOWN_CLEANUP_SLOP_MS = 1000;
 
   private static final Log LOG = LogFactory.getLog(NodeManager.class);
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
@@ -83,8 +75,6 @@ public class NodeManager extends CompositeService
   private ContainerManagerImpl containerManager;
   private NodeStatusUpdater nodeStatusUpdater;
   private static CompositeServiceShutdownHook nodeManagerShutdownHook; 
-  
-  private long waitForContainersOnShutdownMillis;
   
   private AtomicBoolean isStopping = new AtomicBoolean(false);
   
@@ -193,13 +183,6 @@ public class NodeManager extends CompositeService
     // so that we make sure everything is up before registering with RM. 
     addService(nodeStatusUpdater);
     
-    waitForContainersOnShutdownMillis =
-        conf.getLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS,
-            YarnConfiguration.DEFAULT_NM_SLEEP_DELAY_BEFORE_SIGKILL_MS) + 
-        conf.getLong(YarnConfiguration.NM_PROCESS_KILL_WAIT_MS,
-            YarnConfiguration.DEFAULT_NM_PROCESS_KILL_WAIT_MS) +
-        SHUTDOWN_CLEANUP_SLOP_MS;
-    
     super.serviceInit(conf);
     // TODO add local dirs to del
   }
@@ -218,9 +201,6 @@ public class NodeManager extends CompositeService
   protected void serviceStop() throws Exception {
     if (isStopping.getAndSet(true)) {
       return;
-    }
-    if (context != null) {
-      cleanupContainers(NodeManagerEventType.SHUTDOWN);
     }
     super.serviceStop();
     DefaultMetricsSystem.shutdown();
@@ -246,66 +226,10 @@ public class NodeManager extends CompositeService
       public void run() {
         LOG.info("Notifying ContainerManager to block new container-requests");
         containerManager.setBlockNewContainerRequests(true);
-        cleanupContainers(NodeManagerEventType.RESYNC);
+        containerManager.cleanUpApplications(NodeManagerEventType.RESYNC);
         ((NodeStatusUpdaterImpl) nodeStatusUpdater ).rebootNodeStatusUpdater();
       }
     }.start();
-  }
-
-  @SuppressWarnings("unchecked")
-  protected void cleanupContainers(NodeManagerEventType eventType) {
-    Map<ContainerId, Container> containers = context.getContainers();
-    if (containers.isEmpty()) {
-      return;
-    }
-    LOG.info("Containers still running on " + eventType + " : "
-        + containers.keySet());
-    
-    List<ContainerId> containerIds =
-        new ArrayList<ContainerId>(containers.keySet());
-    dispatcher.getEventHandler().handle(
-        new CMgrCompletedContainersEvent(containerIds, 
-            CMgrCompletedContainersEvent.Reason.ON_SHUTDOWN));
-    
-    LOG.info("Waiting for containers to be killed");
-    
-    switch (eventType) {
-    case SHUTDOWN:
-      long waitStartTime = System.currentTimeMillis();
-      while (!containers.isEmpty()
-          && System.currentTimeMillis() - waitStartTime < waitForContainersOnShutdownMillis) {
-        try {
-          //To remove done containers in NM context
-          nodeStatusUpdater.getNodeStatusAndUpdateContainersInContext();
-          Thread.sleep(1000);
-        } catch (InterruptedException ex) {
-          LOG.warn("Interrupted while sleeping on container kill on shutdown",
-            ex);
-        }
-      }
-      break;
-    case RESYNC:
-      while (!containers.isEmpty()) {
-        try {
-          Thread.sleep(1000);
-          nodeStatusUpdater.getNodeStatusAndUpdateContainersInContext();
-        } catch (InterruptedException ex) {
-          LOG.warn("Interrupted while sleeping on container kill on resync",
-            ex);
-        }
-      }
-      break;
-    default:
-      LOG.warn("Invalid eventType: " + eventType);
-    }
-
-    // All containers killed
-    if (containers.isEmpty()) {
-      LOG.info("All containers in DONE state");
-    } else {
-      LOG.info("Done waiting for containers to be killed. Still alive: " + 
-          containers.keySet());
-    }
   }
 
   public static class NMContext implements Context {
