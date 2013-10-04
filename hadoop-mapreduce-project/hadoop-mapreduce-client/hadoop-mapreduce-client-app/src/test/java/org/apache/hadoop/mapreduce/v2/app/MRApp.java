@@ -263,16 +263,22 @@ public class MRApp extends MRAppMaster {
   }
 
   public Job submit(Configuration conf) throws Exception {
+    //TODO: fix the bug where the speculator gets events with 
+    //not-fully-constructed objects. For now, disable speculative exec
+    return submit(conf, false, false);
+  }
+
+  public Job submit(Configuration conf, boolean mapSpeculative,
+      boolean reduceSpeculative) throws Exception {
     String user = conf.get(MRJobConfig.USER_NAME, UserGroupInformation
-      .getCurrentUser().getShortUserName());
+        .getCurrentUser().getShortUserName());
     conf.set(MRJobConfig.USER_NAME, user);
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, testAbsPath.toString());
     conf.setBoolean(MRJobConfig.MR_AM_CREATE_JH_INTERMEDIATE_BASE_DIR, true);
-    //TODO: fix the bug where the speculator gets events with 
-    //not-fully-constructed objects. For now, disable speculative exec
-    LOG.info("****DISABLING SPECULATIVE EXECUTION*****");
-    conf.setBoolean(MRJobConfig.MAP_SPECULATIVE, false);
-    conf.setBoolean(MRJobConfig.REDUCE_SPECULATIVE, false);
+    // TODO: fix the bug where the speculator gets events with
+    // not-fully-constructed objects. For now, disable speculative exec
+    conf.setBoolean(MRJobConfig.MAP_SPECULATIVE, mapSpeculative);
+    conf.setBoolean(MRJobConfig.REDUCE_SPECULATIVE, reduceSpeculative);
 
     init(conf);
     start();
@@ -281,7 +287,7 @@ public class MRApp extends MRAppMaster {
 
     // Write job.xml
     String jobFile = MRApps.getJobFile(conf, user,
-      TypeConverter.fromYarn(job.getID()));
+        TypeConverter.fromYarn(job.getID()));
     LOG.info("Writing job conf to " + jobFile);
     new File(jobFile).getParentFile().mkdirs();
     conf.writeXml(new FileOutputStream(jobFile));
