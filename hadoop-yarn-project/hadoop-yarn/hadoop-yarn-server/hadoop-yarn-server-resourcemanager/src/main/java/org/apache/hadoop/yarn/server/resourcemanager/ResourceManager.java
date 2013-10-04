@@ -731,6 +731,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
     webApp = builder.start(new RMWebApp(this));
   }
 
+  void setConf(Configuration configuration) {
+    conf = configuration;
+  }
+
   /**
    * Helper method to create and init {@link #activeServices}. This creates an
    * instance of {@link RMActiveServices} and initializes it.

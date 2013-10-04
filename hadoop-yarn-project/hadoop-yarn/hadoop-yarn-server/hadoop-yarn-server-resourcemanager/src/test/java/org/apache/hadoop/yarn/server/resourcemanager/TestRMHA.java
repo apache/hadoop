@@ -26,6 +26,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,10 +43,19 @@ public class TestRMHA {
   private static final String STATE_ERR =
       "ResourceManager is in wrong HA state";
 
+  private static final String RM1_ADDRESS = "0.0.0.0:0";
+  private static final String RM1_NODE_ID = "rm1";
+
   @Before
   public void setUp() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID);
+    for (String confKey : HAUtil.RPC_ADDRESS_CONF_KEYS) {
+      conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS);
+    }
+    conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
+
     rm = new MockRM(conf);
     rm.init(conf);
   }

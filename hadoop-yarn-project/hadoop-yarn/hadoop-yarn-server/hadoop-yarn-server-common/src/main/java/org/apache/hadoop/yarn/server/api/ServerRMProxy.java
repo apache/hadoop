@@ -31,13 +31,17 @@ public class ServerRMProxy<T> extends RMProxy<T> {
 
   private static final Log LOG = LogFactory.getLog(ServerRMProxy.class);
 
-  public static <T> T createRMProxy(final Configuration conf,
+  public static <T> T createRMProxy(final Configuration configuration,
       final Class<T> protocol) throws IOException {
+    YarnConfiguration conf = (configuration instanceof YarnConfiguration)
+        ? (YarnConfiguration) configuration
+        : new YarnConfiguration(configuration);
     InetSocketAddress rmAddress = getRMAddress(conf, protocol);
     return createRMProxy(conf, protocol, rmAddress);
   }
 
-  private static InetSocketAddress getRMAddress(Configuration conf, Class<?> protocol) {
+  private static InetSocketAddress getRMAddress(YarnConfiguration conf,
+                                                Class<?> protocol) {
     if (protocol == ResourceTracker.class) {
       return conf.getSocketAddr(
         YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,

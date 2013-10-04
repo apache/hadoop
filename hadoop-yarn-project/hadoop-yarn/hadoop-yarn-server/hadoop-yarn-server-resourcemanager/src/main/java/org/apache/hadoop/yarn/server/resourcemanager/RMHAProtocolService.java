@@ -29,8 +29,8 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.conf.HAUtil;
 
 import java.io.IOException;
 
@@ -44,6 +44,7 @@ public class RMHAProtocolService extends AbstractService implements
   private ResourceManager rm;
   @VisibleForTesting
   protected HAServiceState haState = HAServiceState.INITIALIZING;
+  private boolean haEnabled;
 
   public RMHAProtocolService(ResourceManager resourceManager)  {
     super("RMHAProtocolService");
@@ -51,17 +52,20 @@ public class RMHAProtocolService extends AbstractService implements
   }
 
   @Override
-  public synchronized void serviceInit(Configuration conf) throws Exception {
+  protected synchronized void serviceInit(Configuration conf) throws
+      Exception {
     this.conf = conf;
+    haEnabled = HAUtil.isHAEnabled(this.conf);
+    if (haEnabled) {
+      HAUtil.setAllRpcAddresses(this.conf);
+      rm.setConf(this.conf);
+    }
     rm.createAndInitActiveServices();
     super.serviceInit(this.conf);
   }
 
   @Override
-  public synchronized void serviceStart() throws Exception {
-    boolean haEnabled = this.conf.getBoolean(YarnConfiguration.RM_HA_ENABLED,
-        YarnConfiguration.DEFAULT_RM_HA_ENABLED);
-
+  protected synchronized void serviceStart() throws Exception {
     if (haEnabled) {
       transitionToStandby(true);
     } else {
@@ -72,7 +76,7 @@ public class RMHAProtocolService extends AbstractService implements
   }
 
   @Override
-  public synchronized void serviceStop() throws Exception {
+  protected synchronized void serviceStop() throws Exception {
     transitionToStandby(false);
     haState = HAServiceState.STOPPING;
     super.serviceStop();
