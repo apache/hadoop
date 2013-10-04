@@ -345,6 +345,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9254. Cover packages org.apache.hadoop.util.bloom,
     org.apache.hadoop.util.hash (Vadim Bondarev via jlowe)
 
+    HADOOP-9225. Cover package org.apache.hadoop.compress.Snappy (Vadim
+    Bondarev, Andrey Klochkov and Nathan Roberts via jlowe)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
