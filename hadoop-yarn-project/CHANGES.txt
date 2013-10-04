@@ -153,6 +153,9 @@ Release 2.1.2 - UNRELEASED
     YARN-1271. "Text file busy" errors launching containers again
     (Sandy Ryza)
 
+    YARN-1131. $yarn logs command should return an appropriate error message if
+    YARN application is still running. (Siddharth Seth via hitesh)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
