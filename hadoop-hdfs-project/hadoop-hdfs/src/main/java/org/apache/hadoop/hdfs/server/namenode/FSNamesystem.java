@@ -6796,7 +6796,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException(
             "Cannot delete snapshot for " + snapshotRoot, safeMode);
       }
-      checkOwner(pc, snapshotRoot);
+      if (isPermissionEnabled) {
+        checkOwner(pc, snapshotRoot);
+      }
 
       BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
       List<INode> removedINodes = new ChunkedArrayList<INode>();
