@@ -728,6 +728,21 @@
   </property>
 
   <property>
+    <description>The UNIX user that containers will run as when Linux-container-executor
+    is used in nonsecure mode (a use case for this is using cgroups).</description>
+    <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user</name>
+    <value>nobody</value>
+  </property>
+
+  <property>
+    <description>The allowed pattern for UNIX user names enforced by
+    Linux-container-executor when used in nonsecure mode (use case for this
+    is using cgroups). The default value is taken from /usr/sbin/adduser</description>
+    <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.user-pattern</name>
+    <value>^[_.A-Za-z0-9][-@_.A-Za-z0-9]{0,255}?[$]?$</value>
+  </property>
+
+  <property>
     <description>T-file compression types used to compress aggregated logs.</description>
     <name>yarn.nodemanager.log-aggregation.compression-type</name>
     <value>none</value>

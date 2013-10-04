@@ -407,7 +407,7 @@ static int create_container_directories(const char* user, const char *app_id,
     const char *container_id, char* const* local_dir, char* const* log_dir, const char *work_dir) {
   // create dirs as 0750
   const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;
-  if (app_id == NULL || container_id == NULL || user == NULL) {
+  if (app_id == NULL || container_id == NULL || user == NULL || user_detail == NULL || user_detail->pw_name == NULL) {
     fprintf(LOGFILE, 
             "Either app_id, container_id or the user passed is null.\n");
     return -1;
@@ -758,7 +758,7 @@ int initialize_app(const char *user, const char *app_id,
                    const char* nmPrivate_credentials_file,
                    char* const* local_dirs, char* const* log_roots,
                    char* const* args) {
-  if (app_id == NULL || user == NULL) {
+  if (app_id == NULL || user == NULL || user_detail == NULL || user_detail->pw_name == NULL) {
     fprintf(LOGFILE, "Either app_id is null or the user passed is null.\n");
     return INVALID_ARGUMENT_NUMBER;
   }

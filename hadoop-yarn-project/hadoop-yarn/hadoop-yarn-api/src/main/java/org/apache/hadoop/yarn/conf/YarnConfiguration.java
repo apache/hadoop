@@ -635,7 +635,27 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String NM_LINUX_CONTAINER_GROUP =
     NM_PREFIX + "linux-container-executor.group";
-  
+
+  /**
+   * The UNIX user that containers will run as when Linux-container-executor
+   * is used in nonsecure mode (a use case for this is using cgroups).
+   */
+  public static final String NM_NONSECURE_MODE_LOCAL_USER_KEY = NM_PREFIX +
+      "linux-container-executor.nonsecure-mode.local-user";
+
+  public static final String DEFAULT_NM_NONSECURE_MODE_LOCAL_USER = "nobody";
+
+  /**
+   * The allowed pattern for UNIX user names enforced by 
+   * Linux-container-executor when used in nonsecure mode (use case for this 
+   * is using cgroups). The default value is taken from /usr/sbin/adduser
+   */
+  public static final String NM_NONSECURE_MODE_USER_PATTERN_KEY = NM_PREFIX +
+      "linux-container-executor.nonsecure-mode.user-pattern";
+
+  public static final String DEFAULT_NM_NONSECURE_MODE_USER_PATTERN = 
+      "^[_.A-Za-z0-9][-@_.A-Za-z0-9]{0,255}?[$]?$";
+
   /** The type of resource enforcement to use with the
    *  linux container executor.
    */
