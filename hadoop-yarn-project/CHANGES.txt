@@ -129,6 +129,9 @@ Release 2.1.2 - UNRELEASED
     YARN-1236. FairScheduler setting queue name in RMApp is not working.
     (Sandy Ryza)
 
+    YARN-1256. NM silently ignores non-existent service in
+    StartContainerRequest (Xuan Gong via bikas)
+
     YARN-1149. NM throws InvalidStateTransitonException: Invalid event:
     APPLICATION_LOG_HANDLING_FINISHED at RUNNING (Xuan Gong via hitesh)
 

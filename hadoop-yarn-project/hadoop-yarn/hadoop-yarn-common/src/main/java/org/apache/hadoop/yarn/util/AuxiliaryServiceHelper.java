@@ -30,8 +30,11 @@ public class AuxiliaryServiceHelper {
 
   public static ByteBuffer getServiceDataFromEnv(String serviceName,
       Map<String, String> env) {
-    byte[] metaData =
-        Base64.decodeBase64(env.get(getPrefixServiceName(serviceName)));
+    String meta = env.get(getPrefixServiceName(serviceName));
+    if (null == meta) {
+      return null;
+    }
+    byte[] metaData = Base64.decodeBase64(meta);
     return ByteBuffer.wrap(metaData);
   }
 
