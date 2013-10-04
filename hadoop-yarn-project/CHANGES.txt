@@ -29,6 +29,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1010. FairScheduler: decouple container scheduling from nodemanager
     heartbeats. (Wei Yan via Sandy Ryza)
 
+    YARN-1253. Changes to LinuxContainerExecutor to run containers as a single 
+    dedicated user in non-secure mode. (rvs via tucu)
+
   IMPROVEMENTS
 
     YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)

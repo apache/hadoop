@@ -854,8 +854,10 @@ KVNO Timestamp         Principal
 | | The container process has the same Unix user as the NodeManager.  |
 *--------------------------------------+--------------------------------------+
 | <<<LinuxContainerExecutor>>>               | |
-| | Supported only on GNU/Linux, this executor runs the containers as the |
-| | user who submitted the application. It requires all user accounts to be |
+| | Supported only on GNU/Linux, this executor runs the containers as either the |
+| | YARN user who submitted the application (when full security is enabled) or |
+| | as a dedicated user (defaults to nobody) when full security is not enabled. |
+| | When full security is enabled, this executor requires all user accounts to be |
 | | created on the cluster nodes where the containers are launched. It uses |
 | | a <setuid> executable that is included in the Hadoop distribution. |
 | | The NodeManager uses this executable to launch and kill containers. |

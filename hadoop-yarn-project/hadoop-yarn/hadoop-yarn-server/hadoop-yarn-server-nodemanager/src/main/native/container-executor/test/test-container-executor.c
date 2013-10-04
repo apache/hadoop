@@ -36,6 +36,7 @@
 #define ARRAY_SIZE 1000
 
 static char* username = NULL;
+static char* yarn_username = NULL;
 static char** local_dirs = NULL;
 static char** log_dirs = NULL;
 
@@ -252,15 +253,15 @@ void test_check_configuration_permissions() {
 }
 
 void test_delete_container() {
-  if (initialize_user(username, local_dirs)) {
-    printf("FAIL: failed to initialize user %s\n", username);
+  if (initialize_user(yarn_username, local_dirs)) {
+    printf("FAIL: failed to initialize user %s\n", yarn_username);
     exit(1);
   }
-  char* app_dir = get_app_directory(TEST_ROOT "/local-2", username, "app_1");
-  char* dont_touch = get_app_directory(TEST_ROOT "/local-2", username, 
+  char* app_dir = get_app_directory(TEST_ROOT "/local-2", yarn_username, "app_1");
+  char* dont_touch = get_app_directory(TEST_ROOT "/local-2", yarn_username, 
                                        DONT_TOUCH_FILE);
   char* container_dir = get_container_work_directory(TEST_ROOT "/local-2", 
-					      username, "app_1", "container_1");
+					      yarn_username, "app_1", "container_1");
   char buffer[100000];
   sprintf(buffer, "mkdir -p %s/who/let/the/dogs/out/who/who", container_dir);
   run(buffer);
@@ -287,7 +288,7 @@ void test_delete_container() {
 
   // delete container directory
   char * dirs[] = {app_dir, 0};
-  int ret = delete_as_user(username, "container_1" , dirs);
+  int ret = delete_as_user(yarn_username, "container_1" , dirs);
   if (ret != 0) {
     printf("FAIL: return code from delete_as_user is %d\n", ret);
     exit(1);
@@ -318,11 +319,11 @@ void test_delete_container() {
 }
 
 void test_delete_app() {
-  char* app_dir = get_app_directory(TEST_ROOT "/local-2", username, "app_2");
-  char* dont_touch = get_app_directory(TEST_ROOT "/local-2", username, 
+  char* app_dir = get_app_directory(TEST_ROOT "/local-2", yarn_username, "app_2");
+  char* dont_touch = get_app_directory(TEST_ROOT "/local-2", yarn_username, 
                                        DONT_TOUCH_FILE);
   char* container_dir = get_container_work_directory(TEST_ROOT "/local-2", 
-					      username, "app_2", "container_1");
+					      yarn_username, "app_2", "container_1");
   char buffer[100000];
   sprintf(buffer, "mkdir -p %s/who/let/the/dogs/out/who/who", container_dir);
   run(buffer);
@@ -348,7 +349,7 @@ void test_delete_app() {
   run(buffer);
 
   // delete container directory
-  int ret = delete_as_user(username, app_dir, NULL);
+  int ret = delete_as_user(yarn_username, app_dir, NULL);
   if (ret != 0) {
     printf("FAIL: return code from delete_as_user is %d\n", ret);
     exit(1);
@@ -377,17 +378,17 @@ void test_delete_app() {
 
 void test_delete_user() {
   printf("\nTesting delete_user\n");
-  char* app_dir = get_app_directory(TEST_ROOT "/local-1", username, "app_3");
+  char* app_dir = get_app_directory(TEST_ROOT "/local-1", yarn_username, "app_3");
   if (mkdirs(app_dir, 0700) != 0) {
     exit(1);
   }
   char buffer[100000];
-  sprintf(buffer, "%s/local-1/usercache/%s", TEST_ROOT, username);
+  sprintf(buffer, "%s/local-1/usercache/%s", TEST_ROOT, yarn_username);
   if (access(buffer, R_OK) != 0) {
     printf("FAIL: directory missing before test\n");
     exit(1);
   }
-  if (delete_as_user(username, buffer, NULL) != 0) {
+  if (delete_as_user(yarn_username, buffer, NULL) != 0) {
     exit(1);
   }
   if (access(buffer, R_OK) == 0) {
@@ -446,7 +447,7 @@ void test_signal_container() {
     exit(0);
   } else {
     printf("Child container launched as %d\n", child);
-    if (signal_container_as_user(username, child, SIGQUIT) != 0) {
+    if (signal_container_as_user(yarn_username, child, SIGQUIT) != 0) {
       exit(1);
     }
     int status = 0;
@@ -486,7 +487,7 @@ void test_signal_container_group() {
   // there's a race condition for child calling change_user and us 
   // calling signal_container_as_user, hence sleeping
   sleep(3);
-  if (signal_container_as_user(username, child, SIGKILL) != 0) {
+  if (signal_container_as_user(yarn_username, child, SIGKILL) != 0) {
     exit(1);
   }
   int status = 0;
@@ -550,7 +551,7 @@ void test_init_app() {
     exit(1);
   } else if (child == 0) {
     char *final_pgm[] = {"touch", "my-touch-file", 0};
-    if (initialize_app(username, "app_4", TEST_ROOT "/creds.txt",
+    if (initialize_app(yarn_username, "app_4", TEST_ROOT "/creds.txt",
                        local_dirs, log_dirs, final_pgm) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
@@ -568,7 +569,7 @@ void test_init_app() {
     printf("FAIL: failed to create app log directory\n");
     exit(1);
   }
-  char* app_dir = get_app_directory(TEST_ROOT "/local-1", username, "app_4");
+  char* app_dir = get_app_directory(TEST_ROOT "/local-1", yarn_username, "app_4");
   if (access(app_dir, R_OK) != 0) {
     printf("FAIL: failed to create app directory %s\n", app_dir);
     exit(1);
@@ -640,7 +641,7 @@ void test_run_container() {
   fflush(stdout);
   fflush(stderr);
   char* container_dir = get_container_work_directory(TEST_ROOT "/local-1", 
-					      username, "app_4", "container_1");
+					      yarn_username, "app_4", "container_1");
   const char * pid_file = TEST_ROOT "/pid.txt";
 
   pid_t child = fork();
@@ -649,7 +650,7 @@ void test_run_container() {
 	   strerror(errno));
     exit(1);
   } else if (child == 0) {
-    if (launch_container_as_user(username, "app_4", "container_1", 
+    if (launch_container_as_user(yarn_username, "app_4", "container_1", 
           container_dir, script_name, TEST_ROOT "/creds.txt", pid_file,
           local_dirs, log_dirs,
           "cgroups", cgroups_pids) != 0) {
@@ -697,10 +698,22 @@ void test_run_container() {
   check_pid_file(cgroups_pids[1], child);
 }
 
+// This test is expected to be executed either by a regular
+// user or by root. If executed by a regular user it doesn't
+// test all the functions that would depend on changing the
+// effective user id. If executed by a super-user everything
+// gets tested. Here are different ways of execing the test binary:
+// 1. regular user assuming user == yarn user
+//    $ test-container-executor     
+// 2. regular user with a given yarn user
+//    $ test-container-executor yarn_user
+// 3. super user with a given user and assuming user == yarn user
+//    # test-container-executor user
+// 4. super user with a given user and a given yarn user
+//    # test-container-executor user yarn_user
 int main(int argc, char **argv) {
   LOGFILE = stdout;
   ERRORFILE = stderr;
-  int my_username = 0;
 
   // clean up any junk from previous run
   if (system("chmod -R u=rwx " TEST_ROOT "; rm -fr " TEST_ROOT)) {
@@ -721,11 +734,15 @@ int main(int argc, char **argv) {
 
   create_nm_roots(local_dirs);
 
-  if (getuid() == 0 && argc == 2) {
+  // See the description above of various ways this test
+  // can be executed in order to understand the following logic
+  char* current_username = strdup(getpwuid(getuid())->pw_name);
+  if (getuid() == 0 && (argc == 2 || argc == 3)) {
     username = argv[1];
+    yarn_username = (argc == 3) ? argv[2] : argv[1];
   } else {
-    username = strdup(getpwuid(getuid())->pw_name);
-    my_username = 1;
+    username = current_username;
+    yarn_username = (argc == 2) ? argv[1] : current_username;
   }
   set_nm_uid(geteuid(), getegid());
 
@@ -783,9 +800,7 @@ int main(int argc, char **argv) {
   run("rm -fr " TEST_ROOT);
   printf("\nFinished tests\n");
 
-  if (my_username) {
-    free(username);
-  }
+  free(current_username);
   free_configurations();
   return 0;
 }
