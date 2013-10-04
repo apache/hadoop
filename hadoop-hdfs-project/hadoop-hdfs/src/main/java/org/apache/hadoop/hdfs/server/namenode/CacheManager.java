@@ -469,7 +469,7 @@ public final class CacheManager {
     while (iter.hasNext()) {
       Entry<Long, PathBasedCacheEntry> entry = iter.next();
       if (entry.getValue().getPool() == pool) {
-        entriesById.remove(entry.getValue().getEntryId());
+        entriesByPath.remove(entry.getValue().getPath());
         iter.remove();
       }
     }

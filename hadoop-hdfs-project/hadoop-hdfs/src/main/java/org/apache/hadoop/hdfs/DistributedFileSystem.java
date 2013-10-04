@@ -1602,7 +1602,7 @@ public class DistributedFileSystem extends FileSystem {
    */
   public void removePathBasedCacheDescriptor(PathBasedCacheDescriptor descriptor)
       throws IOException {
-    dfs.removePathBasedCacheDescriptor(descriptor);
+    dfs.removePathBasedCacheDescriptor(descriptor.getEntryId());
   }
   
   /**

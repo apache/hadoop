@@ -2294,11 +2294,11 @@ public class DFSClient implements java.io.Closeable {
     }
   }
   
-  public void removePathBasedCacheDescriptor(PathBasedCacheDescriptor descriptor)
+  public void removePathBasedCacheDescriptor(long id)
       throws IOException {
     checkOpen();
     try {
-      namenode.removePathBasedCacheDescriptor(descriptor.getEntryId());
+      namenode.removePathBasedCacheDescriptor(id);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     }

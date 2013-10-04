@@ -51,6 +51,9 @@ HDFS-4949 (Unreleased)
     HDFS-5119. Persist CacheManager state in the edit log.
     (Contributed by Andrew Wang)
 
+    HDFS-5190. Move cache pool related CLI commands to CacheAdmin.
+    (Contributed by Andrew Wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

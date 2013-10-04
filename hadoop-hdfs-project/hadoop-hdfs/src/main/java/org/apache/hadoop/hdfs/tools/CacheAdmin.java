@@ -21,24 +21,76 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.lang.WordUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException;
+import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.tools.TableListing.Justification;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Tool;
+
+import com.google.common.base.Joiner;
 
 /**
  * This class implements command-line operations on the HDFS Cache.
  */
 @InterfaceAudience.Private
-public class CacheAdmin {
-  private static Configuration conf = new Configuration();
+public class CacheAdmin extends Configured implements Tool {
 
-  private static DistributedFileSystem getDFS() throws IOException {
+  /**
+   * Maximum length for printed lines
+   */
+  private static final int MAX_LINE_WIDTH = 80;
+
+  public CacheAdmin() {
+    this(null);
+  }
+
+  public CacheAdmin(Configuration conf) {
+    super(conf);
+  }
+
+  @Override
+  public int run(String[] args) throws IOException {
+    if (args.length == 0) {
+      printUsage(false);
+      return 1;
+    }
+    Command command = determineCommand(args[0]);
+    if (command == null) {
+      System.err.println("Can't understand command '" + args[0] + "'");
+      if (!args[0].startsWith("-")) {
+        System.err.println("Command names must start with dashes.");
+      }
+      printUsage(false);
+      return 1;
+    }
+    List<String> argsList = new LinkedList<String>();
+    for (int j = 1; j < args.length; j++) {
+      argsList.add(args[j]);
+    }
+    return command.run(getConf(), argsList);
+  }
+
+  public static void main(String[] argsArray) throws IOException {
+    CacheAdmin cacheAdmin = new CacheAdmin(new Configuration());
+    System.exit(cacheAdmin.run(argsArray));
+  }
+
+  private static DistributedFileSystem getDFS(Configuration conf)
+      throws IOException {
     FileSystem fs = FileSystem.get(conf);
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
@@ -47,37 +99,55 @@ public class CacheAdmin {
     return (DistributedFileSystem)fs;
   }
 
+  /**
+   * NN exceptions contain the stack trace as part of the exception message.
+   * When it's a known error, pretty-print the error and squish the stack trace.
+   */
+  private static String prettifyException(Exception e) {
+    return e.getClass().getSimpleName() + ": "
+        + e.getLocalizedMessage().split("\n")[0];
+  }
+
+  private static TableListing getOptionDescriptionListing() {
+    TableListing listing = new TableListing.Builder()
+    .addField("").addField("", true)
+    .wrapWidth(MAX_LINE_WIDTH).hideHeaders().build();
+    return listing;
+  }
+
   interface Command {
     String getName();
     String getShortUsage();
     String getLongUsage();
-    int run(List<String> args) throws IOException;
+    int run(Configuration conf, List<String> args) throws IOException;
   }
 
   private static class AddPathBasedCacheDirectiveCommand implements Command {
     @Override
     public String getName() {
-      return "-addPath";
+      return "-addDirective";
     }
 
     @Override
     public String getShortUsage() {
-      return "[-addPath -path <path> -pool <pool-name>]\n";
+      return "[" + getName() + " -path <path> -pool <pool-name>]\n";
     }
 
     @Override
     public String getLongUsage() {
-      return getShortUsage() +
-        "Adds a new PathBasedCache directive.\n" +
-        "<path>  The new path to cache.\n" + 
-        "        Paths may be either directories or files.\n" +
-        "<pool-name> The pool which this directive will reside in.\n" + 
-        "        You must have write permission on the cache pool in order\n" +
-        "        to add new entries to it.\n";
+      TableListing listing = getOptionDescriptionListing();
+      listing.addRow("<path>", "A path to cache. The path can be " +
+          "a directory or a file.");
+      listing.addRow("<pool-name>", "The pool to which the directive will be " +
+          "added. You must have write permission on the cache pool "
+          + "in order to add new directives.");
+      return getShortUsage() + "\n" +
+        "Add a new PathBasedCache directive.\n\n" +
+        listing.toString();
     }
 
     @Override
-    public int run(List<String> args) throws IOException {
+    public int run(Configuration conf, List<String> args) throws IOException {
       String path = StringUtils.popOptionWithArgument("-path", args);
       if (path == null) {
         System.err.println("You must specify a path with -path.");
@@ -93,14 +163,20 @@ public class CacheAdmin {
         return 1;
       }
         
-      DistributedFileSystem dfs = getDFS();
+      DistributedFileSystem dfs = getDFS(conf);
       PathBasedCacheDirective directive =
           new PathBasedCacheDirective(path, poolName);
 
-      PathBasedCacheDescriptor descriptor =
-          dfs.addPathBasedCacheDirective(directive);
-      System.out.println("Added PathBasedCache entry "
-          + descriptor.getEntryId());
+      try {
+        PathBasedCacheDescriptor descriptor =
+            dfs.addPathBasedCacheDirective(directive);
+        System.out.println("Added PathBasedCache entry "
+            + descriptor.getEntryId());
+      } catch (AddPathBasedCacheDirectiveException e) {
+        System.err.println(prettifyException(e));
+        return 2;
+      }
+
       return 0;
     }
   }
@@ -108,32 +184,41 @@ public class CacheAdmin {
   private static class RemovePathBasedCacheDirectiveCommand implements Command {
     @Override
     public String getName() {
-      return "-removePath";
+      return "-removeDirective";
     }
 
     @Override
     public String getShortUsage() {
-      return "[-removePath <id>]\n";
+      return "[" + getName() + " <id>]\n";
     }
 
     @Override
     public String getLongUsage() {
-      return getShortUsage() +
-        "Remove a cache directive.\n" +
-        "<id>    The id of the cache directive to remove.\n" + 
-        "        You must have write permission on the pool where the\n" +
-        "        directive resides in order to remove it.  To see a list\n" +
-        "        of PathBasedCache directive IDs, use the -list command.\n";
+      TableListing listing = getOptionDescriptionListing();
+      listing.addRow("<id>", "The id of the cache directive to remove. " + 
+        "You must have write permission on the pool of the " +
+        "directive in order to remove it.  To see a list " +
+        "of PathBasedCache directive IDs, use the -list command.");
+      return getShortUsage() + "\n" +
+        "Remove a cache directive.\n\n" +
+        listing.toString();
     }
 
     @Override
-    public int run(List<String> args) throws IOException {
+    public int run(Configuration conf, List<String> args) throws IOException {
       String idString= StringUtils.popFirstNonOption(args);
       if (idString == null) {
         System.err.println("You must specify a directive ID to remove.");
         return 1;
       }
-      long id = Long.valueOf(idString);
+      long id;
+      try {
+        id = Long.valueOf(idString);
+      } catch (NumberFormatException e) {
+        System.err.println("Invalid directive ID " + idString + ": expected " +
+            "a numeric value.");
+        return 1;
+      }
       if (id <= 0) {
         System.err.println("Invalid directive ID " + id + ": ids must " +
             "be greater than 0.");
@@ -141,12 +226,17 @@ public class CacheAdmin {
       }
       if (!args.isEmpty()) {
         System.err.println("Can't understand argument: " + args.get(0));
+        System.err.println("Usage is " + getShortUsage());
         return 1;
       }
-      DistributedFileSystem dfs = getDFS();
-      dfs.removePathBasedCacheDescriptor(new PathBasedCacheDescriptor(id, null,
-          null));
-      System.out.println("Removed PathBasedCache directive " + id);
+      DistributedFileSystem dfs = getDFS(conf);
+      try {
+        dfs.getClient().removePathBasedCacheDescriptor(id);
+        System.out.println("Removed PathBasedCache directive " + id);
+      } catch (RemovePathBasedCacheDescriptorException e) {
+        System.err.println(prettifyException(e));
+        return 2;
+      }
       return 0;
     }
   }
@@ -154,31 +244,30 @@ public class CacheAdmin {
   private static class ListPathBasedCacheDirectiveCommand implements Command {
     @Override
     public String getName() {
-      return "-listPaths";
+      return "-listDirectives";
     }
 
     @Override
     public String getShortUsage() {
-      return "[-listPaths [-path <path>] [-pool <pool-name>]]\n";
+      return "[" + getName() + " [-path <path>] [-pool <pool>]]\n";
     }
 
     @Override
     public String getLongUsage() {
-      return getShortUsage() +
-        "List PathBasedCache directives.\n" +
-        "<path> If a -path argument is given, we will list only\n" +
-        "        PathBasedCache entries with this path.\n" +
-        "        Note that if there is a PathBasedCache directive for <path>\n" +
-        "        in a cache pool that we don't have read access for, it\n" + 
-        "        not be listed.  If there are unreadable cache pools, a\n" +
-        "        message will be printed.\n" +
-        "        may be incomplete.\n" +
-        "<pool-name> If a -pool argument is given, we will list only path\n" +
-        "        cache entries in that pool.\n";
+      TableListing listing = getOptionDescriptionListing();
+      listing.addRow("<path>", "List only " +
+          "PathBasedCache directives with this path. " +
+          "Note that if there is a PathBasedCache directive for <path> " +
+          "in a cache pool that we don't have read access for, it " + 
+          "will not be listed.");
+      listing.addRow("<pool>", "List only path cache directives in that pool.");
+      return getShortUsage() + "\n" +
+        "List PathBasedCache directives.\n\n" +
+        listing.toString();
     }
 
     @Override
-    public int run(List<String> args) throws IOException {
+    public int run(Configuration conf, List<String> args) throws IOException {
       String pathFilter = StringUtils.popOptionWithArgument("-path", args);
       String poolFilter = StringUtils.popOptionWithArgument("-pool", args);
       if (!args.isEmpty()) {
@@ -186,11 +275,11 @@ public class CacheAdmin {
         return 1;
       }
       TableListing tableListing = new TableListing.Builder().
-          addField("ID", Justification.RIGHT).
+          addField("ID", Justification.LEFT).
           addField("POOL", Justification.LEFT).
           addField("PATH", Justification.LEFT).
           build();
-      DistributedFileSystem dfs = getDFS();
+      DistributedFileSystem dfs = getDFS(conf);
       RemoteIterator<PathBasedCacheDescriptor> iter =
           dfs.listPathBasedCacheDescriptors(poolFilter, pathFilter);
       int numEntries = 0;
@@ -205,9 +294,322 @@ public class CacheAdmin {
       System.out.print(String.format("Found %d entr%s\n",
           numEntries, numEntries == 1 ? "y" : "ies"));
       if (numEntries > 0) {
-        System.out.print(tableListing.build());
+        System.out.print(tableListing);
       }
       return 0;
+    }
+  }
+
+  private static class AddCachePoolCommand implements Command {
+
+    private static final String NAME = "-addPool";
+
+    @Override
+    public String getName() {
+      return NAME;
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + NAME + " <name> [-owner <owner>] " +
+          "[-group <group>] [-mode <mode>] [-weight <weight>]]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = getOptionDescriptionListing();
+
+      listing.addRow("<name>", "Name of the new pool.");
+      listing.addRow("<owner>", "Username of the owner of the pool. " +
+          "Defaults to the current user.");
+      listing.addRow("<group>", "Group of the pool. " +
+          "Defaults to the primary group name of the current user.");
+      listing.addRow("<mode>", "UNIX-style permissions for the pool. " +
+          "Permissions are specified in octal, e.g. 0755. " +
+          "By default, this is set to " + String.format("0%03o",
+          FsPermission.getCachePoolDefault().toShort()));
+      listing.addRow("<weight>", "Weight of the pool. " +
+          "This is a relative measure of the importance of the pool used " +
+          "during cache resource management. By default, it is set to " +
+          CachePool.DEFAULT_WEIGHT);
+
+      return getShortUsage() + "\n" +
+          "Add a new cache pool.\n\n" + 
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      String owner = StringUtils.popOptionWithArgument("-owner", args);
+      if (owner == null) {
+        owner = UserGroupInformation.getCurrentUser().getShortUserName();
+      }
+      String group = StringUtils.popOptionWithArgument("-group", args);
+      if (group == null) {
+        group = UserGroupInformation.getCurrentUser().getGroupNames()[0];
+      }
+      String modeString = StringUtils.popOptionWithArgument("-mode", args);
+      int mode;
+      if (modeString == null) {
+        mode = FsPermission.getCachePoolDefault().toShort();
+      } else {
+        mode = Integer.parseInt(modeString, 8);
+      }
+      String weightString = StringUtils.popOptionWithArgument("-weight", args);
+      int weight;
+      if (weightString == null) {
+        weight = CachePool.DEFAULT_WEIGHT;
+      } else {
+        weight = Integer.parseInt(weightString);
+      }
+      String name = StringUtils.popFirstNonOption(args);
+      if (name == null) {
+        System.err.println("You must specify a name when creating a " +
+            "cache pool.");
+        return 1;
+      }
+      if (!args.isEmpty()) {
+        System.err.print("Can't understand arguments: " +
+          Joiner.on(" ").join(args) + "\n");
+        System.err.println("Usage is " + getShortUsage());
+        return 1;
+      }
+      DistributedFileSystem dfs = getDFS(conf);
+      CachePoolInfo info = new CachePoolInfo(name).
+          setOwnerName(owner).
+          setGroupName(group).
+          setMode(new FsPermission((short)mode)).
+          setWeight(weight);
+      try {
+        dfs.addCachePool(info);
+      } catch (IOException e) {
+        throw new RemoteException(e.getClass().getName(), e.getMessage());
+      }
+      System.out.println("Successfully added cache pool " + name + ".");
+      return 0;
+    }
+  }
+
+  private static class ModifyCachePoolCommand implements Command {
+
+    @Override
+    public String getName() {
+      return "-modifyPool";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " <name> [-owner <owner>] " +
+          "[-group <group>] [-mode <mode>] [-weight <weight>]]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = getOptionDescriptionListing();
+
+      listing.addRow("<name>", "Name of the pool to modify.");
+      listing.addRow("<owner>", "Username of the owner of the pool");
+      listing.addRow("<group>", "Groupname of the group of the pool.");
+      listing.addRow("<mode>", "Unix-style permissions of the pool in octal.");
+      listing.addRow("<weight>", "Weight of the pool.");
+
+      return getShortUsage() + "\n" +
+          WordUtils.wrap("Modifies the metadata of an existing cache pool. " +
+          "See usage of " + AddCachePoolCommand.NAME + " for more details",
+          MAX_LINE_WIDTH) + "\n\n" +
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      String owner = StringUtils.popOptionWithArgument("-owner", args);
+      String group = StringUtils.popOptionWithArgument("-group", args);
+      String modeString = StringUtils.popOptionWithArgument("-mode", args);
+      Integer mode = (modeString == null) ?
+          null : Integer.parseInt(modeString, 8);
+      String weightString = StringUtils.popOptionWithArgument("-weight", args);
+      Integer weight = (weightString == null) ?
+          null : Integer.parseInt(weightString);
+      String name = StringUtils.popFirstNonOption(args);
+      if (name == null) {
+        System.err.println("You must specify a name when creating a " +
+            "cache pool.");
+        return 1;
+      }
+      if (!args.isEmpty()) {
+        System.err.print("Can't understand arguments: " +
+          Joiner.on(" ").join(args) + "\n");
+        System.err.println("Usage is " + getShortUsage());
+        return 1;
+      }
+      boolean changed = false;
+      CachePoolInfo info = new CachePoolInfo(name);
+      if (owner != null) {
+        info.setOwnerName(owner);
+        changed = true;
+      }
+      if (group != null) {
+        info.setGroupName(group);
+        changed = true;
+      }
+      if (mode != null) {
+        info.setMode(new FsPermission(mode.shortValue()));
+        changed = true;
+      }
+      if (weight != null) {
+        info.setWeight(weight);
+        changed = true;
+      }
+      if (!changed) {
+        System.err.println("You must specify at least one attribute to " +
+            "change in the cache pool.");
+        return 1;
+      }
+      DistributedFileSystem dfs = getDFS(conf);
+      try {
+        dfs.modifyCachePool(info);
+      } catch (IOException e) {
+        throw new RemoteException(e.getClass().getName(), e.getMessage());
+      }
+      System.out.print("Successfully modified cache pool " + name);
+      String prefix = " to have ";
+      if (owner != null) {
+        System.out.print(prefix + "owner name " + owner);
+        prefix = " and ";
+      }
+      if (group != null) {
+        System.out.print(prefix + "group name " + group);
+        prefix = " and ";
+      }
+      if (mode != null) {
+        System.out.print(prefix + "mode " + new FsPermission(mode.shortValue()));
+        prefix = " and ";
+      }
+      if (weight != null) {
+        System.out.print(prefix + "weight " + weight);
+        prefix = " and ";
+      }
+      System.out.print("\n");
+      return 0;
+    }
+  }
+
+  private static class RemoveCachePoolCommand implements Command {
+
+    @Override
+    public String getName() {
+      return "-removePool";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " <name>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      return getShortUsage() + "\n" +
+          WordUtils.wrap("Remove a cache pool. This also uncaches paths " +
+              "associated with the pool.\n\n", MAX_LINE_WIDTH) +
+          "<name>  Name of the cache pool to remove.\n";
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      String name = StringUtils.popFirstNonOption(args);
+      if (name == null) {
+        System.err.println("You must specify a name when deleting a " +
+            "cache pool.");
+        return 1;
+      }
+      if (!args.isEmpty()) {
+        System.err.print("Can't understand arguments: " +
+          Joiner.on(" ").join(args) + "\n");
+        System.err.println("Usage is " + getShortUsage());
+        return 1;
+      }
+      DistributedFileSystem dfs = getDFS(conf);
+      try {
+        dfs.removeCachePool(name);
+      } catch (IOException e) {
+        throw new RemoteException(e.getClass().getName(), e.getMessage());
+      }
+      System.out.println("Successfully removed cache pool " + name + ".");
+      return 0;
+    }
+  }
+
+  private static class ListCachePoolsCommand implements Command {
+
+    @Override
+    public String getName() {
+      return "-listPools";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " [name]]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = getOptionDescriptionListing();
+      listing.addRow("[name]", "If specified, list only the named cache pool.");
+
+      return getShortUsage() + "\n" +
+          WordUtils.wrap("Display information about one or more cache pools, " +
+              "e.g. name, owner, group, permissions, etc.", MAX_LINE_WIDTH) +
+          "\n\n" +
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      String name = StringUtils.popFirstNonOption(args);
+      if (!args.isEmpty()) {
+        System.err.print("Can't understand arguments: " +
+          Joiner.on(" ").join(args) + "\n");
+        System.err.println("Usage is " + getShortUsage());
+        return 1;
+      }
+      DistributedFileSystem dfs = getDFS(conf);
+      TableListing listing = new TableListing.Builder().
+          addField("NAME", Justification.LEFT).
+          addField("OWNER", Justification.LEFT).
+          addField("GROUP", Justification.LEFT).
+          addField("MODE", Justification.LEFT).
+          addField("WEIGHT", Justification.LEFT).
+          build();
+      int numResults = 0;
+      try {
+        RemoteIterator<CachePoolInfo> iter = dfs.listCachePools();
+        while (iter.hasNext()) {
+          CachePoolInfo info = iter.next();
+          if (name == null || info.getPoolName().equals(name)) {
+            listing.addRow(new String[] {
+                info.getPoolName(),
+                info.getOwnerName(),
+                info.getGroupName(),
+                info.getMode().toString(),
+                info.getWeight().toString(),
+            });
+            ++numResults;
+            if (name != null) {
+              break;
+            }
+          }
+        }
+      } catch (IOException e) {
+        throw new RemoteException(e.getClass().getName(), e.getMessage());
+      }
+      System.out.print(String.format("Found %d result%s.\n", numResults,
+          (numResults == 1 ? "" : "s")));
+      if (numResults > 0) { 
+        System.out.print(listing);
+      }
+      // If there are no results, we return 1 (failure exit code);
+      // otherwise we return 0 (success exit code).
+      return (numResults == 0) ? 1 : 0;
     }
   }
 
@@ -224,15 +626,17 @@ public class CacheAdmin {
 
     @Override
     public String getLongUsage() {
-      return getShortUsage() +
-        "Get detailed help about a command.\n" +
-        "<command-name> The command to get detailed help for.  If no " +
-        "        command-name is specified, we will print detailed help " +
-        "        about all commands";
+      TableListing listing = getOptionDescriptionListing();
+      listing.addRow("<command-name>", "The command for which to get " +
+          "detailed help. If no command is specified, print detailed help for " +
+          "all commands");
+      return getShortUsage() + "\n" +
+        "Get detailed help about a command.\n\n" +
+        listing.toString();
     }
 
     @Override
-    public int run(List<String> args) throws IOException {
+    public int run(Configuration conf, List<String> args) throws IOException {
       if (args.size() == 0) {
         for (Command command : COMMANDS) {
           System.err.println(command.getLongUsage());
@@ -255,6 +659,7 @@ public class CacheAdmin {
           System.err.print(separator + c.getName());
           separator = ", ";
         }
+        System.err.print("\n");
         return 1;
       }
       System.err.print(command.getLongUsage());
@@ -266,6 +671,10 @@ public class CacheAdmin {
     new AddPathBasedCacheDirectiveCommand(),
     new RemovePathBasedCacheDirectiveCommand(),
     new ListPathBasedCacheDirectiveCommand(),
+    new AddCachePoolCommand(),
+    new ModifyCachePoolCommand(),
+    new RemoveCachePoolCommand(),
+    new ListCachePoolsCommand(),
     new HelpCommand(),
   };
 
@@ -289,26 +698,5 @@ public class CacheAdmin {
       }
     }
     return null;
-  }
-
-  public static void main(String[] argsArray) throws IOException {
-    if (argsArray.length == 0) {
-      printUsage(false);
-      System.exit(1);
-    }
-    Command command = determineCommand(argsArray[0]);
-    if (command == null) {
-      System.err.println("Can't understand command '" + argsArray[0] + "'");
-      if (!argsArray[0].startsWith("-")) {
-        System.err.println("Command names must start with dashes.");
-      }
-      printUsage(false);
-      System.exit(1);
-    }
-    List<String> args = new LinkedList<String>();
-    for (int j = 1; j < argsArray.length; j++) {
-      args.add(argsArray[j]);
-    }
-    System.exit(command.run(args));
   }
 }
