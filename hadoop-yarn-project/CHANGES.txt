@@ -156,6 +156,9 @@ Release 2.1.2 - UNRELEASED
     YARN-1131. $yarn logs command should return an appropriate error message if
     YARN application is still running. (Siddharth Seth via hitesh)
 
+    YARN-1219. FSDownload changes file suffix making FileUtil.unTar() throw
+    exception. (Shanyu Zhao via cnauroth)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
