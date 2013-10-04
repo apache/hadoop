@@ -275,6 +275,9 @@ Release 2.1.2 - UNRELEASED
     MAPREDUCE-5489. MR jobs hangs as it does not use the node-blacklisting
     feature in RM requests (Zhijie Shen via bikas)
 
+    MAPREDUCE-5442. $HADOOP_MAPRED_HOME/$HADOOP_CONF_DIR setting not working on
+    Windows. (Yingda Chen via cnauroth)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
