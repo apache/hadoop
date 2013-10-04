@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.InvalidAuxServiceException;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerException;
 import org.apache.hadoop.yarn.exceptions.NMNotYetReadyException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -450,6 +451,18 @@ public class ContainerManagerImpl extends CompositeService implements
     LOG.info("Start request for " + containerIdStr + " by user " + user);
 
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
+
+    Map<String, ByteBuffer> serviceData = getAuxServiceMetaData();
+    if (launchContext.getServiceData()!=null && 
+        !launchContext.getServiceData().isEmpty()) {
+      for (Map.Entry<String, ByteBuffer> meta : launchContext.getServiceData()
+          .entrySet()) {
+        if (null == serviceData.get(meta.getKey())) {
+          throw new InvalidAuxServiceException("The auxService:" + meta.getKey()
+              + " does not exist");
+        }
+      }
+    }
 
     Credentials credentials = parseCredentials(launchContext);
 
