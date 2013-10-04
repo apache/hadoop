@@ -48,6 +48,9 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1199. Make NM/RM Versions Available (Mit Desai via jeagles)
 
+    YARN-1232. Configuration to support multiple RMs (Karthik Kambatla via
+    bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES

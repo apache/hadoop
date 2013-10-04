@@ -320,11 +320,32 @@
   </property>
 
   <property>
-    <description>Enable RM high-availability. When enabled, the RM starts
-    in the Standby mode by default, and transitions to the Active mode when
-    prompted to.</description>
+    <description>Enable RM high-availability. When enabled,
+      (1) The RM starts in the Standby mode by default, and transitions to
+      the Active mode when prompted to.
+      (2) The nodes in the RM ensemble are listed in
+      yarn.resourcemanager.ha.rm-ids
+      (3) The id of each RM comes from yarn.resourcemanager.ha.id
+      (4) The actual physical addresses come from the configs of the pattern
+      - {rpc-config}.{id}</description>
     <name>yarn.resourcemanager.ha.enabled</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>The list of RM nodes in the cluster when HA is
+      enabled. See description of yarn.resourcemanager.ha
+      .enabled for full details on how this is used.</description>
+    <name>yarn.resourcemanager.ha.rm-ids</name>
+    <!--value>rm1,rm2</value-->
+  </property>
+
+  <property>
+    <description>The id (string) of the current RM. When HA is enabled, this
+      is a required config. See description of yarn.resourcemanager.ha.enabled
+      for full details on how this is used.</description>
+    <name>yarn.resourcemanager.ha.id</name>
+    <!--value>rm1</value-->
   </property>
 
   <property>

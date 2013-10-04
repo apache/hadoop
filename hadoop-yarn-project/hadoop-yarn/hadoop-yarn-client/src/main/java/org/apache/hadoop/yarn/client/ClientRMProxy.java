@@ -38,8 +38,11 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
 
   private static final Log LOG = LogFactory.getLog(ClientRMProxy.class);
 
-  public static <T> T createRMProxy(final Configuration conf,
+  public static <T> T createRMProxy(final Configuration configuration,
       final Class<T> protocol) throws IOException {
+    YarnConfiguration conf = (configuration instanceof YarnConfiguration)
+        ? (YarnConfiguration) configuration
+        : new YarnConfiguration(configuration);
     InetSocketAddress rmAddress = getRMAddress(conf, protocol);
     return createRMProxy(conf, protocol, rmAddress);
   }
@@ -60,7 +63,7 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
     }
   }
 
-  private static InetSocketAddress getRMAddress(Configuration conf,
+  private static InetSocketAddress getRMAddress(YarnConfiguration conf,
       Class<?> protocol) throws IOException {
     if (protocol == ApplicationClientProtocol.class) {
       return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
