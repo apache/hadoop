@@ -499,18 +499,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             lastHeartBeatID = response.getResponseId();
             List<ContainerId> containersToCleanup = response
                 .getContainersToCleanup();
-            if (containersToCleanup.size() != 0) {
+            if (!containersToCleanup.isEmpty()) {
               dispatcher.getEventHandler().handle(
-                  new CMgrCompletedContainersEvent(containersToCleanup, 
-                      CMgrCompletedContainersEvent.Reason.BY_RESOURCEMANAGER));
+                  new CMgrCompletedContainersEvent(containersToCleanup));
             }
             List<ApplicationId> appsToCleanup =
                 response.getApplicationsToCleanup();
             //Only start tracking for keepAlive on FINISH_APP
             trackAppsForKeepAlive(appsToCleanup);
-            if (appsToCleanup.size() != 0) {
+            if (!appsToCleanup.isEmpty()) {
               dispatcher.getEventHandler().handle(
-                  new CMgrCompletedAppsEvent(appsToCleanup));
+                  new CMgrCompletedAppsEvent(appsToCleanup,
+                      CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER));
             }
           } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM
