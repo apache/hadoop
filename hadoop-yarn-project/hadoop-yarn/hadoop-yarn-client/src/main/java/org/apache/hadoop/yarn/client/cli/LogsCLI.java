@@ -16,45 +16,39 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.logaggregation;
+package org.apache.hadoop.yarn.client.cli;
 
-import java.io.DataInputStream;
-import java.io.EOFException;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintStream;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
-import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogReader;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
+import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
 @Public
 @Evolving
-public class LogDumper extends Configured implements Tool {
+public class LogsCLI extends Configured implements Tool {
 
   private static final String CONTAINER_ID_OPTION = "containerId";
   private static final String APPLICATION_ID_OPTION = "applicationId";
@@ -65,7 +59,9 @@ public class LogDumper extends Configured implements Tool {
   public int run(String[] args) throws Exception {
 
     Options opts = new Options();
-    opts.addOption(APPLICATION_ID_OPTION, true, "ApplicationId (required)");
+    Option appIdOpt = new Option(APPLICATION_ID_OPTION, true, "ApplicationId (required)");
+    appIdOpt.setRequired(true);
+    opts.addOption(appIdOpt);
     opts.addOption(CONTAINER_ID_OPTION, true,
       "ContainerId (must be specified if node address is specified)");
     opts.addOption(NODE_ADDRESS_OPTION, true, "NodeAddress in the format "
@@ -99,28 +95,46 @@ public class LogDumper extends Configured implements Tool {
       nodeAddress = commandLine.getOptionValue(NODE_ADDRESS_OPTION);
       appOwner = commandLine.getOptionValue(APP_OWNER_OPTION);
     } catch (ParseException e) {
-      System.out.println("options parsing failed: " + e.getMessage());
+      System.err.println("options parsing failed: " + e.getMessage());
       printHelpMessage(printOpts);
       return -1;
     }
 
     if (appIdStr == null) {
-      System.out.println("ApplicationId cannot be null!");
+      System.err.println("ApplicationId cannot be null!");
       printHelpMessage(printOpts);
       return -1;
     }
 
-    RecordFactory recordFactory =
-        RecordFactoryProvider.getRecordFactory(getConf());
-    ApplicationId appId =
-        ConverterUtils.toApplicationId(recordFactory, appIdStr);
+    ApplicationId appId = null;
+    try {
+      appId = ConverterUtils.toApplicationId(appIdStr);
+    } catch (Exception e) {
+      System.err.println("Invalid ApplicationId specified");
+      return -1;
+    }
+    
+    try {
+      int resultCode = verifyApplicationState(appId);
+      if (resultCode != 0) {
+        System.out.println("Application has not completed." +
+        		" Logs are only available after an application completes");
+        return resultCode;
+      }
+    } catch (Exception e) {
+      System.err.println("Unable to get ApplicationState." +
+      		" Attempting to fetch logs directly from the filesystem.");
+    }
 
+    LogCLIHelpers logCliHelper = new LogCLIHelpers();
+    logCliHelper.setConf(getConf());
+    
     if (appOwner == null || appOwner.isEmpty()) {
       appOwner = UserGroupInformation.getCurrentUser().getShortUserName();
     }
     int resultCode = 0;
     if (containerIdStr == null && nodeAddress == null) {
-      resultCode = dumpAllContainersLogs(appId, appOwner, System.out);
+      resultCode = logCliHelper.dumpAllContainersLogs(appId, appOwner, System.out);
     } else if ((containerIdStr == null && nodeAddress != null)
         || (containerIdStr != null && nodeAddress == null)) {
       System.out.println("ContainerId or NodeAddress cannot be null!");
@@ -138,123 +152,49 @@ public class LogDumper extends Configured implements Tool {
                   appOwner,
                   ConverterUtils.toNodeId(nodeAddress),
                   LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf())));
-      resultCode = dumpAContainerLogs(containerIdStr, reader, System.out);
+      resultCode = logCliHelper.dumpAContainerLogs(containerIdStr, reader, System.out);
     }
 
     return resultCode;
   }
 
-  @Private
-  @VisibleForTesting
-  public int dumpAContainersLogs(String appId, String containerId,
-      String nodeId, String jobOwner) throws IOException {
-    Path remoteRootLogDir =
-        new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-    String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf());
-    Path logPath = LogAggregationUtils.getRemoteNodeLogFileForApp(
-        remoteRootLogDir, ConverterUtils.toApplicationId(appId), jobOwner,
-        ConverterUtils.toNodeId(nodeId), suffix);
-    AggregatedLogFormat.LogReader reader;
+  private int verifyApplicationState(ApplicationId appId) throws IOException,
+      YarnException {
+    YarnClient yarnClient = createYarnClient();
+
     try {
-      reader = new AggregatedLogFormat.LogReader(getConf(), logPath);
-    } catch (FileNotFoundException fnfe) {
-      System.out.println("Logs not available at " + logPath.toString());
-      System.out.println(
-          "Log aggregation has not completed or is not enabled.");
-      return -1;
-    }
-    return dumpAContainerLogs(containerId, reader, System.out);
-  }
-
-  private int dumpAContainerLogs(String containerIdStr,
-      AggregatedLogFormat.LogReader reader, PrintStream out)
-      throws IOException {
-    DataInputStream valueStream;
-    LogKey key = new LogKey();
-    valueStream = reader.next(key);
-
-    while (valueStream != null && !key.toString().equals(containerIdStr)) {
-      // Next container
-      key = new LogKey();
-      valueStream = reader.next(key);
-    }
-
-    if (valueStream == null) {
-      System.out.println("Logs for container " + containerIdStr
-          + " are not present in this log-file.");
-      return -1;
-    }
-
-    while (true) {
-      try {
-        LogReader.readAContainerLogsForALogType(valueStream, out);
-      } catch (EOFException eof) {
+      ApplicationReport appReport = yarnClient.getApplicationReport(appId);
+      switch (appReport.getYarnApplicationState()) {
+      case NEW:
+      case NEW_SAVING:
+      case ACCEPTED:
+      case SUBMITTED:
+      case RUNNING:
+        return -1;
+      case FAILED:
+      case FINISHED:
+      case KILLED:
+      default:
         break;
+
       }
+    } finally {
+      yarnClient.close();
     }
     return 0;
   }
-
-  private int dumpAllContainersLogs(ApplicationId appId, String appOwner,
-      PrintStream out) throws IOException {
-    Path remoteRootLogDir =
-        new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-    String user = appOwner;
-    String logDirSuffix =
-        LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf());
-    //TODO Change this to get a list of files from the LAS.
-    Path remoteAppLogDir =
-        LogAggregationUtils.getRemoteAppLogDir(remoteRootLogDir, appId, user,
-            logDirSuffix);
-    RemoteIterator<FileStatus> nodeFiles;
-    try {
-      nodeFiles = FileContext.getFileContext().listStatus(remoteAppLogDir);
-    } catch (FileNotFoundException fnf) {
-      System.out.println("Logs not available at "
-          + remoteAppLogDir.toString());
-      System.out.println(
-          "Log aggregation has not completed or is not enabled.");
-      return -1;
-    }
-    while (nodeFiles.hasNext()) {
-      FileStatus thisNodeFile = nodeFiles.next();
-      AggregatedLogFormat.LogReader reader =
-          new AggregatedLogFormat.LogReader(getConf(),
-              new Path(remoteAppLogDir, thisNodeFile.getPath().getName()));
-      try {
-
-        DataInputStream valueStream;
-        LogKey key = new LogKey();
-        valueStream = reader.next(key);
-
-        while (valueStream != null) {
-          String containerString = "\n\nContainer: " + key + " on " + thisNodeFile.getPath().getName();
-          out.println(containerString);
-          out.println(StringUtils.repeat("=", containerString.length()));
-          while (true) {
-            try {
-              LogReader.readAContainerLogsForALogType(valueStream, out);
-            } catch (EOFException eof) {
-              break;
-            }
-          }
-
-          // Next container
-          key = new LogKey();
-          valueStream = reader.next(key);
-        }
-      } finally {
-        reader.close();
-      }
-    }
-    return 0;
+  
+  @VisibleForTesting
+  protected YarnClient createYarnClient() {
+    YarnClient yarnClient = YarnClient.createYarnClient();
+    yarnClient.init(getConf());
+    yarnClient.start();
+    return yarnClient;
   }
 
   public static void main(String[] args) throws Exception {
     Configuration conf = new YarnConfiguration();
-    LogDumper logDumper = new LogDumper();
+    LogsCLI logDumper = new LogsCLI();
     logDumper.setConf(conf);
     int exitCode = logDumper.run(args);
     System.exit(exitCode);
