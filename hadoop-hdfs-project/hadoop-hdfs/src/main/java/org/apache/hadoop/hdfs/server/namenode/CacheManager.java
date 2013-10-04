@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DESCRIPTORS_NUM_RESPONSES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DESCRIPTORS_NUM_RESPONSES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES_DEFAULT;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -36,17 +38,24 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPoolNameError;
-import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.UnexpectedAddPathBasedCacheDirectiveException;
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.PoolWritePermissionDeniedError;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
 import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.InvalidIdException;
 import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.NoSuchIdException;
-import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.UnexpectedRemovePathBasedCacheDescriptorException;
 import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.RemovePermissionDeniedException;
+import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.UnexpectedRemovePathBasedCacheDescriptorException;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
+import org.apache.hadoop.io.Text;
+
+import com.google.common.base.Preconditions;
 
 /**
  * The Cache Manager handles caching on DataNodes.
@@ -94,7 +103,6 @@ public final class CacheManager {
   final private FSDirectory dir;
 
   CacheManager(FSNamesystem namesystem, FSDirectory dir, Configuration conf) {
-    // TODO: support loading and storing of the CacheManager state
     clear();
     this.namesystem = namesystem;
     this.dir = dir;
@@ -113,13 +121,20 @@ public final class CacheManager {
     nextEntryId = 1;
   }
 
-  synchronized long getNextEntryId() throws IOException {
-    if (nextEntryId == Long.MAX_VALUE) {
-      throw new IOException("no more available IDs");
-    }
+  /**
+   * Returns the next entry ID to be used for a PathBasedCacheEntry
+   */
+  synchronized long getNextEntryId() {
+    Preconditions.checkArgument(nextEntryId != Long.MAX_VALUE);
     return nextEntryId++;
   }
 
+  /**
+   * Returns the PathBasedCacheEntry corresponding to a PathBasedCacheEntry.
+   * 
+   * @param directive Lookup directive
+   * @return Corresponding PathBasedCacheEntry, or null if not present.
+   */
   private synchronized PathBasedCacheEntry
       findEntry(PathBasedCacheDirective directive) {
     List<PathBasedCacheEntry> existing =
@@ -128,13 +143,60 @@ public final class CacheManager {
       return null;
     }
     for (PathBasedCacheEntry entry : existing) {
-      if (entry.getPool().getName().equals(directive.getPool())) {
+      if (entry.getPool().getPoolName().equals(directive.getPool())) {
         return entry;
       }
     }
     return null;
   }
 
+  /**
+   * Add a new PathBasedCacheEntry, skipping any validation checks. Called
+   * directly when reloading CacheManager state from FSImage.
+   * 
+   * @throws IOException if unable to cache the entry
+   */
+  private void unprotectedAddEntry(PathBasedCacheEntry entry)
+      throws IOException {
+    assert namesystem.hasWriteLock();
+    // Add it to the various maps
+    entriesById.put(entry.getEntryId(), entry);
+    String path = entry.getPath();
+    List<PathBasedCacheEntry> entryList = entriesByPath.get(path);
+    if (entryList == null) {
+      entryList = new ArrayList<PathBasedCacheEntry>(1);
+      entriesByPath.put(path, entryList);
+    }
+    entryList.add(entry);
+    // Set the path as cached in the namesystem
+    try {
+      INode node = dir.getINode(entry.getPath());
+      if (node != null && node.isFile()) {
+        INodeFile file = node.asFile();
+        // TODO: adjustable cache replication factor
+        namesystem.setCacheReplicationInt(entry.getPath(),
+            file.getBlockReplication());
+      } else {
+        LOG.warn("Path " + entry.getPath() + " is not a file");
+      }
+    } catch (IOException ioe) {
+      LOG.info("unprotectedAddEntry " + entry +": failed to cache file: " +
+          ioe.getClass().getName() +": " + ioe.getMessage());
+      throw ioe;
+    }
+  }
+
+  /**
+   * Add a new PathBasedCacheDirective if valid, returning a corresponding
+   * PathBasedCacheDescriptor to the user.
+   * 
+   * @param directive Directive describing the cache entry being added
+   * @param pc Permission checker used to validate that the calling user has
+   *          access to the destination cache pool
+   * @return Corresponding PathBasedCacheDescriptor for the new cache entry
+   * @throws IOException if the directive is invalid or was otherwise
+   *           unsuccessful
+   */
   public synchronized PathBasedCacheDescriptor addDirective(
       PathBasedCacheDirective directive, FSPermissionChecker pc)
       throws IOException {
@@ -162,47 +224,44 @@ public final class CacheManager {
           "existing directive " + existing + " in this pool.");
       return existing.getDescriptor();
     }
-    // Add a new entry with the next available ID.
-    PathBasedCacheEntry entry;
-    try {
-      entry = new PathBasedCacheEntry(getNextEntryId(),
-          directive.getPath(), pool);
-    } catch (IOException ioe) {
-      throw new UnexpectedAddPathBasedCacheDirectiveException(directive);
-    }
-    LOG.info("addDirective " + directive + ": added cache directive "
-        + directive);
 
     // Success!
-    // First, add it to the various maps
-    entriesById.put(entry.getEntryId(), entry);
-    String path = directive.getPath();
-    List<PathBasedCacheEntry> entryList = entriesByPath.get(path);
-    if (entryList == null) {
-      entryList = new ArrayList<PathBasedCacheEntry>(1);
-      entriesByPath.put(path, entryList);
-    }
-    entryList.add(entry);
+    PathBasedCacheDescriptor d = unprotectedAddDirective(directive);
+    LOG.info("addDirective " + directive + ": added cache directive "
+        + directive);
+    return d;
+  }
 
-    // Next, set the path as cached in the namesystem
-    try {
-      INode node = dir.getINode(directive.getPath());
-      if (node != null && node.isFile()) {
-        INodeFile file = node.asFile();
-        // TODO: adjustable cache replication factor
-        namesystem.setCacheReplicationInt(directive.getPath(),
-            file.getBlockReplication());
-      } else {
-        LOG.warn("Path " + directive.getPath() + " is not a file");
-      }
-    } catch (IOException ioe) {
-      LOG.info("addDirective " + directive +": failed to cache file: " +
-          ioe.getClass().getName() +": " + ioe.getMessage());
-      throw ioe;
-    }
+  /**
+   * Assigns a new entry ID to a validated PathBasedCacheDirective and adds
+   * it to the CacheManager. Called directly when replaying the edit log.
+   * 
+   * @param directive Directive being added
+   * @return PathBasedCacheDescriptor for the directive
+   * @throws IOException
+   */
+  PathBasedCacheDescriptor unprotectedAddDirective(
+      PathBasedCacheDirective directive) throws IOException {
+    assert namesystem.hasWriteLock();
+    CachePool pool = cachePools.get(directive.getPool());
+    // Add a new entry with the next available ID.
+    PathBasedCacheEntry entry;
+    entry = new PathBasedCacheEntry(getNextEntryId(), directive.getPath(),
+        pool);
+
+    unprotectedAddEntry(entry);
+
     return entry.getDescriptor();
   }
 
+  /**
+   * Remove the PathBasedCacheEntry corresponding to a descriptor ID from
+   * the CacheManager.
+   * 
+   * @param id of the PathBasedCacheDescriptor
+   * @param pc Permissions checker used to validated the request
+   * @throws IOException
+   */
   public synchronized void removeDescriptor(long id, FSPermissionChecker pc)
       throws IOException {
     // Check for invalid IDs.
@@ -229,6 +288,20 @@ public final class CacheManager {
       throw new RemovePermissionDeniedException(id);
     }
     
+    unprotectedRemoveDescriptor(id);
+  }
+
+  /**
+   * Unchecked internal method used to remove a PathBasedCacheEntry from the
+   * CacheManager. Called directly when replaying the edit log.
+   * 
+   * @param id of the PathBasedCacheDescriptor corresponding to the entry that
+   *          is being removed
+   * @throws IOException
+   */
+  void unprotectedRemoveDescriptor(long id) throws IOException {
+    assert namesystem.hasWriteLock();
+    PathBasedCacheEntry existing = entriesById.get(id);
     // Remove the corresponding entry in entriesByPath.
     String path = existing.getDescriptor().getPath();
     List<PathBasedCacheEntry> entries = entriesByPath.get(path);
@@ -294,11 +367,11 @@ public final class CacheManager {
    * Create a cache pool.
    * 
    * Only the superuser should be able to call this function.
-   *
-   * @param info
-   *          The info for the cache pool to create.
+   * 
+   * @param info The info for the cache pool to create.
+   * @return the created CachePool
    */
-  public synchronized void addCachePool(CachePoolInfo info)
+  public synchronized CachePool addCachePool(CachePoolInfo info)
       throws IOException {
     CachePoolInfo.validate(info);
     String poolName = info.getPoolName();
@@ -309,8 +382,20 @@ public final class CacheManager {
     CachePool cachePool = new CachePool(poolName,
       info.getOwnerName(), info.getGroupName(), info.getMode(),
       info.getWeight());
-    cachePools.put(poolName, cachePool);
-    LOG.info("created new cache pool " + cachePool);
+    unprotectedAddCachePool(cachePool);
+    return cachePool;
+  }
+
+  /**
+   * Internal unchecked method used to add a CachePool. Called directly when
+   * reloading CacheManager state from the FSImage or edit log.
+   * 
+   * @param pool to be added
+   */
+  void unprotectedAddCachePool(CachePool pool) {
+    assert namesystem.hasWriteLock();
+    cachePools.put(pool.getPoolName(), pool);
+    LOG.info("created new cache pool " + pool);
   }
 
   /**
@@ -409,4 +494,116 @@ public final class CacheManager {
     }
     return new BatchedListEntries<CachePoolInfo>(results, false);
   }
+
+  /*
+   * FSImage related serialization and deserialization code
+   */
+
+  /**
+   * Saves the current state of the CacheManager to the DataOutput. Used
+   * to persist CacheManager state in the FSImage.
+   * @param out DataOutput to persist state
+   * @param sdPath path of the storage directory
+   * @throws IOException
+   */
+  public synchronized void saveState(DataOutput out, String sdPath)
+      throws IOException {
+    out.writeLong(nextEntryId);
+    savePools(out, sdPath);
+    saveEntries(out, sdPath);
+  }
+
+  /**
+   * Reloads CacheManager state from the passed DataInput. Used during namenode
+   * startup to restore CacheManager state from an FSImage.
+   * @param in DataInput from which to restore state
+   * @throws IOException
+   */
+  public synchronized void loadState(DataInput in) throws IOException {
+    nextEntryId = in.readLong();
+    // pools need to be loaded first since entries point to their parent pool
+    loadPools(in);
+    loadEntries(in);
+  }
+
+  /**
+   * Save cache pools to fsimage
+   */
+  private synchronized void savePools(DataOutput out,
+      String sdPath) throws IOException {
+    StartupProgress prog = NameNode.getStartupProgress();
+    Step step = new Step(StepType.CACHE_POOLS, sdPath);
+    prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+    prog.setTotal(Phase.SAVING_CHECKPOINT, step, cachePools.size());
+    Counter counter = prog.getCounter(Phase.SAVING_CHECKPOINT, step);
+    out.writeInt(cachePools.size());
+    for (CachePool pool: cachePools.values()) {
+      pool.writeTo(out);
+      counter.increment();
+    }
+    prog.endStep(Phase.SAVING_CHECKPOINT, step);
+  }
+
+  /*
+   * Save cache entries to fsimage
+   */
+  private synchronized void saveEntries(DataOutput out, String sdPath)
+      throws IOException {
+    StartupProgress prog = NameNode.getStartupProgress();
+    Step step = new Step(StepType.CACHE_ENTRIES, sdPath);
+    prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+    prog.setTotal(Phase.SAVING_CHECKPOINT, step, entriesById.size());
+    Counter counter = prog.getCounter(Phase.SAVING_CHECKPOINT, step);
+    out.writeInt(entriesById.size());
+    for (PathBasedCacheEntry entry: entriesById.values()) {
+      out.writeLong(entry.getEntryId());
+      Text.writeString(out, entry.getPath());
+      Text.writeString(out, entry.getPool().getPoolName());
+      counter.increment();
+    }
+    prog.endStep(Phase.SAVING_CHECKPOINT, step);
+  }
+
+  /**
+   * Load cache pools from fsimage
+   */
+  private synchronized void loadPools(DataInput in)
+      throws IOException {
+    StartupProgress prog = NameNode.getStartupProgress();
+    Step step = new Step(StepType.CACHE_POOLS);
+    prog.beginStep(Phase.LOADING_FSIMAGE, step);
+    int numberOfPools = in.readInt();
+    prog.setTotal(Phase.LOADING_FSIMAGE, step, numberOfPools);
+    Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, step);
+    for (int i = 0; i < numberOfPools; i++) {
+      CachePool pool = CachePool.readFrom(in);
+      unprotectedAddCachePool(pool);
+      counter.increment();
+    }
+    prog.endStep(Phase.LOADING_FSIMAGE, step);
+  }
+
+  /**
+   * Load cache entries from the fsimage
+   */
+  private synchronized void loadEntries(DataInput in) throws IOException {
+    StartupProgress prog = NameNode.getStartupProgress();
+    Step step = new Step(StepType.CACHE_ENTRIES);
+    prog.beginStep(Phase.LOADING_FSIMAGE, step);
+    int numberOfEntries = in.readInt();
+    prog.setTotal(Phase.LOADING_FSIMAGE, step, numberOfEntries);
+    Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, step);
+    for (int i = 0; i < numberOfEntries; i++) {
+      long entryId = in.readLong();
+      String path = Text.readString(in);
+      String poolName = Text.readString(in);
+      // Get pool reference by looking it up in the map
+      CachePool pool = cachePools.get(poolName);
+      PathBasedCacheEntry entry = new PathBasedCacheEntry(entryId, path, pool);
+      unprotectedAddEntry(entry);
+      counter.increment();
+    }
+    prog.endStep(Phase.LOADING_FSIMAGE, step);
+  }
+
 }

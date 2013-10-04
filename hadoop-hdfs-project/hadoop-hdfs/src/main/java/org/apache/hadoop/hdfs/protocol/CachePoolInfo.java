@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.protocol;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 import javax.annotation.Nullable;
@@ -27,6 +29,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.Text;
 
 /**
  * Information about a cache pool.
@@ -143,6 +146,49 @@ public class CachePoolInfo {
       // confusing.  They would also break the ability to list all pools
       // by starting with prevKey = ""
       throw new IOException("invalid empty cache pool name");
+    }
+  }
+
+  public static CachePoolInfo readFrom(DataInput in) throws IOException {
+    String poolName = Text.readString(in);
+    CachePoolInfo info = new CachePoolInfo(poolName);
+    if (in.readBoolean()) {
+      info.setOwnerName(Text.readString(in));
+    }
+    if (in.readBoolean())  {
+      info.setGroupName(Text.readString(in));
+    }
+    if (in.readBoolean()) {
+      info.setMode(FsPermission.read(in));
+    }
+    if (in.readBoolean()) {
+      info.setWeight(in.readInt());
+    }
+    return info;
+  }
+
+  public void writeTo(DataOutput out) throws IOException {
+    Text.writeString(out, poolName);
+    boolean hasOwner, hasGroup, hasMode, hasWeight;
+    hasOwner = ownerName != null;
+    hasGroup = groupName != null;
+    hasMode = mode != null;
+    hasWeight = weight != null;
+    out.writeBoolean(hasOwner);
+    if (hasOwner) {
+      Text.writeString(out, ownerName);
+    }
+    out.writeBoolean(hasGroup);
+    if (hasGroup) {
+      Text.writeString(out, groupName);
+    }
+    out.writeBoolean(hasMode);
+    if (hasMode) {
+      mode.write(out);
+    }
+    out.writeBoolean(hasWeight);
+    if (hasWeight) {
+      out.writeInt(weight);
     }
   }
 }

@@ -23,16 +23,19 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMOR
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
@@ -55,7 +58,7 @@ public class TestCacheReplicationManager {
 
   private static Configuration conf;
   private static MiniDFSCluster cluster = null;
-  private static FileSystem fs;
+  private static DistributedFileSystem dfs;
   private static NameNode nn;
   private static NamenodeProtocols nnRpc;
   private static CacheReplicationManager cacheReplManager;
@@ -79,17 +82,17 @@ public class TestCacheReplicationManager {
         .numDataNodes(NUM_DATANODES).build();
     cluster.waitActive();
 
-    fs = cluster.getFileSystem();
+    dfs = cluster.getFileSystem();
     nn = cluster.getNameNode();
     nnRpc = nn.getRpcServer();
     cacheReplManager = nn.getNamesystem().getCacheReplicationManager();
-    rootDir = helper.getDefaultWorkingDirectory(fs);
+    rootDir = helper.getDefaultWorkingDirectory(dfs);
   }
 
   @After
   public void tearDown() throws Exception {
-    if (fs != null) {
-      fs.close();
+    if (dfs != null) {
+      dfs.close();
     }
     if (cluster != null) {
       cluster.shutdown();
@@ -139,7 +142,7 @@ public class TestCacheReplicationManager {
     final List<String> paths = new ArrayList<String>(numFiles);
     for (int i=0; i<numFiles; i++) {
       Path p = new Path(rootDir, "testCachePaths-" + i);
-      FileSystemTestHelper.createFile(fs, p, numBlocksPerFile, (int)BLOCK_SIZE);
+      FileSystemTestHelper.createFile(dfs, p, numBlocksPerFile, (int)BLOCK_SIZE);
       paths.add(p.toUri().getPath());
     }
     // Check the initial statistics at the namenode
@@ -152,9 +155,9 @@ public class TestCacheReplicationManager {
       PathBasedCacheDescriptor descriptor =
           nnRpc.addPathBasedCacheDirective(directive);
       assertEquals("Descriptor does not match requested path", paths.get(i),
-          directive.getPath());
+          descriptor.getPath());
       assertEquals("Descriptor does not match requested pool", pool,
-          directive.getPool());
+          descriptor.getPool());
       expected += numBlocksPerFile;
       waitForExpectedNumCachedBlocks(expected);
     }
@@ -168,4 +171,68 @@ public class TestCacheReplicationManager {
       waitForExpectedNumCachedBlocks(expected);
     }
   }
+
+  @Test(timeout=60000)
+  public void testCacheManagerRestart() throws Exception {
+    // Create and validate a pool
+    final String pool = "poolparty";
+    String groupName = "partygroup";
+    FsPermission mode = new FsPermission((short)0777);
+    int weight = 747;
+    dfs.addCachePool(new CachePoolInfo(pool)
+        .setGroupName(groupName)
+        .setMode(mode)
+        .setWeight(weight));
+    RemoteIterator<CachePoolInfo> pit = dfs.listCachePools();
+    assertTrue("No cache pools found", pit.hasNext());
+    CachePoolInfo info = pit.next();
+    assertEquals(pool, info.getPoolName());
+    assertEquals(groupName, info.getGroupName());
+    assertEquals(mode, info.getMode());
+    assertEquals(weight, (int)info.getWeight());
+    assertFalse("Unexpected # of cache pools found", pit.hasNext());
+
+    // Create some cache entries
+    int numEntries = 10;
+    String entryPrefix = "/party-";
+    for (int i=0; i<numEntries; i++) {
+      dfs.addPathBasedCacheDirective(new PathBasedCacheDirective(entryPrefix + i,
+          pool));
+    }
+    RemoteIterator<PathBasedCacheDescriptor> dit
+        = dfs.listPathBasedCacheDescriptors(null, null);
+    for (int i=0; i<numEntries; i++) {
+      assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
+      PathBasedCacheDescriptor cd = dit.next();
+      assertEquals(i+1, cd.getEntryId());
+      assertEquals(entryPrefix + i, cd.getPath());
+      assertEquals(pool, cd.getPool());
+    }
+    assertFalse("Unexpected # of cache descriptors found", dit.hasNext());
+
+    // Restart namenode
+    cluster.restartNameNode();
+
+    // Check that state came back up
+    pit = dfs.listCachePools();
+    assertTrue("No cache pools found", pit.hasNext());
+    info = pit.next();
+    assertEquals(pool, info.getPoolName());
+    assertEquals(pool, info.getPoolName());
+    assertEquals(groupName, info.getGroupName());
+    assertEquals(mode, info.getMode());
+    assertEquals(weight, (int)info.getWeight());
+    assertFalse("Unexpected # of cache pools found", pit.hasNext());
+
+    dit = dfs.listPathBasedCacheDescriptors(null, null);
+    for (int i=0; i<numEntries; i++) {
+      assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
+      PathBasedCacheDescriptor cd = dit.next();
+      assertEquals(i+1, cd.getEntryId());
+      assertEquals(entryPrefix + i, cd.getPath());
+      assertEquals(pool, cd.getPool());
+    }
+    assertFalse("Unexpected # of cache descriptors found", dit.hasNext());
+  }
+
 }

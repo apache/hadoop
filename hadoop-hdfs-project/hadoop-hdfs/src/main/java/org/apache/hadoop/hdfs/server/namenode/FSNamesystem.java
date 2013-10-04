@@ -227,7 +227,6 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
@@ -1956,7 +1955,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     getEditLog().logSync();
     if (isFile) {
-      logAuditEvent(true, "setReplication", src);
+      logAuditEvent(true, "setCacheReplication", src);
     }
     return isFile;
   }
@@ -6884,10 +6883,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   PathBasedCacheDescriptor addPathBasedCacheDirective(
       PathBasedCacheDirective directive) throws IOException {
-    CacheEntryWithPayload retryCacheEntry =
+    CacheEntryWithPayload cacheEntry =
         RetryCache.waitForCompletion(retryCache, null);
-    if (retryCacheEntry != null && retryCacheEntry.isSuccess()) {
-      return (PathBasedCacheDescriptor) retryCacheEntry.getPayload();
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return (PathBasedCacheDescriptor) cacheEntry.getPayload();
     }
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
@@ -6902,7 +6901,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             "Cannot add PathBasedCache directive", safeMode);
       }
       result = cacheManager.addDirective(directive, pc);
-      //getEditLog().logAddPathBasedCacheDirective(result); FIXME: HDFS-5119
+      getEditLog().logAddPathBasedCacheDirective(directive,
+          cacheEntry != null);
       success = true;
     } finally {
       writeUnlock();
@@ -6912,14 +6912,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (isAuditEnabled() && isExternalInvocation()) {
         logAuditEvent(success, "addPathBasedCacheDirective", null, null, null);
       }
-      RetryCache.setState(retryCacheEntry, success, result);
+      RetryCache.setState(cacheEntry, success, result);
     }
     return result;
   }
 
   void removePathBasedCacheDescriptor(Long id) throws IOException {
-    CacheEntry retryCacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (retryCacheEntry != null && retryCacheEntry.isSuccess()) {
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
     final FSPermissionChecker pc = isPermissionEnabled ?
@@ -6934,7 +6934,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             "Cannot remove PathBasedCache directives", safeMode);
       }
       cacheManager.removeDescriptor(id, pc);
-      //getEditLog().logRemovePathBasedCacheEntries(results); FIXME: HDFS-5119
+      getEditLog().logRemovePathBasedCacheDescriptor(id, cacheEntry != null);
       success = true;
     } finally {
       writeUnlock();
@@ -6942,7 +6942,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         logAuditEvent(success, "removePathBasedCacheDescriptors", null, null,
             null);
       }
-      RetryCache.setState(retryCacheEntry, success);
+      RetryCache.setState(cacheEntry, success);
     }
     getEditLog().logSync();
   }
@@ -6989,8 +6989,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (pc != null) {
         pc.checkSuperuserPrivilege();
       }
-      cacheManager.addCachePool(req);
-      //getEditLog().logAddCachePool(req); // FIXME: HDFS-5119
+      CachePool pool = cacheManager.addCachePool(req);
+      getEditLog().logAddCachePool(pool, cacheEntry != null);
       success = true;
     } finally {
       writeUnlock();
@@ -7023,7 +7023,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         pc.checkSuperuserPrivilege();
       }
       cacheManager.modifyCachePool(req);
-      //getEditLog().logModifyCachePool(req); // FIXME: HDFS-5119
+      getEditLog().logModifyCachePool(req, cacheEntry != null);
       success = true;
     } finally {
       writeUnlock();
@@ -7056,7 +7056,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         pc.checkSuperuserPrivilege();
       }
       cacheManager.removeCachePool(cachePoolName);
-      //getEditLog().logRemoveCachePool(req); // FIXME: HDFS-5119
+      getEditLog().logRemoveCachePool(cachePoolName, cacheEntry != null);
       success = true;
     } finally {
       writeUnlock();
