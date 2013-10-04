@@ -332,7 +332,13 @@ public class SecurityUtil {
    * @param addr the socket for the rpc connection
    */
   public static void setTokenService(Token<?> token, InetSocketAddress addr) {
-    token.setService(buildTokenService(addr));
+    Text service = buildTokenService(addr);
+    if (token != null) {
+      token.setService(service);
+      LOG.info("Acquired token "+token);  // Token#toString() prints service
+    } else {
+      LOG.warn("Failed to get token for service "+service);
+    }
   }
   
   /**

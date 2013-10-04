@@ -16,7 +16,10 @@
  */
 package org.apache.hadoop.security;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -28,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -233,10 +237,11 @@ public class TestSecurityUtil {
     SecurityUtil.setTokenServiceUseIp(useIp);
     String serviceHost = useIp ? ip : host.toLowerCase();
     
-    Token token = new Token();
+    Token<TokenIdentifier> token = new Token<TokenIdentifier>();
     Text service = new Text(serviceHost+":"+port);
     
     assertEquals(service, SecurityUtil.buildTokenService(addr));
+
     SecurityUtil.setTokenService(token, addr);
     assertEquals(service, token.getService());
     
@@ -321,5 +326,12 @@ public class TestSecurityUtil {
     String staticHost = "1.2.3.4";
     NetUtils.addStaticResolution(staticHost, "255.255.255.255");
     verifyServiceAddr(staticHost, "255.255.255.255");
+  }
+  
+  @Test
+  public void testSetTokenServiceWithNoToken() {
+    InetSocketAddress addr = NetUtils.makeSocketAddr("127.0.0.1", 1234);
+    // Test whether setTokenService works when token is null
+    SecurityUtil.setTokenService(null, addr);
   }
 }
