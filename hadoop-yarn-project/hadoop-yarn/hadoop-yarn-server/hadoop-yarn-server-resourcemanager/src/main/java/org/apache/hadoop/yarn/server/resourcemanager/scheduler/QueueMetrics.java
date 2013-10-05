@@ -73,7 +73,7 @@ public class QueueMetrics implements MetricsSource {
   @Metric("Reserved CPU in virtual cores") MutableGaugeInt reservedVCores;
   @Metric("# of reserved containers") MutableGaugeInt reservedContainers;
   @Metric("# of active users") MutableGaugeInt activeUsers;
-  @Metric("# of active users") MutableGaugeInt activeApplications;
+  @Metric("# of active applications") MutableGaugeInt activeApplications;
   private final MutableGaugeInt[] runningTime;
   private TimeBucketMetrics<ApplicationId> runBuckets;
 
