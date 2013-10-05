@@ -48,6 +48,7 @@ public abstract class RegisterApplicationMasterRequest {
    *  <li>port: -1</li>
    *  <li>trackingUrl: null</li>
    * </ul>
+   * The port is allowed to be any integer larger than or equal to -1.
    * @return the new instance of <code>RegisterApplicationMasterRequest</code>
    */
   @Public

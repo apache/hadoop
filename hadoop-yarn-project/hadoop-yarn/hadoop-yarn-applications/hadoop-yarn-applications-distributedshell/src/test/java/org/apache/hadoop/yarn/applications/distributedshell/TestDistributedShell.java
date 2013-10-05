@@ -24,14 +24,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
@@ -117,14 +123,46 @@ public class TestDistributedShell {
     };
 
     LOG.info("Initializing DS Client");
-    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    final Client client = new Client(new Configuration(yarnCluster.getConfig()));
     boolean initSuccess = client.init(args);
     Assert.assertTrue(initSuccess);
     LOG.info("Running DS Client");
-    boolean result = client.run();
+    final AtomicBoolean result = new AtomicBoolean(false);
+    Thread t = new Thread() {
+      public void run() {
+        try {
+          result.set(client.run());
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+    };
+    t.start();
 
+    YarnClient yarnClient = YarnClient.createYarnClient();
+    yarnClient.init(new Configuration(yarnCluster.getConfig()));
+    yarnClient.start();
+    String hostName = NetUtils.getHostname();
+    boolean verified = false;
+    while(!verified) {
+      List<ApplicationReport> apps = yarnClient.getApplications();
+      if (apps.size() == 0 ) {
+        Thread.sleep(10);
+        continue;
+      }
+      ApplicationReport appReport = apps.get(0);
+      if (appReport.getHost().startsWith(hostName)
+          && appReport.getRpcPort() == -1) {
+        verified = true;
+      }
+      if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED) {
+        break;
+      }
+    }
+    Assert.assertTrue(verified);
+    t.join();
     LOG.info("Client run completed. Result=" + result);
-    Assert.assertTrue(result);
+    Assert.assertTrue(result.get());
 
   }
 
