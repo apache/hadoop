@@ -171,6 +171,9 @@ Release 2.1.2 - UNRELEASED
     YARN-1167. Fixed Distributed Shell to not incorrectly show empty hostname
     on RM UI. (Xuan Gong via vinodkv)
 
+    YARN-1254. Fixed NodeManager to not pollute container's credentials. (Omkar
+    Vinit Joshi via vinodkv)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
