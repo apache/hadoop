@@ -2279,7 +2279,7 @@ public class TestFairScheduler {
         fs.applications, FSSchedulerApp.class);
   }
 
-  @Test
+  @Test (timeout = 5000)
   public void testContinuousScheduling() throws Exception {
     // set continuous scheduling enabled
     FairScheduler fs = new FairScheduler();
@@ -2315,11 +2315,13 @@ public class TestFairScheduler {
     // at least one pass
     Thread.sleep(fs.getConf().getContinuousSchedulingSleepMs() + 500);
 
+    FSSchedulerApp app = fs.applications.get(appAttemptId);
+    // Wait until app gets resources.
+    while (app.getCurrentConsumption().equals(Resources.none())) { }
+    
     // check consumption
-    Resource consumption =
-            fs.applications.get(appAttemptId).getCurrentConsumption();
-    Assert.assertEquals(1024, consumption.getMemory());
-    Assert.assertEquals(1, consumption.getVirtualCores());
+    Assert.assertEquals(1024, app.getCurrentConsumption().getMemory());
+    Assert.assertEquals(1, app.getCurrentConsumption().getVirtualCores());
   }
 
   
