@@ -29,6 +29,9 @@ Release 2.1.2 - UNRELEASED
     HDFS-5256. Use guava LoadingCache to implement DFSClientCache. (Haohui Mai
     via brandonli)
 
+    HDFS-5308. Replace HttpConfig#getSchemePrefix with implicit schemes in HDFS 
+    JSP. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES

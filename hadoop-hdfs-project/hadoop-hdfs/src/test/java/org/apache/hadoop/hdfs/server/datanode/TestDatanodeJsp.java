@@ -92,12 +92,12 @@ public class TestDatanodeJsp {
       throws IOException {
     Pattern compile = Pattern.compile(regex);
     Matcher matcher = compile.matcher(viewFilePage);
-    URL hyperlink = null;
     if (matcher.find()) {
       // got hyperlink for Tail this file
-      hyperlink = new URL(matcher.group(1));
+      String u = matcher.group(1);
+      String urlString = u.startsWith("///") ? ("http://" + u.substring(3)) : u;
       viewFilePage = StringEscapeUtils.unescapeHtml(DFSTestUtil
-          .urlGet(hyperlink));
+          .urlGet(new URL(urlString)));
       assertTrue("page should show preview of file contents", viewFilePage
           .contains(FILE_DATA));
     } else {
