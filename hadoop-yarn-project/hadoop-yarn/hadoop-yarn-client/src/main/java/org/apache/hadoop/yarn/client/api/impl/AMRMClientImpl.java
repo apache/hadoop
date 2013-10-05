@@ -188,8 +188,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       throws YarnException, IOException {
     Preconditions.checkArgument(appHostName != null,
         "The host name should not be null");
-    Preconditions.checkArgument(appHostPort >= 0,
-        "Port number of the host should not be negative");
+    Preconditions.checkArgument(appHostPort >= -1, "Port number of the host"
+        + " should be any integers larger than or equal to -1");
     // do this only once ???
     RegisterApplicationMasterRequest request =
         RegisterApplicationMasterRequest.newInstance(appHostName, appHostPort,
