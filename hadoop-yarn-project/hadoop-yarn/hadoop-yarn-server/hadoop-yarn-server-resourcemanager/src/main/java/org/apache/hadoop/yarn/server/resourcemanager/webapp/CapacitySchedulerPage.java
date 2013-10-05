@@ -98,24 +98,25 @@ class CapacitySchedulerPage extends RmView {
       for (UserInfo entry: users) {
         activeUserList.append(entry.getUsername()).append(" &lt;")
           .append(getPercentage(entry.getResourcesUsed(), usedResources))
-          .append(", Active Apps: " + entry.getNumActiveApplications())
-          .append(", Pending Apps: " + entry.getNumPendingApplications())
+          .append(", Schedulable Apps: " + entry.getNumActiveApplications())
+          .append(", Non-Schedulable Apps: " + entry.getNumPendingApplications())
           .append("&gt;<br style='display:block'>"); //Force line break
       }
 
       ResponseInfo ri = info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status").
           _("Queue State:", lqinfo.getQueueState()).
           _("Used Capacity:", percent(lqinfo.getUsedCapacity() / 100)).
+          _("Absolute Used Capacity:", percent(lqinfo.getAbsoluteUsedCapacity() / 100)).
           _("Absolute Capacity:", percent(lqinfo.getAbsoluteCapacity() / 100)).
           _("Absolute Max Capacity:", percent(lqinfo.getAbsoluteMaxCapacity() / 100)).
           _("Used Resources:", StringEscapeUtils.escapeHtml(lqinfo.getUsedResources().toString())).
-          _("Num Active Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
-          _("Num Pending Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
+          _("Num Schedulable Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
+          _("Num Non-Schedulable Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
           _("Num Containers:", Integer.toString(lqinfo.getNumContainers())).
           _("Max Applications:", Integer.toString(lqinfo.getMaxApplications())).
           _("Max Applications Per User:", Integer.toString(lqinfo.getMaxApplicationsPerUser())).
-          _("Max Active Applications:", Integer.toString(lqinfo.getMaxActiveApplications())).
-          _("Max Active Applications Per User:", Integer.toString(lqinfo.getMaxActiveApplicationsPerUser())).
+          _("Max Schedulable Applications:", Integer.toString(lqinfo.getMaxActiveApplications())).
+          _("Max Schedulable Applications Per User:", Integer.toString(lqinfo.getMaxActiveApplicationsPerUser())).
           _("Configured Capacity:", percent(lqinfo.getCapacity() / 100)).
           _("Configured Max Capacity:", percent(lqinfo.getMaxCapacity() / 100)).
           _("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
