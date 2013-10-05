@@ -834,7 +834,7 @@ public class ApplicationMaster {
       // files in the distributed file-system. The tokens are otherwise also
       // useful in cases, for e.g., when one is running a "hadoop dfs" command
       // inside the distributed shell.
-      ctx.setTokens(allTokens);
+      ctx.setTokens(allTokens.duplicate());
 
       containerListener.addContainer(container.getId(), container);
       nmClientAsync.startContainerAsync(container, ctx);
