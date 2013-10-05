@@ -59,7 +59,7 @@ public class TestDistributedShell {
   protected static String APPMASTER_JAR = JarFinder.getJar(ApplicationMaster.class);
 
   @BeforeClass
-  public static void setup() throws InterruptedException, Exception {
+  public static void setup() throws Exception {
     LOG.info("Starting up YARN cluster");
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, 
@@ -135,7 +135,7 @@ public class TestDistributedShell {
         } catch (Exception e) {
           throw new RuntimeException(e);
         }
-      };
+      }
     };
     t.start();
 
@@ -248,5 +248,34 @@ public class TestDistributedShell {
       Thread.sleep(2000);
     }
   }
+
+  @Test(timeout=90000)
+  public void testContainerLaunchFailureHandling() throws Exception {
+    String[] args = {
+      "--jar",
+      APPMASTER_JAR,
+      "--num_containers",
+      "2",
+      "--shell_command",
+      Shell.WINDOWS ? "dir" : "ls",
+      "--master_memory",
+      "512",
+      "--container_memory",
+      "128"
+    };
+
+    LOG.info("Initializing DS Client");
+    Client client = new Client(ContainerLaunchFailAppMaster.class.getName(),
+      new Configuration(yarnCluster.getConfig()));
+    boolean initSuccess = client.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running DS Client");
+    boolean result = client.run();
+
+    LOG.info("Client run completed. Result=" + result);
+    Assert.assertFalse(result);
+
+  }
+
 }
 

@@ -125,8 +125,7 @@ public class Client {
   // Application master jar file
   private String appMasterJar = ""; 
   // Main class to invoke application master
-  private final String appMasterMainClass =
-      "org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster";
+  private final String appMasterMainClass;
 
   // Shell command to be executed 
   private String shellCommand = ""; 
@@ -193,8 +192,14 @@ public class Client {
   /**
    */
   public Client(Configuration conf) throws Exception  {
-    
+    this(
+      "org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster",
+      conf);
+  }
+
+  Client(String appMasterMainClass, Configuration conf) {
     this.conf = conf;
+    this.appMasterMainClass = appMasterMainClass;
     yarnClient = YarnClient.createYarnClient();
     yarnClient.init(conf);
     opts = new Options();
@@ -214,6 +219,7 @@ public class Client {
     opts.addOption("log_properties", true, "log4j.properties file");
     opts.addOption("debug", false, "Dump out debug information");
     opts.addOption("help", false, "Print usage");
+
   }
 
   /**
