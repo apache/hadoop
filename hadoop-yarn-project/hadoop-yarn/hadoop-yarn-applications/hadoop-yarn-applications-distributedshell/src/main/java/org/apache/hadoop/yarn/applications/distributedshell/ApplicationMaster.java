@@ -45,6 +45,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -99,7 +100,8 @@ import org.apache.hadoop.yarn.util.Records;
  * within the <code>ResourceManager</code> regarding what host:port the
  * ApplicationMaster is listening on to provide any form of functionality to a
  * client as well as a tracking url that a client can use to keep track of
- * status/job history if needed.
+ * status/job history if needed. However, in the distributedshell, trackingurl
+ * and appMasterHost:appMasterRpcPort are not supported.
  * </p>
  * 
  * <p>
@@ -168,7 +170,7 @@ public class ApplicationMaster {
   // Hostname of the container
   private String appMasterHostname = "";
   // Port on which the app master listens for status updates from clients
-  private int appMasterRpcPort = 0;
+  private int appMasterRpcPort = -1;
   // Tracking url to which app master publishes info for clients to monitor
   private String appMasterTrackingUrl = "";
 
@@ -481,6 +483,7 @@ public class ApplicationMaster {
 
     // Register self with ResourceManager
     // This will start heartbeating to the RM
+    appMasterHostname = NetUtils.getHostname();
     RegisterApplicationMasterResponse response = amRMClient
         .registerApplicationMaster(appMasterHostname, appMasterRpcPort,
             appMasterTrackingUrl);
