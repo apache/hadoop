@@ -64,6 +64,8 @@ Release 2.3.0 - UNRELEASED
     YARN-1188. The context of QueueMetrics becomes default when using
     FairScheduler (Tsuyoshi Ozawa via Sandy Ryza)
 
+    YARN-1268. TestFairScheduler.testContinuousScheduling is flaky (Sandy Ryza)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -176,8 +178,6 @@ Release 2.1.2 - UNRELEASED
 
     YARN-1273. Fixed Distributed-shell to account for containers that failed
     to start. (Hitesh Shah via vinodkv)
-
-    YARN-1268. TestFairScheduler.testContinuousScheduling is flaky (Sandy Ryza)
 
 Release 2.1.1-beta - 2013-09-23
 
