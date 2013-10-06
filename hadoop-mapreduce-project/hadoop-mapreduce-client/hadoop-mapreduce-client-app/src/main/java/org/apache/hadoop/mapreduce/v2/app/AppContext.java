@@ -64,6 +64,6 @@ public interface AppContext {
 
   boolean isLastAMRetry();
 
-  boolean safeToReportTerminationToUser();
+  boolean hasSuccessfullyUnregistered();
 
 }

@@ -128,8 +128,6 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /** Implementation of Job interface. Maintains the state machines of Job.
  * The read and write calls use ReadWriteLock for concurrency.
  */
@@ -933,7 +931,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     readLock.lock();
     try {
       JobState state = getExternalState(getInternalState());
-      if (!appContext.safeToReportTerminationToUser()
+      if (!appContext.hasSuccessfullyUnregistered()
           && (state == JobState.SUCCEEDED || state == JobState.FAILED
           || state == JobState.KILLED || state == JobState.ERROR)) {
         return lastNonFinalState;
