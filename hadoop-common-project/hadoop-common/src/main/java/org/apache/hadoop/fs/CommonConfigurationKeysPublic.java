@@ -258,5 +258,9 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_SSL_ENABLED_KEY = "hadoop.ssl.enabled";
   public static final boolean HADOOP_SSL_ENABLED_DEFAULT = false;
 
+
+  // HTTP policies to be used in configuration
+  public static final String HTTP_POLICY_HTTP_ONLY = "HTTP_ONLY";
+  public static final String HTTP_POLICY_HTTPS_ONLY = "HTTPS_ONLY";
 }
 

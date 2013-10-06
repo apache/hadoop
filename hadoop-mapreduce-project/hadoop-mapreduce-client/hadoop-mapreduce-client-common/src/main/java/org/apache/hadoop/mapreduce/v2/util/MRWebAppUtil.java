@@ -17,24 +17,25 @@
  */
 package org.apache.hadoop.mapreduce.v2.util;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Iterator;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.mapreduce.JobID;
-import org.apache.hadoop.mapreduce.MRConfig;
-import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
+import static org.apache.hadoop.http.HttpConfig.Policy;
 
 @Private
 @Evolving
@@ -42,63 +43,44 @@ public class MRWebAppUtil {
   private static final Splitter ADDR_SPLITTER = Splitter.on(':').trimResults();
   private static final Joiner JOINER = Joiner.on("");
 
-  private static boolean isSSLEnabledInYARN;
-  private static boolean isSSLEnabledInJHS;
-  private static boolean isSSLEnabledInMRAM;
-  
+  private static Policy httpPolicyInYarn;
+  private static Policy httpPolicyInJHS;
+
   public static void initialize(Configuration conf) {
-    setSSLEnabledInYARN(conf.getBoolean(
-          CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_KEY,
-          CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_DEFAULT));
-    setSSLEnabledInJHS(conf.getBoolean(JHAdminConfig.MR_HS_SSL_ENABLED,
-        JHAdminConfig.DEFAULT_MR_HS_SSL_ENABLED));
-    setSSLEnabledInMRAM(conf.getBoolean(MRConfig.SSL_ENABLED_KEY,
-        MRConfig.SSL_ENABLED_KEY_DEFAULT));
+    setHttpPolicyInYARN(conf.get(
+            YarnConfiguration.YARN_HTTP_POLICY_KEY,
+            YarnConfiguration.YARN_HTTP_POLICY_DEFAULT));
+    setHttpPolicyInJHS(conf.get(JHAdminConfig.MR_HS_HTTP_POLICY,
+            JHAdminConfig.DEFAULT_MR_HS_HTTP_POLICY));
   }
   
-  private static void setSSLEnabledInYARN(boolean isSSLEnabledInYARN) {
-    MRWebAppUtil.isSSLEnabledInYARN = isSSLEnabledInYARN;
+  private static void setHttpPolicyInJHS(String policy) {
+    MRWebAppUtil.httpPolicyInJHS = Policy.fromString(policy);
   }
   
-  private static void setSSLEnabledInJHS(boolean isSSLEnabledInJHS) {
-    MRWebAppUtil.isSSLEnabledInJHS = isSSLEnabledInJHS;
+  private static void setHttpPolicyInYARN(String policy) {
+    MRWebAppUtil.httpPolicyInYarn = Policy.fromString(policy);
   }
 
-  private static void setSSLEnabledInMRAM(boolean isSSLEnabledInMRAM) {
-    MRWebAppUtil.isSSLEnabledInMRAM = isSSLEnabledInMRAM;
+  public static Policy getJHSHttpPolicy() {
+    return MRWebAppUtil.httpPolicyInJHS;
   }
 
-  public static boolean isSSLEnabledInYARN() {
-    return isSSLEnabledInYARN;
-  }
-  
-  public static boolean isSSLEnabledInJHS() {
-    return isSSLEnabledInJHS;
-  }
-
-  public static boolean isSSLEnabledInMRAM() {
-    return isSSLEnabledInMRAM;
+  public static Policy getYARNHttpPolicy() {
+    return MRWebAppUtil.httpPolicyInYarn;
   }
 
   public static String getYARNWebappScheme() {
-    if (isSSLEnabledInYARN) {
-      return "https://";
-    } else {
-      return "http://";
-    }
+    return HttpConfig.getScheme(httpPolicyInYarn);
   }
   
   public static String getJHSWebappScheme() {
-    if (isSSLEnabledInJHS) {
-      return "https://";
-    } else {
-      return "http://";
-    }
+    return HttpConfig.getScheme(httpPolicyInJHS);
   }
   
   public static void setJHSWebappURLWithoutScheme(Configuration conf,
       String hostAddress) {
-    if (isSSLEnabledInJHS) {
+    if (httpPolicyInJHS == Policy.HTTPS_ONLY) {
       conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_HTTPS_ADDRESS, hostAddress);
     } else {
       conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, hostAddress);
@@ -106,7 +88,7 @@ public class MRWebAppUtil {
   }
   
   public static String getJHSWebappURLWithoutScheme(Configuration conf) {
-    if (isSSLEnabledInJHS) {
+    if (httpPolicyInJHS == Policy.HTTPS_ONLY) {
       return conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_HTTPS_ADDRESS,
           JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_ADDRESS);
     } else {
@@ -120,7 +102,7 @@ public class MRWebAppUtil {
   }
   
   public static InetSocketAddress getJHSWebBindAddress(Configuration conf) {
-    if (isSSLEnabledInJHS) {
+    if (httpPolicyInJHS == Policy.HTTPS_ONLY) {
       return conf.getSocketAddr(JHAdminConfig.MR_HISTORY_WEBAPP_HTTPS_ADDRESS,
           JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_ADDRESS,
           JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_PORT);
@@ -168,26 +150,18 @@ public class MRWebAppUtil {
   }
 
   private static int getDefaultJHSWebappPort() {
-    if (isSSLEnabledInJHS) {
-      return JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_PORT;
-    } else {
-      return JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT;
-    }
+    return httpPolicyInJHS == Policy.HTTPS_ONLY ?
+      JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_PORT:
+      JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT;
   }
   
   private static String getDefaultJHSWebappURLWithoutScheme() {
-    if (isSSLEnabledInJHS) {
-      return JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_ADDRESS;
-    } else {
-      return JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS;
-    }
+    return httpPolicyInJHS == Policy.HTTPS_ONLY ?
+      JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_ADDRESS :
+      JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS;
   }
-  
+
   public static String getAMWebappScheme(Configuration conf) {
-    if (isSSLEnabledInMRAM) {
-      return "https://";
-    } else {
-      return "http://";
-    }
+    return "http://";
   }
 }

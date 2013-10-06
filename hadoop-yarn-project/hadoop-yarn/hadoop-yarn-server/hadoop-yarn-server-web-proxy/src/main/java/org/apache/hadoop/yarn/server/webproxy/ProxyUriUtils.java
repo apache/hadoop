@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
-import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -26,11 +30,7 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.TrackingUriPlugin;
+import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 
 public class ProxyUriUtils {
   @SuppressWarnings("unused")
@@ -148,9 +148,9 @@ public class ProxyUriUtils {
       /*
        * check is made to make sure if AM reports with scheme then it will be
        * used by default otherwise it will default to the one configured using
-       * "hadoop.ssl.enabled".
+       * "yarn.http.policy".
        */
-      return new URI(HttpConfig.getSchemePrefix() + url);      
+      return new URI(HttpConfig.getSchemePrefix() + url);
     } else {
       return new URI(url);
     }
@@ -168,9 +168,9 @@ public class ProxyUriUtils {
         /*
          * check is made to make sure if AM reports with scheme then it will be
          * used by default otherwise it will default to the one configured using
-         * "hadoop.ssl.enabled".
+         * "yarn.http.policy".
          */
-        return new URI(scheme + "://" + noSchemeUrl);      
+        return new URI(scheme + "://" + noSchemeUrl);
       } else {
         return new URI(noSchemeUrl);
       }

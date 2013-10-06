@@ -18,14 +18,9 @@
 
 package org.apache.hadoop.mapreduce.v2.jobhistory;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
  * Stores Job History configuration keys that can be set by administrators of
@@ -129,10 +124,11 @@ public class JHAdminConfig {
   public static final String MR_HISTORY_PRINCIPAL = 
     MR_HISTORY_PREFIX + "principal";
   
-  /** To enable SSL in MR history server */
-  public static final String MR_HS_SSL_ENABLED = MR_HISTORY_PREFIX
-      + "ssl.enabled";
-  public static boolean DEFAULT_MR_HS_SSL_ENABLED = false;
+  /** To enable https in MR history server */
+  public static final String MR_HS_HTTP_POLICY = MR_HISTORY_PREFIX
+      + "http.policy";
+  public static String DEFAULT_MR_HS_HTTP_POLICY =
+          CommonConfigurationKeysPublic.HTTP_POLICY_HTTP_ONLY;
   
   /**The address the history server webapp is on.*/
   public static final String MR_HISTORY_WEBAPP_ADDRESS =

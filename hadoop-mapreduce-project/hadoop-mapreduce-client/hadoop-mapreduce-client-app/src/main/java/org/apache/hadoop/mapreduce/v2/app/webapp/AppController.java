@@ -63,7 +63,8 @@ public class AppController extends Controller implements AMParams {
     set(APP_ID, app.context.getApplicationID().toString());
     set(RM_WEB,
         JOINER.join(MRWebAppUtil.getYARNWebappScheme(),
-            WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf)));
+            WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf,
+                MRWebAppUtil.getYARNHttpPolicy())));
   }
 
   @Inject
