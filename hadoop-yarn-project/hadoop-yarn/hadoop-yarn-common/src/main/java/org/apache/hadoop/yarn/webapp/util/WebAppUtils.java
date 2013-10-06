@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
@@ -97,8 +98,14 @@ public class WebAppUtils {
   }
   
   public static String getResolvedRMWebAppURLWithoutScheme(Configuration conf) {
+    return getResolvedRMWebAppURLWithoutScheme(conf,
+        HttpConfig.isSecure() ? Policy.HTTPS_ONLY : Policy.HTTP_ONLY);
+  }
+  
+  public static String getResolvedRMWebAppURLWithoutScheme(Configuration conf,
+      Policy httpPolicy) {
     InetSocketAddress address = null;
-    if (HttpConfig.isSecure()) {
+    if (httpPolicy == Policy.HTTPS_ONLY) {
       address =
           conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
               YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS,

@@ -24,6 +24,7 @@ import java.util.Arrays;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -862,7 +863,12 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CLIENT_MAX_NM_PROXIES =
       YARN_PREFIX + "client.max-nodemanagers-proxies";
   public static final int DEFAULT_NM_CLIENT_MAX_NM_PROXIES = 500;
-  
+
+  public static final String YARN_HTTP_POLICY_KEY =
+          YARN_PREFIX + "http.policy";
+  public static final String YARN_HTTP_POLICY_DEFAULT =
+          CommonConfigurationKeysPublic.HTTP_POLICY_HTTP_ONLY;
+
   public YarnConfiguration() {
     super();
   }
