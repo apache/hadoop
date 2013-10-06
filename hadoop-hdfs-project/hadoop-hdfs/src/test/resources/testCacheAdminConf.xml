@@ -165,9 +165,9 @@
       <description>Testing creating cache paths</description>
       <test-commands>
         <cache-admin-command>-addPool pool1</cache-admin-command>
-        <cache-admin-command>-addPath -path /foo -pool pool1</cache-admin-command>
-        <cache-admin-command>-addPath -path /bar -pool pool1</cache-admin-command>
-        <cache-admin-command>-listPaths -pool pool1</cache-admin-command>
+        <cache-admin-command>-addDirective -path /foo -pool pool1</cache-admin-command>
+        <cache-admin-command>-addDirective -path /bar -pool pool1</cache-admin-command>
+        <cache-admin-command>-listDirectives -pool pool1</cache-admin-command>
       </test-commands>
       <cleanup-commands>
         <cache-admin-command>-removePool pool1</cache-admin-command>
@@ -192,10 +192,10 @@
       <description>Testing removing cache paths</description>
       <test-commands>
         <cache-admin-command>-addPool pool1</cache-admin-command>
-        <cache-admin-command>-addPath -path /foo -pool pool1</cache-admin-command>
-        <cache-admin-command>-addPath -path /bar -pool pool1</cache-admin-command>
+        <cache-admin-command>-addDirective -path /foo -pool pool1</cache-admin-command>
+        <cache-admin-command>-addDirective -path /bar -pool pool1</cache-admin-command>
         <cache-admin-command>-removePool pool1</cache-admin-command>
-        <cache-admin-command>-listPaths -pool pool1</cache-admin-command>
+        <cache-admin-command>-listDirectives -pool pool1</cache-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
