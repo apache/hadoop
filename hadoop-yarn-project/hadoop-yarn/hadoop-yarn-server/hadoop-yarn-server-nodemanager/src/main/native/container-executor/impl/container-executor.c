@@ -751,28 +751,11 @@ int initialize_user(const char *user, char* const* local_dirs) {
   return failed ? INITIALIZE_USER_FAILED : 0;
 }
 
-/**
- * Function to prepare the application directories for the container.
- */
-int initialize_app(const char *user, const char *app_id,
-                   const char* nmPrivate_credentials_file,
-                   char* const* local_dirs, char* const* log_roots,
-                   char* const* args) {
-  if (app_id == NULL || user == NULL || user_detail == NULL || user_detail->pw_name == NULL) {
-    fprintf(LOGFILE, "Either app_id is null or the user passed is null.\n");
-    return INVALID_ARGUMENT_NUMBER;
-  }
+int create_log_dirs(const char *app_id, char * const * log_dirs) {
 
-  // create the user directory on all disks
-  int result = initialize_user(user, local_dirs);
-  if (result != 0) {
-    return result;
-  }
-
-  ////////////// create the log directories for the app on all disks
   char* const* log_root;
   char *any_one_app_log_dir = NULL;
-  for(log_root=log_roots; *log_root != NULL; ++log_root) {
+  for(log_root=log_dirs; *log_root != NULL; ++log_root) {
     char *app_log_dir = get_app_log_directory(*log_root, app_id);
     if (app_log_dir == NULL) {
       // try the next one
@@ -791,7 +774,33 @@ int initialize_app(const char *user, const char *app_id,
     return -1;
   }
   free(any_one_app_log_dir);
-  ////////////// End of creating the log directories for the app on all disks
+  return 0;
+}
+
+
+/**
+ * Function to prepare the application directories for the container.
+ */
+int initialize_app(const char *user, const char *app_id,
+                   const char* nmPrivate_credentials_file,
+                   char* const* local_dirs, char* const* log_roots,
+                   char* const* args) {
+  if (app_id == NULL || user == NULL || user_detail == NULL || user_detail->pw_name == NULL) {
+    fprintf(LOGFILE, "Either app_id is null or the user passed is null.\n");
+    return INVALID_ARGUMENT_NUMBER;
+  }
+
+  // create the user directory on all disks
+  int result = initialize_user(user, local_dirs);
+  if (result != 0) {
+    return result;
+  }
+
+  // create the log directories for the app on all disks
+  int log_create_result = create_log_dirs(app_id, log_roots);
+  if (log_create_result != 0) {
+    return log_create_result;
+  }
 
   // open up the credentials file
   int cred_file = open_file_as_nm(nmPrivate_credentials_file);
@@ -922,17 +931,33 @@ int launch_container_as_user(const char *user, const char *app_id,
     }
   }
 
+  // create the user directory on all disks
+  int result = initialize_user(user, local_dirs);
+  if (result != 0) {
+    return result;
+  }
+
+  // initializing log dirs
+  int log_create_result = create_log_dirs(app_id, log_dirs);
+  if (log_create_result != 0) {
+    return log_create_result;
+  }
+
   // give up root privs
   if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
     exit_code = SETUID_OPER_FAILED;
     goto cleanup;
   }
 
+  // Create container specific directories as user. If there are no resources
+  // to localize for this container, app-directories and log-directories are
+  // also created automatically as part of this call.
   if (create_container_directories(user, app_id, container_id, local_dirs,
                                    log_dirs, work_dir) != 0) {
     fprintf(LOGFILE, "Could not create container dirs");
     goto cleanup;
   }
+
 
   // 700
   if (copy_file(container_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
