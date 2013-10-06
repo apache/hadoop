@@ -93,6 +93,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+@SuppressWarnings("rawtypes")
 public class TestNodeStatusUpdater {
 
   // temp fix until metrics system can auto-detect itself running in unit test:
@@ -352,7 +353,6 @@ public class TestNodeStatusUpdater {
 
   private class MyNodeStatusUpdater4 extends NodeStatusUpdaterImpl {
 
-    private Context context;
     private final long rmStartIntervalMS;
     private final boolean rmNeverStart;
     public ResourceTracker resourceTracker;
@@ -360,7 +360,6 @@ public class TestNodeStatusUpdater {
         NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
         long rmStartIntervalMS, boolean rmNeverStart) {
       super(context, dispatcher, healthChecker, metrics);
-      this.context = context;
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
     }
@@ -376,8 +375,8 @@ public class TestNodeStatusUpdater {
       RetryPolicy retryPolicy = RMProxy.createRetryPolicy(conf);
       resourceTracker =
           (ResourceTracker) RetryProxy.create(ResourceTracker.class,
-            new MyResourceTracker6(this.context, rmStartIntervalMS,
-              rmNeverStart), retryPolicy);
+            new MyResourceTracker6(rmStartIntervalMS, rmNeverStart),
+            retryPolicy);
       return resourceTracker;
     }
 
@@ -685,14 +684,11 @@ public class TestNodeStatusUpdater {
 
   private class MyResourceTracker6 implements ResourceTracker {
 
-    private final Context context;
     private long rmStartIntervalMS;
     private boolean rmNeverStart;
     private final long waitStartTime;
 
-    public MyResourceTracker6(Context context, long rmStartIntervalMS,
-        boolean rmNeverStart) {
-      this.context = context;
+    public MyResourceTracker6(long rmStartIntervalMS, boolean rmNeverStart) {
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
       this.waitStartTime = System.currentTimeMillis();
@@ -868,8 +864,8 @@ public class TestNodeStatusUpdater {
             metrics, aclsManager, dirsHandler) {
 
           @Override
-          public void cleanUpApplications(NodeManagerEventType eventType) {
-            super.cleanUpApplications(NodeManagerEventType.SHUTDOWN);
+          public void cleanUpApplicationsOnNMShutDown() {
+            super.cleanUpApplicationsOnNMShutDown();
             numCleanups.incrementAndGet();
           }
         };
@@ -1222,8 +1218,8 @@ public class TestNodeStatusUpdater {
             metrics, aclsManager, dirsHandler) {
 
           @Override
-          public void cleanUpApplications(NodeManagerEventType eventType) {
-            super.cleanUpApplications(NodeManagerEventType.SHUTDOWN);
+          public void cleanUpApplicationsOnNMShutDown() {
+            super.cleanUpApplicationsOnNMShutDown();
             numCleanups.incrementAndGet();
           }
         };

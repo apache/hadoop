@@ -173,6 +173,9 @@ Release 2.1.2 - UNRELEASED
     and log-dirs correctly even when there are no resources to localize for the
     container. (Siddharth Seth via vinodkv)
 
+    YARN-1278. Fixed NodeManager to not delete local resources for apps on resync
+    command from RM - a bug caused by YARN-1149. (Hitesh Shah via vinodkv)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES

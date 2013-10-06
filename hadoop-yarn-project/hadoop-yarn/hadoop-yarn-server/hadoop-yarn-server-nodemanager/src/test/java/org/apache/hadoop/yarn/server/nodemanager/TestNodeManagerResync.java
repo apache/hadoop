@@ -102,7 +102,11 @@ public class TestNodeManagerResync {
     } catch (BrokenBarrierException e) {
     }
     Assert.assertEquals(2, ((TestNodeManager1) nm).getNMRegistrationCount());
-
+    // Only containers should be killed on resync, apps should lie around. That
+    // way local resources for apps can be used beyond resync without
+    // relocalization
+    Assert.assertTrue(nm.getNMContext().getApplications()
+      .containsKey(cId.getApplicationAttemptId().getApplicationId()));
     Assert.assertFalse(assertionFailedInThread.get());
 
     nm.stop();
@@ -285,7 +289,6 @@ public class TestNodeManagerResync {
             recordFactory.newRecordInstance(ContainerLaunchContext.class);
         try {
           while (!isStopped && numContainers < 10) {
-            ContainerId cId = TestNodeManagerShutdown.createContainerId();
             StartContainerRequest scRequest =
                 StartContainerRequest.newInstance(containerLaunchContext,
                   null);

@@ -87,7 +87,6 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
-import org.apache.hadoop.yarn.server.nodemanager.NodeManagerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
@@ -306,7 +305,7 @@ public class ContainerManagerImpl extends CompositeService implements
     try {
       serviceStopped = true;
       if (context != null) {
-        cleanUpApplications(NodeManagerEventType.SHUTDOWN);
+        cleanUpApplicationsOnNMShutDown();
       }
     } finally {
       this.writeLock.unlock();
@@ -320,7 +319,7 @@ public class ContainerManagerImpl extends CompositeService implements
     super.serviceStop();
   }
 
-  public void cleanUpApplications(NodeManagerEventType eventType) {
+  public void cleanUpApplicationsOnNMShutDown() {
     Map<ApplicationId, Application> applications =
         this.context.getApplications();
     if (applications.isEmpty()) {
@@ -336,33 +335,15 @@ public class ContainerManagerImpl extends CompositeService implements
 
     LOG.info("Waiting for Applications to be Finished");
 
-    switch (eventType) {
-      case SHUTDOWN:
-        long waitStartTime = System.currentTimeMillis();
-        while (!applications.isEmpty()
-            && System.currentTimeMillis() - waitStartTime
-                < waitForContainersOnShutdownMillis) {
-          try {
-            Thread.sleep(1000);
-          } catch (InterruptedException ex) {
-            LOG.warn("Interrupted while sleeping on applications finish on shutdown",
-              ex);
-          }
-        }
-        break;
-      case RESYNC:
-        while (!applications.isEmpty()) {
-          try {
-            Thread.sleep(1000);
-          } catch (InterruptedException ex) {
-            LOG.warn("Interrupted while sleeping on applications finish on resync",
-              ex);
-          }
-        }
-        break;
-      default:
-        throw new YarnRuntimeException("Get an unknown NodeManagerEventType: "
-            + eventType);
+    long waitStartTime = System.currentTimeMillis();
+    while (!applications.isEmpty()
+        && System.currentTimeMillis() - waitStartTime < waitForContainersOnShutdownMillis) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException ex) {
+        LOG.warn(
+          "Interrupted while sleeping on applications finish on shutdown", ex);
+      }
     }
 
     // All applications Finished
@@ -371,6 +352,40 @@ public class ContainerManagerImpl extends CompositeService implements
     } else {
       LOG.info("Done waiting for Applications to be Finished. Still alive: " +
           applications.keySet());
+    }
+  }
+
+  public void cleanupContainersOnNMResync() {
+    Map<ContainerId, Container> containers = context.getContainers();
+    if (containers.isEmpty()) {
+      return;
+    }
+    LOG.info("Containers still running on "
+        + CMgrCompletedContainersEvent.Reason.ON_NODEMANAGER_RESYNC + " : "
+        + containers.keySet());
+
+    List<ContainerId> containerIds =
+      new ArrayList<ContainerId>(containers.keySet());
+
+    LOG.info("Waiting for containers to be killed");
+
+    this.handle(new CMgrCompletedContainersEvent(containerIds,
+      CMgrCompletedContainersEvent.Reason.ON_NODEMANAGER_RESYNC));
+    while (!containers.isEmpty()) {
+      try {
+        Thread.sleep(1000);
+        nodeStatusUpdater.getNodeStatusAndUpdateContainersInContext();
+      } catch (InterruptedException ex) {
+        LOG.warn("Interrupted while sleeping on container kill on resync", ex);
+      }
+    }
+
+    // All containers killed
+    if (containers.isEmpty()) {
+      LOG.info("All containers in DONE state");
+    } else {
+      LOG.info("Done waiting for containers to be killed. Still alive: " +
+        containers.keySet());
     }
   }
 
@@ -850,7 +865,7 @@ public class ContainerManagerImpl extends CompositeService implements
       break;
     default:
         throw new YarnRuntimeException(
-            "Get an unknown ContainerManagerEvent type: " + event.getType());
+            "Got an unknown ContainerManagerEvent type: " + event.getType());
     }
   }
 
