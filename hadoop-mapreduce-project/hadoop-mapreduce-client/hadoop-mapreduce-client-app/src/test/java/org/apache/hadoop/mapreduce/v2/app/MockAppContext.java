@@ -137,7 +137,7 @@ public class MockAppContext implements AppContext {
   }
 
   @Override
-  public boolean safeToReportTerminationToUser() {
+  public boolean hasSuccessfullyUnregistered() {
     // bogus - Not Required
     return true;
   }
