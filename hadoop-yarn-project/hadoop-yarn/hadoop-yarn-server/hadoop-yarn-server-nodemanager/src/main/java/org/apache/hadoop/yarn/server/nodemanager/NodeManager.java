@@ -226,7 +226,8 @@ public class NodeManager extends CompositeService
       public void run() {
         LOG.info("Notifying ContainerManager to block new container-requests");
         containerManager.setBlockNewContainerRequests(true);
-        containerManager.cleanUpApplications(NodeManagerEventType.RESYNC);
+        LOG.info("Cleaning up running containers on resync");
+        containerManager.cleanupContainersOnNMResync();
         ((NodeStatusUpdaterImpl) nodeStatusUpdater ).rebootNodeStatusUpdater();
       }
     }.start();
