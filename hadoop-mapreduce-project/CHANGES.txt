@@ -145,6 +145,10 @@ Release 2.1.2 - UNRELEASED
     aren't heart-beating for a while, so that we can aggressively speculate
     instead of waiting for task-timeout (Xuan Gong via vinodkv)
 
+    MAPREDUCE-5562. Fixed MR App Master to perform pending tasks like staging-dir
+    cleanup, sending job-end notification correctly when unregister with RM
+    fails. (Zhijie Shen via vinodkv)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
