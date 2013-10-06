@@ -1339,11 +1339,15 @@ public final class FileContext {
    *           <code>target</code> or <code>link</code> is not supported
    * @throws IOException If an I/O error occurred
    */
+  @SuppressWarnings("deprecation")
   public void createSymlink(final Path target, final Path link,
       final boolean createParent) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, UnsupportedFileSystemException, 
       IOException { 
+    if (!FileSystem.isSymlinksEnabled()) {
+      throw new UnsupportedOperationException("Symlinks not supported");
+    }
     final Path nonRelLink = fixRelativePart(link);
     new FSLinkResolver<Void>() {
       @Override

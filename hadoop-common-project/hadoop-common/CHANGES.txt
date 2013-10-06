@@ -19,6 +19,9 @@ Release 2.1.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-10020. Disable symlinks temporarily (branch-2.1-beta only change)
+    (sanjay via suresh)
+
   NEW FEATURES
 
     HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.

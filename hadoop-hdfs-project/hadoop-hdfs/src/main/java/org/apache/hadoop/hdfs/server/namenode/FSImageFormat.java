@@ -40,6 +40,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -627,6 +628,7 @@ public class FSImageFormat {
    * @param counter Counter to increment for namenode startup progress
    * @return an inode
    */
+  @SuppressWarnings("deprecation")
   INode loadINode(final byte[] localName, boolean isSnapshotINode,
       DataInput in, Counter counter) throws IOException {
     final int imgVersion = getLayoutVersion();
@@ -724,6 +726,9 @@ public class FSImageFormat {
           : dir;
     } else if (numBlocks == -2) {
       //symlink
+      if (!FileSystem.isSymlinksEnabled()) {
+        throw new IOException("Symlinks not supported - please remove symlink before upgrading to this version of HDFS");
+      }
 
       final String symlink = Text.readString(in);
       final PermissionStatus permissions = PermissionStatus.read(in);

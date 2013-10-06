@@ -1118,12 +1118,16 @@ public class DistributedFileSystem extends FileSystem {
     }.resolve(this, absF);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public void createSymlink(final Path target, final Path link,
       final boolean createParent) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, UnsupportedFileSystemException, 
       IOException {
+    if (!FileSystem.isSymlinksEnabled()) {
+      throw new UnsupportedOperationException("Symlinks not supported");
+    }
     statistics.incrementWriteOps(1);
     final Path absF = fixRelativePart(link);
     new FileSystemLinkResolver<Void>() {

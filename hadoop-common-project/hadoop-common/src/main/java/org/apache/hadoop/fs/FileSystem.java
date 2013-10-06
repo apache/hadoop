@@ -2807,4 +2807,24 @@ public abstract class FileSystem extends Configured implements Closeable {
                          ": " + pair.getValue());
     }
   }
+  
+  // Symlinks are temporarily disabled - see Hadoop-10020
+  private static boolean symlinkEnabled = false;
+  private static Configuration conf = null;
+  
+  @Deprecated
+  @VisibleForTesting
+  public static boolean isSymlinksEnabled() {
+    if (conf == null) {
+      Configuration conf = new Configuration();
+      symlinkEnabled = conf.getBoolean("test.SymlinkEnabledForTesting", false); 
+    }
+    return symlinkEnabled;
+  }
+  
+  @Deprecated
+  @VisibleForTesting
+  public static void enableSymlinks() {
+    symlinkEnabled = true;
+  }
 }
