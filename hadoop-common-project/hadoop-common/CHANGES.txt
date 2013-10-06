@@ -147,6 +147,9 @@ Release 2.1.2 - UNRELEASED
     HADOOP-10003. HarFileSystem.listLocatedStatus() fails.
     (Jason Dere and suresh via suresh)
 
+    HADOOP-10017. Fix NPE in DFSClient#getDelegationToken when doing Distcp 
+    from a secured cluster to an insecured cluster. (Haohui Mai via jing9)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES

@@ -891,10 +891,15 @@ public class DFSClient implements java.io.Closeable {
     assert dtService != null;
     Token<DelegationTokenIdentifier> token =
       namenode.getDelegationToken(renewer);
-    token.setService(this.dtService);
 
-    LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(token));
+    if (token != null) {
+      token.setService(this.dtService);
+      LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(token));
+    } else {
+      LOG.info("Cannot get delegation token from " + renewer);
+    }
     return token;
+
   }
 
   /**

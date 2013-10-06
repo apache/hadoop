@@ -92,6 +92,19 @@ public class TestDistributedFileSystem {
   }
 
   @Test
+  public void testEmptyDelegationToken() throws IOException {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      FileSystem fileSys = cluster.getFileSystem();
+      fileSys.getDelegationToken("");
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
   public void testFileSystemCloseAll() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
