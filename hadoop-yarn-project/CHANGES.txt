@@ -118,6 +118,10 @@ Release 2.1.2 - UNRELEASED
     YARN-1090. Fixed CS UI to better reflect applications as non-schedulable
     and not as pending. (Jian He via acmurthy)
 
+    YARN-1274. Fixed NodeManager's LinuxContainerExecutor to create user, app-dir
+    and log-dirs correctly even when there are no resources to localize for the
+    container. (Siddharth Seth via vinodkv)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
