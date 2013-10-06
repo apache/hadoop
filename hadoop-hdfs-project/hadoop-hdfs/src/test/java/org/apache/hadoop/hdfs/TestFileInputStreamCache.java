@@ -17,12 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-
 import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -30,6 +25,10 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.junit.Test;
+
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 public class TestFileInputStreamCache {
   static final Log LOG = LogFactory.getLog(TestFileInputStreamCache.class);
@@ -80,7 +79,7 @@ public class TestFileInputStreamCache {
   public void testAddAndRetrieve() throws Exception {
     FileInputStreamCache cache = new FileInputStreamCache(1, 1000000);
     DatanodeID dnId = new DatanodeID("127.0.0.1", "localhost", 
-        "xyzzy", 8080, 9090, 7070);
+        "xyzzy", 8080, 9090, 7070, 6060);
     ExtendedBlock block = new ExtendedBlock("poolid", 123);
     TestFileDescriptorPair pair = new TestFileDescriptorPair();
     cache.put(dnId, block, pair.getFileInputStreams());
@@ -94,7 +93,7 @@ public class TestFileInputStreamCache {
   public void testExpiry() throws Exception {
     FileInputStreamCache cache = new FileInputStreamCache(1, 10);
     DatanodeID dnId = new DatanodeID("127.0.0.1", "localhost", 
-        "xyzzy", 8080, 9090, 7070);
+        "xyzzy", 8080, 9090, 7070, 6060);
     ExtendedBlock block = new ExtendedBlock("poolid", 123);
     TestFileDescriptorPair pair = new TestFileDescriptorPair();
     cache.put(dnId, block, pair.getFileInputStreams());
@@ -109,12 +108,12 @@ public class TestFileInputStreamCache {
   public void testEviction() throws Exception {
     FileInputStreamCache cache = new FileInputStreamCache(1, 10000000);
     DatanodeID dnId = new DatanodeID("127.0.0.1", "localhost", 
-        "xyzzy", 8080, 9090, 7070);
+        "xyzzy", 8080, 9090, 7070, 6060);
     ExtendedBlock block = new ExtendedBlock("poolid", 123);
     TestFileDescriptorPair pair = new TestFileDescriptorPair();
     cache.put(dnId, block, pair.getFileInputStreams());
     DatanodeID dnId2 = new DatanodeID("127.0.0.1", "localhost", 
-        "xyzzy", 8081, 9091, 7071);
+        "xyzzy", 8081, 9091, 7071, 6061);
     TestFileDescriptorPair pair2 = new TestFileDescriptorPair();
     cache.put(dnId2, block, pair2.getFileInputStreams());
     FileInputStream fis[] = cache.get(dnId, block);

@@ -38,6 +38,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 
+import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -67,6 +68,9 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import static com.google.common.base.Strings.*;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 
 public class TestJspHelper {
@@ -453,12 +457,15 @@ public class TestJspHelper {
   }
   
   @Test
-  public void testSortNodeByFields() throws Exception {    
-    DatanodeID dnId1 = new DatanodeID("127.0.0.1", "localhost1", "storage1", 1234, 2345, 6454);    
-    DatanodeID dnId2 = new DatanodeID("127.0.0.1", "localhost2", "storage2", 1235, 2346, 6455);
-
-    DatanodeDescriptor dnDesc1 = new DatanodeDescriptor(dnId1, 1024, 100, 924, 100, 10, 2);
-    DatanodeDescriptor dnDesc2 = new DatanodeDescriptor(dnId2, 2500, 200, 1848, 200, 20, 1);
+  public void testSortNodeByFields() throws Exception {
+    DatanodeID dnId1 = new DatanodeID("127.0.0.1", "localhost1", "storage1",
+        1234, 2345, 3456, 4567);
+    DatanodeID dnId2 = new DatanodeID("127.0.0.2", "localhost2", "storage2",
+        1235, 2346, 3457, 4568);
+    DatanodeDescriptor dnDesc1 = new DatanodeDescriptor(dnId1, "rack1", 1024,
+        100, 924, 100, 10, 2);
+    DatanodeDescriptor dnDesc2 = new DatanodeDescriptor(dnId2, "rack2", 2500,
+        200, 1848, 200, 20, 1);
     ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     live.add(dnDesc1);
     live.add(dnDesc2);
