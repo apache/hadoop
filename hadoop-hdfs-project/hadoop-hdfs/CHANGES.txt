@@ -153,6 +153,9 @@ Release 2.2.0 - 2013-10-13
     HDFS-5259. Support client which combines appended data with old data
     before sends it to NFS server. (brandonli)
 
+    HDFS-5307. Support both HTTP and HTTPS in jsp pages (Haohui Mai via
+    branconli)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES

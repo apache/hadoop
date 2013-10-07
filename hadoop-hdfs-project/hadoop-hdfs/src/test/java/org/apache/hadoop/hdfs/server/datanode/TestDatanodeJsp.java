@@ -86,6 +86,9 @@ public class TestDatanodeJsp {
     // check whether able to 'Go Back to File View' after tailing the file
     regex = "<a.+href=\"(.+?)\">Go\\s*Back\\s*to\\s*File\\s*View\\<\\/a\\>";
     assertFileContents(regex, "Go Back to File View");
+
+    regex = "<a href=\"///localhost:" + nnHttpAddress.getPort() + "/dfshealth.jsp\">Go back to DFS home</a>";
+    assertTrue("page should generate DFS home scheme without explicit scheme", viewFilePage.contains(regex));
   }
   
   private static void assertFileContents(String regex, String text)
@@ -166,6 +169,7 @@ public class TestDatanodeJsp {
     Mockito.doReturn(NetUtils.getHostPortString(NameNode.getAddress(CONF)))
         .when(reqMock).getParameter("nnaddr");
     Mockito.doReturn(testFile.toString()).when(reqMock).getPathInfo();
+    Mockito.doReturn("http").when(reqMock).getScheme();
   }
 
   static Path writeFile(FileSystem fs, Path f) throws IOException {
