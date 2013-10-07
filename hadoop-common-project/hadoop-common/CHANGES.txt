@@ -138,6 +138,8 @@ Release 2.2.0 - 2013-10-13
     HADOOP-10017. Fix NPE in DFSClient#getDelegationToken when doing Distcp 
     from a secured cluster to an insecured cluster. (Haohui Mai via jing9)
 
+    HADOOP-10028. Malformed ssl-server.xml.example. (Haohui Mai via jing9)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
