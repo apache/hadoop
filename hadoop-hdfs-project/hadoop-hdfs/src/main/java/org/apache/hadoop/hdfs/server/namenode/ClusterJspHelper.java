@@ -887,7 +887,16 @@ class ClusterJspHelper {
 
   private static String queryMbean(String httpAddress, Configuration conf) 
     throws IOException {
-    URL url = new URL(HttpConfig.getSchemePrefix() + httpAddress+JMX_QRY);
+    /**
+     * Although the other namenode might support HTTPS, it is fundamentally
+     * broken to get the JMX via an HTTPS connection inside the namenode,
+     * because in HTTPS set up the principal of the client and the one of
+     * the namenode differs. Therefore, there is no guarantees that the
+     * HTTPS connection can be set up.
+     *
+     * As a result, we just hard code the connection as an HTTP connection.
+     */
+    URL url = new URL("http://" + httpAddress + JMX_QRY);
     return readOutput(url);
   }
   /**
