@@ -74,3 +74,6 @@ HDFS-4949 (Unreleased)
     HDFS-5266. ElasticByteBufferPool#Key does not implement equals. (cnauroth)
 
     HDFS-5309. Fix failing caching unit tests. (Andrew Wang)
+
+    HDFS-5314. Do not expose CachePool type in AddCachePoolOp (Colin Patrick
+    McCabe)

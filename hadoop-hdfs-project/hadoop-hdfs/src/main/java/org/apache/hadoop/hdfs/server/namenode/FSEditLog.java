@@ -971,7 +971,7 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
 
-  void logAddCachePool(CachePool pool, boolean toLogRpcIds) {
+  void logAddCachePool(CachePoolInfo pool, boolean toLogRpcIds) {
     AddCachePoolOp op =
         AddCachePoolOp.getInstance(cache.get()).setPool(pool);
     logRpcIds(op, toLogRpcIds);

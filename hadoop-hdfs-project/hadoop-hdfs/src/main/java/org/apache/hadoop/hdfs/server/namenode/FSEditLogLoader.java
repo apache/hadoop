@@ -664,7 +664,7 @@ public class FSEditLogLoader {
     }
     case OP_ADD_CACHE_POOL: {
       AddCachePoolOp addOp = (AddCachePoolOp) op;
-      fsNamesys.getCacheManager().unprotectedAddCachePool(addOp.pool);
+      fsNamesys.getCacheManager().unprotectedAddCachePool(addOp.info);
 
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);

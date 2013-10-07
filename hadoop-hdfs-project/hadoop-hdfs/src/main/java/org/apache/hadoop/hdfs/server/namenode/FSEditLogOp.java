@@ -2966,7 +2966,7 @@ public abstract class FSEditLogOp {
   }
 
   static class AddCachePoolOp extends FSEditLogOp {
-    CachePool pool;
+    CachePoolInfo info;
 
     public AddCachePoolOp() {
       super(OP_ADD_CACHE_POOL);
@@ -2976,40 +2976,40 @@ public abstract class FSEditLogOp {
       return (AddCachePoolOp) cache.get(OP_ADD_CACHE_POOL);
     }
 
-    public AddCachePoolOp setPool(CachePool pool) {
-      this.pool = pool;
+    public AddCachePoolOp setPool(CachePoolInfo info) {
+      this.info = info;
       return this;
     }
 
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
-      pool = CachePool.readFrom(in);
+      info = CachePoolInfo.readFrom(in);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
-      pool.writeTo(out);
+      info .writeTo(out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
-      pool.writeXmlTo(contentHandler);
+      info .writeXmlTo(contentHandler);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
-      this.pool = CachePool.readXmlFrom(st);
+      this.info = CachePoolInfo.readXmlFrom(st);
     }
 
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
       builder.append("AddCachePoolOp [");
-      builder.append("poolName=" + pool.getPoolName() + ",");
-      builder.append("ownerName=" + pool.getOwnerName() + ",");
-      builder.append("groupName=" + pool.getGroupName() + ",");
-      builder.append("mode=" + Short.toString(pool.getMode().toShort()) + ",");
-      builder.append("weight=" + Integer.toString(pool.getWeight()) + "]");
+      builder.append("poolName=" + info.getPoolName() + ",");
+      builder.append("ownerName=" + info.getOwnerName() + ",");
+      builder.append("groupName=" + info.getGroupName() + ",");
+      builder.append("mode=" + Short.toString(info.getMode().toShort()) + ",");
+      builder.append("weight=" + Integer.toString(info.getWeight()) + "]");
       return builder.toString();
     }
   }

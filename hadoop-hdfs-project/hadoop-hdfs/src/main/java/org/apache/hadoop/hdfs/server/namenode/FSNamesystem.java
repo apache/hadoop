@@ -6989,8 +6989,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (pc != null) {
         pc.checkSuperuserPrivilege();
       }
-      CachePool pool = cacheManager.addCachePool(req);
-      getEditLog().logAddCachePool(pool, cacheEntry != null);
+      CachePoolInfo info = cacheManager.addCachePool(req);
+      getEditLog().logAddCachePool(info, cacheEntry != null);
       success = true;
     } finally {
       writeUnlock();

@@ -26,17 +26,31 @@ import javax.annotation.Nullable;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
+import org.apache.hadoop.hdfs.util.XMLUtils;
+import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
+import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
 import org.apache.hadoop.io.Text;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.SAXException;
 
 /**
- * Information about a cache pool.
+ * CachePoolInfo describes a cache pool.
+ *
+ * This class is used in RPCs to create and modify cache pools.
+ * It is serializable and can be stored in the edit log.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CachePoolInfo {
+  public static final Log LOG = LogFactory.getLog(CachePoolInfo.class);
+
   final String poolName;
 
   @Nullable
@@ -190,5 +204,24 @@ public class CachePoolInfo {
     if (hasWeight) {
       out.writeInt(weight);
     }
+  }
+
+  public void writeXmlTo(ContentHandler contentHandler) throws SAXException {
+    XMLUtils.addSaxString(contentHandler, "POOLNAME", poolName);
+    PermissionStatus perm = new PermissionStatus(ownerName,
+        groupName, mode);
+    FSEditLogOp.permissionStatusToXml(contentHandler, perm);
+    XMLUtils.addSaxString(contentHandler, "WEIGHT", Integer.toString(weight));
+  }
+
+  public static CachePoolInfo readXmlFrom(Stanza st) throws InvalidXmlException {
+    String poolName = st.getValue("POOLNAME");
+    PermissionStatus perm = FSEditLogOp.permissionStatusFromXml(st);
+    int weight = Integer.parseInt(st.getValue("WEIGHT"));
+    return new CachePoolInfo(poolName).
+        setOwnerName(perm.getUserName()).
+        setGroupName(perm.getGroupName()).
+        setMode(perm.getPermission()).
+        setWeight(weight);
   }
 }

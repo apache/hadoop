@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import javax.annotation.Nonnull;
@@ -28,15 +26,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.util.XMLUtils;
-import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
-import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.xml.sax.ContentHandler;
-import org.xml.sax.SAXException;
+
+import com.google.common.base.Preconditions;
 
 /**
  * A CachePool describes a set of cache resources being managed by the NameNode.
@@ -44,6 +37,8 @@ import org.xml.sax.SAXException;
  *
  * This is an internal class, only used on the NameNode.  For identifying or
  * describing a cache pool to clients, please use CachePoolInfo.
+ * 
+ * CachePools must be accessed under the FSNamesystem lock.
  */
 @InterfaceAudience.Private
 public final class CachePool {
@@ -73,29 +68,57 @@ public final class CachePool {
   
   private int weight;
 
-  public CachePool(String poolName, String ownerName, String groupName,
-      FsPermission mode, Integer weight) throws IOException {
-    this.poolName = poolName;
+  /**
+   * Create a new cache pool based on a CachePoolInfo object and the defaults.
+   * We will fill in information that was not supplied according to the
+   * defaults.
+   */
+  static CachePool createFromInfoAndDefaults(CachePoolInfo info)
+      throws IOException {
     UserGroupInformation ugi = null;
+    String ownerName = info.getOwnerName();
     if (ownerName == null) {
       if (ugi == null) {
         ugi = NameNode.getRemoteUser();
       }
-      this.ownerName = ugi.getShortUserName();
-    } else {
-      this.ownerName = ownerName;
+      ownerName = ugi.getShortUserName();
     }
+    String groupName = info.getGroupName();
     if (groupName == null) {
       if (ugi == null) {
         ugi = NameNode.getRemoteUser();
       }
-      this.groupName = ugi.getPrimaryGroupName();
-    } else {
-      this.groupName = groupName;
+      groupName = ugi.getPrimaryGroupName();
     }
-    this.mode = mode != null ? 
-        new FsPermission(mode): FsPermission.getCachePoolDefault();
-    this.weight = weight != null ? weight : DEFAULT_WEIGHT;
+    FsPermission mode = (info.getMode() == null) ? 
+        FsPermission.getCachePoolDefault() : info.getMode();
+    Integer weight = (info.getWeight() == null) ?
+        DEFAULT_WEIGHT : info.getWeight();
+    return new CachePool(info.getPoolName(),
+        ownerName, groupName, mode, weight);
+  }
+
+  /**
+   * Create a new cache pool based on a CachePoolInfo object.
+   * No fields in the CachePoolInfo can be blank.
+   */
+  static CachePool createFromInfo(CachePoolInfo info) {
+    return new CachePool(info.getPoolName(),
+        info.getOwnerName(), info.getGroupName(),
+        info.getMode(), info.getWeight());
+  }
+
+  CachePool(String poolName, String ownerName, String groupName,
+      FsPermission mode, int weight) {
+    Preconditions.checkNotNull(poolName);
+    Preconditions.checkNotNull(ownerName);
+    Preconditions.checkNotNull(groupName);
+    Preconditions.checkNotNull(mode);
+    this.poolName = poolName;
+    this.ownerName = ownerName;
+    this.groupName = groupName;
+    this.mode = new FsPermission(mode);
+    this.weight = weight;
   }
 
   public String getPoolName() {
@@ -170,43 +193,5 @@ public final class CachePool {
         append(", mode:").append(mode).
         append(", weight:").append(weight).
         append(" }").toString();
-  }
-
-  public void writeTo(DataOutput out) throws IOException {
-    Text.writeString(out, poolName);
-    PermissionStatus perm = PermissionStatus.createImmutable(
-        ownerName, groupName, mode);
-    perm.write(out);
-    out.writeInt(weight);
-  }
-
-  public static CachePool readFrom(DataInput in) throws IOException {
-    String poolName = Text.readString(in);
-    PermissionStatus perm = PermissionStatus.read(in);
-    int weight = in.readInt();
-    return new CachePool(poolName, perm.getUserName(), perm.getGroupName(),
-        perm.getPermission(), weight);
-  }
-
-  public void writeXmlTo(ContentHandler contentHandler) throws SAXException {
-    XMLUtils.addSaxString(contentHandler, "POOLNAME", poolName);
-    PermissionStatus perm = new PermissionStatus(ownerName,
-        groupName, mode);
-    FSEditLogOp.permissionStatusToXml(contentHandler, perm);
-    XMLUtils.addSaxString(contentHandler, "WEIGHT", Integer.toString(weight));
-  }
-
-  public static CachePool readXmlFrom(Stanza st) throws InvalidXmlException {
-    String poolName = st.getValue("POOLNAME");
-    PermissionStatus perm = FSEditLogOp.permissionStatusFromXml(st);
-    int weight = Integer.parseInt(st.getValue("WEIGHT"));
-    try {
-      return new CachePool(poolName, perm.getUserName(), perm.getGroupName(),
-          perm.getPermission(), weight);
-    } catch (IOException e) {
-      String error = "Invalid cache pool XML, missing fields.";
-      LOG.warn(error);
-      throw new InvalidXmlException(error);
-    }
   }
 }
