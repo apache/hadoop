@@ -15,6 +15,622 @@
    limitations under the License.
 -->
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Hadoop  2.2.0 Release Notes</title>
+<STYLE type="text/css">
+	H1 {font-family: sans-serif}
+	H2 {font-family: sans-serif; margin-left: 7mm}
+	TABLE {margin-left: 7mm}
+</STYLE>
+</head>
+<body>
+<h1>Hadoop  2.2.0 Release Notes</h1>
+These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
+<a name="changes"/>
+<h2>Changes since Hadoop 2.1.1-beta</h2>
+<ul>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1278">YARN-1278</a>.
+     Blocker bug reported by Yesha Vora and fixed by Hitesh Shah <br>
+     <b>New AM does not start after rm restart</b><br>
+     <blockquote>The new AM fails to start after RM restarts. It fails to start new Application master and job fails with below error.
+
+ /usr/bin/mapred job -status job_1380985373054_0001
+13/10/05 15:04:04 INFO client.RMProxy: Connecting to ResourceManager at hostname
+Job: job_1380985373054_0001
+Job File: /user/abc/.staging/job_1380985373054_0001/job.xml
+Job Tracking URL : http://hostname:8088/cluster/app/application_1380985373054_0001
+Uber job : false
+Number of maps: 0
+Number of reduces: 0
+map() completion: 0.0
+reduce() completion: 0.0
+Job state: FAILED
+retired: false
+reason for failure: There are no failed tasks for the job. Job is failed due to some other reason and reason can be found in the logs.
+Counters: 0</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1277">YARN-1277</a>.
+     Major sub-task reported by Suresh Srinivas and fixed by Omkar Vinit Joshi <br>
+     <b>Add http policy support for YARN daemons</b><br>
+     <blockquote>This YARN part of HADOOP-10022.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1274">YARN-1274</a>.
+     Blocker bug reported by Alejandro Abdelnur and fixed by Siddharth Seth (nodemanager)<br>
+     <b>LCE fails to run containers that don't have resources to localize</b><br>
+     <blockquote>LCE container launch assumes the usercache/USER directory exists and it is owned by the user running the container process.
+
+But the directory is created only if there are resources to localize by the LCE localization command, if there are not resourcdes to localize, LCE localization never executes and launching fails reporting 255 exit code and the NM logs have something like:
+
+{code}
+2013-10-04 14:07:56,425 INFO org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor: main : command provided 1
+2013-10-04 14:07:56,425 INFO org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor: main : user is llama
+2013-10-04 14:07:56,425 INFO org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor: Can't create directory llama in /yarn/nm/usercache/llama/appcache/application_1380853306301_0004/container_1380853306301_0004_01_000004 - Permission denied
+{code}
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1273">YARN-1273</a>.
+     Major bug reported by Hitesh Shah and fixed by Hitesh Shah <br>
+     <b>Distributed shell does not account for start container failures reported asynchronously.</b><br>
+     <blockquote>2013-10-04 22:09:15,234 ERROR [org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl #1] distributedshell.ApplicationMaster (ApplicationMaster.java:onStartContainerError(719)) - Failed to start Container container_1380920347574_0018_01_000006</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1271">YARN-1271</a>.
+     Major bug reported by Sandy Ryza and fixed by Sandy Ryza (nodemanager)<br>
+     <b>"Text file busy" errors launching containers again</b><br>
+     <blockquote>The error is shown below in the comments.
+
+MAPREDUCE-2374 fixed this by removing "-c" when running the container launch script.  It looks like the "-c" got brought back during the windows branch merge, so we should remove it again.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1262">YARN-1262</a>.
+     Major bug reported by Sandy Ryza and fixed by Karthik Kambatla <br>
+     <b>TestApplicationCleanup relies on all containers assigned in a single heartbeat</b><br>
+     <blockquote>TestApplicationCleanup submits container requests and waits for allocations to come in.  It only sends a single node heartbeat to the node, expecting multiple containers to be assigned on this heartbeat, which not all schedulers do by default.
+
+This is causing the test to fail when run with the Fair Scheduler.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1260">YARN-1260</a>.
+     Major sub-task reported by Yesha Vora and fixed by Omkar Vinit Joshi <br>
+     <b>RM_HOME link breaks when webapp.https.address related properties are not specified</b><br>
+     <blockquote>This issue happens in multiple node cluster where resource manager and node manager are running on different machines.
+
+Steps to reproduce:
+1) set yarn.resourcemanager.hostname = &lt;resourcemanager host&gt; in yarn-site.xml
+2) set hadoop.ssl.enabled = true in core-site.xml
+3) Do not specify below property in yarn-site.xml
+yarn.nodemanager.webapp.https.address and yarn.resourcemanager.webapp.https.address
+Here, the default value of above two property will be considered.
+4) Go to nodemanager web UI "https://&lt;nodemanager host&gt;:8044/node"
+5) Click on RM_HOME link 
+This link redirects to "https://&lt;nodemanager host&gt;:8090/cluster" instead "https://&lt;resourcemanager host&gt;:8090/cluster"
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1256">YARN-1256</a>.
+     Critical sub-task reported by Bikas Saha and fixed by Xuan Gong <br>
+     <b>NM silently ignores non-existent service in StartContainerRequest</b><br>
+     <blockquote>A container can set token service metadata for a service, say shuffle_service. If that service does not exist then the errors is silently ignored. Later, when the next container wants to access data written to shuffle_service by the first task, then it fails because the service does not have the token that was supposed to be set by the first task.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1254">YARN-1254</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Omkar Vinit Joshi <br>
+     <b>NM is polluting container's credentials</b><br>
+     <blockquote>Before launching the container, NM is using the same credential object and so is polluting what container should see. We should fix this.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1251">YARN-1251</a>.
+     Major bug reported by Junping Du and fixed by Xuan Gong (applications/distributed-shell)<br>
+     <b>TestDistributedShell#TestDSShell failed with timeout</b><br>
+     <blockquote>TestDistributedShell#TestDSShell on trunk Jenkins are failed consistently recently.
+The Stacktrace is:
+{code}
+java.lang.Exception: test timed out after 90000 milliseconds
+	at com.google.protobuf.LiteralByteString.&lt;init&gt;(LiteralByteString.java:234)
+	at com.google.protobuf.ByteString.copyFromUtf8(ByteString.java:255)
+	at org.apache.hadoop.ipc.protobuf.ProtobufRpcEngineProtos$RequestHeaderProto.getMethodNameBytes(ProtobufRpcEngineProtos.java:286)
+	at org.apache.hadoop.ipc.protobuf.ProtobufRpcEngineProtos$RequestHeaderProto.getSerializedSize(ProtobufRpcEngineProtos.java:462)
+	at com.google.protobuf.AbstractMessageLite.writeDelimitedTo(AbstractMessageLite.java:84)
+	at org.apache.hadoop.ipc.ProtobufRpcEngine$RpcMessageWithHeader.write(ProtobufRpcEngine.java:302)
+	at org.apache.hadoop.ipc.Client$Connection.sendRpcRequest(Client.java:989)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1377)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1357)
+	at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:206)
+	at $Proxy70.getApplicationReport(Unknown Source)
+	at org.apache.hadoop.yarn.api.impl.pb.client.ApplicationClientProtocolPBClientImpl.getApplicationReport(ApplicationClientProtocolPBClientImpl.java:137)
+	at sun.reflect.GeneratedMethodAccessor40.invoke(Unknown Source)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:25)
+	at java.lang.reflect.Method.invoke(Method.java:597)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:185)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:101)
+	at $Proxy71.getApplicationReport(Unknown Source)
+	at org.apache.hadoop.yarn.client.api.impl.YarnClientImpl.getApplicationReport(YarnClientImpl.java:195)
+	at org.apache.hadoop.yarn.applications.distributedshell.Client.monitorApplication(Client.java:622)
+	at org.apache.hadoop.yarn.applications.distributedshell.Client.run(Client.java:597)
+	at org.apache.hadoop.yarn.applications.distributedshell.TestDistributedShell.testDSShell(TestDistributedShell.java:125)
+{code}
+For details, please refer:
+https://builds.apache.org/job/PreCommit-YARN-Build/2039//testReport/</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1247">YARN-1247</a>.
+     Major bug reported by Roman Shaposhnik and fixed by Roman Shaposhnik (nodemanager)<br>
+     <b>test-container-executor has gotten out of sync with the changes to container-executor</b><br>
+     <blockquote>If run under the super-user account test-container-executor.c fails in multiple different places. It would be nice to fix it so that we have better testing of LCE functionality.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1246">YARN-1246</a>.
+     Minor improvement reported by Arpit Gupta and fixed by Arpit Gupta <br>
+     <b>Log application status in the rm log when app is done running</b><br>
+     <blockquote>Since there is no yarn history server it becomes difficult to determine what the status of an old application is. One has to be familiar with the state transition in yarn to know what means a success.
+
+We should add a log at info level that captures what the finalStatus of an app is. This would be helpful while debugging applications if the RM has restarted and we no longer can use the UI.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1236">YARN-1236</a>.
+     Major bug reported by Sandy Ryza and fixed by Sandy Ryza (resourcemanager)<br>
+     <b>FairScheduler setting queue name in RMApp is not working </b><br>
+     <blockquote>The fair scheduler sometimes picks a different queue than the one an application was submitted to, such as when user-as-default-queue is turned on.  It needs to update the queue name in the RMApp so that this choice will be reflected in the UI.
+
+This isn't working because the scheduler is looking up the RMApp by application attempt id instead of app id and failing to find it.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1229">YARN-1229</a>.
+     Blocker bug reported by Tassapol Athiapinya and fixed by Xuan Gong (nodemanager)<br>
+     <b>Define constraints on Auxiliary Service names. Change ShuffleHandler service name from mapreduce.shuffle to mapreduce_shuffle.</b><br>
+     <blockquote>I run sleep job. If AM fails to start, this exception could occur:
+
+13/09/20 11:00:23 INFO mapreduce.Job: Job job_1379673267098_0020 failed with state FAILED due to: Application application_1379673267098_0020 failed 1 times due to AM Container for appattempt_1379673267098_0020_000001 exited with  exitCode: 1 due to: Exception from container-launch:
+org.apache.hadoop.util.Shell$ExitCodeException: /myappcache/application_1379673267098_0020/container_1379673267098_0020_01_000001/launch_container.sh: line 12: export: `NM_AUX_SERVICE_mapreduce.shuffle=AAA0+gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+': not a valid identifier
+
+at org.apache.hadoop.util.Shell.runCommand(Shell.java:464)
+at org.apache.hadoop.util.Shell.run(Shell.java:379)
+at org.apache.hadoop.util.Shell$ShellCommandExecutor.execute(Shell.java:589)
+at org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor.launchContainer(DefaultContainerExecutor.java:195)
+at org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.call(ContainerLaunch.java:270)
+at org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.call(ContainerLaunch.java:78)
+at java.util.concurrent.FutureTask$Sync.innerRun(FutureTask.java:303)
+at java.util.concurrent.FutureTask.run(FutureTask.java:138)
+at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886)
+at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908)
+at java.lang.Thread.run(Thread.java:662)
+.Failing this attempt.. Failing the application.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1228">YARN-1228</a>.
+     Major improvement reported by Sandy Ryza and fixed by Sandy Ryza (scheduler)<br>
+     <b>Clean up Fair Scheduler configuration loading</b><br>
+     <blockquote>Currently the Fair Scheduler is configured in two ways
+* An allocations file that has a different format than the standard Hadoop configuration file, which makes it easier to specify hierarchical objects like queues and their properties. 
+* With properties like yarn.scheduler.fair.max.assign that are specified in the standard Hadoop configuration format.
+
+The standard and default way of configuring it is to use fair-scheduler.xml as the allocations file and to put the yarn.scheduler properties in yarn-site.xml.
+
+It is also possible to specify a different file as the allocations file, and to place the yarn.scheduler properties in fair-scheduler.xml, which will be interpreted as in the standard Hadoop configuration format.  This flexibility is both confusing and unnecessary.
+
+Additionally, the allocation file is loaded as fair-scheduler.xml from the classpath if it is not specified, but is loaded as a File if it is.  This causes two problems
+1. We see different behavior when not setting the yarn.scheduler.fair.allocation.file, and setting it to fair-scheduler.xml, which is its default.
+2. Classloaders may choose to cache resources, which can break the reload logic when yarn.scheduler.fair.allocation.file is not specified.
+
+We should never allow the yarn.scheduler properties to go into fair-scheduler.xml.  And we should always load the allocations file as a file, not as a resource on the classpath.  To preserve existing behavior and allow loading files from the classpath, we can look for files on the classpath, but strip of their scheme and interpret them as Files.
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1221">YARN-1221</a>.
+     Major bug reported by Sandy Ryza and fixed by Siqi Li (resourcemanager , scheduler)<br>
+     <b>With Fair Scheduler, reserved MB reported in RM web UI increases indefinitely</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1219">YARN-1219</a>.
+     Major bug reported by shanyu zhao and fixed by shanyu zhao (nodemanager)<br>
+     <b>FSDownload changes file suffix making FileUtil.unTar() throw exception</b><br>
+     <blockquote>While running a Hive join operation on Yarn, I saw exception as described below. This is caused by FSDownload copy the files into a temp file and change the suffix into ".tmp" before unpacking it. In unpack(), it uses FileUtil.unTar() which will determine if the file is "gzipped" by looking at the file suffix:
+{code}
+boolean gzipped = inFile.toString().endsWith("gz");
+{code}
+
+To fix this problem, we can remove the ".tmp" in the temp file name.
+
+Here is the detailed exception:
+
+org.apache.commons.compress.archivers.tar.TarArchiveInputStream.getNextTarEntry(TarArchiveInputStream.java:240)
+	at org.apache.hadoop.fs.FileUtil.unTarUsingJava(FileUtil.java:676)
+	at org.apache.hadoop.fs.FileUtil.unTar(FileUtil.java:625)
+	at org.apache.hadoop.yarn.util.FSDownload.unpack(FSDownload.java:203)
+	at org.apache.hadoop.yarn.util.FSDownload.call(FSDownload.java:287)
+	at org.apache.hadoop.yarn.util.FSDownload.call(FSDownload.java:50)
+	at java.util.concurrent.FutureTask$Sync.innerRun(FutureTask.java:334)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:166)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:471)
+	at java.util.concurrent.FutureTask$Sync.innerRun(FutureTask.java:334)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:166)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1110)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:603)
+
+at java.lang.Thread.run(Thread.java:722)</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1215">YARN-1215</a>.
+     Major bug reported by Chuan Liu and fixed by Chuan Liu (api)<br>
+     <b>Yarn URL should include userinfo</b><br>
+     <blockquote>In the {{org.apache.hadoop.yarn.api.records.URL}} class, we don't have an userinfo as part of the URL. When converting a {{java.net.URI}} object into the YARN URL object in {{ConverterUtils.getYarnUrlFromURI()}} method, we will set uri host as the url host. If the uri has a userinfo part, the userinfo is discarded. This will lead to information loss if the original uri has the userinfo, e.g. foo://username:password@example.com will be converted to foo://example.com and username/password information is lost during the conversion.
+
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1214">YARN-1214</a>.
+     Critical sub-task reported by Jian He and fixed by Jian He (resourcemanager)<br>
+     <b>Register ClientToken MasterKey in SecretManager after it is saved</b><br>
+     <blockquote>Currently, app attempt ClientToken master key is registered before it is saved. This can cause problem that before the master key is saved, client gets the token and RM also crashes, RM cannot reloads the master key back after it restarts as it is not saved. As a result, client is holding an invalid token.
+
+We can register the client token master key after it is saved in the store.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1213">YARN-1213</a>.
+     Major improvement reported by Sandy Ryza and fixed by Sandy Ryza (scheduler)<br>
+     <b>Restore config to ban submitting to undeclared pools in the Fair Scheduler</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1204">YARN-1204</a>.
+     Major sub-task reported by Yesha Vora and fixed by Omkar Vinit Joshi <br>
+     <b>Need to add https port related property in Yarn</b><br>
+     <blockquote>There is no yarn property available to configure https port for Resource manager, nodemanager and history server. Currently, Yarn services uses the port defined for http [defined by 'mapreduce.jobhistory.webapp.address','yarn.nodemanager.webapp.address', 'yarn.resourcemanager.webapp.address'] for running services on https protocol.
+
+Yarn should have list of property to assign https port for RM, NM and JHS.
+It can be like below.
+yarn.nodemanager.webapp.https.address
+yarn.resourcemanager.webapp.https.address
+mapreduce.jobhistory.webapp.https.address </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1203">YARN-1203</a>.
+     Major sub-task reported by Yesha Vora and fixed by Omkar Vinit Joshi <br>
+     <b>Application Manager UI does not appear with Https enabled</b><br>
+     <blockquote>Need to add support to disable 'hadoop.ssl.enabled' for MR jobs.
+
+A job should be able to run on http protocol by setting 'hadoop.ssl.enabled' property at job level.
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1167">YARN-1167</a>.
+     Major bug reported by Tassapol Athiapinya and fixed by Xuan Gong (applications/distributed-shell)<br>
+     <b>Submitted distributed shell application shows appMasterHost = empty</b><br>
+     <blockquote>Submit distributed shell application. Once the application turns to be RUNNING state, app master host should not be empty. In reality, it is empty.
+
+==console logs==
+distributedshell.Client: Got application report from ASM for, appId=12, clientToAMToken=null, appDiagnostics=, appMasterHost=, appQueue=default, appMasterRpcPort=0, appStartTime=1378505161360, yarnAppState=RUNNING, distributedFinalState=UNDEFINED, 
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1157">YARN-1157</a>.
+     Major bug reported by Tassapol Athiapinya and fixed by Xuan Gong (resourcemanager)<br>
+     <b>ResourceManager UI has invalid tracking URL link for distributed shell application</b><br>
+     <blockquote>Submit YARN distributed shell application. Goto ResourceManager Web UI. The application definitely appears. In Tracking UI column, there will be history link. Click on that link. Instead of showing application master web UI, HTTP error 500 would appear.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1149">YARN-1149</a>.
+     Major bug reported by Ramya Sunil and fixed by Xuan Gong <br>
+     <b>NM throws InvalidStateTransitonException: Invalid event: APPLICATION_LOG_HANDLING_FINISHED at RUNNING</b><br>
+     <blockquote>When nodemanager receives a kill signal when an application has finished execution but log aggregation has not kicked in, InvalidStateTransitonException: Invalid event: APPLICATION_LOG_HANDLING_FINISHED at RUNNING is thrown
+
+{noformat}
+2013-08-25 20:45:00,875 INFO  logaggregation.AppLogAggregatorImpl (AppLogAggregatorImpl.java:finishLogAggregation(254)) - Application just finished : application_1377459190746_0118
+2013-08-25 20:45:00,876 INFO  logaggregation.AppLogAggregatorImpl (AppLogAggregatorImpl.java:uploadLogsForContainer(105)) - Starting aggregate log-file for app application_1377459190746_0118 at /app-logs/foo/logs/application_1377459190746_0118/&lt;host&gt;_45454.tmp
+2013-08-25 20:45:00,876 INFO  logaggregation.LogAggregationService (LogAggregationService.java:stopAggregators(151)) - Waiting for aggregation to complete for application_1377459190746_0118
+2013-08-25 20:45:00,891 INFO  logaggregation.AppLogAggregatorImpl (AppLogAggregatorImpl.java:uploadLogsForContainer(122)) - Uploading logs for container container_1377459190746_0118_01_000004. Current good log dirs are /tmp/yarn/local
+2013-08-25 20:45:00,915 INFO  logaggregation.AppLogAggregatorImpl (AppLogAggregatorImpl.java:doAppLogAggregation(182)) - Finished aggregate log-file for app application_1377459190746_0118
+2013-08-25 20:45:00,925 WARN  application.Application (ApplicationImpl.java:handle(427)) - Can't handle this event at current state
+org.apache.hadoop.yarn.state.InvalidStateTransitonException: Invalid event: APPLICATION_LOG_HANDLING_FINISHED at RUNNING
+        at org.apache.hadoop.yarn.state.StateMachineFactory.doTransition(StateMachineFactory.java:305) 
+        at org.apache.hadoop.yarn.state.StateMachineFactory.access$300(StateMachineFactory.java:46)
+        at org.apache.hadoop.yarn.state.StateMachineFactory$InternalStateMachine.doTransition(StateMachineFactory.java:448)
+        at org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl.handle(ApplicationImpl.java:425)
+        at org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl.handle(ApplicationImpl.java:59)
+        at org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl$ApplicationEventDispatcher.handle(ContainerManagerImpl.java:697)
+        at org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl$ApplicationEventDispatcher.handle(ContainerManagerImpl.java:689)
+        at org.apache.hadoop.yarn.event.AsyncDispatcher.dispatch(AsyncDispatcher.java:134)
+        at org.apache.hadoop.yarn.event.AsyncDispatcher$1.run(AsyncDispatcher.java:81)   
+        at java.lang.Thread.run(Thread.java:662)
+2013-08-25 20:45:00,926 INFO  application.Application (ApplicationImpl.java:handle(430)) - Application application_1377459190746_0118 transitioned from RUNNING to null
+2013-08-25 20:45:00,927 WARN  monitor.ContainersMonitorImpl (ContainersMonitorImpl.java:run(463)) - org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl is interrupted. Exiting.
+2013-08-25 20:45:00,938 INFO  ipc.Server (Server.java:stop(2437)) - Stopping server on 8040
+{noformat}
+
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1141">YARN-1141</a>.
+     Major bug reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Updating resource requests should be decoupled with updating blacklist</b><br>
+     <blockquote>Currently, in CapacityScheduler and FifoScheduler, blacklist is updated together with resource requests, only when the incoming resource requests are not empty. Therefore, when the incoming resource requests are empty, the blacklist will not be updated even when blacklist additions and removals are not empty.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1131">YARN-1131</a>.
+     Minor sub-task reported by Tassapol Athiapinya and fixed by Siddharth Seth (client)<br>
+     <b>$yarn logs command should return an appropriate error message if YARN application is still running</b><br>
+     <blockquote>In the case when log aggregation is enabled, if a user submits MapReduce job and runs $ yarn logs -applicationId &lt;app ID&gt; while the YARN application is running, the command will return no message and return user back to shell. It is nice to tell the user that log aggregation is in progress.
+
+{code}
+-bash-4.1$ /usr/bin/yarn logs -applicationId application_1377900193583_0002
+-bash-4.1$
+{code}
+
+At the same time, if invalid application ID is given, YARN CLI should say that the application ID is incorrect rather than throwing NoSuchElementException.
+{code}
+$ /usr/bin/yarn logs -applicationId application_00000
+Exception in thread "main" java.util.NoSuchElementException
+at com.google.common.base.AbstractIterator.next(AbstractIterator.java:75)
+at org.apache.hadoop.yarn.util.ConverterUtils.toApplicationId(ConverterUtils.java:124)
+at org.apache.hadoop.yarn.util.ConverterUtils.toApplicationId(ConverterUtils.java:119)
+at org.apache.hadoop.yarn.logaggregation.LogDumper.run(LogDumper.java:110)
+at org.apache.hadoop.yarn.logaggregation.LogDumper.main(LogDumper.java:255)
+
+{code}
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1128">YARN-1128</a>.
+     Major bug reported by Sandy Ryza and fixed by Karthik Kambatla (scheduler)<br>
+     <b>FifoPolicy.computeShares throws NPE on empty list of Schedulables</b><br>
+     <blockquote>FifoPolicy gives all of a queue's share to the earliest-scheduled application.
+
+{code}
+    Schedulable earliest = null;
+    for (Schedulable schedulable : schedulables) {
+      if (earliest == null ||
+          schedulable.getStartTime() &lt; earliest.getStartTime()) {
+        earliest = schedulable;
+      }
+    }
+    earliest.setFairShare(Resources.clone(totalResources));
+{code}
+
+If the queue has no schedulables in it, earliest will be left null, leading to an NPE on the last line.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1090">YARN-1090</a>.
+     Major bug reported by Yesha Vora and fixed by Jian He <br>
+     <b>Job does not get into Pending State</b><br>
+     <blockquote>When there is no resource available to run a job, next job should go in pending state. RM UI should show next job as pending app and the counter for the pending app should be incremented.
+
+But Currently. Next job stays in ACCEPTED state and No AM has been assigned to this job.Though Pending App count is not incremented. 
+Running 'job status &lt;nextjob&gt;' shows job state=PREP. 
+
+$ mapred job -status job_1377122233385_0002
+13/08/21 21:59:23 INFO client.RMProxy: Connecting to ResourceManager at host1/ip1
+
+Job: job_1377122233385_0002
+Job File: /ABC/.staging/job_1377122233385_0002/job.xml
+Job Tracking URL : http://host1:port1/application_1377122233385_0002/
+Uber job : false
+Number of maps: 0
+Number of reduces: 0
+map() completion: 0.0
+reduce() completion: 0.0
+Job state: PREP
+retired: false
+reason for failure:</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1070">YARN-1070</a>.
+     Major sub-task reported by Hitesh Shah and fixed by Zhijie Shen (nodemanager)<br>
+     <b>ContainerImpl State Machine: Invalid event: CONTAINER_KILLED_ON_REQUEST at CONTAINER_CLEANEDUP_AFTER_KILL</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1032">YARN-1032</a>.
+     Critical bug reported by Lohit Vijayarenu and fixed by Lohit Vijayarenu <br>
+     <b>NPE in RackResolve</b><br>
+     <blockquote>We found a case where our rack resolve script was not returning rack due to problem with resolving host address. This exception was see in RackResolver.java as NPE, ultimately caught in RMContainerAllocator. 
+
+{noformat}
+2013-08-01 07:11:37,708 ERROR [RMCommunicator Allocator] org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator: ERROR IN CONTACTING RM. 
+java.lang.NullPointerException
+	at org.apache.hadoop.yarn.util.RackResolver.coreResolve(RackResolver.java:99)
+	at org.apache.hadoop.yarn.util.RackResolver.resolve(RackResolver.java:92)
+	at org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator$ScheduledRequests.assignMapsWithLocality(RMContainerAllocator.java:1039)
+	at org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator$ScheduledRequests.assignContainers(RMContainerAllocator.java:925)
+	at org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator$ScheduledRequests.assign(RMContainerAllocator.java:861)
+	at org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator$ScheduledRequests.access$400(RMContainerAllocator.java:681)
+	at org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator.heartbeat(RMContainerAllocator.java:219)
+	at org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator$1.run(RMCommunicator.java:243)
+	at java.lang.Thread.run(Thread.java:722)
+
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-899">YARN-899</a>.
+     Major sub-task reported by Sandy Ryza and fixed by Xuan Gong (scheduler)<br>
+     <b>Get queue administration ACLs working</b><br>
+     <blockquote>The Capacity Scheduler documents the yarn.scheduler.capacity.root.&lt;queue-path&gt;.acl_administer_queue config option for controlling who can administer a queue, but it is not hooked up to anything.  The Fair Scheduler could make use of a similar option as well.  This is a feature-parity regression from MR1.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-890">YARN-890</a>.
+     Major bug reported by Trupti Dhavle and fixed by Xuan Gong (resourcemanager)<br>
+     <b>The roundup for memory values on resource manager UI is misleading</b><br>
+     <blockquote>
+From the yarn-site.xml, I see following values-
+&lt;property&gt;
+&lt;name&gt;yarn.nodemanager.resource.memory-mb&lt;/name&gt;
+&lt;value&gt;4192&lt;/value&gt;
+&lt;/property&gt;
+&lt;property&gt;
+&lt;name&gt;yarn.scheduler.maximum-allocation-mb&lt;/name&gt;
+&lt;value&gt;4192&lt;/value&gt;
+&lt;/property&gt;
+&lt;property&gt;
+&lt;name&gt;yarn.scheduler.minimum-allocation-mb&lt;/name&gt;
+&lt;value&gt;1024&lt;/value&gt;
+&lt;/property&gt;
+
+However the resourcemanager UI shows total memory as 5MB 
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-876">YARN-876</a>.
+     Major bug reported by PengZhang and fixed by PengZhang (resourcemanager)<br>
+     <b>Node resource is added twice when node comes back from unhealthy to healthy</b><br>
+     <blockquote>When an unhealthy restarts, its resource maybe added twice in scheduler.
+First time is at node's reconnection, while node's final state is still "UNHEALTHY".
+And second time is at node's update, while node's state changing from "UNHEALTHY" to "HEALTHY".</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-621">YARN-621</a>.
+     Critical sub-task reported by Allen Wittenauer and fixed by Omkar Vinit Joshi (resourcemanager)<br>
+     <b>RM triggers web auth failure before first job</b><br>
+     <blockquote>On a secure YARN setup, before the first job is executed, going to the web interface of the resource manager triggers authentication errors.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-49">YARN-49</a>.
+     Major sub-task reported by Hitesh Shah and fixed by Vinod Kumar Vavilapalli (applications/distributed-shell)<br>
+     <b>Improve distributed shell application to work on a secure cluster</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5562">MAPREDUCE-5562</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>MR AM should exit when unregister() throws exception</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5554">MAPREDUCE-5554</a>.
+     Minor bug reported by Robert Kanter and fixed by Robert Kanter (test)<br>
+     <b>hdfs-site.xml included in hadoop-mapreduce-client-jobclient tests jar is breaking tests for downstream components</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5551">MAPREDUCE-5551</a>.
+     Blocker sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Binary Incompatibility of O.A.H.U.mapred.SequenceFileAsBinaryOutputFormat.WritableValueBytes</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5545">MAPREDUCE-5545</a>.
+     Major bug reported by Robert Kanter and fixed by Robert Kanter <br>
+     <b>org.apache.hadoop.mapred.TestTaskAttemptListenerImpl.testCommitWindow times out</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5544">MAPREDUCE-5544</a>.
+     Major bug reported by Sandy Ryza and fixed by Sandy Ryza <br>
+     <b>JobClient#getJob loads job conf twice</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5538">MAPREDUCE-5538</a>.
+     Blocker sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>MRAppMaster#shutDownJob shouldn't send job end notification before checking isLastRetry</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5536">MAPREDUCE-5536</a>.
+     Blocker bug reported by Yesha Vora and fixed by Omkar Vinit Joshi <br>
+     <b>mapreduce.jobhistory.webapp.https.address property is not respected</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5533">MAPREDUCE-5533</a>.
+     Major bug reported by Tassapol Athiapinya and fixed by Xuan Gong (applicationmaster)<br>
+     <b>Speculative execution does not function for reduce</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5531">MAPREDUCE-5531</a>.
+     Blocker sub-task reported by Robert Kanter and fixed by Robert Kanter (mrv1 , mrv2)<br>
+     <b>Binary and source incompatibility in mapreduce.TaskID and mapreduce.TaskAttemptID between branch-1 and branch-2</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5530">MAPREDUCE-5530</a>.
+     Blocker sub-task reported by Robert Kanter and fixed by Robert Kanter (mrv1 , mrv2)<br>
+     <b>Binary and source incompatibility in mapred.lib.CombineFileInputFormat between branch-1 and branch-2</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5529">MAPREDUCE-5529</a>.
+     Blocker sub-task reported by Robert Kanter and fixed by Robert Kanter (mrv1 , mrv2)<br>
+     <b>Binary incompatibilities in mapred.lib.TotalOrderPartitioner between branch-1 and branch-2</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5525">MAPREDUCE-5525</a>.
+     Minor test reported by Chuan Liu and fixed by Chuan Liu (mrv2 , test)<br>
+     <b>Increase timeout of TestDFSIO.testAppend and TestMRJobsWithHistoryService.testJobHistoryData</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5523">MAPREDUCE-5523</a>.
+     Major bug reported by Omkar Vinit Joshi and fixed by Omkar Vinit Joshi <br>
+     <b>Need to add https port related property in Job history server</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5515">MAPREDUCE-5515</a>.
+     Major bug reported by Omkar Vinit Joshi and fixed by Omkar Vinit Joshi <br>
+     <b>Application Manager UI does not appear with Https enabled</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5513">MAPREDUCE-5513</a>.
+     Major bug reported by Jason Lowe and fixed by Robert Parker <br>
+     <b>ConcurrentModificationException in JobControl</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5505">MAPREDUCE-5505</a>.
+     Critical sub-task reported by Jian He and fixed by Zhijie Shen <br>
+     <b>Clients should be notified job finished only after job successfully unregistered </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5503">MAPREDUCE-5503</a>.
+     Blocker bug reported by Jason Lowe and fixed by Jian He (mrv2)<br>
+     <b>TestMRJobClient.testJobClient is failing</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5489">MAPREDUCE-5489</a>.
+     Critical bug reported by Yesha Vora and fixed by Zhijie Shen <br>
+     <b>MR jobs hangs as it does not use the node-blacklisting feature in RM requests</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5488">MAPREDUCE-5488</a>.
+     Major bug reported by Arpit Gupta and fixed by Jian He <br>
+     <b>Job recovery fails after killing all the running containers for the app</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5459">MAPREDUCE-5459</a>.
+     Major bug reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Update the doc of running MRv1 examples jar on YARN</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5442">MAPREDUCE-5442</a>.
+     Major bug reported by Yingda Chen and fixed by Yingda Chen (client)<br>
+     <b>$HADOOP_MAPRED_HOME/$HADOOP_CONF_DIR setting not working on Windows</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5170">MAPREDUCE-5170</a>.
+     Trivial bug reported by Sangjin Lee and fixed by Sangjin Lee (mrv2)<br>
+     <b>incorrect exception message if min node size &gt; min rack size</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5308">HDFS-5308</a>.
+     Major improvement reported by Haohui Mai and fixed by Haohui Mai <br>
+     <b>Replace HttpConfig#getSchemePrefix with implicit schemes in HDFS JSP </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5306">HDFS-5306</a>.
+     Major sub-task reported by Suresh Srinivas and fixed by Suresh Srinivas (datanode , namenode)<br>
+     <b>Datanode https port is not available at the namenode</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5300">HDFS-5300</a>.
+     Major bug reported by Vinay and fixed by Vinay (namenode)<br>
+     <b>FSNameSystem#deleteSnapshot() should not check owner in case of permissions disabled</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5299">HDFS-5299</a>.
+     Blocker bug reported by Vinay and fixed by Vinay (namenode)<br>
+     <b>DFS client hangs in updatePipeline RPC when failover happened</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5289">HDFS-5289</a>.
+     Major bug reported by Aaron T. Myers and fixed by Aaron T. Myers (test)<br>
+     <b>Race condition in TestRetryCacheWithHA#testCreateSymlink causes spurious test failure</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5279">HDFS-5279</a>.
+     Major bug reported by Chris Nauroth and fixed by Chris Nauroth (namenode)<br>
+     <b>Guard against NullPointerException in NameNode JSP pages before initialization of FSNamesystem.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5268">HDFS-5268</a>.
+     Major bug reported by Brandon Li and fixed by Brandon Li (nfs)<br>
+     <b>NFS write commit verifier is not set in a few places</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5265">HDFS-5265</a>.
+     Major bug reported by Haohui Mai and fixed by Haohui Mai <br>
+     <b>Namenode fails to start when dfs.https.port is unspecified</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5259">HDFS-5259</a>.
+     Major sub-task reported by Yesha Vora and fixed by Brandon Li (nfs)<br>
+     <b>Support client which combines appended data with old data before sends it to NFS server</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5258">HDFS-5258</a>.
+     Minor bug reported by Chris Nauroth and fixed by Chuan Liu (test)<br>
+     <b>Skip tests in TestHDFSCLI that are not applicable on Windows.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5256">HDFS-5256</a>.
+     Major improvement reported by Haohui Mai and fixed by Haohui Mai (nfs)<br>
+     <b>Use guava LoadingCache to implement DFSClientCache</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5255">HDFS-5255</a>.
+     Major bug reported by Yesha Vora and fixed by Arpit Agarwal <br>
+     <b>Distcp job fails with hsftp when https is enabled in insecure cluster</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5251">HDFS-5251</a>.
+     Major bug reported by Haohui Mai and fixed by Haohui Mai <br>
+     <b>Race between the initialization of NameNode and the http server</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5246">HDFS-5246</a>.
+     Major sub-task reported by Jinghui Wang and fixed by Jinghui Wang (nfs)<br>
+     <b>Make Hadoop nfs server port and mount daemon port configurable</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5230">HDFS-5230</a>.
+     Major sub-task reported by Haohui Mai and fixed by Haohui Mai (nfs)<br>
+     <b>Introduce RpcInfo to decouple XDR classes from the RPC API</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5228">HDFS-5228</a>.
+     Blocker bug reported by Tsz Wo (Nicholas), SZE and fixed by Tsz Wo (Nicholas), SZE (hdfs-client)<br>
+     <b>The RemoteIterator returned by DistributedFileSystem.listFiles(..) may throw NPE</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5186">HDFS-5186</a>.
+     Minor test reported by Chuan Liu and fixed by Chuan Liu (namenode , test)<br>
+     <b>TestFileJournalManager fails on Windows due to file handle leaks</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5139">HDFS-5139</a>.
+     Major improvement reported by Arpit Agarwal and fixed by Arpit Agarwal (tools)<br>
+     <b>Remove redundant -R option from setrep</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5031">HDFS-5031</a>.
+     Blocker bug reported by Vinay and fixed by Vinay (datanode)<br>
+     <b>BlockScanner scans the block multiple times and on restart scans everything</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4817">HDFS-4817</a>.
+     Minor improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>make HDFS advisory caching configurable on a per-file basis</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10020">HADOOP-10020</a>.
+     Blocker sub-task reported by Colin Patrick McCabe and fixed by Sanjay Radia (fs)<br>
+     <b>disable symlinks temporarily</b><br>
+     <blockquote>During review of symbolic links, many issues were found related impact on semantics of existing APIs such FileSystem#listStatus, FileSystem#globStatus etc. There were also many issues brought up about symbolic links and the impact on security and functionality of HDFS. All these issues will be address in the upcoming release 2.3. Until then the feature is temporarily disabled.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10017">HADOOP-10017</a>.
+     Major sub-task reported by Jing Zhao and fixed by Haohui Mai <br>
+     <b>Fix NPE in DFSClient#getDelegationToken when doing Distcp from a secured cluster to an insecured cluster</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10012">HADOOP-10012</a>.
+     Blocker bug reported by Arpit Gupta and fixed by Suresh Srinivas (ha)<br>
+     <b>Secure Oozie jobs fail with delegation token renewal exception in Namenode HA setup</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10003">HADOOP-10003</a>.
+     Major bug reported by Jason Dere and fixed by  (fs)<br>
+     <b>HarFileSystem.listLocatedStatus() fails</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9976">HADOOP-9976</a>.
+     Major bug reported by Karthik Kambatla and fixed by Karthik Kambatla <br>
+     <b>Different versions of avro and avro-maven-plugin</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9948">HADOOP-9948</a>.
+     Minor test reported by Chuan Liu and fixed by Chuan Liu (test)<br>
+     <b>Add a config value to CLITestHelper to skip tests on Windows</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9776">HADOOP-9776</a>.
+     Major bug reported by shanyu zhao and fixed by shanyu zhao (fs)<br>
+     <b>HarFileSystem.listStatus() returns invalid authority if port number is empty</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9761">HADOOP-9761</a>.
+     Blocker bug reported by Andrew Wang and fixed by Andrew Wang (viewfs)<br>
+     <b>ViewFileSystem#rename fails when using DistributedFileSystem</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9758">HADOOP-9758</a>.
+     Major improvement reported by Andrew Wang and fixed by Andrew Wang <br>
+     <b>Provide configuration option for FileSystem/FileContext symlink resolution</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8315">HADOOP-8315</a>.
+     Major improvement reported by Todd Lipcon and fixed by Todd Lipcon (auto-failover , ha)<br>
+     <b>Support SASL-authenticated ZooKeeper in ActiveStandbyElector</b><br>
+     <blockquote></blockquote></li>
+</ul>
+</body></html>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Hadoop  2.1.1-beta Release Notes</title>
 <STYLE type="text/css">
 	H1 {font-family: sans-serif}
