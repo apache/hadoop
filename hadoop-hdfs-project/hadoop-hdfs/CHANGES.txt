@@ -21,9 +21,6 @@ Release 2.3.0 - UNRELEASED
     HDFS-4278. Log an ERROR when DFS_BLOCK_ACCESS_TOKEN_ENABLE config is
     disabled but security is turned on. (Kousuke Saruta via harsh)
 
-    HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
-    (Colin Patrick McCabe)
-
     HDFS-5004. Add additional JMX bean for NameNode status data. Contributed
     by Trevor Lorimer.
 
@@ -94,6 +91,9 @@ Release 2.2.0 - 2013-10-13
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+    HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
+    (Colin Patrick McCabe)
 
     HDFS-5230. Introduce RpcInfo to decouple XDR classes from the RPC API.
     (Haohui Mai via brandonli)
