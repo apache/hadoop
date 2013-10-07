@@ -102,22 +102,7 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10006. Compilation failure in trunk for
     o.a.h.fs.swift.util.JSONUtil (Junping Du via stevel)
 
-Release 2.2.0 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    HADOOP-8315. Support SASL-authenticated ZooKeeper in ActiveStandbyElector
-    (todd)
-
-Release 2.1.2 - UNRELEASED
+Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
 
@@ -133,6 +118,9 @@ Release 2.1.2 - UNRELEASED
 
     HADOOP-9758.  Provide configuration option for FileSystem/FileContext
     symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-8315. Support SASL-authenticated ZooKeeper in ActiveStandbyElector
+    (todd)
 
   OPTIMIZATIONS
 
