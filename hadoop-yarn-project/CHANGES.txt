@@ -54,6 +54,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1232. Configuration to support multiple RMs (Karthik Kambatla via
     bikas)
 
+    YARN-465. fix coverage org.apache.hadoop.yarn.server.webproxy (Aleksey
+    Gorshkov and Andrey Klochkov via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
