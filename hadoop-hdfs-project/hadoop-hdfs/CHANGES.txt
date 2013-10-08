@@ -107,6 +107,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5317. Go back to DFS Home link does not work on datanode webUI
     (Haohui Mai via brandonli)
 
+    HDFS-5316. Namenode ignores the default https port (Haohui Mai via
+    brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
