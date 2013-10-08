@@ -159,6 +159,9 @@ Release 2.2.0 - 2013-10-13
     HDFS-5291. Standby namenode after transition to active goes into safemode.
     (jing9)
 
+    HDFS-5317. Go back to DFS Home link does not work on datanode webUI
+    (Haohui Mai via brandonli)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES

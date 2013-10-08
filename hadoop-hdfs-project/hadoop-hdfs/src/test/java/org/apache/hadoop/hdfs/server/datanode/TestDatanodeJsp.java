@@ -61,9 +61,10 @@ public class TestDatanodeJsp {
     
     InetSocketAddress nnIpcAddress = cluster.getNameNode().getNameNodeAddress();
     InetSocketAddress nnHttpAddress = cluster.getNameNode().getHttpAddress();
-    int dnInfoPort = cluster.getDataNodes().get(0).getInfoPort();
-    
-    URL url = new URL("http://localhost:" + dnInfoPort + "/"
+    String base = JspHelper.Url.url("http", cluster.getDataNodes().get(0)
+        .getDatanodeId());
+
+    URL url = new URL(base + "/"
         + "browseDirectory.jsp" + JspHelper.getUrlParam("dir", 
             URLEncoder.encode(testPath.toString(), "UTF-8"), true)
         + JspHelper.getUrlParam("namenodeInfoPort", Integer
