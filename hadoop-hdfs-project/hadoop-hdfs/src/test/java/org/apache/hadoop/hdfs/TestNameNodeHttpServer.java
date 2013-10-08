@@ -31,9 +31,9 @@ public class TestNameNodeHttpServer {
     System.setProperty("jetty.ssl.password", "foo");
     System.setProperty("jetty.ssl.keypassword", "bar");
 
-    MiniDFSCluster dfsCluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(0).build();
-    dfsCluster.waitActive();
-    dfsCluster.shutdown();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+        .build();
+
+    cluster.shutdown();
   }
 }
