@@ -15,25 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.ipc;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * This exception is thrown when the name node is in safe mode.
- * Client cannot modified namespace until the safe mode is off. 
- * 
+ * Exception thrown by a server typically to indicate that server is in a state
+ * where request cannot be processed temporarily (such as still starting up).
+ * Client may retry the request. If the service is up, the server may be able to
+ * process a retried request.
  */
-@InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class SafeModeException extends IOException {
-  private static final long serialVersionUID = 1L;
-
-  public SafeModeException(String text, FSNamesystem.SafeModeInfo mode ) {
-    super(text + ". Name node is in safe mode.\n" + mode.getTurnOffTip());
+public class RetriableException extends IOException {
+  private static final long serialVersionUID = 1915561725516487301L;
+  
+  public RetriableException(Exception e) {
+    super(e);
+  }
+  
+  public RetriableException(String msg) {
+    super(msg);
   }
 }
