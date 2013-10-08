@@ -52,6 +52,7 @@ public class NameNodeHttpServer {
   private final NameNode nn;
   
   private InetSocketAddress httpAddress;
+  private InetSocketAddress httpsAddress;
   private InetSocketAddress bindAddress;
   
   public static final String NAMENODE_ADDRESS_ATTRIBUTE_KEY = "name.node.address";
@@ -99,14 +100,15 @@ public class NameNodeHttpServer {
     boolean certSSL = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY, false);
     if (certSSL) {
       boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
-      InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(infoHost + ":" + conf.get(
-        DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, "0"));
+      httpsAddress = NetUtils.createSocketAddr(conf.get(
+          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT));
+
       Configuration sslConf = new Configuration(false);
-      if (certSSL) {
-        sslConf.addResource(conf.get(DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
-                                     "ssl-server.xml"));
-      }
-      httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth);
+      sslConf.addResource(conf.get(
+          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
+      httpServer.addSslListener(httpsAddress, sslConf, needClientAuth);
       // assume same ssl port for all datanodes
       InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.get(
         DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, infoHost + ":" + 50475));
@@ -161,6 +163,10 @@ public class NameNodeHttpServer {
 
   public InetSocketAddress getHttpAddress() {
     return httpAddress;
+  }
+
+  public InetSocketAddress getHttpsAddress() {
+    return httpsAddress;
   }
 
   /**
