@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,8 @@
 package org.apache.hadoop.io;
 
 import java.io.*;
+
+import org.junit.Assert;
 
 import junit.framework.TestCase;
 
@@ -61,4 +63,50 @@ public class TestArrayWritable extends TestCase {
       assertEquals(destElements[i],elements[i]);
     }
   }
+  
+ /**
+  * test {@link ArrayWritable} toArray() method 
+  */
+  public void testArrayWritableToArray() {
+    Text[] elements = {new Text("zero"), new Text("one"), new Text("two")};
+    TextArrayWritable arrayWritable = new TextArrayWritable();
+    arrayWritable.set(elements);
+    Object array = arrayWritable.toArray();
+  
+    assertTrue("TestArrayWritable testArrayWritableToArray error!!! ", array instanceof Text[]);
+    Text[] destElements = (Text[]) array;
+  
+    for (int i = 0; i < elements.length; i++) {
+      assertEquals(destElements[i], elements[i]);
+    }
+  }
+  
+  /**
+   * test {@link ArrayWritable} constructor with null
+   */
+  public void testNullArgument() {
+    try {
+      Class<? extends Writable> valueClass = null;
+      new ArrayWritable(valueClass);
+      fail("testNullArgument error !!!");
+    } catch (IllegalArgumentException exp) {
+      //should be for test pass
+    } catch (Exception e) {
+      fail("testNullArgument error !!!");
+    }
+  }
+
+  /**
+   * test {@link ArrayWritable} constructor with {@code String[]} as a parameter
+   */
+  @SuppressWarnings("deprecation")
+  public void testArrayWritableStringConstructor() {
+    String[] original = { "test1", "test2", "test3" };
+    ArrayWritable arrayWritable = new ArrayWritable(original);
+    assertEquals("testArrayWritableStringConstructor class error!!!", 
+        UTF8.class, arrayWritable.getValueClass());
+    Assert.assertArrayEquals("testArrayWritableStringConstructor toString error!!!",
+      original, arrayWritable.toStrings());
+  }
+  
 }
