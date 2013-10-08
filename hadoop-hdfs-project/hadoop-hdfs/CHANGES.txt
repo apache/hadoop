@@ -1,3 +1,4 @@
+
 Hadoop HDFS Change Log
 
 Release 2.2.0 - 2013-10-13
@@ -63,6 +64,9 @@ Release 2.2.0 - 2013-10-13
 
     HDFS-5259. Support client which combines appended data with old data
     before sends it to NFS server. (brandonli)
+
+    HDFS-5307. Support both HTTP and HTTPS in jsp pages (Haohui Mai via
+    branconli)
 
     HDFS-5291. Standby namenode after transition to active goes into safemode.
     (jing9)
