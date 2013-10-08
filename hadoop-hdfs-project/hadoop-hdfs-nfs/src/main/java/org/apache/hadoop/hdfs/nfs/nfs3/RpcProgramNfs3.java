@@ -840,7 +840,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     
     // Add open stream
     OpenFileCtx openFileCtx = new OpenFileCtx(fos, postOpObjAttr, writeDumpDir
-        + "/" + postOpObjAttr.getFileId());
+        + "/" + postOpObjAttr.getFileId(), dfsClient, iug);
     fileHandle = new FileHandle(postOpObjAttr.getFileId());
     writeManager.addOpenFileStream(fileHandle, openFileCtx);
     if (LOG.isDebugEnabled()) {
@@ -1706,8 +1706,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
 
   @Override
-  public COMMIT3Response commit(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client) {
+  public COMMIT3Response commit(XDR xdr, Channel channel, int xid,
+      SecurityHandler securityHandler, InetAddress client) {
     COMMIT3Response response = new COMMIT3Response(Nfs3Status.NFS3_OK);
     DFSClient dfsClient = clientCache.get(securityHandler.getUser());
     if (dfsClient == null) {
@@ -1748,18 +1748,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       long commitOffset = (request.getCount() == 0) ? 0
           : (request.getOffset() + request.getCount());
       
-      int status;
-      if (writeManager.handleCommit(handle, commitOffset)) {
-        status = Nfs3Status.NFS3_OK;
-      } else {
-        status = Nfs3Status.NFS3ERR_IO;
-      }
-      Nfs3FileAttributes postOpAttr = writeManager.getFileAttr(dfsClient,
-          handle, iug);
-      WccData fileWcc = new WccData(Nfs3Utils.getWccAttr(preOpAttr), postOpAttr);
-      return new COMMIT3Response(status, fileWcc,
-          Nfs3Constant.WRITE_COMMIT_VERF);
-
+      // Insert commit as an async request
+      writeManager.handleCommit(dfsClient, handle, commitOffset, channel, xid,
+          preOpAttr);
+      return null;
     } catch (IOException e) {
       LOG.warn("Exception ", e);
       Nfs3FileAttributes postOpAttr = null;
@@ -1892,7 +1884,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     } else if (nfsproc3 == NFSPROC3.PATHCONF) {
       response = pathconf(xdr, securityHandler, client);
     } else if (nfsproc3 == NFSPROC3.COMMIT) {
-      response = commit(xdr, securityHandler, client);
+      response = commit(xdr, channel, xid, securityHandler, client);
     } else {
       // Invalid procedure
       RpcAcceptedReply.getInstance(xid,
