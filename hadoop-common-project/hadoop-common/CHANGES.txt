@@ -407,6 +407,9 @@ Release 2.2.1 - UNRELEASED
 
     HADOOP-10028. Malformed ssl-server.xml.example. (Haohui Mai via jing9)
 
+    HADOOP-10030. FsShell -put/copyFromLocal should support Windows local path.
+    (Chuan Liu via cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

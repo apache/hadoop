@@ -204,13 +204,18 @@ class CopyCommands {
     // commands operating on local paths have no need for glob expansion
     @Override
     protected List<PathData> expandArgument(String arg) throws IOException {
+      List<PathData> items = new LinkedList<PathData>();
       try {
-        List<PathData> items = new LinkedList<PathData>();
         items.add(new PathData(new URI(arg), getConf()));
-        return items;
       } catch (URISyntaxException e) {
-        throw new IOException("unexpected URISyntaxException", e);
+        if (Path.WINDOWS) {
+          // Unlike URI, PathData knows how to parse Windows drive-letter paths.
+          items.add(new PathData(arg, getConf()));
+        } else {
+          throw new IOException("unexpected URISyntaxException", e);
+        }
       }
+      return items;
     }
 
     @Override
