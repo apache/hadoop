@@ -86,6 +86,27 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5266. ElasticByteBufferPool#Key does not implement equals. (cnauroth)
 
+Release 2.2.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-5307. Support both HTTP and HTTPS in jsp pages (Haohui Mai via
+    brandonli)
+
+    HDFS-5291. Standby namenode after transition to active goes into safemode.
+    (jing9)
+
+    HDFS-5317. Go back to DFS Home link does not work on datanode webUI
+    (Haohui Mai via brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
@@ -152,15 +173,6 @@ Release 2.2.0 - 2013-10-13
 
     HDFS-5259. Support client which combines appended data with old data
     before sends it to NFS server. (brandonli)
-
-    HDFS-5307. Support both HTTP and HTTPS in jsp pages (Haohui Mai via
-    branconli)
-
-    HDFS-5291. Standby namenode after transition to active goes into safemode.
-    (jing9)
-
-    HDFS-5317. Go back to DFS Home link does not work on datanode webUI
-    (Haohui Mai via brandonli)
 
 Release 2.1.1-beta - 2013-09-23
 
