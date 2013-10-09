@@ -303,6 +303,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4512. Cover package org.apache.hadoop.hdfs.server.common with tests.
     (Vadim Bondarev via kihwal)
 
+    HDFS-4510. Cover classes ClusterJspHelper/NamenodeJspHelper with unit
+    tests. (Andrey Klochkov via kihwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
