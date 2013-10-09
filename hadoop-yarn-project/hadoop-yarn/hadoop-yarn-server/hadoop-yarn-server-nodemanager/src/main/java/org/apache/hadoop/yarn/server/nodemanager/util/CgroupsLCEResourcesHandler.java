@@ -32,6 +32,7 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +41,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.SystemClock;
 
 public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
@@ -59,8 +62,13 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
   private final int CPU_DEFAULT_WEIGHT = 1024; // set by kernel
   private final Map<String, String> controllerPaths; // Controller -> path
 
+  private long deleteCgroupTimeout;
+  // package private for testing purposes
+  Clock clock;
+  
   public CgroupsLCEResourcesHandler() {
     this.controllerPaths = new HashMap<String, String>();
+    clock = new SystemClock();
   }
 
   @Override
@@ -73,7 +81,8 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     return conf;
   }
 
-  public synchronized void init(LinuxContainerExecutor lce) throws IOException {
+  @VisibleForTesting
+  void initConfig() throws IOException {
 
     this.cgroupPrefix = conf.get(YarnConfiguration.
             NM_LINUX_CONTAINER_CGROUPS_HIERARCHY, "/hadoop-yarn");
@@ -82,6 +91,9 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     this.cgroupMountPath = conf.get(YarnConfiguration.
             NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, null);
 
+    this.deleteCgroupTimeout = conf.getLong(
+        YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT,
+        YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT);
     // remove extra /'s at end or start of cgroupPrefix
     if (cgroupPrefix.charAt(0) == '/') {
       cgroupPrefix = cgroupPrefix.substring(1);
@@ -91,7 +103,11 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     if (cgroupPrefix.charAt(len - 1) == '/') {
       cgroupPrefix = cgroupPrefix.substring(0, len - 1);
     }
+  }
   
+  public void init(LinuxContainerExecutor lce) throws IOException {
+    initConfig();
+    
     // mount cgroups if requested
     if (cgroupMount && cgroupMountPath != null) {
       ArrayList<String> cgroupKVs = new ArrayList<String>();
@@ -158,14 +174,32 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     }
   }
 
-  private void deleteCgroup(String controller, String groupName) {
-    String path = pathForCgroup(controller, groupName);
-
-    LOG.debug("deleteCgroup: " + path);
-
-    if (! new File(path).delete()) {
-      LOG.warn("Unable to delete cgroup at: " + path);
+  @VisibleForTesting
+  boolean deleteCgroup(String cgroupPath) {
+    boolean deleted;
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("deleteCgroup: " + cgroupPath);
     }
+
+    long start = clock.getTime();
+    do {
+      deleted = new File(cgroupPath).delete();
+      if (!deleted) {
+        try {
+          Thread.sleep(20);
+        } catch (InterruptedException ex) {
+          // NOP        
+        }
+      }
+    } while (!deleted && (clock.getTime() - start) < deleteCgroupTimeout);
+
+    if (!deleted) {
+      LOG.warn("Unable to delete cgroup at: " + cgroupPath +
+          ", tried to delete for " + deleteCgroupTimeout + "ms");
+    }
+
+    return deleted;
   }
 
   /*
@@ -185,21 +219,8 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
   }
 
   private void clearLimits(ContainerId containerId) {
-    String containerName = containerId.toString();
-
-    // Based on testing, ApplicationMaster executables don't terminate until
-    // a little after the container appears to have finished. Therefore, we
-    // wait a short bit for the cgroup to become empty before deleting it.
-    if (containerId.getId() == 1) {
-      try {
-        Thread.sleep(500);
-      } catch (InterruptedException e) {
-        // not a problem, continue anyway
-      }
-    }
-
     if (isCpuWeightEnabled()) {
-      deleteCgroup(CONTROLLER_CPU, containerName);
+      deleteCgroup(pathForCgroup(CONTROLLER_CPU, containerId.toString()));
     }
   }
 
