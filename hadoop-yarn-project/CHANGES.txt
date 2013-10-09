@@ -42,6 +42,8 @@ Release 2.3.0 - UNRELEASED
     YARN-465. fix coverage org.apache.hadoop.yarn.server.webproxy (Aleksey
     Gorshkov and Andrey Klochkov via jlowe)
 
+    YARN-976. Document the meaning of a virtual core. (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
