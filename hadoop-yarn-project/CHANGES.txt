@@ -76,9 +76,6 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1268. TestFairScheduler.testContinuousScheduling is flaky (Sandy Ryza)
 
-    YARN-1284. LCE: Race condition leaves dangling cgroups entries for killed
-    containers. (Alejandro Abdelnur via Sandy Ryza)
-
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -90,6 +87,9 @@ Release 2.2.1 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-1284. LCE: Race condition leaves dangling cgroups entries for killed
+    containers. (Alejandro Abdelnur via Sandy Ryza)
 
 Release 2.2.0 - 2013-10-13
 
