@@ -143,6 +143,21 @@ public class WebAppUtils {
       return conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     }
-
+  }
+  
+  /**
+   * if url has scheme then it will be returned as it is else it will return
+   * url with scheme.
+   * @param schemePrefix eg. http:// or https://
+   * @param url
+   * @return url with scheme
+   */
+  public static String getURLWithScheme(String schemePrefix, String url) {
+    // If scheme is provided then it will be returned as it is
+    if (url.indexOf("://") > 0) {
+      return url;
+    } else {
+      return schemePrefix + url;
+    }
   }
 }
