@@ -42,7 +42,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-public class TestFileInputFormat {
+public class TestMRCJCFileInputFormat {
 
   @Test
   public void testAddInputPath() throws IOException {

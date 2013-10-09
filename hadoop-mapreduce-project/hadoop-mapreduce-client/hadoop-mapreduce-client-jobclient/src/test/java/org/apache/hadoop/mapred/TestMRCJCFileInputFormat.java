@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 
 @SuppressWarnings("deprecation")
-public class TestFileInputFormat extends TestCase {
+public class TestMRCJCFileInputFormat extends TestCase {
 
   Configuration conf = new Configuration();
   MiniDFSCluster dfs = null;

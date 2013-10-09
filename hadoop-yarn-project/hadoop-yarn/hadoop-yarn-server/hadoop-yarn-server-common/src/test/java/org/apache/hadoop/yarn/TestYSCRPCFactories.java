@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.junit.Test;
 
-public class TestRPCFactories {
+public class TestYSCRPCFactories {
   
   
   

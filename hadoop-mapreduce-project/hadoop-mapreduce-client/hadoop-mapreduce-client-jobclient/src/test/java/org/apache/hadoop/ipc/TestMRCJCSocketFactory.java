@@ -39,7 +39,7 @@ import org.junit.Test;
 /**
  * This class checks that RPCs can use specialized socket factories.
  */
-public class TestSocketFactory {
+public class TestMRCJCSocketFactory {
 
   /**
    * Check that we can reach a NameNode or Resource Manager using a specific

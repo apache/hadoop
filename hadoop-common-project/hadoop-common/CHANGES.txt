@@ -64,6 +64,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9199. Cover package org.apache.hadoop.io with unit tests (Andrey
     Klochkov via jeagles)
 
+    HADOOP-9470. eliminate duplicate FQN tests in different Hadoop modules
+    (Ivan A. Veselovsky via daryn)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)

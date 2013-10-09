@@ -25,7 +25,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 
-public class TestNetworkTopologyWithNodeGroup extends TestCase {
+public class TestHdfsNetworkTopologyWithNodeGroup extends TestCase {
   private final static NetworkTopologyWithNodeGroup cluster = new 
       NetworkTopologyWithNodeGroup();
 
