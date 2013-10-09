@@ -48,6 +48,9 @@ Release 2.3.0 - UNRELEASED
 
   BUG FIXES
 
+    YARN-461. Fair scheduler should not accept apps with empty string queue name. 
+    (ywskycn via tucu)
+
     YARN-1060. Two tests in TestFairScheduler are missing @Test annotation
     (Niranjan Singh via Sandy Ryza)
 
@@ -1087,9 +1090,6 @@ Release 2.1.0-beta - 2013-08-22
 
     YARN-875. Application can hang if AMRMClientAsync callback thread has
     exception (Xuan Gong via bikas)
-
-    YARN-461. Fair scheduler should not accept apps with empty string queue name. 
-    (ywskycn via tucu)
 
     YARN-968. RM admin commands don't work. (vinodkv via kihwal)
 
