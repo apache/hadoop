@@ -674,7 +674,19 @@ public class YarnConfiguration extends Configuration {
   /** Where the linux container executor should mount cgroups if not found */
   public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH =
     NM_PREFIX + "linux-container-executor.cgroups.mount-path";
-  
+
+
+  /**
+   * Interval of time the linux container executor should try cleaning up
+   * cgroups entry when cleaning up a container. This is required due to what 
+   * it seems a race condition because the SIGTERM/SIGKILL is asynch.
+   */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT =
+   NM_PREFIX + "linux-container-executor.cgroups.delete-timeout-ms";
+
+  public static final long DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT =
+      1000;
+
   /** T-file compression types used to compress aggregated logs.*/
   public static final String NM_LOG_AGG_COMPRESSION_TYPE = 
     NM_PREFIX + "log-aggregation.compression-type";
