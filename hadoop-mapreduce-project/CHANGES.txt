@@ -199,6 +199,9 @@ Release 2.2.1 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-5569. FloatSplitter is not generating correct splits (Nathan
+    Roberts via jlowe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
