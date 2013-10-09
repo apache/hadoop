@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -89,9 +90,6 @@ public class BlockManager {
 
   static final Log LOG = LogFactory.getLog(BlockManager.class);
   public static final Log blockLog = NameNode.blockStateChangeLog;
-
-  /** Default load factor of map */
-  public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
 
   private static final String QUEUE_REASON_CORRUPT_STATE =
     "it has the wrong state or generation stamp";
@@ -244,7 +242,8 @@ public class BlockManager {
     invalidateBlocks = new InvalidateBlocks(datanodeManager);
 
     // Compute the map capacity by allocating 2% of total memory
-    blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
+    blocksMap = new BlocksMap(
+        LightWeightGSet.computeCapacity(2.0, "BlocksMap"));
     blockplacement = BlockPlacementPolicy.getInstance(
         conf, stats, datanodeManager.getNetworkTopology());
     pendingReplications = new PendingReplicationBlocks(conf.getInt(

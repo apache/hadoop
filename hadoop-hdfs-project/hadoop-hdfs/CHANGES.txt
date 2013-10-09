@@ -306,6 +306,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-4510. Cover classes ClusterJspHelper/NamenodeJspHelper with unit
     tests. (Andrey Klochkov via kihwal)
 
+    HDFS-5323.  Remove some deadcode in BlockManager (Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
