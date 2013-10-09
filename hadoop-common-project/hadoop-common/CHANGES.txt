@@ -413,6 +413,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-10030. FsShell -put/copyFromLocal should support Windows local path.
     (Chuan Liu via cnauroth)
 
+    HADOOP-10031. FsShell -get/copyToLocal/moveFromLocal should support Windows
+    local path. (Chuan Liu via cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

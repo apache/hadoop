@@ -457,6 +457,34 @@ public class TestFsShellCopy {
     assertTrue(lfs.exists(srcDir));
   }
   
+  @Test
+  public void testMoveFromWindowsLocalPath() throws Exception {
+    assumeTrue(Path.WINDOWS);
+    Path testRoot = new Path(testRootDir, "testPutFile");
+    lfs.delete(testRoot, true);
+    lfs.mkdirs(testRoot);
+
+    Path target = new Path(testRoot, "target");
+    Path srcFile = new Path(testRoot, new Path("srcFile"));
+    lfs.createNewFile(srcFile);
+
+    String winSrcFile = (new File(srcFile.toUri().getPath()
+        .toString())).getAbsolutePath();
+    shellRun(0, "-moveFromLocal", winSrcFile, target.toString());
+    assertFalse(lfs.exists(srcFile));
+    assertTrue(lfs.exists(target));
+    assertTrue(lfs.isFile(target));
+  }
+
+  @Test
+  public void testGetWindowsLocalPath() throws Exception {
+    assumeTrue(Path.WINDOWS);
+    String winDstFile = (new File(dstPath.toUri().getPath()
+        .toString())).getAbsolutePath();
+    shellRun(0, "-get", srcPath.toString(), winDstFile);
+    checkPath(dstPath, false);
+  }
+  
   private void createFile(Path ... paths) throws IOException {
     for (Path path : paths) {
       FSDataOutputStream out = lfs.create(path);
