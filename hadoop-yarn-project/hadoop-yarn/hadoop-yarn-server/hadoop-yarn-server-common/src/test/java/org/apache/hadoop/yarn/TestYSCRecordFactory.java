@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatRequestPBImpl;
 import org.junit.Test;
 
-public class TestRecordFactory {
+public class TestYSCRecordFactory {
   
   @Test
   public void testPbRecordFactory() {

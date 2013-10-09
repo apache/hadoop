@@ -32,7 +32,7 @@ import org.apache.hadoop.util.ClassUtil;
 
 import static org.junit.Assert.*;
 @Ignore
-public class TestJobConf {
+public class TestMRCJCJobConf {
   private static final String JAR_RELATIVE_PATH =
     "build/test/mapred/testjar/testjob.jar";
   private static final String CLASSNAME = "testjar.ClassWordCount";

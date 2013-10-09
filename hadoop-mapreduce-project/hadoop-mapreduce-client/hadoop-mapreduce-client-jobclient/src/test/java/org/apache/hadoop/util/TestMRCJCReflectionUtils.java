@@ -30,7 +30,7 @@ import org.junit.Test;
  * Test for the JobConf-related parts of common's ReflectionUtils
  * class.
  */
-public class TestReflectionUtils {
+public class TestMRCJCReflectionUtils {
   @Before
   public void setUp() {
     ReflectionUtils.clearCache();

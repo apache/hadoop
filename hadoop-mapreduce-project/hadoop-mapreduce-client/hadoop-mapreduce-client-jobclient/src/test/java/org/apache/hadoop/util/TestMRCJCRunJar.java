@@ -33,7 +33,7 @@ import org.junit.Test;
 /**
  * A test to rest the RunJar class.
  */
-public class TestRunJar {
+public class TestMRCJCRunJar {
 
   private static String TEST_ROOT_DIR = new Path(System.getProperty(
       "test.build.data", "/tmp")).toString();
