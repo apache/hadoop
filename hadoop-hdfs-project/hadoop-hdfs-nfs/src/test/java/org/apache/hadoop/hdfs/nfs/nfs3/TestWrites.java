@@ -19,13 +19,23 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentNavigableMap;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.COMMIT_STATUS;
+import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.CommitCtx;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
+import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
+import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.request.WRITE3Request;
+import org.jboss.netty.channel.Channel;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestWrites {
   @Test
@@ -96,5 +106,62 @@ public class TestWrites {
     Assert.assertTrue(position == 19);
     Assert.assertTrue(limit - position == 1);
     Assert.assertTrue(appendedData.get(position) == (byte) 19);
+  }
+  
+  @Test
+  // Validate all the commit check return codes OpenFileCtx.COMMIT_STATUS, which
+  // includes COMMIT_FINISHED, COMMIT_WAIT, COMMIT_INACTIVE_CTX,
+  // COMMIT_INACTIVE_WITH_PENDING_WRITE, COMMIT_ERROR, and COMMIT_DO_SYNC.
+  public void testCheckCommit() throws IOException {
+    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    Nfs3FileAttributes attr = new Nfs3FileAttributes();
+    HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
+    Mockito.when(fos.getPos()).thenReturn((long) 0);
+
+    OpenFileCtx ctx = new OpenFileCtx(fos, attr, "/dumpFilePath", dfsClient,
+        new IdUserGroup());
+
+    COMMIT_STATUS ret;
+
+    // Test inactive open file context
+    ctx.setActiveStatusForTest(false);
+    ret = ctx.checkCommit(dfsClient, 0, null, 1, attr);
+    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_CTX);
+
+    ctx.getPendingWritesForTest().put(new OffsetRange(5, 10),
+        new WriteCtx(null, 0, 0, 0, null, null, null, 0, false, null));
+    ret = ctx.checkCommit(dfsClient, 0, null, 1, attr);
+    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE);
+
+    // Test request with non zero commit offset
+    ctx.setActiveStatusForTest(true);
+    Mockito.when(fos.getPos()).thenReturn((long) 10);
+    ret = ctx.checkCommit(dfsClient, 5, null, 1, attr);
+    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_DO_SYNC);
+    ret = ctx.checkCommit(dfsClient, 10, null, 1, attr);
+    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_DO_SYNC);
+
+    ConcurrentNavigableMap<Long, CommitCtx> commits = ctx
+        .getPendingCommitsForTest();
+    Assert.assertTrue(commits.size() == 0);
+    ret = ctx.checkCommit(dfsClient, 11, null, 1, attr);
+    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_WAIT);
+    Assert.assertTrue(commits.size() == 1);
+    long key = commits.firstKey();
+    Assert.assertTrue(key == 11);
+
+    // Test request with zero commit offset
+    commits.remove(new Long(11));
+    // There is one pending write [5,10]
+    ret = ctx.checkCommit(dfsClient, 0, null, 1, attr);
+    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_WAIT);
+    Assert.assertTrue(commits.size() == 1);
+    key = commits.firstKey();
+    Assert.assertTrue(key == 9);
+
+    // Empty pending writes
+    ctx.getPendingWritesForTest().remove(new OffsetRange(5, 10));
+    ret = ctx.checkCommit(dfsClient, 0, null, 1, attr);
+    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
   }
 }
