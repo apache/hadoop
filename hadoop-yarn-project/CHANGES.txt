@@ -91,6 +91,10 @@ Release 2.2.1 - UNRELEASED
     YARN-1284. LCE: Race condition leaves dangling cgroups entries for killed
     containers. (Alejandro Abdelnur via Sandy Ryza)
 
+    YARN-1283. Fixed RM to give a fully-qualified proxy URL for an application
+    so that clients don't need to do scheme-mangling. (Omkar Vinit Joshi via
+    vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

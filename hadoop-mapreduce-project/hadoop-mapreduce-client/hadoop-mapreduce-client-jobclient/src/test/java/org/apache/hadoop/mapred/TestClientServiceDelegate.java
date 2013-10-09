@@ -514,7 +514,7 @@ public class TestClientServiceDelegate {
     jobReport.setMapProgress(1.0f);
     jobReport.setReduceProgress(1.0f);
     jobReport.setJobFile("TestJobFilePath");
-    jobReport.setTrackingUrl("TestTrackingUrl");
+    jobReport.setTrackingUrl("http://TestTrackingUrl");
     jobReportResponse.setJobReport(jobReport);
     return jobReportResponse;
   }

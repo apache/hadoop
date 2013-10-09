@@ -33,7 +33,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -424,9 +423,6 @@ public class ClientServiceDelegate {
       String historyTrackingUrl = report.getTrackingUrl();
       String url = StringUtils.isNotEmpty(historyTrackingUrl)
           ? historyTrackingUrl : trackingUrl;
-      if (!UNAVAILABLE.equals(url)) {
-        url = HttpConfig.getSchemePrefix() + url;
-      }
       jobStatus = TypeConverter.fromYarn(report, url);
     }
     return jobStatus;
