@@ -187,6 +187,10 @@ Release 2.3.0 - UNRELEASED
 
     MAPREDUCE-5514. Fix TestRMContainerAllocator. (Zhijie Shen via acmurthy) 
 
+    MAPREDUCE-5102. fix coverage org.apache.hadoop.mapreduce.lib.db and
+    org.apache.hadoop.mapred.lib.db (Aleksey Gorshkov, Andrey Klochkov, and
+    Nathan Roberts via jlowe)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
