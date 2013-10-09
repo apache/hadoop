@@ -54,6 +54,9 @@ HDFS-4949 (Unreleased)
     HDFS-5190. Move cache pool related CLI commands to CacheAdmin.
     (Contributed by Andrew Wang)
 
+    HDFS-5304. Expose if a block replica is cached in getFileBlockLocations.
+    (Contributed by Andrew Wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

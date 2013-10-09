@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
@@ -186,6 +187,14 @@ public class CacheReplicationManager extends ReportProcessor {
   short getCacheReplication(Block block) {
     final BlockCollection bc = blockManager.blocksMap.getBlockCollection(block);
     return bc == null ? 0 : bc.getCacheReplication();
+  }
+
+  public void setCachedLocations(LocatedBlock block) {
+    BlockInfo blockInfo = cachedBlocksMap.getStoredBlock(
+        block.getBlock().getLocalBlock());
+    for (int i=0; i<blockInfo.numNodes(); i++) {
+      block.addCachedLoc(blockInfo.getDatanode(i));
+    }
   }
 
   /**

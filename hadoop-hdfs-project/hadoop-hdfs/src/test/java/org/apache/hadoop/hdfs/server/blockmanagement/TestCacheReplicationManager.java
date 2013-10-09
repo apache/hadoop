@@ -32,6 +32,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.HdfsBlockLocation;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -160,6 +162,18 @@ public class TestCacheReplicationManager {
           descriptor.getPool());
       expected += numBlocksPerFile;
       waitForExpectedNumCachedBlocks(expected);
+      HdfsBlockLocation[] locations =
+          (HdfsBlockLocation[]) dfs.getFileBlockLocations(
+              new Path(paths.get(i)), 0, numBlocksPerFile * BLOCK_SIZE);
+      assertEquals("Unexpected number of locations", numBlocksPerFile,
+          locations.length);
+      for (HdfsBlockLocation loc: locations) {
+        assertEquals("Block should be present on all datanodes",
+            3, loc.getHosts().length);
+        DatanodeInfo[] cachedLocs = loc.getLocatedBlock().getCachedLocations();
+        assertEquals("Block should be cached on all datanodes",
+            loc.getHosts().length, cachedLocs.length);
+      }
     }
     // Uncache and check each path in sequence
     RemoteIterator<PathBasedCacheDescriptor> entries =

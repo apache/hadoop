@@ -1442,6 +1442,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         blockManager.getDatanodeManager().sortLocatedBlocks(
                               clientMachine, lastBlockList);
       }
+      // Set caching information for the block list
+      for (LocatedBlock lb: blocks.getLocatedBlocks()) {
+        cacheReplicationManager.setCachedLocations(lb);
+      }
     }
     return blocks;
   }
