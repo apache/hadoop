@@ -302,54 +302,69 @@ public class QueueManager {
       throw new AllocationConfigurationException("Bad fair scheduler config " +
           "file: top-level element not <allocations>");
     NodeList elements = root.getChildNodes();
+    List<Element> queueElements = new ArrayList<Element>();
     for (int i = 0; i < elements.getLength(); i++) {
       Node node = elements.item(i);
-      if (!(node instanceof Element))
-        continue;
-      Element element = (Element)node;
-      if ("queue".equals(element.getTagName()) ||
-    	  "pool".equals(element.getTagName())) {
-        loadQueue("root", element, minQueueResources, maxQueueResources, queueMaxApps,
-            userMaxApps, queueWeights, queuePolicies, minSharePreemptionTimeouts,
-            queueAcls, queueNamesInAllocFile);
-      } else if ("user".equals(element.getTagName())) {
-        String userName = element.getAttribute("name");
-        NodeList fields = element.getChildNodes();
-        for (int j = 0; j < fields.getLength(); j++) {
-          Node fieldNode = fields.item(j);
-          if (!(fieldNode instanceof Element))
-            continue;
-          Element field = (Element) fieldNode;
-          if ("maxRunningApps".equals(field.getTagName())) {
-            String text = ((Text)field.getFirstChild()).getData().trim();
-            int val = Integer.parseInt(text);
-            userMaxApps.put(userName, val);
+      if (node instanceof Element) {
+        Element element = (Element)node;
+        if ("queue".equals(element.getTagName()) ||
+      	  "pool".equals(element.getTagName())) {
+          queueElements.add(element);
+        } else if ("user".equals(element.getTagName())) {
+          String userName = element.getAttribute("name");
+          NodeList fields = element.getChildNodes();
+          for (int j = 0; j < fields.getLength(); j++) {
+            Node fieldNode = fields.item(j);
+            if (!(fieldNode instanceof Element))
+              continue;
+            Element field = (Element) fieldNode;
+            if ("maxRunningApps".equals(field.getTagName())) {
+              String text = ((Text)field.getFirstChild()).getData().trim();
+              int val = Integer.parseInt(text);
+              userMaxApps.put(userName, val);
+            }
           }
+        } else if ("userMaxAppsDefault".equals(element.getTagName())) {
+          String text = ((Text)element.getFirstChild()).getData().trim();
+          int val = Integer.parseInt(text);
+          userMaxAppsDefault = val;
+        } else if ("fairSharePreemptionTimeout".equals(element.getTagName())) {
+          String text = ((Text)element.getFirstChild()).getData().trim();
+          long val = Long.parseLong(text) * 1000L;
+          fairSharePreemptionTimeout = val;
+        } else if ("defaultMinSharePreemptionTimeout".equals(element.getTagName())) {
+          String text = ((Text)element.getFirstChild()).getData().trim();
+          long val = Long.parseLong(text) * 1000L;
+          defaultMinSharePreemptionTimeout = val;
+        } else if ("queueMaxAppsDefault".equals(element.getTagName())) {
+          String text = ((Text)element.getFirstChild()).getData().trim();
+          int val = Integer.parseInt(text);
+          queueMaxAppsDefault = val;
+        } else if ("defaultQueueSchedulingPolicy".equals(element.getTagName())
+            || "defaultQueueSchedulingMode".equals(element.getTagName())) {
+          String text = ((Text)element.getFirstChild()).getData().trim();
+          SchedulingPolicy.setDefault(text);
+          defaultSchedPolicy = SchedulingPolicy.getDefault();
+        } else {
+          LOG.warn("Bad element in allocations file: " + element.getTagName());
         }
-      } else if ("userMaxAppsDefault".equals(element.getTagName())) {
-        String text = ((Text)element.getFirstChild()).getData().trim();
-        int val = Integer.parseInt(text);
-        userMaxAppsDefault = val;
-      } else if ("fairSharePreemptionTimeout".equals(element.getTagName())) {
-        String text = ((Text)element.getFirstChild()).getData().trim();
-        long val = Long.parseLong(text) * 1000L;
-        fairSharePreemptionTimeout = val;
-      } else if ("defaultMinSharePreemptionTimeout".equals(element.getTagName())) {
-        String text = ((Text)element.getFirstChild()).getData().trim();
-        long val = Long.parseLong(text) * 1000L;
-        defaultMinSharePreemptionTimeout = val;
-      } else if ("queueMaxAppsDefault".equals(element.getTagName())) {
-        String text = ((Text)element.getFirstChild()).getData().trim();
-        int val = Integer.parseInt(text);
-        queueMaxAppsDefault = val;
-      } else if ("defaultQueueSchedulingPolicy".equals(element.getTagName())
-          || "defaultQueueSchedulingMode".equals(element.getTagName())) {
-        String text = ((Text)element.getFirstChild()).getData().trim();
-        SchedulingPolicy.setDefault(text);
-        defaultSchedPolicy = SchedulingPolicy.getDefault();
-      } else {
-        LOG.warn("Bad element in allocations file: " + element.getTagName());
       }
+    }
+    
+    // Load queue elements.  A root queue can either be included or omitted.  If
+    // it's included, all other queues must be inside it.
+    for (Element element : queueElements) {
+      String parent = "root";
+      if (element.getAttribute("name").equalsIgnoreCase("root")) {
+        if (queueElements.size() > 1) {
+          throw new AllocationConfigurationException("If configuring root queue,"
+          		+ " no other queues can be placed alongside it.");
+        }
+        parent = null;
+      }
+      loadQueue(parent, element, minQueueResources, maxQueueResources, queueMaxApps,
+          userMaxApps, queueWeights, queuePolicies, minSharePreemptionTimeouts,
+          queueAcls, queueNamesInAllocFile);
     }
 
     // Commit the reload; also create any queue defined in the alloc file
@@ -398,7 +413,10 @@ public class QueueManager {
       Map<String, Long> minSharePreemptionTimeouts,
       Map<String, Map<QueueACL, AccessControlList>> queueAcls, List<String> queueNamesInAllocFile) 
       throws AllocationConfigurationException {
-    String queueName = parentName + "." + element.getAttribute("name");
+    String queueName = element.getAttribute("name");
+    if (parentName != null) {
+      queueName = parentName + "." + queueName;
+    }
     Map<QueueACL, AccessControlList> acls =
         new HashMap<QueueACL, AccessControlList>();
     NodeList fields = element.getChildNodes();

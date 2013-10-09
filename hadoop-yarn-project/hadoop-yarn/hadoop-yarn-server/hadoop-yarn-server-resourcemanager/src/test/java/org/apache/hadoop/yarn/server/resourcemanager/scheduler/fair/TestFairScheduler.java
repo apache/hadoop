@@ -923,12 +923,68 @@ public class TestFairScheduler {
     
     Collection<FSLeafQueue> leafQueues = queueManager.getLeafQueues();
     Assert.assertEquals(4, leafQueues.size());
-    Assert.assertNotNull(queueManager.getLeafQueue("queueA", true));
-    Assert.assertNotNull(queueManager.getLeafQueue("queueB.queueC", true));
-    Assert.assertNotNull(queueManager.getLeafQueue("queueB.queueD", true));
-    Assert.assertNotNull(queueManager.getLeafQueue("default", true));
+    Assert.assertNotNull(queueManager.getLeafQueue("queueA", false));
+    Assert.assertNotNull(queueManager.getLeafQueue("queueB.queueC", false));
+    Assert.assertNotNull(queueManager.getLeafQueue("queueB.queueD", false));
+    Assert.assertNotNull(queueManager.getLeafQueue("default", false));
     // Make sure querying for queues didn't create any new ones:
     Assert.assertEquals(4, leafQueues.size());
+  }
+  
+  @Test
+  public void testConfigureRootQueue() throws Exception {
+    Configuration conf = createConfiguration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>");
+    out.println("<queue name=\"root\">");
+    out.println("  <schedulingPolicy>drf</schedulingPolicy>");
+    out.println("  <queue name=\"child1\">");
+    out.println("    <minResources>1024mb,1vcores</minResources>");
+    out.println("  </queue>");
+    out.println("  <queue name=\"child2\">");
+    out.println("    <minResources>1024mb,4vcores</minResources>");
+    out.println("  </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    QueueManager queueManager = scheduler.getQueueManager();
+    queueManager.initialize();
+    
+    FSQueue root = queueManager.getRootQueue();
+    assertTrue(root.getPolicy() instanceof DominantResourceFairnessPolicy);
+    
+    assertNotNull(queueManager.getLeafQueue("child1", false));
+    assertNotNull(queueManager.getLeafQueue("child2", false));
+  }
+  
+  /**
+   * Verify that you can't place queues at the same level as the root queue in
+   * the allocations file.
+   */
+  @Test (expected = AllocationConfigurationException.class)
+  public void testQueueAlongsideRoot() throws Exception {
+    Configuration conf = createConfiguration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"root\">");
+    out.println("</queue>");
+    out.println("<queue name=\"other\">");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    QueueManager queueManager = scheduler.getQueueManager();
+    queueManager.initialize();
   }
   
   @Test
