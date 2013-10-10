@@ -79,14 +79,11 @@ public class TestJobHistoryServer {
   private static RecordFactory recordFactory = RecordFactoryProvider
           .getRecordFactory(null);
 
-
-  
   JobHistoryServer historyServer=null;
+
   // simple test init/start/stop   JobHistoryServer. Status should change.
-  
   @Test (timeout= 50000 )
   public void testStartStopServer() throws Exception {
-
     historyServer = new JobHistoryServer();
     Configuration config = new Configuration();
     historyServer.init(config);
@@ -99,7 +96,6 @@ public class TestJobHistoryServer {
     assertNotNull(historyServer.getClientService());
     HistoryClientService historyService = historyServer.getClientService();
     assertNotNull(historyService.getClientHandler().getConnectAddress());
-
   }
 
   /*
@@ -126,7 +122,6 @@ public class TestJobHistoryServer {
   }
 
   //Test reports of  JobHistoryServer. History server should get log files from  MRApp and read them
-  
   @Test (timeout= 50000 )
   public void testReports() throws Exception {
     Configuration config = new Configuration();
@@ -159,7 +154,6 @@ public class TestJobHistoryServer {
     
     assertEquals(1, jobs.size());
     assertEquals("job_0_0000",jobs.keySet().iterator().next().toString());
-    
     
     Task task = job.getTasks().values().iterator().next();
     TaskAttempt attempt = task.getAttempts().values().iterator().next();
@@ -274,14 +268,14 @@ public class TestJobHistoryServer {
 
     historyServer.stop();
   }
- // test main method
+
+  // test launch method
   @Test (timeout =60000)
-  public void testMainMethod() throws Exception {
+  public void testLaunch() throws Exception {
 
     ExitUtil.disableSystemExit();
     try {
-      JobHistoryServer.main(new String[0]);
-
+      historyServer = JobHistoryServer.launchJobHistoryServer(new String[0]);
     } catch (ExitUtil.ExitException e) {
       assertEquals(0,e.status);
       ExitUtil.resetFirstExitException();

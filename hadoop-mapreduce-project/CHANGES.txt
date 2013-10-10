@@ -57,6 +57,9 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-4571. TestHsWebServicesJobs fails on jdk7. (tgraves via tucu)
 
+    MAPREDUCE-5425. Junit in TestJobHistoryServer failing in jdk 7 (Robert
+    Parker via jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
