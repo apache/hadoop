@@ -364,6 +364,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5337. should do hsync for a commit request even there is no pending
     writes (brandonli)
 
+    HDFS-5335. Hive query failed with possible race in dfs output stream.
+    (Haohui Mai via suresh)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
