@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.Service;
+import org.junit.After;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
@@ -122,7 +123,6 @@ public class TestAppManager{
 
     @Override
     public void handle(RMAppEvent event) {
-      //RMApp rmApp = this.rmContext.getRMApps().get(appID);
       setAppEventType(event.getType());
       System.out.println("in handle routine " + getAppEventType().toString());
     }   
@@ -174,6 +174,13 @@ public class TestAppManager{
         appMonitor.finishApplication(app.getApplicationId());
       }
     }
+  }
+
+  @After
+  public void teardown() {
+    // reset the type to KILL before starting each test since that is used
+    // as expected initial state in some of the tests
+    setAppEventType(RMAppEventType.KILL); 
   }
 
   @Test
@@ -326,7 +333,7 @@ public class TestAppManager{
     rmContext.getDispatcher().register(RMAppManagerEventType.class, testAppManagerDispatcher);
     ((Service)rmContext.getDispatcher()).init(conf);
     ((Service)rmContext.getDispatcher()).start();
-    Assert.assertEquals("app event type is wrong before", RMAppEventType.KILL, appEventType);
+    Assert.assertEquals("app event type is wrong before", RMAppEventType.KILL, getAppEventType());
   }
 
   @Test
@@ -372,7 +379,6 @@ public class TestAppManager{
       Thread.sleep(1000);
     }
     Assert.assertEquals("app event type sent is wrong", RMAppEventType.START, getAppEventType());
-    setAppEventType(RMAppEventType.KILL); 
     ((Service)rmContext.getDispatcher()).stop();
   }
 
@@ -418,7 +424,6 @@ public class TestAppManager{
       Thread.sleep(1000);
     }
     Assert.assertEquals("app event type sent is wrong", RMAppEventType.START, getAppEventType());
-    setAppEventType(RMAppEventType.KILL); 
     ((Service)rmContext.getDispatcher()).stop();
   }
 
