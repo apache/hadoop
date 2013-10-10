@@ -710,7 +710,8 @@ class OpenFileCtx {
       LOG.debug("Got commit status: " + ret.name());
     }
     // Do the sync outside the lock
-    if (ret == COMMIT_STATUS.COMMIT_DO_SYNC) {
+    if (ret == COMMIT_STATUS.COMMIT_DO_SYNC
+        || ret == COMMIT_STATUS.COMMIT_FINISHED) {
       try {
         // Sync file data and length
         fos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));

@@ -361,6 +361,9 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5281. COMMIT request should not block. (brandonli)
 
+    HDFS-5337. should do hsync for a commit request even there is no pending
+    writes (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
