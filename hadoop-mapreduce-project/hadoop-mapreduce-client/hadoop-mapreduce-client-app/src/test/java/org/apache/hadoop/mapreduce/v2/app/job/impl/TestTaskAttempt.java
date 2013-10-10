@@ -28,7 +28,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -36,22 +35,16 @@ import java.util.Map;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
-import org.apache.hadoop.io.DataInputByteBuffer;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapTaskAttemptImpl;
-import org.apache.hadoop.mapred.WrappedJvmID;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletion;
-import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -78,18 +71,14 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
-import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.Event;
@@ -100,81 +89,6 @@ import org.mockito.ArgumentCaptor;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class TestTaskAttempt{
-  @Test
-  public void testAttemptContainerRequest() throws Exception {
-    //WARNING: This test must run first.  This is because there is an 
-    // optimization where the credentials passed in are cached statically so 
-    // they do not need to be recomputed when creating a new 
-    // ContainerLaunchContext. if other tests run first this code will cache
-    // their credentials and this test will fail trying to look for the
-    // credentials it inserted in.
-    final Text SECRET_KEY_ALIAS = new Text("secretkeyalias");
-    final byte[] SECRET_KEY = ("secretkey").getBytes();
-    Map<ApplicationAccessType, String> acls =
-        new HashMap<ApplicationAccessType, String>(1);
-    acls.put(ApplicationAccessType.VIEW_APP, "otheruser");
-    ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
-    JobId jobId = MRBuilderUtils.newJobId(appId, 1);
-    TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
-    Path jobFile = mock(Path.class);
-
-    EventHandler eventHandler = mock(EventHandler.class);
-    TaskAttemptListener taListener = mock(TaskAttemptListener.class);
-    when(taListener.getAddress()).thenReturn(new InetSocketAddress("localhost", 0));
-
-    JobConf jobConf = new JobConf();
-    jobConf.setClass("fs.file.impl", StubbedFS.class, FileSystem.class);
-    jobConf.setBoolean("fs.file.impl.disable.cache", true);
-    jobConf.set(JobConf.MAPRED_MAP_TASK_ENV, "");
-
-    // setup UGI for security so tokens and keys are preserved
-    jobConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    UserGroupInformation.setConfiguration(jobConf);
-
-    Credentials credentials = new Credentials();
-    credentials.addSecretKey(SECRET_KEY_ALIAS, SECRET_KEY);
-    Token<JobTokenIdentifier> jobToken = new Token<JobTokenIdentifier>(
-        ("tokenid").getBytes(), ("tokenpw").getBytes(),
-        new Text("tokenkind"), new Text("tokenservice"));
-    
-    TaskAttemptImpl taImpl =
-        new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
-            mock(TaskSplitMetaInfo.class), jobConf, taListener,
-            jobToken, credentials, new SystemClock(), null);
-
-    jobConf.set(MRJobConfig.APPLICATION_ATTEMPT_ID, taImpl.getID().toString());
-    ContainerId containerId = BuilderUtils.newContainerId(1, 1, 1, 1);
-    
-    ContainerLaunchContext launchCtx =
-        TaskAttemptImpl.createContainerLaunchContext(acls, containerId,
-            jobConf, jobToken, taImpl.createRemoteTask(),
-            TypeConverter.fromYarn(jobId), mock(Resource.class),
-            mock(WrappedJvmID.class), taListener,
-            credentials);
-
-    Assert.assertEquals("ACLs mismatch", acls, launchCtx.getApplicationACLs());
-    Credentials launchCredentials = new Credentials();
-
-    DataInputByteBuffer dibb = new DataInputByteBuffer();
-    dibb.reset(launchCtx.getContainerTokens());
-    launchCredentials.readTokenStorageStream(dibb);
-
-    // verify all tokens specified for the task attempt are in the launch context
-    for (Token<? extends TokenIdentifier> token : credentials.getAllTokens()) {
-      Token<? extends TokenIdentifier> launchToken =
-          launchCredentials.getToken(token.getService());
-      Assert.assertNotNull("Token " + token.getService() + " is missing",
-          launchToken);
-      Assert.assertEquals("Token " + token.getService() + " mismatch",
-          token, launchToken);
-    }
-
-    // verify the secret key is in the launch context
-    Assert.assertNotNull("Secret key missing",
-        launchCredentials.getSecretKey(SECRET_KEY_ALIAS));
-    Assert.assertTrue("Secret key mismatch", Arrays.equals(SECRET_KEY,
-        launchCredentials.getSecretKey(SECRET_KEY_ALIAS)));
-  }
 
   static public class StubbedFS extends RawLocalFileSystem {
     @Override
@@ -225,7 +139,7 @@ public class TestTaskAttempt{
     //Only a single occurrence of /DefaultRack
     assertEquals(1, requestedRacks.length);
   }
- 
+
   @Test
   public void testHostResolveAttempt() throws Exception {
     TaskAttemptImpl.RequestContainerTransition rct =
@@ -264,7 +178,7 @@ public class TestTaskAttempt{
     }
     assertEquals(0, expected.size());
   }
-  
+
   @Test
   public void testSlotMillisCounterUpdate() throws Exception {
     verifySlotMillis(2048, 2048, 1024);
@@ -323,13 +237,13 @@ public class TestTaskAttempt{
             .getAllCounters().findCounter(JobCounter.SLOTS_MILLIS_REDUCES)
             .getValue());
   }
-  
+
   private TaskAttemptImpl createMapTaskAttemptImplForTest(
       EventHandler eventHandler, TaskSplitMetaInfo taskSplitMetaInfo) {
     Clock clock = new SystemClock();
     return createMapTaskAttemptImplForTest(eventHandler, taskSplitMetaInfo, clock);
   }
-  
+
   private TaskAttemptImpl createMapTaskAttemptImplForTest(
       EventHandler eventHandler, TaskSplitMetaInfo taskSplitMetaInfo, Clock clock) {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
@@ -399,30 +313,30 @@ public class TestTaskAttempt{
       };
     }
   }
-  
+
   @Test
   public void testLaunchFailedWhileKilling() throws Exception {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
-    ApplicationAttemptId appAttemptId = 
+    ApplicationAttemptId appAttemptId =
       BuilderUtils.newApplicationAttemptId(appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId, 0);
     Path jobFile = mock(Path.class);
-    
+
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptListener taListener = mock(TaskAttemptListener.class);
     when(taListener.getAddress()).thenReturn(new InetSocketAddress("localhost", 0));
-    
+
     JobConf jobConf = new JobConf();
     jobConf.setClass("fs.file.impl", StubbedFS.class, FileSystem.class);
     jobConf.setBoolean("fs.file.impl.disable.cache", true);
     jobConf.set(JobConf.MAPRED_MAP_TASK_ENV, "");
     jobConf.set(MRJobConfig.APPLICATION_ATTEMPT_ID, "10");
-    
+
     TaskSplitMetaInfo splits = mock(TaskSplitMetaInfo.class);
     when(splits.getLocations()).thenReturn(new String[] {"127.0.0.1"});
-    
+
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
@@ -434,7 +348,7 @@ public class TestTaskAttempt{
     Container container = mock(Container.class);
     when(container.getId()).thenReturn(contId);
     when(container.getNodeId()).thenReturn(nid);
-    
+
     taImpl.handle(new TaskAttemptEvent(attemptId,
         TaskAttemptEventType.TA_SCHEDULE));
     taImpl.handle(new TaskAttemptContainerAssignedEvent(attemptId,
@@ -447,7 +361,7 @@ public class TestTaskAttempt{
         TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED));
     assertFalse(eventHandler.internalError);
   }
-  
+
   @Test
   public void testContainerCleanedWhileRunning() throws Exception {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
@@ -562,7 +476,7 @@ public class TestTaskAttempt{
     assertFalse("InternalError occurred trying to handle TA_CONTAINER_CLEANED",
         eventHandler.internalError);
   }
-  
+
   @Test
   public void testDoubleTooManyFetchFailure() throws Exception {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
@@ -615,7 +529,7 @@ public class TestTaskAttempt{
         TaskAttemptEventType.TA_DONE));
     taImpl.handle(new TaskAttemptEvent(attemptId,
         TaskAttemptEventType.TA_CONTAINER_CLEANED));
-    
+
     assertEquals("Task attempt is not in succeeded state", taImpl.getState(),
         TaskAttemptState.SUCCEEDED);
     taImpl.handle(new TaskAttemptEvent(attemptId,
@@ -732,7 +646,7 @@ public class TestTaskAttempt{
   
   public static class MockEventHandler implements EventHandler {
     public boolean internalError;
-    
+
     @Override
     public void handle(Event event) {
       if (event instanceof JobEvent) {
@@ -742,6 +656,6 @@ public class TestTaskAttempt{
         }
       }
     }
-    
+
   };
 }

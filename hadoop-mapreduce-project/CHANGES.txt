@@ -60,6 +60,9 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-5425. Junit in TestJobHistoryServer failing in jdk 7 (Robert
     Parker via jlowe)
 
+    MAPREDUCE-4579. Split TestTaskAttempt into two so as to pass tests on
+    jdk7. (Thomas Graves via vinodkv)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
