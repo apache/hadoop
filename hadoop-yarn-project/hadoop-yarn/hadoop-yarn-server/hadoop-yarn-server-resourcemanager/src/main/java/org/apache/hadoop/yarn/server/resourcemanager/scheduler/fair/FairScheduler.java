@@ -788,6 +788,10 @@ public class FairScheduler implements ResourceScheduler {
 
   private synchronized void removeNode(RMNode rmNode) {
     FSSchedulerNode node = nodes.get(rmNode.getNodeID());
+    // This can occur when an UNHEALTHY node reconnects
+    if (node == null) {
+      return;
+    }
     Resources.subtractFrom(clusterCapacity, rmNode.getTotalCapability());
     updateRootQueueMetrics();
 
