@@ -83,6 +83,8 @@ Release 2.2.1 - UNRELEASED
     YARN-879. Fixed tests w.r.t o.a.h.y.server.resourcemanager.Application.
     (Junping Du via devaraj)
 
+    YARN-1265. Fair Scheduler chokes on unhealthy node reconnect (Sandy Ryza)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
