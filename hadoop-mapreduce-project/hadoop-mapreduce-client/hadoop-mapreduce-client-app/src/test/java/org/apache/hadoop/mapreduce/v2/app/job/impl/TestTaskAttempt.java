@@ -340,7 +340,7 @@ public class TestTaskAttempt{
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
-          mock(Token.class), new Credentials(),
+          new Token(), new Credentials(),
           new SystemClock(), null);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
@@ -395,7 +395,7 @@ public class TestTaskAttempt{
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
-          mock(Token.class), new Credentials(),
+          new Token(), new Credentials(),
           new SystemClock(), appCtx);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
@@ -451,7 +451,7 @@ public class TestTaskAttempt{
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
-          mock(Token.class), new Credentials(),
+          new Token(), new Credentials(),
           new SystemClock(), appCtx);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
@@ -510,7 +510,7 @@ public class TestTaskAttempt{
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
-          mock(Token.class), new Credentials(),
+          new Token(), new Credentials(),
           new SystemClock(), appCtx);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
@@ -575,10 +575,9 @@ public class TestTaskAttempt{
     when(clusterInfo.getMinContainerCapability()).thenReturn(resource);
     when(resource.getMemory()).thenReturn(1024);
 
-    TaskAttemptImpl taImpl =
-        new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
-            splits, jobConf, taListener, mock(Token.class),
-            new Credentials(), new SystemClock(), appCtx);
+    TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
+        jobFile, 1, splits, jobConf, taListener,
+        new Token(), new Credentials(), new SystemClock(), appCtx);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
     ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
@@ -628,7 +627,7 @@ public class TestTaskAttempt{
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener, 
-        mock(Token.class), new Credentials(), new SystemClock(), appCtx);
+        new Token(), new Credentials(), new SystemClock(), appCtx);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
     ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);

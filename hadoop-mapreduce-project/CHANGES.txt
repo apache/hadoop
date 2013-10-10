@@ -63,6 +63,9 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-4579. Split TestTaskAttempt into two so as to pass tests on
     jdk7. (Thomas Graves via vinodkv)
 
+    MAPREDUCE-5414. TestTaskAttempt fails in JDK7 with NPE (Nemon Lou via 
+    devaraj)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
