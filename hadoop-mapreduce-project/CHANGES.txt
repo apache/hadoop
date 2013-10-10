@@ -55,6 +55,8 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-4716. TestHsWebServicesJobsQuery.testJobsQueryStateInvalid 
     fails with jdk7. (tgraves via tucu)
 
+    MAPREDUCE-4571. TestHsWebServicesJobs fails on jdk7. (tgraves via tucu)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
