@@ -96,8 +96,7 @@ public class TestFifoScheduler {
           YarnException {
     return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
         hostName, containerManagerPort, nmHttpPort, rackName, capability,
-        resourceManager.getResourceTrackerService(), resourceManager
-            .getRMContext());
+        resourceManager);
   }
   
   private ApplicationAttemptId createAppAttemptId(int appId, int attemptId) {
