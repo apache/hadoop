@@ -95,6 +95,9 @@ Release 2.2.1 - UNRELEASED
     so that clients don't need to do scheme-mangling. (Omkar Vinit Joshi via
     vinodkv)
 
+    YARN-879. Fixed tests w.r.t o.a.h.y.server.resourcemanager.Application.
+    (Junping Du via devaraj)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
