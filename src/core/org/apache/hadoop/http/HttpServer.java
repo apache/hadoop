@@ -160,7 +160,9 @@ public class HttpServer implements FilterContainer {
     
     webServer.addConnector(listener);
 
-    webServer.setThreadPool(new QueuedThreadPool());
+    QueuedThreadPool threadPool = new QueuedThreadPool();
+    threadPool.setName("httpServerThreadPool");
+    webServer.setThreadPool(threadPool);
 
     final String appDir = getWebAppsPath();
     ContextHandlerCollection contexts = new ContextHandlerCollection();

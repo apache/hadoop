@@ -83,7 +83,7 @@ public class JobEndNotifier {
               LOG.error("Notification failure [" + notification + "]", ex);
             }
           }
-        });
+        }, "jobEndNotifier");
     thread.start();
   }
 

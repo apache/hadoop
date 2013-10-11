@@ -151,6 +151,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5569. FloatSplitter is not generating correct splits (Nathan
     Roberts via jlowe)
 
+    MAPREDUCE-5512. TaskTracker hung after failed reconnect to the JobTracker.
+    (ivanmi)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES
