@@ -29,6 +29,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 
 
@@ -66,7 +67,29 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * @return the password to use
    * @throws InvalidToken the token was invalid
    */
-  public abstract byte[] retrievePassword(T identifier) throws InvalidToken;
+  public abstract byte[] retrievePassword(T identifier)
+      throws InvalidToken;
+  
+  /**
+   * The same functionality with {@link #retrievePassword}, except that this 
+   * method can throw a {@link RetriableException} or a {@link StandbyException}
+   * to indicate that client can retry/failover the same operation because of 
+   * temporary issue on the server side.
+   * 
+   * @param identifier the identifier to validate
+   * @return the password to use
+   * @throws InvalidToken the token was invalid
+   * @throws StandbyException the server is in standby state, the client can
+   *         try other servers
+   * @throws RetriableException the token was invalid, and the server thinks 
+   *         this may be a temporary issue and suggests the client to retry
+   * @throws IOException to allow future exceptions to be added without breaking
+   *         compatibility        
+   */
+  public byte[] retriableRetrievePassword(T identifier)
+      throws InvalidToken, StandbyException, RetriableException, IOException {
+    return retrievePassword(identifier);
+  }
   
   /**
    * Create an empty token identifier.
