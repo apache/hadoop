@@ -1295,6 +1295,29 @@ public abstract class Server {
       }
     }
 
+    private Throwable getCauseForInvalidToken(IOException e) {
+      Throwable cause = e;
+      while (cause != null) {
+        if (cause instanceof RetriableException) {
+          return (RetriableException) cause;
+        } else if (cause instanceof StandbyException) {
+          return (StandbyException) cause;
+        } else if (cause instanceof InvalidToken) {
+          // FIXME: hadoop method signatures are restricting the SASL
+          // callbacks to only returning InvalidToken, but some services
+          // need to throw other exceptions (ex. NN + StandyException),
+          // so for now we'll tunnel the real exceptions via an
+          // InvalidToken's cause which normally is not set 
+          if (cause.getCause() != null) {
+            cause = cause.getCause();
+          }
+          return cause;
+        }
+        cause = cause.getCause();
+      }
+      return e;
+    }
+    
     private void saslProcess(RpcSaslProto saslMessage)
         throws WrappedRpcServerException, IOException, InterruptedException {
       if (saslContextEstablished) {
@@ -1307,29 +1330,11 @@ public abstract class Server {
         try {
           saslResponse = processSaslMessage(saslMessage);
         } catch (IOException e) {
-          IOException sendToClient = e;
-          Throwable cause = e;
-          while (cause != null) {
-            if (cause instanceof InvalidToken) {
-              // FIXME: hadoop method signatures are restricting the SASL
-              // callbacks to only returning InvalidToken, but some services
-              // need to throw other exceptions (ex. NN + StandyException),
-              // so for now we'll tunnel the real exceptions via an
-              // InvalidToken's cause which normally is not set 
-              if (cause.getCause() != null) {
-                cause = cause.getCause();
-              }
-              sendToClient = (IOException) cause;
-              break;
-            }
-            cause = cause.getCause();
-          }
           rpcMetrics.incrAuthenticationFailures();
-          String clientIP = this.toString();
           // attempting user could be null
-          AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser +
-            " (" + e.getLocalizedMessage() + ")");
-          throw sendToClient;
+          AUDITLOG.warn(AUTH_FAILED_FOR + this.toString() + ":"
+              + attemptingUser + " (" + e.getLocalizedMessage() + ")");
+          throw (IOException) getCauseForInvalidToken(e);
         }
         
         if (saslServer != null && saslServer.isComplete()) {
