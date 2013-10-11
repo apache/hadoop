@@ -60,6 +60,9 @@ Release 2.3.0 - UNRELEASED
  
     YARN-1268. TestFairScheduler.testContinuousScheduling is flaky (Sandy Ryza)
 
+    YARN-1300. SLS tests fail because conf puts YARN properties in
+    fair-scheduler.xml (Ted Yu via Sandy Ryza)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
