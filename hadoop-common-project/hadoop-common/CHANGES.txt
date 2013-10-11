@@ -128,6 +128,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-10031. FsShell -get/copyToLocal/moveFromLocal should support Windows
     local path. (Chuan Liu via cnauroth)
 
+    HADOOP-10039. Add Hive to the list of projects using 
+    AbstractDelegationTokenSecretManager. (Haohui Mai via jing9)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
