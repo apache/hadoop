@@ -114,25 +114,33 @@ public class TestDatanodeConfig {
   public void testMemlockLimit() throws Exception {
     assumeTrue(NativeIO.isAvailable());
     final long memlockLimit = NativeIO.getMemlockLimit();
+
+    // Can't increase the memlock limit past the maximum.
+    assumeTrue(memlockLimit != Long.MAX_VALUE);
+
     Configuration conf = cluster.getConfiguration(0);
-    // Try starting the DN with limit configured to the ulimit
-    conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
-        memlockLimit);
-    if (memlockLimit == Long.MAX_VALUE) {
-      // Can't increase the memlock limit past the maximum.
-      return;
-    }
-    DataNode dn = null;
-    dn = DataNode.createDataNode(new String[]{},  conf);
-    dn.shutdown();
-    // Try starting the DN with a limit > ulimit
-    conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
-        memlockLimit+1);
+    long prevLimit = conf.
+        getLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
+            DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_DEFAULT);
     try {
-      dn = DataNode.createDataNode(new String[]{}, conf);
-    } catch (RuntimeException e) {
-      GenericTestUtils.assertExceptionContains(
-          "less than the datanode's available RLIMIT_MEMLOCK", e);
+      // Try starting the DN with limit configured to the ulimit
+      conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
+          memlockLimit);
+      DataNode dn = null;
+      dn = DataNode.createDataNode(new String[]{},  conf);
+      dn.shutdown();
+      // Try starting the DN with a limit > ulimit
+      conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
+          memlockLimit+1);
+      try {
+        dn = DataNode.createDataNode(new String[]{}, conf);
+      } catch (RuntimeException e) {
+        GenericTestUtils.assertExceptionContains(
+            "more than the datanode's available RLIMIT_MEMLOCK", e);
+      }
+    } finally {
+      conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
+          prevLimit);
     }
   }
 }

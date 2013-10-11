@@ -753,7 +753,7 @@ public class DataNode extends Configured
       if (dnConf.maxLockedMemory > ulimit) {
       throw new RuntimeException(String.format(
           "Cannot start datanode because the configured max locked memory" +
-          " size (%s) of %d bytes is less than the datanode's available" +
+          " size (%s) of %d bytes is more than the datanode's available" +
           " RLIMIT_MEMLOCK ulimit of %d bytes.",
           DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
           dnConf.maxLockedMemory,

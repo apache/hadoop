@@ -83,3 +83,6 @@ HDFS-4949 (Unreleased)
 
     HDFS-5314. Do not expose CachePool type in AddCachePoolOp (Colin Patrick
     McCabe)
+
+    HDFS-5348. Fix error message when dfs.datanode.max.locked.memory is
+    improperly configured. (Colin Patrick McCabe)
