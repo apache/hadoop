@@ -74,6 +74,9 @@ Release 1.3.0 - unreleased
     HDFS-5003. TestNNThroughputBenchmark failed caused by existing directories.
     (Xi Fang via cnauroth)
 
+    MAPREDUCE-5512. TaskTracker hung after failed reconnect to the JobTracker.
+    (ivanmi)
+
 Release 1.2.1 - Unreleased 
 
   INCOMPATIBLE CHANGES

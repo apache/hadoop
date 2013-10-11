@@ -126,6 +126,8 @@ public class TrackerDistributedCacheManager {
 
     this.taskController = controller;
     this.cleanupThread = new CleanupThread(conf);
+    this.cleanupThread.setName("distCacheManagerCleanupThread");
+    this.cleanupThread.setDaemon(true);
   }
 
   /**

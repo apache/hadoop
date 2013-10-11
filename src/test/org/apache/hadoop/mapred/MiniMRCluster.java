@@ -617,7 +617,7 @@ public class MiniMRCluster {
   void startJobTracker(boolean wait) {
     //  Create the JobTracker
     jobTracker = new JobTrackerRunner(conf);
-    jobTrackerThread = new Thread(jobTracker);
+    jobTrackerThread = new Thread(jobTracker, "jobTrackerMain");
         
     jobTrackerThread.start();
     
@@ -712,7 +712,7 @@ public class MiniMRCluster {
    * Add a tasktracker to the Mini-MR cluster.
    */
   void addTaskTracker(TaskTrackerRunner taskTracker) {
-    Thread taskTrackerThread = new Thread(taskTracker);
+    Thread taskTrackerThread = new Thread(taskTracker, "taskTrackerMain");
     taskTrackerList.add(taskTracker);
     taskTrackerThreadList.add(taskTrackerThread);
     taskTrackerThread.start();
