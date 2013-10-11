@@ -180,6 +180,8 @@ public class ApplicationMaster {
   private int numTotalContainers = 1;
   // Memory to request for the container on which the shell command will run
   private int containerMemory = 10;
+  // VirtualCores to request for the container on which the shell command will run
+  private int containerVirtualCores = 1;
   // Priority of the request
   private int requestPriority;
 
@@ -309,6 +311,8 @@ public class ApplicationMaster {
         "Environment for shell script. Specified as env_key=env_val pairs");
     opts.addOption("container_memory", true,
         "Amount of memory in MB to be requested to run the shell command");
+    opts.addOption("container_vcores", true,
+        "Amount of virtual cores to be requested to run the shell command");
     opts.addOption("num_containers", true,
         "No. of containers on which the shell command needs to be executed");
     opts.addOption("priority", true, "Application Priority. Default 0");
@@ -421,6 +425,8 @@ public class ApplicationMaster {
 
     containerMemory = Integer.parseInt(cliParser.getOptionValue(
         "container_memory", "10"));
+    containerVirtualCores = Integer.parseInt(cliParser.getOptionValue(
+        "container_vcores", "1"));
     numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
         "num_containers", "1"));
     if (numTotalContainers == 0) {
@@ -492,6 +498,9 @@ public class ApplicationMaster {
     // resource manager
     int maxMem = response.getMaximumResourceCapability().getMemory();
     LOG.info("Max mem capabililty of resources in this cluster " + maxMem);
+    
+    int maxVCores = response.getMaximumResourceCapability().getVirtualCores();
+    LOG.info("Max vcores capabililty of resources in this cluster " + maxVCores);
 
     // A resource ask cannot exceed the max.
     if (containerMemory > maxMem) {
@@ -499,6 +508,13 @@ public class ApplicationMaster {
           + " Using max value." + ", specified=" + containerMemory + ", max="
           + maxMem);
       containerMemory = maxMem;
+    }
+
+    if (containerVirtualCores > maxVCores) {
+      LOG.info("Container virtual cores specified above max threshold of cluster."
+          + " Using max value." + ", specified=" + containerVirtualCores + ", max="
+          + maxVCores);
+      containerVirtualCores = maxVCores;
     }
 
     // Setup ask for containers from RM
@@ -645,7 +661,9 @@ public class ApplicationMaster {
             + ":" + allocatedContainer.getNodeId().getPort()
             + ", containerNodeURI=" + allocatedContainer.getNodeHttpAddress()
             + ", containerResourceMemory"
-            + allocatedContainer.getResource().getMemory());
+            + allocatedContainer.getResource().getMemory()
+            + ", containerResourceVirtualCores"
+            + allocatedContainer.getResource().getVirtualCores());
         // + ", containerToken"
         // +allocatedContainer.getContainerToken().getIdentifier().toString());
 
@@ -872,9 +890,10 @@ public class ApplicationMaster {
     pri.setPriority(requestPriority);
 
     // Set up resource type requirements
-    // For now, only memory is supported so we set memory requirements
+    // For now, memory and CPU are supported so we set memory and cpu requirements
     Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(containerMemory);
+    capability.setVirtualCores(containerVirtualCores);
 
     ContainerRequest request = new ContainerRequest(capability, null, null,
         pri);
