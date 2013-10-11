@@ -57,6 +57,9 @@ HDFS-4949 (Unreleased)
     HDFS-5304. Expose if a block replica is cached in getFileBlockLocations.
     (Contributed by Andrew Wang)
 
+    HDFS-5224. Refactor PathBasedCache* methods to use a Path rather than a
+    String. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

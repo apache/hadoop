@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
@@ -32,7 +33,7 @@ import com.google.common.base.Preconditions;
 public final class PathBasedCacheDescriptor extends PathBasedCacheDirective {
   private final long entryId;
 
-  public PathBasedCacheDescriptor(long entryId, String path, String pool) {
+  public PathBasedCacheDescriptor(long entryId, Path path, String pool) {
     super(path, pool);
     Preconditions.checkArgument(entryId > 0);
     this.entryId = entryId;

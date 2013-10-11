@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
 
 import com.google.common.base.Preconditions;
@@ -65,6 +66,7 @@ public final class PathBasedCacheEntry {
   }
 
   public PathBasedCacheDescriptor getDescriptor() {
-    return new PathBasedCacheDescriptor(entryId, path, pool.getPoolName());
+    return new PathBasedCacheDescriptor(entryId, new Path(path),
+        pool.getPoolName());
   }
 };

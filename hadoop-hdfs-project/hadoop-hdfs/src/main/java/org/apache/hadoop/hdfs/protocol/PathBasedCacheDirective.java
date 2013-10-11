@@ -25,8 +25,8 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.EmptyPathError;
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPoolNameError;
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPathNameError;
 
@@ -36,21 +36,54 @@ import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.Inval
 @InterfaceStability.Evolving
 @InterfaceAudience.Public
 public class PathBasedCacheDirective {
-  private final String path;
 
-  private final String pool;
+  /**
+   * A builder for creating new PathBasedCacheDirective instances.
+   */
+  public static class Builder {
 
-  public PathBasedCacheDirective(String path, String pool) {
-    Preconditions.checkNotNull(path);
-    Preconditions.checkNotNull(pool);
-    this.path = path;
-    this.pool = pool;
+    private Path path;
+    private String pool;
+
+    /**
+     * Builds a new PathBasedCacheDirective populated with the set properties.
+     * 
+     * @return New PathBasedCacheDirective.
+     */
+    public PathBasedCacheDirective build() {
+      return new PathBasedCacheDirective(path, pool);
+    }
+
+    /**
+     * Sets the path used in this request.
+     * 
+     * @param path The path used in this request.
+     * @return This builder, for call chaining.
+     */
+    public Builder setPath(Path path) {
+      this.path = path;
+      return this;
+    }
+
+    /**
+     * Sets the pool used in this request.
+     * 
+     * @param pool The pool used in this request.
+     * @return This builder, for call chaining.
+     */
+    public Builder setPool(String pool) {
+      this.pool = pool;
+      return this;
+    }
   }
+
+  private final Path path;
+  private final String pool;
 
   /**
    * @return The path used in this request.
    */
-  public String getPath() {
+  public Path getPath() {
     return path;
   }
 
@@ -68,10 +101,7 @@ public class PathBasedCacheDirective {
    *     If this PathBasedCacheDirective is not valid.
    */
   public void validate() throws IOException {
-    if (path.isEmpty()) {
-      throw new EmptyPathError(this);
-    }
-    if (!DFSUtil.isValidName(path)) {
+    if (!DFSUtil.isValidName(path.toUri().getPath())) {
       throw new InvalidPathNameError(this);
     }
     if (pool.isEmpty()) {
@@ -107,5 +137,18 @@ public class PathBasedCacheDirective {
       append(", pool:").append(pool).
       append(" }");
     return builder.toString();
+  }
+
+  /**
+   * Protected constructor.  Callers use Builder to create new instances.
+   * 
+   * @param path The path used in this request.
+   * @param pool The pool used in this request.
+   */
+  protected PathBasedCacheDirective(Path path, String pool) {
+    Preconditions.checkNotNull(path);
+    Preconditions.checkNotNull(pool);
+    this.path = path;
+    this.pool = pool;
   }
 };

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -1009,7 +1010,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
       AddPathBasedCacheDirectiveRequestProto.Builder builder =
           AddPathBasedCacheDirectiveRequestProto.newBuilder();
       builder.setDirective(PathBasedCacheDirectiveProto.newBuilder()
-          .setPath(directive.getPath())
+          .setPath(directive.getPath().toUri().getPath())
           .setPool(directive.getPool())
           .build());
       AddPathBasedCacheDirectiveResponseProto result = 
@@ -1047,7 +1048,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
       ListPathBasedCacheDescriptorsElementProto elementProto =
         response.getElements(i);
       return new PathBasedCacheDescriptor(elementProto.getId(),
-          elementProto.getPath(), elementProto.getPool());
+          new Path(elementProto.getPath()), elementProto.getPool());
     }
 
     @Override

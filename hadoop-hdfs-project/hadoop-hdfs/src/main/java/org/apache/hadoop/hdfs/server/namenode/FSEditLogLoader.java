@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -641,8 +642,10 @@ public class FSEditLogLoader {
     }
     case OP_ADD_PATH_BASED_CACHE_DIRECTIVE: {
       AddPathBasedCacheDirectiveOp addOp = (AddPathBasedCacheDirectiveOp) op;
-      PathBasedCacheDirective d = new PathBasedCacheDirective(addOp.path,
-          addOp.pool);
+      PathBasedCacheDirective d = new PathBasedCacheDirective.Builder().
+          setPath(new Path(addOp.path)).
+          setPool(addOp.pool).
+          build();
       PathBasedCacheDescriptor descriptor =
           fsNamesys.getCacheManager().unprotectedAddDirective(d);
 

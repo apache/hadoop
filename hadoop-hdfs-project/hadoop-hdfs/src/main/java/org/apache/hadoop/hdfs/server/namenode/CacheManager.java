@@ -36,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPoolNameError;
@@ -138,7 +139,7 @@ public final class CacheManager {
   private synchronized PathBasedCacheEntry
       findEntry(PathBasedCacheDirective directive) {
     List<PathBasedCacheEntry> existing =
-        entriesByPath.get(directive.getPath());
+        entriesByPath.get(directive.getPath().toUri().getPath());
     if (existing == null) {
       return null;
     }
@@ -246,8 +247,8 @@ public final class CacheManager {
     CachePool pool = cachePools.get(directive.getPool());
     // Add a new entry with the next available ID.
     PathBasedCacheEntry entry;
-    entry = new PathBasedCacheEntry(getNextEntryId(), directive.getPath(),
-        pool);
+    entry = new PathBasedCacheEntry(getNextEntryId(),
+        directive.getPath().toUri().getPath(), pool);
 
     unprotectedAddEntry(entry);
 
@@ -303,7 +304,7 @@ public final class CacheManager {
     assert namesystem.hasWriteLock();
     PathBasedCacheEntry existing = entriesById.get(id);
     // Remove the corresponding entry in entriesByPath.
-    String path = existing.getDescriptor().getPath();
+    String path = existing.getDescriptor().getPath().toUri().getPath();
     List<PathBasedCacheEntry> entries = entriesByPath.get(path);
     if (entries == null || !entries.remove(existing)) {
       throw new UnexpectedRemovePathBasedCacheDescriptorException(id);
@@ -315,10 +316,11 @@ public final class CacheManager {
 
     // Set the path as uncached in the namesystem
     try {
-      INode node = dir.getINode(existing.getDescriptor().getPath());
+      INode node = dir.getINode(existing.getDescriptor().getPath().toUri().
+          getPath());
       if (node != null && node.isFile()) {
-        namesystem.setCacheReplicationInt(existing.getDescriptor().getPath(),
-            (short) 0);
+        namesystem.setCacheReplicationInt(existing.getDescriptor().getPath().
+            toUri().getPath(), (short) 0);
       }
     } catch (IOException e) {
       LOG.warn("removeDescriptor " + id + ": failure while setting cache"

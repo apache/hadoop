@@ -25,8 +25,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.EmptyPathError;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
@@ -175,6 +177,8 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRespons
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.security.token.Token;
+
+import org.apache.commons.lang.StringUtils;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -1035,8 +1039,13 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       PathBasedCacheDirectiveProto proto = request.getDirective();
-      PathBasedCacheDirective directive =
-          new PathBasedCacheDirective(proto.getPath(), proto.getPool());
+      if (StringUtils.isEmpty(proto.getPath())) {
+        throw new EmptyPathError();
+      }
+      PathBasedCacheDirective directive = new PathBasedCacheDirective.Builder().
+          setPath(new Path(proto.getPath())).
+          setPool(proto.getPool()).
+          build();
       PathBasedCacheDescriptor descriptor =
           server.addPathBasedCacheDirective(directive);
       AddPathBasedCacheDirectiveResponseProto.Builder builder =
@@ -1080,7 +1089,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         builder.addElements(
             ListPathBasedCacheDescriptorsElementProto.newBuilder().
               setId(directive.getEntryId()).
-              setPath(directive.getPath()).
+              setPath(directive.getPath().toUri().getPath()).
               setPool(directive.getPool()));
         prevId = directive.getEntryId();
       }

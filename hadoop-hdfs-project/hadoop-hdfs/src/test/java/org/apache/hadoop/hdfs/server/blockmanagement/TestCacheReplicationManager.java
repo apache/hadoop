@@ -152,12 +152,14 @@ public class TestCacheReplicationManager {
     waitForExpectedNumCachedBlocks(expected);
     // Cache and check each path in sequence
     for (int i=0; i<numFiles; i++) {
-      PathBasedCacheDirective directive = new PathBasedCacheDirective(paths
-          .get(i), pool);
+      PathBasedCacheDirective directive = new PathBasedCacheDirective.Builder().
+          setPath(new Path(paths.get(i))).
+          setPool(pool).
+          build();
       PathBasedCacheDescriptor descriptor =
           nnRpc.addPathBasedCacheDirective(directive);
       assertEquals("Descriptor does not match requested path", paths.get(i),
-          descriptor.getPath());
+          descriptor.getPath().toUri().getPath());
       assertEquals("Descriptor does not match requested pool", pool,
           descriptor.getPool());
       expected += numBlocksPerFile;
@@ -210,8 +212,10 @@ public class TestCacheReplicationManager {
     int numEntries = 10;
     String entryPrefix = "/party-";
     for (int i=0; i<numEntries; i++) {
-      dfs.addPathBasedCacheDirective(new PathBasedCacheDirective(entryPrefix + i,
-          pool));
+      dfs.addPathBasedCacheDirective(new PathBasedCacheDirective.Builder().
+          setPath(new Path(entryPrefix + i)).
+          setPool(pool).
+          build());
     }
     RemoteIterator<PathBasedCacheDescriptor> dit
         = dfs.listPathBasedCacheDescriptors(null, null);
@@ -219,7 +223,7 @@ public class TestCacheReplicationManager {
       assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
       PathBasedCacheDescriptor cd = dit.next();
       assertEquals(i+1, cd.getEntryId());
-      assertEquals(entryPrefix + i, cd.getPath());
+      assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
       assertEquals(pool, cd.getPool());
     }
     assertFalse("Unexpected # of cache descriptors found", dit.hasNext());
@@ -243,7 +247,7 @@ public class TestCacheReplicationManager {
       assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
       PathBasedCacheDescriptor cd = dit.next();
       assertEquals(i+1, cd.getEntryId());
-      assertEquals(entryPrefix + i, cd.getPath());
+      assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
       assertEquals(pool, cd.getPool());
     }
     assertFalse("Unexpected # of cache descriptors found", dit.hasNext());
