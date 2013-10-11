@@ -105,7 +105,7 @@ public class TestDistributedShell {
       }
     }
   }
-
+  
   @Test(timeout=90000)
   public void testDSShell() throws Exception {
 
@@ -118,8 +118,12 @@ public class TestDistributedShell {
         Shell.WINDOWS ? "dir" : "ls",
         "--master_memory",
         "512",
+        "--master_vcores",
+        "2",
         "--container_memory",
-        "128"
+        "128",
+        "--container_vcores",
+        "1"
     };
 
     LOG.info("Initializing DS Client");
@@ -236,6 +240,31 @@ public class TestDistributedShell {
     } catch (IllegalArgumentException e) {
       Assert.assertTrue("The throw exception is not expected",
           e.getMessage().contains("Invalid no. of containers"));
+    }
+    
+    LOG.info("Initializing DS Client with invalid no. of vcores");
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--shell_command",
+          Shell.WINDOWS ? "dir" : "ls",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "-2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1"
+      };
+      client.init(args);
+      Assert.fail("Exception is expected");
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue("The throw exception is not expected",
+          e.getMessage().contains("Invalid virtual cores specified"));
     }
   }
 

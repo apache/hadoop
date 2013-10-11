@@ -16,6 +16,8 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
+
     YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)
 
     YARN-1098. Separate out RM services into Always On and Active (Karthik
