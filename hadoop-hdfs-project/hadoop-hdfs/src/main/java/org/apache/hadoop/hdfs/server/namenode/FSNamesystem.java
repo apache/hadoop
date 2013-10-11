@@ -440,6 +440,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private HAContext haContext;
 
   private final boolean haEnabled;
+  
+  /**
+   * Whether the namenode is in the middle of starting the active service
+   */
+  private volatile boolean startingActiveService = false;
     
   private INodeId inodeId;
   
@@ -888,6 +893,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   void startActiveServices() throws IOException {
+    startingActiveService = true;
     LOG.info("Starting services required for active state");
     writeLock();
     try {
@@ -942,7 +948,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       nnrmthread.start();
     } finally {
       writeUnlock();
+      startingActiveService = false;
     }
+  }
+  
+  /**
+   * @return Whether the namenode is transitioning to active state and is in the
+   *         middle of the {@link #startActiveServices()}
+   */
+  public boolean inTransitionToActive() {
+    return haEnabled && haContext != null
+        && haContext.getState().getServiceState() == HAServiceState.ACTIVE
+        && startingActiveService;
   }
 
   private boolean shouldUseDelegationTokens() {
@@ -6443,11 +6460,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Verifies that the given identifier and password are valid and match.
    * @param identifier Token identifier.
    * @param password Password in the token.
-   * @throws InvalidToken
    */
   public synchronized void verifyToken(DelegationTokenIdentifier identifier,
-      byte[] password) throws InvalidToken {
-    getDelegationTokenSecretManager().verifyToken(identifier, password);
+      byte[] password) throws InvalidToken, RetriableException {
+    try {
+      getDelegationTokenSecretManager().verifyToken(identifier, password);
+    } catch (InvalidToken it) {
+      if (inTransitionToActive()) {
+        throw new RetriableException(it);
+      }
+      throw it;
+    }
   }
   
   @Override
@@ -6462,6 +6485,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @VisibleForTesting
   public EditLogTailer getEditLogTailer() {
     return editLogTailer;
+  }
+  
+  @VisibleForTesting
+  public void setEditLogTailerForTests(EditLogTailer tailer) {
+    this.editLogTailer = tailer;
   }
   
   @VisibleForTesting

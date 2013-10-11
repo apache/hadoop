@@ -125,6 +125,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5335. Hive query failed with possible race in dfs output stream.
     (Haohui Mai via suresh)
 
+    HDFS-5322. HDFS delegation token not found in cache errors seen on secure HA 
+    clusters. (jing9)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
