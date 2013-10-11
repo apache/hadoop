@@ -15,8 +15,6 @@ Trunk (Unreleased)
 
   IMPROVEMENTS
 
-    HDFS-5276. Remove volatile from LightWeightHashSet. (Junping Du via llu)
-
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
     (Junping Du via llu)
 
@@ -256,6 +254,8 @@ Release 2.3.0 - UNRELEASED
     (Colin Patrick McCabe via wang).
 
   IMPROVEMENTS
+
+    HDFS-5276. Remove volatile from LightWeightHashSet. (Junping Du via llu)
 
     HDFS-4657.  Limit the number of blocks logged by the NN after a block
     report to a configurable value.  (Aaron T. Myers via Colin Patrick
