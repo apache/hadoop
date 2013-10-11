@@ -109,7 +109,7 @@ class CapacitySchedulerPage extends RmView {
           _("Absolute Used Capacity:", percent(lqinfo.getAbsoluteUsedCapacity() / 100)).
           _("Absolute Capacity:", percent(lqinfo.getAbsoluteCapacity() / 100)).
           _("Absolute Max Capacity:", percent(lqinfo.getAbsoluteMaxCapacity() / 100)).
-          _("Used Resources:", StringEscapeUtils.escapeHtml(lqinfo.getUsedResources().toString())).
+          _("Used Resources:", StringEscapeUtils.escapeHtml(lqinfo.getResourcesUsed().toString())).
           _("Num Schedulable Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
           _("Num Non-Schedulable Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
           _("Num Containers:", Integer.toString(lqinfo.getNumContainers())).

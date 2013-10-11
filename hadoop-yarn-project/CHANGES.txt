@@ -90,6 +90,10 @@ Release 2.2.1 - UNRELEASED
     YARN-1284. LCE: Race condition leaves dangling cgroups entries for killed
     containers. (Alejandro Abdelnur via Sandy Ryza)
 
+    YARN-1044. used/min/max resources do not display info in the scheduler page
+    (Sangjin Lee via Sandy Ryza)
+
+>>>>>>> .merge-right.r1531447
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
