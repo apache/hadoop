@@ -13,7 +13,8 @@
 
 *.sh     text eol=lf
 
-*.bat    text eol=crlf
-*.cmd    text eol=crlf
-*.csproj text merge=union eol=crlf
-*.sln    text merge=union eol=crlf
+*.bat    binary
+*.cmd    binary
+*.vcxproj binary
+*.csproj binary
+*.sln    binary
