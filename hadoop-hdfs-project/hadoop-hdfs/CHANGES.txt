@@ -255,7 +255,7 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
-    HDFS-5276. Remove volatile from LightWeightHashSet. (Junping Du via llu)
+    HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)
 
     HDFS-4657.  Limit the number of blocks logged by the NN after a block
     report to a configurable value.  (Aaron T. Myers via Colin Patrick
