@@ -133,6 +133,13 @@ public interface MRJobConfig {
 
   public static final String MAPREDUCE_JOB_CLASSLOADER = "mapreduce.job.classloader";
 
+  /**
+   * A comma-separated list of services that function as ShuffleProvider aux-services
+   * (in addition to the built-in ShuffleHandler).
+   * These services can serve shuffle requests from reducetasks.
+   */
+  public static final String MAPREDUCE_JOB_SHUFFLE_PROVIDER_SERVICES = "mapreduce.job.shuffle.provider.services";
+
   public static final String MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES = "mapreduce.job.classloader.system.classes";
 
   public static final String MAPREDUCE_JVM_SYSTEM_PROPERTIES_TO_LOG = "mapreduce.jvm.system-properties-to-log";
