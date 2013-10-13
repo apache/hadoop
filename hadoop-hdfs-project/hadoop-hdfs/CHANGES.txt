@@ -128,6 +128,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5322. HDFS delegation token not found in cache errors seen on secure HA 
     clusters. (jing9)
 
+    HDFS-5329. Update FSNamesystem#getListing() to handle inode path in startAfter
+    token. (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
