@@ -61,6 +61,10 @@ Release 2.2.1 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+  
+    MAPREDUCE-5329. Allow MR applications to use additional AuxServices,
+    which are compatible with the default MapReduce shuffle.
+    (Avner BenHanoch via sseth)
 
   OPTIMIZATIONS
 

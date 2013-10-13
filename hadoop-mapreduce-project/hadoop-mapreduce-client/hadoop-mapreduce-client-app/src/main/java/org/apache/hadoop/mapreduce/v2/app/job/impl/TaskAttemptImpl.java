@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -721,6 +722,32 @@ public abstract class TaskAttemptImpl implements
           jobToken.getService());
       serviceData.put(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
           ShuffleHandler.serializeServiceData(shuffleToken));
+
+      // add external shuffle-providers - if any
+      Collection<String> shuffleProviders = conf.getStringCollection(
+          MRJobConfig.MAPREDUCE_JOB_SHUFFLE_PROVIDER_SERVICES);
+      if (! shuffleProviders.isEmpty()) {
+        Collection<String> auxNames = conf.getStringCollection(
+            YarnConfiguration.NM_AUX_SERVICES);
+
+        for (final String shuffleProvider : shuffleProviders) {
+          if (shuffleProvider.equals(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID)) {
+            continue; // skip built-in shuffle-provider that was already inserted with shuffle secret key
+          }
+          if (auxNames.contains(shuffleProvider)) {
+                LOG.info("Adding ShuffleProvider Service: " + shuffleProvider + " to serviceData");
+                // This only serves for INIT_APP notifications
+                // The shuffle service needs to be able to work with the host:port information provided by the AM
+                // (i.e. shuffle services which require custom location / other configuration are not supported)
+                serviceData.put(shuffleProvider, ByteBuffer.allocate(0));
+          }
+          else {
+            throw new YarnRuntimeException("ShuffleProvider Service: " + shuffleProvider +
+            " was NOT found in the list of aux-services that are available in this NM." +
+            " You may need to specify this ShuffleProvider as an aux-service in your yarn-site.xml");
+          }
+        }
+      }
 
       Apps.addToEnvironment(
           environment,  
