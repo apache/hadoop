@@ -96,7 +96,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1044. used/min/max resources do not display info in the scheduler page
     (Sangjin Lee via Sandy Ryza)
 
->>>>>>> .merge-right.r1531447
+    YARN-1259. In Fair Scheduler web UI, queue num pending and num active apps
+    switched. (Robert Kanter via Sandy Ryza)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
