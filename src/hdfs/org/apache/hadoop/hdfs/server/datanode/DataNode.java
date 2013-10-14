@@ -221,6 +221,7 @@ public class DataNode extends Configured
   private HttpServer infoServer = null;
   DataNodeInstrumentation myMetrics;
   private static InetSocketAddress nameNodeAddr;
+  private static InetSocketAddress nameNodeRpcAddr;
   private InetSocketAddress selfAddr;
   private static DataNode datanodeObject = null;
   private Thread dataNodeThread = null;
@@ -476,6 +477,7 @@ public class DataNode extends Configured
                                        DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_DEFAULT);
 
     DataNode.nameNodeAddr = nameNodeAddr;
+    DataNode.nameNodeRpcAddr = NameNode.getAddress(conf);
 
     //initialize periodic block scanner
     String reason = null;
@@ -709,6 +711,10 @@ public class DataNode extends Configured
 
   public InetSocketAddress getNameNodeAddr() {
     return nameNodeAddr;
+  }
+  
+  public InetSocketAddress getNameNodeRpcAddr() {
+    return nameNodeRpcAddr;
   }
   
   public InetSocketAddress getSelfAddr() {

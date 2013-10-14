@@ -83,7 +83,7 @@ public class JspHelper {
   public JspHelper() {
     fsn = FSNamesystem.getFSNamesystem();
     if (DataNode.getDataNode() != null) {
-      nameNodeAddr = DataNode.getDataNode().getNameNodeAddr();
+      nameNodeAddr = DataNode.getDataNode().getNameNodeRpcAddr();
     }
     else {
       nameNodeAddr = fsn.getDFSNameNodeAddress(); 
