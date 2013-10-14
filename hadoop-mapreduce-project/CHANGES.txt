@@ -66,6 +66,9 @@ Release 2.2.1 - UNRELEASED
     which are compatible with the default MapReduce shuffle.
     (Avner BenHanoch via sseth)
 
+    MAPREDUCE-5463. Deprecate SLOTS_MILLIS counters (Tzuyoshi Ozawa via Sandy
+    Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
