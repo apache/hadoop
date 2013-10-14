@@ -60,6 +60,9 @@ HDFS-4949 (Unreleased)
     HDFS-5224. Refactor PathBasedCache* methods to use a Path rather than a
     String. (cnauroth)
 
+    HDFS-5358. Add replication field to PathBasedCacheDirective.
+    (Contributed by Colin Patrick McCabe)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

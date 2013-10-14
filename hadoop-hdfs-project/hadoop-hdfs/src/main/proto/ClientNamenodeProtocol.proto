@@ -365,7 +365,8 @@ message IsFileClosedResponseProto {
 
 message PathBasedCacheDirectiveProto {
   required string path = 1;
-  required string pool = 2;
+  required uint32 replication = 2;
+  required string pool = 3;
 }
 
 message AddPathBasedCacheDirectiveRequestProto {
@@ -392,7 +393,8 @@ message ListPathBasedCacheDescriptorsRequestProto {
 message ListPathBasedCacheDescriptorsElementProto {
   required int64 id = 1;
   required string pool = 2;
-  required string path = 3;
+  required uint32 replication = 3;
+  required string path = 4;
 }
 
 message ListPathBasedCacheDescriptorsResponseProto {

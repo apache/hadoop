@@ -959,6 +959,7 @@ public class FSEditLog implements LogsPurgeable {
     AddPathBasedCacheDirectiveOp op = AddPathBasedCacheDirectiveOp.getInstance(
         cache.get())
         .setPath(directive.getPath().toUri().getPath())
+        .setReplication(directive.getReplication())
         .setPool(directive.getPool());
     logRpcIds(op, toLogRpcIds);
     logEdit(op);

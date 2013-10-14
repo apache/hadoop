@@ -128,6 +128,7 @@ abstract class ImageVisitor {
     CACHE_POOL_WEIGHT,
     CACHE_NUM_ENTRIES,
     CACHE_ENTRY_PATH,
+    CACHE_ENTRY_REPLICATION,
     CACHE_ENTRY_POOL_NAME
   }
   

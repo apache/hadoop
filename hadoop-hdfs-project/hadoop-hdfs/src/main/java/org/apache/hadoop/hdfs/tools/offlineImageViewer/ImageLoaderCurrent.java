@@ -245,6 +245,7 @@ class ImageLoaderCurrent implements ImageLoader {
     final int numEntries = in.readInt();
     for (int i=0; i<numEntries; i++) {
       v.visit(ImageElement.CACHE_ENTRY_PATH, Text.readString(in));
+      v.visit(ImageElement.CACHE_ENTRY_REPLICATION, in.readShort());
       v.visit(ImageElement.CACHE_ENTRY_POOL_NAME, Text.readString(in));
     }
   }

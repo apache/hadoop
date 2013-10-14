@@ -840,6 +840,7 @@
     <DATA>
       <TXID>63</TXID>
       <PATH>/bar</PATH>
+      <REPLICATION>1</REPLICATION>
       <POOL>poolparty</POOL>
     </DATA>
   </RECORD>

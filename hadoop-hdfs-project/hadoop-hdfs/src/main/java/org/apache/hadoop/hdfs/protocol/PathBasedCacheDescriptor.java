@@ -33,8 +33,9 @@ import com.google.common.base.Preconditions;
 public final class PathBasedCacheDescriptor extends PathBasedCacheDirective {
   private final long entryId;
 
-  public PathBasedCacheDescriptor(long entryId, Path path, String pool) {
-    super(path, pool);
+  public PathBasedCacheDescriptor(long entryId, Path path,
+      short replication, String pool) {
+    super(path, replication, pool);
     Preconditions.checkArgument(entryId > 0);
     this.entryId = entryId;
   }
@@ -54,6 +55,7 @@ public final class PathBasedCacheDescriptor extends PathBasedCacheDirective {
     PathBasedCacheDescriptor other = (PathBasedCacheDescriptor)o;
     return new EqualsBuilder().append(entryId, other.entryId).
         append(getPath(), other.getPath()).
+        append(getReplication(), other.getReplication()).
         append(getPool(), other.getPool()).
         isEquals();
   }
@@ -62,6 +64,7 @@ public final class PathBasedCacheDescriptor extends PathBasedCacheDirective {
   public int hashCode() {
     return new HashCodeBuilder().append(entryId).
         append(getPath()).
+        append(getReplication()).
         append(getPool()).
         hashCode();
   }
@@ -71,6 +74,7 @@ public final class PathBasedCacheDescriptor extends PathBasedCacheDirective {
     StringBuilder builder = new StringBuilder();
     builder.append("{ entryId:").append(entryId).
       append(", path:").append(getPath()).
+      append(", replication:").append(getReplication()).
       append(", pool:").append(getPool()).
       append(" }");
     return builder.toString();

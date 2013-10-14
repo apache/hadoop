@@ -245,6 +245,7 @@ public class OfflineEditsViewerHelper {
     PathBasedCacheDescriptor descriptor =
         dfs.addPathBasedCacheDirective(new PathBasedCacheDirective.Builder().
             setPath(new Path("/bar")).
+            setReplication((short)1).
             setPool(pool).
             build());
     // OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR 34

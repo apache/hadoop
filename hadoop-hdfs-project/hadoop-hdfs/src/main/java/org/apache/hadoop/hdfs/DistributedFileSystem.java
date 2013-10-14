@@ -1595,6 +1595,7 @@ public class DistributedFileSystem extends FileSystem {
         makeQualified(getUri(), getWorkingDirectory());
     return dfs.addPathBasedCacheDirective(new PathBasedCacheDirective.Builder().
         setPath(path).
+        setReplication(directive.getReplication()).
         setPool(directive.getPool()).
         build());
   }
@@ -1634,7 +1635,7 @@ public class DistributedFileSystem extends FileSystem {
         PathBasedCacheDescriptor desc = iter.next();
         Path qualPath = desc.getPath().makeQualified(getUri(), path);
         return new PathBasedCacheDescriptor(desc.getEntryId(), qualPath,
-            desc.getPool());
+            desc.getReplication(), desc.getPool());
       }
     };
   }

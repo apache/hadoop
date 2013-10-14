@@ -148,6 +148,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRespons
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
 
+import com.google.common.primitives.Shorts;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
@@ -1011,12 +1012,14 @@ public class ClientNamenodeProtocolTranslatorPB implements
           AddPathBasedCacheDirectiveRequestProto.newBuilder();
       builder.setDirective(PathBasedCacheDirectiveProto.newBuilder()
           .setPath(directive.getPath().toUri().getPath())
+          .setReplication(directive.getReplication())
           .setPool(directive.getPool())
           .build());
       AddPathBasedCacheDirectiveResponseProto result = 
           rpcProxy.addPathBasedCacheDirective(null, builder.build());
       return new PathBasedCacheDescriptor(result.getDescriptorId(),
-          directive.getPath(), directive.getPool());
+          directive.getPath(), directive.getReplication(),
+          directive.getPool());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -1048,7 +1051,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
       ListPathBasedCacheDescriptorsElementProto elementProto =
         response.getElements(i);
       return new PathBasedCacheDescriptor(elementProto.getId(),
-          new Path(elementProto.getPath()), elementProto.getPool());
+          new Path(elementProto.getPath()),
+          Shorts.checkedCast(elementProto.getReplication()),
+          elementProto.getPool());
     }
 
     @Override

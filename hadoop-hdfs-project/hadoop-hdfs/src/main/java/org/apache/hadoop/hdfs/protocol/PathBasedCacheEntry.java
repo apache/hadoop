@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
@@ -32,14 +33,18 @@ import com.google.common.base.Preconditions;
 public final class PathBasedCacheEntry {
   private final long entryId;
   private final String path;
+  private final short replication;
   private final CachePool pool;
 
-  public PathBasedCacheEntry(long entryId, String path, CachePool pool) {
+  public PathBasedCacheEntry(long entryId, String path,
+      short replication, CachePool pool) {
     Preconditions.checkArgument(entryId > 0);
     this.entryId = entryId;
-    Preconditions.checkNotNull(path);
+    Preconditions.checkArgument(replication > 0);
     this.path = path;
     Preconditions.checkNotNull(pool);
+    this.replication = replication;
+    Preconditions.checkNotNull(path);
     this.pool = pool;
   }
 
@@ -55,18 +60,37 @@ public final class PathBasedCacheEntry {
     return pool;
   }
 
+  public short getReplication() {
+    return replication;
+  }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
     builder.append("{ entryId:").append(entryId).
       append(", path:").append(path).
+      append(", replication:").append(replication).
       append(", pool:").append(pool).
       append(" }");
     return builder.toString();
   }
 
   public PathBasedCacheDescriptor getDescriptor() {
-    return new PathBasedCacheDescriptor(entryId, new Path(path),
+    return new PathBasedCacheDescriptor(entryId, new Path(path), replication,
         pool.getPoolName());
+  }
+  
+  @Override
+  public boolean equals(Object o) {
+    if (o.getClass() != this.getClass()) {
+      return false;
+    }
+    PathBasedCacheEntry other = (PathBasedCacheEntry)o;
+    return entryId == other.entryId;
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder().append(entryId).toHashCode();
   }
 };

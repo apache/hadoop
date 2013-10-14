@@ -139,6 +139,8 @@ public class CacheAdmin extends Configured implements Tool {
       TableListing listing = getOptionDescriptionListing();
       listing.addRow("<path>", "A path to cache. The path can be " +
           "a directory or a file.");
+      listing.addRow("<replication>", "The cache replication factor to use. " +
+          "Defaults to 1.");
       listing.addRow("<pool-name>", "The pool to which the directive will be " +
           "added. You must have write permission on the cache pool "
           + "in order to add new directives.");
@@ -154,6 +156,12 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println("You must specify a path with -path.");
         return 1;
       }
+      short replication = 1;
+      String replicationString =
+          StringUtils.popOptionWithArgument("-replication", args);
+      if (replicationString != null) {
+        replication = Short.parseShort(replicationString);
+      }
       String poolName = StringUtils.popOptionWithArgument("-pool", args);
       if (poolName == null) {
         System.err.println("You must specify a pool name with -pool.");
@@ -167,9 +175,9 @@ public class CacheAdmin extends Configured implements Tool {
       DistributedFileSystem dfs = getDFS(conf);
       PathBasedCacheDirective directive = new PathBasedCacheDirective.Builder().
           setPath(new Path(path)).
+          setReplication(replication).
           setPool(poolName).
           build();
-
       try {
         PathBasedCacheDescriptor descriptor =
             dfs.addPathBasedCacheDirective(directive);

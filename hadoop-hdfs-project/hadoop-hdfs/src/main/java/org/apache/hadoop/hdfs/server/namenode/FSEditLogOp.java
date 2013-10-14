@@ -2862,8 +2862,8 @@ public abstract class FSEditLogOp {
   }
 
   static class AddPathBasedCacheDirectiveOp extends FSEditLogOp {
-
     String path;
+    short replication;
     String pool;
 
     public AddPathBasedCacheDirectiveOp() {
@@ -2880,6 +2880,11 @@ public abstract class FSEditLogOp {
       return this;
     }
 
+    public AddPathBasedCacheDirectiveOp setReplication(short replication) {
+      this.replication = replication;
+      return this;
+    }
+
     public AddPathBasedCacheDirectiveOp setPool(String pool) {
       this.pool = pool;
       return this;
@@ -2888,24 +2893,29 @@ public abstract class FSEditLogOp {
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       this.path = FSImageSerialization.readString(in);
+      this.replication = FSImageSerialization.readShort(in);
       this.pool = FSImageSerialization.readString(in);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeString(path, out);
+      FSImageSerialization.writeShort(replication, out);
       FSImageSerialization.writeString(pool, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "PATH", path);
+      XMLUtils.addSaxString(contentHandler, "REPLICATION",
+          Short.toString(replication));
       XMLUtils.addSaxString(contentHandler, "POOL", pool);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
       path = st.getValue("PATH");
+      replication = Short.parseShort(st.getValue("REPLICATION"));
       pool = st.getValue("POOL");
     }
 
@@ -2914,6 +2924,7 @@ public abstract class FSEditLogOp {
       StringBuilder builder = new StringBuilder();
       builder.append("AddPathBasedCacheDirective [");
       builder.append("path=" + path + ",");
+      builder.append("replication=" + replication + ",");
       builder.append("pool=" + pool + "]");
       return builder.toString();
     }

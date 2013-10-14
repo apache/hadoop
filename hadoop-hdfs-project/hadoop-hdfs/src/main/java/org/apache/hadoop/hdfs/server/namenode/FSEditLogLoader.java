@@ -644,6 +644,7 @@ public class FSEditLogLoader {
       AddPathBasedCacheDirectiveOp addOp = (AddPathBasedCacheDirectiveOp) op;
       PathBasedCacheDirective d = new PathBasedCacheDirective.Builder().
           setPath(new Path(addOp.path)).
+          setReplication(addOp.replication).
           setPool(addOp.pool).
           build();
       PathBasedCacheDescriptor descriptor =

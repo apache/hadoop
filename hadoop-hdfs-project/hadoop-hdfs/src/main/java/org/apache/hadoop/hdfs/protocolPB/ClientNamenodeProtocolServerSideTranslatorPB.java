@@ -180,6 +180,7 @@ import org.apache.hadoop.security.token.Token;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.google.common.primitives.Shorts;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -1044,6 +1045,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       }
       PathBasedCacheDirective directive = new PathBasedCacheDirective.Builder().
           setPath(new Path(proto.getPath())).
+          setReplication(Shorts.checkedCast(proto.getReplication())).
           setPool(proto.getPool()).
           build();
       PathBasedCacheDescriptor descriptor =
@@ -1090,6 +1092,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
             ListPathBasedCacheDescriptorsElementProto.newBuilder().
               setId(directive.getEntryId()).
               setPath(directive.getPath().toUri().getPath()).
+              setReplication(directive.getReplication()).
               setPool(directive.getPool()));
         prevId = directive.getEntryId();
       }

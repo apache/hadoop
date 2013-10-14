@@ -248,7 +248,8 @@ public final class CacheManager {
     // Add a new entry with the next available ID.
     PathBasedCacheEntry entry;
     entry = new PathBasedCacheEntry(getNextEntryId(),
-        directive.getPath().toUri().getPath(), pool);
+        directive.getPath().toUri().getPath(),
+        directive.getReplication(), pool);
 
     unprotectedAddEntry(entry);
 
@@ -597,10 +598,12 @@ public final class CacheManager {
     for (int i = 0; i < numberOfEntries; i++) {
       long entryId = in.readLong();
       String path = Text.readString(in);
+      short replication = in.readShort();
       String poolName = Text.readString(in);
       // Get pool reference by looking it up in the map
       CachePool pool = cachePools.get(poolName);
-      PathBasedCacheEntry entry = new PathBasedCacheEntry(entryId, path, pool);
+      PathBasedCacheEntry entry =
+        new PathBasedCacheEntry(entryId, path, replication, pool);
       unprotectedAddEntry(entry);
       counter.increment();
     }
