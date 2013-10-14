@@ -44,6 +44,7 @@ public class StartupProgressServlet extends DfsServlet {
   private static final String ELAPSED_TIME = "elapsedTime";
   private static final String FILE = "file";
   private static final String NAME = "name";
+  private static final String DESC = "desc";
   private static final String PERCENT_COMPLETE = "percentComplete";
   private static final String PHASES = "phases";
   private static final String SIZE = "size";
@@ -70,6 +71,7 @@ public class StartupProgressServlet extends DfsServlet {
       for (Phase phase: view.getPhases()) {
         json.writeStartObject();
         json.writeStringField(NAME, phase.getName());
+        json.writeStringField(DESC, phase.getDescription());
         json.writeStringField(STATUS, view.getStatus(phase).toString());
         json.writeNumberField(PERCENT_COMPLETE, view.getPercentComplete(phase));
         json.writeNumberField(ELAPSED_TIME, view.getElapsedTime(phase));
@@ -80,8 +82,10 @@ public class StartupProgressServlet extends DfsServlet {
         for (Step step: view.getSteps(phase)) {
           json.writeStartObject();
           StepType type = step.getType();
-          String name = type != null ? type.getName() : null;
-          writeStringFieldIfNotNull(json, NAME, name);
+          if (type != null) {
+            json.writeStringField(NAME, type.getName());
+            json.writeStringField(DESC, type.getDescription());
+          }
           json.writeNumberField(COUNT, view.getCount(phase, step));
           writeStringFieldIfNotNull(json, FILE, step.getFile());
           writeNumberFieldIfDefined(json, SIZE, step.getSize());

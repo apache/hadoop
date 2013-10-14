@@ -165,7 +165,13 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.*;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
+import org.apache.hadoop.hdfs.server.blockmanagement.OutOfV1GenerationStampsException;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
@@ -178,12 +184,6 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.Status;
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
@@ -195,6 +195,12 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottab
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Status;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -207,10 +213,10 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RetryCache;
 import org.apache.hadoop.ipc.RetryCache.CacheEntry;
 import org.apache.hadoop.ipc.RetryCache.CacheEntryWithPayload;
-import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -236,6 +242,7 @@ import org.mortbay.util.ajax.JSON;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
 /***************************************************
@@ -4208,7 +4215,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return JSON.toString(info);
   }
 
-
   int getNumberOfDatanodes(DatanodeReportType type) {
     readLock();
     try {
@@ -5246,7 +5252,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Get the total number of objects in the system. 
    */
-  long getMaxObjects() {
+  @Override // FSNamesystemMBean
+  public long getMaxObjects() {
     return maxFsObjects;
   }
 
@@ -5391,12 +5398,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   public int getNumDecomDeadDataNodes() {
     final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(dead, null, true);
+    getBlockManager().getDatanodeManager().fetchDatanodes(null, dead, true);
     int deadDecommissioned = 0;
     for (DatanodeDescriptor node : dead) {
       deadDecommissioned += node.isDecommissioned() ? 1 : 0;
     }
     return deadDecommissioned;
+  }
+
+  @Override // FSNamesystemMBean
+  public int getNumDecommissioningDataNodes() {
+    return getBlockManager().getDatanodeManager().getDecommissioningNodes()
+        .size();
   }
 
   @Override // FSNamesystemMBean
@@ -6238,14 +6251,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     blockManager.getDatanodeManager().fetchDatanodes(live, null, true);
     for (DatanodeDescriptor node : live) {
-      final Map<String, Object> innerinfo = new HashMap<String, Object>();
-      innerinfo.put("lastContact", getLastContact(node));
-      innerinfo.put("usedSpace", getDfsUsed(node));
-      innerinfo.put("adminState", node.getAdminState().toString());
-      innerinfo.put("nonDfsUsedSpace", node.getNonDfsUsed());
-      innerinfo.put("capacity", node.getCapacity());
-      innerinfo.put("numBlocks", node.numBlocks());
-      innerinfo.put("version", node.getSoftwareVersion());
+      Map<String, Object> innerinfo = ImmutableMap.<String, Object>builder()
+          .put("infoAddr", node.getInfoAddr())
+          .put("infoSecureAddr", node.getInfoSecureAddr())
+          .put("xferaddr", node.getXferAddr())
+          .put("lastContact", getLastContact(node))
+          .put("usedSpace", getDfsUsed(node))
+          .put("adminState", node.getAdminState().toString())
+          .put("nonDfsUsedSpace", node.getNonDfsUsed())
+          .put("capacity", node.getCapacity())
+          .put("numBlocks", node.numBlocks())
+          .put("version", node.getSoftwareVersion())
+          .put("used", node.getDfsUsed())
+          .put("remaining", node.getRemaining())
+          .put("blockScheduled", node.getBlocksScheduled())
+          .put("blockPoolUsed", node.getBlockPoolUsed())
+          .put("blockPoolUsedPercent", node.getBlockPoolUsedPercent())
+          .put("volfails", node.getVolumeFailures())
+          .build();
+
       info.put(node.getHostName(), innerinfo);
     }
     return JSON.toString(info);
@@ -6262,9 +6286,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
     blockManager.getDatanodeManager().fetchDatanodes(null, dead, true);
     for (DatanodeDescriptor node : dead) {
-      final Map<String, Object> innerinfo = new HashMap<String, Object>();
-      innerinfo.put("lastContact", getLastContact(node));
-      innerinfo.put("decommissioned", node.isDecommissioned());
+      Map<String, Object> innerinfo = ImmutableMap.<String, Object>builder()
+          .put("lastContact", getLastContact(node))
+          .put("decommissioned", node.isDecommissioned())
+          .put("xferaddr", node.getXferAddr())
+          .build();
       info.put(node.getHostName(), innerinfo);
     }
     return JSON.toString(info);
@@ -6281,13 +6307,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final List<DatanodeDescriptor> decomNodeList = blockManager.getDatanodeManager(
         ).getDecommissioningNodes();
     for (DatanodeDescriptor node : decomNodeList) {
-      final Map<String, Object> innerinfo = new HashMap<String, Object>();
-      innerinfo.put("underReplicatedBlocks", node.decommissioningStatus
-          .getUnderReplicatedBlocks());
-      innerinfo.put("decommissionOnlyReplicas", node.decommissioningStatus
-          .getDecommissionOnlyReplicas());
-      innerinfo.put("underReplicateInOpenFiles", node.decommissioningStatus
-          .getUnderReplicatedInOpenFiles());
+      Map<String, Object> innerinfo = ImmutableMap
+          .<String, Object> builder()
+          .put("xferaddr", node.getXferAddr())
+          .put("underReplicatedBlocks",
+              node.decommissioningStatus.getUnderReplicatedBlocks())
+          .put("decommissionOnlyReplicas",
+              node.decommissioningStatus.getDecommissionOnlyReplicas())
+          .put("underReplicateInOpenFiles",
+              node.decommissioningStatus.getUnderReplicatedInOpenFiles())
+          .build();
       info.put(node.getHostName(), innerinfo);
     }
     return JSON.toString(info);
