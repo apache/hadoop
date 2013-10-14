@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -1308,14 +1309,22 @@ public class DatanodeManager {
         // Check pending caching
         List<Block> pendingCacheList = nodeinfo.getCacheBlocks();
         if (pendingCacheList != null) {
-          cmds.add(new BlockCommand(DatanodeProtocol.DNA_CACHE, blockPoolId,
-              pendingCacheList.toArray(new Block[] {})));
+          long blockIds[] = new long[pendingCacheList.size()];
+          for (int i = 0; i < pendingCacheList.size(); i++) {
+            blockIds[i] = pendingCacheList.get(i).getBlockId();
+          }
+          cmds.add(new BlockIdCommand(DatanodeProtocol.DNA_CACHE, blockPoolId,
+              blockIds));
         }
         // Check cached block invalidation
         blks = nodeinfo.getInvalidateCacheBlocks();
         if (blks != null) {
-          cmds.add(new BlockCommand(DatanodeProtocol.DNA_UNCACHE,
-              blockPoolId, blks));
+          long blockIds[] = new long[blks.length];
+          for (int i = 0; i < blks.length; i++) {
+            blockIds[i] = blks[i].getBlockId();
+          }
+          cmds.add(new BlockIdCommand(DatanodeProtocol.DNA_UNCACHE,
+              blockPoolId, blockIds));
         }
 
         blockManager.addKeyUpdateCommand(cmds, nodeinfo);

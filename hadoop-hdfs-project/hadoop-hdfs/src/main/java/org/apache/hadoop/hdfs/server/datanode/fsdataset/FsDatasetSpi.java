@@ -305,16 +305,16 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /**
    * Caches the specified blocks
    * @param bpid Block pool id
-   * @param cacheBlks - block to cache
+   * @param blockIds - block ids to cache
    */
-  public void cache(String bpid, Block[] cacheBlks);
+  public void cache(String bpid, long[] blockIds);
 
   /**
    * Uncaches the specified blocks
    * @param bpid Block pool id
-   * @param uncacheBlks - blocks to uncache
+   * @param blockIds - blocks ids to uncache
    */
-  public void uncache(String bpid, Block[] uncacheBlks);
+  public void uncache(String bpid, long[] blockIds);
 
     /**
      * Check if all the data directories are healthy

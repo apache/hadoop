@@ -562,7 +562,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       FinalizedReplica replicaInfo, long newGS, long estimateBlockLen)
       throws IOException {
     // uncache the block
-    cacheManager.uncacheBlock(bpid, replicaInfo);
+    cacheManager.uncacheBlock(bpid, replicaInfo.getBlockId());
     // unlink the finalized replica
     replicaInfo.unlinkBlock(1);
     
@@ -1178,7 +1178,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
 
       // Uncache the block synchronously
-      cacheManager.uncacheBlock(bpid, invalidBlks[i]);
+      cacheManager.uncacheBlock(bpid, invalidBlks[i].getBlockId());
       // Delete the block asynchronously to make sure we can do it fast enough
       asyncDiskService.deleteAsync(v, f,
           FsDatasetUtil.getMetaFile(f, invalidBlks[i].getGenerationStamp()),
@@ -1189,20 +1189,22 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  synchronized boolean validToCache(String bpid, Block blk) {
-    ReplicaInfo info = volumeMap.get(bpid, blk);
+  synchronized boolean validToCache(String bpid, long blockId) {
+    ReplicaInfo info = volumeMap.get(bpid, blockId);
     if (info == null) {
-      LOG.warn("Failed to cache replica " + blk + ": ReplicaInfo not found.");
+      LOG.warn("Failed to cache replica in block pool " + bpid +
+          " with block id " + blockId + ": ReplicaInfo not found.");
       return false;
     }
     FsVolumeImpl volume = (FsVolumeImpl)info.getVolume();
     if (volume == null) {
-      LOG.warn("Failed to cache replica " + blk + ": Volume not found.");
+      LOG.warn("Failed to cache block with id " + blockId +
+          ": Volume not found.");
       return false;
     }
     if (info.getState() != ReplicaState.FINALIZED) {
-      LOG.warn("Failed to cache replica " + blk + ": Replica is not"
-          + " finalized.");
+      LOG.warn("Failed to block with id " + blockId + 
+          ": Replica is not finalized.");
       return false;
     }
     return true;
@@ -1211,31 +1213,33 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   /**
    * Asynchronously attempts to cache a single block via {@link FsDatasetCache}.
    */
-  private void cacheBlock(String bpid, Block blk) {
+  private void cacheBlock(String bpid, long blockId) {
     ReplicaInfo info;
     FsVolumeImpl volume;
     synchronized (this) {
-      if (!validToCache(bpid, blk)) {
+      if (!validToCache(bpid, blockId)) {
         return;
       }
-      info = volumeMap.get(bpid, blk);
+      info = volumeMap.get(bpid, blockId);
       volume = (FsVolumeImpl)info.getVolume();
     }
     // Try to open block and meta streams
     FileInputStream blockIn = null;
     FileInputStream metaIn = null;
     boolean success = false;
+    ExtendedBlock extBlk =
+        new ExtendedBlock(bpid, blockId,
+            info.getBytesOnDisk(), info.getGenerationStamp());
     try {
-      ExtendedBlock extBlk = new ExtendedBlock(bpid, blk);
       blockIn = (FileInputStream)getBlockInputStream(extBlk, 0);
       metaIn = (FileInputStream)getMetaDataInputStream(extBlk)
           .getWrappedStream();
       success = true;
     } catch (ClassCastException e) {
-      LOG.warn("Failed to cache replica " + blk + ": Underlying blocks"
+      LOG.warn("Failed to cache replica " + extBlk + ": Underlying blocks"
           + " are not backed by files.", e);
     } catch (IOException e) {
-      LOG.warn("Failed to cache replica " + blk + ": IOException while"
+      LOG.warn("Failed to cache replica " + extBlk + ": IOException while"
           + " trying to open block or meta files.", e);
     }
     if (!success) {
@@ -1243,21 +1247,21 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       IOUtils.closeQuietly(metaIn);
       return;
     }
-    cacheManager.cacheBlock(bpid, blk, volume, blockIn, metaIn);
+    cacheManager.cacheBlock(bpid, extBlk.getLocalBlock(),
+        volume, blockIn, metaIn);
   }
 
   @Override // FsDatasetSpi
-  public void cache(String bpid, Block[] cacheBlks) {
-    for (int i=0; i<cacheBlks.length; i++) {
-      cacheBlock(bpid, cacheBlks[i]);
+  public void cache(String bpid, long[] blockIds) {
+    for (int i=0; i < blockIds.length; i++) {
+      cacheBlock(bpid, blockIds[i]);
     }
   }
 
   @Override // FsDatasetSpi
-  public void uncache(String bpid, Block[] uncacheBlks) {
-    for (int i=0; i<uncacheBlks.length; i++) {
-      Block blk = uncacheBlks[i];
-      cacheManager.uncacheBlock(bpid, blk);
+  public void uncache(String bpid, long[] blockIds) {
+    for (int i=0; i < blockIds.length; i++) {
+      cacheManager.uncacheBlock(bpid, blockIds[i]);
     }
   }
 

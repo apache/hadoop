@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsS
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CacheReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
@@ -119,6 +120,7 @@ import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -696,6 +698,8 @@ public class PBHelper {
       return PBHelper.convert(proto.getKeyUpdateCmd());
     case RegisterCommand:
       return REG_CMD;
+    case BlockIdCommand:
+      return PBHelper.convert(proto.getBlkIdCmd());
     }
     return null;
   }
@@ -738,12 +742,6 @@ public class PBHelper {
     case DatanodeProtocol.DNA_SHUTDOWN:
       builder.setAction(BlockCommandProto.Action.SHUTDOWN);
       break;
-    case DatanodeProtocol.DNA_CACHE:
-      builder.setAction(BlockCommandProto.Action.CACHE);
-      break;
-    case DatanodeProtocol.DNA_UNCACHE:
-      builder.setAction(BlockCommandProto.Action.UNCACHE);
-      break;
     default:
       throw new AssertionError("Invalid action");
     }
@@ -752,6 +750,26 @@ public class PBHelper {
       builder.addBlocks(PBHelper.convert(blocks[i]));
     }
     builder.addAllTargets(PBHelper.convert(cmd.getTargets()));
+    return builder.build();
+  }
+  
+  public static BlockIdCommandProto convert(BlockIdCommand cmd) {
+    BlockIdCommandProto.Builder builder = BlockIdCommandProto.newBuilder()
+        .setBlockPoolId(cmd.getBlockPoolId());
+    switch (cmd.getAction()) {
+    case DatanodeProtocol.DNA_CACHE:
+      builder.setAction(BlockIdCommandProto.Action.CACHE);
+      break;
+    case DatanodeProtocol.DNA_UNCACHE:
+      builder.setAction(BlockIdCommandProto.Action.UNCACHE);
+      break;
+    default:
+      throw new AssertionError("Invalid action");
+    }
+    long[] blockIds = cmd.getBlockIds();
+    for (int i = 0; i < blockIds.length; i++) {
+      builder.addBlockIds(blockIds[i]);
+    }
     return builder.build();
   }
 
@@ -796,11 +814,14 @@ public class PBHelper {
       break;
     case DatanodeProtocol.DNA_TRANSFER:
     case DatanodeProtocol.DNA_INVALIDATE:
+    case DatanodeProtocol.DNA_SHUTDOWN:
+      builder.setCmdType(DatanodeCommandProto.Type.BlockCommand).
+        setBlkCmd(PBHelper.convert((BlockCommand) datanodeCommand));
+      break;
     case DatanodeProtocol.DNA_CACHE:
     case DatanodeProtocol.DNA_UNCACHE:
-    case DatanodeProtocol.DNA_SHUTDOWN:
-      builder.setCmdType(DatanodeCommandProto.Type.BlockCommand).setBlkCmd(
-          PBHelper.convert((BlockCommand) datanodeCommand));
+      builder.setCmdType(DatanodeCommandProto.Type.BlockIdCommand).
+        setBlkIdCmd(PBHelper.convert((BlockIdCommand) datanodeCommand));
       break;
     case DatanodeProtocol.DNA_UNKNOWN: //Not expected
     default:
@@ -851,6 +872,20 @@ public class PBHelper {
     case SHUTDOWN:
       action = DatanodeProtocol.DNA_SHUTDOWN;
       break;
+    default:
+      throw new AssertionError("Unknown action type: " + blkCmd.getAction());
+    }
+    return new BlockCommand(action, blkCmd.getBlockPoolId(), blocks, targets);
+  }
+
+  public static BlockIdCommand convert(BlockIdCommandProto blkIdCmd) {
+    int numBlockIds = blkIdCmd.getBlockIdsCount();
+    long blockIds[] = new long[numBlockIds];
+    for (int i = 0; i < numBlockIds; i++) {
+      blockIds[i] = blkIdCmd.getBlockIds(i);
+    }
+    int action = DatanodeProtocol.DNA_UNKNOWN;
+    switch (blkIdCmd.getAction()) {
     case CACHE:
       action = DatanodeProtocol.DNA_CACHE;
       break;
@@ -858,9 +893,9 @@ public class PBHelper {
       action = DatanodeProtocol.DNA_UNCACHE;
       break;
     default:
-      throw new AssertionError("Unknown action type: " + blkCmd.getAction());
+      throw new AssertionError("Unknown action type: " + blkIdCmd.getAction());
     }
-    return new BlockCommand(action, blkCmd.getBlockPoolId(), blocks, targets);
+    return new BlockIdCommand(action, blkIdCmd.getBlockPoolId(), blockIds);
   }
 
   public static DatanodeInfo[] convert(DatanodeInfosProto datanodeInfosProto) {

@@ -91,8 +91,8 @@ public class FsDatasetCache {
   /**
    * @return if the block is cached
    */
-  boolean isCached(String bpid, Block block) {
-    MappableBlock mapBlock = cachedBlocks.get(block.getBlockId());
+  boolean isCached(String bpid, long blockId) {
+    MappableBlock mapBlock = cachedBlocks.get(blockId);
     if (mapBlock != null) {
       return mapBlock.getBlockPoolId().equals(bpid);
     }
@@ -127,7 +127,7 @@ public class FsDatasetCache {
    */
   void cacheBlock(String bpid, Block block, FsVolumeImpl volume,
       FileInputStream blockIn, FileInputStream metaIn) {
-    if (isCached(bpid, block)) {
+    if (isCached(bpid, block.getBlockId())) {
       return;
     }
     MappableBlock mapBlock = null;
@@ -166,23 +166,23 @@ public class FsDatasetCache {
 
   /**
    * Uncaches a block if it is cached.
-   * @param block to uncache
+   * @param blockId id to uncache
    */
-  void uncacheBlock(String bpid, Block block) {
-    MappableBlock mapBlock = cachedBlocks.get(block.getBlockId());
+  void uncacheBlock(String bpid, long blockId) {
+    MappableBlock mapBlock = cachedBlocks.get(blockId);
     if (mapBlock != null &&
         mapBlock.getBlockPoolId().equals(bpid) &&
-        mapBlock.getBlock().equals(block)) {
+        mapBlock.getBlock().getBlockId() == blockId) {
       mapBlock.close();
-      cachedBlocks.remove(block.getBlockId());
+      cachedBlocks.remove(blockId);
       long bytes = mapBlock.getNumBytes();
       long used = usedBytes.get();
       while (!usedBytes.compareAndSet(used, used - bytes)) {
         used = usedBytes.get();
       }
-      LOG.info("Successfully uncached block " + block);
+      LOG.info("Successfully uncached block " + blockId);
     } else {
-      LOG.info("Could not uncache block " + block + ": unknown block.");
+      LOG.info("Could not uncache block " + blockId + ": unknown block.");
     }
   }
 
@@ -215,7 +215,8 @@ public class FsDatasetCache {
       // If we failed or the block became uncacheable in the meantime,
       // clean up and return the reserved cache allocation 
       if (!success || 
-          !dataset.validToCache(block.getBlockPoolId(), block.getBlock())) {
+          !dataset.validToCache(block.getBlockPoolId(),
+              block.getBlock().getBlockId())) {
         block.close();
         long used = usedBytes.get();
         while (!usedBytes.compareAndSet(used, used-block.getNumBytes())) {

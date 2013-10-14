@@ -61,6 +61,7 @@ HDFS-4949 (Unreleased)
     String. (cnauroth)
 
   OPTIMIZATIONS
+    HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
   BUG FIXES
     HDFS-5169. hdfs.c: translateZCRException: null pointer deref when

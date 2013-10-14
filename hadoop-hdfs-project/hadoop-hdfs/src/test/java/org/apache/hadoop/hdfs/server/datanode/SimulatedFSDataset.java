@@ -580,13 +580,13 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override // FSDatasetSpi
-  public void cache(String bpid, Block[] cacheBlks) {
+  public void cache(String bpid, long[] cacheBlks) {
     throw new UnsupportedOperationException(
         "SimulatedFSDataset does not support cache operation!");
   }
 
   @Override // FSDatasetSpi
-  public void uncache(String bpid, Block[] uncacheBlks) {
+  public void uncache(String bpid, long[] uncacheBlks) {
     throw new UnsupportedOperationException(
         "SimulatedFSDataset does not support uncache operation!");
   }

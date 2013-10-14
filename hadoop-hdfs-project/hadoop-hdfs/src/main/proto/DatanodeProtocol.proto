@@ -70,6 +70,7 @@ message DatanodeCommandProto {
     RegisterCommand = 5;
     UnusedUpgradeCommand = 6;
     NullDatanodeCommand = 7;
+    BlockIdCommand = 8;
   }
 
   required Type cmdType = 1;    // Type of the command
@@ -82,6 +83,7 @@ message DatanodeCommandProto {
   optional FinalizeCommandProto finalizeCmd = 5;
   optional KeyUpdateCommandProto keyUpdateCmd = 6;
   optional RegisterCommandProto registerCmd = 7;
+  optional BlockIdCommandProto blkIdCmd = 8;
 }
 
 /**
@@ -103,13 +105,25 @@ message BlockCommandProto {
     TRANSFER = 1;   // Transfer blocks to another datanode
     INVALIDATE = 2; // Invalidate blocks
     SHUTDOWN = 3;   // Shutdown the datanode
-    CACHE = 4;      // Cache blocks on the datanode
-    UNCACHE = 5;    // Uncache blocks on the datanode
   }
   required Action action = 1;
   required string blockPoolId = 2;
   repeated BlockProto blocks = 3;
   repeated DatanodeInfosProto targets = 4;
+}
+
+/**
+ * Command to instruct datanodes to perform certain action
+ * on the given set of block IDs.
+ */
+message BlockIdCommandProto {
+  enum Action {
+    CACHE = 1;
+    UNCACHE = 2;
+  }
+  required Action action = 1;
+  required string blockPoolId = 2;
+  repeated uint64 blockIds = 3 [packed=true];
 }
 
 /**
