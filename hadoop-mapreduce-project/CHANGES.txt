@@ -76,6 +76,9 @@ Release 2.2.1 - UNRELEASED
     MAPREDUCE-5569. FloatSplitter is not generating correct splits (Nathan
     Roberts via jlowe)
 
+    MAPREDUCE-5546. mapred.cmd on Windows set HADOOP_OPTS incorrectly (Chuan Liu
+    via cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
