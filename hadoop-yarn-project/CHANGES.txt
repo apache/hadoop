@@ -89,6 +89,9 @@ Release 2.2.1 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-305. Fair scheduler logs too many "Node offered to app" messages.
+    (Lohit Vijayarenu via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
