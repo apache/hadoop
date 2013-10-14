@@ -27,6 +27,7 @@ import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
 import org.apache.hadoop.lib.service.instrumentation.InstrumentationService;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
@@ -35,11 +36,20 @@ import org.apache.hadoop.test.TestHdfs;
 import org.apache.hadoop.test.TestHdfsHelper;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
+import org.junit.BeforeClass;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 
 public class TestFileSystemAccessService extends HFSTestCase {
+
+  @BeforeClass
+  public static void classSetup() throws IOException {
+    // This ensures static initializers are called before any tests run
+    Configuration conf = new Configuration(false);
+    UserGroupInformation.setConfiguration(conf);
+  }
 
   @Test
   @TestDir

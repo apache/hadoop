@@ -44,6 +44,9 @@ Release 0.23.10 - UNRELEASED
     HDFS-4482. ReplicationMonitor thread can exit with NPE due to the race
     between delete and replication of same file. (umamahesh)
 
+    HDFS-5357. TestFileSystemAccessService failures in JDK7 (Robert Parker via
+    jeagles)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
