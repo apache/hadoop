@@ -277,7 +277,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       pout.println("echo $$ > " + pidFile.toString() + ".tmp");
       pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
       String exec = Shell.isSetsidAvailable? "exec setsid" : "exec";
-      pout.println(exec + " /bin/bash -c \"" +
+      pout.println(exec + " /bin/bash \"" +
         launchDst.toUri().getPath().toString() + "\"");
     }
   }

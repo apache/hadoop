@@ -102,6 +102,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1259. In Fair Scheduler web UI, queue num pending and num active apps
     switched. (Robert Kanter via Sandy Ryza)
 
+    YARN-1295. In UnixLocalWrapperScriptBuilder, using bash -c can cause Text
+    file busy errors (Sandy Ryza)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
