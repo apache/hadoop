@@ -195,6 +195,7 @@ public class WriteManager {
       COMMIT_STATUS ret = openFileCtx.checkCommit(dfsClient, commitOffset,
           channel, xid, preOpAttr);
       switch (ret) {
+      case COMMIT_DO_SYNC:
       case COMMIT_FINISHED:
       case COMMIT_INACTIVE_CTX:
         status = Nfs3Status.NFS3_OK;
@@ -207,7 +208,8 @@ public class WriteManager {
         // Do nothing. Commit is async now.
         return;
       default:
-        throw new RuntimeException("Wring error code:" + ret.name());
+        throw new RuntimeException("Should not get commit return code:"
+            + ret.name());
       }
     }
     
