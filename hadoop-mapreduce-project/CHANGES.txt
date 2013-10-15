@@ -216,6 +216,9 @@ Release 2.2.1 - UNRELEASED
     MAPREDUCE-5546. mapred.cmd on Windows set HADOOP_OPTS incorrectly (Chuan Liu
     via cnauroth)
 
+    MAPREDUCE-5518. Fixed typo "can't read paritions file". (Albert Chu
+    via devaraj)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
