@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 import junit.framework.Assert;
@@ -33,7 +32,6 @@ import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.request.WRITE3Request;
-import org.jboss.netty.channel.Channel;
 import org.junit.Test;
 import org.mockito.Mockito;
 

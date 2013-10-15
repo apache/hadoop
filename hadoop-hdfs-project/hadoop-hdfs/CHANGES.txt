@@ -140,6 +140,8 @@ Release 2.2.1 - UNRELEASED
     HDFS-5329. Update FSNamesystem#getListing() to handle inode path in startAfter
     token. (brandonli)
 
+    HDFS-5330. fix readdir and readdirplus for large directories (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
