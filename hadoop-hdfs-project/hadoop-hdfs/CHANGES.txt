@@ -313,6 +313,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5323.  Remove some deadcode in BlockManager (Colin Patrick McCabe)
 
+    HDFS-5338. Add a conf to disable hostname check in datanode registration.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
