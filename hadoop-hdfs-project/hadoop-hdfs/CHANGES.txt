@@ -340,6 +340,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5266. ElasticByteBufferPool#Key does not implement equals. (cnauroth)
 
+    HDFS-5352. Server#initLog() doesn't close InputStream in httpfs. (Ted Yu via
+    jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
