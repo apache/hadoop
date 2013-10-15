@@ -119,6 +119,9 @@ Release 2.2.1 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-10046. Print a log message when SSL is enabled.
+    (David S. Wang via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
