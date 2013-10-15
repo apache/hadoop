@@ -18,6 +18,7 @@
 package org.apache.hadoop.util;
 
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.PriorityQueue;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -234,5 +235,29 @@ public class LightWeightCache<K, E extends K> extends LightWeightGSet<K, E> {
       Preconditions.checkState(queue.remove(removed));
     }
     return removed;
+  }
+
+  @Override
+  public Iterator<E> iterator() {
+    final Iterator<E> iter = super.iterator();
+    return new Iterator<E>() {
+      @Override
+      public boolean hasNext() {
+        return iter.hasNext();
+      }
+
+      @Override
+      public E next() {
+        return iter.next();
+      }
+
+      @Override
+      public void remove() {
+        // It would be tricky to support this because LightWeightCache#remove
+        // may evict multiple elements via evictExpiredEntries.
+        throw new UnsupportedOperationException("Remove via iterator is " +
+            "not supported for LightWeightCache");
+      }
+    };
   }
 }

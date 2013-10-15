@@ -63,6 +63,9 @@ HDFS-4949 (Unreleased)
     HDFS-5358. Add replication field to PathBasedCacheDirective.
     (Contributed by Colin Patrick McCabe)
 
+    HDFS-5359. Allow LightWeightGSet#Iterator to remove elements.
+    (Contributed by Colin Patrick McCabe)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
