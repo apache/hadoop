@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.FileUtil;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.nfs.AccessPrivilege;
 import org.apache.hadoop.nfs.NfsExports;
 import org.apache.hadoop.nfs.NfsFileType;
@@ -1258,6 +1260,29 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     return new READDIR3Response(Nfs3Status.NFS3ERR_NOTSUPP);
   }
 
+  /**
+   * Used by readdir and readdirplus to get dirents. It retries the listing if
+   * the startAfter can't be found anymore.
+   */
+  private DirectoryListing listPaths(DFSClient dfsClient, String dirFileIdPath,
+      byte[] startAfter) throws IOException {
+    DirectoryListing dlisting = null;
+    try {
+      dlisting = dfsClient.listPaths(dirFileIdPath, startAfter);
+    } catch (RemoteException e) {
+      IOException io = e.unwrapRemoteException();
+      if (!(io instanceof DirectoryListingStartAfterNotFoundException)) {
+        throw io;
+      }
+      // This happens when startAfter was just deleted
+      LOG.info("Cookie cound't be found: " + new String(startAfter)
+          + ", do listing from beginning");
+      dlisting = dfsClient
+          .listPaths(dirFileIdPath, HdfsFileStatus.EMPTY_NAME);
+    }
+    return dlisting;
+  }
+  
   @Override
   public READDIR3Response readdir(XDR xdr, SecurityHandler securityHandler,
       InetAddress client) {
@@ -1298,7 +1323,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           + cookie + " count: " + count);
     }
 
-    HdfsFileStatus dirStatus;
+    HdfsFileStatus dirStatus = null;
     DirectoryListing dlisting = null;
     Nfs3FileAttributes postOpAttr = null;
     long dotdotFileId = 0;
@@ -1342,8 +1367,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         String inodeIdPath = Nfs3Utils.getFileIdPath(cookie);
         startAfter = inodeIdPath.getBytes();
       }
-      dlisting = dfsClient.listPaths(dirFileIdPath, startAfter);
-
+      
+      dlisting = listPaths(dfsClient, dirFileIdPath, startAfter);
       postOpAttr = Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
       if (postOpAttr == null) {
         LOG.error("Can't get path for fileId:" + handle.getFileId());
@@ -1426,11 +1451,15 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
     long dirCount = request.getDirCount();
     if (dirCount <= 0) {
-      LOG.info("Nonpositive count in invalid READDIRPLUS request:" + dirCount);
-      return new READDIRPLUS3Response(Nfs3Status.NFS3_OK);
+      LOG.info("Nonpositive dircount in invalid READDIRPLUS request:" + dirCount);
+      return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_INVAL);
     }
     int maxCount = request.getMaxCount();
-
+    if (maxCount <= 0) {
+      LOG.info("Nonpositive maxcount in invalid READDIRPLUS request:" + maxCount);
+      return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_INVAL);
+    }
+    
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS READDIRPLUS fileId: " + handle.getFileId() + " cookie: "
           + cookie + " dirCount: " + dirCount + " maxCount: " + maxCount);
@@ -1480,8 +1509,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         String inodeIdPath = Nfs3Utils.getFileIdPath(cookie);
         startAfter = inodeIdPath.getBytes();
       }
-      dlisting = dfsClient.listPaths(dirFileIdPath, startAfter);
-
+      
+      dlisting = listPaths(dfsClient, dirFileIdPath, startAfter);
       postOpDirAttr = Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
       if (postOpDirAttr == null) {
         LOG.info("Can't get path for fileId:" + handle.getFileId());
