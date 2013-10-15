@@ -341,6 +341,7 @@ public class HttpServer implements FilterContainer {
       }
       listener.setHost(bindAddress);
       listener.setPort(port);
+      LOG.info("SSL is enabled on " + toString());
     } else {
       listenerStartedExternally = true;
       listener = connector;
