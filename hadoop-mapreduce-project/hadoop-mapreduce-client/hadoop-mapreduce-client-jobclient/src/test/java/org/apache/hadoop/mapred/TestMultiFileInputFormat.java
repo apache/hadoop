@@ -81,14 +81,12 @@ public class TestMultiFileInputFormat extends TestCase{
   }
   
   public void testFormat() throws IOException {
-    if(LOG.isInfoEnabled()) {
-      LOG.info("Test started");
-      LOG.info("Max split count           = " + MAX_SPLIT_COUNT);
-      LOG.info("Split count increment     = " + SPLIT_COUNT_INCR);
-      LOG.info("Max bytes per file        = " + MAX_BYTES);
-      LOG.info("Max number of files       = " + MAX_NUM_FILES);
-      LOG.info("Number of files increment = " + NUM_FILES_INCR);
-    }
+    LOG.info("Test started");
+    LOG.info("Max split count           = " + MAX_SPLIT_COUNT);
+    LOG.info("Split count increment     = " + SPLIT_COUNT_INCR);
+    LOG.info("Max bytes per file        = " + MAX_BYTES);
+    LOG.info("Max number of files       = " + MAX_NUM_FILES);
+    LOG.info("Number of files increment = " + NUM_FILES_INCR);
     
     MultiFileInputFormat<Text,Text> format = new DummyMultiFileInputFormat();
     FileSystem fs = FileSystem.getLocal(job);

@@ -972,12 +972,10 @@ public class MapTask extends Task {
       maxRec = kvmeta.capacity() / NMETA;
       softLimit = (int)(kvbuffer.length * spillper);
       bufferRemaining = softLimit;
-      if (LOG.isInfoEnabled()) {
-        LOG.info(JobContext.IO_SORT_MB + ": " + sortmb);
-        LOG.info("soft limit at " + softLimit);
-        LOG.info("bufstart = " + bufstart + "; bufvoid = " + bufvoid);
-        LOG.info("kvstart = " + kvstart + "; length = " + maxRec);
-      }
+      LOG.info(JobContext.IO_SORT_MB + ": " + sortmb);
+      LOG.info("soft limit at " + softLimit);
+      LOG.info("bufstart = " + bufstart + "; bufvoid = " + bufvoid);
+      LOG.info("kvstart = " + kvstart + "; length = " + maxRec);
 
       // k/v serialization
       comparator = job.getOutputKeyComparator();
@@ -1180,10 +1178,8 @@ public class MapTask extends Task {
       final int aligned = pos - (pos % METASIZE);
       kvindex =
         ((aligned - METASIZE + kvbuffer.length) % kvbuffer.length) / 4;
-      if (LOG.isInfoEnabled()) {
-        LOG.info("(EQUATOR) " + pos + " kvi " + kvindex +
-            "(" + (kvindex * 4) + ")");
-      }
+      LOG.info("(EQUATOR) " + pos + " kvi " + kvindex +
+          "(" + (kvindex * 4) + ")");
     }
 
     /**
@@ -1198,10 +1194,8 @@ public class MapTask extends Task {
       // set start/end to point to first meta record
       kvstart = kvend =
         ((aligned - METASIZE + kvbuffer.length) % kvbuffer.length) / 4;
-      if (LOG.isInfoEnabled()) {
-        LOG.info("(RESET) equator " + e + " kv " + kvstart + "(" +
-          (kvstart * 4) + ")" + " kvi " + kvindex + "(" + (kvindex * 4) + ")");
-      }
+      LOG.info("(RESET) equator " + e + " kv " + kvstart + "(" +
+        (kvstart * 4) + ")" + " kvi " + kvindex + "(" + (kvindex * 4) + ")");
     }
 
     /**
@@ -1456,15 +1450,13 @@ public class MapTask extends Task {
         if (kvindex != kvend) {
           kvend = (kvindex + NMETA) % kvmeta.capacity();
           bufend = bufmark;
-          if (LOG.isInfoEnabled()) {
-            LOG.info("Spilling map output");
-            LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
-                     "; bufvoid = " + bufvoid);
-            LOG.info("kvstart = " + kvstart + "(" + (kvstart * 4) +
-                     "); kvend = " + kvend + "(" + (kvend * 4) +
-                     "); length = " + (distanceTo(kvend, kvstart,
-                           kvmeta.capacity()) + 1) + "/" + maxRec);
-          }
+          LOG.info("Spilling map output");
+          LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
+                   "; bufvoid = " + bufvoid);
+          LOG.info("kvstart = " + kvstart + "(" + (kvstart * 4) +
+                   "); kvend = " + kvend + "(" + (kvend * 4) +
+                   "); length = " + (distanceTo(kvend, kvstart,
+                         kvmeta.capacity()) + 1) + "/" + maxRec);
           sortAndSpill();
         }
       } catch (InterruptedException e) {
@@ -1547,15 +1539,13 @@ public class MapTask extends Task {
       kvend = (kvindex + NMETA) % kvmeta.capacity();
       bufend = bufmark;
       spillInProgress = true;
-      if (LOG.isInfoEnabled()) {
-        LOG.info("Spilling map output");
-        LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
-                 "; bufvoid = " + bufvoid);
-        LOG.info("kvstart = " + kvstart + "(" + (kvstart * 4) +
-                 "); kvend = " + kvend + "(" + (kvend * 4) +
-                 "); length = " + (distanceTo(kvend, kvstart,
-                       kvmeta.capacity()) + 1) + "/" + maxRec);
-      }
+      LOG.info("Spilling map output");
+      LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark +
+               "; bufvoid = " + bufvoid);
+      LOG.info("kvstart = " + kvstart + "(" + (kvstart * 4) +
+               "); kvend = " + kvend + "(" + (kvend * 4) +
+               "); length = " + (distanceTo(kvend, kvstart,
+                     kvmeta.capacity()) + 1) + "/" + maxRec);
       spillReady.signal();
     }
 
