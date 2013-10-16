@@ -349,6 +349,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5352. Server#initLog() doesn't close InputStream in httpfs. (Ted Yu via
     jing9)
 
+    HDFS-5283. Under construction blocks only inside snapshots should not be
+    counted in safemode threshhold.  (Vinay via szetszwo)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
