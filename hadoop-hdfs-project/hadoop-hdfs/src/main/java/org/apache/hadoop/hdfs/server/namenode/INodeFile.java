@@ -104,8 +104,6 @@ public class INodeFile extends INodeWithAdditionalFields
 
   private BlockInfo[] blocks;
 
-  private short cacheReplication = 0;
-
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime, long atime,
       BlockInfo[] blklist, short replication, long preferredBlockSize) {
     super(id, name, permissions, mtime, atime);
@@ -199,18 +197,6 @@ public class INodeFile extends INodeWithAdditionalFields
     final INodeFile nodeToUpdate = recordModification(latest, inodeMap);
     nodeToUpdate.setFileReplication(replication);
     return nodeToUpdate;
-  }
-
-  @Override
-  public void setCacheReplication(short cacheReplication) {
-    Preconditions.checkArgument(cacheReplication <= getBlockReplication(),
-        "Cannot set cache replication higher than block replication factor");
-    this.cacheReplication = cacheReplication;
-  }
-
-  @Override
-  public short getCacheReplication() {
-    return cacheReplication;
   }
 
   /** @return preferred block size (in bytes) of the file. */

@@ -61,17 +61,6 @@ public interface BlockCollection {
   public short getBlockReplication();
 
   /**
-   * Set cache replication factor for the collection
-   */
-  public void setCacheReplication(short cacheReplication);
-
-  /**
-   * Get cache replication factor for the collection
-   * @return cache replication value
-   */
-  public short getCacheReplication();
-
-  /**
    * Get the name of the collection.
    */
   public String getName();

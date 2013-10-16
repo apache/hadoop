@@ -49,6 +49,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
+import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.HostFileManager;
 import org.apache.hadoop.hdfs.server.namenode.HostFileManager.Entry;
 import org.apache.hadoop.hdfs.server.namenode.HostFileManager.EntrySet;
@@ -76,6 +78,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
@@ -166,6 +169,12 @@ public class DatanodeManager {
    * according to the NetworkTopology.
    */
   private boolean hasClusterEverBeenMultiRack = false;
+
+  /**
+   * Whether we should tell datanodes what to cache in replies to
+   * heartbeat messages.
+   */
+  private boolean sendCachingCommands = false;
 
   /**
    * The number of datanodes for each software version. This list should change
@@ -1305,26 +1314,17 @@ public class DatanodeManager {
           cmds.add(new BlockCommand(DatanodeProtocol.DNA_INVALIDATE,
               blockPoolId, blks));
         }
-        
-        // Check pending caching
-        List<Block> pendingCacheList = nodeinfo.getCacheBlocks();
-        if (pendingCacheList != null) {
-          long blockIds[] = new long[pendingCacheList.size()];
-          for (int i = 0; i < pendingCacheList.size(); i++) {
-            blockIds[i] = pendingCacheList.get(i).getBlockId();
-          }
-          cmds.add(new BlockIdCommand(DatanodeProtocol.DNA_CACHE, blockPoolId,
-              blockIds));
+        DatanodeCommand pendingCacheCommand =
+            getCacheCommand(nodeinfo.getPendingCached(), nodeinfo,
+              DatanodeProtocol.DNA_CACHE, blockPoolId);
+        if (pendingCacheCommand != null) {
+          cmds.add(pendingCacheCommand);
         }
-        // Check cached block invalidation
-        blks = nodeinfo.getInvalidateCacheBlocks();
-        if (blks != null) {
-          long blockIds[] = new long[blks.length];
-          for (int i = 0; i < blks.length; i++) {
-            blockIds[i] = blks[i].getBlockId();
-          }
-          cmds.add(new BlockIdCommand(DatanodeProtocol.DNA_UNCACHE,
-              blockPoolId, blockIds));
+        DatanodeCommand pendingUncacheCommand =
+            getCacheCommand(nodeinfo.getPendingUncached(), nodeinfo,
+              DatanodeProtocol.DNA_UNCACHE, blockPoolId);
+        if (pendingUncacheCommand != null) {
+          cmds.add(pendingUncacheCommand);
         }
 
         blockManager.addKeyUpdateCommand(cmds, nodeinfo);
@@ -1343,6 +1343,40 @@ public class DatanodeManager {
     }
 
     return new DatanodeCommand[0];
+  }
+
+  /**
+   * Convert a CachedBlockList into a DatanodeCommand with a list of blocks.
+   *
+   * @param list       The {@link CachedBlocksList}.  This function 
+   *                   clears the list.
+   * @param datanode   The datanode.
+   * @param action     The action to perform in the command.
+   * @param poolId     The block pool id.
+   * @return           A DatanodeCommand to be sent back to the DN, or null if
+   *                   there is nothing to be done.
+   */
+  private DatanodeCommand getCacheCommand(CachedBlocksList list,
+      DatanodeDescriptor datanode, int action, String poolId) {
+    int length = list.size();
+    if (length == 0) {
+      return null;
+    }
+    // Read and clear the existing cache commands.
+    long[] blockIds = new long[length];
+    int i = 0;
+    for (Iterator<CachedBlock> iter = list.iterator();
+            iter.hasNext(); ) {
+      CachedBlock cachedBlock = iter.next();
+      blockIds[i++] = cachedBlock.getBlockId();
+      iter.remove();
+    }
+    if (!sendCachingCommands) {
+      // Do not send caching commands unless the FSNamesystem told us we
+      // should.
+      return null;
+    }
+    return new BlockIdCommand(action, poolId, blockIds);
   }
 
   /**
@@ -1392,5 +1426,9 @@ public class DatanodeManager {
   @Override
   public String toString() {
     return getClass().getSimpleName() + ": " + host2DatanodeMap;
+  }
+
+  public void setSendCachingCommands(boolean sendCachingCommands) {
+    this.sendCachingCommands = sendCachingCommands;
   }
 }

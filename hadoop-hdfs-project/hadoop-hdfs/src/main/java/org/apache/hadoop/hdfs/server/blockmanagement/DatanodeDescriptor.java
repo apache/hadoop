@@ -28,7 +28,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
+import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -98,6 +100,65 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
+   * A list of CachedBlock objects on this datanode.
+   */
+  public static class CachedBlocksList extends IntrusiveCollection<CachedBlock> {
+    public enum Type {
+      PENDING_CACHED,
+      CACHED,
+      PENDING_UNCACHED
+    }
+
+    private final DatanodeDescriptor datanode;
+
+    private final Type type;
+
+    CachedBlocksList(DatanodeDescriptor datanode, Type type) {
+      this.datanode = datanode;
+      this.type = type;
+    }
+
+    public DatanodeDescriptor getDatanode() {
+      return datanode;
+    }
+
+    public Type getType() {
+      return type;
+    }
+  }
+
+  /**
+   * The blocks which we want to cache on this DataNode.
+   */
+  private final CachedBlocksList pendingCached = 
+      new CachedBlocksList(this, CachedBlocksList.Type.PENDING_CACHED);
+
+  /**
+   * The blocks which we know are cached on this datanode.
+   * This list is updated by periodic cache reports.
+   */
+  private final CachedBlocksList cached = 
+      new CachedBlocksList(this, CachedBlocksList.Type.CACHED);
+
+  /**
+   * The blocks which we want to uncache on this DataNode.
+   */
+  private final CachedBlocksList pendingUncached = 
+      new CachedBlocksList(this, CachedBlocksList.Type.PENDING_UNCACHED);
+
+  public CachedBlocksList getPendingCached() {
+    return pendingCached;
+  }
+
+  public CachedBlocksList getCached() {
+    return cached;
+  }
+
+  public CachedBlocksList getPendingUncached() {
+    return pendingUncached;
+  }
+
+  /**
    * Head of the list of blocks on the datanode
    */
   private volatile BlockInfo blockList = null;
@@ -105,15 +166,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Number of blocks on the datanode
    */
   private int numBlocks = 0;
-
-  /**
-   * Head of the list of cached blocks on the datanode
-   */
-  private volatile BlockInfo cachedBlockList = null;
-  /**
-   * Number of cached blocks on the datanode
-   */
-  private int numCachedBlocks = 0;
 
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
@@ -153,12 +205,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
                                 new BlockQueue<BlockInfoUnderConstruction>();
   /** A set of blocks to be invalidated by this datanode */
   private LightWeightHashSet<Block> invalidateBlocks = new LightWeightHashSet<Block>();
-
-  /** A queue of blocks to be cached by this datanode */
-  private BlockQueue<Block> cacheBlocks = new BlockQueue<Block>();
-  /** A set of blocks to be uncached by this datanode */
-  private LightWeightHashSet<Block> blocksToUncache =
-      new LightWeightHashSet<Block>();
 
   /* Variables for maintaining number of blocks scheduled to be written to
    * this datanode. This count is approximate and might be slightly bigger
@@ -287,54 +333,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * Add block to the list of cached blocks on the data-node.
-   * @return true if block was successfully added, false if already present
-   */
-  public boolean addCachedBlock(BlockInfo b) {
-    if (!b.addNode(this))
-      return false;
-    // add to the head of the data-node list
-    cachedBlockList = b.listInsert(cachedBlockList, this);
-    numCachedBlocks++;
-    return true;
-  }
-
-  /**
-   * Remove block from the list of cached blocks on the data-node.
-   * @return true if block was successfully removed, false if not present
-   */
-  public boolean removeCachedBlock(BlockInfo b) {
-    cachedBlockList = b.listRemove(cachedBlockList, this);
-    if (b.removeNode(this)) {
-      numCachedBlocks--;
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  /**
-   * Move block to the head of the list of cached blocks on the data-node.
-   * @return the index of the head of the blockList
-   */
-  int moveCachedBlockToHead(BlockInfo b, int curIndex, int headIndex) {
-    cachedBlockList = b.moveBlockToHead(cachedBlockList, this, curIndex,
-        headIndex);
-    return curIndex;
-  }
-
-  /**
    * Used for testing only
    * @return the head of the blockList
    */
   @VisibleForTesting
   protected BlockInfo getHead(){
     return blockList;
-  }
-
-  @VisibleForTesting
-  protected BlockInfo getCachedHead() {
-    return cachedBlockList;
   }
 
   /**
@@ -359,10 +363,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
     setDfsUsed(0);
     setXceiverCount(0);
     this.blockList = null;
-    this.cachedBlockList = null;
     this.invalidateBlocks.clear();
-    this.blocksToUncache.clear();
     this.volumeFailures = 0;
+    // pendingCached, cached, and pendingUncached are protected by the
+    // FSN lock.
+    this.pendingCached.clear();
+    this.cached.clear();
+    this.pendingUncached.clear();
   }
   
   public void clearBlockQueues() {
@@ -371,18 +378,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
       this.recoverBlocks.clear();
       this.replicateBlocks.clear();
     }
-    synchronized(blocksToUncache) {
-      this.blocksToUncache.clear();
-      this.cacheBlocks.clear();
-    }
+    // pendingCached, cached, and pendingUncached are protected by the
+    // FSN lock.
+    this.pendingCached.clear();
+    this.cached.clear();
+    this.pendingUncached.clear();
   }
 
   public int numBlocks() {
     return numBlocks;
-  }
-
-  public int numCachedBlocks() {
-    return numCachedBlocks;
   }
 
   /**
@@ -438,24 +442,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return new BlockIterator(this.blockList, this);
   }
 
-  public Iterator<BlockInfo> getCachedBlockIterator() {
-    return new BlockIterator(this.cachedBlockList, this);
-  }
-
   /**
    * Store block replication work.
    */
   void addBlockToBeReplicated(Block block, DatanodeDescriptor[] targets) {
     assert(block != null && targets != null && targets.length > 0);
     replicateBlocks.offer(new BlockTargetPair(block, targets));
-  }
-
-  /**
-   * Store block caching work.
-   */
-  void addBlockToBeCached(Block block) {
-    assert(block != null);
-    cacheBlocks.offer(block);
   }
 
   /**
@@ -483,29 +475,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
   
   /**
-   * Store block uncaching work.
-   */
-  void addBlocksToBeUncached(List<Block> blocklist) {
-    assert(blocklist != null && blocklist.size() > 0);
-    synchronized (blocksToUncache) {
-      for (Block blk : blocklist) {
-        blocksToUncache.add(blk);
-      }
-    }
-  }
-
-  /**
    * The number of work items that are pending to be replicated
    */
   int getNumberOfBlocksToBeReplicated() {
     return replicateBlocks.size();
-  }
-
-  /**
-   * The number of pending cache work items
-   */
-  int getNumberOfBlocksToBeCached() {
-    return cacheBlocks.size();
   }
 
   /**
@@ -518,21 +491,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
-  /**
-   * The number of pending uncache work items
-   */
-  int getNumberOfBlocksToBeUncached() {
-    synchronized (blocksToUncache) {
-      return blocksToUncache.size();
-    }
-  }
-
   public List<BlockTargetPair> getReplicationCommand(int maxTransfers) {
     return replicateBlocks.poll(maxTransfers);
-  }
-
-  public List<Block> getCacheBlocks() {
-    return cacheBlocks.poll(cacheBlocks.size());
   }
 
   public BlockInfoUnderConstruction[] getLeaseRecoveryCommand(int maxTransfers) {
@@ -549,17 +509,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     synchronized (invalidateBlocks) {
       Block[] deleteList = invalidateBlocks.pollToArray(new Block[Math.min(
           invalidateBlocks.size(), maxblocks)]);
-      return deleteList.length == 0 ? null : deleteList;
-    }
-  }
-
-  /**
-   * Remove up to the maximum number of blocks to be uncached
-   */
-  public Block[] getInvalidateCacheBlocks() {
-    synchronized (blocksToUncache) {
-      Block[] deleteList = blocksToUncache.pollToArray(
-          new Block[blocksToUncache.size()]);
       return deleteList.length == 0 ? null : deleteList;
     }
   }

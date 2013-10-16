@@ -997,9 +997,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
            + "from " + nodeReg + " " + blist.getNumberOfBlocks()
            + " blocks");
     }
-
-    namesystem.getCacheReplicationManager()
-        .processCacheReport(nodeReg, poolId, blist);
+    namesystem.getCacheManager().processCacheReport(nodeReg, blist);
     return null;
   }
 

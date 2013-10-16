@@ -648,8 +648,7 @@ public class FSEditLogLoader {
           setPool(addOp.pool).
           build();
       PathBasedCacheDescriptor descriptor =
-          fsNamesys.getCacheManager().unprotectedAddDirective(d);
-
+          fsNamesys.getCacheManager().addDirective(d, null);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntryWithPayload(op.rpcClientId, op.rpcCallId,
             descriptor);
@@ -659,8 +658,7 @@ public class FSEditLogLoader {
     case OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR: {
       RemovePathBasedCacheDescriptorOp removeOp =
           (RemovePathBasedCacheDescriptorOp) op;
-      fsNamesys.getCacheManager().unprotectedRemoveDescriptor(removeOp.id);
-
+      fsNamesys.getCacheManager().removeDescriptor(removeOp.id, null);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
       }
@@ -668,8 +666,7 @@ public class FSEditLogLoader {
     }
     case OP_ADD_CACHE_POOL: {
       AddCachePoolOp addOp = (AddCachePoolOp) op;
-      fsNamesys.getCacheManager().unprotectedAddCachePool(addOp.info);
-
+      fsNamesys.getCacheManager().addCachePool(addOp.info);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
       }
@@ -678,7 +675,6 @@ public class FSEditLogLoader {
     case OP_MODIFY_CACHE_POOL: {
       ModifyCachePoolOp modifyOp = (ModifyCachePoolOp) op;
       fsNamesys.getCacheManager().modifyCachePool(modifyOp.info);
-
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
       }
@@ -687,7 +683,6 @@ public class FSEditLogLoader {
     case OP_REMOVE_CACHE_POOL: {
       RemoveCachePoolOp removeOp = (RemoveCachePoolOp) op;
       fsNamesys.getCacheManager().removeCachePool(removeOp.poolName);
-
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
       }

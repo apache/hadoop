@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,20 +35,22 @@ import org.apache.hadoop.hdfs.util.LightWeightHashSet;
  * on the machine in question.
  */
 @InterfaceAudience.Private
-abstract class InvalidateBlocks {
+class InvalidateBlocks {
   /** Mapping: StorageID -> Collection of Blocks */
   private final Map<String, LightWeightHashSet<Block>> node2blocks =
       new TreeMap<String, LightWeightHashSet<Block>>();
   /** The total number of blocks in the map. */
   private long numBlocks = 0L;
 
+  private final DatanodeManager datanodeManager;
+
+  InvalidateBlocks(final DatanodeManager datanodeManager) {
+    this.datanodeManager = datanodeManager;
+  }
+
   /** @return the number of blocks to be invalidated . */
   synchronized long numBlocks() {
     return numBlocks;
-  }
-
-  synchronized int numStorages() {
-    return node2blocks.size();
   }
 
   /**
@@ -108,22 +111,22 @@ abstract class InvalidateBlocks {
     }
   }
 
-  /**
-   * Polls up to <i>limit</i> blocks from the list of to-be-invalidated Blocks
-   * for a storage.
-   */
-  synchronized List<Block> pollNumBlocks(final String storageId, final int limit) {
-    final LightWeightHashSet<Block> set = node2blocks.get(storageId);
-    if (set == null) {
-      return null;
+  /** Print the contents to out. */
+  synchronized void dump(final PrintWriter out) {
+    final int size = node2blocks.values().size();
+    out.println("Metasave: Blocks " + numBlocks 
+        + " waiting deletion from " + size + " datanodes.");
+    if (size == 0) {
+      return;
     }
-    List<Block> polledBlocks = set.pollN(limit);
-    // Remove the storage if the set is now empty
-    if (set.isEmpty()) {
-      remove(storageId);
+
+    for(Map.Entry<String,LightWeightHashSet<Block>> entry : node2blocks.entrySet()) {
+      final LightWeightHashSet<Block> blocks = entry.getValue();
+      if (blocks.size() > 0) {
+        out.println(datanodeManager.getDatanode(entry.getKey()));
+        out.println(blocks);
+      }
     }
-    numBlocks -= polledBlocks.size();
-    return polledBlocks;
   }
 
   /** @return a list of the storage IDs. */
@@ -131,22 +134,26 @@ abstract class InvalidateBlocks {
     return new ArrayList<String>(node2blocks.keySet());
   }
 
-  /**
-   * Return the set of to-be-invalidated blocks for a storage.
-   */
-  synchronized LightWeightHashSet<Block> getBlocks(String storageId) {
-    return node2blocks.get(storageId);
-  }
+  synchronized List<Block> invalidateWork(
+      final String storageId, final DatanodeDescriptor dn) {
+    final LightWeightHashSet<Block> set = node2blocks.get(storageId);
+    if (set == null) {
+      return null;
+    }
 
-  /**
-   * Schedules invalidation work associated with a storage at the corresponding
-   * datanode.
-   * @param storageId Storage of blocks to be invalidated
-   * @param dn Datanode where invalidation work will be scheduled
-   * @return List of blocks scheduled for invalidation at the datanode
-   */
-  abstract List<Block> invalidateWork(final String storageId,
-      final DatanodeDescriptor dn);
+    // # blocks that can be sent in one message is limited
+    final int limit = datanodeManager.blockInvalidateLimit;
+    final List<Block> toInvalidate = set.pollN(limit);
+
+    // If we send everything in this message, remove this node entry
+    if (set.isEmpty()) {
+      remove(storageId);
+    }
+
+    dn.addBlocksToBeInvalidated(toInvalidate);
+    numBlocks -= toInvalidate.size();
+    return toInvalidate;
+  }
   
   synchronized void clear() {
     node2blocks.clear();

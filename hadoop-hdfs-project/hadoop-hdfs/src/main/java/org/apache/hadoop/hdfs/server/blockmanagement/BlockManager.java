@@ -77,13 +77,14 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
  */
 @InterfaceAudience.Private
-public class BlockManager extends ReportProcessor {
+public class BlockManager {
 
   static final Log LOG = LogFactory.getLog(BlockManager.class);
   public static final Log blockLog = NameNode.blockStateChangeLog;
@@ -162,7 +163,7 @@ public class BlockManager extends ReportProcessor {
   final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
 
   /** Blocks to be invalidated. */
-  private final InvalidateStoredBlocks invalidateBlocks;
+  private final InvalidateBlocks invalidateBlocks;
   
   /**
    * After a failover, over-replicated blocks may not be handled
@@ -218,6 +219,7 @@ public class BlockManager extends ReportProcessor {
   final boolean encryptDataTransfer;
   
   // Max number of blocks to log info about during a block report.
+  private final long maxNumBlocksToLog;
 
   /**
    * When running inside a Standby node, the node may receive block reports
@@ -235,11 +237,10 @@ public class BlockManager extends ReportProcessor {
   
   public BlockManager(final Namesystem namesystem, final FSClusterStats stats,
       final Configuration conf) throws IOException {
-    super(conf);
     this.namesystem = namesystem;
     datanodeManager = new DatanodeManager(this, namesystem, conf);
     heartbeatManager = datanodeManager.getHeartbeatManager();
-    invalidateBlocks = new InvalidateStoredBlocks(datanodeManager);
+    invalidateBlocks = new InvalidateBlocks(datanodeManager);
 
     // Compute the map capacity by allocating 2% of total memory
     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
@@ -299,7 +300,11 @@ public class BlockManager extends ReportProcessor {
     this.encryptDataTransfer =
         conf.getBoolean(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY,
             DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT);
-
+    
+    this.maxNumBlocksToLog =
+        conf.getLong(DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
+            DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
+    
     LOG.info("defaultReplication         = " + defaultReplication);
     LOG.info("maxReplication             = " + maxReplication);
     LOG.info("minReplication             = " + minReplication);
@@ -999,7 +1004,6 @@ public class BlockManager extends ReportProcessor {
    * Adds block to list of blocks which will be invalidated on specified
    * datanode and log the operation
    */
-  @Override  // ReportProcessor
   void addToInvalidates(final Block block, final DatanodeInfo datanode) {
     invalidateBlocks.add(block, datanode, true);
   }
@@ -1045,8 +1049,7 @@ public class BlockManager extends ReportProcessor {
     markBlockAsCorrupt(new BlockToMarkCorrupt(storedBlock, reason), dn);
   }
 
-  @Override // ReportProcessor
-  void markBlockAsCorrupt(BlockToMarkCorrupt b,
+  private void markBlockAsCorrupt(BlockToMarkCorrupt b,
                                   DatanodeInfo dn) throws IOException {
     DatanodeDescriptor node = getDatanodeManager().getDatanode(dn);
     if (node == null) {
@@ -1056,7 +1059,7 @@ public class BlockManager extends ReportProcessor {
 
     BlockCollection bc = b.corrupted.getBlockCollection();
     if (bc == null) {
-      blockLogInfo("#markBlockAsCorrupt: " + b
+      blockLog.info("BLOCK markBlockAsCorrupt: " + b
           + " cannot be marked as corrupt as it does not belong to any file");
       addToInvalidates(b.corrupted, node);
       return;
@@ -1120,9 +1123,6 @@ public class BlockManager extends ReportProcessor {
     this.shouldPostponeBlocksFromFuture  = postpone;
   }
 
-  public boolean shouldPostponeBlocksFromFuture() {
-    return this.shouldPostponeBlocksFromFuture;
-  }
 
   private void postponeBlock(Block blk) {
     if (postponedMisreplicatedBlocks.add(blk)) {
@@ -1544,6 +1544,61 @@ public class BlockManager extends ReportProcessor {
        */
     }
   }
+  
+  /**
+   * StatefulBlockInfo is used to build the "toUC" list, which is a list of
+   * updates to the information about under-construction blocks.
+   * Besides the block in question, it provides the ReplicaState
+   * reported by the datanode in the block report. 
+   */
+  private static class StatefulBlockInfo {
+    final BlockInfoUnderConstruction storedBlock;
+    final ReplicaState reportedState;
+    
+    StatefulBlockInfo(BlockInfoUnderConstruction storedBlock, 
+        ReplicaState reportedState) {
+      this.storedBlock = storedBlock;
+      this.reportedState = reportedState;
+    }
+  }
+  
+  /**
+   * BlockToMarkCorrupt is used to build the "toCorrupt" list, which is a
+   * list of blocks that should be considered corrupt due to a block report.
+   */
+  private static class BlockToMarkCorrupt {
+    /** The corrupted block in a datanode. */
+    final BlockInfo corrupted;
+    /** The corresponding block stored in the BlockManager. */
+    final BlockInfo stored;
+    /** The reason to mark corrupt. */
+    final String reason;
+    
+    BlockToMarkCorrupt(BlockInfo corrupted, BlockInfo stored, String reason) {
+      Preconditions.checkNotNull(corrupted, "corrupted is null");
+      Preconditions.checkNotNull(stored, "stored is null");
+
+      this.corrupted = corrupted;
+      this.stored = stored;
+      this.reason = reason;
+    }
+
+    BlockToMarkCorrupt(BlockInfo stored, String reason) {
+      this(stored, stored, reason);
+    }
+
+    BlockToMarkCorrupt(BlockInfo stored, long gs, String reason) {
+      this(new BlockInfo(stored), stored, reason);
+      //the corrupted block in datanode has a different generation stamp
+      corrupted.setGenerationStamp(gs);
+    }
+
+    @Override
+    public String toString() {
+      return corrupted + "("
+          + (corrupted == stored? "same as stored": "stored=" + stored) + ")";
+    }
+  }
 
   /**
    * The given datanode is reporting all its blocks.
@@ -1635,6 +1690,46 @@ public class BlockManager extends ReportProcessor {
     }
   }
   
+  private void processReport(final DatanodeDescriptor node,
+      final BlockListAsLongs report) throws IOException {
+    // Normal case:
+    // Modify the (block-->datanode) map, according to the difference
+    // between the old and new block report.
+    //
+    Collection<BlockInfo> toAdd = new LinkedList<BlockInfo>();
+    Collection<Block> toRemove = new LinkedList<Block>();
+    Collection<Block> toInvalidate = new LinkedList<Block>();
+    Collection<BlockToMarkCorrupt> toCorrupt = new LinkedList<BlockToMarkCorrupt>();
+    Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
+    reportDiff(node, report, toAdd, toRemove, toInvalidate, toCorrupt, toUC);
+
+    // Process the blocks on each queue
+    for (StatefulBlockInfo b : toUC) { 
+      addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState);
+    }
+    for (Block b : toRemove) {
+      removeStoredBlock(b, node);
+    }
+    int numBlocksLogged = 0;
+    for (BlockInfo b : toAdd) {
+      addStoredBlock(b, node, null, numBlocksLogged < maxNumBlocksToLog);
+      numBlocksLogged++;
+    }
+    if (numBlocksLogged > maxNumBlocksToLog) {
+      blockLog.info("BLOCK* processReport: logged info for " + maxNumBlocksToLog
+          + " of " + numBlocksLogged + " reported.");
+    }
+    for (Block b : toInvalidate) {
+      blockLog.info("BLOCK* processReport: "
+          + b + " on " + node + " size " + b.getNumBytes()
+          + " does not belong to any file");
+      addToInvalidates(b, node);
+    }
+    for (BlockToMarkCorrupt b : toCorrupt) {
+      markBlockAsCorrupt(b, node);
+    }
+  }
+
   /**
    * processFirstBlockReport is intended only for processing "initial" block
    * reports, the first block report received from a DN after it registers.
@@ -1697,6 +1792,44 @@ public class BlockManager extends ReportProcessor {
     }
   }
 
+  private void reportDiff(DatanodeDescriptor dn, 
+      BlockListAsLongs newReport, 
+      Collection<BlockInfo> toAdd,              // add to DatanodeDescriptor
+      Collection<Block> toRemove,           // remove from DatanodeDescriptor
+      Collection<Block> toInvalidate,       // should be removed from DN
+      Collection<BlockToMarkCorrupt> toCorrupt, // add to corrupt replicas list
+      Collection<StatefulBlockInfo> toUC) { // add to under-construction list
+    // place a delimiter in the list which separates blocks 
+    // that have been reported from those that have not
+    BlockInfo delimiter = new BlockInfo(new Block(), 1);
+    boolean added = dn.addBlock(delimiter);
+    assert added : "Delimiting block cannot be present in the node";
+    int headIndex = 0; //currently the delimiter is in the head of the list
+    int curIndex;
+
+    if (newReport == null)
+      newReport = new BlockListAsLongs();
+    // scan the report and process newly reported blocks
+    BlockReportIterator itBR = newReport.getBlockReportIterator();
+    while(itBR.hasNext()) {
+      Block iblk = itBR.next();
+      ReplicaState iState = itBR.getCurrentReplicaState();
+      BlockInfo storedBlock = processReportedBlock(dn, iblk, iState,
+                                  toAdd, toInvalidate, toCorrupt, toUC);
+      // move block to the head of the list
+      if (storedBlock != null && (curIndex = storedBlock.findDatanode(dn)) >= 0) {
+        headIndex = dn.moveBlockToHead(storedBlock, curIndex, headIndex);
+      }
+    }
+    // collect blocks that have not been reported
+    // all of them are next to the delimiter
+    Iterator<? extends Block> it = new DatanodeDescriptor.BlockIterator(
+        delimiter.getNext(0), dn);
+    while(it.hasNext())
+      toRemove.add(it.next());
+    dn.removeBlock(delimiter);
+  }
+
   /**
    * Process a block replica reported by the data-node.
    * No side effects except adding to the passed-in Collections.
@@ -1728,8 +1861,7 @@ public class BlockManager extends ReportProcessor {
    * @return the up-to-date stored block, if it should be kept.
    *         Otherwise, null.
    */
-  @Override // ReportProcessor
-  BlockInfo processReportedBlock(final DatanodeDescriptor dn, 
+  private BlockInfo processReportedBlock(final DatanodeDescriptor dn, 
       final Block block, final ReplicaState reportedState, 
       final Collection<BlockInfo> toAdd, 
       final Collection<Block> toInvalidate, 
@@ -1956,7 +2088,6 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     }
   }
   
-  @Override // ReportProcessor
   void addStoredBlockUnderConstruction(
       BlockInfoUnderConstruction block, 
       DatanodeDescriptor node, 
@@ -2012,8 +2143,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
    * needed replications if this takes care of the problem.
    * @return the block that is stored in blockMap.
    */
-  @Override // ReportProcessor
-  Block addStoredBlock(final BlockInfo block,
+  private Block addStoredBlock(final BlockInfo block,
                                DatanodeDescriptor node,
                                DatanodeDescriptor delNodeHint,
                                boolean logEveryBlock)
@@ -2028,7 +2158,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     }
     if (storedBlock == null || storedBlock.getBlockCollection() == null) {
       // If this block does not belong to anyfile, then we are done.
-      blockLogInfo("#addStoredBlock: " + block + " on "
+      blockLog.info("BLOCK* addStoredBlock: " + block + " on "
           + node + " size " + block.getNumBytes()
           + " but it does not belong to any file");
       // we could add this block to invalidate set of this datanode.
@@ -2050,7 +2180,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       }
     } else {
       curReplicaDelta = 0;
-      blockLogWarn("#addStoredBlock: "
+      blockLog.warn("BLOCK* addStoredBlock: "
           + "Redundant addStoredBlock request received for " + storedBlock
           + " on " + node + " size " + storedBlock.getNumBytes());
     }
@@ -2108,6 +2238,20 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     return storedBlock;
   }
 
+  private void logAddStoredBlock(BlockInfo storedBlock, DatanodeDescriptor node) {
+    if (!blockLog.isInfoEnabled()) {
+      return;
+    }
+    
+    StringBuilder sb = new StringBuilder(500);
+    sb.append("BLOCK* addStoredBlock: blockMap updated: ")
+      .append(node)
+      .append(" is added to ");
+    storedBlock.appendStringTo(sb);
+    sb.append(" size " )
+      .append(storedBlock.getNumBytes());
+    blockLog.info(sb);
+  }
   /**
    * Invalidate corrupt replicas.
    * <p>
@@ -2989,6 +3133,13 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
   }
 
+  /**
+   * Get the replicas which are corrupt for a given block.
+   */
+  public Collection<DatanodeDescriptor> getCorruptReplicas(Block block) {
+    return corruptReplicas.getNodes(block);
+  }
+
   /** @return the size of UnderReplicatedBlocks */
   public int numOfUnderReplicatedBlocks() {
     return neededReplications.size();
@@ -3129,21 +3280,4 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   public void shutdown() {
     blocksMap.close();
   }
-
-  @Override // ReportProcessor
-  int moveBlockToHead(DatanodeDescriptor dn, BlockInfo storedBlock,
-      int curIndex, int headIndex) {
-    return dn.moveBlockToHead(storedBlock, curIndex, headIndex);
-  }
-
-  @Override // ReportProcessor
-  boolean addBlock(DatanodeDescriptor dn, BlockInfo block) {
-    return dn.addBlock(block);
-  }
-
-  @Override // ReportProcessor
-  boolean removeBlock(DatanodeDescriptor dn, BlockInfo block) {
-    return dn.removeBlock(block);
-  }
-
 }
