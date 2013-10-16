@@ -66,6 +66,9 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-5414. TestTaskAttempt fails in JDK7 with NPE (Nemon Lou via 
     devaraj)
 
+    MAPREDUCE-5585. TestCopyCommitter#testNoCommitAction Fails on JDK7
+    (jeagles)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
