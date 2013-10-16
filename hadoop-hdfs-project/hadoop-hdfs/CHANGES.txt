@@ -3489,6 +3489,9 @@ Release 0.23.10 - UNRELEASED
     HDFS-5010. Reduce the frequency of getCurrentUser() calls from namenode
     (kihwal)
 
+    HDFS-5346. Avoid unnecessary call to getNumLiveDataNodes() for each block 
+    during IBR processing (Ravi Prakash via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
