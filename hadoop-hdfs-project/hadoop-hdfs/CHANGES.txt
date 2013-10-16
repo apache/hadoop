@@ -148,6 +148,9 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5330. fix readdir and readdirplus for large directories (brandonli)
 
+    HDFS-5370. Typo in Error Message: different between range in condition
+    and range in error message. (Kousuke Saruta via suresh)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
