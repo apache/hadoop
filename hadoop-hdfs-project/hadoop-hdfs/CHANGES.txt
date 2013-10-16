@@ -19,6 +19,9 @@ Release 0.23.10 - UNRELEASED
     HDFS-4329. DFSShell issues with directories with spaces in name (Cristina
     L. Abad via jeagles)
 
+    HDFS-5346. Avoid unnecessary call to getNumLiveDataNodes() for each block
+    during IBR processing (Ravi Prakash via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
