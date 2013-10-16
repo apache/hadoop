@@ -191,6 +191,9 @@ Release 2.3.0 - UNRELEASED
     org.apache.hadoop.mapred.lib.db (Aleksey Gorshkov, Andrey Klochkov, and
     Nathan Roberts via jlowe)
 
+    MAPREDUCE-5585. TestCopyCommitter#testNoCommitAction Fails on JDK7
+    (jeagles)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
