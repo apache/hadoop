@@ -1494,6 +1494,9 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-5513. ConcurrentModificationException in JobControl (Robert
     Parker via jlowe)
 
+    MAPREDUCE-5586. TestCopyMapper#testCopyFailOnBlockSizeDifference fails when
+    run from hadoop-tools/hadoop-distcp directory (jeagles)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
