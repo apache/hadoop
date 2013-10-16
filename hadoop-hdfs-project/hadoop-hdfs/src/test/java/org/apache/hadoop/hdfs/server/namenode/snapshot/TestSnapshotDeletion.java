@@ -23,12 +23,15 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.security.PrivilegedAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -920,5 +923,30 @@ public class TestSnapshotDeletion {
     // combination
     subFile1Status = hdfs.getFileStatus(subFile1SCopy);
     assertEquals(REPLICATION_1, subFile1Status.getReplication());
+  }
+  
+  @Test
+  public void testDeleteSnapshotCommandWithIllegalArguments() throws Exception {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream psOut = new PrintStream(out);
+    System.setOut(psOut);
+    System.setErr(psOut);
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    
+    String[] argv1 = {"-deleteSnapshot", "/tmp"};
+    int val = shell.run(argv1);
+    assertTrue(val == -1);
+    assertTrue(out.toString().contains(
+        argv1[0] + ": Incorrect number of arguments."));
+    out.reset();
+    
+    String[] argv2 = {"-deleteSnapshot", "/tmp", "s1", "s2"};
+    val = shell.run(argv2);
+    assertTrue(val == -1);
+    assertTrue(out.toString().contains(
+        argv2[0] + ": Incorrect number of arguments."));
+    psOut.close();
+    out.close();
   }
 }
