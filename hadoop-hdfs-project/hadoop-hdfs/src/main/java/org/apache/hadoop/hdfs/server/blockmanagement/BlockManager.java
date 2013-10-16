@@ -1785,6 +1785,14 @@ public class BlockManager {
       if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
         ((BlockInfoUnderConstruction)storedBlock).addReplicaIfNotPresent(
             node, iblk, reportedState);
+        // OpenFileBlocks only inside snapshots also will be added to safemode
+        // threshold. So we need to update such blocks to safemode
+        // refer HDFS-5283
+        BlockInfoUnderConstruction blockUC = (BlockInfoUnderConstruction) storedBlock;
+        if (namesystem.isInSnapshot(blockUC)) {
+          int numOfReplicas = blockUC.getNumExpectedLocations();
+          namesystem.incrementSafeBlockCount(numOfReplicas);
+        }
         //and fall through to next clause
       }      
       //add replica if appropriate

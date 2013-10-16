@@ -1014,4 +1014,8 @@ public class DFSTestUtil {
           cluster.getNameNodeRpc(nnIndex), filePath, 0L, bytes.length);
     } while (locatedBlocks.isUnderConstruction());
   }
+
+  public static void abortStream(DFSOutputStream out) throws IOException {
+    out.abort();
+  }
 }
