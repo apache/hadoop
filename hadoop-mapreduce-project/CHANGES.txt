@@ -69,6 +69,9 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-5585. TestCopyCommitter#testNoCommitAction Fails on JDK7
     (jeagles)
 
+    MAPREDUCE-5586. TestCopyMapper#testCopyFailOnBlockSizeDifference fails when
+    run from hadoop-tools/hadoop-distcp directory (jeagles)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
