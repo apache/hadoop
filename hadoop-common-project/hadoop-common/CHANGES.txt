@@ -70,6 +70,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9494. Excluded auto-generated and examples code from clover reports
     (Andrey Klochkov via jeagles)
 
+    HADOOP-9897. Add method to get path start position without drive specifier in
+    o.a.h.fs.Path. (Binglin Chang via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
