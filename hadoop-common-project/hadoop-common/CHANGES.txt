@@ -73,6 +73,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9897. Add method to get path start position without drive specifier in
     o.a.h.fs.Path. (Binglin Chang via cnauroth)
 
+    HADOOP-9078. enhance unit-test coverage of class
+    org.apache.hadoop.fs.FileContext (Ivan A. Veselovsky via jeagles)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
