@@ -108,6 +108,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5283. Under construction blocks only inside snapshots should not be
     counted in safemode threshhold.  (Vinay via szetszwo)
 
+    HDFS-4376. Fix race conditions in Balancer.  (Junping Du via szetszwo)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
