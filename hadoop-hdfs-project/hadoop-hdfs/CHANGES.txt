@@ -118,6 +118,9 @@ Release 2.2.1 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-5360. Improvement of usage message of renameSnapshot and
+    deleteSnapshot. (Shinichi Yamashita via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
