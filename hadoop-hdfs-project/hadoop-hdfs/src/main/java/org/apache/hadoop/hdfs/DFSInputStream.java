@@ -368,7 +368,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead {
 
     //check offset
     if (offset < 0 || offset >= getFileLength()) {
-      throw new IOException("offset < 0 || offset > getFileLength(), offset="
+      throw new IOException("offset < 0 || offset >= getFileLength(), offset="
           + offset
           + ", updatePosition=" + updatePosition
           + ", locatedBlocks=" + locatedBlocks);
