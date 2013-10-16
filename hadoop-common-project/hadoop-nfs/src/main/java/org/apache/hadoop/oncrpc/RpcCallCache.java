@@ -44,7 +44,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class RpcCallCache {
   
   public static class CacheEntry {
-    private XDR response; // null if no response has been sent
+    private RpcResponse response; // null if no response has been sent
     
     public CacheEntry() {
       response = null;
@@ -58,11 +58,11 @@ public class RpcCallCache {
       return response != null;
     }
     
-    public XDR getResponse() {
+    public RpcResponse getResponse() {
       return response;
     }
     
-    public void setResponse(XDR response) {
+    public void setResponse(RpcResponse response) {
       this.response = response;
     }
   }
@@ -128,13 +128,13 @@ public class RpcCallCache {
   }
 
   /** Mark a request as completed and add corresponding response to the cache */
-  public void callCompleted(InetAddress clientId, int xid, XDR response) {
+  public void callCompleted(InetAddress clientId, int xid, RpcResponse response) {
     ClientRequest req = new ClientRequest(clientId, xid);
     CacheEntry e;
     synchronized(map) {
       e = map.get(req);
     }
-    e.setResponse(response);
+    e.response = response;
   }
   
   /**

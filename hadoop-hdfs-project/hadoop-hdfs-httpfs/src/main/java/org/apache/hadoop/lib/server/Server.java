@@ -418,7 +418,11 @@ public class Server {
       Properties props = new Properties();
       try {
         InputStream is = getResource(DEFAULT_LOG4J_PROPERTIES);
-        props.load(is);
+        try {
+          props.load(is);
+        } finally {
+          is.close();
+        }
       } catch (IOException ex) {
         throw new ServerException(ServerException.ERROR.S03, DEFAULT_LOG4J_PROPERTIES, ex.getMessage(), ex);
       }

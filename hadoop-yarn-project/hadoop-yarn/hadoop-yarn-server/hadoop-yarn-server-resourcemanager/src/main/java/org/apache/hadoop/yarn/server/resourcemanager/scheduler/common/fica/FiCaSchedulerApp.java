@@ -141,10 +141,16 @@ public class FiCaSchedulerApp extends SchedulerApplication {
   }
 
   public synchronized void updateResourceRequests(
-      List<ResourceRequest> requests, 
+      List<ResourceRequest> requests) {
+    if (!isStopped) {
+      this.appSchedulingInfo.updateResourceRequests(requests);
+    }
+  }
+
+  public synchronized void updateBlacklist(
       List<String> blacklistAdditions, List<String> blacklistRemovals) {
     if (!isStopped) {
-      this.appSchedulingInfo.updateResourceRequests(requests, 
+      this.appSchedulingInfo.updateBlacklist(
           blacklistAdditions, blacklistRemovals);
     }
   }

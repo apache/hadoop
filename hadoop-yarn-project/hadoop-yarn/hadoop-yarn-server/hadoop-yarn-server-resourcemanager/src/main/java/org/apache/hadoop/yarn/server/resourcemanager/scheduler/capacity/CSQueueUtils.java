@@ -99,15 +99,11 @@ class CSQueueUtils {
           Resources.divide(calculator, clusterResource, 
               usedResources, queueLimit);
     }
-    
+
     childQueue.setUsedCapacity(usedCapacity);
     childQueue.setAbsoluteUsedCapacity(absoluteUsedCapacity);
     
-    Resource available = 
-        Resources.roundUp(
-            calculator, 
-            Resources.subtract(queueLimit, usedResources), 
-            minimumAllocation);
+    Resource available = Resources.subtract(queueLimit, usedResources);
     childQueue.getMetrics().setAvailableResourcesToQueue(
         Resources.max(
             calculator, 

@@ -28,25 +28,41 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class HttpConfig {
-  private static boolean sslEnabled;
+  private static Policy policy;
+  public enum Policy {
+    HTTP_ONLY,
+    HTTPS_ONLY;
+
+    public static Policy fromString(String value) {
+      if (value.equalsIgnoreCase(CommonConfigurationKeysPublic
+              .HTTP_POLICY_HTTPS_ONLY)) {
+        return HTTPS_ONLY;
+      }
+      return HTTP_ONLY;
+    }
+  }
 
   static {
     Configuration conf = new Configuration();
-    sslEnabled = conf.getBoolean(
-        CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_KEY,
-        CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_DEFAULT);
+    boolean sslEnabled = conf.getBoolean(
+            CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_KEY,
+            CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_DEFAULT);
+    policy = sslEnabled ? Policy.HTTPS_ONLY : Policy.HTTP_ONLY;
   }
 
-  public static void setSecure(boolean secure) {
-    sslEnabled = secure;
+  public static void setPolicy(Policy policy) {
+    HttpConfig.policy = policy;
   }
 
   public static boolean isSecure() {
-    return sslEnabled;
+    return policy == Policy.HTTPS_ONLY;
   }
 
   public static String getSchemePrefix() {
     return (isSecure()) ? "https://" : "http://";
   }
 
+  public static String getScheme(Policy policy) {
+    return policy == Policy.HTTPS_ONLY ? "https://" : "http://";
+  }
 }

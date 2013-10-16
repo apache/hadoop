@@ -39,6 +39,14 @@ public class TestConverterUtils {
   }
 
   @Test
+  public void testConvertUrlWithUserinfo() throws URISyntaxException {
+    Path expectedPath = new Path("foo://username:password@example.com:8042");
+    URL url = ConverterUtils.getYarnUrlFromPath(expectedPath);
+    Path actualPath = ConverterUtils.getPathFromYarnURL(url);
+    assertEquals(expectedPath, actualPath);
+  }
+  
+  @Test
   public void testContainerId() throws URISyntaxException {
     ContainerId id = TestContainerId.newContainerId(0, 0, 0, 0);
     String cid = ConverterUtils.toString(id);

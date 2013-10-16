@@ -17,12 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -98,6 +104,50 @@ public class TestHASafeMode {
   public void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Make sure the client retries when the active NN is in safemode
+   */
+  @Test (timeout=300000)
+  public void testClientRetrySafeMode() throws Exception {
+    final Map<Path, Boolean> results = Collections
+        .synchronizedMap(new HashMap<Path, Boolean>());
+    final Path test = new Path("/test");
+    // let nn0 enter safemode
+    NameNodeAdapter.enterSafeMode(nn0, false);
+    LOG.info("enter safemode");
+    new Thread() {
+      @Override
+      public void run() {
+        try {
+          boolean mkdir = fs.mkdirs(test);
+          LOG.info("mkdir finished, result is " + mkdir);
+          synchronized (TestHASafeMode.this) {
+            results.put(test, mkdir);
+            TestHASafeMode.this.notifyAll();
+          }
+        } catch (Exception e) {
+          LOG.info("Got Exception while calling mkdir", e);
+        }
+      }
+    }.start();
+    
+    // make sure the client's call has actually been handled by the active NN
+    assertFalse("The directory should not be created while NN in safemode",
+        fs.exists(test));
+    
+    Thread.sleep(1000);
+    // let nn0 leave safemode
+    NameNodeAdapter.leaveSafeMode(nn0);
+    LOG.info("leave safemode");
+    
+    synchronized (this) {
+      while (!results.containsKey(test)) {
+        this.wait();
+      }
+      assertTrue(results.get(test));
     }
   }
   

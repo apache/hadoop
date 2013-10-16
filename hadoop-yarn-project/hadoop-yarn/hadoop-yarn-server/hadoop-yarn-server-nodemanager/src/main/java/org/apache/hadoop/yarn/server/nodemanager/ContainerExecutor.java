@@ -218,7 +218,7 @@ public abstract class ContainerExecutor implements Configurable {
         retCommand.addAll(Arrays.asList("nice", "-n",
             Integer.toString(containerSchedPriorityAdjustment)));
       }
-      retCommand.addAll(Arrays.asList("bash", "-c", command));
+      retCommand.addAll(Arrays.asList("bash", command));
       return retCommand.toArray(new String[retCommand.size()]);
     }
 

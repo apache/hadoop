@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -45,6 +46,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -99,7 +101,8 @@ import org.apache.hadoop.yarn.util.Records;
  * within the <code>ResourceManager</code> regarding what host:port the
  * ApplicationMaster is listening on to provide any form of functionality to a
  * client as well as a tracking url that a client can use to keep track of
- * status/job history if needed.
+ * status/job history if needed. However, in the distributedshell, trackingurl
+ * and appMasterHost:appMasterRpcPort are not supported.
  * </p>
  * 
  * <p>
@@ -168,7 +171,7 @@ public class ApplicationMaster {
   // Hostname of the container
   private String appMasterHostname = "";
   // Port on which the app master listens for status updates from clients
-  private int appMasterRpcPort = 0;
+  private int appMasterRpcPort = -1;
   // Tracking url to which app master publishes info for clients to monitor
   private String appMasterTrackingUrl = "";
 
@@ -177,6 +180,8 @@ public class ApplicationMaster {
   private int numTotalContainers = 1;
   // Memory to request for the container on which the shell command will run
   private int containerMemory = 10;
+  // VirtualCores to request for the container on which the shell command will run
+  private int containerVirtualCores = 1;
   // Priority of the request
   private int requestPriority;
 
@@ -279,8 +284,8 @@ public class ApplicationMaster {
     }
   }
 
-  public ApplicationMaster() throws Exception {
-    // Set up the configuration and RPC
+  public ApplicationMaster() {
+    // Set up the configuration
     conf = new YarnConfiguration();
   }
 
@@ -306,6 +311,8 @@ public class ApplicationMaster {
         "Environment for shell script. Specified as env_key=env_val pairs");
     opts.addOption("container_memory", true,
         "Amount of memory in MB to be requested to run the shell command");
+    opts.addOption("container_vcores", true,
+        "Amount of virtual cores to be requested to run the shell command");
     opts.addOption("num_containers", true,
         "No. of containers on which the shell command needs to be executed");
     opts.addOption("priority", true, "Application Priority. Default 0");
@@ -418,6 +425,8 @@ public class ApplicationMaster {
 
     containerMemory = Integer.parseInt(cliParser.getOptionValue(
         "container_memory", "10"));
+    containerVirtualCores = Integer.parseInt(cliParser.getOptionValue(
+        "container_vcores", "1"));
     numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
         "num_containers", "1"));
     if (numTotalContainers == 0) {
@@ -468,7 +477,7 @@ public class ApplicationMaster {
     amRMClient.init(conf);
     amRMClient.start();
 
-    containerListener = new NMCallbackHandler();
+    containerListener = createNMCallbackHandler();
     nmClientAsync = new NMClientAsyncImpl(containerListener);
     nmClientAsync.init(conf);
     nmClientAsync.start();
@@ -481,6 +490,7 @@ public class ApplicationMaster {
 
     // Register self with ResourceManager
     // This will start heartbeating to the RM
+    appMasterHostname = NetUtils.getHostname();
     RegisterApplicationMasterResponse response = amRMClient
         .registerApplicationMaster(appMasterHostname, appMasterRpcPort,
             appMasterTrackingUrl);
@@ -488,6 +498,9 @@ public class ApplicationMaster {
     // resource manager
     int maxMem = response.getMaximumResourceCapability().getMemory();
     LOG.info("Max mem capabililty of resources in this cluster " + maxMem);
+    
+    int maxVCores = response.getMaximumResourceCapability().getVirtualCores();
+    LOG.info("Max vcores capabililty of resources in this cluster " + maxVCores);
 
     // A resource ask cannot exceed the max.
     if (containerMemory > maxMem) {
@@ -497,6 +510,12 @@ public class ApplicationMaster {
       containerMemory = maxMem;
     }
 
+    if (containerVirtualCores > maxVCores) {
+      LOG.info("Container virtual cores specified above max threshold of cluster."
+          + " Using max value." + ", specified=" + containerVirtualCores + ", max="
+          + maxVCores);
+      containerVirtualCores = maxVCores;
+    }
 
     // Setup ask for containers from RM
     // Send request for containers to RM
@@ -510,7 +529,8 @@ public class ApplicationMaster {
     }
     numRequestedContainers.set(numTotalContainers);
 
-    while (!done) {
+    while (!done
+        && (numCompletedContainers.get() != numTotalContainers)) {
       try {
         Thread.sleep(200);
       } catch (InterruptedException ex) {}
@@ -519,7 +539,12 @@ public class ApplicationMaster {
     
     return success;
   }
-  
+
+  @VisibleForTesting
+  NMCallbackHandler createNMCallbackHandler() {
+    return new NMCallbackHandler(this);
+  }
+
   private void finish() {
     // Join all launched threads
     // needed for when we time out
@@ -563,7 +588,6 @@ public class ApplicationMaster {
       LOG.error("Failed to unregister application", e);
     }
     
-    done = true;
     amRMClient.stop();
   }
   
@@ -637,7 +661,9 @@ public class ApplicationMaster {
             + ":" + allocatedContainer.getNodeId().getPort()
             + ", containerNodeURI=" + allocatedContainer.getNodeHttpAddress()
             + ", containerResourceMemory"
-            + allocatedContainer.getResource().getMemory());
+            + allocatedContainer.getResource().getMemory()
+            + ", containerResourceVirtualCores"
+            + allocatedContainer.getResource().getVirtualCores());
         // + ", containerToken"
         // +allocatedContainer.getContainerToken().getIdentifier().toString());
 
@@ -676,10 +702,17 @@ public class ApplicationMaster {
     }
   }
 
-  private class NMCallbackHandler implements NMClientAsync.CallbackHandler {
+  @VisibleForTesting
+  static class NMCallbackHandler
+    implements NMClientAsync.CallbackHandler {
 
     private ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentHashMap<ContainerId, Container>();
+    private final ApplicationMaster applicationMaster;
+
+    public NMCallbackHandler(ApplicationMaster applicationMaster) {
+      this.applicationMaster = applicationMaster;
+    }
 
     public void addContainer(ContainerId containerId, Container container) {
       containers.putIfAbsent(containerId, container);
@@ -710,7 +743,7 @@ public class ApplicationMaster {
       }
       Container container = containers.get(containerId);
       if (container != null) {
-        nmClientAsync.getContainerStatusAsync(containerId, container.getNodeId());
+        applicationMaster.nmClientAsync.getContainerStatusAsync(containerId, container.getNodeId());
       }
     }
 
@@ -718,6 +751,8 @@ public class ApplicationMaster {
     public void onStartContainerError(ContainerId containerId, Throwable t) {
       LOG.error("Failed to start Container " + containerId);
       containers.remove(containerId);
+      applicationMaster.numCompletedContainers.incrementAndGet();
+      applicationMaster.numFailedContainers.incrementAndGet();
     }
 
     @Override
@@ -834,7 +869,7 @@ public class ApplicationMaster {
       // files in the distributed file-system. The tokens are otherwise also
       // useful in cases, for e.g., when one is running a "hadoop dfs" command
       // inside the distributed shell.
-      ctx.setTokens(allTokens);
+      ctx.setTokens(allTokens.duplicate());
 
       containerListener.addContainer(container.getId(), container);
       nmClientAsync.startContainerAsync(container, ctx);
@@ -844,7 +879,6 @@ public class ApplicationMaster {
   /**
    * Setup the request that will be sent to the RM for the container ask.
    *
-   * @param numContainers Containers to ask for from RM
    * @return the setup ResourceRequest to be sent to RM
    */
   private ContainerRequest setupContainerAskForRM() {
@@ -856,9 +890,10 @@ public class ApplicationMaster {
     pri.setPriority(requestPriority);
 
     // Set up resource type requirements
-    // For now, only memory is supported so we set memory requirements
+    // For now, memory and CPU are supported so we set memory and cpu requirements
     Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(containerMemory);
+    capability.setVirtualCores(containerVirtualCores);
 
     ContainerRequest request = new ContainerRequest(capability, null, null,
         pri);

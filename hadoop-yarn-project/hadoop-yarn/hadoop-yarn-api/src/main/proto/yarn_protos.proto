@@ -100,6 +100,7 @@ message URLProto {
   optional string host = 2;
   optional int32 port = 3;
   optional string file = 4;
+  optional string userInfo = 5;
 }
 
 enum LocalResourceVisibilityProto {

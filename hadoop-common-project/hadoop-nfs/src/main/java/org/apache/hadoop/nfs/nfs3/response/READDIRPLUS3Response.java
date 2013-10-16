@@ -27,6 +27,8 @@ import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.Verifier;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * READDIRPLUS3 Response
  */
@@ -51,6 +53,11 @@ public class READDIRPLUS3Response  extends NFS3Response {
       this.objFileHandle = objFileHandle;
     }
 
+    @VisibleForTesting
+    public String getName() {
+      return name;
+    }
+    
     void seralize(XDR xdr) {
       xdr.writeLongAsHyper(fileId);
       xdr.writeString(name);
@@ -71,7 +78,8 @@ public class READDIRPLUS3Response  extends NFS3Response {
       this.eof = eof;
     }
 
-    List<EntryPlus3> getEntries() {
+    @VisibleForTesting
+    public List<EntryPlus3> getEntries() {
       return entries;
     }
     
@@ -80,6 +88,11 @@ public class READDIRPLUS3Response  extends NFS3Response {
     }
   }
 
+  @VisibleForTesting
+  public DirListPlus3 getDirListPlus() {
+    return dirListPlus;
+  }
+  
   public READDIRPLUS3Response(int status) {
     this(status, null, 0, null);
   }

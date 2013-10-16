@@ -19,6 +19,7 @@ package org.apache.hadoop.mapreduce;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.Shell;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -131,6 +132,13 @@ public interface MRJobConfig {
   public static final String MAPREDUCE_JOB_USER_CLASSPATH_FIRST = "mapreduce.job.user.classpath.first";
 
   public static final String MAPREDUCE_JOB_CLASSLOADER = "mapreduce.job.classloader";
+
+  /**
+   * A comma-separated list of services that function as ShuffleProvider aux-services
+   * (in addition to the built-in ShuffleHandler).
+   * These services can serve shuffle requests from reducetasks.
+   */
+  public static final String MAPREDUCE_JOB_SHUFFLE_PROVIDER_SERVICES = "mapreduce.job.shuffle.provider.services";
 
   public static final String MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES = "mapreduce.job.classloader.system.classes";
 
@@ -650,12 +658,20 @@ public interface MRJobConfig {
       "mapreduce.application.classpath";
 
   /**
+   * Path to MapReduce framework archive
+   */
+  public static final String MAPREDUCE_APPLICATION_FRAMEWORK_PATH =
+      "mapreduce.application.framework.path";
+
+  /**
    * Default CLASSPATH for all YARN MapReduce applications.
    */
-  public static final String[] DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH = {
-      "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*",
-      "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*",
-  };
+  public final String 
+  DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH = Shell.WINDOWS ?
+      "%HADOOP_MAPRED_HOME%\\share\\hadoop\\mapreduce\\*," 
+      + "%HADOOP_MAPRED_HOME%\\share\\hadoop\\mapreduce\\lib\\*" :
+      "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,"
+      + "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*";
 
   public static final String WORKFLOW_ID = "mapreduce.workflow.id";
   

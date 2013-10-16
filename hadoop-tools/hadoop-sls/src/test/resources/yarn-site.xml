@@ -55,4 +55,17 @@
     <value>false</value>
   </property>
 
+  <property>
+    <description>Whether to use preemption. Note that preemption is experimental
+    in the current version. Defaults to false.</description>
+    <name>yarn.scheduler.fair.preemption</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>Whether to allow multiple container assignments in one
+    heartbeat. Defaults to false.</description>
+    <name>yarn.scheduler.fair.assignmultiple</name>
+    <value>true</value>
+  </property>
 </configuration>

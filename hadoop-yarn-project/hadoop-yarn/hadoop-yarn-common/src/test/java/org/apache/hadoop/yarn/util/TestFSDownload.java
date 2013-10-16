@@ -41,6 +41,7 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import java.util.zip.GZIPOutputStream;
 
 import junit.framework.Assert;
 
@@ -72,6 +73,9 @@ public class TestFSDownload {
   private static final Log LOG = LogFactory.getLog(TestFSDownload.class);
   private static AtomicLong uniqueNumberGenerator =
     new AtomicLong(System.currentTimeMillis());
+  private enum TEST_FILE_TYPE {
+    TAR, JAR, ZIP, TGZ
+  };
   
   @AfterClass
   public static void deleteTestDir() throws IOException {
@@ -121,7 +125,7 @@ public class TestFSDownload {
     ret.setPattern("classes/.*");
     return ret;
   }
-  
+
   static LocalResource createTarFile(FileContext files, Path p, int len,
       Random r, LocalResourceVisibility vis) throws IOException,
       URISyntaxException {
@@ -149,7 +153,35 @@ public class TestFSDownload {
         .getModificationTime());
     return ret;
   }
-  
+
+  static LocalResource createTgzFile(FileContext files, Path p, int len,
+      Random r, LocalResourceVisibility vis) throws IOException,
+      URISyntaxException {
+    byte[] bytes = new byte[len];
+    r.nextBytes(bytes);
+
+    File gzipFile = new File(p.toUri().getPath() + ".tar.gz");
+    gzipFile.createNewFile();
+    TarArchiveOutputStream out = new TarArchiveOutputStream(
+        new GZIPOutputStream(new FileOutputStream(gzipFile)));
+    TarArchiveEntry entry = new TarArchiveEntry(p.getName());
+    entry.setSize(bytes.length);
+    out.putArchiveEntry(entry);
+    out.write(bytes);
+    out.closeArchiveEntry();
+    out.close();
+
+    LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
+    ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
+        + ".tar.gz")));
+    ret.setSize(len);
+    ret.setType(LocalResourceType.ARCHIVE);
+    ret.setVisibility(vis);
+    ret.setTimestamp(files.getFileStatus(new Path(p.toString() + ".tar.gz"))
+        .getModificationTime());
+    return ret;
+  }
+
   static LocalResource createJarFile(FileContext files, Path p, int len,
       Random r, LocalResourceVisibility vis) throws IOException,
       URISyntaxException {
@@ -175,7 +207,7 @@ public class TestFSDownload {
         .getModificationTime());
     return ret;
   }
-  
+
   static LocalResource createZipFile(FileContext files, Path p, int len,
       Random r, LocalResourceVisibility vis) throws IOException,
       URISyntaxException {
@@ -201,7 +233,7 @@ public class TestFSDownload {
         .getModificationTime());
     return ret;
   }
-  
+
   @Test (timeout=10000)
   public void testDownloadBadPublic() throws IOException, URISyntaxException,
       InterruptedException {
@@ -252,7 +284,7 @@ public class TestFSDownload {
       Assert.assertTrue(e.getCause() instanceof IOException);
     }
   }
-  
+
   @Test (timeout=10000)
   public void testDownload() throws IOException, URISyntaxException,
       InterruptedException {
@@ -326,10 +358,9 @@ public class TestFSDownload {
       throw new IOException("Failed exec", e);
     }
   }
-  
-  @Test (timeout=10000) 
-  public void testDownloadArchive() throws IOException, URISyntaxException,
-      InterruptedException {
+
+  private void downloadWithFileType(TEST_FILE_TYPE fileType) throws IOException, 
+      URISyntaxException, InterruptedException{
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
     FileContext files = FileContext.getLocalFSFileContext(conf);
@@ -352,7 +383,22 @@ public class TestFSDownload {
     LocalResourceVisibility vis = LocalResourceVisibility.PRIVATE;
 
     Path p = new Path(basedir, "" + 1);
-    LocalResource rsrc = createTarFile(files, p, size, rand, vis);
+    LocalResource rsrc = null;
+    switch (fileType) {
+    case TAR:
+      rsrc = createTarFile(files, p, size, rand, vis);
+      break;
+    case JAR:
+      rsrc = createJarFile(files, p, size, rand, vis);
+      rsrc.setType(LocalResourceType.PATTERN);
+      break;
+    case ZIP:
+      rsrc = createZipFile(files, p, size, rand, vis);
+      break;
+    case TGZ:
+      rsrc = createTgzFile(files, p, size, rand, vis);
+      break;
+    }
     Path destPath = dirs.getLocalPathForWrite(basedir.toString(), size, conf);
     destPath = new Path (destPath,
         Long.toString(uniqueNumberGenerator.incrementAndGet()));
@@ -371,7 +417,7 @@ public class TestFSDownload {
           FileStatus[] childFiles = files.getDefaultFileSystem().listStatus(
               filestatus.getPath());
           for (FileStatus childfile : childFiles) {
-            if (childfile.getPath().getName().equalsIgnoreCase("1.tar.tmp")) {
+            if (childfile.getPath().getName().startsWith("tmp")) {
               Assert.fail("Tmp File should not have been there "
                   + childfile.getPath());
             }
@@ -384,118 +430,29 @@ public class TestFSDownload {
   }
 
   @Test (timeout=10000) 
+  public void testDownloadArchive() throws IOException, URISyntaxException,
+      InterruptedException {
+    downloadWithFileType(TEST_FILE_TYPE.TAR);
+  }
+
+  @Test (timeout=10000)
   public void testDownloadPatternJar() throws IOException, URISyntaxException,
       InterruptedException {
-    Configuration conf = new Configuration();
-    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
-    FileContext files = FileContext.getLocalFSFileContext(conf);
-    final Path basedir = files.makeQualified(new Path("target",
-        TestFSDownload.class.getSimpleName()));
-    files.mkdir(basedir, null, true);
-    conf.setStrings(TestFSDownload.class.getName(), basedir.toString());
-
-    Random rand = new Random();
-    long sharedSeed = rand.nextLong();
-    rand.setSeed(sharedSeed);
-    System.out.println("SEED: " + sharedSeed);
-
-    Map<LocalResource, Future<Path>> pending = new HashMap<LocalResource, Future<Path>>();
-    ExecutorService exec = Executors.newSingleThreadExecutor();
-    LocalDirAllocator dirs = new LocalDirAllocator(
-        TestFSDownload.class.getName());
-
-    int size = rand.nextInt(512) + 512;
-    LocalResourceVisibility vis = LocalResourceVisibility.PRIVATE;
-
-    Path p = new Path(basedir, "" + 1);
-    LocalResource rsrcjar = createJarFile(files, p, size, rand, vis);
-    rsrcjar.setType(LocalResourceType.PATTERN);
-    Path destPathjar = dirs.getLocalPathForWrite(basedir.toString(), size, conf);
-    destPathjar = new Path (destPathjar,
-        Long.toString(uniqueNumberGenerator.incrementAndGet()));
-    FSDownload fsdjar = new FSDownload(files,
-        UserGroupInformation.getCurrentUser(), conf, destPathjar, rsrcjar);
-    pending.put(rsrcjar, exec.submit(fsdjar));
-    exec.shutdown();
-    while (!exec.awaitTermination(1000, TimeUnit.MILLISECONDS));
-    Assert.assertTrue(pending.get(rsrcjar).isDone());
-
-    try {
-      FileStatus[] filesstatus = files.getDefaultFileSystem().listStatus(
-          basedir);
-      for (FileStatus filestatus : filesstatus) {
-        if (filestatus.isDirectory()) {
-          FileStatus[] childFiles = files.getDefaultFileSystem().listStatus(
-              filestatus.getPath());
-          for (FileStatus childfile : childFiles) {
-            if (childfile.getPath().getName().equalsIgnoreCase("1.jar.tmp")) {
-              Assert.fail("Tmp File should not have been there "
-                  + childfile.getPath());
-            }
-          }
-        }
-      }
-    }catch (Exception e) {
-      throw new IOException("Failed exec", e);
-    }
+    downloadWithFileType(TEST_FILE_TYPE.JAR);
   }
-  
+
   @Test (timeout=10000) 
   public void testDownloadArchiveZip() throws IOException, URISyntaxException,
       InterruptedException {
-    Configuration conf = new Configuration();
-    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
-    FileContext files = FileContext.getLocalFSFileContext(conf);
-    final Path basedir = files.makeQualified(new Path("target",
-        TestFSDownload.class.getSimpleName()));
-    files.mkdir(basedir, null, true);
-    conf.setStrings(TestFSDownload.class.getName(), basedir.toString());
-
-    Random rand = new Random();
-    long sharedSeed = rand.nextLong();
-    rand.setSeed(sharedSeed);
-    System.out.println("SEED: " + sharedSeed);
-
-    Map<LocalResource, Future<Path>> pending = new HashMap<LocalResource, Future<Path>>();
-    ExecutorService exec = Executors.newSingleThreadExecutor();
-    LocalDirAllocator dirs = new LocalDirAllocator(
-        TestFSDownload.class.getName());
-
-    int size = rand.nextInt(512) + 512;
-    LocalResourceVisibility vis = LocalResourceVisibility.PRIVATE;
-
-    Path p = new Path(basedir, "" + 1);
-    LocalResource rsrczip = createZipFile(files, p, size, rand, vis);
-    Path destPathjar = dirs.getLocalPathForWrite(basedir.toString(), size, conf);
-    destPathjar = new Path (destPathjar,
-        Long.toString(uniqueNumberGenerator.incrementAndGet()));
-    FSDownload fsdzip = new FSDownload(files,
-        UserGroupInformation.getCurrentUser(), conf, destPathjar, rsrczip);
-    pending.put(rsrczip, exec.submit(fsdzip));
-    exec.shutdown();
-    while (!exec.awaitTermination(1000, TimeUnit.MILLISECONDS));
-    Assert.assertTrue(pending.get(rsrczip).isDone());
-
-    try {
-      FileStatus[] filesstatus = files.getDefaultFileSystem().listStatus(
-          basedir);
-      for (FileStatus filestatus : filesstatus) {
-        if (filestatus.isDirectory()) {
-          FileStatus[] childFiles = files.getDefaultFileSystem().listStatus(
-              filestatus.getPath());
-          for (FileStatus childfile : childFiles) {
-            if (childfile.getPath().getName().equalsIgnoreCase("1.gz.tmp")) {
-              Assert.fail("Tmp File should not have been there "
-                  + childfile.getPath());
-            }
-          }
-        }
-      }
-    }catch (Exception e) {
-      throw new IOException("Failed exec", e);
-    }
+    downloadWithFileType(TEST_FILE_TYPE.ZIP);
   }
-  
+
+  @Test (timeout=10000)
+  public void testDownloadArchiveTgz() throws IOException, URISyntaxException,
+      InterruptedException {
+    downloadWithFileType(TEST_FILE_TYPE.TGZ);
+  }
+
   private void verifyPermsRecursively(FileSystem fs,
       FileContext files, Path p,
       LocalResourceVisibility vis) throws IOException {
@@ -527,7 +484,7 @@ public class TestFSDownload {
       }
     }      
   }
-  
+
   @Test (timeout=10000)
   public void testDirDownload() throws IOException, InterruptedException {
     Configuration conf = new Configuration();

@@ -87,7 +87,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
    *
    * @see ConcurrentModificationException
    */
-  protected volatile int modification = 0;
+  protected int modification = 0;
 
   private float maxLoadFactor;
   private float minLoadFactor;

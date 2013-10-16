@@ -25,10 +25,12 @@ import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.PrivilegedAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -45,7 +47,9 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiffList;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -777,7 +781,40 @@ public class TestSnapshotDeletion {
     assertEquals("user1", statusOfS1.getOwner());
     assertEquals("group1", statusOfS1.getGroup());
   }
-  
+
+  @Test
+  public void testDeleteSnapshotWithPermissionsDisabled() throws Exception {
+    cluster.shutdown();
+    Configuration newConf = new Configuration(conf);
+    newConf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+    cluster = new MiniDFSCluster.Builder(newConf).numDataNodes(0).build();
+    cluster.waitActive();
+    hdfs = cluster.getFileSystem();
+
+    final Path path = new Path("/dir");
+    hdfs.mkdirs(path);
+    hdfs.allowSnapshot(path);
+    hdfs.mkdirs(new Path(path, "/test"));
+    hdfs.createSnapshot(path, "s1");
+    UserGroupInformation anotherUser = UserGroupInformation
+        .createRemoteUser("anotheruser");
+    anotherUser.doAs(new PrivilegedAction<Object>() {
+      @Override
+      public Object run() {
+        DistributedFileSystem anotherUserFS = null;
+        try {
+          anotherUserFS = cluster.getFileSystem();
+          anotherUserFS.deleteSnapshot(path, "s1");
+        } catch (IOException e) {
+          fail("Failed to delete snapshot : " + e.getLocalizedMessage());
+        } finally {
+          IOUtils.closeStream(anotherUserFS);
+        }
+        return null;
+      }
+    });
+  }
+
   /** 
    * A test covering the case where the snapshot diff to be deleted is renamed 
    * to its previous snapshot. 

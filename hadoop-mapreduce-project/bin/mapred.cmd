@@ -91,7 +91,7 @@ if "%1" == "--config" (
   set CLASSPATH=%CLASSPATH%;%HADOOP_MAPRED_HOME%\modules\*
 
   call :%mapred-command% %mapred-command-arguments%
-  set java_arguments=%JAVA_HEAP_MAX% %MAPRED_OPTS% -classpath %CLASSPATH% %CLASS% %mapred-command-arguments%
+  set java_arguments=%JAVA_HEAP_MAX% %HADOOP_OPTS% -classpath %CLASSPATH% %CLASS% %mapred-command-arguments%
   call %JAVA% %java_arguments%
 
 goto :eof
@@ -118,7 +118,7 @@ goto :eof
 
 :historyserver
   set CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
-  set HADOOP_OPTS=%HADOOP_OPTS% -Dmapred.jobsummary.logger=%HADOOP_JHS_LOGGER% %HADOOP_JOB_HISTORYSERVER_OPTS%"
+  set HADOOP_OPTS=%HADOOP_OPTS% -Dmapred.jobsummary.logger=%HADOOP_JHS_LOGGER% %HADOOP_JOB_HISTORYSERVER_OPTS%
   if defined HADOOP_JOB_HISTORYSERVER_HEAPSIZE (
     set JAVA_HEAP_MAX=-Xmx%HADOOP_JOB_HISTORYSERVER_HEAPSIZE%m
   )

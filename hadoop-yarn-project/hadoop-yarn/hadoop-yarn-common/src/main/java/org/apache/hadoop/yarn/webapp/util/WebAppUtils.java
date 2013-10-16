@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
@@ -97,8 +98,14 @@ public class WebAppUtils {
   }
   
   public static String getResolvedRMWebAppURLWithoutScheme(Configuration conf) {
+    return getResolvedRMWebAppURLWithoutScheme(conf,
+        HttpConfig.isSecure() ? Policy.HTTPS_ONLY : Policy.HTTP_ONLY);
+  }
+  
+  public static String getResolvedRMWebAppURLWithoutScheme(Configuration conf,
+      Policy httpPolicy) {
     InetSocketAddress address = null;
-    if (HttpConfig.isSecure()) {
+    if (httpPolicy == Policy.HTTPS_ONLY) {
       address =
           conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
               YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS,
@@ -136,6 +143,21 @@ public class WebAppUtils {
       return conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     }
-
+  }
+  
+  /**
+   * if url has scheme then it will be returned as it is else it will return
+   * url with scheme.
+   * @param schemePrefix eg. http:// or https://
+   * @param url
+   * @return url with scheme
+   */
+  public static String getURLWithScheme(String schemePrefix, String url) {
+    // If scheme is provided then it will be returned as it is
+    if (url.indexOf("://") > 0) {
+      return url;
+    } else {
+      return schemePrefix + url;
+    }
   }
 }

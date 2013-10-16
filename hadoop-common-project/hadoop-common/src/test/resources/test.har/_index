@@ -1,0 +1,4 @@
+%2F dir 1380270822000+511+root+wheel 0 0 dir1 
+%2Fdir1 dir 1380270441000+493+jdere+wheel 0 0 1.txt 2.txt 
+%2Fdir1%2F1.txt file part-0 0 0 1380270439000+420+jdere+wheel 
+%2Fdir1%2F2.txt file part-0 0 0 1380270441000+420+jdere+wheel 

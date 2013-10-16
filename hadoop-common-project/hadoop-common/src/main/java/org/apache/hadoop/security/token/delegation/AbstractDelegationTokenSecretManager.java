@@ -45,7 +45,7 @@ import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
 
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "Hive"})
 @InterfaceStability.Evolving
 public abstract 
 class AbstractDelegationTokenSecretManager<TokenIdent 
@@ -289,20 +289,30 @@ extends AbstractDelegationTokenIdentifier>
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier)));
     return password;
   }
-
-  @Override
-  public synchronized byte[] retrievePassword(TokenIdent identifier)
+  
+  /**
+   * Find the DelegationTokenInformation for the given token id, and verify that
+   * if the token is expired. Note that this method should be called with 
+   * acquiring the secret manager's monitor.
+   */
+  protected DelegationTokenInformation checkToken(TokenIdent identifier)
       throws InvalidToken {
+    assert Thread.holdsLock(this);
     DelegationTokenInformation info = currentTokens.get(identifier);
     if (info == null) {
       throw new InvalidToken("token (" + identifier.toString()
           + ") can't be found in cache");
     }
-    long now = Time.now();
-    if (info.getRenewDate() < now) {
+    if (info.getRenewDate() < Time.now()) {
       throw new InvalidToken("token (" + identifier.toString() + ") is expired");
     }
-    return info.getPassword();
+    return info;
+  }
+  
+  @Override
+  public synchronized byte[] retrievePassword(TokenIdent identifier)
+      throws InvalidToken {
+    return checkToken(identifier).getPassword();
   }
 
   protected String getTrackingIdIfEnabled(TokenIdent ident) {

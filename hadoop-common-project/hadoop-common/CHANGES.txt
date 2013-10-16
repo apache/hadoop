@@ -315,9 +315,6 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9435.  Support building the JNI code against the IBM JVM.
     (Tian Hong Wang via Colin Patrick McCabe)
 
-    HADOOP-9758.  Provide configuration option for FileSystem/FileContext
-    symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
-
     HADOOP-9848. Create a MiniKDC for use with security testing. 
     (ywskycn via tucu)
 
@@ -341,6 +338,24 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10006. Compilation failure in trunk for
     o.a.h.fs.swift.util.JSONUtil (Junping Du via stevel)
+
+    HADOOP-9063. enhance unit-test coverage of class
+    org.apache.hadoop.fs.FileUtil (Ivan A. Veselovsky via jlowe)
+
+    HADOOP-9254. Cover packages org.apache.hadoop.util.bloom,
+    org.apache.hadoop.util.hash (Vadim Bondarev via jlowe)
+
+    HADOOP-9225. Cover package org.apache.hadoop.compress.Snappy (Vadim
+    Bondarev, Andrey Klochkov and Nathan Roberts via jlowe)
+
+    HADOOP-9199. Cover package org.apache.hadoop.io with unit tests (Andrey
+    Klochkov via jeagles)
+
+    HADOOP-9470. eliminate duplicate FQN tests in different Hadoop modules
+    (Ivan A. Veselovsky via daryn)
+
+    HADOOP-9494. Excluded auto-generated and examples code from clover reports
+    (Andrey Klochkov via jeagles)
 
   OPTIMIZATIONS
 
@@ -384,7 +399,7 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9981. globStatus should minimize its listStatus and getFileStatus
     calls.  (Contributed by Colin Patrick McCabe)
 
-Release 2.2.0 - UNRELEASED
+Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -392,11 +407,28 @@ Release 2.2.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-10046. Print a log message when SSL is enabled.
+    (David S. Wang via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
 
-Release 2.1.2 - UNRELEASED
+    HADOOP-10028. Malformed ssl-server.xml.example. (Haohui Mai via jing9)
+
+    HADOOP-10030. FsShell -put/copyFromLocal should support Windows local path.
+    (Chuan Liu via cnauroth)
+
+    HADOOP-10031. FsShell -get/copyToLocal/moveFromLocal should support Windows
+    local path. (Chuan Liu via cnauroth)
+
+    HADOOP-10039. Add Hive to the list of projects using 
+    AbstractDelegationTokenSecretManager. (Haohui Mai via jing9)
+
+    HADOOP-10040. hadoop.cmd in UNIX format and would not run by default on
+    Windows. (cnauroth)
+
+Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
 
@@ -410,6 +442,12 @@ Release 2.1.2 - UNRELEASED
     HADOOP-9976. Different versions of avro and avro-maven-plugin (Karthik
     Kambatla via Sandy Ryza)
 
+    HADOOP-9758.  Provide configuration option for FileSystem/FileContext
+    symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-8315. Support SASL-authenticated ZooKeeper in ActiveStandbyElector
+    (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -419,6 +457,12 @@ Release 2.1.2 - UNRELEASED
 
     HADOOP-9761.  ViewFileSystem#rename fails when using DistributedFileSystem.
     (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-10003. HarFileSystem.listLocatedStatus() fails.
+    (Jason Dere and suresh via suresh)
+
+    HADOOP-10017. Fix NPE in DFSClient#getDelegationToken when doing Distcp 
+    from a secured cluster to an insecured cluster. (Haohui Mai via jing9)
 
 Release 2.1.1-beta - 2013-09-23
 

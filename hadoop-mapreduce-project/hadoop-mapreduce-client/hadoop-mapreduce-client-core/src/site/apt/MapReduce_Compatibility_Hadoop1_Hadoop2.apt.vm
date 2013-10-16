@@ -96,12 +96,21 @@ Apache Hadoop MapReduce - Migrating from Apache Hadoop 1.x to Apache Hadoop 2.x
 
 * {Malicious}
 
- For the users who are going to try <<<hadoop-examples-1.x.x.jar>>> on YARN,
- please note that <<<hadoop -jar hadoop-examples-1.x.x.jar>>> will still use
- <<<hadoop-mapreduce-examples-2.x.x.jar>>>, which is installed together with
- other MRv2 jars. By default Hadoop framework jars appear before the users'
- jars in the classpath, such that the classes from the 2.x.x jar will still be
- picked. Users should either remove <<<hadoop-mapreduce-examples-2.x.x.jar>>>
- from the classpath or set <<<HADOOP_USER_CLASSPATH_FIRST=true>>> and
- <<<HADOOP_CLASSPATH=...:hadoop-examples-1.x.x.jar>>> to run their target
- examples jar.
+  For the users who are going to try <<<hadoop-examples-1.x.x.jar>>> on YARN,
+  please note that <<<hadoop -jar hadoop-examples-1.x.x.jar>>> will still use
+  <<<hadoop-mapreduce-examples-2.x.x.jar>>>, which is installed together with
+  other MRv2 jars. By default Hadoop framework jars appear before the users'
+  jars in the classpath, such that the classes from the 2.x.x jar will still be
+  picked. Users should remove <<<hadoop-mapreduce-examples-2.x.x.jar>>>
+  from the classpath of all the nodes in a cluster. Otherwise, users need to
+  set <<<HADOOP_USER_CLASSPATH_FIRST=true>>> and
+  <<<HADOOP_CLASSPATH=...:hadoop-examples-1.x.x.jar>>> to run their target
+  examples jar, and add the following configuration in <<<mapred-site.xml>>> to
+  make the processes in YARN containers pick this jar as well.
+
++---+
+    <property>
+        <name>mapreduce.job.user.classpath.first</name>
+        <value>true</value>
+    </property>
++---+

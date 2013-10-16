@@ -100,9 +100,26 @@
   </property>
 
   <property>
-    <description>The address of the RM web application.</description>
+      <description>
+        This configures the HTTP endpoint for Yarn Daemons.The following
+        values are supported:
+        - HTTP_ONLY : Service is provided only on http
+        - HTTPS_ONLY : Service is provided only on https
+      </description>
+      <name>yarn.http.policy</name>
+      <value>HTTP_ONLY</value>
+  </property>
+
+  <property>
+    <description>The http address of the RM web application.</description>
     <name>yarn.resourcemanager.webapp.address</name>
     <value>${yarn.resourcemanager.hostname}:8088</value>
+  </property>
+
+  <property>
+    <description>The https adddress of the RM web application.</description>
+    <name>yarn.resourcemanager.webapp.https.address</name>
+    <value>${yarn.resourcemanager.hostname}:8090</value>
   </property>
 
   <property>
@@ -314,11 +331,32 @@
   </property>
 
   <property>
-    <description>Enable RM high-availability. When enabled, the RM starts
-    in the Standby mode by default, and transitions to the Active mode when
-    prompted to.</description>
+    <description>Enable RM high-availability. When enabled,
+      (1) The RM starts in the Standby mode by default, and transitions to
+      the Active mode when prompted to.
+      (2) The nodes in the RM ensemble are listed in
+      yarn.resourcemanager.ha.rm-ids
+      (3) The id of each RM comes from yarn.resourcemanager.ha.id
+      (4) The actual physical addresses come from the configs of the pattern
+      - {rpc-config}.{id}</description>
     <name>yarn.resourcemanager.ha.enabled</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>The list of RM nodes in the cluster when HA is
+      enabled. See description of yarn.resourcemanager.ha
+      .enabled for full details on how this is used.</description>
+    <name>yarn.resourcemanager.ha.rm-ids</name>
+    <!--value>rm1,rm2</value-->
+  </property>
+
+  <property>
+    <description>The id (string) of the current RM. When HA is enabled, this
+      is a required config. See description of yarn.resourcemanager.ha.enabled
+      for full details on how this is used.</description>
+    <name>yarn.resourcemanager.ha.id</name>
+    <!--value>rm1</value-->
   </property>
 
   <property>
@@ -698,6 +736,21 @@
     Only used when the LCE resources handler is set to the CgroupsLCEResourcesHandler, and
     yarn.nodemanager.linux-container-executor.cgroups.mount is true.</description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.mount-path</name>
+  </property>
+
+  <property>
+    <description>The UNIX user that containers will run as when Linux-container-executor
+    is used in nonsecure mode (a use case for this is using cgroups).</description>
+    <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user</name>
+    <value>nobody</value>
+  </property>
+
+  <property>
+    <description>The allowed pattern for UNIX user names enforced by
+    Linux-container-executor when used in nonsecure mode (use case for this
+    is using cgroups). The default value is taken from /usr/sbin/adduser</description>
+    <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.user-pattern</name>
+    <value>^[_.A-Za-z0-9][-@_.A-Za-z0-9]{0,255}?[$]?$</value>
   </property>
 
   <property>

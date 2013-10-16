@@ -389,7 +389,7 @@ public class JobHistory extends AbstractService implements HistoryContext {
   }
 
   @Override
-  public boolean safeToReportTerminationToUser() {
+  public boolean hasSuccessfullyUnregistered() {
     // bogus - Not Required
     return true;
   }

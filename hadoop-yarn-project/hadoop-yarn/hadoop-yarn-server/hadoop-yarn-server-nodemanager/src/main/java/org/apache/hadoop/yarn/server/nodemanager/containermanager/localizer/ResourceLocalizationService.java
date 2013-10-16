@@ -1017,6 +1017,7 @@ public class ResourceLocalizationService extends CompositeService
           }
         }
         if (UserGroupInformation.isSecurityEnabled()) {
+          credentials = new Credentials(credentials);
           LocalizerTokenIdentifier id = secretManager.createIdentifier();
           Token<LocalizerTokenIdentifier> localizerToken =
               new Token<LocalizerTokenIdentifier>(id, secretManager);

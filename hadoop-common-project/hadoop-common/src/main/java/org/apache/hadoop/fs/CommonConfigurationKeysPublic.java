@@ -264,5 +264,9 @@ public class CommonConfigurationKeysPublic {
   /** Default value for HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN */
   public static final int HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT =
           60;
+
+  // HTTP policies to be used in configuration
+  public static final String HTTP_POLICY_HTTP_ONLY = "HTTP_ONLY";
+  public static final String HTTP_POLICY_HTTPS_ONLY = "HTTPS_ONLY";
 }
 

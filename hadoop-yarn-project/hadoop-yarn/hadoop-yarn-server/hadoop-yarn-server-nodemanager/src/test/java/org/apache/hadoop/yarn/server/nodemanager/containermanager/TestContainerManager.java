@@ -24,6 +24,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
@@ -59,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -68,6 +71,7 @@ import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestAuxServices.ServiceA;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
@@ -538,7 +542,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     // Simulate RM sending an AppFinish event.
     containerManager.handle(new CMgrCompletedAppsEvent(Arrays
-        .asList(new ApplicationId[] { appId })));
+        .asList(new ApplicationId[] { appId }), CMgrCompletedAppsEvent.Reason.ON_SHUTDOWN));
 
     BaseContainerManagerTest.waitForApplicationState(containerManager, 
         cId.getApplicationAttemptId().getApplicationId(),
@@ -744,6 +748,48 @@ public class TestContainerManager extends BaseContainerManagerTest {
       Assert.assertTrue(entry.getValue().getMessage()
         .contains("Reject this container"));
     }
+  }
+
+  @Test
+  public void testStartContainerFailureWithUnknownAuxService() throws Exception {
+    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES,
+        new String[] { "existService" });
+    conf.setClass(
+        String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "existService"),
+        ServiceA.class, Service.class);
+    containerManager.start();
+
+    List<StartContainerRequest> startRequest =
+        new ArrayList<StartContainerRequest>();
+
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    Map<String, ByteBuffer> serviceData = new HashMap<String, ByteBuffer>();
+    String serviceName = "non_exist_auxService";
+    serviceData.put(serviceName, ByteBuffer.wrap(serviceName.getBytes()));
+    containerLaunchContext.setServiceData(serviceData);
+
+    ContainerId cId = createContainerId(0);
+    String user = "start_container_fail";
+    Token containerToken =
+        createContainerToken(cId, DUMMY_RM_IDENTIFIER, context.getNodeId(),
+            user, context.getContainerTokenSecretManager());
+    StartContainerRequest request =
+        StartContainerRequest.newInstance(containerLaunchContext,
+            containerToken);
+
+    // start containers
+    startRequest.add(request);
+    StartContainersRequest requestList =
+        StartContainersRequest.newInstance(startRequest);
+
+    StartContainersResponse response =
+        containerManager.startContainers(requestList);
+    Assert.assertTrue(response.getFailedRequests().size() == 1);
+    Assert.assertTrue(response.getSuccessfullyStartedContainers().size() == 0);
+    Assert.assertTrue(response.getFailedRequests().containsKey(cId));
+    Assert.assertTrue(response.getFailedRequests().get(cId).getMessage()
+        .contains("The auxService:" + serviceName + " does not exist"));
   }
 
   public static Token createContainerToken(ContainerId cId, long rmIdentifier,

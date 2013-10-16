@@ -189,31 +189,33 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     @Override
-    public synchronized void serviceStart() throws Exception {
-      try {
-        getConfig().setBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, true);
-        if (!getConfig().getBoolean(
-            YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,
-            YarnConfiguration.DEFAULT_YARN_MINICLUSTER_FIXED_PORTS)) {
-          // pick free random ports.
-          String hostname = MiniYARNCluster.getHostname();
-          getConfig().set(YarnConfiguration.RM_ADDRESS,
-              hostname + ":0");
-          getConfig().set(YarnConfiguration.RM_ADMIN_ADDRESS,
-              hostname + ":0");
-          getConfig().set(YarnConfiguration.RM_SCHEDULER_ADDRESS,
-              hostname + ":0");
-          getConfig().set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
-              hostname + ":0");
-          WebAppUtils.setRMWebAppHostnameAndPort(getConfig(), hostname, 0);
-        }
-        resourceManager = new ResourceManager() {
-          @Override
-          protected void doSecureLogin() throws IOException {
-            // Don't try to login using keytab in the testcase.
-          };
+    protected synchronized void serviceInit(Configuration conf)
+        throws Exception {
+      conf.setBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, true);
+      if (!conf.getBoolean(
+          YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,
+          YarnConfiguration.DEFAULT_YARN_MINICLUSTER_FIXED_PORTS)) {
+        // pick free random ports.
+        String hostname = MiniYARNCluster.getHostname();
+        conf.set(YarnConfiguration.RM_ADDRESS, hostname + ":0");
+        conf.set(YarnConfiguration.RM_ADMIN_ADDRESS, hostname + ":0");
+        conf.set(YarnConfiguration.RM_SCHEDULER_ADDRESS, hostname + ":0");
+        conf.set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, hostname + ":0");
+        WebAppUtils.setRMWebAppHostnameAndPort(conf, hostname, 0);
+      }
+      resourceManager = new ResourceManager() {
+        @Override
+        protected void doSecureLogin() throws IOException {
+          // Don't try to login using keytab in the testcase.
         };
-        resourceManager.init(getConfig());
+      };
+      resourceManager.init(conf);
+      super.serviceInit(conf);
+    }
+
+    @Override
+    protected synchronized void serviceStart() throws Exception {
+      try {
         new Thread() {
           public void run() {
             resourceManager.start();
@@ -242,7 +244,7 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     @Override
-    public synchronized void serviceStop() throws Exception {
+    protected synchronized void serviceStop() throws Exception {
       if (resourceManager != null) {
         resourceManager.stop();
       }
@@ -271,8 +273,43 @@ public class MiniYARNCluster extends CompositeService {
       index = i;
     }
 
-    public synchronized void serviceInit(Configuration conf) throws Exception {
+    protected synchronized void serviceInit(Configuration conf)
+        throws Exception {
       Configuration config = new YarnConfiguration(conf);
+      // create nm-local-dirs and configure them for the nodemanager
+      String localDirsString = prepareDirs("local", numLocalDirs);
+      config.set(YarnConfiguration.NM_LOCAL_DIRS, localDirsString);
+      // create nm-log-dirs and configure them for the nodemanager
+      String logDirsString = prepareDirs("log", numLogDirs);
+      config.set(YarnConfiguration.NM_LOG_DIRS, logDirsString);
+
+      File remoteLogDir =
+          new File(testWorkDir, MiniYARNCluster.this.getName()
+              + "-remoteLogDir-nm-" + index);
+      remoteLogDir.mkdir();
+      config.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+          remoteLogDir.getAbsolutePath());
+      // By default AM + 2 containers
+      config.setInt(YarnConfiguration.NM_PMEM_MB, 4*1024);
+      config.set(YarnConfiguration.NM_ADDRESS,
+          MiniYARNCluster.getHostname() + ":0");
+      config.set(YarnConfiguration.NM_LOCALIZER_ADDRESS,
+          MiniYARNCluster.getHostname() + ":0");
+      WebAppUtils
+          .setNMWebAppHostNameAndPort(config,
+              MiniYARNCluster.getHostname(), 0);
+
+      // Disable resource checks by default
+      if (!config.getBoolean(
+          YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
+          YarnConfiguration.
+              DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING)) {
+        config.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
+        config.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
+      }
+
+      LOG.info("Starting NM: " + index);
+      nodeManagers[index].init(config);
       super.serviceInit(config);
     }
 
@@ -296,42 +333,8 @@ public class MiniYARNCluster extends CompositeService {
       return dirsString;
     }
 
-    public synchronized void serviceStart() throws Exception {
+    protected synchronized void serviceStart() throws Exception {
       try {
-        // create nm-local-dirs and configure them for the nodemanager
-        String localDirsString = prepareDirs("local", numLocalDirs);
-        getConfig().set(YarnConfiguration.NM_LOCAL_DIRS, localDirsString);
-        // create nm-log-dirs and configure them for the nodemanager
-        String logDirsString = prepareDirs("log", numLogDirs);
-        getConfig().set(YarnConfiguration.NM_LOG_DIRS, logDirsString);
-
-        File remoteLogDir =
-            new File(testWorkDir, MiniYARNCluster.this.getName()
-                + "-remoteLogDir-nm-" + index);
-        remoteLogDir.mkdir();
-        getConfig().set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            	remoteLogDir.getAbsolutePath());
-        // By default AM + 2 containers
-        getConfig().setInt(YarnConfiguration.NM_PMEM_MB, 4*1024);
-        getConfig().set(YarnConfiguration.NM_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
-        getConfig().set(YarnConfiguration.NM_LOCALIZER_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
-        WebAppUtils
-            .setNMWebAppHostNameAndPort(getConfig(),
-                MiniYARNCluster.getHostname(), 0);
-
-        // Disable resource checks by default
-        if (!getConfig().getBoolean(
-            YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
-            YarnConfiguration.
-                DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING)) {
-          getConfig().setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
-          getConfig().setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
-        }
-
-        LOG.info("Starting NM: " + index);
-        nodeManagers[index].init(getConfig());
         new Thread() {
           public void run() {
             nodeManagers[index].start();
@@ -354,7 +357,7 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     @Override
-    public synchronized void serviceStop() throws Exception {
+    protected synchronized void serviceStop() throws Exception {
       if (nodeManagers[index] != null) {
         nodeManagers[index].stop();
       }

@@ -18,24 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.common;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.TreeSet;
-
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.jsp.JspWriter;
+import com.google.common.base.Charsets;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,13 +30,9 @@ import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
@@ -74,10 +53,22 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.VersionInfo;
 
-import com.google.common.base.Charsets;
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.jsp.JspWriter;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.*;
+
 import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
 
 @InterfaceAudience.Private
 public class JspHelper {
@@ -112,7 +103,7 @@ public class JspHelper {
       return super.hashCode();
     }
   }
- 
+
   // compare two records based on their frequency
   private static class NodeRecordComparator implements Comparator<NodeRecord> {
 
@@ -126,6 +117,27 @@ public class JspHelper {
       return 0;
     }
   }
+
+  /**
+   * A helper class that generates the correct URL for different schema.
+   *
+   */
+  public static final class Url {
+    public static String authority(String scheme, DatanodeID d) {
+      if (scheme.equals("http")) {
+        return d.getInfoAddr();
+      } else if (scheme.equals("https")) {
+        return d.getInfoSecureAddr();
+      } else {
+        throw new IllegalArgumentException("Unknown scheme:" + scheme);
+      }
+    }
+
+    public static String url(String scheme, DatanodeID d) {
+      return scheme + "://" + authority(scheme, d);
+    }
+  }
+
   public static DatanodeInfo bestNode(LocatedBlocks blks, Configuration conf)
       throws IOException {
     HashMap<DatanodeInfo, NodeRecord> map =
@@ -217,7 +229,7 @@ public class JspHelper {
         offsetIntoBlock, amtToRead,  true,
         "JspHelper", TcpPeerServer.peerFromSocketAndKey(s, encryptionKey),
         new DatanodeID(addr.getAddress().getHostAddress(),
-            addr.getHostName(), poolId, addr.getPort(), 0, 0), null,
+            addr.getHostName(), poolId, addr.getPort(), 0, 0, 0), null,
             null, null, false, CachingStrategy.newDefaultStrategy());
         
     final byte[] buf = new byte[amtToRead];

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -646,10 +647,14 @@ public class TestRetryCacheWithHA {
     @Override
     boolean checkNamenodeBeforeReturn() throws Exception {
       Path linkPath = new Path(link);
-      FileStatus linkStatus = dfs.getFileLinkStatus(linkPath);
+      FileStatus linkStatus = null;
       for (int i = 0; i < CHECKTIMES && linkStatus == null; i++) {
-        Thread.sleep(1000);
-        linkStatus = dfs.getFileLinkStatus(linkPath);
+        try {
+          linkStatus = dfs.getFileLinkStatus(linkPath);
+        } catch (FileNotFoundException fnf) {
+          // Ignoring, this can be legitimate.
+          Thread.sleep(1000);
+        }
       }
       return linkStatus != null;
     }

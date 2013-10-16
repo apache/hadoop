@@ -175,39 +175,56 @@ public class AuxServices extends AbstractService
     LOG.info("Got event " + event.getType() + " for appId "
         + event.getApplicationID());
     switch (event.getType()) {
-    case APPLICATION_INIT:
-      LOG.info("Got APPLICATION_INIT for service " + event.getServiceID());
-      AuxiliaryService service = serviceMap.get(event.getServiceID());
-      if (null == service) {
-        LOG.info("service is null");
-        // TODO kill all containers waiting on Application
-        return;
-      }
-      service.initializeApplication(new ApplicationInitializationContext(event
-        .getUser(), event.getApplicationID(), event.getServiceData()));
-      break;
-    case APPLICATION_STOP:
-      for (AuxiliaryService serv : serviceMap.values()) {
-        serv.stopApplication(new ApplicationTerminationContext(event
-          .getApplicationID()));
-      }
-      break;
-    case CONTAINER_INIT:
-      for (AuxiliaryService serv : serviceMap.values()) {
-        serv.initializeContainer(new ContainerInitializationContext(
-            event.getUser(), event.getContainer().getContainerId(),
-            event.getContainer().getResource()));
-      }
-      break;
-    case CONTAINER_STOP:
-      for (AuxiliaryService serv : serviceMap.values()) {
-        serv.stopContainer(new ContainerTerminationContext(
-            event.getUser(), event.getContainer().getContainerId(),
-            event.getContainer().getResource()));
-      }
-      break;
+      case APPLICATION_INIT:
+        LOG.info("Got APPLICATION_INIT for service " + event.getServiceID());
+        AuxiliaryService service = null;
+        try {
+          service = serviceMap.get(event.getServiceID());
+          service
+              .initializeApplication(new ApplicationInitializationContext(event
+                  .getUser(), event.getApplicationID(), event.getServiceData()));
+        } catch (Throwable th) {
+          logWarningWhenAuxServiceThrowExceptions(service,
+              AuxServicesEventType.APPLICATION_INIT, th);
+        }
+        break;
+      case APPLICATION_STOP:
+        for (AuxiliaryService serv : serviceMap.values()) {
+          try {
+            serv.stopApplication(new ApplicationTerminationContext(event
+                .getApplicationID()));
+          } catch (Throwable th) {
+            logWarningWhenAuxServiceThrowExceptions(serv,
+                AuxServicesEventType.APPLICATION_STOP, th);
+          }
+        }
+        break;
+      case CONTAINER_INIT:
+        for (AuxiliaryService serv : serviceMap.values()) {
+          try {
+            serv.initializeContainer(new ContainerInitializationContext(
+                event.getUser(), event.getContainer().getContainerId(),
+                event.getContainer().getResource()));
+          } catch (Throwable th) {
+            logWarningWhenAuxServiceThrowExceptions(serv,
+                AuxServicesEventType.CONTAINER_INIT, th);
+          }
+        }
+        break;
+      case CONTAINER_STOP:
+        for (AuxiliaryService serv : serviceMap.values()) {
+          try {
+            serv.stopContainer(new ContainerTerminationContext(
+                event.getUser(), event.getContainer().getContainerId(),
+                event.getContainer().getResource()));
+          } catch (Throwable th) {
+            logWarningWhenAuxServiceThrowExceptions(serv,
+                AuxServicesEventType.CONTAINER_STOP, th);
+          }
+        }
+        break;
       default:
-      throw new RuntimeException("Unknown type: " + event.getType());
+        throw new RuntimeException("Unknown type: " + event.getType());
     }
   }
 
@@ -216,5 +233,12 @@ public class AuxServices extends AbstractService
       return false;
     }
     return p.matcher(name).matches();
+  }
+
+  private void logWarningWhenAuxServiceThrowExceptions(AuxiliaryService service,
+      AuxServicesEventType eventType, Throwable th) {
+    LOG.warn((null == service ? "The auxService is null"
+        : "The auxService name is " + service.getName())
+        + " and it got an error at event: " + eventType, th);
   }
 }

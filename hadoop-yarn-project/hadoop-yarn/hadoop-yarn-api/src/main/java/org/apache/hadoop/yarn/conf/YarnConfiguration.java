@@ -18,15 +18,13 @@
 
 package org.apache.hadoop.yarn.conf;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -84,7 +82,7 @@ public class YarnConfiguration extends Configuration {
   // Resource Manager Configs
   ////////////////////////////////
   public static final String RM_PREFIX = "yarn.resourcemanager.";
-  
+
   /** The address of the applications manager interface in the RM.*/
   public static final String RM_ADDRESS = 
     RM_PREFIX + "address";
@@ -281,6 +279,8 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_ENABLED = RM_HA_PREFIX + "enabled";
   public static final boolean DEFAULT_RM_HA_ENABLED = false;
   
+  public static final String RM_HA_IDS = RM_HA_PREFIX + "rm-ids";
+  public static final String RM_HA_ID = RM_HA_PREFIX + "id";
 
   ////////////////////////////////
   // RM state store configs
@@ -636,7 +636,27 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String NM_LINUX_CONTAINER_GROUP =
     NM_PREFIX + "linux-container-executor.group";
-  
+
+  /**
+   * The UNIX user that containers will run as when Linux-container-executor
+   * is used in nonsecure mode (a use case for this is using cgroups).
+   */
+  public static final String NM_NONSECURE_MODE_LOCAL_USER_KEY = NM_PREFIX +
+      "linux-container-executor.nonsecure-mode.local-user";
+
+  public static final String DEFAULT_NM_NONSECURE_MODE_LOCAL_USER = "nobody";
+
+  /**
+   * The allowed pattern for UNIX user names enforced by 
+   * Linux-container-executor when used in nonsecure mode (use case for this 
+   * is using cgroups). The default value is taken from /usr/sbin/adduser
+   */
+  public static final String NM_NONSECURE_MODE_USER_PATTERN_KEY = NM_PREFIX +
+      "linux-container-executor.nonsecure-mode.user-pattern";
+
+  public static final String DEFAULT_NM_NONSECURE_MODE_USER_PATTERN = 
+      "^[_.A-Za-z0-9][-@_.A-Za-z0-9]{0,255}?[$]?$";
+
   /** The type of resource enforcement to use with the
    *  linux container executor.
    */
@@ -654,7 +674,19 @@ public class YarnConfiguration extends Configuration {
   /** Where the linux container executor should mount cgroups if not found */
   public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH =
     NM_PREFIX + "linux-container-executor.cgroups.mount-path";
-  
+
+
+  /**
+   * Interval of time the linux container executor should try cleaning up
+   * cgroups entry when cleaning up a container. This is required due to what 
+   * it seems a race condition because the SIGTERM/SIGKILL is asynch.
+   */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT =
+   NM_PREFIX + "linux-container-executor.cgroups.delete-timeout-ms";
+
+  public static final long DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT =
+      1000;
+
   /** T-file compression types used to compress aggregated logs.*/
   public static final String NM_LOG_AGG_COMPRESSION_TYPE = 
     NM_PREFIX + "log-aggregation.compression-type";
@@ -843,7 +875,12 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CLIENT_MAX_NM_PROXIES =
       YARN_PREFIX + "client.max-nodemanagers-proxies";
   public static final int DEFAULT_NM_CLIENT_MAX_NM_PROXIES = 500;
-  
+
+  public static final String YARN_HTTP_POLICY_KEY =
+          YARN_PREFIX + "http.policy";
+  public static final String YARN_HTTP_POLICY_DEFAULT =
+          CommonConfigurationKeysPublic.HTTP_POLICY_HTTP_ONLY;
+
   public YarnConfiguration() {
     super();
   }
@@ -853,5 +890,25 @@ public class YarnConfiguration extends Configuration {
     if (! (conf instanceof YarnConfiguration)) {
       this.reloadConfiguration();
     }
+  }
+
+  /**
+   * Get the socket address for <code>name</code> property as a
+   * <code>InetSocketAddress</code>.
+   * @param name property name.
+   * @param defaultAddress the default value
+   * @param defaultPort the default port
+   * @return InetSocketAddress
+   */
+  @Override
+  public InetSocketAddress getSocketAddr(
+      String name, String defaultAddress, int defaultPort) {
+    String address;
+    if (HAUtil.isHAEnabled(this)) {
+      address = HAUtil.getConfValueForRMInstance(name, defaultAddress, this);
+    } else {
+      address = get(name, defaultAddress);
+    }
+    return NetUtils.createSocketAddr(address, defaultPort, name);
   }
 }

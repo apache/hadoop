@@ -464,6 +464,10 @@
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.c</exclude>
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc_encoder.h</exclude>
             <exclude>src/test/java/org/apache/hadoop/fs/test-untar.tgz</exclude>
+            <exclude>src/test/resources/test.har/_SUCCESS</exclude>
+            <exclude>src/test/resources/test.har/_index</exclude>
+            <exclude>src/test/resources/test.har/_masterindex</exclude>
+            <exclude>src/test/resources/test.har/part-0</exclude>
           </excludes>
         </configuration>
       </plugin>

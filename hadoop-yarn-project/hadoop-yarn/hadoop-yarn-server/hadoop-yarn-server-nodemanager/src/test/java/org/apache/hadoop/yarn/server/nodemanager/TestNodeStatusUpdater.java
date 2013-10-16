@@ -93,6 +93,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+@SuppressWarnings("rawtypes")
 public class TestNodeStatusUpdater {
 
   // temp fix until metrics system can auto-detect itself running in unit test:
@@ -352,7 +353,6 @@ public class TestNodeStatusUpdater {
 
   private class MyNodeStatusUpdater4 extends NodeStatusUpdaterImpl {
 
-    private Context context;
     private final long rmStartIntervalMS;
     private final boolean rmNeverStart;
     public ResourceTracker resourceTracker;
@@ -360,7 +360,6 @@ public class TestNodeStatusUpdater {
         NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
         long rmStartIntervalMS, boolean rmNeverStart) {
       super(context, dispatcher, healthChecker, metrics);
-      this.context = context;
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
     }
@@ -376,8 +375,8 @@ public class TestNodeStatusUpdater {
       RetryPolicy retryPolicy = RMProxy.createRetryPolicy(conf);
       resourceTracker =
           (ResourceTracker) RetryProxy.create(ResourceTracker.class,
-            new MyResourceTracker6(this.context, rmStartIntervalMS,
-              rmNeverStart), retryPolicy);
+            new MyResourceTracker6(rmStartIntervalMS, rmNeverStart),
+            retryPolicy);
       return resourceTracker;
     }
 
@@ -454,13 +453,13 @@ public class TestNodeStatusUpdater {
 
     @Override
     protected void serviceStop() throws Exception {
+      System.out.println("Called stooppppp");
       super.serviceStop();
       isStopped = true;
-      ConcurrentMap<ContainerId, org.apache.hadoop.yarn.server.nodemanager
-      .containermanager.container.Container> containers =
-          getNMContext().getContainers();
-      // ensure that containers are empty
-      if(!containers.isEmpty()) {
+      ConcurrentMap<ApplicationId, Application> applications =
+          getNMContext().getApplications();
+      // ensure that applications are empty
+      if(!applications.isEmpty()) {
         assertionFailedInThread.set(true);
       }
       syncBarrier.await(10000, TimeUnit.MILLISECONDS);
@@ -685,14 +684,11 @@ public class TestNodeStatusUpdater {
 
   private class MyResourceTracker6 implements ResourceTracker {
 
-    private final Context context;
     private long rmStartIntervalMS;
     private boolean rmNeverStart;
     private final long waitStartTime;
 
-    public MyResourceTracker6(Context context, long rmStartIntervalMS,
-        boolean rmNeverStart) {
-      this.context = context;
+    public MyResourceTracker6(long rmStartIntervalMS, boolean rmNeverStart) {
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
       this.waitStartTime = System.currentTimeMillis();
@@ -859,9 +855,20 @@ public class TestNodeStatusUpdater {
       }
       
       @Override
-      protected void cleanupContainers(NodeManagerEventType eventType) {
-        super.cleanupContainers(NodeManagerEventType.SHUTDOWN);
-        numCleanups.incrementAndGet();
+      protected ContainerManagerImpl createContainerManager(Context context,
+          ContainerExecutor exec, DeletionService del,
+          NodeStatusUpdater nodeStatusUpdater,
+          ApplicationACLsManager aclsManager,
+          LocalDirsHandlerService dirsHandler) {
+        return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
+            metrics, aclsManager, dirsHandler) {
+
+          @Override
+          public void cleanUpApplicationsOnNMShutDown() {
+            super.cleanUpApplicationsOnNMShutDown();
+            numCleanups.incrementAndGet();
+          }
+        };
       }
     };
 
@@ -1161,6 +1168,7 @@ public class TestNodeStatusUpdater {
         .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
         connectionRetryIntervalMs);
     conf.setLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS, 5000);
+    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     CyclicBarrier syncBarrier = new CyclicBarrier(2);
     nm = new MyNodeManager2(syncBarrier, conf);
     nm.init(conf);
@@ -1201,9 +1209,20 @@ public class TestNodeStatusUpdater {
       }
 
       @Override
-      protected void cleanupContainers(NodeManagerEventType eventType) {
-        super.cleanupContainers(NodeManagerEventType.SHUTDOWN);
-        numCleanups.incrementAndGet();
+      protected ContainerManagerImpl createContainerManager(Context context,
+          ContainerExecutor exec, DeletionService del,
+          NodeStatusUpdater nodeStatusUpdater,
+          ApplicationACLsManager aclsManager,
+          LocalDirsHandlerService dirsHandler) {
+        return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
+            metrics, aclsManager, dirsHandler) {
+
+          @Override
+          public void cleanUpApplicationsOnNMShutDown() {
+            super.cleanUpApplicationsOnNMShutDown();
+            numCleanups.incrementAndGet();
+          }
+        };
       }
     };
 
@@ -1345,6 +1364,7 @@ public class TestNodeStatusUpdater {
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
       remoteLogsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, nmLocalDir.getAbsolutePath());
+    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     return conf;
   }
   

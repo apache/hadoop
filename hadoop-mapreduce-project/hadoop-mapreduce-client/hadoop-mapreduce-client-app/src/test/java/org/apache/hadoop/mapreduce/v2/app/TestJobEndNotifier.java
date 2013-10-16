@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,10 +42,16 @@ import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -185,25 +192,19 @@ public class TestJobEndNotifier extends JobEndNotifier {
   }
 
   @Test
-  public void testNotificationOnNormalShutdown() throws Exception {
+  public void testNotificationOnLastRetryNormalShutdown() throws Exception {
     HttpServer server = startHttpServer();
     // Act like it is the second attempt. Default max attempts is 2
-    MRApp app = spy(new MRApp(2, 2, true, this.getClass().getName(), true, 2));
-    // Make use of safeToReportflag so that we can look at final job-state as
-    // seen by real users.
-    app.safeToReportTerminationToUser.set(false);
+    MRApp app = spy(new MRAppWithCustomContainerAllocator(
+        2, 2, true, this.getClass().getName(), true, 2, true));
     doNothing().when(app).sysexit();
     Configuration conf = new Configuration();
     conf.set(JobContext.MR_JOB_END_NOTIFICATION_URL,
         JobEndServlet.baseUrl + "jobend?jobid=$jobId&status=$jobStatus");
     JobImpl job = (JobImpl)app.submit(conf);
-    // Even though auto-complete is true, because app is not shut-down yet, user
-    // will only see RUNNING state.
     app.waitForInternalState(job, JobStateInternal.SUCCEEDED);
-    app.waitForState(job, JobState.RUNNING);
-    // Now shutdown. User should see SUCCEEDED state.
+    // Unregistration succeeds: successfullyUnregistered is set
     app.shutDownJob();
-    app.waitForState(job, JobState.SUCCEEDED);
     Assert.assertEquals(true, app.isLastAMRetry());
     Assert.assertEquals(1, JobEndServlet.calledTimes);
     Assert.assertEquals("jobid=" + job.getID() + "&status=SUCCEEDED",
@@ -214,28 +215,56 @@ public class TestJobEndNotifier extends JobEndNotifier {
   }
 
   @Test
-  public void testNotificationOnNonLastRetryShutdown() throws Exception {
+  public void testAbsentNotificationOnNotLastRetryUnregistrationFailure()
+      throws Exception {
     HttpServer server = startHttpServer();
-    MRApp app = spy(new MRApp(2, 2, false, this.getClass().getName(), true));
+    MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
+        this.getClass().getName(), true, 1, false));
     doNothing().when(app).sysexit();
-    // Make use of safeToReportflag so that we can look at final job-state as
-    // seen by real users.
-    app.safeToReportTerminationToUser.set(false);
     Configuration conf = new Configuration();
     conf.set(JobContext.MR_JOB_END_NOTIFICATION_URL,
         JobEndServlet.baseUrl + "jobend?jobid=$jobId&status=$jobStatus");
-    JobImpl job = (JobImpl)app.submit(new Configuration());
+    JobImpl job = (JobImpl)app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     app.getContext().getEventHandler()
       .handle(new JobEvent(app.getJobId(), JobEventType.JOB_AM_REBOOT));
     app.waitForInternalState(job, JobStateInternal.REBOOT);
+    // Now shutdown.
+    // Unregistration fails: isLastAMRetry is recalculated, this is not
+    app.shutDownJob();
     // Not the last AM attempt. So user should that the job is still running.
     app.waitForState(job, JobState.RUNNING);
-    app.shutDownJob();
     Assert.assertEquals(false, app.isLastAMRetry());
     Assert.assertEquals(0, JobEndServlet.calledTimes);
     Assert.assertEquals(null, JobEndServlet.requestUri);
     Assert.assertEquals(null, JobEndServlet.foundJobState);
+    server.stop();
+  }
+
+  @Test
+  public void testNotificationOnLastRetryUnregistrationFailure()
+      throws Exception {
+    HttpServer server = startHttpServer();
+    MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
+        this.getClass().getName(), true, 2, false));
+    doNothing().when(app).sysexit();
+    Configuration conf = new Configuration();
+    conf.set(JobContext.MR_JOB_END_NOTIFICATION_URL,
+        JobEndServlet.baseUrl + "jobend?jobid=$jobId&status=$jobStatus");
+    JobImpl job = (JobImpl)app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    app.getContext().getEventHandler()
+      .handle(new JobEvent(app.getJobId(), JobEventType.JOB_AM_REBOOT));
+    app.waitForInternalState(job, JobStateInternal.REBOOT);
+    // Now shutdown. User should see FAILED state.
+    // Unregistration fails: isLastAMRetry is recalculated, this is
+    app.shutDownJob();
+    Assert.assertEquals(true, app.isLastAMRetry());
+    Assert.assertEquals(1, JobEndServlet.calledTimes);
+    Assert.assertEquals("jobid=" + job.getID() + "&status=FAILED",
+        JobEndServlet.requestUri.getQuery());
+    Assert.assertEquals(JobState.FAILED.toString(),
+      JobEndServlet.foundJobState);
     server.stop();
   }
 
@@ -278,6 +307,85 @@ public class TestJobEndNotifier extends JobEndNotifier {
       in.close();
       out.close();
     }
+  }
+
+  private class MRAppWithCustomContainerAllocator extends MRApp {
+
+    private boolean crushUnregistration;
+
+    public MRAppWithCustomContainerAllocator(int maps, int reduces,
+        boolean autoComplete, String testName, boolean cleanOnStart,
+        int startCount, boolean crushUnregistration) {
+      super(maps, reduces, autoComplete, testName, cleanOnStart, startCount,
+          false);
+      this.crushUnregistration = crushUnregistration;
+    }
+
+    @Override
+    protected ContainerAllocator createContainerAllocator(
+        ClientService clientService, AppContext context) {
+      context = spy(context);
+      when(context.getEventHandler()).thenReturn(null);
+      when(context.getApplicationID()).thenReturn(null);
+      return new CustomContainerAllocator(this, context);
+    }
+
+    private class CustomContainerAllocator
+        extends RMCommunicator
+        implements ContainerAllocator, RMHeartbeatHandler {
+      private MRAppWithCustomContainerAllocator app;
+      private MRAppContainerAllocator allocator =
+          new MRAppContainerAllocator();
+
+      public CustomContainerAllocator(
+          MRAppWithCustomContainerAllocator app, AppContext context) {
+        super(null, context);
+        this.app = app;
+      }
+
+      @Override
+      public void serviceInit(Configuration conf) {
+      }
+
+      @Override
+      public void serviceStart() {
+      }
+
+      @Override
+      public void serviceStop() {
+        unregister();
+      }
+
+      @Override
+      protected void doUnregistration()
+          throws YarnException, IOException, InterruptedException {
+        if (crushUnregistration) {
+          app.successfullyUnregistered.set(true);
+        } else {
+          throw new YarnException("test exception");
+        }
+      }
+
+      @Override
+      public void handle(ContainerAllocatorEvent event) {
+        allocator.handle(event);
+      }
+
+      @Override
+      public long getLastHeartbeatTime() {
+        return allocator.getLastHeartbeatTime();
+      }
+
+      @Override
+      public void runOnNextHeartbeat(Runnable callback) {
+        allocator.runOnNextHeartbeat(callback);
+      }
+
+      @Override
+      protected void heartbeat() throws Exception {
+      }
+    }
+
   }
 
 }
