@@ -93,3 +93,6 @@ HDFS-4949 (Unreleased)
 
     HDFS-5348. Fix error message when dfs.datanode.max.locked.memory is
     improperly configured. (Colin Patrick McCabe)
+
+    HDFS-5373. hdfs cacheadmin -addDirective short usage does not mention
+    -replication parameter. (cnauroth)

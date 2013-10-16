@@ -131,7 +131,8 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " -path <path> -pool <pool-name>]\n";
+      return "[" + getName() +
+          " -path <path> -replication <replication> -pool <pool-name>]\n";
     }
 
     @Override

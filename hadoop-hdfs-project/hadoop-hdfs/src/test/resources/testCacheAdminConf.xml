@@ -167,6 +167,7 @@
         <cache-admin-command>-addPool pool1</cache-admin-command>
         <cache-admin-command>-addDirective -path /foo -pool pool1</cache-admin-command>
         <cache-admin-command>-addDirective -path /bar -pool pool1</cache-admin-command>
+        <cache-admin-command>-addDirective -path /baz -replication 2 -pool pool1</cache-admin-command>
         <cache-admin-command>-listDirectives -pool pool1</cache-admin-command>
       </test-commands>
       <cleanup-commands>
@@ -175,7 +176,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Found 2 entries</expected-output>
+          <expected-output>Found 3 entries</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
@@ -184,6 +185,10 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>2   pool1  /bar</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>3   pool1  /baz</expected-output>
         </comparator>
       </comparators>
     </test>
