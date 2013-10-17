@@ -32,6 +32,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-10055. FileSystemShell.apt.vm doc has typo "numRepicas".
     (Akira Ajisaka via cnauroth)
 
+    HADOOP-10052. Temporarily disable client-side symlink resolution
+    (branch-2.2 only change). (wang)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
