@@ -18,7 +18,8 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.doReturn;
 
 import java.io.FileInputStream;
@@ -41,7 +42,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
 import org.apache.hadoop.hdfs.server.protocol.CacheReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -139,11 +140,11 @@ public class TestFsDatasetCache {
   private static DatanodeCommand getResponse(HdfsBlockLocation[] locs,
       int action) {
     String bpid = locs[0].getLocatedBlock().getBlock().getBlockPoolId();
-    Block[] blocks = new Block[locs.length];
+    long[] blocks = new long[locs.length];
     for (int i=0; i<locs.length; i++) {
-      blocks[i] = locs[i].getLocatedBlock().getBlock().getLocalBlock();
+      blocks[i] = locs[i].getLocatedBlock().getBlock().getBlockId();
     }
-    return new BlockCommand(action, bpid, blocks);
+    return new BlockIdCommand(action, bpid, blocks);
   }
 
   private static long[] getBlockSizes(HdfsBlockLocation[] locs)

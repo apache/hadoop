@@ -99,3 +99,5 @@ HDFS-4949 (Unreleased)
 
     HDFS-5373. hdfs cacheadmin -addDirective short usage does not mention
     -replication parameter. (cnauroth)
+
+    HDFS-5383. fix broken caching unit tests. (Andrew Wang)

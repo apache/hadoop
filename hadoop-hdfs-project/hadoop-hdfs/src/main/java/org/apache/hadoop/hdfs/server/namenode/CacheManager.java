@@ -662,7 +662,6 @@ public final class CacheManager {
    * @throws IOException
    */
   public void loadState(DataInput in) throws IOException {
-    assert namesystem.hasWriteLock();
     nextEntryId = in.readLong();
     // pools need to be loaded first since entries point to their parent pool
     loadPools(in);

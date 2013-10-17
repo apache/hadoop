@@ -41,6 +41,7 @@ public class TestClientNamenodeProtocolServerSideTranslatorPB {
             setDirective(PathBasedCacheDirectiveProto.newBuilder().
                 setPath("").
                 setPool("pool").
+                setReplication(1).
                 build()).
             build();
     ClientNamenodeProtocolServerSideTranslatorPB translator =
