@@ -88,9 +88,9 @@
       {/nn}
 
       {#fs}
-      <tr><th><a href="dfsnodelist.jsp?whatNodes=LIVE">Live Nodes</a></th><td>{NumLiveDataNodes} (Decommissioned: {NumDecomLiveDataNodes})</td></tr>
-      <tr><th><a href="dfsnodelist.jsp?whatNodes=DEAD">Dead Nodes</a></th><td>{NumDeadDataNodes} (Decommissioned: {NumDecomDeadDataNodes})</td></tr>
-      <tr><th><a href="dfsnodelist.jsp?whatNodes=DECOMMISSIONING">Decommissioning Nodes</a></th><td>{NumDecommissioningDataNodes}</td></tr>
+      <tr><th><a href="#nodelist-operation">Live Nodes</a></th><td>{NumLiveDataNodes} (Decommissioned: {NumDecomLiveDataNodes})</td></tr>
+      <tr><th><a href="#nodelist-operation">Dead Nodes</a></th><td>{NumDeadDataNodes} (Decommissioned: {NumDecomDeadDataNodes})</td></tr>
+      <tr><th><a href="#nodelist-decom">Decommissioning Nodes</a></th><td>{NumDecommissioningDataNodes}</td></tr>
       <tr><th title="Excludes missing blocks.">Number of Under-Replicated Blocks</th><td>{UnderReplicatedBlocks}</td></tr>
       {/fs}
     </table>
@@ -263,4 +263,3 @@
     </div>
   </div>
 </div>
->>>>>>> 801ea4f... Fix for dfshealth
