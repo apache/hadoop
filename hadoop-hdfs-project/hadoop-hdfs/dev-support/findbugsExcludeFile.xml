@@ -83,7 +83,7 @@
        <Class name="org.apache.hadoop.mapred.Task$TaskReporter" />
        <Method name="run" />
        <Bug pattern="DM_EXIT" />
-     </Match>
+     </Match>     
      <!--
        We need to cast objects between old and new api objects
      -->
@@ -325,6 +325,12 @@
        <Field name="modification" />
        <Bug pattern="VO_VOLATILE_INCREMENT" />
      </Match>
+      <!-- Replace System.exit() call with ExitUtil.terminate() -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.tools.JMXGet"/>
+       <Method name="main" />
+       <Bug pattern="NP_NULL_ON_SOME_PATH" />
+     </Match>    
      <Match>
        <Class name="org.apache.hadoop.hdfs.server.datanode.ReplicaInfo" />
        <Method name="setDirInternal" />
