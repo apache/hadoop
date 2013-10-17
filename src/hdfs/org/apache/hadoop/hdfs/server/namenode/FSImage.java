@@ -1308,12 +1308,9 @@ public class FSImage extends Storage {
 
         if (sd.getStorageDirType().equals(NameNodeDirType.EDITS)) {
           restoreFile(goodEdits, sd.getCurrentDir(), NameNodeFile.EDITS.getName());
-        } else if (sd.getStorageDirType().equals(NameNodeDirType.IMAGE)) {
-          restoreFile(goodImage, sd.getCurrentDir(), NameNodeFile.IMAGE.getName());
         } else if (sd.getStorageDirType().equals(
             NameNodeDirType.IMAGE_AND_EDITS)) {
-          restoreFile(goodEdits, sd.getCurrentDir(), NameNodeFile.EDITS.getName());
-          restoreFile(goodImage, sd.getCurrentDir(), NameNodeFile.IMAGE.getName());
+          restoreFile(goodEdits, sd.getCurrentDir(), NameNodeFile.EDITS.getName());          
         } else {
           throw new IOException("Invalid NameNodeDirType: "
               + sd.getStorageDirType());

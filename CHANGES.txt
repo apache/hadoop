@@ -43,6 +43,9 @@ Release 1.3.0 - unreleased
     HDFS-5245. shouldRetry() in WebHDFSFileSystem generates excessive warnings.
     (Haohui Mai via jing9)
 
+    HDFS-5367. Restoring namenode storage locks namenode due to unnecessary
+    fsimage write. (Jonh Zhao via suresh)
+
   BUG FIXES
 
     HADOOP-9863. Backport HADOOP-8686 to support BigEndian on ppc64. 
