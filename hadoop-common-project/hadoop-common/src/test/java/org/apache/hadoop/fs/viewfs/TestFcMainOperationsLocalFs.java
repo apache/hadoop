@@ -18,13 +18,9 @@
 package org.apache.hadoop.fs.viewfs;
 
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextMainOperationsBaseTest;
-import org.apache.hadoop.fs.FileContextTestHelper;
-import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.viewfs.ConfigUtil;
 
 import org.junit.After;
 import org.junit.Before;
@@ -48,5 +44,10 @@ public class TestFcMainOperationsLocalFs  extends
   public void tearDown() throws Exception {
     super.tearDown();
     ViewFsTestSetup.tearDownForViewFsLocalFs(fileContextTestHelper);
+  }
+  
+  @Override
+  protected boolean listCorruptedBlocksSupported() {
+    return false;
   }
 }

@@ -1,0 +1,265 @@
+<div class="page-header">
+  {#nnstat}
+  <h1>NameNode '{HostAndPort}' ({State})</h1>
+  {/nnstat}
+</div>
+
+{#nn}
+{@if cond="{DistinctVersionCount} > 1"}
+<div class="alert alert-dismissable alert-success">
+  <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+
+  There are {DistinctVersionCount} versions of datanodes currently live: 
+  {#DistinctVersions}
+  {key} ({value}) {@sep},{/sep}
+  {/DistinctVersions}
+</div>
+{/if}
+
+{@if cond="{NumberOfMissingBlocks} > 0"}
+<div class="alert alert-dismissable alert-warning">
+  <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+
+  <p>There are {NumberOfMissingBlocks} missing blocks. The following files may be corrupted:</p>
+  <br/>
+  <div class="well">
+    {#CorruptFiles}
+    {.}<br/>
+    {/CorruptFiles}
+  </div>
+  <p>Please check the logs or run fsck in order to identify the missing blocks. See the Hadoop FAQ for common causes and potential solutions.</p>
+</div>
+{/if}
+{/nn}
+
+<div class="panel panel-primary">
+  <div class="panel-heading">Overview</div>
+  <div class="panel-body">
+    {#nn}
+    <table class="table table-bordered">
+      <tr><th>Started:</th><td>{NNStarted}</td></tr>
+      <tr><th>Version:</th><td>{Version}</td></tr>
+      <tr><th>Compiled:</th><td>{CompileInfo}</td></tr>
+      <tr><th>Cluster ID:</th><td>{ClusterId}</td></tr>
+      <tr><th>Block Pool ID:</th><td>{BlockPoolId}</td></tr>
+    </table>
+    {/nn}
+  </div>
+</div>
+
+<a id="browse-dir-first" style="cursor:pointer">Browse the filesystem</a>  <a href="/logs/">NameNode Logs</a>
+
+<hr/>
+
+<div class="panel panel-primary">
+  <div class="panel-heading">Cluster Summary</div>
+  <div class="panel-body">
+
+    <p>
+      Security is {#nnstat}{#SecurityModeEnabled}on{:else}off{/SecurityModeEnabled}{/nnstat}.</p>
+    <p>{#nn}{#Safemode}{.}{:else}Safemode is off.{/Safemode}{/nn}</p>
+
+    <p>
+      {#fs}
+      {TotalLoad} files and directories, {BlocksTotal} blocks = {FilesTotal} total filesystem object(s).
+      {#helper_fs_max_objects/}
+      {/fs}
+    </p>
+    {#mem.HeapMemoryUsage}
+    <p>Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Heap Memory. Max Heap Memory is {max|fmt_bytes}. </p>
+    {/mem.HeapMemoryUsage}
+
+    {#mem.NonHeapMemoryUsage}
+    <p>Non Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Commited Non Heap Memory. Max Non Heap Memory is {max|fmt_bytes}. </p>
+    {/mem.NonHeapMemoryUsage}
+
+    {#nn}
+    <table class="table table-bordered table-striped">
+      <tr><th> Configured Capacity:</th><td>{Total|fmt_bytes}</td></tr>
+      <tr><th> DFS Used:</th><td>{Used|fmt_bytes}</td></tr>
+      <tr><th> Non DFS Used:</th><td>{NonDfsUsedSpace|fmt_bytes}</td></tr>
+      <tr><th> DFS Remaining:</th><td>{Free|fmt_bytes}</td></tr>
+      <tr><th> DFS Used%:</th><td>{PercentUsed|fmt_percentage}</td></tr>
+      <tr><th> DFS Remaining%:</th><td>{PercentRemaining|fmt_percentage}</td></tr>
+      <tr><th> Block Pool Used:</th><td>{BlockPoolUsedSpace|fmt_bytes}</td></tr>
+      <tr><th> Block Pool Used%:</th><td>{PercentBlockPoolUsed|fmt_percentage}</td></tr>
+      <tr><th> DataNodes usages% (Min/Median/Max/stdDev): </th>
+	<td>{#NodeUsage.nodeUsage}{min} / {median} / {max} / {stdDev}{/NodeUsage.nodeUsage}</td></tr>
+      {/nn}
+
+      {#fs}
+      <tr><th><a href="#nodelist-operation">Live Nodes</a></th><td>{NumLiveDataNodes} (Decommissioned: {NumDecomLiveDataNodes})</td></tr>
+      <tr><th><a href="#nodelist-operation">Dead Nodes</a></th><td>{NumDeadDataNodes} (Decommissioned: {NumDecomDeadDataNodes})</td></tr>
+      <tr><th><a href="#nodelist-decom">Decommissioning Nodes</a></th><td>{NumDecommissioningDataNodes}</td></tr>
+      <tr><th title="Excludes missing blocks.">Number of Under-Replicated Blocks</th><td>{UnderReplicatedBlocks}</td></tr>
+      {/fs}
+    </table>
+  </div>
+</div>
+
+<hr/>
+<div class="panel panel-primary">
+  <div class="panel-heading">NameNode Journal Status</div>
+  <div class="panel-body">
+    <p><b>Current transaction ID:</b> {nn.JournalTransactionInfo.LastAppliedOrWrittenTxId}</p>
+    <table class="table" title="NameNode Journals">
+      <thead>
+	<tr><th>Journal Manager</th><th>State</th></tr>
+      </thead>
+      <tbody>
+	{#nn.NameJournalStatus}
+	<tr><td>{manager}</td><td>{stream}</td></tr>
+	{/nn.NameJournalStatus}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<hr/>
+<div class="panel panel-primary">
+  <div class="panel-heading">NameNode Storage</div>
+  <div class="panel-body">
+    <table class="table" title="NameNode Storage">
+      <thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>
+      {#nn.NameDirStatuses}
+      {#active}{#helper_dir_status type="Active"/}{/active}
+      {#failed}{#helper_dir_status type="Failed"/}{/failed}
+      {/nn.NameDirStatuses}
+    </table>
+  </div>
+</div>
+<hr/>
+
+<div class="panel panel-primary">
+  <div class="panel-heading">Snapshot Summary</div>
+  <div class="panel-body">
+    {#fs.SnapshotStats}
+    <table class="table" title="Snapshot Summary">
+      <thead><tr><td><b>Snapshottable directories</b></td>
+	  <td><b>Snapshotted directories</b></td></tr>
+      </thead>
+      <tbody>
+	<tr>
+	  <td>{SnapshottableDirectories}</td>
+	  <td>{Snapshots}</td>
+	</tr>
+      </tbody>
+    </table>
+    {/fs.SnapshotStats}
+  </div>
+</div>
+<hr/>
+
+{#startup}
+<div class="panel panel-primary">
+  <div class="panel-heading">Startup Progress</div>
+  <div class="panel-body">
+    <p>Elapsed Time: {elapsedTime|fmt_time}, Percent Complete: {percentComplete|fmt_percentage}</p>
+    <table class="table">
+      <thead>
+	<tr>
+	  <th>Phase</th>
+	  <th>Completion</th>
+	  <th>Elapsed Time</th>
+	</tr>
+      </thead>
+      <tbody>
+	{#phases}
+	<tr class="phase">
+	  <td class="startupdesc">{desc} {file} {size|fmt_bytes}</td>
+	  <td>{percentComplete|fmt_percentage}</td>
+	  <td>{elapsedTime|fmt_time}</td>
+	</tr>
+	{#steps root_file=file}
+	<tr class="step">
+	  <td class="startupdesc">{stepDesc} {stepFile} {stepSize|fmt_bytes} ({count}/{total})</td>
+	  <td>{percentComplete|fmt_percentage}</td>
+	  <td></td>
+	</tr>
+	{/steps}
+	{/phases}
+    </table>
+  </div>
+</div>
+{/startup}
+
+<hr/>
+<div class="panel panel-primary">
+  <div class="panel-heading">Datanode Information</div>
+  <div class="panel-body">
+    <div class="panel panel-default" id="nodelist-operation">
+      <div class="panel-heading">Nodes in operation</div>
+      <div class="panel-body">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Node</th>
+              <th>Last contact</th>
+              <th>Admin State</th>
+              <th>Capacity</th>
+              <th>Used</th>
+              <th>Non DFS Used</th>
+              <th>Remaining</th>
+              <th>Blocks</th>
+              <th>Block pool used</th>
+              <th>Failed Volumes</th>
+            </tr>
+          </thead>
+          {#nn.LiveNodes}
+          <tr>
+            <td><a class="browse-dir-links" info-http-addr="{infoAddr}" info-https-addr="{infoSecureAddr}">{name}</a> ({xferaddr})</td>
+            <td>{lastContact}</td>
+            <td>{adminState}</td>
+            <td>{capacity|fmt_bytes}</td>
+            <td>{used|fmt_bytes}</td>
+            <td>{nonDfsUsedSpace|fmt_bytes}</td>
+            <td>{remaining|fmt_bytes}</td>
+            <td>{numBlocks}</td>
+            <td>{blockPoolUsed|fmt_bytes} ({blockPoolUsedPercent|fmt_percentage})</td>
+            <td>{volfails}</td>
+          </tr>
+          {/nn.LiveNodes}
+          {#nn.DeadNodes}
+          <tr class="danger">
+            <td>{name} ({xferaddr})</td>
+            <td>{lastContact}</td>
+            <td>Dead{?decomissioned}, Decomissioned{/decomissioned}</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+          </tr>
+          {/nn.DeadNodes}
+        </table>
+      </div>
+    </div>
+    <div class="panel panel-default" id="nodelist-decom">
+      <div class="panel-heading">Nodes being decomissioned</div>
+      <div class="panel-body">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Node</th>
+              <th>Last contact</th>
+              <th>Under replicated blocks</th>
+              <th>Blocks with no live replicas</th>
+              <th>Under Replicated Blocks <br/>In files under construction</th>
+            </tr>
+          </thead>
+          {#nn.DecomNodes}
+          <tr>
+            <td>{name} ({xferaddr})</td>
+            <td>{lastContact}</td>
+            <td>{underReplicatedBlocks}</td>
+            <td>{decommissionOnlyReplicas}</td>
+	    <td>{underReplicateInOpenFiles}</td>
+	  </tr>
+	  {/nn.DecomNodes}
+	</table>
+      </div>
+    </div>
+  </div>
+</div>

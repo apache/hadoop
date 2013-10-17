@@ -360,6 +360,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9897. Add method to get path start position without drive specifier in
     o.a.h.fs.Path. (Binglin Chang via cnauroth)
 
+    HADOOP-9078. enhance unit-test coverage of class
+    org.apache.hadoop.fs.FileContext (Ivan A. Veselovsky via jeagles)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -430,6 +433,9 @@ Release 2.2.1 - UNRELEASED
 
     HADOOP-10040. hadoop.cmd in UNIX format and would not run by default on
     Windows. (cnauroth)
+
+    HADOOP-10055. FileSystemShell.apt.vm doc has typo "numRepicas".
+    (Akira Ajisaka via cnauroth)
 
 Release 2.2.0 - 2013-10-13
 

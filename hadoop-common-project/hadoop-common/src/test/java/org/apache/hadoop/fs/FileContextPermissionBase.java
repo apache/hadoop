@@ -35,6 +35,7 @@ import org.junit.Test;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * <p>
@@ -173,6 +174,13 @@ public abstract class FileContextPermissionBase {
       } else {
         System.out.println("Not testing changing the group since user " +
                            "belongs to only one group.");
+      }
+      
+      try {
+        fc.setOwner(f, null, null);
+        fail("Exception expected.");
+      } catch (IllegalArgumentException iae) {
+        // okay
       }
     } 
     finally {cleanupFile(fc, f);}

@@ -255,7 +255,12 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5342. Provide more information in the FSNamesystem JMX interfaces.
     (Haohui Mai via jing9)
- 
+
+    HDFS-5334. Implement dfshealth.jsp in HTML pages. (Haohui Mai via jing9)
+
+    HDFS-5379. Update links to datanode information in dfshealth.html. (Haohui
+    Mai via jing9)
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)
@@ -352,6 +357,13 @@ Release 2.3.0 - UNRELEASED
     HDFS-5283. Under construction blocks only inside snapshots should not be
     counted in safemode threshhold.  (Vinay via szetszwo)
 
+    HDFS-4376. Fix race conditions in Balancer.  (Junping Du via szetszwo)
+
+    HDFS-5375. hdfs.cmd does not expose several snapshot commands. (cnauroth)
+
+    HDFS-5336. DataNode should not output 'StartupProgress' metrics.
+    (Akira Ajisaka via cnauroth)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -359,6 +371,9 @@ Release 2.2.1 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HDFS-5360. Improvement of usage message of renameSnapshot and
+    deleteSnapshot. (Shinichi Yamashita via wang)
 
   OPTIMIZATIONS
 
@@ -3673,6 +3688,9 @@ Release 0.23.10 - UNRELEASED
 
     HDFS-5010. Reduce the frequency of getCurrentUser() calls from namenode
     (kihwal)
+
+    HDFS-5346. Avoid unnecessary call to getNumLiveDataNodes() for each block 
+    during IBR processing (Ravi Prakash via kihwal)
 
   OPTIMIZATIONS
 
