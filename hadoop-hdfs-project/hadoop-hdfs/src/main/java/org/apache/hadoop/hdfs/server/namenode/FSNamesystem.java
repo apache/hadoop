@@ -350,7 +350,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     this.systemStart = now();
     this.blockManager = new BlockManager(this, this, conf);
     this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
-    this.fsLock = new ReentrantReadWriteLock(true); // fair locking
+    this.fsLock = createFsLock(conf);
     setConfigurationParameters(conf);
     // For testing purposes, allow the DT secret manager to be started regardless
     // of whether security is enabled.
@@ -371,6 +371,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.dir = new FSDirectory(fsImage, this, conf);
     }
     this.safeMode = new SafeModeInfo(conf);
+  }
+
+  private static ReentrantReadWriteLock createFsLock(Configuration conf) {
+    boolean fair = conf.getBoolean("dfs.namenode.fslock.fair", true);
+    LOG.info("fsLock is fair:" + fair);
+    return new ReentrantReadWriteLock(fair);
   }
 
   void activateSecretManager() throws IOException {
@@ -472,7 +478,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * is stored
    */
   FSNamesystem(FSImage fsImage, Configuration conf) throws IOException {
-    this.fsLock = new ReentrantReadWriteLock(true);
+    this.fsLock = createFsLock(conf);
     this.blockManager = new BlockManager(this, this, conf);
     setConfigurationParameters(conf);
     this.dir = new FSDirectory(fsImage, this, conf);
@@ -4547,5 +4553,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @VisibleForTesting
   public SafeModeInfo getSafeModeInfoForTests() {
     return safeMode;
+  }
+  
+  @VisibleForTesting
+  void setFsLockForTests(ReentrantReadWriteLock lock) {
+    this.fsLock = lock;
+  }
+  
+  @VisibleForTesting
+  ReentrantReadWriteLock getFsLockForTests() {
+    return fsLock;
   }
 }

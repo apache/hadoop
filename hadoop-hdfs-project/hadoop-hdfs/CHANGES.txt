@@ -24,6 +24,9 @@ Release 0.23.10 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn via
+    kihwal)
+
   BUG FIXES
 
     HDFS-4984. Incorrect Quota counting in INodeFile. (jing9 via kihwal)

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 
@@ -72,4 +72,21 @@ public class TestFSNamesystem {
     assertTrue("Replication queues weren't being populated after entering "
       + "safemode 2nd time", fsn.isPopulatingReplQueues());
   }
+  
+  @Test
+  public void testFsLockFairness() throws IOException, InterruptedException{
+    Configuration conf = new Configuration();
+
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+
+    conf.setBoolean("dfs.namenode.fslock.fair", true);
+    FSNamesystem fsNamesystem = new FSNamesystem(fsImage, conf);
+    assertTrue(fsNamesystem.getFsLockForTests().isFair());
+    
+    conf.setBoolean("dfs.namenode.fslock.fair", false);
+    fsNamesystem = new FSNamesystem(fsImage, conf);
+    assertFalse(fsNamesystem.getFsLockForTests().isFair());
+  }  
 }
