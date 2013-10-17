@@ -117,6 +117,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5375. hdfs.cmd does not expose several snapshot commands. (cnauroth)
 
+    HDFS-5336. DataNode should not output 'StartupProgress' metrics.
+    (Akira Ajisaka via cnauroth)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
