@@ -47,7 +47,6 @@ import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Syncable;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
@@ -138,7 +137,7 @@ public class DFSOutputStream extends FSOutputSummer
   private long currentSeqno = 0;
   private long lastQueuedSeqno = -1;
   private long lastAckedSeqno = -1;
-  private long bytesCurBlock = 0; // bytes writen in current block
+  private long bytesCurBlock = 0; // bytes written in current block
   private int packetSize = 0; // write packet size, not including the header.
   private int chunksPerPacket = 0;
   private final AtomicReference<IOException> lastException = new AtomicReference<IOException>();
@@ -466,8 +465,7 @@ public class DFSOutputStream extends FSOutputSummer
           }
         }
 
-        Packet one = null;
-
+        Packet one;
         try {
           // process datanode IO errors if any
           boolean doSleep = false;
@@ -511,7 +509,7 @@ public class DFSOutputStream extends FSOutputSummer
             if(DFSClient.LOG.isDebugEnabled()) {
               DFSClient.LOG.debug("Allocating new block");
             }
-            nodes = nextBlockOutputStream(src);
+            nodes = nextBlockOutputStream();
             initDataStreaming();
           } else if (stage == BlockConstructionStage.PIPELINE_SETUP_APPEND) {
             if(DFSClient.LOG.isDebugEnabled()) {
@@ -574,9 +572,6 @@ public class DFSOutputStream extends FSOutputSummer
             throw e;
           }
           lastPacket = Time.now();
-          
-          if (one.isHeartbeatPacket()) {  //heartbeat packet
-          }
           
           // update bytesSent
           long tmpBytesSent = one.getLastByteOffsetBlock();
@@ -695,7 +690,7 @@ public class DFSOutputStream extends FSOutputSummer
     }
 
     //
-    // Processes reponses from the datanodes.  A packet is removed 
+    // Processes responses from the datanodes.  A packet is removed
     // from the ackQueue when its response arrives.
     //
     private class ResponseProcessor extends Daemon {
@@ -737,18 +732,18 @@ public class DFSOutputStream extends FSOutputSummer
             }
             
             assert seqno != PipelineAck.UNKOWN_SEQNO : 
-              "Ack for unkown seqno should be a failed ack: " + ack;
+              "Ack for unknown seqno should be a failed ack: " + ack;
             if (seqno == Packet.HEART_BEAT_SEQNO) {  // a heartbeat ack
               continue;
             }
 
             // a success ack for a data packet
-            Packet one = null;
+            Packet one;
             synchronized (dataQueue) {
               one = ackQueue.getFirst();
             }
             if (one.seqno != seqno) {
-              throw new IOException("Responseprocessor: Expecting seqno " +
+              throw new IOException("ResponseProcessor: Expecting seqno " +
                                     " for block " + block +
                                     one.seqno + " but received " + seqno);
             }
@@ -1057,7 +1052,7 @@ public class DFSOutputStream extends FSOutputSummer
      * Must get block ID and the IDs of the destinations from the namenode.
      * Returns the list of target datanodes.
      */
-    private DatanodeInfo[] nextBlockOutputStream(String client) throws IOException {
+    private DatanodeInfo[] nextBlockOutputStream() throws IOException {
       LocatedBlock lb = null;
       DatanodeInfo[] nodes = null;
       int count = dfsClient.getConf().nBlockWriteRetry;
@@ -1215,8 +1210,7 @@ public class DFSOutputStream extends FSOutputSummer
     }
 
     private LocatedBlock locateFollowingBlock(long start,
-        DatanodeInfo[] excludedNodes) 
-        throws IOException, UnresolvedLinkException {
+        DatanodeInfo[] excludedNodes)  throws IOException {
       int retries = dfsClient.getConf().nBlockWriteLocateFollowingRetry;
       long sleeptime = 400;
       while (true) {
@@ -1287,7 +1281,7 @@ public class DFSOutputStream extends FSOutputSummer
    * Create a socket for a write pipeline
    * @param first the first datanode 
    * @param length the pipeline length
-   * @param client
+   * @param client client
    * @return the socket connected to the first datanode
    */
   static Socket createSocketForPipeline(final DatanodeInfo first,
@@ -1479,7 +1473,7 @@ public class DFSOutputStream extends FSOutputSummer
           //
           // Rather than wait around for space in the queue, we should instead try to
           // return to the caller as soon as possible, even though we slightly overrun
-          // the MAX_PACKETS iength.
+          // the MAX_PACKETS length.
           Thread.currentThread().interrupt();
           break;
         }
@@ -1705,7 +1699,7 @@ public class DFSOutputStream extends FSOutputSummer
         }
       }
       // If 1) any new blocks were allocated since the last flush, or 2) to
-      // update length in NN is requried, then persist block locations on
+      // update length in NN is required, then persist block locations on
       // namenode.
       if (persistBlocks.getAndSet(false) || updateLength) {
         try {

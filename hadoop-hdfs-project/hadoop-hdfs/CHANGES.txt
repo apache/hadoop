@@ -83,6 +83,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5130. Add test for snapshot related FsShell and DFSAdmin commands.
     (Binglin Chang via jing9)
 
+    HDFS-5374. Remove deadcode in DFSOutputStream. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
