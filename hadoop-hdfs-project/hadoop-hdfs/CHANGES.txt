@@ -112,6 +112,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4376. Fix race conditions in Balancer.  (Junping Du via szetszwo)
 
+    HDFS-5375. hdfs.cmd does not expose several snapshot commands. (cnauroth)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

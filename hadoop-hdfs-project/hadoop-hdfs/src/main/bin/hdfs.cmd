@@ -123,6 +123,14 @@ goto :eof
   set CLASS=org.apache.hadoop.hdfs.tools.GetGroups
   goto :eof
 
+:snapshotDiff
+  set CLASS=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
+  goto :eof
+
+:lsSnapshottableDir
+  set CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
+  goto :eof
+
 @rem This changes %1, %2 etc. Hence those cannot be used after calling this.
 :make_command_arguments
   if "%1" == "--config" (
@@ -164,7 +172,10 @@ goto :eof
   @echo   fetchdt              fetch a delegation token from the NameNode
   @echo   getconf              get config values from configuration
   @echo   groups               get the groups which users belong to
-  @echo                        Use -help to see options
+  @echo   snapshotDiff         diff two snapshots of a directory or diff the
+  @echo                        current directory contents with a snapshot
+  @echo   lsSnapshottableDir   list all snapshottable dirs owned by the current user
+  @echo 						Use -help to see options
   @echo.
   @echo Most commands print help when invoked w/o parameters.
 
