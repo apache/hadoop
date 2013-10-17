@@ -23,6 +23,7 @@ import java.util.Set;
 
 import javax.crypto.SecretKey;
 
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -151,9 +152,12 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
   Token<AMRMTokenIdentifier> getAMRMToken();
 
   /**
-   * The master key for client-to-AM tokens for this app attempt
+   * The master key for client-to-AM tokens for this app attempt. This is only
+   * used for RMStateStore. Normal operation must invoke the secret manager to
+   * get the key and not use the local key directly.
    * @return The master key for client-to-AM tokens for this app attempt
    */
+  @LimitedPrivate("RMStateStore")
   SecretKey getClientTokenMasterKey();
 
   /**

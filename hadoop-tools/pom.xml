@@ -40,6 +40,8 @@
     <module>hadoop-tools-dist</module>
     <module>hadoop-extras</module>
     <module>hadoop-pipes</module>
+    <module>hadoop-openstack</module>
+    <module>hadoop-sls</module>
   </modules>
 
   <build>

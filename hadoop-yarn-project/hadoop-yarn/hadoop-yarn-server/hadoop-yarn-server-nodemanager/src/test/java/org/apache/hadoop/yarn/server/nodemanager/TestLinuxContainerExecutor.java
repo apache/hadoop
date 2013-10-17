@@ -31,14 +31,17 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 
+import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -256,4 +259,91 @@ public class TestLinuxContainerExecutor {
     
     assertFalse(t.isAlive());
   }
+
+  @Test
+  public void testLocalUser() throws Exception {
+    try {
+      //nonsecure default
+      Configuration conf = new YarnConfiguration();
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+          "simple");
+      UserGroupInformation.setConfiguration(conf);
+      LinuxContainerExecutor lce = new LinuxContainerExecutor();
+      lce.setConf(conf);
+      Assert.assertEquals(YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
+          lce.getRunAsUser("foo"));
+
+      //nonsecure custom setting
+      conf.set(YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY, "bar");
+      lce = new LinuxContainerExecutor();
+      lce.setConf(conf);
+      Assert.assertEquals("bar", lce.getRunAsUser("foo"));
+
+      //secure
+      conf = new YarnConfiguration();
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+          "kerberos");
+      UserGroupInformation.setConfiguration(conf);
+      lce = new LinuxContainerExecutor();
+      lce.setConf(conf);
+      Assert.assertEquals("foo", lce.getRunAsUser("foo"));
+    } finally {
+      Configuration conf = new YarnConfiguration();
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+          "simple");
+      UserGroupInformation.setConfiguration(conf);
+    }
+  }
+
+  @Test
+  public void testNonsecureUsernamePattern() throws Exception {
+    try {
+      //nonsecure default
+      Configuration conf = new YarnConfiguration();
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+          "simple");
+      UserGroupInformation.setConfiguration(conf);
+      LinuxContainerExecutor lce = new LinuxContainerExecutor();
+      lce.setConf(conf);
+      lce.verifyUsernamePattern("foo");
+      try {
+        lce.verifyUsernamePattern("foo/x");
+        Assert.fail();
+      } catch (IllegalArgumentException ex) {
+        //NOP        
+      } catch (Throwable ex) {
+        Assert.fail(ex.toString());
+      }
+      
+      //nonsecure custom setting
+      conf.set(YarnConfiguration.NM_NONSECURE_MODE_USER_PATTERN_KEY, "foo");
+      lce = new LinuxContainerExecutor();
+      lce.setConf(conf);
+      lce.verifyUsernamePattern("foo");
+      try {
+        lce.verifyUsernamePattern("bar");
+        Assert.fail();
+      } catch (IllegalArgumentException ex) {
+        //NOP        
+      } catch (Throwable ex) {
+        Assert.fail(ex.toString());
+      }
+
+      //secure, pattern matching does not kick in.
+      conf = new YarnConfiguration();
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+          "kerberos");
+      UserGroupInformation.setConfiguration(conf);
+      lce = new LinuxContainerExecutor();
+      lce.setConf(conf);
+      lce.verifyUsernamePattern("foo");
+      lce.verifyUsernamePattern("foo/w");
+    } finally {
+      Configuration conf = new YarnConfiguration();
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+          "simple");
+      UserGroupInformation.setConfiguration(conf);
+    }
+  }
+
 }

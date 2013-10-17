@@ -18,21 +18,24 @@
 package org.apache.hadoop.oncrpc;
 
 import java.io.IOException;
-import java.net.InetAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
-import org.apache.hadoop.oncrpc.RpcCallCache.CacheEntry;
+import org.apache.hadoop.oncrpc.security.Verifier;
 import org.apache.hadoop.portmap.PortmapMapping;
 import org.apache.hadoop.portmap.PortmapRequest;
-import org.jboss.netty.channel.Channel;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Class for writing RPC server programs based on RFC 1050. Extend this class
  * and implement {@link #handleInternal} to handle the requests received.
  */
-public abstract class RpcProgram {
+public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   private static final Log LOG = LogFactory.getLog(RpcProgram.class);
   public static final int RPCB_PORT = 111;
   private final String program;
@@ -41,7 +44,6 @@ public abstract class RpcProgram {
   private final int progNumber;
   private final int lowProgVersion;
   private final int highProgVersion;
-  private final RpcCallCache rpcCallCache;
   
   /**
    * Constructor
@@ -52,19 +54,15 @@ public abstract class RpcProgram {
    * @param progNumber program number as defined in RFC 1050
    * @param lowProgVersion lowest version of the specification supported
    * @param highProgVersion highest version of the specification supported
-   * @param cacheSize size of cache to handle duplciate requests. Size <= 0
-   *          indicates no cache.
    */
   protected RpcProgram(String program, String host, int port, int progNumber,
-      int lowProgVersion, int highProgVersion, int cacheSize) {
+      int lowProgVersion, int highProgVersion) {
     this.program = program;
     this.host = host;
     this.port = port;
     this.progNumber = progNumber;
     this.lowProgVersion = lowProgVersion;
     this.highProgVersion = highProgVersion;
-    this.rpcCallCache = cacheSize > 0 ? new RpcCallCache(program, cacheSize)
-        : null;
   }
 
   /**
@@ -102,88 +100,50 @@ public abstract class RpcProgram {
     }
   }
 
-  /**
-   * Handle an RPC request.
-   * @param rpcCall RPC call that is received
-   * @param in xdr with cursor at reading the remaining bytes of a method call
-   * @param out xdr output corresponding to Rpc reply
-   * @param client making the Rpc request
-   * @param channel connection over which Rpc request is received
-   * @return response xdr response
-   */
-  protected abstract XDR handleInternal(RpcCall rpcCall, XDR in, XDR out,
-      InetAddress client, Channel channel);
-  
-  public XDR handle(XDR xdr, InetAddress client, Channel channel) {
-    XDR out = new XDR();
-    RpcCall rpcCall = RpcCall.read(xdr);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(program + " procedure #" + rpcCall.getProcedure());
+  @Override
+  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+      throws Exception {
+    RpcInfo info = (RpcInfo) e.getMessage();
+    RpcCall call = (RpcCall) info.header();
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(program + " procedure #" + call.getProcedure());
     }
     
-    if (!checkProgram(rpcCall.getProgram())) {
-      return programMismatch(out, rpcCall);
+    if (this.progNumber != call.getProgram()) {
+      LOG.warn("Invalid RPC call program " + call.getProgram());
+      RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
+          AcceptState.PROG_UNAVAIL, Verifier.VERIFIER_NONE);
+
+      XDR out = new XDR();
+      reply.write(out);
+      ChannelBuffer b = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
+          .buffer());
+      RpcResponse rsp = new RpcResponse(b, info.remoteAddress());
+      RpcUtil.sendRpcResponse(ctx, rsp);
+      return;
     }
 
-    if (!checkProgramVersion(rpcCall.getVersion())) {
-      return programVersionMismatch(out, rpcCall);
+    int ver = call.getVersion();
+    if (ver < lowProgVersion || ver > highProgVersion) {
+      LOG.warn("Invalid RPC call version " + ver);
+      RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
+          AcceptState.PROG_MISMATCH, Verifier.VERIFIER_NONE);
+
+      XDR out = new XDR();
+      reply.write(out);
+      out.writeInt(lowProgVersion);
+      out.writeInt(highProgVersion);
+      ChannelBuffer b = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
+          .buffer());
+      RpcResponse rsp = new RpcResponse(b, info.remoteAddress());
+      RpcUtil.sendRpcResponse(ctx, rsp);
+      return;
     }
     
-    // Check for duplicate requests in the cache for non-idempotent requests
-    boolean idempotent = rpcCallCache != null && !isIdempotent(rpcCall);
-    if (idempotent) {
-      CacheEntry entry = rpcCallCache.checkOrAddToCache(client, rpcCall.getXid());
-      if (entry != null) { // in ache 
-        if (entry.isCompleted()) {
-          LOG.info("Sending the cached reply to retransmitted request "
-              + rpcCall.getXid());
-          return entry.getResponse();
-        } else { // else request is in progress
-          LOG.info("Retransmitted request, transaction still in progress "
-              + rpcCall.getXid());
-          // TODO: ignore the request?
-        }
-      }
-    }
-    
-    XDR response = handleInternal(rpcCall, xdr, out, client, channel);
-    if (response.size() == 0) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("No sync response, expect an async response for request XID="
-            + rpcCall.getXid());
-      }
-    }
-    
-    // Add the request to the cache
-    if (idempotent) {
-      rpcCallCache.callCompleted(client, rpcCall.getXid(), response);
-    }
-    return response;
+    handleInternal(ctx, info);
   }
-  
-  private XDR programMismatch(XDR out, RpcCall call) {
-    LOG.warn("Invalid RPC call program " + call.getProgram());
-    RpcAcceptedReply.voidReply(out, call.getXid(), AcceptState.PROG_UNAVAIL);
-    return out;
-  }
-  
-  private XDR programVersionMismatch(XDR out, RpcCall call) {
-    LOG.warn("Invalid RPC call version " + call.getVersion());
-    RpcAcceptedReply.voidReply(out, call.getXid(), AcceptState.PROG_MISMATCH);
-    out.writeInt(lowProgVersion);
-    out.writeInt(highProgVersion);
-    return out;
-  }
-  
-  private boolean checkProgram(int progNumber) {
-    return this.progNumber == progNumber;
-  }
-  
-  /** Return true if a the program version in rpcCall is supported */
-  private boolean checkProgramVersion(int programVersion) {
-    return programVersion >= lowProgVersion
-        && programVersion <= highProgVersion;
-  }
+
+  protected abstract void handleInternal(ChannelHandlerContext ctx, RpcInfo info);
   
   @Override
   public String toString() {

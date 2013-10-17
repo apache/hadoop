@@ -749,6 +749,23 @@
 </property>
 
 <property>
+  <name>mapreduce.job.token.tracking.ids.enabled</name>
+  <value>false</value>
+  <description>Whether to write tracking ids of tokens to
+    job-conf. When true, the configuration property
+    "mapreduce.job.token.tracking.ids" is set to the token-tracking-ids of
+    the job</description>
+</property>
+
+<property>
+  <name>mapreduce.job.token.tracking.ids</name>
+  <value></value>
+  <description>When mapreduce.job.token.tracking.ids.enabled is
+    set to true, this is set by the framework to the
+    token-tracking-ids used by the job.</description>
+</property>
+
+<property>
   <name>mapreduce.task.merge.progress.records</name>
   <value>10000</value>
   <description> The number of records to process during merge before
@@ -965,7 +982,7 @@
 
 <property>
   <name>yarn.app.mapreduce.client-am.ipc.max-retries</name>
-  <value>1</value>
+  <value>3</value>
   <description>The number of client retries to the AM - before reconnecting
     to the RM to fetch Application Status.</description>
 </property>
@@ -973,7 +990,7 @@
 <property>
   <name>yarn.app.mapreduce.client.max-retries</name>
   <value>3</value>
-  <description>The number of client retries to the RM/HS/AM before
+  <description>The number of client retries to the RM/HS before
     throwing exception. This is a layer above the ipc.</description>
 </property>
 
@@ -993,9 +1010,38 @@
 
 <property>
   <description>CLASSPATH for MR applications. A comma-separated list
-  of CLASSPATH entries</description>
+  of CLASSPATH entries. If mapreduce.application.framework is set then this
+  must specify the appropriate classpath for that archive, and the name of
+  the archive must be present in the classpath. 
+  When this value is empty, the following default CLASSPATH for MR 
+  applications would be used. 
+  For Linux:
+  $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,
+  $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*.
+  For Windows:
+  %HADOOP_MAPRED_HOME%/share/hadoop/mapreduce/*,
+  %HADOOP_MAPRED_HOME%/share/hadoop/mapreduce/lib/*.
+  </description>
    <name>mapreduce.application.classpath</name>
-   <value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*</value>
+   <value></value>
+</property>
+
+<property>
+  <description>Path to the MapReduce framework archive. If set, the framework
+    archive will automatically be distributed along with the job, and this
+    path would normally reside in a public location in an HDFS filesystem. As
+    with distributed cache files, this can be a URL with a fragment specifying
+    the alias to use for the archive name. For example,
+    hdfs:/mapred/framework/hadoop-mapreduce-2.1.1.tar.gz#mrframework would
+    alias the localized archive as "mrframework".
+
+    Note that mapreduce.application.classpath must include the appropriate
+    classpath for the specified framework. The base name of the archive, or
+    alias of the archive if an alias is used, must appear in the specified
+    classpath.
+  </description>
+   <name>mapreduce.application.framework.path</name>
+   <value></value>
 </property>
 
 <property>
@@ -1150,4 +1196,38 @@
   <description>ACL of who can be admin of the History server.</description>
 </property>
 
+<property>
+  <name>mapreduce.jobhistory.recovery.enable</name>
+  <value>false</value>
+  <description>Enable the history server to store server state and recover
+  server state upon startup.  If enabled then
+  mapreduce.jobhistory.recovery.store.class must be specified.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.recovery.store.class</name>
+  <value>org.apache.hadoop.mapreduce.v2.hs.HistoryServerFileSystemStateStoreService</value>
+  <description>The HistoryServerStateStoreService class to store history server
+  state for recovery.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.recovery.store.fs.uri</name>
+  <value>${hadoop.tmp.dir}/mapred/history/recoverystore</value>
+  <!--value>hdfs://localhost:9000/mapred/history/recoverystore</value-->
+  <description>The URI where history server state will be stored if
+  HistoryServerFileSystemStateStoreService is configured as the recovery
+  storage class.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.http.policy</name>
+  <value>HTTP_ONLY</value>
+  <description>
+    This configures the HTTP endpoint for JobHistoryServer web UI.
+    The following values are supported:
+    - HTTP_ONLY : Service is provided only on http
+    - HTTPS_ONLY : Service is provided only on https
+  </description>
+</property>
 </configuration>

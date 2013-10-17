@@ -1269,6 +1269,129 @@ _01_000001</amContainerLogs>
 
 +---+
 
+* Cluster Application Statistics API
+
+  With the Application Statistics API, you can obtain a collection of triples, each of which contains the application type, the application state and the number of applications of this type and this state in ResourceManager context. Note that with the performance concern, we currently only support at most one applicationType per query. We may support multiple applicationTypes per query as well as more statistics in the future. When you run a GET operation on this resource, you obtain a collection of statItem objects. 
+
+** URI
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/appstatistics
+------
+
+** HTTP Operations Supported
+
+------
+  * GET
+------
+
+** Query Parameters Required
+
+  Two paramters can be specified. The parameters are case insensitive.
+
+------
+  * states - states of the applications, specified as a comma-separated list. If states is not provided, the API will enumerate all application states and return the counts of them.
+  * applicationTypes - types of the applications, specified as a comma-separated list. If applicationTypes is not provided, the API will count the applications of any application type. In this case, the response shows * to indicate any application type. Note that we only support at most one applicationType temporarily. Otherwise, users will expect an BadRequestException.
+------
+
+** Elements of the <appStatInfo> (statItems) object
+
+  When you make a request for the list of statistics items, the information will be returned as a collection of statItem objects
+
+*-----------+----------------------------------------------------------------------+-------------------------------------+
+|| Item     || Data Type                                                           || Description                        |
+*-----------+----------------------------------------------------------------------+-------------------------------------+
+| statItem  | array of statItem objects(JSON)/zero or more statItem objects(XML)   | The collection of statItem objects  |
+*-----------+----------------------------------------------------------------------+-------------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/appstatistics?states=accepted,running,finished&applicationTypes=mapreduce
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "appStatInfo":
+  {
+    "statItem":
+    [
+       {
+          "state" : "accepted",
+          "type" : "mapreduce",
+          "count" : 4
+       },
+       {
+          "state" : "running",
+          "type" : "mapreduce",
+          "count" : 1
+       },
+       {
+          "state" : "finished",
+          "type" : "mapreduce",
+          "count" : 7
+       }
+    ]
+  }
+}
++---+
+
+  <<XML response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/appstatistics?states=accepted,running,finished&applicationTypes=mapreduce
+  Accept: application/xml
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 2459
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appStatInfo>
+  <statItem>
+    <state>accepted</state>
+    <type>mapreduce</type>
+    <count>4</count>
+  </statItem>
+  <statItem>
+    <state>running</state>
+    <type>mapreduce</type>
+    <count>1</count>
+  </statItem>
+  <statItem>
+    <state>finished</state>
+    <type>mapreduce</type>
+    <count>7</count>
+  </statItem>
+</appStatInfo>
++---+
+
 * Cluster {Application API}
 
   An application resource contains information about a particular application that was submitted to a cluster.

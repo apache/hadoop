@@ -24,14 +24,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
@@ -53,7 +59,7 @@ public class TestDistributedShell {
   protected static String APPMASTER_JAR = JarFinder.getJar(ApplicationMaster.class);
 
   @BeforeClass
-  public static void setup() throws InterruptedException, Exception {
+  public static void setup() throws Exception {
     LOG.info("Starting up YARN cluster");
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, 
@@ -99,7 +105,7 @@ public class TestDistributedShell {
       }
     }
   }
-
+  
   @Test(timeout=90000)
   public void testDSShell() throws Exception {
 
@@ -112,19 +118,55 @@ public class TestDistributedShell {
         Shell.WINDOWS ? "dir" : "ls",
         "--master_memory",
         "512",
+        "--master_vcores",
+        "2",
         "--container_memory",
-        "128"
+        "128",
+        "--container_vcores",
+        "1"
     };
 
     LOG.info("Initializing DS Client");
-    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    final Client client = new Client(new Configuration(yarnCluster.getConfig()));
     boolean initSuccess = client.init(args);
     Assert.assertTrue(initSuccess);
     LOG.info("Running DS Client");
-    boolean result = client.run();
+    final AtomicBoolean result = new AtomicBoolean(false);
+    Thread t = new Thread() {
+      public void run() {
+        try {
+          result.set(client.run());
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+    t.start();
 
+    YarnClient yarnClient = YarnClient.createYarnClient();
+    yarnClient.init(new Configuration(yarnCluster.getConfig()));
+    yarnClient.start();
+    String hostName = NetUtils.getHostname();
+    boolean verified = false;
+    while(!verified) {
+      List<ApplicationReport> apps = yarnClient.getApplications();
+      if (apps.size() == 0 ) {
+        Thread.sleep(10);
+        continue;
+      }
+      ApplicationReport appReport = apps.get(0);
+      if (appReport.getHost().startsWith(hostName)
+          && appReport.getRpcPort() == -1) {
+        verified = true;
+      }
+      if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED) {
+        break;
+      }
+    }
+    Assert.assertTrue(verified);
+    t.join();
     LOG.info("Client run completed. Result=" + result);
-    Assert.assertTrue(result);
+    Assert.assertTrue(result.get());
 
   }
 
@@ -199,6 +241,31 @@ public class TestDistributedShell {
       Assert.assertTrue("The throw exception is not expected",
           e.getMessage().contains("Invalid no. of containers"));
     }
+    
+    LOG.info("Initializing DS Client with invalid no. of vcores");
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--shell_command",
+          Shell.WINDOWS ? "dir" : "ls",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "-2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1"
+      };
+      client.init(args);
+      Assert.fail("Exception is expected");
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue("The throw exception is not expected",
+          e.getMessage().contains("Invalid virtual cores specified"));
+    }
   }
 
   protected static void waitForNMToRegister(NodeManager nm)
@@ -210,5 +277,34 @@ public class TestDistributedShell {
       Thread.sleep(2000);
     }
   }
+
+  @Test(timeout=90000)
+  public void testContainerLaunchFailureHandling() throws Exception {
+    String[] args = {
+      "--jar",
+      APPMASTER_JAR,
+      "--num_containers",
+      "2",
+      "--shell_command",
+      Shell.WINDOWS ? "dir" : "ls",
+      "--master_memory",
+      "512",
+      "--container_memory",
+      "128"
+    };
+
+    LOG.info("Initializing DS Client");
+    Client client = new Client(ContainerLaunchFailAppMaster.class.getName(),
+      new Configuration(yarnCluster.getConfig()));
+    boolean initSuccess = client.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running DS Client");
+    boolean result = client.run();
+
+    LOG.info("Client run completed. Result=" + result);
+    Assert.assertFalse(result);
+
+  }
+
 }
 

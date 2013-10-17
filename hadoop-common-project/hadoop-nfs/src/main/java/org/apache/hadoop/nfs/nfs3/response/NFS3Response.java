@@ -19,11 +19,13 @@ package org.apache.hadoop.nfs.nfs3.response;
 
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.Verifier;
 
 /**
- * Abstract class for a NFSv3 response
+ * Base class for a NFSv3 response. This class and its subclasses contain
+ * the response from NFSv3 handlers.
  */
-abstract public class NFS3Response {
+public class NFS3Response {
   protected int status;
 
   public NFS3Response(int status) {
@@ -38,8 +40,13 @@ abstract public class NFS3Response {
     this.status = status;
   }
   
-  public XDR send(XDR out, int xid) {
-    RpcAcceptedReply.voidReply(out, xid);
+  /**
+   * Write the response, along with the rpc header (including verifier), to the
+   * XDR.
+   */
+  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
+    RpcAcceptedReply reply = RpcAcceptedReply.getAcceptInstance(xid, verifier);
+    reply.write(out);
     out.writeInt(this.getStatus());
     return out;
   }

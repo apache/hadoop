@@ -146,7 +146,7 @@ public class FSLeafQueue extends FSQueue {
   public Resource assignContainer(FSSchedulerNode node) {
     Resource assigned = Resources.none();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Node offered to queue: " + getName());
+      LOG.debug("Node " + node.getNodeName() + " offered to queue: " + getName());
     }
 
     if (!assignContainerPreCheck(node)) {

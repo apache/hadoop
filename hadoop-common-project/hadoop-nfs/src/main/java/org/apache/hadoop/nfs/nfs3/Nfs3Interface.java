@@ -97,6 +97,6 @@ public interface Nfs3Interface {
       InetAddress client);
 
   /** COMMIT: Commit cached data on a server to stable storage */
-  public NFS3Response commit(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response commit(XDR xdr, Channel channel, int xid,
+      SecurityHandler securityHandler, InetAddress client);
 }

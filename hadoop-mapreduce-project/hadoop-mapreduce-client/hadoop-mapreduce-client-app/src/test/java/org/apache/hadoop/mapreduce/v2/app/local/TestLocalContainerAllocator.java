@@ -89,6 +89,10 @@ public class TestLocalContainerAllocator {
     }
 
     @Override
+    protected void unregister() {
+    }
+
+    @Override
     protected void startAllocatorThread() {
       allocatorThread = new Thread();
     }

@@ -175,6 +175,11 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       queueUserAclInfo.setUserAcls(Arrays.asList(QueueACL.values()));
       return Collections.singletonList(queueUserAclInfo);
     }
+
+    @Override
+    public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
+      return getQueueAcls().get(acl).isUserAllowed(user);
+    }
   };
 
   @Override
@@ -299,7 +304,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         application.showRequests();
 
         // Update application requests
-        application.updateResourceRequests(ask, blacklistAdditions, blacklistRemovals);
+        application.updateResourceRequests(ask);
 
         LOG.debug("allocate: post-update" +
             " applicationId=" + applicationAttemptId + 
@@ -311,13 +316,16 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
             " #ask=" + ask.size());
       }
 
+      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
+
       return new Allocation(
           application.pullNewlyAllocatedContainers(), 
           application.getHeadroom());
     }
   }
 
-  private FiCaSchedulerApp getApplication(
+  @VisibleForTesting
+  FiCaSchedulerApp getApplication(
       ApplicationAttemptId applicationAttemptId) {
     return applications.get(applicationAttemptId);
   }
@@ -834,6 +842,12 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   @Override
   public QueueMetrics getRootQueueMetrics() {
     return DEFAULT_QUEUE.getMetrics();
+  }
+
+  @Override
+  public synchronized boolean checkAccess(UserGroupInformation callerUGI,
+      QueueACL acl, String queueName) {
+    return DEFAULT_QUEUE.hasAccess(acl, callerUGI);
   }
 
 }

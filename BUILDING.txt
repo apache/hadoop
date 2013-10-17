@@ -4,8 +4,8 @@ Build instructions for Hadoop
 Requirements:
 
 * Unix System
-* JDK 1.6
-* Maven 3.0
+* JDK 1.6+
+* Maven 3.0 or later
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.5.0
 * CMake 2.6 or newer (if compiling native code)
@@ -149,12 +149,31 @@ Create a local staging version of the website (in /tmp/hadoop-site)
 
 ----------------------------------------------------------------------------------
 
+Handling out of memory errors in builds
+
+----------------------------------------------------------------------------------
+
+If the build process fails with an out of memory error, you should be able to fix
+it by increasing the memory used by maven -which can be done via the environment
+variable MAVEN_OPTS.
+
+Here is an example setting to allocate between 256 and 512 MB of heap space to
+Maven
+
+export MAVEN_OPTS="-Xms256m -Xmx512m"
+
+----------------------------------------------------------------------------------
+
 Building on OS/X
 
 ----------------------------------------------------------------------------------
 
-Hadoop does not build on OS/X with Java 7.
+A one-time manual step is required to enable building Hadoop OS X with Java 7
+every time the JDK is updated.
 see: https://issues.apache.org/jira/browse/HADOOP-9350
+
+$ sudo mkdir `/usr/libexec/java_home`/Classes
+$ sudo ln -s `/usr/libexec/java_home`/lib/tools.jar `/usr/libexec/java_home`/Classes/classes.jar
 
 ----------------------------------------------------------------------------------
 

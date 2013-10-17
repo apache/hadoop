@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -571,8 +572,7 @@ public class CapacityScheduler
         application.showRequests();
   
         // Update application requests
-        application.updateResourceRequests(ask, 
-            blacklistAdditions, blacklistRemovals);
+        application.updateResourceRequests(ask);
   
         LOG.debug("allocate: post-update");
         application.showRequests();
@@ -583,6 +583,8 @@ public class CapacityScheduler
           " applicationAttemptId=" + applicationAttemptId + 
           " #ask=" + ask.size());
       }
+
+      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
 
       return application.getAllocation(getResourceCalculator(),
                    clusterResource, getMinimumResourceCapability());
@@ -911,6 +913,20 @@ public class CapacityScheduler
             cont.getContainerId(),"Container being forcibly preempted:"
         + cont.getContainerId()),
         RMContainerEventType.KILL);
+  }
+
+  @Override
+  public synchronized boolean checkAccess(UserGroupInformation callerUGI,
+      QueueACL acl, String queueName) {
+    CSQueue queue = getQueue(queueName);
+    if (queue == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("ACL not found for queue access-type " + acl
+            + " for queue " + queueName);
+      }
+      return false;
+    }
+    return queue.hasAccess(acl, callerUGI);
   }
 
 }

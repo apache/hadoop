@@ -32,6 +32,8 @@ import org.apache.hadoop.oncrpc.RpcCallCache.CacheEntry;
 import org.apache.hadoop.oncrpc.RpcCallCache.ClientRequest;
 import org.junit.Test;
 
+import static org.mockito.Mockito.*;
+
 /**
  * Unit tests for {@link RpcCallCache}
  */
@@ -67,7 +69,7 @@ public class TestRpcCallCache {
     validateInprogressCacheEntry(e);
     
     // Set call as completed
-    XDR response = new XDR();
+    RpcResponse response = mock(RpcResponse.class);
     cache.callCompleted(clientIp, xid, response);
     e = cache.checkOrAddToCache(clientIp, xid);
     validateCompletedCacheEntry(e, response);
@@ -79,7 +81,7 @@ public class TestRpcCallCache {
     assertNull(c.getResponse());
   }
   
-  private void validateCompletedCacheEntry(CacheEntry c, XDR response) {
+  private void validateCompletedCacheEntry(CacheEntry c, RpcResponse response) {
     assertFalse(c.isInProgress());
     assertTrue(c.isCompleted());
     assertEquals(response, c.getResponse());
@@ -93,7 +95,7 @@ public class TestRpcCallCache {
     assertFalse(c.isCompleted());
     assertNull(c.getResponse());
     
-    XDR response = new XDR();
+    RpcResponse response = mock(RpcResponse.class);
     c.setResponse(response);
     validateCompletedCacheEntry(c, response);
   }

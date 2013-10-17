@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
@@ -98,8 +99,15 @@ public class RackResolver {
     List <String> tmpList = new ArrayList<String>(1);
     tmpList.add(hostName);
     List <String> rNameList = dnsToSwitchMapping.resolve(tmpList);
-    String rName = rNameList.get(0);
-    LOG.info("Resolved " + hostName + " to " + rName);
+    String rName = null;
+    if (rNameList == null || rNameList.get(0) == null) {
+      rName = NetworkTopology.DEFAULT_RACK;
+      LOG.info("Couldn't resolve " + hostName + ". Falling back to "
+          + NetworkTopology.DEFAULT_RACK);
+    } else {
+      rName = rNameList.get(0);
+      LOG.info("Resolved " + hostName + " to " + rName);
+    }
     return new NodeBase(hostName, rName);
   }
 

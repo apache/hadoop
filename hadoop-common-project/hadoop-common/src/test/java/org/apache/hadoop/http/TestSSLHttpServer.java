@@ -54,7 +54,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   @Before
   public void setup() throws Exception {
-    HttpConfig.setSecure(true);
+    HttpConfig.setPolicy(HttpConfig.Policy.HTTPS_ONLY);
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     base.mkdirs();
@@ -89,7 +89,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     String classpathDir =
         KeyStoreTestUtil.getClasspathDir(TestSSLHttpServer.class);
     new File(classpathDir, CONFIG_SITE_XML).delete();
-    HttpConfig.setSecure(false);
+    HttpConfig.setPolicy(HttpConfig.Policy.HTTP_ONLY);
   }
   
 

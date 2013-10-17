@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
@@ -45,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -54,16 +59,21 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestApplicationACLs {
 
   private static final String APP_OWNER = "owner";
   private static final String FRIEND = "friend";
   private static final String ENEMY = "enemy";
+  private static final String QUEUE_ADMIN_USER = "queue-admin-user";
   private static final String SUPER_USER = "superUser";
   private static final String FRIENDLY_GROUP = "friendly-group";
   private static final String SUPER_GROUP = "superGroup";
@@ -83,6 +93,8 @@ public class TestApplicationACLs {
   private static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(conf);
 
+  private static boolean isQueueUser = false;
+
   @BeforeClass
   public static void setup() throws InterruptedException, IOException {
     RMStateStore store = RMStateStoreFactory.getStore(conf);
@@ -91,9 +103,25 @@ public class TestApplicationACLs {
     adminACL.addGroup(SUPER_GROUP);
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, adminACL.getAclString());
     resourceManager = new MockRM(conf) {
+
+      @Override
+      protected QueueACLsManager createQueueACLsManager(
+          ResourceScheduler scheduler,
+          Configuration conf) {
+        QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
+        when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
+            any(QueueACL.class), anyString())).thenAnswer(new Answer() {
+          public Object answer(InvocationOnMock invocation) {
+            return isQueueUser;
+          }
+        });
+        return mockQueueACLsManager;
+      }
+
       protected ClientRMService createClientRMService() {
         return new ClientRMService(getRMContext(), this.scheduler,
-            this.rmAppManager, this.applicationACLsManager, null);
+            this.rmAppManager, this.applicationACLsManager,
+            this.queueACLsManager, null);
       };
     };
     new Thread() {
@@ -147,6 +175,8 @@ public class TestApplicationACLs {
     verifyFriendAccess();
 
     verifyEnemyAccess();
+
+    verifyAdministerQueueUserAccess();
   }
 
   private ApplicationId submitAppAndGetAppId(AccessControlList viewACL,
@@ -357,5 +387,37 @@ public class TestApplicationACLs {
         -1, usageReport.getReservedResources().getMemory());
     Assert.assertEquals("Enemy should not see app needed resources",
         -1, usageReport.getNeededResources().getMemory());
+  }
+
+  private void verifyAdministerQueueUserAccess() throws Exception {
+    isQueueUser = true;
+    AccessControlList viewACL = new AccessControlList("");
+    viewACL.addGroup(FRIENDLY_GROUP);
+    AccessControlList modifyACL = new AccessControlList("");
+    modifyACL.addUser(FRIEND);
+    ApplicationId applicationId = submitAppAndGetAppId(viewACL, modifyACL);
+
+    final GetApplicationReportRequest appReportRequest = recordFactory
+        .newRecordInstance(GetApplicationReportRequest.class);
+    appReportRequest.setApplicationId(applicationId);
+    final KillApplicationRequest finishAppRequest = recordFactory
+        .newRecordInstance(KillApplicationRequest.class);
+    finishAppRequest.setApplicationId(applicationId);
+
+    ApplicationClientProtocol administerQueueUserRmClient =
+        getRMClientForUser(QUEUE_ADMIN_USER);
+
+    // View as the administerQueueUserRmClient
+    administerQueueUserRmClient.getApplicationReport(appReportRequest);
+
+    // List apps as administerQueueUserRmClient
+    Assert.assertEquals("App view by queue-admin-user should list the apps!!",
+        5, administerQueueUserRmClient.getApplications(
+               recordFactory.newRecordInstance(GetApplicationsRequest.class))
+               .getApplicationList().size());
+
+    // Kill app as the administerQueueUserRmClient
+    administerQueueUserRmClient.forceKillApplication(finishAppRequest);
+    resourceManager.waitForState(applicationId, RMAppState.KILLED);
   }
 }

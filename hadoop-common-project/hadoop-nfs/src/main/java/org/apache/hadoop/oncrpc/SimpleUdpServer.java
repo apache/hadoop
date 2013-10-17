@@ -23,9 +23,8 @@ import java.util.concurrent.Executors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
 
@@ -38,20 +37,13 @@ public class SimpleUdpServer {
   private final int RECEIVE_BUFFER_SIZE = 65536;
 
   protected final int port;
-  protected final ChannelPipelineFactory pipelineFactory;
-  protected final RpcProgram rpcProgram;
+  protected final SimpleChannelUpstreamHandler rpcProgram;
   protected final int workerCount;
 
-  public SimpleUdpServer(int port, RpcProgram program, int workerCount) {
+  public SimpleUdpServer(int port, SimpleChannelUpstreamHandler program, int workerCount) {
     this.port = port;
     this.rpcProgram = program;
     this.workerCount = workerCount;
-    this.pipelineFactory = new ChannelPipelineFactory() {
-      @Override
-      public ChannelPipeline getPipeline() {
-        return Channels.pipeline(new SimpleUdpServerHandler(rpcProgram));
-      }
-    };
   }
 
   public void run() {
@@ -60,8 +52,9 @@ public class SimpleUdpServer {
         Executors.newCachedThreadPool(), workerCount);
 
     ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
-    ChannelPipeline p = b.getPipeline();
-    p.addLast("handler", new SimpleUdpServerHandler(rpcProgram));
+    b.setPipeline(Channels.pipeline(
+            RpcUtil.STAGE_RPC_MESSAGE_PARSER, rpcProgram,
+            RpcUtil.STAGE_RPC_UDP_RESPONSE));
 
     b.setOption("broadcast", "false");
     b.setOption("sendBufferSize", SEND_BUFFER_SIZE);

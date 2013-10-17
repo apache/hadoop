@@ -60,8 +60,8 @@ message RequestHeaderProto {
    * ProtocolInfoProto) since they reuse the connection; in this case
    * the declaringClassProtocolName field is set to the ProtocolInfoProto
    */
-  required string declaringClassProtocolName = 3;
+  required string declaringClassProtocolName = 2;
   
   /** protocol version of class declaring the called method */
-  required uint64 clientProtocolVersion = 4;
+  required uint64 clientProtocolVersion = 3;
 }

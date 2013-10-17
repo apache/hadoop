@@ -289,6 +289,9 @@ Release 2.3.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-8545. Filesystem Implementation for OpenStack Swift
+    (Dmitry Mezhensky, David Dobbins, Stevel via stevel)
+
   IMPROVEMENTS
 
     HADOOP-9784. Add a builder for HttpServer. (Junping Du via llu)
@@ -312,9 +315,6 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9435.  Support building the JNI code against the IBM JVM.
     (Tian Hong Wang via Colin Patrick McCabe)
 
-    HADOOP-9758.  Provide configuration option for FileSystem/FileContext
-    symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
-
     HADOOP-9848. Create a MiniKDC for use with security testing. 
     (ywskycn via tucu)
 
@@ -333,17 +333,47 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9915.  o.a.h.fs.Stat support on Mac OS X  (Binglin Chang via Colin
     Patrick McCabe)
 
+    HADOOP-9998.  Provide methods to clear only part of the DNSToSwitchMapping.
+    (Junping Du via Colin Patrick McCabe)
+
+    HADOOP-10006. Compilation failure in trunk for
+    o.a.h.fs.swift.util.JSONUtil (Junping Du via stevel)
+
+    HADOOP-9063. enhance unit-test coverage of class
+    org.apache.hadoop.fs.FileUtil (Ivan A. Veselovsky via jlowe)
+
+    HADOOP-9254. Cover packages org.apache.hadoop.util.bloom,
+    org.apache.hadoop.util.hash (Vadim Bondarev via jlowe)
+
+    HADOOP-9225. Cover package org.apache.hadoop.compress.Snappy (Vadim
+    Bondarev, Andrey Klochkov and Nathan Roberts via jlowe)
+
+    HADOOP-9199. Cover package org.apache.hadoop.io with unit tests (Andrey
+    Klochkov via jeagles)
+
+    HADOOP-9470. eliminate duplicate FQN tests in different Hadoop modules
+    (Ivan A. Veselovsky via daryn)
+
+    HADOOP-9494. Excluded auto-generated and examples code from clover reports
+    (Andrey Klochkov via jeagles)
+
+    HADOOP-9897. Add method to get path start position without drive specifier in
+    o.a.h.fs.Path. (Binglin Chang via cnauroth)
+
+    HADOOP-9078. enhance unit-test coverage of class
+    org.apache.hadoop.fs.FileContext (Ivan A. Veselovsky via jeagles)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
 
   BUG FIXES
 
+    HADOOP-9964. Fix deadlocks in TestHttpServer by synchronize
+    ReflectionUtils.printThreadInfo. (Junping Du via llu)
+
     HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
     (Ashwin Shankar via jlowe)
-
-    HADOOP-9761.  ViewFileSystem#rename fails when using DistributedFileSystem.
-    (Andrew Wang via Colin Patrick McCabe)
 
     HADOOP-9817. FileSystem#globStatus and FileContext#globStatus need to work
     with symlinks. (Colin Patrick McCabe via Andrew Wang)
@@ -363,9 +393,90 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-9908. Fix NPE when versioninfo properties file is missing (todd)
 
-Release 2.1.1-beta - UNRELEASED
+    HADOOP-9350. Hadoop not building against Java7 on OSX
+    (Robert Kanter via stevel)
+
+    HADOOP-9929. Insufficient permissions for a path reported as file not found.
+    (Contributed by Colin Patrick McCabe)
+
+    HADOOP-9791. Add a test case covering long paths for new FileUtil access
+    check methods (ivanmi)
+
+    HADOOP-9981. globStatus should minimize its listStatus and getFileStatus
+    calls.  (Contributed by Colin Patrick McCabe)
+
+Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-10046. Print a log message when SSL is enabled.
+    (David S. Wang via wang)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-10028. Malformed ssl-server.xml.example. (Haohui Mai via jing9)
+
+    HADOOP-10030. FsShell -put/copyFromLocal should support Windows local path.
+    (Chuan Liu via cnauroth)
+
+    HADOOP-10031. FsShell -get/copyToLocal/moveFromLocal should support Windows
+    local path. (Chuan Liu via cnauroth)
+
+    HADOOP-10039. Add Hive to the list of projects using 
+    AbstractDelegationTokenSecretManager. (Haohui Mai via jing9)
+
+    HADOOP-10040. hadoop.cmd in UNIX format and would not run by default on
+    Windows. (cnauroth)
+
+Release 2.2.0 - 2013-10-13
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-9948. Add a config value to CLITestHelper to skip tests on Windows.
+    (Chuan Liu via cnauroth)
+
+    HADOOP-9976. Different versions of avro and avro-maven-plugin (Karthik
+    Kambatla via Sandy Ryza)
+
+    HADOOP-9758.  Provide configuration option for FileSystem/FileContext
+    symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-8315. Support SASL-authenticated ZooKeeper in ActiveStandbyElector
+    (todd)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-9776. HarFileSystem.listStatus() returns invalid authority if port
+    number is empty. (Shanyu Zhao via ivanmi)
+
+    HADOOP-9761.  ViewFileSystem#rename fails when using DistributedFileSystem.
+    (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-10003. HarFileSystem.listLocatedStatus() fails.
+    (Jason Dere and suresh via suresh)
+
+    HADOOP-10017. Fix NPE in DFSClient#getDelegationToken when doing Distcp 
+    from a secured cluster to an insecured cluster. (Haohui Mai via jing9)
+
+Release 2.1.1-beta - 2013-09-23
+
+  INCOMPATIBLE CHANGES
+
+    HADOOP-9944. Fix RpcRequestHeaderProto.callId to be sint32 rather than
+    uint32 since ipc.Client.CONNECTION_CONTEXT_CALL_ID is signed (i.e. -3) 
+    (acmurthy)
 
   NEW FEATURES
 
@@ -404,6 +515,15 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9918. Add addIfService to CompositeService (Karthik Kambatla via
     Sandy Ryza)
+
+    HADOOP-9945. HAServiceState should have a state for stopped services.
+    (Karthik Kambatla via atm)
+
+    HADOOP-9962. in order to avoid dependency divergence within Hadoop itself 
+    lets enable DependencyConvergence. (rvs via tucu)
+
+    HADOOP-9669. Reduce the number of byte array creations and copies in
+    XDR data manipulation. (Haohui Mai via brandonli)
 
   OPTIMIZATIONS
 
@@ -453,6 +573,23 @@ Release 2.1.1-beta - UNRELEASED
     classpath correctly. (Shanyu Zhao via ivanmi)
 
     HADOOP-9932. Improper synchronization in RetryCache. (kihwal)
+
+    HADOOP-9958. Add old constructor back to DelegationTokenInformation to
+    unbreak downstream builds. (Andrew Wang)
+
+    HADOOP-9960. Upgrade Jersey version to 1.9. (Karthik Kambatla via atm)
+
+    HADOOP-9557. hadoop-client excludes commons-httpclient. (Lohit Vijayarenu via
+    cnauroth)
+
+    HADOOP-9961. versions of a few transitive dependencies diverged between hadoop 
+    subprojects. (rvs via tucu)
+
+    HADOOP-9977. Hadoop services won't start with different keypass and
+    keystorepass when https is enabled. (cnauroth)
+
+    HADOOP-10005. No need to check INFO severity level is enabled or not.
+    (Jackie Chang via suresh)
 
 Release 2.1.0-beta - 2013-08-22
 

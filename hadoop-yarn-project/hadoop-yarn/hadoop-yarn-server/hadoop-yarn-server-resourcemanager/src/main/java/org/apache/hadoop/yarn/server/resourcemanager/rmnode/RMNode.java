@@ -27,7 +27,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
-import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 
 /**
  * Node managers information on available resources 
@@ -84,7 +83,13 @@ public interface RMNode {
    * @return the time of the latest health report received from this node.
    */
   public long getLastHealthReportTime();
-  
+
+  /**
+   * the node manager version of the node received as part of the
+   * registration with the resource manager
+   */
+  public String getNodeManagerVersion();
+
   /**
    * the total available resource.
    * @return the total available resource.

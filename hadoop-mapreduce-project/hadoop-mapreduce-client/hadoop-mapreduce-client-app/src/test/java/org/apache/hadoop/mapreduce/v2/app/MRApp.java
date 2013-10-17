@@ -136,10 +136,21 @@ public class MRApp extends MRAppMaster {
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, Clock clock, boolean unregistered) {
+    this(maps, reduces, autoComplete, testName, cleanOnStart, 1, clock,
+        unregistered);
+  }
+
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart) {
     this(maps, reduces, autoComplete, testName, cleanOnStart, 1);
   }
-  
+
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, boolean unregistered) {
+    this(maps, reduces, autoComplete, testName, cleanOnStart, 1, unregistered);
+  }
+
   @Override
   protected void initJobCredentialsAndUGI(Configuration conf) {
     // Fake a shuffle secret that normally is provided by the job client.
@@ -170,22 +181,42 @@ public class MRApp extends MRAppMaster {
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, int startCount, boolean unregistered) {
+    this(maps, reduces, autoComplete, testName, cleanOnStart, startCount,
+        new SystemClock(), unregistered);
+  }
+
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, int startCount, Clock clock, boolean unregistered) {
+    this(getApplicationAttemptId(applicationId, startCount), getContainerId(
+      applicationId, startCount), maps, reduces, autoComplete, testName,
+      cleanOnStart, startCount, clock, unregistered);
+  }
+
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount, Clock clock) {
     this(getApplicationAttemptId(applicationId, startCount), getContainerId(
       applicationId, startCount), maps, reduces, autoComplete, testName,
-      cleanOnStart, startCount, clock);
+      cleanOnStart, startCount, clock, true);
+  }
+
+  public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
+      int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, int startCount, boolean unregistered) {
+    this(appAttemptId, amContainerId, maps, reduces, autoComplete, testName,
+        cleanOnStart, startCount, new SystemClock(), unregistered);
   }
 
   public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
       int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount) {
     this(appAttemptId, amContainerId, maps, reduces, autoComplete, testName,
-        cleanOnStart, startCount, new SystemClock());
+        cleanOnStart, startCount, new SystemClock(), true);
   }
 
   public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
       int maps, int reduces, boolean autoComplete, String testName,
-      boolean cleanOnStart, int startCount, Clock clock) {
+      boolean cleanOnStart, int startCount, Clock clock, boolean unregistered) {
     super(appAttemptId, amContainerId, NM_HOST, NM_PORT, NM_HTTP_PORT, clock, System
         .currentTimeMillis(), MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
     this.testWorkDir = new File("target", testName);
@@ -204,6 +235,9 @@ public class MRApp extends MRAppMaster {
     this.maps = maps;
     this.reduces = reduces;
     this.autoComplete = autoComplete;
+    // If safeToReportTerminationToUser is set to true, we can verify whether
+    // the job can reaches the final state when MRAppMaster shuts down.
+    this.successfullyUnregistered.set(unregistered);
   }
 
   @Override
@@ -229,16 +263,22 @@ public class MRApp extends MRAppMaster {
   }
 
   public Job submit(Configuration conf) throws Exception {
+    //TODO: fix the bug where the speculator gets events with 
+    //not-fully-constructed objects. For now, disable speculative exec
+    return submit(conf, false, false);
+  }
+
+  public Job submit(Configuration conf, boolean mapSpeculative,
+      boolean reduceSpeculative) throws Exception {
     String user = conf.get(MRJobConfig.USER_NAME, UserGroupInformation
-      .getCurrentUser().getShortUserName());
+        .getCurrentUser().getShortUserName());
     conf.set(MRJobConfig.USER_NAME, user);
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, testAbsPath.toString());
     conf.setBoolean(MRJobConfig.MR_AM_CREATE_JH_INTERMEDIATE_BASE_DIR, true);
-    //TODO: fix the bug where the speculator gets events with 
-    //not-fully-constructed objects. For now, disable speculative exec
-    LOG.info("****DISABLING SPECULATIVE EXECUTION*****");
-    conf.setBoolean(MRJobConfig.MAP_SPECULATIVE, false);
-    conf.setBoolean(MRJobConfig.REDUCE_SPECULATIVE, false);
+    // TODO: fix the bug where the speculator gets events with
+    // not-fully-constructed objects. For now, disable speculative exec
+    conf.setBoolean(MRJobConfig.MAP_SPECULATIVE, mapSpeculative);
+    conf.setBoolean(MRJobConfig.REDUCE_SPECULATIVE, reduceSpeculative);
 
     init(conf);
     start();
@@ -247,7 +287,7 @@ public class MRApp extends MRAppMaster {
 
     // Write job.xml
     String jobFile = MRApps.getJobFile(conf, user,
-      TypeConverter.fromYarn(job.getID()));
+        TypeConverter.fromYarn(job.getID()));
     LOG.info("Writing job conf to " + jobFile);
     new File(jobFile).getParentFile().mkdirs();
     conf.writeXml(new FileOutputStream(jobFile));

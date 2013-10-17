@@ -101,8 +101,8 @@ public class TestCounters {
   static final long FS_COUNTER_VALUE = 10;
 
   private void testMaxCounters(final Counters counters) {
-    LOG.info("counters max="+ Limits.COUNTERS_MAX);
-    for (int i = 0; i < Limits.COUNTERS_MAX; ++i) {
+    LOG.info("counters max="+ Limits.getCountersMax());
+    for (int i = 0; i < Limits.getCountersMax(); ++i) {
       counters.findCounter("test", "test"+ i);
     }
     setExpected(counters);
@@ -115,8 +115,8 @@ public class TestCounters {
   }
 
   private void testMaxGroups(final Counters counters) {
-    LOG.info("counter groups max="+ Limits.GROUPS_MAX);
-    for (int i = 0; i < Limits.GROUPS_MAX; ++i) {
+    LOG.info("counter groups max="+ Limits.getGroupsMax());
+    for (int i = 0; i < Limits.getGroupsMax(); ++i) {
       // assuming COUNTERS_MAX > GROUPS_MAX
       counters.findCounter("test"+ i, "test");
     }

@@ -128,7 +128,8 @@ public class TestLinuxContainerExecutorWithMocks {
         appSubmitter, appId, workDir, dirsHandler.getLocalDirs(),
         dirsHandler.getLogDirs());
     assertEquals(0, ret);
-    assertEquals(Arrays.asList(appSubmitter, cmd, appId, containerId,
+    assertEquals(Arrays.asList(YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
+        appSubmitter, cmd, appId, containerId,
         workDir.toString(), "/bin/echo", "/dev/null", pidFile.toString(),
         StringUtils.join(",", dirsHandler.getLocalDirs()),
         StringUtils.join(",", dirsHandler.getLogDirs()), "cgroups=none"),
@@ -180,18 +181,19 @@ public class TestLinuxContainerExecutorWithMocks {
     try {
       mockExec.startLocalizer(nmPrivateCTokensPath, address, "test", "application_0", "12345", dirsHandler.getLocalDirs(), dirsHandler.getLogDirs());
       List<String> result=readMockParams();
-      Assert.assertEquals(result.size(), 16);
-      Assert.assertEquals(result.get(0), "test");
-      Assert.assertEquals(result.get(1), "0" );
-      Assert.assertEquals(result.get(2),"application_0" );
-      Assert.assertEquals(result.get(3), "/bin/nmPrivateCTokensPath");
-      Assert.assertEquals(result.get(7), "-classpath" );
-      Assert.assertEquals(result.get(10),"org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer" );
-      Assert.assertEquals(result.get(11), "test");
-      Assert.assertEquals(result.get(12), "application_0");
-      Assert.assertEquals(result.get(13),"12345" );
-      Assert.assertEquals(result.get(14),"localhost" );
-      Assert.assertEquals(result.get(15),"8040" );
+      Assert.assertEquals(result.size(), 17);
+      Assert.assertEquals(result.get(0), YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);
+      Assert.assertEquals(result.get(1), "test");
+      Assert.assertEquals(result.get(2), "0" );
+      Assert.assertEquals(result.get(3),"application_0" );
+      Assert.assertEquals(result.get(4), "/bin/nmPrivateCTokensPath");
+      Assert.assertEquals(result.get(8), "-classpath" );
+      Assert.assertEquals(result.get(11),"org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer" );
+      Assert.assertEquals(result.get(12), "test");
+      Assert.assertEquals(result.get(13), "application_0");
+      Assert.assertEquals(result.get(14),"12345" );
+      Assert.assertEquals(result.get(15),"localhost" );
+      Assert.assertEquals(result.get(16),"8040" );
 
     } catch (InterruptedException e) {
       LOG.error("Error:"+e.getMessage(),e);
@@ -246,7 +248,8 @@ public class TestLinuxContainerExecutorWithMocks {
         appSubmitter, appId, workDir, dirsHandler.getLocalDirs(),
         dirsHandler.getLogDirs());
     Assert.assertNotSame(0, ret);
-    assertEquals(Arrays.asList(appSubmitter, cmd, appId, containerId,
+    assertEquals(Arrays.asList(YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
+        appSubmitter, cmd, appId, containerId,
         workDir.toString(), "/bin/echo", "/dev/null", pidFile.toString(),
         StringUtils.join(",", dirsHandler.getLocalDirs()),
         StringUtils.join(",", dirsHandler.getLogDirs()),
@@ -272,7 +275,8 @@ public class TestLinuxContainerExecutorWithMocks {
     String sigVal = String.valueOf(signal.getValue());
     
     mockExec.signalContainer(appSubmitter, "1000", signal);
-    assertEquals(Arrays.asList(appSubmitter, cmd, "1000", sigVal),
+    assertEquals(Arrays.asList(YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
+        appSubmitter, cmd, "1000", sigVal),
         readMockParams());
   }
   
@@ -284,7 +288,8 @@ public class TestLinuxContainerExecutorWithMocks {
     Path dir = new Path("/tmp/testdir");
     
     mockExec.deleteAsUser(appSubmitter, dir);
-    assertEquals(Arrays.asList(appSubmitter, cmd, "/tmp/testdir"),
+    assertEquals(Arrays.asList(YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
+        appSubmitter, cmd, "/tmp/testdir"),
         readMockParams());
   }
 }

@@ -93,6 +93,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+@SuppressWarnings("rawtypes")
 public class TestNodeStatusUpdater {
 
   // temp fix until metrics system can auto-detect itself running in unit test:
@@ -145,7 +146,7 @@ public class TestNodeStatusUpdater {
       .byteValue() }));
     return masterKey;
   }
-  
+
   private class MyResourceTracker implements ResourceTracker {
 
     private final Context context;
@@ -352,7 +353,6 @@ public class TestNodeStatusUpdater {
 
   private class MyNodeStatusUpdater4 extends NodeStatusUpdaterImpl {
 
-    private Context context;
     private final long rmStartIntervalMS;
     private final boolean rmNeverStart;
     public ResourceTracker resourceTracker;
@@ -360,7 +360,6 @@ public class TestNodeStatusUpdater {
         NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
         long rmStartIntervalMS, boolean rmNeverStart) {
       super(context, dispatcher, healthChecker, metrics);
-      this.context = context;
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
     }
@@ -376,8 +375,8 @@ public class TestNodeStatusUpdater {
       RetryPolicy retryPolicy = RMProxy.createRetryPolicy(conf);
       resourceTracker =
           (ResourceTracker) RetryProxy.create(ResourceTracker.class,
-            new MyResourceTracker6(this.context, rmStartIntervalMS,
-              rmNeverStart), retryPolicy);
+            new MyResourceTracker6(rmStartIntervalMS, rmNeverStart),
+            retryPolicy);
       return resourceTracker;
     }
 
@@ -454,13 +453,13 @@ public class TestNodeStatusUpdater {
 
     @Override
     protected void serviceStop() throws Exception {
+      System.out.println("Called stooppppp");
       super.serviceStop();
       isStopped = true;
-      ConcurrentMap<ContainerId, org.apache.hadoop.yarn.server.nodemanager
-      .containermanager.container.Container> containers =
-          getNMContext().getContainers();
-      // ensure that containers are empty
-      if(!containers.isEmpty()) {
+      ConcurrentMap<ApplicationId, Application> applications =
+          getNMContext().getApplications();
+      // ensure that applications are empty
+      if(!applications.isEmpty()) {
         assertionFailedInThread.set(true);
       }
       syncBarrier.await(10000, TimeUnit.MILLISECONDS);
@@ -471,6 +470,7 @@ public class TestNodeStatusUpdater {
     public NodeAction heartBeatNodeAction = NodeAction.NORMAL;
     public NodeAction registerNodeAction = NodeAction.NORMAL;
     public String shutDownMessage = "";
+    public String rmVersion = "3.0.1";
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
@@ -483,6 +483,7 @@ public class TestNodeStatusUpdater {
       response.setContainerTokenMasterKey(createMasterKey());
       response.setNMTokenMasterKey(createMasterKey());
       response.setDiagnosticsMessage(shutDownMessage);
+      response.setRMVersion(rmVersion);
       return response;
     }
     @Override
@@ -683,14 +684,11 @@ public class TestNodeStatusUpdater {
 
   private class MyResourceTracker6 implements ResourceTracker {
 
-    private final Context context;
     private long rmStartIntervalMS;
     private boolean rmNeverStart;
     private final long waitStartTime;
 
-    public MyResourceTracker6(Context context, long rmStartIntervalMS,
-        boolean rmNeverStart) {
-      this.context = context;
+    public MyResourceTracker6(long rmStartIntervalMS, boolean rmNeverStart) {
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
       this.waitStartTime = System.currentTimeMillis();
@@ -857,9 +855,20 @@ public class TestNodeStatusUpdater {
       }
       
       @Override
-      protected void cleanupContainers(NodeManagerEventType eventType) {
-        super.cleanupContainers(NodeManagerEventType.SHUTDOWN);
-        numCleanups.incrementAndGet();
+      protected ContainerManagerImpl createContainerManager(Context context,
+          ContainerExecutor exec, DeletionService del,
+          NodeStatusUpdater nodeStatusUpdater,
+          ApplicationACLsManager aclsManager,
+          LocalDirsHandlerService dirsHandler) {
+        return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
+            metrics, aclsManager, dirsHandler) {
+
+          @Override
+          public void cleanUpApplicationsOnNMShutDown() {
+            super.cleanUpApplicationsOnNMShutDown();
+            numCleanups.incrementAndGet();
+          }
+        };
       }
     };
 
@@ -1159,6 +1168,7 @@ public class TestNodeStatusUpdater {
         .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
         connectionRetryIntervalMs);
     conf.setLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS, 5000);
+    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     CyclicBarrier syncBarrier = new CyclicBarrier(2);
     nm = new MyNodeManager2(syncBarrier, conf);
     nm.init(conf);
@@ -1178,6 +1188,55 @@ public class TestNodeStatusUpdater {
     Assert.assertTrue(((MyNodeManager2) nm).isStopped);
     Assert.assertTrue("calculate heartBeatCount based on" +
         " connectionWaitSecs and RetryIntervalSecs", heartBeatID == 2);
+  }
+
+  @Test
+  public void testRMVersionLessThanMinimum() throws InterruptedException {
+    final AtomicInteger numCleanups = new AtomicInteger(0);
+    YarnConfiguration conf = createNMConfig();
+    conf.set(YarnConfiguration.NM_RESOURCEMANAGER_MINIMUM_VERSION, "3.0.0");
+    nm = new NodeManager() {
+      @Override
+      protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+                                                          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+        MyNodeStatusUpdater myNodeStatusUpdater = new MyNodeStatusUpdater(
+            context, dispatcher, healthChecker, metrics);
+        MyResourceTracker2 myResourceTracker2 = new MyResourceTracker2();
+        myResourceTracker2.heartBeatNodeAction = NodeAction.NORMAL;
+        myResourceTracker2.rmVersion = "3.0.0";
+        myNodeStatusUpdater.resourceTracker = myResourceTracker2;
+        return myNodeStatusUpdater;
+      }
+
+      @Override
+      protected ContainerManagerImpl createContainerManager(Context context,
+          ContainerExecutor exec, DeletionService del,
+          NodeStatusUpdater nodeStatusUpdater,
+          ApplicationACLsManager aclsManager,
+          LocalDirsHandlerService dirsHandler) {
+        return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
+            metrics, aclsManager, dirsHandler) {
+
+          @Override
+          public void cleanUpApplicationsOnNMShutDown() {
+            super.cleanUpApplicationsOnNMShutDown();
+            numCleanups.incrementAndGet();
+          }
+        };
+      }
+    };
+
+    nm.init(conf);
+    nm.start();
+
+    // NM takes a while to reach the STARTED state.
+    int waitCount = 0;
+    while (nm.getServiceState() != STATE.STARTED && waitCount++ != 20) {
+      LOG.info("Waiting for NM to stop..");
+      Thread.sleep(1000);
+    }
+    Assert.assertTrue(nm.getServiceState() == STATE.STARTED);
+    nm.stop();
   }
 
   private class MyNMContext extends NMContext {
@@ -1305,6 +1364,7 @@ public class TestNodeStatusUpdater {
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
       remoteLogsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, nmLocalDir.getAbsolutePath());
+    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     return conf;
   }
   

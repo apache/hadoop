@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.oncrpc;
 
+import org.apache.hadoop.oncrpc.security.RpcAuthInfo;
+import org.apache.hadoop.oncrpc.security.Verifier;
+
+import com.google.common.base.Preconditions;
+
 /**
  * Represents an RPC message of type RPC reply as defined in RFC 1831
  */
@@ -36,28 +41,35 @@ public abstract class RpcReply extends RpcMessage {
     }
   }
   
-  private final ReplyState state;
+  protected final ReplyState replyState;
+  protected final Verifier verifier;
   
-  RpcReply(int xid, RpcMessage.Type messageType, ReplyState state) {
-    super(xid, messageType);
-    this.state = state;
-    validateMessageType(RpcMessage.Type.RPC_REPLY);
+  RpcReply(int xid, ReplyState state, Verifier verifier) {
+    super(xid, RpcMessage.Type.RPC_REPLY);
+    this.replyState = state;
+    this.verifier = verifier;
+  }
+  
+  public RpcAuthInfo getVerifier() {
+    return verifier;
   }
 
   public static RpcReply read(XDR xdr) {
     int xid = xdr.readInt();
     final Type messageType = Type.fromValue(xdr.readInt());
+    Preconditions.checkState(messageType == RpcMessage.Type.RPC_REPLY);
+    
     ReplyState stat = ReplyState.fromValue(xdr.readInt());
     switch (stat) {
     case MSG_ACCEPTED:
-      return RpcAcceptedReply.read(xid, messageType, stat, xdr);
+      return RpcAcceptedReply.read(xid, stat, xdr);
     case MSG_DENIED:
-      return RpcDeniedReply.read(xid, messageType, stat, xdr);
+      return RpcDeniedReply.read(xid, stat, xdr);
     }
     return null;
   }
 
   public ReplyState getState() {
-    return state;
+    return replyState;
   }
 }

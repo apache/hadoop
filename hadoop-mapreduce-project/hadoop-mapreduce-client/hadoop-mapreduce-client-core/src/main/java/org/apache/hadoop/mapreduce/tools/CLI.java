@@ -54,7 +54,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.yarn.logaggregation.LogDumper;
+import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 
 import com.google.common.base.Charsets;
 
@@ -359,7 +359,7 @@ public class CLI extends Configured implements Tool {
         JobID jobID = JobID.forName(jobid);
         TaskAttemptID taskAttemptID = TaskAttemptID.forName(taskid);
         LogParams logParams = cluster.getLogParams(jobID, taskAttemptID);
-        LogDumper logDumper = new LogDumper();
+        LogCLIHelpers logDumper = new LogCLIHelpers();
         logDumper.setConf(getConf());
         exitCode = logDumper.dumpAContainersLogs(logParams.getApplicationId(),
             logParams.getContainerId(), logParams.getNodeId(),

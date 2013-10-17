@@ -33,18 +33,17 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.MRAppMaster.RunningAppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
-import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
-import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
+import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -53,9 +52,12 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Registers/unregisters to RM and sends heartbeats to RM.
@@ -145,7 +147,9 @@ public abstract class RMCommunicator extends AbstractService
       if (serviceAddr != null) {
         request.setHost(serviceAddr.getHostName());
         request.setRpcPort(serviceAddr.getPort());
-        request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
+        request.setTrackingUrl(MRWebAppUtil
+            .getAMWebappScheme(getConfig())
+            + serviceAddr.getHostName() + ":" + clientService.getHttpPort());
       }
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
@@ -170,33 +174,57 @@ public abstract class RMCommunicator extends AbstractService
 
   protected void unregister() {
     try {
-      FinalApplicationStatus finishState = FinalApplicationStatus.UNDEFINED;
-      JobImpl jobImpl = (JobImpl)job;
-      if (jobImpl.getInternalState() == JobStateInternal.SUCCEEDED) {
-        finishState = FinalApplicationStatus.SUCCEEDED;
-      } else if (jobImpl.getInternalState() == JobStateInternal.KILLED
-          || (jobImpl.getInternalState() == JobStateInternal.RUNNING && isSignalled)) {
-        finishState = FinalApplicationStatus.KILLED;
-      } else if (jobImpl.getInternalState() == JobStateInternal.FAILED
-          || jobImpl.getInternalState() == JobStateInternal.ERROR) {
-        finishState = FinalApplicationStatus.FAILED;
-      }
-      StringBuffer sb = new StringBuffer();
-      for (String s : job.getDiagnostics()) {
-        sb.append(s).append("\n");
-      }
-      LOG.info("Setting job diagnostics to " + sb.toString());
-
-      String historyUrl = JobHistoryUtils.getHistoryUrl(getConfig(),
-          context.getApplicationID());
-      LOG.info("History url is " + historyUrl);
-
-      FinishApplicationMasterRequest request =
-          FinishApplicationMasterRequest.newInstance(finishState,
-            sb.toString(), historyUrl);
-      scheduler.finishApplicationMaster(request);
+      doUnregistration();
     } catch(Exception are) {
       LOG.error("Exception while unregistering ", are);
+      // if unregistration failed, isLastAMRetry needs to be recalculated
+      // to see whether AM really has the chance to retry
+      RunningAppContext raContext = (RunningAppContext) context;
+      raContext.computeIsLastAMRetry();
+    }
+  }
+
+  @VisibleForTesting
+  protected void doUnregistration()
+      throws YarnException, IOException, InterruptedException {
+    FinalApplicationStatus finishState = FinalApplicationStatus.UNDEFINED;
+    JobImpl jobImpl = (JobImpl)job;
+    if (jobImpl.getInternalState() == JobStateInternal.SUCCEEDED) {
+      finishState = FinalApplicationStatus.SUCCEEDED;
+    } else if (jobImpl.getInternalState() == JobStateInternal.KILLED
+        || (jobImpl.getInternalState() == JobStateInternal.RUNNING && isSignalled)) {
+      finishState = FinalApplicationStatus.KILLED;
+    } else if (jobImpl.getInternalState() == JobStateInternal.FAILED
+        || jobImpl.getInternalState() == JobStateInternal.ERROR) {
+      finishState = FinalApplicationStatus.FAILED;
+    }
+    StringBuffer sb = new StringBuffer();
+    for (String s : job.getDiagnostics()) {
+      sb.append(s).append("\n");
+    }
+    LOG.info("Setting job diagnostics to " + sb.toString());
+
+    String historyUrl =
+        MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(getConfig(),
+            context.getApplicationID());
+    LOG.info("History url is " + historyUrl);
+    FinishApplicationMasterRequest request =
+        FinishApplicationMasterRequest.newInstance(finishState,
+          sb.toString(), historyUrl);
+    while (true) {
+      FinishApplicationMasterResponse response =
+          scheduler.finishApplicationMaster(request);
+      if (response.getIsUnregistered()) {
+        // When excepting ClientService, other services are already stopped,
+        // it is safe to let clients know the final states. ClientService
+        // should wait for some time so clients have enough time to know the
+        // final states.
+        RunningAppContext raContext = (RunningAppContext) context;
+        raContext.markSuccessfulUnregistration();
+        break;
+      }
+      LOG.info("Waiting for application to be successfully unregistered.");
+      Thread.sleep(rmPollInterval);
     }
   }
 
@@ -226,7 +254,6 @@ public abstract class RMCommunicator extends AbstractService
 
   protected void startAllocatorThread() {
     allocatorThread = new Thread(new Runnable() {
-      @SuppressWarnings("unchecked")
       @Override
       public void run() {
         while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
@@ -236,15 +263,6 @@ public abstract class RMCommunicator extends AbstractService
               heartbeat();
             } catch (YarnRuntimeException e) {
               LOG.error("Error communicating with RM: " + e.getMessage() , e);
-              return;
-            } catch (InvalidToken e) {
-              // This can happen if the RM has been restarted, since currently
-              // when RM restarts AMRMToken is not populated back to
-              // AMRMTokenSecretManager yet. Once this is fixed, no need
-              // to send JOB_AM_REBOOT event in this method any more.
-              eventHandler.handle(new JobEvent(job.getID(),
-                JobEventType.JOB_AM_REBOOT));
-              LOG.error("Error in authencating with RM: " ,e);
               return;
             } catch (Exception e) {
               LOG.error("ERROR IN CONTACTING RM. ", e);

@@ -29,7 +29,6 @@ import java.util.Iterator;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -54,15 +53,12 @@ import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerRemoteLaunchEvent;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.util.Clock;
 import org.junit.Test;
 
 /**
@@ -374,8 +370,22 @@ public class TestMRApp {
     app.waitForState(job, JobState.ERROR);
   }
 
+  @SuppressWarnings("resource")
   @Test
-  public void testJobRebootNotLastRetry() throws Exception {
+  public void testJobSuccess() throws Exception {
+    MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true, false);
+    JobImpl job = (JobImpl) app.submit(new Configuration());
+    app.waitForInternalState(job, JobStateInternal.SUCCEEDED);
+    // AM is not unregistered
+    Assert.assertEquals(JobState.RUNNING, job.getState());
+    // imitate that AM is unregistered
+    app.successfullyUnregistered.set(true);
+    app.waitForState(job, JobState.SUCCEEDED);
+  }
+
+  @Test
+  public void testJobRebootNotLastRetryOnUnregistrationFailure()
+      throws Exception {
     MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.RUNNING);
@@ -394,10 +404,12 @@ public class TestMRApp {
   }
 
   @Test
-  public void testJobRebootOnLastRetry() throws Exception {
+  public void testJobRebootOnLastRetryOnUnregistrationFailure()
+      throws Exception {
     // make startCount as 2 since this is last retry which equals to
     // DEFAULT_MAX_AM_RETRY
-    MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true, 2);
+    // The last param mocks the unregistration failure
+    MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true, 2, false);
 
     Configuration conf = new Configuration();
     Job job = app.submit(conf);
@@ -411,8 +423,10 @@ public class TestMRApp {
     app.getContext().getEventHandler().handle(new JobEvent(job.getID(),
       JobEventType.JOB_AM_REBOOT));
 
-    // return exteranl state as ERROR if this is the last retry
-    app.waitForState(job, JobState.ERROR);
+    app.waitForInternalState((JobImpl) job, JobStateInternal.REBOOT);
+    // return exteranl state as RUNNING if this is the last retry while
+    // unregistration fails
+    app.waitForState(job, JobState.RUNNING);
   }
 
   private final class MRAppWithSpiedJob extends MRApp {

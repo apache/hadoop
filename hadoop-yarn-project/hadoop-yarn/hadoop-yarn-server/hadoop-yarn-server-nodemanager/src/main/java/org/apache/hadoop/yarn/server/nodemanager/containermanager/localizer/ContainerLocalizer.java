@@ -65,7 +65,6 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHe
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceStatusType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
-import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
 
@@ -130,9 +129,12 @@ public class ContainerLocalizer {
     try {
       // assume credentials in cwd
       // TODO: Fix
-      credFile = lfs.open(
-          new Path(String.format(TOKEN_FILE_NAME_FMT, localizerId)));
+      Path tokenPath =
+          new Path(String.format(TOKEN_FILE_NAME_FMT, localizerId));
+      credFile = lfs.open(tokenPath);
       creds.readTokenStorageStream(credFile);
+      // Explicitly deleting token file.
+      lfs.delete(tokenPath, false);      
     } finally  {
       if (credFile != null) {
         credFile.close();

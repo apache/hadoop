@@ -53,6 +53,8 @@ import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Copy-paste of ClientBase from ZooKeeper, but without any of the
  * JMXEnv verification. There seems to be a bug ZOOKEEPER-1438
@@ -111,7 +113,9 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         synchronized boolean isConnected() {
             return connected;
         }
-        synchronized void waitForConnected(long timeout) throws InterruptedException, TimeoutException {
+        @VisibleForTesting
+        public synchronized void waitForConnected(long timeout)
+            throws InterruptedException, TimeoutException {
             long expire = Time.now() + timeout;
             long left = timeout;
             while(!connected && left > 0) {
@@ -123,7 +127,9 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
             }
         }
-        synchronized void waitForDisconnected(long timeout) throws InterruptedException, TimeoutException {
+        @VisibleForTesting
+        public synchronized void waitForDisconnected(long timeout)
+            throws InterruptedException, TimeoutException {
             long expire = Time.now() + timeout;
             long left = timeout;
             while(connected && left > 0) {

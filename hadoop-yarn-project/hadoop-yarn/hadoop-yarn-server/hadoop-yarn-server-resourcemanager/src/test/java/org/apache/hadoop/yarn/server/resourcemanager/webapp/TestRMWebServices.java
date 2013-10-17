@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -84,6 +85,7 @@ public class TestRMWebServices extends JerseyTest {
       bind(RMContext.class).toInstance(rm.getRMContext());
       bind(ApplicationACLsManager.class).toInstance(
           rm.getApplicationACLsManager());
+      bind(QueueACLsManager.class).toInstance(rm.getQueueACLsManager());
       serve("/*").with(GuiceContainer.class);
     }
   });
@@ -295,10 +297,10 @@ public class TestRMWebServices extends JerseyTest {
       String hadoopVersion, String resourceManagerVersionBuiltOn,
       String resourceManagerBuildVersion, String resourceManagerVersion) {
 
-    assertEquals("clusterId doesn't match: ", ResourceManager.clusterTimeStamp,
-        clusterid);
-    assertEquals("startedOn doesn't match: ", ResourceManager.clusterTimeStamp,
-        startedon);
+    assertEquals("clusterId doesn't match: ",
+        ResourceManager.getClusterTimeStamp(), clusterid);
+    assertEquals("startedOn doesn't match: ",
+        ResourceManager.getClusterTimeStamp(), startedon);
     assertTrue("stated doesn't match: " + state,
         state.matches(STATE.INITED.toString()));
 

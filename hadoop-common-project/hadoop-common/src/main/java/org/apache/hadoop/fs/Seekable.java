@@ -22,7 +22,9 @@ import java.io.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-/** Stream that permits seeking. */
+/**
+ *  Stream that permits seeking.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface Seekable {

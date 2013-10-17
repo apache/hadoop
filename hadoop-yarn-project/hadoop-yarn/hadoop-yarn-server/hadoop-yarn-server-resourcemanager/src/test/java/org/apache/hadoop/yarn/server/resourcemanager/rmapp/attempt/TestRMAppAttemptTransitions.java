@@ -25,16 +25,19 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.spy;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -51,7 +54,6 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
@@ -83,10 +85,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -100,7 +105,7 @@ public class TestRMAppAttemptTransitions {
   
   private static final String EMPTY_DIAGNOSTICS = "";
   private static final String RM_WEBAPP_ADDR =
-      YarnConfiguration.getRMWebAppHostAndPort(new Configuration());
+      WebAppUtils.getResolvedRMWebAppURLWithoutScheme(new Configuration());
   
   private boolean isSecurityEnabled;
   private RMContext rmContext;
@@ -261,8 +266,21 @@ public class TestRMAppAttemptTransitions {
   
 
   private String getProxyUrl(RMAppAttempt appAttempt) {
-    return pjoin(RM_WEBAPP_ADDR, "proxy",
-        appAttempt.getAppAttemptId().getApplicationId(), "");
+    String url = null;
+    try {
+      URI trackingUri =
+          StringUtils.isEmpty(appAttempt.getOriginalTrackingUrl()) ? null :
+              ProxyUriUtils
+                  .getUriFromAMUrl(appAttempt.getOriginalTrackingUrl());
+      String proxy = WebAppUtils.getProxyHostAndPort(conf);
+      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(proxy);
+      URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
+          appAttempt.getAppAttemptId().getApplicationId());
+      url = result.toASCIIString();
+    } catch (URISyntaxException ex) {
+      Assert.fail();
+    }
+    return url;
   }
 
   /**
@@ -294,9 +312,11 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0, applicationAttempt.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
     if (UserGroupInformation.isSecurityEnabled()) {
-      verify(clientToAMTokenManager).registerApplication(
+      verify(clientToAMTokenManager).createMasterKey(
           applicationAttempt.getAppAttemptId());
-      assertNotNull(applicationAttempt.createClientToken("some client"));
+      // can't create ClientToken as at this time ClientTokenMasterKey has
+      // not been registered in the SecretManager
+      assertNull(applicationAttempt.createClientToken("some client"));
     }
     assertNull(applicationAttempt.createClientToken(null));
     assertNotNull(applicationAttempt.getAMRMToken());
@@ -428,7 +448,11 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.LAUNCHED, 
         applicationAttempt.getAppAttemptState());
     assertEquals(container, applicationAttempt.getMasterContainer());
-    
+    if (UserGroupInformation.isSecurityEnabled()) {
+      // ClientTokenMasterKey has been registered in SecretManager, it's able to
+      // create ClientToken now
+      assertNotNull(applicationAttempt.createClientToken("some client"));
+    }
     // TODO - need to add more checks relevant to this state
   }
 
@@ -442,9 +466,9 @@ public class TestRMAppAttemptTransitions {
     assertEquals(container, applicationAttempt.getMasterContainer());
     assertEquals(host, applicationAttempt.getHost());
     assertEquals(rpcPort, applicationAttempt.getRpcPort());
-    assertEquals(trackingUrl, applicationAttempt.getOriginalTrackingUrl());
+    verifyUrl(trackingUrl, applicationAttempt.getOriginalTrackingUrl());
     if (unmanagedAM) {
-      assertEquals("oldtrackingurl", applicationAttempt.getTrackingUrl());
+      verifyUrl(trackingUrl, applicationAttempt.getTrackingUrl());
     } else {
       assertEquals(getProxyUrl(applicationAttempt), 
           applicationAttempt.getTrackingUrl());
@@ -462,7 +486,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.FINISHING,
         applicationAttempt.getAppAttemptState());
     assertEquals(diagnostics, applicationAttempt.getDiagnostics());
-    assertEquals(trackingUrl, applicationAttempt.getOriginalTrackingUrl());
+    verifyUrl(trackingUrl, applicationAttempt.getOriginalTrackingUrl());
     assertEquals(getProxyUrl(applicationAttempt),
         applicationAttempt.getTrackingUrl());
     assertEquals(container, applicationAttempt.getMasterContainer());
@@ -481,9 +505,9 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.FINISHED, 
         applicationAttempt.getAppAttemptState());
     assertEquals(diagnostics, applicationAttempt.getDiagnostics());
-    assertEquals(trackingUrl, applicationAttempt.getOriginalTrackingUrl());
+    verifyUrl(trackingUrl, applicationAttempt.getOriginalTrackingUrl());
     if (unmanagedAM) {
-      assertEquals("mytrackingurl", applicationAttempt.getTrackingUrl());
+      verifyUrl(trackingUrl, applicationAttempt.getTrackingUrl());
       
     } else {
       assertEquals(getProxyUrl(applicationAttempt),
@@ -561,6 +585,11 @@ public class TestRMAppAttemptTransitions {
   }
   
   private void launchApplicationAttempt(Container container) {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      // Before LAUNCHED state, can't create ClientToken as at this time
+      // ClientTokenMasterKey has not been registered in the SecretManager
+      assertNull(applicationAttempt.createClientToken("some client"));
+    }
     applicationAttempt.handle(
         new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(), 
             RMAppAttemptEventType.LAUNCHED));
@@ -592,9 +621,7 @@ public class TestRMAppAttemptTransitions {
         trackingUrl, diagnostics);
   }
 
-  
-  @Test
-  public void testUnmanagedAMSuccess() {
+  private void testUnmanagedAMSuccess(String url) {
     unmanagedAM = true;
     when(submissionContext.getUnmanagedAM()).thenReturn(true);
     // submit AM and check it goes to LAUNCHED state
@@ -604,7 +631,7 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptId());
 
     // launch AM
-    runApplicationAttempt(null, "host", 8042, "oldtrackingurl", true);
+    runApplicationAttempt(null, "host", 8042, url, true);
 
     // complete a container
     applicationAttempt.handle(new RMAppAttemptContainerAcquiredEvent(
@@ -612,13 +639,12 @@ public class TestRMAppAttemptTransitions {
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
         applicationAttempt.getAppAttemptId(), mock(ContainerStatus.class)));
     // complete AM
-    String trackingUrl = "mytrackingurl";
     String diagnostics = "Successful";
     FinalApplicationStatus finalStatus = FinalApplicationStatus.SUCCEEDED;
     applicationAttempt.handle(new RMAppAttemptUnregistrationEvent(
-        applicationAttempt.getAppAttemptId(), trackingUrl, finalStatus,
+        applicationAttempt.getAppAttemptId(), url, finalStatus,
         diagnostics));
-    testAppAttemptFinishedState(null, finalStatus, trackingUrl, diagnostics, 1,
+    testAppAttemptFinishedState(null, finalStatus, url, diagnostics, 1,
         true);
   }
   
@@ -813,12 +839,42 @@ public class TestRMAppAttemptTransitions {
         "Killed by user");
   }
 
+  @Test
+  public void testTrackingUrlUnmanagedAM() {
+    testUnmanagedAMSuccess("oldTrackingUrl");
+  }
 
   @Test
-  public void testNoTrackingUrl() {
+  public void testEmptyTrackingUrlUnmanagedAM() {
+    testUnmanagedAMSuccess("");
+  }
+
+  @Test
+  public void testNullTrackingUrlUnmanagedAM() {
+    testUnmanagedAMSuccess(null);
+  }
+
+  @Test
+  public void testManagedAMWithTrackingUrl() {
+    testTrackingUrlManagedAM("theTrackingUrl");
+  }
+
+  @Test
+  public void testManagedAMWithEmptyTrackingUrl() {
+    testTrackingUrlManagedAM("");
+  }
+
+  @Test
+  public void testManagedAMWithNullTrackingUrl() {
+    testTrackingUrlManagedAM(null);
+  }
+
+  private void testTrackingUrlManagedAM(String url) {
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
-    runApplicationAttempt(amContainer, "host", 8042, "", false);
+    runApplicationAttempt(amContainer, "host", 8042, url, false);
+    unregisterApplicationAttempt(amContainer,
+        FinalApplicationStatus.SUCCEEDED, url, "Successful");
   }
 
   @Test
@@ -914,6 +970,14 @@ public class TestRMAppAttemptTransitions {
       if (count > 0) {
         assertNull(applicationAttempt.createClientToken("client"));
       }
+    }
+  }
+
+  private void verifyUrl(String url1, String url2) {
+    if (url1 == null || url1.trim().isEmpty()) {
+      assertEquals("N/A", url2);
+    } else {
+      assertEquals(url1, url2);
     }
   }
 }

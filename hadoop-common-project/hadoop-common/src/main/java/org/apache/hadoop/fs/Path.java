@@ -218,10 +218,13 @@ public class Path implements Comparable {
    */
   public static Path mergePaths(Path path1, Path path2) {
     String path2Str = path2.toUri().getPath();
-    if(hasWindowsDrive(path2Str)) {
-      path2Str = path2Str.substring(path2Str.indexOf(':')+1);
-    }
-    return new Path(path1 + path2Str);
+    path2Str = path2Str.substring(startPositionWithoutWindowsDrive(path2Str));
+    // Add path components explicitly, because simply concatenating two path
+    // string is not safe, for example:
+    // "/" + "/foo" yields "//foo", which will be parsed as authority in Path
+    return new Path(path1.toUri().getScheme(), 
+        path1.toUri().getAuthority(), 
+        path1.toUri().getPath() + path2Str);
   }
 
   /**
@@ -247,8 +250,8 @@ public class Path implements Comparable {
     }
     
     // trim trailing slash from non-root path (ignoring windows drive)
-    int minLength = hasWindowsDrive(path) ? 4 : 1;
-    if (path.length() > minLength && path.endsWith("/")) {
+    int minLength = startPositionWithoutWindowsDrive(path) + 1;
+    if (path.length() > minLength && path.endsWith(SEPARATOR)) {
       path = path.substring(0, path.length()-1);
     }
     
@@ -259,6 +262,14 @@ public class Path implements Comparable {
     return (WINDOWS && hasDriveLetterSpecifier.matcher(path).find());
   }
 
+  private static int startPositionWithoutWindowsDrive(String path) {
+    if (hasWindowsDrive(path)) {
+      return path.charAt(0) ==  SEPARATOR_CHAR ? 3 : 2;
+    } else {
+      return 0;
+    }
+  }
+  
   /**
    * Determine whether a given path string represents an absolute path on
    * Windows. e.g. "C:/a/b" is an absolute path. "C:a/b" is not.
@@ -270,13 +281,11 @@ public class Path implements Comparable {
    */
   public static boolean isWindowsAbsolutePath(final String pathString,
                                               final boolean slashed) {
-    int start = (slashed ? 1 : 0);
-
-    return
-        hasWindowsDrive(pathString) &&
-        pathString.length() >= (start + 3) &&
-        ((pathString.charAt(start + 2) == SEPARATOR_CHAR) ||
-          (pathString.charAt(start + 2) == '\\'));
+    int start = startPositionWithoutWindowsDrive(pathString);
+    return start > 0
+        && pathString.length() > start
+        && ((pathString.charAt(start) == SEPARATOR_CHAR) ||
+            (pathString.charAt(start) == '\\'));
   }
 
   /** Convert this to a URI. */
@@ -300,7 +309,7 @@ public class Path implements Comparable {
    *  True if the path component (i.e. directory) of this URI is absolute.
    */
   public boolean isUriPathAbsolute() {
-    int start = hasWindowsDrive(uri.getPath()) ? 3 : 0;
+    int start = startPositionWithoutWindowsDrive(uri.getPath());
     return uri.getPath().startsWith(SEPARATOR, start);
    }
   
@@ -334,7 +343,7 @@ public class Path implements Comparable {
   public Path getParent() {
     String path = uri.getPath();
     int lastSlash = path.lastIndexOf('/');
-    int start = hasWindowsDrive(path) ? 3 : 0;
+    int start = startPositionWithoutWindowsDrive(path);
     if ((path.length() == start) ||               // empty path
         (lastSlash == start && path.length() == start+1)) { // at root
       return null;
@@ -343,8 +352,7 @@ public class Path implements Comparable {
     if (lastSlash==-1) {
       parent = CUR_DIR;
     } else {
-      int end = hasWindowsDrive(path) ? 3 : 0;
-      parent = path.substring(0, lastSlash==end?end+1:lastSlash);
+      parent = path.substring(0, lastSlash==start?start+1:lastSlash);
     }
     return new Path(uri.getScheme(), uri.getAuthority(), parent);
   }

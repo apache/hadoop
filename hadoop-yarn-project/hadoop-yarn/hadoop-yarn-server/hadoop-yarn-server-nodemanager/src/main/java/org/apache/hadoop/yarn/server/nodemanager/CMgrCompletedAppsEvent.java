@@ -27,13 +27,31 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerManagerEventType;
 public class CMgrCompletedAppsEvent extends ContainerManagerEvent {
 
   private final List<ApplicationId> appsToCleanup;
+  private final Reason reason;
 
-  public CMgrCompletedAppsEvent(List<ApplicationId> appsToCleanup) {
+  public CMgrCompletedAppsEvent(List<ApplicationId> appsToCleanup, Reason reason) {
     super(ContainerManagerEventType.FINISH_APPS);
     this.appsToCleanup = appsToCleanup;
+    this.reason = reason;
   }
 
   public List<ApplicationId> getAppsToCleanup() {
     return this.appsToCleanup;
+  }
+
+  public Reason getReason() {
+    return reason;
+  }
+
+  public static enum Reason {
+    /**
+     * Application is killed as NodeManager is shut down
+     */
+    ON_SHUTDOWN, 
+
+    /**
+     * Application is killed by ResourceManager
+     */
+    BY_RESOURCEMANAGER
   }
 }

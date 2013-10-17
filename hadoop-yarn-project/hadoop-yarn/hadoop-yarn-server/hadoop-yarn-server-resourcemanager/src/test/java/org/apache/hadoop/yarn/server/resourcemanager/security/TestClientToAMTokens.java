@@ -167,7 +167,7 @@ public class TestClientToAMTokens {
     MockRM rm = new MockRMWithCustomAMLauncher(conf, containerManager) {
       protected ClientRMService createClientRMService() {
         return new ClientRMService(this.rmContext, scheduler,
-          this.rmAppManager, this.applicationACLsManager,
+          this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
           this.rmDTSecretManager);
       };
 
@@ -194,16 +194,6 @@ public class TestClientToAMTokens {
     nm1.nodeHeartbeat(true);
     dispatcher.await();
 
-    // Get the app-report.
-    GetApplicationReportRequest request =
-        Records.newRecord(GetApplicationReportRequest.class);
-    request.setApplicationId(app.getApplicationId());
-    GetApplicationReportResponse reportResponse =
-        rm.getClientRMService().getApplicationReport(request);
-    ApplicationReport appReport = reportResponse.getApplicationReport();
-    org.apache.hadoop.yarn.api.records.Token originalClientToAMToken =
-        appReport.getClientToAMToken();
-
     ApplicationAttemptId appAttempt = app.getCurrentAppAttempt().getAppAttemptId();
     final MockAM mockAM =
         new MockAM(rm.getRMContext(), rm.getApplicationMasterService(),
@@ -224,7 +214,17 @@ public class TestClientToAMTokens {
             return response;
           }
         });
-     
+
+    // Get the app-report.
+    GetApplicationReportRequest request =
+        Records.newRecord(GetApplicationReportRequest.class);
+    request.setApplicationId(app.getApplicationId());
+    GetApplicationReportResponse reportResponse =
+        rm.getClientRMService().getApplicationReport(request);
+    ApplicationReport appReport = reportResponse.getApplicationReport();
+    org.apache.hadoop.yarn.api.records.Token originalClientToAMToken =
+        appReport.getClientToAMToken();
+
     // ClientToAMToken master key should have been received on register
     // application master response.
     Assert.assertNotNull(response.getClientToAMTokenMasterKey());

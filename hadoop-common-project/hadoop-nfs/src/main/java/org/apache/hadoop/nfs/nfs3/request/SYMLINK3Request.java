@@ -25,9 +25,9 @@ import org.apache.hadoop.oncrpc.XDR;
  * SYMLINK3 Request
  */
 public class SYMLINK3Request extends RequestWithHandle {
-  private final String name;
+  private final String name;     // The name of the link
   private final SetAttr3 symAttr;
-  private final String symData;
+  private final String symData;  // It contains the target
   
   public SYMLINK3Request(XDR xdr) throws IOException {
     super(xdr);

@@ -57,6 +57,22 @@ public abstract class URL {
   public abstract void setScheme(String scheme);
 
   /**
+   * Get the user info of the URL.
+   * @return user info of the URL
+   */
+  @Public
+  @Stable
+  public abstract String getUserInfo();
+  
+  /**
+   * Set the user info of the URL.
+   * @param userInfo user info of the URL
+   */
+  @Public
+  @Stable
+  public abstract void setUserInfo(String userInfo);
+
+  /**
    * Get the host of the URL.
    * @return host of the URL
    */

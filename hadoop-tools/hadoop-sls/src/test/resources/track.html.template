@@ -1,0 +1,193 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="css/bootstrap.min.css" media="screen">
+    <link rel="stylesheet" href="css/bootstrap-responsive.min.css">
+    <style type="text/css">
+      body '{' font: 20px sans-serif;'}'
+      .axis path,
+      .axis line '{' fill: none; stroke: #000; shape-rendering: crispEdges;'}'
+      .axis text '{' font-family: sans-serif; font-size: 20px; '}'
+      .line '{' fill: none; stroke: steelblue; stroke-width: 3px; '}'
+      .legend '{' padding: 5px; font: 18px sans-serif; background: yellow;
+                box-shadow: 2px 2px 1px #888;'}'
+      .title '{' font: 24px sans-serif; '}'
+      .divborder '{' border-width: 1px; border-style: solid; border-color: black;
+                    margin-top:10px '}'
+    </style>
+    <script src="js/thirdparty/d3.v3.js"></script>
+    <script src="js/thirdparty/jquery.js"></script>
+    <script src="js/thirdparty/bootstrap.min.js"></script>
+  </head>
+  <body>
+    <div class="row">
+      <div class="offset4 span8"><br/><br/><br/>
+        Select Tracked Job/Queue:
+        <select id="trackedSelect" onchange="redrawChart()">
+          <option>----Queue----</option>
+          {0}
+          <option>----Job----</option>
+          {1}
+        </select>
+        <input type="button" style="float: right;" value="Stop"
+               onClick="stop()" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="divborder span9 offset4" id="area1"></div>
+    </div>
+    <script>
+      // global variables
+      var basetime = 0;
+      var running = 1;
+      var para = '''';
+      var data = [];
+      var path, line, svg;
+      var x, y;
+      var width, height;
+      var xAxis, yAxis;
+      var legends = [''usage.memory'', ''demand.memory'', ''maxshare.memory'',
+                      ''minshare.memory'', ''fairshare.memory''];
+
+      // stop function
+      function stop() '{'
+        running = 0;
+      '}'
+
+      // select changed event
+      function redrawChart() '{'
+        var value = $(''#trackedSelect'').val();
+        if (value.substring(0, ''Job ''.length) === ''Job ''
+                      || value.substring(0, ''Queue ''.length) === ''Queue '') '{'
+          para = value;
+          running = 0;
+          basetime = 0;
+          data = [];
+          $(''#area1'').empty();
+          drawChart(''Tracking '' + value);
+          running = 1;
+          requestData();
+        }
+      }
+
+      // draw chart
+      function drawChart(title) '{'
+        // location
+        var margin = '{'top: 50, right: 150, bottom: 50, left: 80'}';
+        width = 800 - margin.left - margin.right;
+        height = 420 - margin.top - margin.bottom;
+        x = d3.scale.linear().range([0, width]);
+        y = d3.scale.linear().range([height, 0]);
+        xAxis = d3.svg.axis().scale(x).orient(''bottom'');
+        yAxis = d3.svg.axis().scale(y).orient(''left'');
+        // lines
+        line = d3.svg.line().interpolate(''basis'')
+                .x(function(d) '{' return x(d.time); })
+                .y(function(d) '{' return y(d.value); });
+        // create chart
+        svg = d3.select(''#area1'').append(''svg'')
+                .attr(''width'', width + margin.left + margin.right)
+                .attr(''height'', height + margin.top + margin.bottom)
+                .append(''g'')
+                .attr(''transform'', ''translate('' + margin.left + '','' + margin.top + '')'');
+        // axis labels
+        svg.append(''text'')
+                .attr(''transform'', ''translate('' + (width / 2) + '','' + (height + margin.bottom - 5 ) + '')'')
+                .style(''text-anchor'', ''middle'')
+                .text(''Time ({2})'');
+        svg.append(''text'')
+                .attr(''transform'', ''rotate(-90)'')
+                .attr(''y'', 0 - margin.left)
+                .attr(''x'',0 - (height / 2))
+                .attr(''dy'', ''1em'')
+                .style(''text-anchor'', ''middle'')
+                .text(''Memory (GB)'');
+        // title
+        svg.append(''text'')
+                .attr(''x'', (width / 2))
+                .attr(''y'', 10 - (margin.top / 2))
+                .attr(''text-anchor'', ''middle'')
+                .text(title);
+      '}'
+
+      // request data
+      function requestData() '{'
+        $.ajax('{'url: ''trackMetrics?t='' + para,
+          success: function(point) '{'
+            // clear old
+            svg.selectAll(''g.tick'').remove();
+            svg.selectAll(''g'').remove();
+
+          if(basetime == 0)  basetime = point.time;
+          point.time = (point.time - basetime)/{3};
+          data.push(point);
+
+          var color = d3.scale.category10();
+          color.domain(d3.keys(data[0]).filter(function(key) '{'
+            return $.inArray(key, legends) !== -1;
+          '}'));
+
+          var values = color.domain().map(function(name) '{'
+            return '{'
+              name: name,
+              values: data.map(function(d) '{'
+                return '{' time: d.time, value: d[name]'}';
+              '}')
+            '}';
+          '}');
+
+          // set x/y range
+          x.domain(d3.extent(data, function(d) '{' return d.time; '}'));
+          y.domain([
+            d3.min(values, function(c) '{' return 0 '}'),
+            d3.max(values, function(c) '{' return 1.1 * d3.max(c.values, function(v) '{' return v.value; '}'); '}')
+          ]);
+
+          svg.append(''g'').attr(''class'', ''x axis'')
+            .attr(''transform'', ''translate(0,'' + height + '')'').call(xAxis);
+          svg.append(''g'').attr(''class'', ''y axis'').call(yAxis);
+          var value = svg.selectAll(''.path'')
+            .data(values).enter().append(''g'').attr(''class'', ''line'');
+
+          value.append(''path'').attr(''class'', ''line'')
+            .attr(''d'', function(d) '{'return line(d.values); '}')
+            .style(''stroke'', function(d) '{'return color(d.name); '}');
+
+          // legend
+          var legend = svg.append(''g'')
+            .attr(''class'', ''legend'')
+            .attr(''x'', width + 5)
+            .attr(''y'', 25)
+            .attr(''height'', 120)
+            .attr(''width'', 180);
+
+          legend.selectAll(''g'').data(legends)
+            .enter()
+            .append(''g'')
+            .each(function(d, i) '{'
+              var g = d3.select(this);
+              g.append(''rect'')
+                .attr(''x'', width + 5)
+                .attr(''y'', i * 20)
+                .attr(''width'', 10)
+                .attr(''height'', 10)
+                .style(''fill'', color(d));
+
+              g.append(''text'')
+                .attr(''x'', width + 25)
+                .attr(''y'', i * 20 + 8)
+                .attr(''height'',30)
+                .attr(''width'',250)
+                .style(''fill'', color(d))
+                .text(d);
+            '}');
+
+          if(running == 1)
+            setTimeout(requestData, {4});
+        '}',
+        cache: false
+      '}');
+    '}'
+  </script>
+</body>
+</html>

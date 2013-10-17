@@ -20,6 +20,8 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.*;
@@ -50,6 +52,39 @@ public class TestSetFile extends TestCase {
     } finally {
       fs.close();
     }
+  }
+  
+  /**
+   * test {@code SetFile.Reader} methods 
+   * next(), get() in combination 
+   */
+  public void testSetFileAccessMethods() {    
+    try {             
+      FileSystem fs = FileSystem.getLocal(conf);
+      int size = 10;
+      writeData(fs, size);
+      SetFile.Reader reader = createReader(fs);
+      assertTrue("testSetFileWithConstruction1 error !!!", reader.next(new IntWritable(0)));
+      // don't know why reader.get(i) return i+1
+      assertEquals("testSetFileWithConstruction2 error !!!", new IntWritable(size/2 + 1), reader.get(new IntWritable(size/2)));      
+      assertNull("testSetFileWithConstruction3 error !!!", reader.get(new IntWritable(size*2)));
+    } catch (Exception ex) {
+      fail("testSetFileWithConstruction error !!!");    
+    }
+  }
+
+  private SetFile.Reader createReader(FileSystem fs) throws IOException  {
+    return new SetFile.Reader(fs, FILE, 
+        WritableComparator.get(IntWritable.class), conf);    
+  }
+  
+  @SuppressWarnings("deprecation")
+  private void writeData(FileSystem fs, int elementSize) throws IOException {
+    MapFile.delete(fs, FILE);    
+    SetFile.Writer writer = new SetFile.Writer(fs, FILE, IntWritable.class);
+    for (int i = 0; i < elementSize; i++)
+      writer.append(new IntWritable(i));
+    writer.close();    
   }
 
   private static RandomDatum[] generate(int count) {

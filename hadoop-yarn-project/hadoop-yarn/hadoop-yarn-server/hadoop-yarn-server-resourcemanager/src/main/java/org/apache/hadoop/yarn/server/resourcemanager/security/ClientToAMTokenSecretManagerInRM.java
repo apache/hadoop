@@ -33,17 +33,21 @@ public class ClientToAMTokenSecretManagerInRM extends
   private Map<ApplicationAttemptId, SecretKey> masterKeys =
       new HashMap<ApplicationAttemptId, SecretKey>();
 
-  public synchronized SecretKey registerApplication(
+  public synchronized SecretKey createMasterKey(
       ApplicationAttemptId applicationAttemptID) {
-    SecretKey key = generateSecret();
-    this.masterKeys.put(applicationAttemptID, key);
-    return key;
+    return generateSecret();
   }
 
+  public synchronized void registerApplication(
+      ApplicationAttemptId applicationAttemptID, SecretKey key) {
+    this.masterKeys.put(applicationAttemptID, key);
+  }
+
+  // Only for RM recovery
   public synchronized SecretKey registerMasterKey(
       ApplicationAttemptId applicationAttemptID, byte[] keyData) {
     SecretKey key = createSecretKey(keyData);
-    this.masterKeys.put(applicationAttemptID, key);
+    registerApplication(applicationAttemptID, key);
     return key;
   }
 

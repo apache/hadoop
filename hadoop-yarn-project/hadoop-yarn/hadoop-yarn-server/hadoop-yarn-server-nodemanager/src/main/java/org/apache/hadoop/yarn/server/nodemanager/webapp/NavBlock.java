@@ -19,8 +19,9 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -37,8 +38,9 @@ public class NavBlock extends HtmlBlock implements YarnWebParams {
   @Override
   protected void render(Block html) {
 	
-	String RMWebAppURL = YarnConfiguration.getRMWebAppURL(this.conf);
-	html
+    String RMWebAppURL =
+        WebAppUtils.getResolvedRMWebAppURLWithScheme(this.conf);
+	  html
       .div("#nav")
       .h3()._("ResourceManager")._()
         .ul()

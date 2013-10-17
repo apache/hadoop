@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
 public class MockNM {
 
@@ -51,6 +52,7 @@ public class MockNM {
   private final int httpPort = 2;
   private MasterKey currentContainerTokenMasterKey;
   private MasterKey currentNMTokenMasterKey;
+  private String version;
 
   public MockNM(String nodeIdStr, int memory, ResourceTrackerService resourceTracker) {
     // scale vcores based on the requested memory
@@ -61,10 +63,16 @@ public class MockNM {
   }
 
   public MockNM(String nodeIdStr, int memory, int vcores,
-                ResourceTrackerService resourceTracker) {
+      ResourceTrackerService resourceTracker) {
+    this(nodeIdStr, memory, vcores, resourceTracker, YarnVersionInfo.getVersion());
+  }
+
+  public MockNM(String nodeIdStr, int memory, int vcores,
+      ResourceTrackerService resourceTracker, String version) {
     this.memory = memory;
     this.vCores = vcores;
     this.resourceTracker = resourceTracker;
+    this.version = version;
     String[] splits = nodeIdStr.split(":");
     nodeId = BuilderUtils.newNodeId(splits[0], Integer.parseInt(splits[1]));
   }
@@ -96,6 +104,7 @@ public class MockNM {
     req.setHttpPort(httpPort);
     Resource resource = BuilderUtils.newResource(memory, vCores);
     req.setResource(resource);
+    req.setNMVersion(version);
     RegisterNodeManagerResponse registrationResponse =
         resourceTracker.registerNodeManager(req);
     this.currentContainerTokenMasterKey =

@@ -155,14 +155,21 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5411. Refresh size of loaded job cache on history server (Ashwin
     Shankar via jlowe)
 
+    MAPREDUCE-5332. Support token-preserving restart of history server (jlowe)
+
   IMPROVEMENTS
 
     MAPREDUCE-434. LocalJobRunner limited to single reducer (Sandy Ryza and
     Aaron Kimball via Sandy Ryza)
 
+    MAPREDUCE-4421. Run MapReduce framework via the distributed cache (jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
+
+    MAPREDUCE-5487. In task processes, JobConf is unnecessarily loaded again
+    in Limits (Sandy Ryza)
 
   BUG FIXES
 
@@ -175,7 +182,134 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5404. HSAdminServer does not use ephemeral ports in minicluster
     mode (Ted Yu via jlowe)
 
-Release 2.1.1-beta - UNRELEASED
+    MAPREDUCE-5522. Incorrect oreder expected from JobQueueInfo (Jinghui Wang
+    via bobby)
+
+    MAPREDUCE-5514. Fix TestRMContainerAllocator. (Zhijie Shen via acmurthy) 
+
+    MAPREDUCE-5102. fix coverage org.apache.hadoop.mapreduce.lib.db and
+    org.apache.hadoop.mapred.lib.db (Aleksey Gorshkov, Andrey Klochkov, and
+    Nathan Roberts via jlowe)
+
+    MAPREDUCE-5585. TestCopyCommitter#testNoCommitAction Fails on JDK7
+    (jeagles)
+
+Release 2.2.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+  
+    MAPREDUCE-5329. Allow MR applications to use additional AuxServices,
+    which are compatible with the default MapReduce shuffle.
+    (Avner BenHanoch via sseth)
+
+    MAPREDUCE-5463. Deprecate SLOTS_MILLIS counters (Tzuyoshi Ozawa via Sandy
+    Ryza)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-5569. FloatSplitter is not generating correct splits (Nathan
+    Roberts via jlowe)
+
+    MAPREDUCE-5546. mapred.cmd on Windows set HADOOP_OPTS incorrectly (Chuan Liu
+    via cnauroth)
+
+    MAPREDUCE-5518. Fixed typo "can't read paritions file". (Albert Chu
+    via devaraj)
+
+Release 2.2.0 - 2013-10-13
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-5504. mapred queue -info inconsistent with types (Kousuke Saruta
+    via tgraves)
+
+    MAPREDUCE-5488. Changed MR client to keep trying to reach the application
+    when it sees that on attempt's AM is down. (Jian He via vinodkv)
+
+    MAPREDUCE-5515. Fixed MR AM's webapp to depend on a new config
+    mapreduce.ssl.enabled to enable https and disabling it by default as MR AM
+    needs to set up its own certificates etc and not depend on clusters'.
+    (Omkar Vinit Joshi via vinodkv)
+
+    MAPREDUCE-5505. Clients should be notified job finished only after job
+    successfully unregistered (Zhijie Shen via bikas)
+
+    MAPREDUCE-5503. Fixed a test issue in TestMRJobClient. (Jian He via vinodkv)
+
+    MAPREDUCE-5170. Fixed a wrong log message in CombineFileInputFormat class.
+    (Sangjin Lee via vinodkv)
+
+    MAPREDUCE-5525. Increase timeout of TestDFSIO.testAppend and
+    TestMRJobsWithHistoryService.testJobHistoryData. (Chuan Liu via cnauroth)
+
+    MAPREDUCE-5513. ConcurrentModificationException in JobControl (Robert
+    Parker via jlowe)
+
+    MAPREDUCE-5531. Fix compat with hadoop-1 in mapreduce.(TaskID,
+    TaskAttemptID) by re-introducing missing constructors. (Robert Kanter via
+    acmurthy)
+
+    MAPREDUCE-5545. org.apache.hadoop.mapred.TestTaskAttemptListenerImpl.testCommitWindow
+    times out (Robert Kanter via jlowe)
+
+    MAPREDUCE-5529. Fix compat with hadoop-1 in mapred.TotalOrderPartitioner
+    by re-introducing (get,set)PartitionFile which takes in JobConf. (Robert 
+    Kanter via acmurthy)
+
+    MAPREDUCE-5538. Fixed MR AppMaster to send job-notification URL only after
+    the job is really done - a bug caused by MAPREDUCE-5505. (Zhijie Shen via
+    vinodkv)
+
+    MAPREDUCE-5551. Fix compat with hadoop-1 in
+    SequenceFileAsBinaryOutputFormat.WritableValueBytes by re-introducing
+    missing constructors. (Zhijie Shen via acmurthy)
+
+    MAPREDUCE-5544. JobClient#getJob loads job conf twice. (Sandy Ryza)
+
+    MAPREDUCE-5536. Fixed MR AM and JHS to respect
+    mapreduce.jobhistory.webapp.https.address. (Omkar Vinit Joshi via vinodkv)
+
+    MAPREDUCE-5530. Fix compat with hadoop-1 in
+    mapred.lib.CombinFileInputFormat by re-introducing
+    isSplittable(FileSystem, Path) api and ensuring semantic compatibility.
+    (Robert Kanter via acmurthy)
+
+    MAPREDUCE-5459. Update documentation on how to run MRv1 examples on YARN.
+    (Zhijie Shen via acmurthy)
+
+    MAPREDUCE-5554. hdfs-site.xml included in hadoop-mapreduce-client-jobclient
+    tests jar is breaking tests for downstream components (Robert Kanter via
+    Sandy Ryza)
+
+    MAPREDUCE-5489. MR jobs hangs as it does not use the node-blacklisting
+    feature in RM requests (Zhijie Shen via bikas)
+
+    MAPREDUCE-5442. $HADOOP_MAPRED_HOME/$HADOOP_CONF_DIR setting not working on
+    Windows. (Yingda Chen via cnauroth)
+
+    MAPREDUCE-5533. Fixed MR speculation code to track any TaskAttempts that
+    aren't heart-beating for a while, so that we can aggressively speculate
+    instead of waiting for task-timeout (Xuan Gong via vinodkv)
+
+    MAPREDUCE-5562. Fixed MR App Master to perform pending tasks like staging-dir
+    cleanup, sending job-end notification correctly when unregister with RM
+    fails. (Zhijie Shen via vinodkv)
+
+Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
 
@@ -189,6 +323,12 @@ Release 2.1.1-beta - UNRELEASED
     MAPREDUCE-5497. Changed MRAppMaster to sleep only after doing everything else
     but just before ClientService to avoid race conditions during RM restart.
     (Jian He via vinodkv)
+
+    MAPREDUCE-5379. Include token tracking ids in jobconf. (kkambatl via tucu)
+
+    MAPREDUCE-5523. Added separate configuration properties for https for JHS 
+    without which even when https is enabled, it starts on http port itself.
+    (Omkar Vinit Joshi via vinodkv)
 
   OPTIMIZATIONS
 
@@ -264,6 +404,9 @@ Release 2.1.1-beta - UNRELEASED
 
     MAPREDUCE-5164. mapred job and queue commands omit HADOOP_CLIENT_OPTS 
     (Nemon Lou via devaraj)
+
+    MAPREDUCE-5493. Cleanup in-memory & on-disk segments to prevent leak on
+    shuffle completion. (jlowe via acmurthy)
 
 Release 2.1.0-beta - 2013-08-22
 
@@ -1344,6 +1487,15 @@ Release 0.23.10 - UNRELEASED
     failures (Sandy Ryza via jlowe)
 
     MAPREDUCE-5475. MRClientService does not verify ACLs properly (jlowe)
+
+    MAPREDUCE-5504. mapred queue -info inconsistent with types (Kousuke Saruta
+    via tgraves)
+
+    MAPREDUCE-5513. ConcurrentModificationException in JobControl (Robert
+    Parker via jlowe)
+
+    MAPREDUCE-5586. TestCopyMapper#testCopyFailOnBlockSizeDifference fails when
+    run from hadoop-tools/hadoop-distcp directory (jeagles)
 
 Release 0.23.9 - 2013-07-08
 

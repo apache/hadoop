@@ -36,13 +36,15 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AppInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.View;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 
 /**
@@ -50,6 +52,7 @@ import com.google.inject.Inject;
  */
 public class AppController extends Controller implements AMParams {
   private static final Log LOG = LogFactory.getLog(AppController.class);
+  private static final Joiner JOINER = Joiner.on("");
   
   protected final App app;
   
@@ -58,7 +61,10 @@ public class AppController extends Controller implements AMParams {
     super(ctx);
     this.app = app;
     set(APP_ID, app.context.getApplicationID().toString());
-    set(RM_WEB, YarnConfiguration.getRMWebAppURL(conf));
+    set(RM_WEB,
+        JOINER.join(MRWebAppUtil.getYARNWebappScheme(),
+            WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf,
+                MRWebAppUtil.getYARNHttpPolicy())));
   }
 
   @Inject
