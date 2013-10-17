@@ -81,7 +81,7 @@ public class WebHdfsTestUtil {
   
   public static HttpURLConnection twoStepWrite(final WebHdfsFileSystem webhdfs,
       final HttpOpParam.Op op, HttpURLConnection conn) throws IOException {
-    return webhdfs.new Runner(op, conn).twoStepWrite();
+    return webhdfs.new ConnRunner(op, conn).twoStepWrite();
   }
 
   public static FSDataOutputStream write(final WebHdfsFileSystem webhdfs,

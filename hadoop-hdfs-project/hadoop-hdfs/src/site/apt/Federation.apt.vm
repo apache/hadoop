@@ -28,7 +28,7 @@ HDFS Federation
 
 * {Background}
 
-[./federation-background.gif] HDFS Layers
+[./images/federation-background.gif] HDFS Layers
 
   HDFS has two main layers:
 
@@ -72,7 +72,7 @@ HDFS Federation
   send periodic heartbeats and block reports and handles commands from the 
   Namenodes.
 
-[./federation.gif] HDFS Federation Architecture
+[./images/federation.gif] HDFS Federation Architecture
 
 
   <<Block Pool>>

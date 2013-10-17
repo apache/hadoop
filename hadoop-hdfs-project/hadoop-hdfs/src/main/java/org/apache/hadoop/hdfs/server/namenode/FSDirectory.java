@@ -2600,10 +2600,12 @@ public class FSDirectory implements Closeable {
           node.getUserName(snapshot), node.getGroupName(snapshot),
           node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
           node.getId(), loc, childrenNum);
-        // Set caching information for the located blocks.
-    CacheManager cacheManager = namesystem.getCacheManager();
-    for (LocatedBlock lb: loc.getLocatedBlocks()) {
-      cacheManager.setCachedLocations(lb);
+    // Set caching information for the located blocks.
+    if (loc != null) {
+      CacheManager cacheManager = namesystem.getCacheManager();
+      for (LocatedBlock lb: loc.getLocatedBlocks()) {
+        cacheManager.setCachedLocations(lb);
+      }
     }
     return status;
   }

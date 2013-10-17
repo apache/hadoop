@@ -38,6 +38,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -592,6 +593,48 @@ public class DFSUtil {
   public static Map<String, Map<String, InetSocketAddress>> getHaNnRpcAddresses(
       Configuration conf) {
     return getAddresses(conf, null, DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+  }
+
+  /**
+   * Returns list of InetSocketAddress corresponding to HA NN HTTP addresses from
+   * the configuration.
+   *
+   * @param conf configuration
+   * @return list of InetSocketAddresses
+   */
+  public static Map<String, Map<String, InetSocketAddress>> getHaNnHttpAddresses(
+      Configuration conf) {
+    return getAddresses(conf, null, DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+  }
+
+  /**
+   * Resolve an HDFS URL into real INetSocketAddress. It works like a DNS resolver
+   * when the URL points to an non-HA cluster. When the URL points to an HA
+   * cluster, the resolver further resolves the logical name (i.e., the authority
+   * in the URL) into real namenode addresses.
+   */
+  public static InetSocketAddress[] resolve(URI uri, int schemeDefaultPort,
+      Configuration conf) throws IOException {
+    ArrayList<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
+
+    if (!HAUtil.isLogicalUri(conf, uri)) {
+      InetSocketAddress addr = NetUtils.createSocketAddr(uri.getAuthority(),
+          schemeDefaultPort);
+      ret.add(addr);
+
+    } else {
+      Map<String, Map<String, InetSocketAddress>> addresses = DFSUtil
+          .getHaNnHttpAddresses(conf);
+
+      for (Map<String, InetSocketAddress> addrs : addresses.values()) {
+        for (InetSocketAddress addr : addrs.values()) {
+          ret.add(addr);
+        }
+      }
+    }
+
+    InetSocketAddress[] r = new InetSocketAddress[ret.size()];
+    return ret.toArray(r);
   }
   
   /**

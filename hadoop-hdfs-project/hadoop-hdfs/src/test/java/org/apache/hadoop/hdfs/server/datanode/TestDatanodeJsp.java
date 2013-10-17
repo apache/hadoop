@@ -61,9 +61,10 @@ public class TestDatanodeJsp {
     
     InetSocketAddress nnIpcAddress = cluster.getNameNode().getNameNodeAddress();
     InetSocketAddress nnHttpAddress = cluster.getNameNode().getHttpAddress();
-    int dnInfoPort = cluster.getDataNodes().get(0).getInfoPort();
-    
-    URL url = new URL("http://localhost:" + dnInfoPort + "/"
+    String base = JspHelper.Url.url("http", cluster.getDataNodes().get(0)
+        .getDatanodeId());
+
+    URL url = new URL(base + "/"
         + "browseDirectory.jsp" + JspHelper.getUrlParam("dir", 
             URLEncoder.encode(testPath.toString(), "UTF-8"), true)
         + JspHelper.getUrlParam("namenodeInfoPort", Integer
@@ -86,18 +87,21 @@ public class TestDatanodeJsp {
     // check whether able to 'Go Back to File View' after tailing the file
     regex = "<a.+href=\"(.+?)\">Go\\s*Back\\s*to\\s*File\\s*View\\<\\/a\\>";
     assertFileContents(regex, "Go Back to File View");
+
+    regex = "<a href=\"///localhost:" + nnHttpAddress.getPort() + "/dfshealth.jsp\">Go back to DFS home</a>";
+    assertTrue("page should generate DFS home scheme without explicit scheme", viewFilePage.contains(regex));
   }
   
   private static void assertFileContents(String regex, String text)
       throws IOException {
     Pattern compile = Pattern.compile(regex);
     Matcher matcher = compile.matcher(viewFilePage);
-    URL hyperlink = null;
     if (matcher.find()) {
       // got hyperlink for Tail this file
-      hyperlink = new URL(matcher.group(1));
+      String u = matcher.group(1);
+      String urlString = u.startsWith("///") ? ("http://" + u.substring(3)) : u;
       viewFilePage = StringEscapeUtils.unescapeHtml(DFSTestUtil
-          .urlGet(hyperlink));
+          .urlGet(new URL(urlString)));
       assertTrue("page should show preview of file contents", viewFilePage
           .contains(FILE_DATA));
     } else {
@@ -166,6 +170,7 @@ public class TestDatanodeJsp {
     Mockito.doReturn(NetUtils.getHostPortString(NameNode.getAddress(CONF)))
         .when(reqMock).getParameter("nnaddr");
     Mockito.doReturn(testFile.toString()).when(reqMock).getPathInfo();
+    Mockito.doReturn("http").when(reqMock).getScheme();
   }
 
   static Path writeFile(FileSystem fs, Path f) throws IOException {

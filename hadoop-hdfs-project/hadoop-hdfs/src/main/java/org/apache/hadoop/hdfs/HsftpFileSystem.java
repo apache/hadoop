@@ -68,6 +68,14 @@ public class HsftpFileSystem extends HftpFileSystem {
     return "hsftp";
   }
 
+  /**
+   * Return the underlying protocol that is used to talk to the namenode.
+   */
+  @Override
+  protected String getUnderlyingProtocol() {
+    return "https";
+  }
+
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
@@ -134,24 +142,15 @@ public class HsftpFileSystem extends HftpFileSystem {
 
   @Override
   protected int getDefaultPort() {
-    return getDefaultSecurePort();
+    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
+                            DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
   }
 
-  @Override
-  protected InetSocketAddress getNamenodeSecureAddr(URI uri) {
-    return getNamenodeAddr(uri);
-  }
-
-  @Override
-  protected URI getNamenodeUri(URI uri) {
-    return getNamenodeSecureUri(uri);
-  }
-  
   @Override
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     query = addDelegationTokenParam(query);
-    final URL url = new URL("https", nnUri.getHost(), 
+    final URL url = new URL(getUnderlyingProtocol(), nnUri.getHost(),
         nnUri.getPort(), path + '?' + query);
     HttpsURLConnection conn;
     conn = (HttpsURLConnection)connectionFactory.openConnection(url);

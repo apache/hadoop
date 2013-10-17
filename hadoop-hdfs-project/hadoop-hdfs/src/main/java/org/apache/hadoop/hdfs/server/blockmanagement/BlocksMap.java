@@ -57,11 +57,11 @@ class BlocksMap {
   /** Constant {@link LightWeightGSet} capacity. */
   private final int capacity;
   
-  private volatile GSet<Block, BlockInfo> blocks;
+  private GSet<Block, BlockInfo> blocks;
 
-  BlocksMap(final float loadFactor) {
+  BlocksMap(int capacity) {
     // Use 2% of total memory to size the GSet capacity
-    this.capacity = LightWeightGSet.computeCapacity(2.0, "BlocksMap");
+    this.capacity = capacity;
     this.blocks = new LightWeightGSet<Block, BlockInfo>(capacity);
   }
 

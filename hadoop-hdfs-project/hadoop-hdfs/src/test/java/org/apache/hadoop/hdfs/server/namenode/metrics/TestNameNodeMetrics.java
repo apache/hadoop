@@ -192,17 +192,10 @@ public class TestNameNodeMetrics {
     assertCounter("CreateFileOps", 1L, rb);
     assertCounter("FilesCreated", (long)file.depth(), rb);
 
-    // Blocks are stored in a hashmap. Compute its capacity, which
-    // doubles every time the number of entries reach the threshold.
-    int threshold = (int)(blockCapacity * BlockManager.DEFAULT_MAP_LOAD_FACTOR);
-    while (threshold < blockCount) {
-      blockCapacity <<= 1;
-    }
     long filesTotal = file.depth() + 1; // Add 1 for root
     rb = getMetrics(NS_METRICS);
     assertGauge("FilesTotal", filesTotal, rb);
     assertGauge("BlocksTotal", blockCount, rb);
-    assertGauge("BlockCapacity", blockCapacity, rb);
     fs.delete(file, true);
     filesTotal--; // reduce the filecount for deleted file
 

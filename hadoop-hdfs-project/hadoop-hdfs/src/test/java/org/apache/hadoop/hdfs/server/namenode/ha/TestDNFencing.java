@@ -96,8 +96,8 @@ public class TestDNFencing {
     // Increase max streams so that we re-replicate quickly.
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 1000);
     // See RandomDeleterPolicy javadoc.
-    conf.setClass("dfs.block.replicator.classname", RandomDeleterPolicy.class,
-        BlockPlacementPolicy.class); 
+    conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        RandomDeleterPolicy.class, BlockPlacementPolicy.class); 
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())

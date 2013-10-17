@@ -22,10 +22,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -225,5 +228,30 @@ public class TestSnapshotRename {
         GenericTestUtils.assertExceptionContains(errorMsg, e);
       }
     }
+  }
+  
+  @Test
+  public void testRenameSnapshotCommandWithIllegalArguments() throws Exception {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream psOut = new PrintStream(out);
+    System.setOut(psOut);
+    System.setErr(psOut);
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    
+    String[] argv1 = {"-renameSnapshot", "/tmp", "s1"};
+    int val = shell.run(argv1);
+    assertTrue(val == -1);
+    assertTrue(out.toString().contains(
+        argv1[0] + ": Incorrect number of arguments."));
+    out.reset();
+    
+    String[] argv2 = {"-renameSnapshot", "/tmp", "s1", "s2", "s3"};
+    val = shell.run(argv2);
+    assertTrue(val == -1);
+    assertTrue(out.toString().contains(
+        argv2[0] + ": Incorrect number of arguments."));
+    psOut.close();
+    out.close();
   }
 }

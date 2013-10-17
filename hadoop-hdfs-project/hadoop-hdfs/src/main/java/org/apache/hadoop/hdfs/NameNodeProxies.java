@@ -158,8 +158,8 @@ public class NameNodeProxies {
    * Generate a dummy namenode proxy instance that utilizes our hacked
    * {@link LossyRetryInvocationHandler}. Proxy instance generated using this
    * method will proactively drop RPC responses. Currently this method only
-   * support HA setup. IllegalStateException will be thrown if the given
-   * configuration is not for HA.
+   * support HA setup. null will be returned if the given configuration is not 
+   * for HA.
    * 
    * @param config the configuration containing the required IPC
    *        properties, client failover configurations, etc.
@@ -168,7 +168,8 @@ public class NameNodeProxies {
    * @param xface the IPC interface which should be created
    * @param numResponseToDrop The number of responses to drop for each RPC call
    * @return an object containing both the proxy and the associated
-   *         delegation token service it corresponds to
+   *         delegation token service it corresponds to. Will return null of the
+   *         given configuration does not support HA.
    * @throws IOException if there is an error creating the proxy
    */
   @SuppressWarnings("unchecked")
@@ -204,8 +205,9 @@ public class NameNodeProxies {
       Text dtService = HAUtil.buildTokenServiceForLogicalUri(nameNodeUri);
       return new ProxyAndInfo<T>(proxy, dtService);
     } else {
-      throw new IllegalStateException("Currently creating proxy using " +
+      LOG.warn("Currently creating proxy using " +
       		"LossyRetryInvocationHandler requires NN HA setup");
+      return null;
     }
   }
 

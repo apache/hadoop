@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -39,9 +40,11 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithNodeGroup;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.NetworkTopologyWithNodeGroup;
+import org.junit.Assert;
 import org.junit.Test;
-import junit.framework.Assert;
 
 /**
  * This class tests if a balancer schedules tasks correctly.
@@ -75,10 +78,9 @@ public class TestBalancerWithNodeGroup {
     Configuration conf = new HdfsConfiguration();
     TestBalancer.initConf(conf);
     conf.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY, 
-        "org.apache.hadoop.net.NetworkTopologyWithNodeGroup");
-    conf.set("dfs.block.replicator.classname", 
-        "org.apache.hadoop.hdfs.server.blockmanagement." +
-        "BlockPlacementPolicyWithNodeGroup");
+        NetworkTopologyWithNodeGroup.class.getName());
+    conf.set(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, 
+        BlockPlacementPolicyWithNodeGroup.class.getName());
     return conf;
   }
 

@@ -370,13 +370,20 @@ public class TestDecommission {
       for (int i = 0; i < numNamenodes; i++) {
         ArrayList<DatanodeInfo> decommissionedNodes = namenodeDecomList.get(i);
         FileSystem fileSys = cluster.getFileSystem(i);
+        FSNamesystem ns = cluster.getNamesystem(i);
+
         writeFile(fileSys, file1, replicas);
-        
+
+        int deadDecomissioned = ns.getNumDecomDeadDataNodes();
+        int liveDecomissioned = ns.getNumDecomLiveDataNodes();
+
         // Decommission one node. Verify that node is decommissioned.
         DatanodeInfo decomNode = decommissionNode(i, decommissionedNodes,
             AdminStates.DECOMMISSIONED);
         decommissionedNodes.add(decomNode);
-        
+        assertEquals(deadDecomissioned, ns.getNumDecomDeadDataNodes());
+        assertEquals(liveDecomissioned + 1, ns.getNumDecomLiveDataNodes());
+
         // Ensure decommissioned datanode is not automatically shutdown
         DFSClient client = getDfsClient(cluster.getNameNode(i), conf);
         assertEquals("All datanodes must be alive", numDatanodes, 

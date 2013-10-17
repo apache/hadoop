@@ -44,7 +44,8 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeDescriptor extends DatanodeInfo {
-  
+  public static final DatanodeDescriptor[] EMPTY_ARRAY = {};
+
   // Stores status of decommissioning.
   // If node is not decommissioning, do not use this object for anything.
   public DecommissioningStatus decommissioningStatus = new DecommissioningStatus();
