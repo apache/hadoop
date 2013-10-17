@@ -146,6 +146,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-10040. hadoop.cmd in UNIX format and would not run by default on
     Windows. (cnauroth)
 
+    HADOOP-10055. FileSystemShell.apt.vm doc has typo "numRepicas".
+    (Akira Ajisaka via cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
