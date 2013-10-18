@@ -101,3 +101,6 @@ HDFS-4949 (Unreleased)
     -replication parameter. (cnauroth)
 
     HDFS-5383. fix broken caching unit tests. (Andrew Wang)
+
+    HDFS-5388. Loading fsimage fails to find cache pools during namenode
+    startup.  (Chris Nauroth via Colin Patrick McCabe)

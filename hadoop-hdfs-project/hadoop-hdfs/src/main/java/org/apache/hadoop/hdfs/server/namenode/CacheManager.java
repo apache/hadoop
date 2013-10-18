@@ -742,7 +742,7 @@ public final class CacheManager {
       String poolName = Text.readString(in);
       // Get pool reference by looking it up in the map
       CachePool pool = cachePools.get(poolName);
-      if (pool != null) {
+      if (pool == null) {
         throw new IOException("Entry refers to pool " + poolName +
             ", which does not exist.");
       }
