@@ -30,7 +30,7 @@ import org.apache.hadoop.streaming.PipeMapRed;
  */
 public class TextInputWriter extends InputWriter<Object, Object> {
   
-  private DataOutput clientOut;
+  protected DataOutput clientOut;
   private byte[] inputSeparator;
   
   @Override
@@ -53,7 +53,7 @@ public class TextInputWriter extends InputWriter<Object, Object> {
   }
   
   // Write an object to the output stream using UTF-8 encoding
-  private void writeUTF8(Object object) throws IOException {
+  protected void writeUTF8(Object object) throws IOException {
     byte[] bval;
     int valSize;
     if (object instanceof BytesWritable) {
