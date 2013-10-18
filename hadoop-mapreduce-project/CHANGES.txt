@@ -72,6 +72,9 @@ Release 2.2.1 - UNRELEASED
     MAPREDUCE-5463. Deprecate SLOTS_MILLIS counters (Tzuyoshi Ozawa via Sandy
     Ryza)
 
+    MAPREDUCE-5457. Add a KeyOnlyTextOutputReader to enable streaming to write
+    out text files without separators (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
