@@ -207,10 +207,10 @@ public class CacheAdmin extends Configured implements Tool {
     @Override
     public String getLongUsage() {
       TableListing listing = getOptionDescriptionListing();
-      listing.addRow("<id>", "The id of the cache directive to remove. " + 
+      listing.addRow("<id>", "The id of the cache directive to remove.  " + 
         "You must have write permission on the pool of the " +
         "directive in order to remove it.  To see a list " +
-        "of PathBasedCache directive IDs, use the -list command.");
+        "of PathBasedCache directive IDs, use the -listDirectives command.");
       return getShortUsage() + "\n" +
         "Remove a cache directive.\n\n" +
         listing.toString();
@@ -250,6 +250,64 @@ public class CacheAdmin extends Configured implements Tool {
         return 2;
       }
       return 0;
+    }
+  }
+
+  private static class RemovePathBasedCacheDirectivesCommand implements Command {
+    @Override
+    public String getName() {
+      return "-removeDirectives";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " <path>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = getOptionDescriptionListing();
+      listing.addRow("<path>", "The path of the cache directives to remove.  " +
+        "You must have write permission on the pool of the directive in order " +
+        "to remove it.  To see a list of cache directives, use the " +
+        "-listDirectives command.");
+      return getShortUsage() + "\n" +
+        "Remove every cache directive with the specified path.\n\n" +
+        listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      String path = StringUtils.popOptionWithArgument("-path", args);
+      if (path == null) {
+        System.err.println("You must specify a path with -path.");
+        return 1;
+      }
+      if (!args.isEmpty()) {
+        System.err.println("Can't understand argument: " + args.get(0));
+        System.err.println("Usage is " + getShortUsage());
+        return 1;
+      }
+      DistributedFileSystem dfs = getDFS(conf);
+      RemoteIterator<PathBasedCacheDescriptor> iter =
+          dfs.listPathBasedCacheDescriptors(null, new Path(path));
+      int exitCode = 0;
+      while (iter.hasNext()) {
+        PathBasedCacheDescriptor entry = iter.next();
+        try {
+          dfs.removePathBasedCacheDescriptor(entry);
+          System.out.println("Removed PathBasedCache directive " +
+              entry.getEntryId());
+        } catch (RemovePathBasedCacheDescriptorException e) {
+          System.err.println(prettifyException(e));
+          exitCode = 2;
+        }
+      }
+      if (exitCode == 0) {
+        System.out.println("Removed every PathBasedCache directive with path " +
+            path);
+      }
+      return exitCode;
     }
   }
 
@@ -684,6 +742,7 @@ public class CacheAdmin extends Configured implements Tool {
   private static Command[] COMMANDS = {
     new AddPathBasedCacheDirectiveCommand(),
     new RemovePathBasedCacheDirectiveCommand(),
+    new RemovePathBasedCacheDirectivesCommand(),
     new ListPathBasedCacheDirectiveCommand(),
     new AddCachePoolCommand(),
     new ModifyCachePoolCommand(),

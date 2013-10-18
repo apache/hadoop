@@ -104,3 +104,7 @@ HDFS-4949 (Unreleased)
 
     HDFS-5388. Loading fsimage fails to find cache pools during namenode
     startup.  (Chris Nauroth via Colin Patrick McCabe)
+
+    HDFS-5203. Concurrent clients that add a cache directive on the same path
+    may prematurely uncache from each other.  (Chris Nauroth via Colin Patrick
+    McCabe)

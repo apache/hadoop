@@ -6978,7 +6978,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "removePathBasedCacheDescriptors", null, null,
+        logAuditEvent(success, "removePathBasedCacheDescriptor", null, null,
             null);
       }
       RetryCache.setState(cacheEntry, success);

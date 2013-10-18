@@ -344,8 +344,9 @@ public class TestPathBasedCacheRequests {
 
     PathBasedCacheDescriptor alphaD = addAsUnprivileged(alpha);
     PathBasedCacheDescriptor alphaD2 = addAsUnprivileged(alpha);
-    assertEquals("Expected to get the same descriptor when re-adding"
-        + "an existing PathBasedCacheDirective", alphaD, alphaD2);
+    assertFalse("Expected to get unique descriptors when re-adding an "
+        + "existing PathBasedCacheDirective",
+        alphaD.getEntryId() == alphaD2.getEntryId());
     PathBasedCacheDescriptor betaD = addAsUnprivileged(beta);
 
     try {
@@ -404,11 +405,11 @@ public class TestPathBasedCacheRequests {
 
     RemoteIterator<PathBasedCacheDescriptor> iter;
     iter = dfs.listPathBasedCacheDescriptors(null, null);
-    validateListAll(iter, alphaD, betaD, deltaD, relativeD);
+    validateListAll(iter, alphaD, alphaD2, betaD, deltaD, relativeD);
     iter = dfs.listPathBasedCacheDescriptors("pool3", null);
     Assert.assertFalse(iter.hasNext());
     iter = dfs.listPathBasedCacheDescriptors("pool1", null);
-    validateListAll(iter, alphaD, deltaD, relativeD);
+    validateListAll(iter, alphaD, alphaD2, deltaD, relativeD);
     iter = dfs.listPathBasedCacheDescriptors("pool2", null);
     validateListAll(iter, betaD);
 
@@ -437,6 +438,7 @@ public class TestPathBasedCacheRequests {
     }
 
     dfs.removePathBasedCacheDescriptor(alphaD);
+    dfs.removePathBasedCacheDescriptor(alphaD2);
     dfs.removePathBasedCacheDescriptor(deltaD);
     dfs.removePathBasedCacheDescriptor(relativeD);
     iter = dfs.listPathBasedCacheDescriptors(null, null);
@@ -652,6 +654,7 @@ public class TestPathBasedCacheRequests {
   @Test(timeout=120000)
   public void testAddingPathBasedCacheDirectivesWhenCachingIsDisabled()
       throws Exception {
+    Assume.assumeTrue(canTestDatanodeCaching());
     HdfsConfiguration conf = createCachingConf();
     conf.setBoolean(DFS_NAMENODE_CACHING_ENABLED_KEY, false);
     MiniDFSCluster cluster =

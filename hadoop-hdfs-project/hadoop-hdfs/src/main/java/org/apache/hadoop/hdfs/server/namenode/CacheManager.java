@@ -266,21 +266,6 @@ public final class CacheManager {
     return nextEntryId++;
   }
 
-  private PathBasedCacheEntry findEntry(PathBasedCacheDirective directive) {
-    assert namesystem.hasReadOrWriteLock();
-    List<PathBasedCacheEntry> existing =
-        entriesByPath.get(directive.getPath().toUri().getPath());
-    if (existing == null) {
-      return null;
-    }
-    for (PathBasedCacheEntry entry : existing) {
-      if (entry.getPool().getPoolName().equals(directive.getPool())) {
-        return entry;
-      }
-    }
-    return null;
-  }
-
   public PathBasedCacheDescriptor addDirective(
       PathBasedCacheDirective directive, FSPermissionChecker pc)
       throws IOException {
@@ -302,13 +287,6 @@ public final class CacheManager {
       throw ioe;
     }
     
-    // Check if we already have this entry.
-    PathBasedCacheEntry existing = findEntry(directive);
-    if (existing != null) {
-      LOG.info("addDirective " + directive + ": there is an " +
-          "existing directive " + existing + " in this pool.");
-      return existing.getDescriptor();
-    }
     // Add a new entry with the next available ID.
     PathBasedCacheEntry entry;
     try {
@@ -405,7 +383,7 @@ public final class CacheManager {
         continue;
       }
       if (filterPath != null &&
-          !directive.getPath().equals(filterPath)) {
+          !directive.getPath().toUri().getPath().equals(filterPath)) {
         continue;
       }
       if (pc.checkPermission(curEntry.getPool(), FsAction.READ)) {
