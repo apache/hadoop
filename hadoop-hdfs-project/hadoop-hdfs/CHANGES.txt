@@ -125,8 +125,6 @@ Release 2.3.0 - UNRELEASED
     HDFS-5336. DataNode should not output 'StartupProgress' metrics.
     (Akira Ajisaka via cnauroth)
 
-    HDFS-5365. Fix libhdfs compile error on FreeBSD9. (Radim Kolar via cnauroth)
-
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -172,6 +170,8 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5370. Typo in Error Message: different between range in condition
     and range in error message. (Kousuke Saruta via suresh)
+
+    HDFS-5365. Fix libhdfs compile error on FreeBSD9. (Radim Kolar via cnauroth)
 
 Release 2.2.0 - 2013-10-13
 
