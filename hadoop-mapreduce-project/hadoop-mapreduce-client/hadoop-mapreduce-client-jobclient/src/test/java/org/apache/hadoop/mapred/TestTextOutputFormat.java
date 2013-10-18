@@ -18,15 +18,24 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
-public class TestTextOutputFormat  {
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.io.compress.CompressionInputStream;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.LineReader;
+
+public class TestTextOutputFormat {
   private static JobConf defaultConf = new JobConf();
 
   private static FileSystem localFs = null;
@@ -40,12 +49,13 @@ public class TestTextOutputFormat  {
   // A random task attempt id for testing.
   private static String attempt = "attempt_200707121733_0001_m_000000_0";
 
-  private static Path workDir = 
+  private static Path workDir =
     new Path(new Path(
-                      new Path(System.getProperty("test.build.data", "."), 
-                               "data"), 
+                      new Path(System.getProperty("test.build.data", "."),
+                               "data"),
                       FileOutputCommitter.TEMP_DIR_NAME), "_" + attempt);
- @Test  (timeout=10000)
+
+  @Test
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
     job.set(JobContext.TASK_ATTEMPT_ID, attempt);
@@ -55,7 +65,7 @@ public class TestTextOutputFormat  {
     if (!fs.mkdirs(workDir)) {
       fail("Failed to create output directory");
     }
-    String file = "test.txt";
+    String file = "test_format.txt";
 
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
@@ -92,11 +102,11 @@ public class TestTextOutputFormat  {
     expectedOutput.append(key1).append("\n");
     expectedOutput.append(key2).append('\t').append(val2).append("\n");
     String output = UtilsForTests.slurp(expectedFile);
-    assertEquals(output, expectedOutput.toString());
+    assertEquals(expectedOutput.toString(), output);
 
   }
 
- @Test  (timeout=10000)
+  @Test
   public void testFormatWithCustomSeparator() throws Exception {
     JobConf job = new JobConf();
     String separator = "\u0001";
@@ -108,7 +118,7 @@ public class TestTextOutputFormat  {
     if (!fs.mkdirs(workDir)) {
       fail("Failed to create output directory");
     }
-    String file = "test.txt";
+    String file = "test_custom.txt";
 
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
@@ -145,29 +155,27 @@ public class TestTextOutputFormat  {
     expectedOutput.append(key1).append("\n");
     expectedOutput.append(key2).append(separator).append(val2).append("\n");
     String output = UtilsForTests.slurp(expectedFile);
-    assertEquals(output, expectedOutput.toString());
+    assertEquals(expectedOutput.toString(), output);
 
   }
+
   /**
    * test compressed file
    * @throws IOException
    */
- 
- @Test  (timeout=10000)
- public void testCompress() throws IOException{
+  @Test
+  public void testCompress() throws IOException {
    JobConf job = new JobConf();
-   String separator = "\u0001";
-   job.set("mapreduce.output.textoutputformat.separator", separator);
    job.set(JobContext.TASK_ATTEMPT_ID, attempt);
    job.set(org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.COMPRESS,"true");
-   
+
    FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
    FileOutputFormat.setWorkOutputPath(job, workDir);
    FileSystem fs = workDir.getFileSystem(job);
    if (!fs.mkdirs(workDir)) {
      fail("Failed to create output directory");
    }
-   String file = "test.txt";
+   String file = "test_compress.txt";
 
    // A reporter that does nothing
    Reporter reporter = Reporter.NULL;
@@ -194,16 +202,30 @@ public class TestTextOutputFormat  {
    } finally {
      theRecordWriter.close(reporter);
    }
-   File expectedFile = new File(new Path(workDir, file).toString());
    StringBuffer expectedOutput = new StringBuffer();
-   expectedOutput.append(key1).append(separator).append(val1).append("\n");
+   expectedOutput.append(key1).append("\t").append(val1).append("\n");
    expectedOutput.append(val1).append("\n");
    expectedOutput.append(val2).append("\n");
    expectedOutput.append(key2).append("\n");
    expectedOutput.append(key1).append("\n");
-   expectedOutput.append(key2).append(separator).append(val2).append("\n");
-   String output = UtilsForTests.slurp(expectedFile);
-   assertEquals(output, expectedOutput.toString());
+   expectedOutput.append(key2).append("\t").append(val2).append("\n");
+
+   DefaultCodec codec = new DefaultCodec();
+   codec.setConf(job);
+   Path expectedFile = new Path(workDir, file + codec.getDefaultExtension());
+   final FileInputStream istream = new FileInputStream(expectedFile.toString());
+   CompressionInputStream cistream = codec.createInputStream(istream);
+   LineReader reader = new LineReader(cistream);
+
+   String output = "";
+   Text out = new Text();
+   while (reader.readLine(out) > 0) {
+     output += out;
+     output += "\n";
+   }
+   reader.close();
+
+   assertEquals(expectedOutput.toString(), output);
  }
   public static void main(String[] args) throws Exception {
     new TestTextOutputFormat().testFormat();
