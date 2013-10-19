@@ -105,6 +105,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1295. In UnixLocalWrapperScriptBuilder, using bash -c can cause Text
     file busy errors (Sandy Ryza)
 
+    YARN-1185. Fixed FileSystemRMStateStore to not leave partial files that
+    prevent subsequent ResourceManager recovery. (Omkar Vinit Joshi via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
