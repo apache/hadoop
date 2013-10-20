@@ -136,6 +136,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5360. Improvement of usage message of renameSnapshot and
     deleteSnapshot. (Shinichi Yamashita via wang)
 
+    HDFS-5331. make SnapshotDiff.java to a o.a.h.util.Tool interface implementation. 
+    (Vinayakumar B via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
