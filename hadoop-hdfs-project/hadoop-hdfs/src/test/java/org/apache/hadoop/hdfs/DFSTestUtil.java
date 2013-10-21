@@ -993,6 +993,20 @@ public class DFSTestUtil {
       locatedBlocks = DFSClientAdapter.callGetBlockLocations(
           cluster.getNameNodeRpc(nnIndex), filePath, 0L, bytes.length);
     } while (locatedBlocks.isUnderConstruction());
+    // OP_ADD_CACHE_POOL 35
+    filesystem.addCachePool(new CachePoolInfo("pool1"));
+    // OP_MODIFY_CACHE_POOL 36
+    filesystem.modifyCachePool(new CachePoolInfo("pool1").setWeight(99));
+    // OP_ADD_PATH_BASED_CACHE_DIRECTIVE 33
+    PathBasedCacheDescriptor pbcd = filesystem.addPathBasedCacheDirective(
+        new PathBasedCacheDirective.Builder().
+            setPath(new Path("/path")).
+            setPool("pool1").
+            build());
+    // OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR 34
+    filesystem.removePathBasedCacheDescriptor(pbcd);
+    // OP_REMOVE_CACHE_POOL 37
+    filesystem.removeCachePool("pool1");
   }
 
   public static void abortStream(DFSOutputStream out) throws IOException {

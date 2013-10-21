@@ -2861,6 +2861,10 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /**
+   * {@literal @AtMostOnce} for
+   * {@link ClientProtocol#addPathBasedCacheDirective}
+   */
   static class AddPathBasedCacheDirectiveOp extends FSEditLogOp {
     String path;
     short replication;
@@ -2895,6 +2899,7 @@ public abstract class FSEditLogOp {
       this.path = FSImageSerialization.readString(in);
       this.replication = FSImageSerialization.readShort(in);
       this.pool = FSImageSerialization.readString(in);
+      readRpcIds(in, logVersion);
     }
 
     @Override
@@ -2902,6 +2907,7 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeShort(replication, out);
       FSImageSerialization.writeString(pool, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
@@ -2910,6 +2916,7 @@ public abstract class FSEditLogOp {
       XMLUtils.addSaxString(contentHandler, "REPLICATION",
           Short.toString(replication));
       XMLUtils.addSaxString(contentHandler, "POOL", pool);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
@@ -2917,6 +2924,7 @@ public abstract class FSEditLogOp {
       path = st.getValue("PATH");
       replication = Short.parseShort(st.getValue("REPLICATION"));
       pool = st.getValue("POOL");
+      readRpcIdsFromXml(st);
     }
 
     @Override
@@ -2925,11 +2933,17 @@ public abstract class FSEditLogOp {
       builder.append("AddPathBasedCacheDirective [");
       builder.append("path=" + path + ",");
       builder.append("replication=" + replication + ",");
-      builder.append("pool=" + pool + "]");
+      builder.append("pool=" + pool);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      builder.append("]");
       return builder.toString();
     }
   }
 
+  /**
+   * {@literal @AtMostOnce} for
+   * {@link ClientProtocol#removePathBasedCacheDescriptor}
+   */
   static class RemovePathBasedCacheDescriptorOp extends FSEditLogOp {
     long id;
 
@@ -2950,32 +2964,39 @@ public abstract class FSEditLogOp {
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       this.id = FSImageSerialization.readLong(in);
+      readRpcIds(in, logVersion);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeLong(id, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "ID", Long.toString(id));
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
       this.id = Long.parseLong(st.getValue("ID"));
+      readRpcIdsFromXml(st);
     }
 
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
       builder.append("RemovePathBasedCacheDescriptor [");
-      builder.append("id=" + Long.toString(id) + "]");
+      builder.append("id=" + Long.toString(id));
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      builder.append("]");
       return builder.toString();
     }
   }
 
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#addCachePool} */
   static class AddCachePoolOp extends FSEditLogOp {
     CachePoolInfo info;
 
@@ -2995,21 +3016,25 @@ public abstract class FSEditLogOp {
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       info = CachePoolInfo.readFrom(in);
+      readRpcIds(in, logVersion);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
       info .writeTo(out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
-      info .writeXmlTo(contentHandler);
+      info.writeXmlTo(contentHandler);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
       this.info = CachePoolInfo.readXmlFrom(st);
+      readRpcIdsFromXml(st);
     }
 
     @Override
@@ -3020,11 +3045,14 @@ public abstract class FSEditLogOp {
       builder.append("ownerName=" + info.getOwnerName() + ",");
       builder.append("groupName=" + info.getGroupName() + ",");
       builder.append("mode=" + Short.toString(info.getMode().toShort()) + ",");
-      builder.append("weight=" + Integer.toString(info.getWeight()) + "]");
+      builder.append("weight=" + Integer.toString(info.getWeight()));
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      builder.append("]");
       return builder.toString();
     }
   }
 
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#modifyCachePool} */
   static class ModifyCachePoolOp extends FSEditLogOp {
     CachePoolInfo info;
 
@@ -3044,21 +3072,25 @@ public abstract class FSEditLogOp {
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       info = CachePoolInfo.readFrom(in);
+      readRpcIds(in, logVersion);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
       info.writeTo(out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       cachePoolInfoToXml(contentHandler, info);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
       this.info = cachePoolInfoFromXml(st);
+      readRpcIdsFromXml(st);
     }
 
     @Override
@@ -3082,11 +3114,13 @@ public abstract class FSEditLogOp {
         fields.add("weight=" + info.getWeight());
       }
       builder.append(Joiner.on(",").join(fields));
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
     }
   }
 
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#removeCachePool} */
   static class RemoveCachePoolOp extends FSEditLogOp {
     String poolName;
 
@@ -3106,28 +3140,34 @@ public abstract class FSEditLogOp {
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       poolName = FSImageSerialization.readString(in);
+      readRpcIds(in, logVersion);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeString(poolName, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "POOLNAME", poolName);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
       this.poolName = st.getValue("POOLNAME");
+      readRpcIdsFromXml(st);
     }
 
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
       builder.append("RemoveCachePoolOp [");
-      builder.append("poolName=" + poolName + "]");
+      builder.append("poolName=" + poolName);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      builder.append("]");
       return builder.toString();
     }
   }
