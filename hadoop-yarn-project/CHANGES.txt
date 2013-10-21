@@ -77,6 +77,8 @@ Release 2.2.1 - UNRELEASED
 
     YARN-1258. Allow configuring the Fair Scheduler root queue (Sandy Ryza)
 
+    YARN-1288. Make Fair Scheduler ACLs more user friendly (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
