@@ -527,11 +527,6 @@ public class LeafQueue implements CSQueue {
   }
 
   @Override
-  public synchronized Map<QueueACL, AccessControlList> getQueueAcls() {
-    return new HashMap<QueueACL, AccessControlList>(acls);
-  }
-
-  @Override
   public synchronized QueueInfo getQueueInfo(
       boolean includeChildQueues, boolean recursive) {
     queueInfo.setCurrentCapacity(usedCapacity);
