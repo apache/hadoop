@@ -80,6 +80,7 @@
       <item name="HttpFS Gateway" href="hadoop-hdfs-httpfs/index.html"/>
       <item name="Short Circuit Local Reads" 
           href="hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html"/>
+      <item name="HDFS NFS Gateway" href="hadoop-project-dist/hadoop-hdfs/HdfsNfsGateway.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">

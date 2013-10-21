@@ -178,6 +178,8 @@ Release 2.2.1 - UNRELEASED
     and range in error message. (Kousuke Saruta via suresh)
 
     HDFS-5365. Fix libhdfs compile error on FreeBSD9. (Radim Kolar via cnauroth)
+    
+    HDFS-5347. Add HDFS NFS user guide. (brandonli)
 
 Release 2.2.0 - 2013-10-13
 

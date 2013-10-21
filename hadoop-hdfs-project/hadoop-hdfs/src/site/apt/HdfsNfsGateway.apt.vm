@@ -1,0 +1,258 @@
+
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  Hadoop Distributed File System-${project.version} - HDFS NFS Gateway
+  ---
+  ---
+  ${maven.build.timestamp}
+
+HDFS NFS Gateway
+
+  \[ {{{./index.html}Go Back}} \]
+
+%{toc|section=1|fromDepth=0}
+
+* {Overview}
+
+  The NFS Gateway supports NFSv3 and allows HDFS to be mounted as part of the client's local file system.
+  Currently NFS Gateway supports and enables the following usage patterns:
+
+   * Users can browse the HDFS file system through their local file system
+     on NFSv3 client compatible operating systems.
+
+   * Users can download files from the the HDFS file system on to their
+     local file system.
+
+   * Users can upload files from their local file system directly to the
+     HDFS file system.
+
+   * Users can stream data directly to HDFS through the mount point. File
+     append is supported but random write is not supported. 
+
+  The NFS gateway machine needs the same thing to run an HDFS client like Hadoop JAR files, HADOOP_CONF directory.
+  The NFS gateway can be on the same host as DataNode, NameNode, or any HDFS client. 
+
+
+* {Configuration}
+
+   NFS gateway can work with its default settings in most cases. However, it's
+   strongly recommended for the users to update a few configuration properties based on their use
+   cases. All the related configuration properties can be added or updated in hdfs-site.xml.
+  
+   * If the client mounts the export with access time update allowed, make sure the following 
+    property is not disabled in the configuration file. Only NameNode needs to restart after 
+    this property is changed. On some Unix systems, the user can disable access time update
+    by mounting the export with "noatime".
+
+----
+<property>
+  <name>dfs.access.time.precision</name>
+  <value>3600000</value>
+  <description>The access time for HDFS file is precise upto this value. 
+    The default value is 1 hour. Setting a value of 0 disables
+    access times for HDFS.
+  </description>
+</property>
+----
+
+   * Users are expected to update the file dump directory. NFS client often 
+      reorders writes. Sequential writes can arrive at the NFS gateway at random
+      order. This directory is used to temporarily save out-of-order writes
+      before writing to HDFS. For each file, the out-of-order writes are dumped after 
+      they are accumulated to exceed certain threshold (e.g., 1MB) in memory.
+      One needs to make sure the directory has enough
+      space. For example, if the application uploads 10 files with each having 
+      100MB, it is recommended for this directory to have roughly 1GB space in case if a
+      worst-case write reorder happens to every file. Only NFS gateway needs to restart after 
+      this property is updated.
+
+----
+  <property>    
+    <name>dfs.nfs3.dump.dir</name>    
+    <value>/tmp/.hdfs-nfs</value>
+  </property>
+---- 
+
+  * By default, the export can be mounted by any client. To better control the access,
+    users can update the following property. The value string contains machine name and
+    access privilege, separated by whitespace
+    characters. Machine name format can be single host, wildcards, and IPv4 networks.The
+    access privilege uses rw or ro to specify readwrite or readonly access of the machines to exports. If the access
+    privilege is not provided, the default is read-only. Entries are separated by ";".
+    For example: "192.168.0.0/22 rw ; host*.example.com ; host1.test.org ro;". Only NFS gateway needs to restart after 
+    this property is updated.
+
+----
+<property>
+  <name>dfs.nfs.exports.allowed.hosts</name>
+  <value>* rw</value>
+</property>
+----
+
+  * Customize log settings. To get NFS debug trace, users can edit the log4j.property file 
+   to add the following. Note, debug trace, especially for ONCRPC, can be very verbose.
+
+    To change logging level:
+
+----------------------------------------------- 
+    log4j.logger.org.apache.hadoop.hdfs.nfs=DEBUG
+----------------------------------------------- 
+
+    To get more details of ONCRPC requests:
+
+----------------------------------------------- 
+    log4j.logger.org.apache.hadoop.oncrpc=DEBUG
+----------------------------------------------- 
+
+
+* {Start and stop NFS gateway service}
+
+  Three daemons are required to provide NFS service: rpcbind (or portmap), mountd and nfsd.
+  The NFS gateway process has both nfsd and mountd. It shares the HDFS root "/" as the
+  only export. It is recommended to use the portmap included in NFS gateway package. Even
+  though NFS gateway works with portmap/rpcbind provide by most Linux distributions, the
+  package included portmap is needed on some Linux systems such as REHL6.2 due to an 
+  {{{https://bugzilla.redhat.com/show_bug.cgi?id=731542}rpcbind bug}}. More detailed discussions can
+  be found in {{{https://issues.apache.org/jira/browse/HDFS-4763}HDFS-4763}}.
+
+   [[1]] Stop nfs/rpcbind/portmap services provided by the platform (commands can be different on various Unix platforms):
+      
+-------------------------
+     service nfs stop
+      
+     service rpcbind stop
+-------------------------
+
+
+   [[2]] Start package included portmap (needs root privileges):
+
+-------------------------
+     hadoop portmap
+  
+     OR
+
+     hadoop-daemon.sh start portmap
+-------------------------
+
+   [[3]] Start mountd and nfsd.
+   
+     No root privileges are required for this command. However, ensure that the user starting
+     the Hadoop cluster and the user starting the NFS gateway are same.
+
+-------------------------
+     hadoop nfs3
+
+     OR
+
+     hadoop-daemon.sh start nfs3
+-------------------------
+
+     Note, if the hadoop-daemon.sh script starts the NFS gateway, its log can be found in the hadoop log folder.
+
+
+   [[4]] Stop NFS gateway services.
+
+-------------------------
+      hadoop-daemon.sh stop nfs3
+
+      hadoop-daemon.sh stop portmap
+-------------------------
+
+
+* {Verify validity of NFS related services}
+
+    [[1]] Execute the following command to verify if all the services are up and running:
+
+-------------------------
+       rpcinfo -p $nfs_server_ip
+-------------------------
+
+     You should see output similar to the following:
+
+-------------------------
+       program vers proto   port
+
+       100005    1   tcp   4242  mountd
+
+       100005    2   udp   4242  mountd
+
+       100005    2   tcp   4242  mountd
+
+       100000    2   tcp    111  portmapper
+
+       100000    2   udp    111  portmapper
+
+       100005    3   udp   4242  mountd
+
+       100005    1   udp   4242  mountd
+
+       100003    3   tcp   2049  nfs
+
+       100005    3   tcp   4242  mountd
+-------------------------
+
+    [[2]]  Verify if the HDFS namespace is exported and can be mounted.
+
+-------------------------
+        showmount -e $nfs_server_ip                         
+-------------------------
+
+      You should see output similar to the following:
+     
+-------------------------
+        Exports list on $nfs_server_ip :
+
+        / (everyone)
+-------------------------
+
+
+* {Mount the export “/”}
+
+  Currently NFS v3 only uses TCP as the transportation protocol. 
+  NLM is not supported so mount option "nolock" is needed. It's recommended to use
+  hard mount. This is because, even after the client sends all data to 
+  NFS gateway, it may take NFS gateway some extra time to transfer data to HDFS 
+  when writes were reorderd by NFS client Kernel.
+ 
+  If soft mount has to be used, the user should give it a relatively 
+  long timeout (at least no less than the default timeout on the host) .
+
+  The users can mount the HDFS namespace as shown below:
+
+-------------------------------------------------------------------  
+       mount -t nfs -o vers=3,proto=tcp,nolock $server:/  $mount_point
+-------------------------------------------------------------------
+
+  Then the users can access HDFS as part of the local file system except that, 
+  hard link and random write are not supported yet.
+
+* {User authentication and mapping}
+
+  NFS gateway in this release uses AUTH_UNIX style authentication. When the user on NFS client
+  accesses the mount point, NFS client passes the UID to NFS gateway. 
+  NFS gateway does a lookup to find user name from the UID, and then passes the
+  username to the HDFS along with the HDFS requests.
+  For example, if the NFS client has current user as "admin", when the user accesses
+  the mounted directory, NFS gateway will access HDFS as user "admin". To access HDFS
+  as the user "hdfs", one needs to switch the current user to "hdfs" on the client system
+  when accessing the mounted directory.
+
+  The system administrator must ensure that the user on NFS client host has the same
+  name and UID as that on the NFS gateway host. This is usually not a problem if
+  the same user management system (e.g., LDAP/NIS) is used to create and deploy users on
+  HDFS nodes and NFS client node. In case the user account is created manually in different hosts, one might need to 
+  modify UID (e.g., do "usermod -u 123 myusername") on either NFS client or NFS gateway host
+  in order to make it the same on both sides. More technical details of RPC AUTH_UNIX can be found
+  in {{{http://tools.ietf.org/html/rfc1057}RPC specification}}.
+
