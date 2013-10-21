@@ -47,7 +47,7 @@
   </div>
 </div>
 
-<a id="browse-dir-first" style="cursor:pointer">Browse the filesystem</a>  <a href="/logs/">NameNode Logs</a>
+<a href="explorer.html">Browse the filesystem</a>  <a href="/logs/">NameNode Logs</a>
 
 <hr/>
 
@@ -56,7 +56,7 @@
   <div class="panel-body">
 
     <p>
-      Security is {#nnstat}{#SecurityModeEnabled}on{:else}off{/SecurityModeEnabled}{/nnstat}.</p>
+      Security is {#nnstat}{#SecurityEnabled}on{:else}off{/SecurityEnabled}{/nnstat}.</p>
     <p>{#nn}{#Safemode}{.}{:else}Safemode is off.{/Safemode}{/nn}</p>
 
     <p>
@@ -207,7 +207,7 @@
           </thead>
           {#nn.LiveNodes}
           <tr>
-            <td><a class="browse-dir-links" info-http-addr="{infoAddr}" info-https-addr="{infoSecureAddr}">{name}</a> ({xferaddr})</td>
+            <td>{name} ({xferaddr})</td>
             <td>{lastContact}</td>
             <td>{adminState}</td>
             <td>{capacity|fmt_bytes}</td>
