@@ -81,15 +81,10 @@ public interface FSDatasetMBean {
   /**
    * Returns the total cache used by the datanode (in bytes).
    */
-  public long getCacheUsed();
+  public long getDnCacheUsed();
 
   /**
    * Returns the total cache capacity of the datanode (in bytes).
    */
-  public long getCacheCapacity();
-
-  /**
-   * Returns the total amount of cache remaining (in bytes).
-   */
-  public long getCacheRemaining();
+  public long getDnCacheCapacity();
 }

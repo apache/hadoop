@@ -270,12 +270,12 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   public BlockListAsLongs getBlockReport(String bpid);
 
   /**
-   * Returns the cache report - the full list of cached blocks of a
-   * block pool
-   * @param bpid Block Pool Id
-   * @return - the cache report - the full list of cached blocks
+   * Returns the cache report - the full list of cached block IDs of a
+   * block pool.
+   * @param   bpid Block Pool Id
+   * @return  the cache report - the full list of cached block IDs.
    */
-  public BlockListAsLongs getCacheReport(String bpid);
+  public List<Long> getCacheReport(String bpid);
 
   /** Does the dataset contain the block? */
   public boolean contains(ExtendedBlock block);

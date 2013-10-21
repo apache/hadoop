@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.*;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -106,7 +107,8 @@ public interface DatanodeProtocol {
   @Idempotent
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
                                        StorageReport[] reports,
-                                       CacheReport[] cacheReports,
+                                       long dnCacheCapacity,
+                                       long dnCacheUsed,
                                        int xmitsInProgress,
                                        int xceiverCount,
                                        int failedVolumes) throws IOException;
@@ -139,16 +141,15 @@ public interface DatanodeProtocol {
    * {@link #blockReport(DatanodeRegistration, String, StorageBlockReport[])},
    * which is used to communicated blocks stored on disk.
    *
-   * @param registration
-   * @param poolId block pool ID for the blocks
-   * @param blocks a Long[] array from {@link BlockListAsLongs} that describes 
-   * the list of cached blocks. This is more memory-efficient than a Block[].
-   * @return
+   * @param            The datanode registration.
+   * @param poolId     The block pool ID for the blocks.
+   * @param blockIds   A list of block IDs.
+   * @return           The DatanodeCommand.
    * @throws IOException
    */
   @Idempotent
   public DatanodeCommand cacheReport(DatanodeRegistration registration,
-      String poolId, long[] blocks) throws IOException;
+      String poolId, List<Long> blockIds) throws IOException;
 
   /**
    * blockReceivedAndDeleted() allows the DataNode to tell the NameNode about

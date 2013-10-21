@@ -102,7 +102,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
-import org.apache.hadoop.hdfs.server.protocol.CacheReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -962,13 +961,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // DatanodeProtocol
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration nodeReg,
-      StorageReport[] report, CacheReport[] cacheReport, int xmitsInProgress,
-      int xceiverCount, int failedVolumes) throws IOException {
+      StorageReport[] report, long dnCacheCapacity, long dnCacheUsed,
+      int xmitsInProgress, int xceiverCount,
+      int failedVolumes) throws IOException {
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, report[0].getCapacity(),
         report[0].getDfsUsed(), report[0].getRemaining(),
-        report[0].getBlockPoolUsed(), cacheReport[0].getCapacity(),
-        cacheReport[0].getUsed(), xceiverCount, xmitsInProgress, failedVolumes);
+        report[0].getBlockPoolUsed(), dnCacheCapacity, dnCacheUsed,
+        xceiverCount, xmitsInProgress, failedVolumes);
   }
 
   @Override // DatanodeProtocol
@@ -990,15 +990,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override
   public DatanodeCommand cacheReport(DatanodeRegistration nodeReg,
-      String poolId, long[] blocks) throws IOException {
+      String poolId, List<Long> blockIds) throws IOException {
     verifyRequest(nodeReg);
-    BlockListAsLongs blist = new BlockListAsLongs(blocks);
     if (blockStateChangeLog.isDebugEnabled()) {
       blockStateChangeLog.debug("*BLOCK* NameNode.cacheReport: "
-           + "from " + nodeReg + " " + blist.getNumberOfBlocks()
-           + " blocks");
+           + "from " + nodeReg + " " + blockIds.size() + " blocks");
     }
-    namesystem.getCacheManager().processCacheReport(nodeReg, blist);
+    namesystem.getCacheManager().processCacheReport(nodeReg, blockIds);
     return null;
   }
 

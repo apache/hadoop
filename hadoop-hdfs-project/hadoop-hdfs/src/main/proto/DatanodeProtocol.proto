@@ -188,7 +188,8 @@ message HeartbeatRequestProto {
   optional uint32 xmitsInProgress = 3 [ default = 0 ];
   optional uint32 xceiverCount = 4 [ default = 0 ];
   optional uint32 failedVolumes = 5 [ default = 0 ];
-  repeated CacheReportProto cacheReports = 6;
+  optional uint64 dnCacheCapacity = 6 [ default = 0 ];
+  optional uint64 dnCacheUsed = 7 [default = 0 ];
 }
 
 message StorageReportProto {
@@ -198,11 +199,6 @@ message StorageReportProto {
   optional uint64 dfsUsed = 4 [ default = 0 ];
   optional uint64 remaining = 5 [ default = 0 ];
   optional uint64 blockPoolUsed = 6 [ default = 0 ];
-}
-
-message CacheReportProto {
-  optional uint64 cacheCapacity = 1 [default = 0 ];
-  optional uint64 cacheUsed = 2 [default = 0 ];
 }
 
 /**

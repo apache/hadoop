@@ -85,14 +85,14 @@ public class FsDatasetCache {
    * @return List of cached blocks suitable for translation into a
    * {@link BlockListAsLongs} for a cache report.
    */
-  List<Block> getCachedBlocks(String bpid) {
-    List<Block> blocks = new ArrayList<Block>();
+  List<Long> getCachedBlocks(String bpid) {
+    List<Long> blocks = new ArrayList<Long>();
     // ConcurrentHashMap iteration doesn't see latest updates, which is okay
     Iterator<MappableBlock> it = cachedBlocks.values().iterator();
     while (it.hasNext()) {
       MappableBlock mapBlock = it.next();
       if (mapBlock.getBlockPoolId().equals(bpid)) {
-        blocks.add(mapBlock.getBlock());
+        blocks.add(mapBlock.getBlock().getBlockId());
       }
     }
     return blocks;
@@ -213,15 +213,11 @@ public class FsDatasetCache {
 
   // Stats related methods for FsDatasetMBean
 
-  public long getCacheUsed() {
+  public long getDnCacheUsed() {
     return usedBytes.get();
   }
 
-  public long getCacheCapacity() {
+  public long getDnCacheCapacity() {
     return maxBytes;
-  }
-
-  public long getCacheRemaining() {
-    return maxBytes - usedBytes.get();
   }
 }

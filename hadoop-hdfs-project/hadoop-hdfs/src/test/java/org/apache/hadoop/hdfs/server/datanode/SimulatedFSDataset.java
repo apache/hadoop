@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -466,8 +467,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override // FsDatasetSpi
-  public BlockListAsLongs getCacheReport(String bpid) {
-    return new BlockListAsLongs();
+  public List<Long> getCacheReport(String bpid) {
+    return new LinkedList<Long>();
   }
 
   @Override // FSDatasetMBean
@@ -496,17 +497,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override // FSDatasetMBean
-  public long getCacheUsed() {
+  public long getDnCacheUsed() {
     return 0l;
   }
 
   @Override // FSDatasetMBean
-  public long getCacheCapacity() {
-    return 0l;
-  }
-
-  @Override // FSDatasetMBean
-  public long getCacheRemaining() {
+  public long getDnCacheCapacity() {
     return 0l;
   }
 

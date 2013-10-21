@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -38,7 +39,6 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.protocol.CacheReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -435,7 +435,7 @@ class BPServiceActor implements Runnable {
   
   DatanodeCommand cacheReport() throws IOException {
     // If caching is disabled, do not send a cache report
-    if (dn.getFSDataset().getCacheCapacity() == 0) {
+    if (dn.getFSDataset().getDnCacheCapacity() == 0) {
       return null;
     }
     // send cache report if timer has expired.
@@ -448,16 +448,15 @@ class BPServiceActor implements Runnable {
       lastCacheReport = startTime;
 
       String bpid = bpos.getBlockPoolId();
-      BlockListAsLongs blocks = dn.getFSDataset().getCacheReport(bpid);
+      List<Long> blockIds = dn.getFSDataset().getCacheReport(bpid);
       long createTime = Time.monotonicNow();
 
-      cmd = bpNamenode.cacheReport(bpRegistration, bpid,
-          blocks.getBlockListAsLongs());
+      cmd = bpNamenode.cacheReport(bpRegistration, bpid, blockIds);
       long sendTime = Time.monotonicNow();
       long createCost = createTime - startTime;
       long sendCost = sendTime - createTime;
       dn.getMetrics().addCacheReport(sendCost);
-      LOG.info("CacheReport of " + blocks.getNumberOfBlocks()
+      LOG.info("CacheReport of " + blockIds.size()
           + " blocks took " + createCost + " msec to generate and "
           + sendCost + " msecs for RPC and NN processing");
     }
@@ -475,10 +474,9 @@ class BPServiceActor implements Runnable {
         dn.getFSDataset().getDfsUsed(),
         dn.getFSDataset().getRemaining(),
         dn.getFSDataset().getBlockPoolUsed(bpos.getBlockPoolId())) };
-    CacheReport[] cacheReport = { new CacheReport(
-        dn.getFSDataset().getCacheCapacity(),
-        dn.getFSDataset().getCacheUsed()) };
-    return bpNamenode.sendHeartbeat(bpRegistration, report, cacheReport,
+    return bpNamenode.sendHeartbeat(bpRegistration, report,
+        dn.getFSDataset().getDnCacheCapacity(),
+        dn.getFSDataset().getDnCacheUsed(),
         dn.getXmitsInProgress(),
         dn.getXceiverCount(),
         dn.getFSDataset().getNumFailedVolumes());

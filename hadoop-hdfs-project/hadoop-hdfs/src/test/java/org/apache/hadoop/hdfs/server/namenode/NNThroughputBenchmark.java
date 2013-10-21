@@ -845,9 +845,8 @@ public class NNThroughputBenchmark implements Tool {
       // TODO:FEDERATION currently a single block pool is supported
       StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
           false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
-      CacheReport[] cacheRep = { new CacheReport(0l, 0l) };
-      DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, cacheRep, 0, 0, 0).getCommands();
+      DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration, rep,
+          0L, 0L, 0, 0, 0).getCommands();
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
           if(LOG.isDebugEnabled()) {
@@ -893,9 +892,8 @@ public class NNThroughputBenchmark implements Tool {
       // register datanode
       StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
           false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
-      CacheReport[] cacheRep = { new CacheReport(0l, 0l) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, cacheRep, 0, 0, 0).getCommands();
+          rep, 0L, 0L, 0, 0, 0).getCommands();
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {

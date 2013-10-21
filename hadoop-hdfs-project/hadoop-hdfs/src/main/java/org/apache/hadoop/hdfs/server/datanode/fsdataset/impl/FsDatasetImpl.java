@@ -294,24 +294,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * Returns the total cache used by the datanode (in bytes).
    */
   @Override // FSDatasetMBean
-  public long getCacheUsed() {
-    return cacheManager.getCacheUsed();
+  public long getDnCacheUsed() {
+    return cacheManager.getDnCacheUsed();
   }
 
   /**
    * Returns the total cache capacity of the datanode (in bytes).
    */
   @Override // FSDatasetMBean
-  public long getCacheCapacity() {
-    return cacheManager.getCacheCapacity();
-  }
-
-  /**
-   * Returns the total amount of cache remaining (in bytes).
-   */
-  @Override // FSDatasetMBean
-  public long getCacheRemaining() {
-    return cacheManager.getCacheRemaining();
+  public long getDnCacheCapacity() {
+    return cacheManager.getDnCacheCapacity();
   }
 
   /**
@@ -1031,8 +1023,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override // FsDatasetSpi
-  public BlockListAsLongs getCacheReport(String bpid) {
-    return new BlockListAsLongs(cacheManager.getCachedBlocks(bpid), null);
+  public List<Long> getCacheReport(String bpid) {
+    return cacheManager.getCachedBlocks(bpid);
   }
 
   /**

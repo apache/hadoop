@@ -69,6 +69,9 @@ HDFS-4949 (Unreleased)
     HDFS-5096. Automatically cache new data added to a cached path.
     (Contributed by Colin Patrick McCabe)
 
+    HDFS-5378. In CacheReport, don't send genstamp and length on the wire
+    (Contributed by Colin Patrick McCabe)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

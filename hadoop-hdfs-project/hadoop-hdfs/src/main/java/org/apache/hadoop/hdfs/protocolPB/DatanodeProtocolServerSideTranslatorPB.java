@@ -27,7 +27,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReceive
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReceivedAndDeletedResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CacheReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CacheReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CacheReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto;
@@ -48,7 +47,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto;
-import org.apache.hadoop.hdfs.server.protocol.CacheReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -113,15 +111,9 @@ public class DatanodeProtocolServerSideTranslatorPB implements
             p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
             p.getBlockPoolUsed());
       }
-      List<CacheReportProto> cacheList = request.getCacheReportsList();
-      CacheReport[] cacheReport = new CacheReport[list.size()];
-      i = 0;
-      for (CacheReportProto p : cacheList) {
-        cacheReport[i++] = new CacheReport(p.getCacheCapacity(),
-            p.getCacheUsed());
-      }
       response = impl.sendHeartbeat(PBHelper.convert(request.getRegistration()),
-          report, cacheReport, request.getXmitsInProgress(),
+          report, request.getDnCacheCapacity(), request.getDnCacheUsed(),
+          request.getXmitsInProgress(),
           request.getXceiverCount(), request.getFailedVolumes());
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -179,7 +171,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
       cmd = impl.cacheReport(
           PBHelper.convert(request.getRegistration()),
           request.getBlockPoolId(),
-          Longs.toArray(request.getBlocksList()));
+          request.getBlocksList());
     } catch (IOException e) {
       throw new ServiceException(e);
     }

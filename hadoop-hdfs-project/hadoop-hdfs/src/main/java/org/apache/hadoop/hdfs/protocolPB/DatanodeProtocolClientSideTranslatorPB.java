@@ -21,8 +21,8 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -51,7 +51,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlock
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.CacheReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -156,8 +155,9 @@ public class DatanodeProtocolClientSideTranslatorPB implements
 
   @Override
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
-      StorageReport[] reports, CacheReport[] cacheReports, int xmitsInProgress,
-      int xceiverCount, int failedVolumes) throws IOException {
+      StorageReport[] reports, long dnCacheCapacity, long dnCacheUsed,
+          int xmitsInProgress, int xceiverCount, int failedVolumes)
+              throws IOException {
     HeartbeatRequestProto.Builder builder = HeartbeatRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration))
         .setXmitsInProgress(xmitsInProgress).setXceiverCount(xceiverCount)
@@ -165,10 +165,12 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     for (StorageReport r : reports) {
       builder.addReports(PBHelper.convert(r));
     }
-    for (CacheReport r : cacheReports) {
-      builder.addCacheReports(PBHelper.convert(r));
+    if (dnCacheCapacity != 0) {
+      builder.setDnCacheCapacity(dnCacheCapacity);
     }
-    
+    if (dnCacheUsed != 0) {
+      builder.setDnCacheUsed(dnCacheUsed);
+    }
     HeartbeatResponseProto resp;
     try {
       resp = rpcProxy.sendHeartbeat(NULL_CONTROLLER, builder.build());
@@ -211,13 +213,13 @@ public class DatanodeProtocolClientSideTranslatorPB implements
 
   @Override
   public DatanodeCommand cacheReport(DatanodeRegistration registration,
-      String poolId, long[] blocks) throws IOException {
+      String poolId, List<Long> blockIds) throws IOException {
     CacheReportRequestProto.Builder builder =
         CacheReportRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration))
         .setBlockPoolId(poolId);
-    for (int i=0; i<blocks.length; i++) {
-      builder.addBlocks(blocks[i]);
+    for (Long blockId : blockIds) {
+      builder.addBlocks(blockId);
     }
     
     CacheReportResponseProto resp;

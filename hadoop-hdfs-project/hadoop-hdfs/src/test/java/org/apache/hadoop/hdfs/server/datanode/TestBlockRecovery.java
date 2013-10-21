@@ -67,7 +67,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode.BlockRecord;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
-import org.apache.hadoop.hdfs.server.protocol.CacheReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -155,7 +154,8 @@ public class TestBlockRecovery {
     when(namenode.sendHeartbeat(
             Mockito.any(DatanodeRegistration.class),
             Mockito.any(StorageReport[].class),
-            Mockito.any(CacheReport[].class),
+            Mockito.anyLong(),
+            Mockito.anyLong(),
             Mockito.anyInt(),
             Mockito.anyInt(),
             Mockito.anyInt()))

@@ -538,11 +538,11 @@ public final class CacheManager {
   }
 
   public final void processCacheReport(final DatanodeID datanodeID,
-      final BlockListAsLongs report) throws IOException {
+      final List<Long> blockIds) throws IOException {
     if (!enabled) {
       LOG.info("Ignoring cache report from " + datanodeID +
           " because " + DFS_NAMENODE_CACHING_ENABLED_KEY + " = false. " +
-          "number of blocks: " + report.getNumberOfBlocks());
+          "number of blocks: " + blockIds.size());
       return;
     }
     namesystem.writeLock();
@@ -555,7 +555,7 @@ public final class CacheManager {
         throw new IOException(
             "processCacheReport from dead or unregistered datanode: " + datanode);
       }
-      processCacheReportImpl(datanode, report);
+      processCacheReportImpl(datanode, blockIds);
     } finally {
       endTime = Time.monotonicNow();
       namesystem.writeUnlock();
@@ -567,28 +567,28 @@ public final class CacheManager {
       metrics.addCacheBlockReport((int) (endTime - startTime));
     }
     LOG.info("Processed cache report from "
-        + datanodeID + ", blocks: " + report.getNumberOfBlocks()
+        + datanodeID + ", blocks: " + blockIds.size()
         + ", processing time: " + (endTime - startTime) + " msecs");
   }
 
   private void processCacheReportImpl(final DatanodeDescriptor datanode,
-      final BlockListAsLongs report) {
+      final List<Long> blockIds) {
     CachedBlocksList cached = datanode.getCached();
     cached.clear();
-    BlockReportIterator itBR = report.getBlockReportIterator();
-    while (itBR.hasNext()) {
-      Block block = itBR.next();
-      ReplicaState iState = itBR.getCurrentReplicaState();
-      if (iState != ReplicaState.FINALIZED) {
-        LOG.error("Cached block report contained unfinalized block " + block);
-        continue;
-      }
+    for (Iterator<Long> iter = blockIds.iterator(); iter.hasNext(); ) {
+      Block block = new Block(iter.next());
       BlockInfo blockInfo = blockManager.getStoredBlock(block);
       if (blockInfo.getGenerationStamp() < block.getGenerationStamp()) {
         // The NameNode will eventually remove or update the out-of-date block.
         // Until then, we pretend that it isn't cached.
         LOG.warn("Genstamp in cache report disagrees with our genstamp for " +
           block + ": expected genstamp " + blockInfo.getGenerationStamp());
+        continue;
+      }
+      if (!blockInfo.isComplete()) {
+        LOG.warn("Ignoring block id " + block.getBlockId() + ", because " +
+            "it is in not complete yet.  It is in state " + 
+            blockInfo.getBlockUCState());
         continue;
       }
       Collection<DatanodeDescriptor> corruptReplicas =

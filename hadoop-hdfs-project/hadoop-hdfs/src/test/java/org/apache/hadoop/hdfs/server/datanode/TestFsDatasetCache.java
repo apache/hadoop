@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.doReturn;
 
@@ -43,7 +44,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
-import org.apache.hadoop.hdfs.server.protocol.CacheReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -109,8 +109,7 @@ public class TestFsDatasetCache {
         fsImage.getLastAppliedOrWrittenTxId()));
     doReturn(response).when(spyNN).sendHeartbeat(
         (DatanodeRegistration) any(),
-        (StorageReport[]) any(),
-        (CacheReport[]) any(),
+        (StorageReport[]) any(), anyLong(), anyLong(),
         anyInt(), anyInt(), anyInt());
   }
 
@@ -166,15 +165,11 @@ public class TestFsDatasetCache {
    * Blocks until cache usage hits the expected new value.
    */
   private long verifyExpectedCacheUsage(final long expected) throws Exception {
-    long cacheUsed = fsd.getCacheUsed();
+    long cacheUsed = fsd.getDnCacheUsed();
     while (cacheUsed != expected) {
-      cacheUsed = fsd.getCacheUsed();
+      cacheUsed = fsd.getDnCacheUsed();
       Thread.sleep(100);
     }
-    long cacheCapacity = fsd.getCacheCapacity();
-    long cacheRemaining = fsd.getCacheRemaining();
-    assertEquals("Sum of used and remaining cache does not equal total",
-        cacheCapacity, cacheUsed+cacheRemaining);
     assertEquals("Unexpected amount of cache used", expected, cacheUsed);
     return cacheUsed;
   }
@@ -195,8 +190,8 @@ public class TestFsDatasetCache {
     final long[] blockSizes = getBlockSizes(locs);
 
     // Check initial state
-    final long cacheCapacity = fsd.getCacheCapacity();
-    long cacheUsed = fsd.getCacheUsed();
+    final long cacheCapacity = fsd.getDnCacheCapacity();
+    long cacheUsed = fsd.getDnCacheUsed();
     long current = 0;
     assertEquals("Unexpected cache capacity", CACHE_CAPACITY, cacheCapacity);
     assertEquals("Unexpected amount of cache used", current, cacheUsed);
@@ -257,7 +252,7 @@ public class TestFsDatasetCache {
 
     // Uncache the cached part of the nth file
     setHeartbeatResponse(uncacheBlocks(fileLocs[numFiles-1]));
-    while (fsd.getCacheUsed() != oldCurrent) {
+    while (fsd.getDnCacheUsed() != oldCurrent) {
       Thread.sleep(100);
     }
 
