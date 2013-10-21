@@ -19,19 +19,6 @@
   "use strict";
 
   var data = {};
-  function generate_browse_dn_link(info_http_addr, info_https_addr) {
-    var is_https = window.location.protocol === 'https:';
-    var authority = is_https ? info_https_addr : info_http_addr;
-
-    var nn_info_port = window.location.port;
-    if (nn_info_port === "") {
-      nn_info_port = is_https ? 443 : 80;
-    }
-
-    var l = '//' + authority + '/browseDirectory.jsp?dir=%2F&namenodeInfoPort=' +
-      nn_info_port + '&nnaddr=' + data.nnstat.HostAndPort;
-    return l;
-  }
 
   function render() {
     var helpers = {
@@ -56,24 +43,7 @@
 
     load_templates(dust, TEMPLATES, function() {
       dust.render('dfshealth', base.push(data), function(err, out) {
-
-        $('#panel').append(out);
-
-        $('#browse-dir-first').click(function () {
-          var len = data.nn.LiveNodes.length;
-          if (len < 1) {
-            show_err_msg('Cannot browse the DFS since there are no live nodes available.');
-            return false;
-          }
-
-          var dn = data.nn.LiveNodes[Math.floor(Math.random() * len)];
-          window.location.href = generate_browse_dn_link(dn.infoAddr, dn.infoSecureAddr);
-        });
-
-        $('.browse-dir-links').click(function () {
-          var http_addr = $(this).attr('info-http-addr'), https_addr = $(this).attr('info-https-addr');
-          window.location.href = generate_browse_dn_link(http_addr, https_addr);
-        });
+        $('#panel').html(out);
       });
     }, function () {
       show_err_msg('Failed to load the page.');

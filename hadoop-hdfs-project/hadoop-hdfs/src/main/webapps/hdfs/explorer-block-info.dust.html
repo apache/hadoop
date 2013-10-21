@@ -1,0 +1,13 @@
+{#block}
+<p>Block ID: {blockId}</p>
+<p>Block Pool ID: {blockPoolId}</p>
+<p>Generation Stamp: {generationStamp}</p>
+<p>Size: {numBytes}</p>
+{/block}
+<p>Availability:
+<ul>
+{#locations}
+<li>{hostName}</li>
+{/locations}
+</ul>
+</p>
