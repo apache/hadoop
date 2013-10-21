@@ -83,7 +83,6 @@ import org.apache.log4j.RollingFileAppender;
 import org.junit.Test;
 
 import com.google.common.collect.Sets;
-import org.mockito.Mockito;
 import static org.mockito.Mockito.*;
 
 /**
@@ -883,6 +882,80 @@ public class TestFsck {
       assertEquals(res.missingReplicas, 
           (NUM_BLOCKS*REPL_FACTOR) - (NUM_BLOCKS*NUM_REPLICAS));
       assertEquals(res.numExpectedReplicas, NUM_BLOCKS*REPL_FACTOR);
+    } finally {
+      if(dfs != null) {
+        dfs.close();
+      }
+      if(cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
+  /**
+   * Tests that the # of misreplaced replicas is correct
+   * @throws IOException
+   */
+  @Test
+  public void testFsckMisPlacedReplicas() throws IOException {
+    // Desired replication factor
+    final short REPL_FACTOR = 2;
+    // Number of replicas to actually start
+    short NUM_DN = 2;
+    // Number of blocks to write
+    final short NUM_BLOCKS = 3;
+    // Set a small-ish blocksize
+    final long blockSize = 512;
+    
+    String [] racks = {"/rack1", "/rack1"};
+    String [] hosts = {"host1", "host2"};
+    
+    Configuration conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    
+    MiniDFSCluster cluster = null;
+    DistributedFileSystem dfs = null;
+    
+    try {
+      // Startup a minicluster
+      cluster = 
+          new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DN).hosts(hosts)
+          .racks(racks).build();
+      assertNotNull("Failed Cluster Creation", cluster);
+      cluster.waitClusterUp();
+      dfs = (DistributedFileSystem) cluster.getFileSystem();
+      assertNotNull("Failed to get FileSystem", dfs);
+      
+      // Create a file that will be intentionally under-replicated
+      final String pathString = new String("/testfile");
+      final Path path = new Path(pathString);
+      long fileLen = blockSize * NUM_BLOCKS;
+      DFSTestUtil.createFile(dfs, path, fileLen, REPL_FACTOR, 1);
+      
+      // Create an under-replicated file
+      NameNode namenode = cluster.getNameNode();
+      NetworkTopology nettop = cluster.getNamesystem().getBlockManager()
+          .getDatanodeManager().getNetworkTopology();
+      // Add a new node on different rack, so previous blocks' replicas 
+      // are considered to be misplaced
+      nettop.add(DFSTestUtil.getDatanodeDescriptor("/rack2", "/host3"));
+      NUM_DN++;
+      
+      Map<String,String[]> pmap = new HashMap<String, String[]>();
+      Writer result = new StringWriter();
+      PrintWriter out = new PrintWriter(result, true);
+      InetAddress remoteAddress = InetAddress.getLocalHost();
+      NamenodeFsck fsck = new NamenodeFsck(conf, namenode, nettop, pmap, out, 
+          NUM_DN, (short)REPL_FACTOR, remoteAddress);
+      
+      // Run the fsck and check the Result
+      final HdfsFileStatus file = 
+          namenode.getRpcServer().getFileInfo(pathString);
+      assertNotNull(file);
+      Result res = new Result(conf);
+      fsck.check(pathString, file, res);
+      // check misReplicatedBlock number.
+      assertEquals(res.numMisReplicatedBlocks, NUM_BLOCKS);
     } finally {
       if(dfs != null) {
         dfs.close();
