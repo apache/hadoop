@@ -43,8 +43,6 @@ Release 2.3.0 - UNRELEASED
 
     YARN-976. Document the meaning of a virtual core. (Sandy Ryza)
 
-    YARN-1258. Allow configuring the Fair Scheduler root queue (Sandy Ryza)
-
     YARN-1182. MiniYARNCluster creates and inits the RM/NM only on start()
     (Karthik Kambatla via Sandy Ryza)
 
@@ -76,6 +74,8 @@ Release 2.2.1 - UNRELEASED
 
     YARN-305. Fair scheduler logs too many "Node offered to app" messages.
     (Lohit Vijayarenu via Sandy Ryza)
+
+    YARN-1258. Allow configuring the Fair Scheduler root queue (Sandy Ryza)
 
   OPTIMIZATIONS
 
