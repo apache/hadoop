@@ -363,6 +363,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9078. enhance unit-test coverage of class
     org.apache.hadoop.fs.FileContext (Ivan A. Veselovsky via jeagles)
 
+    HDFS-5276. FileSystem.Statistics should use thread-local counters to avoid
+    multi-threaded performance issues on read/write.  (Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)

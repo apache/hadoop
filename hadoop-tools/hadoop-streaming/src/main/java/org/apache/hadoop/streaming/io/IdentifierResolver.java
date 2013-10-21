@@ -19,6 +19,7 @@
 package org.apache.hadoop.streaming.io;
 
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.typedbytes.TypedBytesWritable;
 
@@ -34,6 +35,7 @@ public class IdentifierResolver {
   public static final String TEXT_ID = "text";
   public static final String RAW_BYTES_ID = "rawbytes";
   public static final String TYPED_BYTES_ID = "typedbytes";
+  public static final String KEY_ONLY_TEXT_ID = "keyonlytext";
   
   private Class<? extends InputWriter> inputWriterClass = null;
   private Class<? extends OutputReader> outputReaderClass = null;
@@ -55,6 +57,11 @@ public class IdentifierResolver {
       setOutputReaderClass(TypedBytesOutputReader.class);
       setOutputKeyClass(TypedBytesWritable.class);
       setOutputValueClass(TypedBytesWritable.class);
+    } else if (identifier.equalsIgnoreCase(KEY_ONLY_TEXT_ID)) {
+      setInputWriterClass(KeyOnlyTextInputWriter.class);
+      setOutputReaderClass(KeyOnlyTextOutputReader.class);
+      setOutputKeyClass(Text.class);
+      setOutputValueClass(NullWritable.class);
     } else { // assume TEXT_ID
       setInputWriterClass(TextInputWriter.class);
       setOutputReaderClass(TextOutputReader.class);

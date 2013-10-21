@@ -39,6 +39,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -75,9 +76,9 @@ import org.apache.zookeeper.ZooKeeper;
 
 import org.junit.Test;
 
-public class TestRMStateStore extends ClientBaseWithFixes{
+public class RMStateStoreTestBase extends ClientBaseWithFixes{
 
-  public static final Log LOG = LogFactory.getLog(TestRMStateStore.class);
+  public static final Log LOG = LogFactory.getLog(RMStateStoreTestBase.class);
 
   static class TestDispatcher implements
       Dispatcher, EventHandler<RMAppAttemptStoredEvent> {
@@ -114,104 +115,6 @@ public class TestRMStateStore extends ClientBaseWithFixes{
   interface RMStateStoreHelper {
     RMStateStore getRMStateStore() throws Exception;
     boolean isFinalStateValid() throws Exception;
-  }
-
-  @Test
-  public void testZKRMStateStoreRealZK() throws Exception {
-    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
-    testRMAppStateStore(zkTester);
-    testRMDTSecretManagerStateStore(zkTester);
-  }
-
-  @Test
-  public void testFSRMStateStore() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    try {
-      TestFSRMStateStoreTester fsTester = new TestFSRMStateStoreTester(cluster);
-      testRMAppStateStore(fsTester);
-      testRMDTSecretManagerStateStore(fsTester);
-    } finally {
-      cluster.shutdown();
-    }
-  }
-
-  class TestZKRMStateStoreTester implements RMStateStoreHelper {
-    ZooKeeper client;
-    ZKRMStateStore store;
-
-    class TestZKRMStateStore extends ZKRMStateStore {
-      public TestZKRMStateStore(Configuration conf, String workingZnode)
-          throws Exception {
-        init(conf);
-        start();
-        assertTrue(znodeWorkingPath.equals(workingZnode));
-      }
-
-      @Override
-      public ZooKeeper getNewZooKeeper() throws IOException {
-        return client;
-      }
-    }
-
-    public RMStateStore getRMStateStore() throws Exception {
-      String workingZnode = "/Test";
-      YarnConfiguration conf = new YarnConfiguration();
-      conf.set(YarnConfiguration.ZK_RM_STATE_STORE_ADDRESS, hostPort);
-      conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
-      this.client = createClient();
-      this.store = new TestZKRMStateStore(conf, workingZnode);
-      return this.store;
-    }
-
-    @Override
-    public boolean isFinalStateValid() throws Exception {
-      List<String> nodes = client.getChildren(store.znodeWorkingPath, false);
-      return nodes.size() == 1;
-    }
-  }
-
-  class TestFSRMStateStoreTester implements RMStateStoreHelper {
-    Path workingDirPathURI;
-    FileSystemRMStateStore store;
-    MiniDFSCluster cluster;
-
-    class TestFileSystemRMStore extends FileSystemRMStateStore {
-      TestFileSystemRMStore(Configuration conf) throws Exception {
-        init(conf);
-        Assert.assertNull(fs);
-        assertTrue(workingDirPathURI.equals(fsWorkingPath));
-        start();
-        Assert.assertNotNull(fs);
-      }
-    }
-
-    public TestFSRMStateStoreTester(MiniDFSCluster cluster) throws Exception {
-      Path workingDirPath = new Path("/Test");
-      this.cluster = cluster;
-      FileSystem fs = cluster.getFileSystem();
-      fs.mkdirs(workingDirPath);
-      Path clusterURI = new Path(cluster.getURI());
-      workingDirPathURI = new Path(clusterURI, workingDirPath);
-      fs.close();
-    }
-
-    @Override
-    public RMStateStore getRMStateStore() throws Exception {
-      YarnConfiguration conf = new YarnConfiguration();
-      conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI,
-          workingDirPathURI.toString());
-      this.store = new TestFileSystemRMStore(conf);
-      return store;
-    }
-
-    @Override
-    public boolean isFinalStateValid() throws Exception {
-      FileSystem fs = cluster.getFileSystem();
-      FileStatus[] files = fs.listStatus(workingDirPathURI);
-      return files.length == 1;
-    }
   }
 
   void waitNotify(TestDispatcher dispatcher) {
