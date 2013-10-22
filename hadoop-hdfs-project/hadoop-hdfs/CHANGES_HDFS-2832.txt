@@ -36,6 +36,3 @@ IMPROVEMENTS:
 
     HDFS-4988. Datanode must support all the volumes as individual storages.
     (Arpit Agarwal)
-
-    HDFS-4885. Improve the verifyBlockPlacement() API in BlockPlacementPolicy.
-    (Junping Du via szetszwo)

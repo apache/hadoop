@@ -100,17 +100,18 @@ public abstract class BlockPlacementPolicy {
   }
 
   /**
-   * Verify if the block's placement meets requirement of placement policy,
-   * i.e. replicas are placed on no less than minRacks racks in the system.
+   * Verify that the block is replicated on at least minRacks different racks
+   * if there is more than minRacks rack in the system.
    * 
    * @param srcPath the full pathname of the file to be verified
    * @param lBlk block with locations
-   * @param numOfReplicas replica number of file to be verified
-   * @return the result of verification
+   * @param minRacks number of racks the block should be replicated to
+   * @return the difference between the required and the actual number of racks
+   * the block is replicated to.
    */
-  abstract public BlockPlacementStatus verifyBlockPlacement(String srcPath,
-      LocatedBlock lBlk,
-      int numOfReplicas);
+  abstract public int verifyBlockPlacement(String srcPath,
+                                           LocatedBlock lBlk,
+                                           int minRacks);
   /**
    * Decide whether deleting the specified replica of the block still makes 
    * the block conform to the configured block placement policy.
