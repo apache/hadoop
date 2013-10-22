@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
@@ -107,6 +108,26 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public List<FsVolumeImpl> getVolumes() {
     return volumes.volumes;
+  }
+
+  @Override // FsDatasetSpi
+  public StorageReport[] getStorageReports(String bpid)
+      throws IOException {
+    StorageReport[] reports;
+    synchronized (statsLock) {
+      reports = new StorageReport[volumes.volumes.size()];
+      int i = 0;
+      for (FsVolumeImpl volume : volumes.volumes) {
+        reports[i++] = new StorageReport(volume.getStorageID(),
+                                         false,
+                                         volume.getCapacity(),
+                                         volume.getDfsUsed(),
+                                         volume.getAvailable(),
+                                         volume.getBlockPoolUsed(bpid));
+      }
+    }
+
+    return reports;
   }
 
   @Override

@@ -36,3 +36,6 @@ IMPROVEMENTS:
 
     HDFS-4988. Datanode must support all the volumes as individual storages.
     (Arpit Agarwal)
+
+    HDFS-5377. Heartbeats from Datandode should include one storage report
+    per storage directory (Arpit Agarwal)

@@ -449,17 +449,15 @@ class BPServiceActor implements Runnable {
   
   
   HeartbeatResponse sendHeartBeat() throws IOException {
+    StorageReport[] reports =
+        dn.getFSDataset().getStorageReports(bpos.getBlockPoolId());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending heartbeat from service actor: " + this);
+      LOG.debug("Sending heartbeat with " + reports.length +
+                " storage reports from service actor: " + this);
     }
-    // reports number of failed volumes
-    StorageReport[] report = { new StorageReport(bpRegistration.getDatanodeUuid(),
-        false,
-        dn.getFSDataset().getCapacity(),
-        dn.getFSDataset().getDfsUsed(),
-        dn.getFSDataset().getRemaining(),
-        dn.getFSDataset().getBlockPoolUsed(bpos.getBlockPoolId())) };
-    return bpNamenode.sendHeartbeat(bpRegistration, report,
+
+    return bpNamenode.sendHeartbeat(bpRegistration,
+        reports,
         dn.getXmitsInProgress(),
         dn.getXceiverCount(),
         dn.getFSDataset().getNumFailedVolumes());
