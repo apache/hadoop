@@ -307,7 +307,6 @@ public class TestJobImpl {
           TaskEventType.T_ATTEMPT_FAILED));
       }
     }
-    assertJobState(job, JobStateInternal.FAIL_ABORT);
 
     dispatcher.await();
     //Verify abortJob is called once and the job failed

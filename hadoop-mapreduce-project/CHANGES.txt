@@ -74,6 +74,9 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5587. TestTextOutputFormat fails on JDK7 (jeagles)
 
+    MAPREDUCE-5561. org.apache.hadoop.mapreduce.v2.app.job.impl.TestJobImpl
+    testcase failing on trunk (Karthik Kambatla via jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
