@@ -110,6 +110,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1185. Fixed FileSystemRMStateStore to not leave partial files that
     prevent subsequent ResourceManager recovery. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-1331. yarn.cmd exits with NoClassDefFoundError trying to run rmadmin or
+    logs. (cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
