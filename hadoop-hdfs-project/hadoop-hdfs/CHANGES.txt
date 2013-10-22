@@ -375,6 +375,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5336. DataNode should not output 'StartupProgress' metrics.
     (Akira Ajisaka via cnauroth)
 
+    HDFS-5400.  DFS_CLIENT_MMAP_CACHE_THREAD_RUNS_PER_TIMEOUT constant is set
+    to the wrong value.  (Colin Patrick McCabe)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
