@@ -118,6 +118,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1331. yarn.cmd exits with NoClassDefFoundError trying to run rmadmin or
     logs. (cnauroth)
 
+    YARN-1330. Fair Scheduler: defaultQueueSchedulingPolicy does not take effect
+    (Sandy Ryza)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
