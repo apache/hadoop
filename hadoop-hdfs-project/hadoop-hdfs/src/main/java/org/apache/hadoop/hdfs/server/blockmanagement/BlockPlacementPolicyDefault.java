@@ -655,22 +655,22 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   }
 
   @Override
-  public int verifyBlockPlacement(String srcPath,
-                                  LocatedBlock lBlk,
-                                  int minRacks) {
+  public BlockPlacementStatus verifyBlockPlacement(String srcPath,
+      LocatedBlock lBlk, int numberOfReplicas) {
     DatanodeInfo[] locs = lBlk.getLocations();
     if (locs == null)
       locs = DatanodeDescriptor.EMPTY_ARRAY;
     int numRacks = clusterMap.getNumOfRacks();
     if(numRacks <= 1) // only one rack
-      return 0;
-    minRacks = Math.min(minRacks, numRacks);
+      return new BlockPlacementStatusDefault(
+          Math.min(numRacks, numberOfReplicas), numRacks);
+    int minRacks = Math.min(2, numberOfReplicas);
     // 1. Check that all locations are different.
     // 2. Count locations on different racks.
     Set<String> racks = new TreeSet<String>();
     for (DatanodeInfo dn : locs)
       racks.add(dn.getNetworkLocation());
-    return minRacks - racks.size();
+    return new BlockPlacementStatusDefault(racks.size(), minRacks);
   }
 
   @Override

@@ -91,6 +91,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4511. Cover package org.apache.hadoop.hdfs.tools with unit test
     (Andrey Klochkov via jeagles)
 
+    HDFS-4885. Improve the verifyBlockPlacement() API in BlockPlacementPolicy.
+    (Junping Du via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
