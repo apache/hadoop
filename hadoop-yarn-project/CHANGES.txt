@@ -61,8 +61,6 @@ Release 2.3.0 - UNRELEASED
 
     YARN-976. Document the meaning of a virtual core. (Sandy Ryza)
 
-    YARN-1258. Allow configuring the Fair Scheduler root queue (Sandy Ryza)
-
     YARN-1182. MiniYARNCluster creates and inits the RM/NM only on start()
     (Karthik Kambatla via Sandy Ryza)
 
@@ -95,6 +93,12 @@ Release 2.2.1 - UNRELEASED
     YARN-305. Fair scheduler logs too many "Node offered to app" messages.
     (Lohit Vijayarenu via Sandy Ryza)
 
+    YARN-1258. Allow configuring the Fair Scheduler root queue (Sandy Ryza)
+
+    YARN-1288. Make Fair Scheduler ACLs more user friendly (Sandy Ryza)
+
+    YARN-1315. TestQueueACLs should also test FairScheduler (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -122,6 +126,9 @@ Release 2.2.1 - UNRELEASED
 
     YARN-1185. Fixed FileSystemRMStateStore to not leave partial files that
     prevent subsequent ResourceManager recovery. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-1331. yarn.cmd exits with NoClassDefFoundError trying to run rmadmin or
+    logs. (cnauroth)
 
 Release 2.2.0 - 2013-10-13
 

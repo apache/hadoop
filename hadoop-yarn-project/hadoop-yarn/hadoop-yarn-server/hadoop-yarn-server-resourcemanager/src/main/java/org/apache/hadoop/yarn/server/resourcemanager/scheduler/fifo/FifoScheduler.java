@@ -156,7 +156,6 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       return queueInfo;
     }
 
-    @Override
     public Map<QueueACL, AccessControlList> getQueueAcls() {
       Map<QueueACL, AccessControlList> acls =
         new HashMap<QueueACL, AccessControlList>();

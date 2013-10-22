@@ -413,8 +413,15 @@ public class DatanodeWebHdfsMethods {
       final long n = length.getValue() != null ?
         Math.min(length.getValue(), in.getVisibleLength() - offset.getValue()) :
         in.getVisibleLength() - offset.getValue();
-      return Response.ok(new OpenEntity(in, n, dfsclient)).type(
-          MediaType.APPLICATION_OCTET_STREAM).build();
+
+      /**
+       * Allow the Web UI to perform an AJAX request to get the data.
+       */
+      return Response.ok(new OpenEntity(in, n, dfsclient))
+          .type(MediaType.APPLICATION_OCTET_STREAM)
+          .header("Access-Control-Allow-Methods", "GET")
+          .header("Access-Control-Allow-Origin", "*")
+          .build();
     }
     case GETFILECHECKSUM:
     {

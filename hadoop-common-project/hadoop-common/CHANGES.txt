@@ -366,6 +366,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5276. FileSystem.Statistics should use thread-local counters to avoid
     multi-threaded performance issues on read/write.  (Colin Patrick McCabe)
 
+    HADOOP-9291. enhance unit-test coverage of package o.a.h.metrics2 (Ivan A.
+    Veselovsky via jeagles)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)

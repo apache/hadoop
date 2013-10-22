@@ -221,10 +221,14 @@ Allocation file format
      for containers, but apps submitted later may run concurrently if there is
      leftover space on the cluster after satisfying the earlier app's requests.
 
-   * aclSubmitApps: a list of users that can submit apps to the queue. A (default)
-     value of "*" means that any users can submit apps. A queue inherits the ACL of
-     its parent, so if a queue2 descends from queue1, and user1 is in queue1's ACL,
-     and user2 is in queue2's ACL, then both users may submit to queue2.
+   * aclSubmitApps: a list of users and/or groups that can submit apps to the
+     queue. Refer to the ACLs section below for more info on the format of this
+     list and how queue ACLs work.
+
+   * aclAdministerApps: a list of users and/or groups that can administer a
+     queue.  Currently the only administrative action is killing an application.
+     Refer to the ACLs section below for more info on the format of this list
+     and how queue ACLs work.
 
    * minSharePreemptionTimeout: number of seconds the queue is under its minimum share
      before it will try to preempt containers to take resources from other queues.
@@ -246,6 +250,24 @@ Allocation file format
 
   An example allocation file is given here:
 
+Queue Access Control Lists (ACLs)
+
+  Queue Access Control Lists (ACLs) allow administrators to control who may
+  take actions on particular queues. They are configured with the aclSubmitApps
+  and aclAdministerApps properties, which can be set per queue. Currently the
+  only supported administrative action is killing an application. Anybody who
+  may administer a queue may also submit applications to it. These properties
+  take values in a format like "user1,user2 group1,group2" or " group1,group2".
+  An action on a queue will be permitted if its user or group is in the ACL of
+  that queue or in the ACL of any of that queue's ancestors. So if queue2
+  is inside queue1, and user1 is in queue1's ACL, and user2 is in queue2's
+  ACL, then both users may submit to queue2.
+  
+  The root queue's ACLs are "*" by default which, because ACLs are passed down,
+  means that everybody may submit to and kill applications from every queue.
+  To start restricting access, change the root queue's ACLs to something other
+  than "*". 
+
 ---
 <?xml version="1.0"?>
 <allocations>
@@ -256,6 +278,7 @@ Allocation file format
     <weight>2.0</weight>
     <schedulingPolicy>fair</schedulingPolicy>
     <queue name="sample_sub_queue">
+      <aclSubmitApps>charlie</aclSubmitApps>
       <minResources>5000 mb,0vcores</minResources>
     </queue>
   </queue>

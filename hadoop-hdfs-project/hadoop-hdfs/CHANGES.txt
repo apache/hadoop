@@ -261,6 +261,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5379. Update links to datanode information in dfshealth.html. (Haohui
     Mai via jing9)
 
+    HDFS-5382. Implement the UI of browsing filesystems in HTML 5 page. (Haohui
+    Mai via jing9)
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)
@@ -329,6 +332,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4511. Cover package org.apache.hadoop.hdfs.tools with unit test
     (Andrey Klochkov via jeagles)
 
+    HDFS-4885. Improve the verifyBlockPlacement() API in BlockPlacementPolicy.
+    (Junping Du via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -368,6 +374,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5336. DataNode should not output 'StartupProgress' metrics.
     (Akira Ajisaka via cnauroth)
+
+    HDFS-5400.  DFS_CLIENT_MMAP_CACHE_THREAD_RUNS_PER_TIMEOUT constant is set
+    to the wrong value.  (Colin Patrick McCabe)
 
 Release 2.2.1 - UNRELEASED
 
@@ -419,6 +428,8 @@ Release 2.2.1 - UNRELEASED
     and range in error message. (Kousuke Saruta via suresh)
 
     HDFS-5365. Fix libhdfs compile error on FreeBSD9. (Radim Kolar via cnauroth)
+    
+    HDFS-5347. Add HDFS NFS user guide. (brandonli)
 
 Release 2.2.0 - 2013-10-13
 

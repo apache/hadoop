@@ -550,6 +550,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/static/dust-full-2.0.0.min.js</exclude>
             <exclude>src/main/webapps/static/dust-helpers-1.1.1.min.js</exclude>
             <exclude>src/main/webapps/hdfs/dfshealth.dust.html</exclude>
+            <exclude>src/main/webapps/hdfs/explorer-block-info.dust.html</exclude>
+            <exclude>src/main/webapps/hdfs/explorer.dust.html</exclude>
           </excludes>
         </configuration>
       </plugin>

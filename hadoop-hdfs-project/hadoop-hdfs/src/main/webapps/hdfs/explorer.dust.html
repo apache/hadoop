@@ -1,0 +1,26 @@
+<table class="table">
+<thead>
+<tr>
+<th>Permission</th>
+<th>Owner</th>
+<th>Group</th>
+<th>Size</th>
+<th>Replication</th>
+<th>Block Size</th>
+<th>Name</th>
+</tr>
+</thead>
+<tbody>
+{#FileStatus}
+<tr>
+<td>{#helper_to_permission/}</td>
+<td>{owner}</td>
+<td>{group}</td>
+<td>{length|fmt_bytes}</td>
+<td>{replication}</td>
+<td>{blockSize|fmt_bytes}</td>
+<td><a style="cursor:pointer" inode-type="{type}" class="explorer-browse-links" inode-path="{pathSuffix}">{pathSuffix}</a></td>
+</tr>
+{/FileStatus}
+</tbody>
+</table>
