@@ -112,7 +112,7 @@ public abstract class AbstractPatternFilter extends MetricsFilter {
       return false;
     }
     // Reject if no match in whitelist only mode
-    if (ipat != null && epat == null) {
+    if (!includeTagPatterns.isEmpty() && excludeTagPatterns.isEmpty()) {
       return false;
     }
     return true;
