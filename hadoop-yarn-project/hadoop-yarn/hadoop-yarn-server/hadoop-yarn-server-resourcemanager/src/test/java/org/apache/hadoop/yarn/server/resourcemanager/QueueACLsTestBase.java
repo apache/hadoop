@@ -42,41 +42,43 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
-public class TestQueueACLs {
+public abstract class QueueACLsTestBase {
 
-  private static final String COMMON_USER = "common_user";
-  private static final String QUEUE_A_USER = "queueA_user";
-  private static final String QUEUE_B_USER = "queueB_user";
-  private static final String ROOT_ADMIN = "root_admin";
-  private static final String QUEUE_A_ADMIN = "queueA_admin";
-  private static final String QUEUE_B_ADMIN = "queueB_admin";
+  protected static final String COMMON_USER = "common_user";
+  protected static final String QUEUE_A_USER = "queueA_user";
+  protected static final String QUEUE_B_USER = "queueB_user";
+  protected static final String ROOT_ADMIN = "root_admin";
+  protected static final String QUEUE_A_ADMIN = "queueA_admin";
+  protected static final String QUEUE_B_ADMIN = "queueB_admin";
 
-  private static final String QUEUEA = "queueA";
-  private static final String QUEUEB = "queueB";
+  protected static final String QUEUEA = "queueA";
+  protected static final String QUEUEB = "queueB";
 
   private static final Log LOG = LogFactory.getLog(TestApplicationACLs.class);
 
-  static MockRM resourceManager;
-  static Configuration conf = createConfiguration();
-  final static YarnRPC rpc = YarnRPC.create(conf);
-  final static InetSocketAddress rmAddress = conf.getSocketAddr(
-    YarnConfiguration.RM_ADDRESS, YarnConfiguration.DEFAULT_RM_ADDRESS,
-    YarnConfiguration.DEFAULT_RM_PORT);
+  MockRM resourceManager;
+  Configuration conf;
+  YarnRPC rpc;
+  InetSocketAddress rmAddress;
 
-  @BeforeClass
-  public static void setup() throws InterruptedException, IOException {
+  @Before
+  public void setup() throws InterruptedException, IOException {
+    conf = createConfiguration();
+    rpc = YarnRPC.create(conf);
+    rmAddress = conf.getSocketAddr(
+      YarnConfiguration.RM_ADDRESS, YarnConfiguration.DEFAULT_RM_ADDRESS,
+      YarnConfiguration.DEFAULT_RM_PORT);
+    
     AccessControlList adminACL = new AccessControlList("");
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, adminACL.getAclString());
 
@@ -109,8 +111,8 @@ public class TestQueueACLs {
     }
   }
 
-  @AfterClass
-  public static void tearDown() {
+  @After
+  public void tearDown() {
     if (resourceManager != null) {
       resourceManager.stop();
     }
@@ -262,45 +264,5 @@ public class TestQueueACLs {
     return userClient;
   }
 
-  private static YarnConfiguration createConfiguration() {
-    CapacitySchedulerConfiguration csConf =
-        new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {
-        QUEUEA, QUEUEB });
-
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + QUEUEA, 50f);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + QUEUEB, 50f);
-
-    Map<QueueACL, AccessControlList> aclsOnQueueA =
-        new HashMap<QueueACL, AccessControlList>();
-    AccessControlList submitACLonQueueA = new AccessControlList(QUEUE_A_USER);
-    submitACLonQueueA.addUser(COMMON_USER);
-    AccessControlList adminACLonQueueA = new AccessControlList(QUEUE_A_ADMIN);
-    aclsOnQueueA.put(QueueACL.SUBMIT_APPLICATIONS, submitACLonQueueA);
-    aclsOnQueueA.put(QueueACL.ADMINISTER_QUEUE, adminACLonQueueA);
-    csConf.setAcls(CapacitySchedulerConfiguration.ROOT + "." + QUEUEA,
-      aclsOnQueueA);
-
-    Map<QueueACL, AccessControlList> aclsOnQueueB =
-        new HashMap<QueueACL, AccessControlList>();
-    AccessControlList submitACLonQueueB = new AccessControlList(QUEUE_B_USER);
-    submitACLonQueueB.addUser(COMMON_USER);
-    AccessControlList adminACLonQueueB = new AccessControlList(QUEUE_B_ADMIN);
-    aclsOnQueueB.put(QueueACL.SUBMIT_APPLICATIONS, submitACLonQueueB);
-    aclsOnQueueB.put(QueueACL.ADMINISTER_QUEUE, adminACLonQueueB);
-    csConf.setAcls(CapacitySchedulerConfiguration.ROOT + "." + QUEUEB,
-      aclsOnQueueB);
-
-    Map<QueueACL, AccessControlList> aclsOnRootQueue =
-        new HashMap<QueueACL, AccessControlList>();
-    AccessControlList submitACLonRoot = new AccessControlList("");
-    AccessControlList adminACLonRoot = new AccessControlList(ROOT_ADMIN);
-    aclsOnRootQueue.put(QueueACL.SUBMIT_APPLICATIONS, submitACLonRoot);
-    aclsOnRootQueue.put(QueueACL.ADMINISTER_QUEUE, adminACLonRoot);
-    csConf.setAcls(CapacitySchedulerConfiguration.ROOT, aclsOnRootQueue);
-
-    YarnConfiguration conf = new YarnConfiguration(csConf);
-    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
-    return conf;
-  }
+  protected abstract Configuration createConfiguration() throws IOException;
 }
