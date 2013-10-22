@@ -146,9 +146,20 @@ public class TestReplicationPolicyWithNodeGroup {
     namenode.stop();
   }
   
+  private static void updateHeartbeatWithUsage(DatanodeDescriptor dn,
+      long capacity, long dfsUsed, long remaining, long blockPoolUsed,
+      int xceiverCount, int volFailures) {
+    dn.getStorageInfos()[0].setUtilization(
+        capacity, dfsUsed, remaining, blockPoolUsed);
+    dn.updateHeartbeat(
+        BlockManagerTestUtil.getStorageReportsForDatanode(dn),
+        xceiverCount, volFailures);
+  }
+
+
   private static void setupDataNodeCapacity() {
     for(int i=0; i<NUM_OF_DATANODES; i++) {
-      dataNodes[i].updateHeartbeat(
+      updateHeartbeatWithUsage(dataNodes[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
     }
@@ -231,7 +242,7 @@ public class TestReplicationPolicyWithNodeGroup {
    */
   @Test
   public void testChooseTarget1() throws Exception {
-    dataNodes[0].updateHeartbeat(
+    updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 
         HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 4, 0); // overloaded
 
@@ -268,7 +279,7 @@ public class TestReplicationPolicyWithNodeGroup {
     // Make sure no more than one replicas are on the same nodegroup 
     verifyNoTwoTargetsOnSameNodeGroup(targets);
 
-    dataNodes[0].updateHeartbeat(
+    updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0); 
   }
@@ -336,7 +347,7 @@ public class TestReplicationPolicyWithNodeGroup {
   @Test
   public void testChooseTarget3() throws Exception {
     // make data node 0 to be not qualified to choose
-    dataNodes[0].updateHeartbeat(
+    updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0); // no space
 
@@ -367,7 +378,7 @@ public class TestReplicationPolicyWithNodeGroup {
     assertTrue(isOnSameRack(targets[1], targets[2]) ||
                isOnSameRack(targets[2], targets[3]));
 
-    dataNodes[0].updateHeartbeat(
+    updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0); 
   }
@@ -385,7 +396,7 @@ public class TestReplicationPolicyWithNodeGroup {
   public void testChooseTarget4() throws Exception {
     // make data node 0-2 to be not qualified to choose: not enough disk space
     for(int i=0; i<3; i++) {
-      dataNodes[i].updateHeartbeat(
+      updateHeartbeatWithUsage(dataNodes[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0);
     }
@@ -613,11 +624,11 @@ public class TestReplicationPolicyWithNodeGroup {
       cluster.add(dataNodesInBoundaryCase[i]);
     }
     for(int i=0; i<NUM_OF_DATANODES_BOUNDARY; i++) {
-        dataNodes[0].updateHeartbeat(
+      updateHeartbeatWithUsage(dataNodes[0],
                 2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
                 (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0);
-        
-      dataNodesInBoundaryCase[i].updateHeartbeat(
+
+      updateHeartbeatWithUsage(dataNodesInBoundaryCase[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
     }
@@ -648,7 +659,7 @@ public class TestReplicationPolicyWithNodeGroup {
   @Test
   public void testRereplicateOnBoundaryTopology() throws Exception {
     for(int i=0; i<NUM_OF_DATANODES_BOUNDARY; i++) {
-      dataNodesInBoundaryCase[i].updateHeartbeat(
+      updateHeartbeatWithUsage(dataNodesInBoundaryCase[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
     }
@@ -686,7 +697,7 @@ public class TestReplicationPolicyWithNodeGroup {
     }
 
     for(int i=0; i<NUM_OF_DATANODES_MORE_TARGETS; i++) {
-      dataNodesInMoreTargetsCase[i].updateHeartbeat(
+      updateHeartbeatWithUsage(dataNodesInMoreTargetsCase[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
     }

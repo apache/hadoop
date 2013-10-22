@@ -960,10 +960,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
       StorageReport[] report, int xmitsInProgress, int xceiverCount,
       int failedVolumes) throws IOException {
     verifyRequest(nodeReg);
-    return namesystem.handleHeartbeat(nodeReg, report[0].getCapacity(),
-        report[0].getDfsUsed(), report[0].getRemaining(),
-        report[0].getBlockPoolUsed(), xceiverCount, xmitsInProgress,
-        failedVolumes);
+    return namesystem.handleHeartbeat(nodeReg, report, xceiverCount,
+        xmitsInProgress, failedVolumes);
   }
 
   @Override // DatanodeProtocol

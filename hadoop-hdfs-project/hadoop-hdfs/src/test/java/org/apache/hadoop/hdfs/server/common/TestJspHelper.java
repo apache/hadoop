@@ -451,10 +451,8 @@ public class TestJspHelper {
         1234, 2345, 3456, 4567);
     DatanodeID dnId2 = new DatanodeID("127.0.0.2", "localhost2", "datanode2",
         1235, 2346, 3457, 4568);
-    DatanodeDescriptor dnDesc1 = new DatanodeDescriptor(dnId1, "rack1", 1024,
-        100, 924, 100, 10, 2);
-    DatanodeDescriptor dnDesc2 = new DatanodeDescriptor(dnId2, "rack2", 2500,
-        200, 1848, 200, 20, 1);
+    DatanodeDescriptor dnDesc1 = new DatanodeDescriptor(dnId1, "rack1", 10, 2);
+    DatanodeDescriptor dnDesc2 = new DatanodeDescriptor(dnId2, "rack2", 20, 1);
     ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     live.add(dnDesc1);
     live.add(dnDesc2);

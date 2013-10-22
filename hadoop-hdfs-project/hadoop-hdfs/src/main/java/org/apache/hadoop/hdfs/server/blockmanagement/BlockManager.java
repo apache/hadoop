@@ -2628,7 +2628,14 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     // Decrement number of blocks scheduled to this storage.
     // for a retry request (of DatanodeProtocol#blockReceivedAndDeleted with 
     // RECEIVED_BLOCK), we currently also decrease the approximate number. 
-    node.getStorageInfo(storageID).decrementBlocksScheduled();
+    DatanodeStorageInfo storageInfo = node.getStorageInfo(storageID);
+    if (storageInfo != null) {
+      storageInfo.decrementBlocksScheduled();
+    } else {
+      throw new IllegalArgumentException(
+          "Unrecognized storageID " + storageID + " in block report " +
+          "from Datanode " + node.toString());
+    }
 
     // get the deletion hint node
     DatanodeDescriptor delHintNode = null;

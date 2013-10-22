@@ -4,7 +4,7 @@ IMPROVEMENTS:
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
     and block locations. (Arpit Agarwal)
-    
+
     HDFS-5115. Make StorageID a UUID. (Arpit Agarwal)
 
     HDFS-5000. DataNode configuration should allow specifying storage type.
@@ -38,4 +38,7 @@ IMPROVEMENTS:
     (Arpit Agarwal)
 
     HDFS-5377. Heartbeats from Datandode should include one storage report
-    per storage directory (Arpit Agarwal)
+    per storage directory. (Arpit Agarwal)
+
+    HDFS-5398. NameNode changes to process storage reports per storage
+    directory. (Arpit Agarwal)

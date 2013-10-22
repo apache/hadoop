@@ -18,16 +18,19 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.util.Daemon;
 import org.junit.Assert;
 
@@ -239,5 +242,19 @@ public class BlockManagerTestUtil {
         dn.updateStorage(storage);
       }
       return dn;
+  }
+
+
+  public static StorageReport[] getStorageReportsForDatanode(
+      DatanodeDescriptor dnd) {
+    ArrayList<StorageReport> reports = new ArrayList<StorageReport>();
+    for (DatanodeStorageInfo storage : dnd.getStorageInfos()) {
+      StorageReport report = new StorageReport(
+          storage.getStorageID(), false, storage.getCapacity(),
+          storage.getDfsUsed(), storage.getRemaining(),
+          storage.getBlockPoolUsed());
+      reports.add(report);
+    }
+    return reports.toArray(StorageReport.EMPTY_ARRAY);
   }
 }

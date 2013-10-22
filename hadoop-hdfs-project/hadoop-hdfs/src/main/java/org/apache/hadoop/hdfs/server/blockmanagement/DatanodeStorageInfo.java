@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -96,6 +97,7 @@ public class DatanodeStorageInfo {
   private long capacity;
   private long dfsUsed;
   private long remaining;
+  private long blockPoolUsed;
 
   private volatile BlockInfo blockList = null;
   private int numBlocks = 0;
@@ -153,7 +155,8 @@ public class DatanodeStorageInfo {
     blockContentsStale = true;
   }
 
-  void receivedHeartbeat(final long lastUpdate) {
+  void receivedHeartbeat(StorageReport report, final long lastUpdate) {
+    updateState(report);
     heartbeatedSinceFailover = true;
     rollBlocksScheduled(lastUpdate);
   }
@@ -165,10 +168,13 @@ public class DatanodeStorageInfo {
     blockReportCount++;
   }
 
-  void setUtilization(long capacity, long dfsUsed, long remaining) {
+  @VisibleForTesting
+  public void setUtilization(long capacity, long dfsUsed,
+                      long remaining, long blockPoolUsed) {
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
     this.remaining = remaining;
+    this.blockPoolUsed = blockPoolUsed;
   }
   
   public void setState(State s) {
@@ -199,6 +205,10 @@ public class DatanodeStorageInfo {
 
   public long getRemaining() {
     return remaining;
+  }
+
+  public long getBlockPoolUsed() {
+    return blockPoolUsed;
   }
 
   public boolean addBlock(BlockInfo b) {
@@ -232,6 +242,7 @@ public class DatanodeStorageInfo {
     capacity = r.getCapacity();
     dfsUsed = r.getDfsUsed();
     remaining = r.getRemaining();
+    blockPoolUsed = r.getBlockPoolUsed();
   }
 
   public DatanodeDescriptor getDatanodeDescriptor() {

@@ -103,7 +103,10 @@ public class TestOverReplicatedBlocks {
           String corruptMachineName = corruptDataNode.getXferAddr();
           for (DatanodeDescriptor datanode : hm.getDatanodes()) {
             if (!corruptMachineName.equals(datanode.getXferAddr())) {
-              datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0, 0);
+              datanode.getStorageInfos()[0].setUtilization(100L, 100L, 0, 100L);
+              datanode.updateHeartbeat(
+                  BlockManagerTestUtil.getStorageReportsForDatanode(datanode),
+                  0, 0);
             }
           }
 

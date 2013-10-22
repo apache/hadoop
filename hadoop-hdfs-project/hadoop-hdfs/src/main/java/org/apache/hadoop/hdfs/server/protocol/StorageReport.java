@@ -27,6 +27,8 @@ public class StorageReport {
   private final long dfsUsed;
   private final long remaining;
   private final long blockPoolUsed;
+
+  public static final StorageReport[] EMPTY_ARRAY = {};
   
   public StorageReport(String sid, boolean failed, long capacity, long dfsUsed,
       long remaining, long bpUsed) {
