@@ -225,6 +225,9 @@ Release 2.2.1 - UNRELEASED
     MAPREDUCE-5518. Fixed typo "can't read paritions file". (Albert Chu
     via devaraj)
 
+    MAPREDUCE-5561. org.apache.hadoop.mapreduce.v2.app.job.impl.TestJobImpl
+    testcase failing on trunk (Karthik Kambatla via jlowe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
