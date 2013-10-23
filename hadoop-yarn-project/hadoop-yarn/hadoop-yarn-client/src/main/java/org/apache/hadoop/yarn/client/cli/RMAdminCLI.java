@@ -162,7 +162,7 @@ public class RMAdminCLI extends Configured implements Tool {
     }
   }
 
-  private ResourceManagerAdministrationProtocol createAdminProtocol() throws IOException {
+  protected ResourceManagerAdministrationProtocol createAdminProtocol() throws IOException {
     // Get the current configuration
     final YarnConfiguration conf = new YarnConfiguration(getConf());
     return ClientRMProxy.createRMProxy(conf, ResourceManagerAdministrationProtocol.class);
