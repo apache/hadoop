@@ -94,6 +94,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4885. Improve the verifyBlockPlacement() API in BlockPlacementPolicy.
     (Junping Du via szetszwo)
 
+    HDFS-5363. Refactor WebHdfsFileSystem: move SPENGO-authenticated connection
+    creation to URLConnectionFactory. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
