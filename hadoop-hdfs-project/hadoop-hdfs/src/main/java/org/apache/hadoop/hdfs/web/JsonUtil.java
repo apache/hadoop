@@ -298,9 +298,14 @@ public class JsonUtil {
   }
 
   /** Convert a Json map to an DatanodeInfo object. */
-  private static DatanodeInfo toDatanodeInfo(final Map<?, ?> m) {
+  static DatanodeInfo toDatanodeInfo(final Map<?, ?> m) {
     if (m == null) {
       return null;
+    }
+    
+    Object infoSecurePort = m.get("infoSecurePort");
+    if (infoSecurePort == null) {
+      infoSecurePort = 0l; // same as the default value in hdfs.proto
     }
 
     // TODO: Fix storageID
@@ -310,7 +315,7 @@ public class JsonUtil {
         (String)m.get("storageID"),
         (int)(long)(Long)m.get("xferPort"),
         (int)(long)(Long)m.get("infoPort"),
-        (int)(long)(Long)m.get("infoSecurePort"),
+        (int)(long)(Long)infoSecurePort,
         (int)(long)(Long)m.get("ipcPort"),
 
         (Long)m.get("capacity"),

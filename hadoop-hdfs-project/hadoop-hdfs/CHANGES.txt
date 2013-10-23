@@ -431,6 +431,9 @@ Release 2.2.1 - UNRELEASED
     
     HDFS-5347. Add HDFS NFS user guide. (brandonli)
 
+    HDFS-5403. WebHdfs client cannot communicate with older WebHdfs servers
+    post HDFS-5306. (atm)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

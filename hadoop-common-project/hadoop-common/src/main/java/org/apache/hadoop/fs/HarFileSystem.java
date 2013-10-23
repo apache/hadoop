@@ -898,11 +898,15 @@ public class HarFileSystem extends FileSystem {
       private long position, start, end;
       //The underlying data input stream that the
       // underlying filesystem will return.
-      private FSDataInputStream underLyingStream;
+      private final FSDataInputStream underLyingStream;
       //one byte buffer
-      private byte[] oneBytebuff = new byte[1];
+      private final byte[] oneBytebuff = new byte[1];
+      
       HarFsInputStream(FileSystem fs, Path path, long start,
           long length, int bufferSize) throws IOException {
+        if (length < 0) {
+          throw new IllegalArgumentException("Negative length ["+length+"]");
+        }
         underLyingStream = fs.open(path, bufferSize);
         underLyingStream.seek(start);
         // the start of this file in the part file
@@ -916,7 +920,7 @@ public class HarFileSystem extends FileSystem {
       @Override
       public synchronized int available() throws IOException {
         long remaining = end - underLyingStream.getPos();
-        if (remaining > (long)Integer.MAX_VALUE) {
+        if (remaining > Integer.MAX_VALUE) {
           return Integer.MAX_VALUE;
         }
         return (int) remaining;
@@ -948,10 +952,14 @@ public class HarFileSystem extends FileSystem {
         return (ret <= 0) ? -1: (oneBytebuff[0] & 0xff);
       }
       
+      // NB: currently this method actually never executed becusae
+      // java.io.DataInputStream.read(byte[]) directly delegates to 
+      // method java.io.InputStream.read(byte[], int, int).
+      // However, potentially it can be invoked, so leave it intact for now.
       @Override
       public synchronized int read(byte[] b) throws IOException {
-        int ret = read(b, 0, b.length);
-        if (ret != -1) {
+        final int ret = read(b, 0, b.length);
+        if (ret > 0) {
           position += ret;
         }
         return ret;
@@ -980,15 +988,19 @@ public class HarFileSystem extends FileSystem {
       public synchronized long skip(long n) throws IOException {
         long tmpN = n;
         if (tmpN > 0) {
-          if (position + tmpN > end) {
-            tmpN = end - position;
-          }
+          final long actualRemaining = end - position; 
+          if (tmpN > actualRemaining) {
+            tmpN = actualRemaining;
+          }   
           underLyingStream.seek(tmpN + position);
           position += tmpN;
           return tmpN;
-        }
-        return (tmpN < 0)? -1 : 0;
-      }
+        }   
+        // NB: the contract is described in java.io.InputStream.skip(long):
+        // this method returns the number of bytes actually skipped, so,
+        // the return value should never be negative. 
+        return 0;
+      }   
       
       @Override
       public synchronized long getPos() throws IOException {
@@ -996,12 +1008,21 @@ public class HarFileSystem extends FileSystem {
       }
       
       @Override
-      public synchronized void seek(long pos) throws IOException {
-        if (pos < 0 || (start + pos > end)) {
-          throw new IOException("Failed to seek: EOF");
-        }
+      public synchronized void seek(final long pos) throws IOException {
+        validatePosition(pos);
         position = start + pos;
         underLyingStream.seek(position);
+      }
+
+      private void validatePosition(final long pos) throws IOException {
+        if (pos < 0) {
+          throw new IOException("Negative position: "+pos);
+         }
+         final long length = end - start;
+         if (pos > length) {
+           throw new IOException("Position behind the end " +
+               "of the stream (length = "+length+"): " + pos);
+         }
       }
 
       @Override
@@ -1020,7 +1041,12 @@ public class HarFileSystem extends FileSystem {
       throws IOException {
         int nlength = length;
         if (start + nlength + pos > end) {
-          nlength = (int) (end - (start + pos));
+          // length corrected to the real remaining length:
+          nlength = (int) (end - start - pos);
+        }
+        if (nlength <= 0) {
+          // EOS:
+          return -1;
         }
         return underLyingStream.read(pos + start , b, offset, nlength);
       }
