@@ -123,6 +123,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10006. Compilation failure in trunk for
     o.a.h.fs.swift.util.JSONUtil (Junping Du via stevel)
 
+    HADOOP-9016. HarFsInputStream.skip(long) must never return negative value.
+    (Ivan A. Veselovsky via jeagles)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
