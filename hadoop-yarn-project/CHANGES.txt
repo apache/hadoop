@@ -67,6 +67,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1183. MiniYARNCluster shutdown takes several minutes intermittently
     (Andrey Klochkov via jeagles)
 
+    YARN-1305. RMHAProtocolService#serviceInit should handle HAUtil's
+    IllegalArgumentException (Tsuyoshi Ozawa via bikas)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

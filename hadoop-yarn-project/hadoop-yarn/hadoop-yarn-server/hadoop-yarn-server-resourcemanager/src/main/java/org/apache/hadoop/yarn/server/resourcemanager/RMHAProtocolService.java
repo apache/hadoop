@@ -57,7 +57,7 @@ public class RMHAProtocolService extends AbstractService implements
     this.conf = conf;
     haEnabled = HAUtil.isHAEnabled(this.conf);
     if (haEnabled) {
-      HAUtil.setAllRpcAddresses(this.conf);
+      HAUtil.verifyAndSetConfiguration(conf);
       rm.setConf(this.conf);
     }
     rm.createAndInitActiveServices();
