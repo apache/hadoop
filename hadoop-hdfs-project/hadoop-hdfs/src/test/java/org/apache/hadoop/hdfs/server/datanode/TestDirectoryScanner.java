@@ -412,6 +412,11 @@ public class TestDirectoryScanner {
     public StorageType getStorageType() {
       return StorageType.DEFAULT;
     }
+
+    @Override
+    public String getStorageID() {
+      return "";
+    }
   }
 
   private final static TestFsVolumeSpi TEST_VOLUME = new TestFsVolumeSpi();

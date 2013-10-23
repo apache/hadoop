@@ -26,6 +26,9 @@ import org.apache.hadoop.hdfs.StorageType;
  * This is an interface for the underlying volume.
  */
 public interface FsVolumeSpi {
+  /** @return the StorageUuid of the volume */
+  public String getStorageID();
+
   /** @return a list of block pools. */
   public String[] getBlockPoolList();
 

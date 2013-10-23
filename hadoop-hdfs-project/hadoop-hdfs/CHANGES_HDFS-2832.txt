@@ -42,3 +42,6 @@ IMPROVEMENTS:
 
     HDFS-5398. NameNode changes to process storage reports per storage
     directory. (Arpit Agarwal)
+
+    HDFS-5390. Send one incremental block report per storage directory.
+    (Arpit Agarwal)

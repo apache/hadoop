@@ -243,7 +243,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @param expectedBlockLen the number of bytes the replica is expected to have
    * @throws IOException
    */
-  public void recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen
+  public Replica recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen
       ) throws IOException;
   
   /**

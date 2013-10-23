@@ -132,6 +132,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
+    public String getStorageUuid() {
+      return storage.getStorageUuid();
+    }
+
+    @Override
     synchronized public long getGenerationStamp() {
       return theBlock.getGenerationStamp();
     }
@@ -314,6 +319,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   private static class SimulatedStorage {
     private Map<String, SimulatedBPStorage> map = 
       new HashMap<String, SimulatedBPStorage>();
+    private final String storageUuid = "SimulatedStorage-UUID";
+
     private long capacity;  // in bytes
     
     synchronized long getFree() {
@@ -374,6 +381,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
         throw new IOException("block pool " + bpid + " not found");
       }
       return bpStorage;
+    }
+
+    public String getStorageUuid() {
+      return storageUuid;
     }
   }
   
@@ -625,7 +636,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override // FsDatasetSpi
-  public void recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen)
+  public Replica recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen)
       throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
@@ -639,6 +650,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     map.remove(b.getLocalBlock());
     binfo.theBlock.setGenerationStamp(newGS);
     map.put(binfo.theBlock, binfo);
+    return binfo;
   }
   
   @Override // FsDatasetSpi
