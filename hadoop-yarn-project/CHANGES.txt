@@ -46,6 +46,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1182. MiniYARNCluster creates and inits the RM/NM only on start()
     (Karthik Kambatla via Sandy Ryza)
 
+    HADOOP-9598. Improve code coverage of RMAdminCLI (Aleksey Gorshkov and
+    Andrey Klochkov via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
