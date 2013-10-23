@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -57,5 +58,28 @@ public class TestJsonUtil {
     System.out.println("s2      = " + s2);
     System.out.println("fs2     = " + fs2);
     Assert.assertEquals(fstatus, fs2);
+  }
+  
+  @Test
+  public void testToDatanodeInfoWithoutSecurePort() {
+    Map<String, Object> response = new HashMap<String, Object>();
+    
+    response.put("ipAddr", "127.0.0.1");
+    response.put("hostName", "localhost");
+    response.put("storageID", "fake-id");
+    response.put("xferPort", 1337l);
+    response.put("infoPort", 1338l);
+    // deliberately don't include an entry for "infoSecurePort"
+    response.put("ipcPort", 1339l);
+    response.put("capacity", 1024l);
+    response.put("dfsUsed", 512l);
+    response.put("remaining", 512l);
+    response.put("blockPoolUsed", 512l);
+    response.put("lastUpdate", 0l);
+    response.put("xceiverCount", 4096l);
+    response.put("networkLocation", "foo.bar.baz");
+    response.put("adminState", "NORMAL");
+    
+    JsonUtil.toDatanodeInfo(response);
   }
 }
