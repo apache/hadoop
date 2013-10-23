@@ -88,6 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
@@ -807,6 +808,7 @@ public class TestFairScheduler {
     out.println("<queue name=\"queueB\">");
     out.println("<minResources>2048mb,0vcores</minResources>");
     out.println("<aclAdministerApps>alice,bob admins</aclAdministerApps>");
+    out.println("<schedulingPolicy>fair</schedulingPolicy>");
     out.println("</queue>");
     // Give queue C no minimum
     out.println("<queue name=\"queueC\">");
@@ -833,6 +835,8 @@ public class TestFairScheduler {
         + "</defaultMinSharePreemptionTimeout>");
     // Set fair share preemption timeout to 5 minutes
     out.println("<fairSharePreemptionTimeout>300</fairSharePreemptionTimeout>");
+    // Set default scheduling policy to DRF
+    out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
     out.println("</allocations>");
     out.close();
 
@@ -894,6 +898,18 @@ public class TestFairScheduler {
     assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueA"));
     assertEquals(60000, queueManager.getMinSharePreemptionTimeout("root.queueE"));
     assertEquals(300000, queueManager.getFairSharePreemptionTimeout());
+    
+    // Verify existing queues have default scheduling policy
+    assertEquals(DominantResourceFairnessPolicy.NAME,
+        queueManager.getQueue("root").getPolicy().getName());
+    assertEquals(DominantResourceFairnessPolicy.NAME,
+        queueManager.getQueue("root.queueA").getPolicy().getName());
+    // Verify default is overriden if specified explicitly
+    assertEquals(FairSharePolicy.NAME,
+        queueManager.getQueue("root.queueB").getPolicy().getName());
+    // Verify new queue gets default scheduling policy
+    assertEquals(DominantResourceFairnessPolicy.NAME,
+        queueManager.getLeafQueue("root.newqueue", true).getPolicy().getName());
   }
 
   @Test

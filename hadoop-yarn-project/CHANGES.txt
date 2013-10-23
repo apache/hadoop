@@ -82,6 +82,12 @@ Release 2.3.0 - UNRELEASED
     YARN-1300. SLS tests fail because conf puts YARN properties in
     fair-scheduler.xml (Ted Yu via Sandy Ryza)
 
+    YARN-1183. MiniYARNCluster shutdown takes several minutes intermittently
+    (Andrey Klochkov via jeagles)
+
+    YARN-1305. RMHAProtocolService#serviceInit should handle HAUtil's
+    IllegalArgumentException (Tsuyoshi Ozawa via bikas)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -129,6 +135,9 @@ Release 2.2.1 - UNRELEASED
 
     YARN-1331. yarn.cmd exits with NoClassDefFoundError trying to run rmadmin or
     logs. (cnauroth)
+
+    YARN-1330. Fair Scheduler: defaultQueueSchedulingPolicy does not take effect
+    (Sandy Ryza)
 
 Release 2.2.0 - 2013-10-13
 
