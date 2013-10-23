@@ -45,3 +45,5 @@ IMPROVEMENTS:
 
     HDFS-5390. Send one incremental block report per storage directory.
     (Arpit Agarwal)
+
+    HDFS-5401. Fix NPE in Directory Scanner. (Arpit Agarwal)

@@ -198,7 +198,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   //                 two maps. This might require some refactoring
   //                 rewrite of FsDatasetImpl.
   final ReplicaMap volumeMap;
-  final Map<FsVolumeImpl, ReplicaMap> perVolumeReplicaMap;
+
+  // Map from StorageID to ReplicaMap.
+  final Map<String, ReplicaMap> perVolumeReplicaMap;
 
 
   // Used for synchronizing access to usage stats
@@ -249,7 +251,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       LOG.info("Added volume - " + dir + ", StorageType: " + storageType);
     }
     volumeMap = new ReplicaMap(this);
-    perVolumeReplicaMap = new HashMap<FsVolumeImpl, ReplicaMap>();
+    perVolumeReplicaMap = new HashMap<String, ReplicaMap>();
 
     @SuppressWarnings("unchecked")
     final VolumeChoosingPolicy<FsVolumeImpl> blockChooserImpl =
@@ -628,7 +630,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     
     // Replace finalized replica by a RBW replica in replicas map
     volumeMap.add(bpid, newReplicaInfo);
-    perVolumeReplicaMap.get(v).add(bpid, newReplicaInfo);
+    perVolumeReplicaMap.get(v.getStorageID()).add(bpid, newReplicaInfo);
     
     return newReplicaInfo;
   }
@@ -759,7 +761,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(b.getBlockId(), 
         b.getGenerationStamp(), v, f.getParentFile());
     volumeMap.add(b.getBlockPoolId(), newReplicaInfo);
-    perVolumeReplicaMap.get(v).add(b.getBlockPoolId(), newReplicaInfo);
+    perVolumeReplicaMap.get(v.getStorageID()).add(b.getBlockPoolId(), newReplicaInfo);
     return newReplicaInfo;
   }
   
@@ -878,7 +880,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     rbw.setBytesAcked(visible);
     // overwrite the RBW in the volume map
     volumeMap.add(b.getBlockPoolId(), rbw);
-    perVolumeReplicaMap.get(v).add(b.getBlockPoolId(), rbw);
+    perVolumeReplicaMap.get(v.getStorageID()).add(b.getBlockPoolId(), rbw);
     return rbw;
   }
 
@@ -898,7 +900,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaInPipeline newReplicaInfo = new ReplicaInPipeline(b.getBlockId(), 
         b.getGenerationStamp(), v, f.getParentFile());
     volumeMap.add(b.getBlockPoolId(), newReplicaInfo);
-    perVolumeReplicaMap.get(v).add(b.getBlockPoolId(), newReplicaInfo);
+    perVolumeReplicaMap.get(v.getStorageID()).add(b.getBlockPoolId(), newReplicaInfo);
     
     return newReplicaInfo;
   }
@@ -967,7 +969,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       newReplicaInfo = new FinalizedReplica(replicaInfo, v, dest.getParentFile());
     }
     volumeMap.add(bpid, newReplicaInfo);
-    perVolumeReplicaMap.get(newReplicaInfo.getVolume()).add(bpid, newReplicaInfo);
+    perVolumeReplicaMap.get(newReplicaInfo.getVolume().getStorageID())
+        .add(bpid, newReplicaInfo);
     return newReplicaInfo;
   }
 
@@ -981,7 +984,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (replicaInfo != null && replicaInfo.getState() == ReplicaState.TEMPORARY) {
       // remove from volumeMap
       volumeMap.remove(b.getBlockPoolId(), b.getLocalBlock());
-      perVolumeReplicaMap.get((FsVolumeImpl) replicaInfo.getVolume())
+      perVolumeReplicaMap.get(replicaInfo.getVolume().getStorageID())
           .remove(b.getBlockPoolId(), b.getLocalBlock());
       
       // delete the on-disk temp file
@@ -1064,7 +1067,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         new HashMap<String, BlockListAsLongs>();
 
     for (FsVolumeImpl v : getVolumes()) {
-      ReplicaMap rMap = perVolumeReplicaMap.get(v);
+      ReplicaMap rMap = perVolumeReplicaMap.get(v.getStorageID());
       BlockListAsLongs blockList = getBlockReportWithReplicaMap(bpid, rMap);
       blockReportMap.put(v.getStorageID(), blockList);
     }
@@ -1212,7 +1215,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           v.clearPath(bpid, parent);
         }
         volumeMap.remove(bpid, invalidBlks[i]);
-        perVolumeReplicaMap.get(v).remove(bpid, invalidBlks[i]);
+        perVolumeReplicaMap.get(v.getStorageID()).remove(bpid, invalidBlks[i]);
       }
 
       // Delete the block asynchronously to make sure we can do it fast enough
@@ -1274,7 +1277,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               LOG.warn("Removing replica " + bpid + ":" + b.getBlockId()
                   + " on failed volume " + fv.getCurrentDir().getAbsolutePath());
               ib.remove();
-              perVolumeReplicaMap.get(fv).remove(bpid, b.getBlockId());
+              perVolumeReplicaMap.get(fv.getStorageID())
+                  .remove(bpid, b.getBlockId());
               removedBlocks++;
             }
           }
@@ -1391,8 +1395,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           // Block is in memory and not on the disk
           // Remove the block from volumeMap
           volumeMap.remove(bpid, blockId);
-          perVolumeReplicaMap.get((FsVolumeImpl) memBlockInfo.getVolume())
-              .remove(bpid, blockId);
+          perVolumeReplicaMap.get(vol.getStorageID()).remove(bpid, blockId);
           final DataBlockScanner blockScanner = datanode.getBlockScanner();
           if (blockScanner != null) {
             blockScanner.deleteBlock(bpid, new Block(blockId));
@@ -1416,8 +1419,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         ReplicaInfo diskBlockInfo = new FinalizedReplica(blockId, 
             diskFile.length(), diskGS, vol, diskFile.getParentFile());
         volumeMap.add(bpid, diskBlockInfo);
-        perVolumeReplicaMap.get((FsVolumeImpl) memBlockInfo.getVolume()).
-            remove(bpid, diskBlockInfo);
+        perVolumeReplicaMap.get(vol.getStorageID())
+            .remove(bpid, diskBlockInfo);
         final DataBlockScanner blockScanner = datanode.getBlockScanner();
         if (blockScanner != null) {
           blockScanner.addBlock(new ExtendedBlock(bpid, diskBlockInfo));
@@ -1695,7 +1698,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     // TODO: Avoid the double scan.
     for (FsVolumeImpl v : getVolumes()) {
-      ReplicaMap rMap = perVolumeReplicaMap.get(v);
+      ReplicaMap rMap = perVolumeReplicaMap.get(v.getStorageID());
       rMap.initBlockPool(bpid);
       volumes.getVolumeMap(bpid, v, rMap);
     }
