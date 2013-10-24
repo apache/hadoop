@@ -115,3 +115,6 @@ HDFS-4949 (Unreleased)
     HDFS-5385. Caching RPCs are AtMostOnce, but do not persist client ID and
     call ID to edit log.  (Chris Nauroth via Colin Patrick McCabe)
 
+    HDFS-5404. Resolve regressions in Windows compatibility on HDFS-4949
+    branch. (Chris Nauroth via Andrew Wang)
+

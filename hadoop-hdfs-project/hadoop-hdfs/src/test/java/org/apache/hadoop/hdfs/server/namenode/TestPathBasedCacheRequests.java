@@ -447,77 +447,74 @@ public class TestPathBasedCacheRequests {
 
   @Test(timeout=60000)
   public void testCacheManagerRestart() throws Exception {
+    cluster.shutdown();
+    cluster = null;
     HdfsConfiguration conf = createCachingConf();
-    MiniDFSCluster cluster =
-      new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
 
-    try {
-      cluster.waitActive();
-      DistributedFileSystem dfs = cluster.getFileSystem();
+    cluster.waitActive();
+    DistributedFileSystem dfs = cluster.getFileSystem();
 
-      // Create and validate a pool
-      final String pool = "poolparty";
-      String groupName = "partygroup";
-      FsPermission mode = new FsPermission((short)0777);
-      int weight = 747;
-      dfs.addCachePool(new CachePoolInfo(pool)
-          .setGroupName(groupName)
-          .setMode(mode)
-          .setWeight(weight));
-      RemoteIterator<CachePoolInfo> pit = dfs.listCachePools();
-      assertTrue("No cache pools found", pit.hasNext());
-      CachePoolInfo info = pit.next();
-      assertEquals(pool, info.getPoolName());
-      assertEquals(groupName, info.getGroupName());
-      assertEquals(mode, info.getMode());
-      assertEquals(weight, (int)info.getWeight());
-      assertFalse("Unexpected # of cache pools found", pit.hasNext());
+    // Create and validate a pool
+    final String pool = "poolparty";
+    String groupName = "partygroup";
+    FsPermission mode = new FsPermission((short)0777);
+    int weight = 747;
+    dfs.addCachePool(new CachePoolInfo(pool)
+        .setGroupName(groupName)
+        .setMode(mode)
+        .setWeight(weight));
+    RemoteIterator<CachePoolInfo> pit = dfs.listCachePools();
+    assertTrue("No cache pools found", pit.hasNext());
+    CachePoolInfo info = pit.next();
+    assertEquals(pool, info.getPoolName());
+    assertEquals(groupName, info.getGroupName());
+    assertEquals(mode, info.getMode());
+    assertEquals(weight, (int)info.getWeight());
+    assertFalse("Unexpected # of cache pools found", pit.hasNext());
   
-      // Create some cache entries
-      int numEntries = 10;
-      String entryPrefix = "/party-";
-      for (int i=0; i<numEntries; i++) {
-        dfs.addPathBasedCacheDirective(
-            new PathBasedCacheDirective.Builder().
-              setPath(new Path(entryPrefix + i)).setPool(pool).build());
-      }
-      RemoteIterator<PathBasedCacheDescriptor> dit
-          = dfs.listPathBasedCacheDescriptors(null, null);
-      for (int i=0; i<numEntries; i++) {
-        assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
-        PathBasedCacheDescriptor cd = dit.next();
-        assertEquals(i+1, cd.getEntryId());
-        assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
-        assertEquals(pool, cd.getPool());
-      }
-      assertFalse("Unexpected # of cache descriptors found", dit.hasNext());
-  
-      // Restart namenode
-      cluster.restartNameNode();
-  
-      // Check that state came back up
-      pit = dfs.listCachePools();
-      assertTrue("No cache pools found", pit.hasNext());
-      info = pit.next();
-      assertEquals(pool, info.getPoolName());
-      assertEquals(pool, info.getPoolName());
-      assertEquals(groupName, info.getGroupName());
-      assertEquals(mode, info.getMode());
-      assertEquals(weight, (int)info.getWeight());
-      assertFalse("Unexpected # of cache pools found", pit.hasNext());
-  
-      dit = dfs.listPathBasedCacheDescriptors(null, null);
-      for (int i=0; i<numEntries; i++) {
-        assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
-        PathBasedCacheDescriptor cd = dit.next();
-        assertEquals(i+1, cd.getEntryId());
-        assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
-        assertEquals(pool, cd.getPool());
-      }
-      assertFalse("Unexpected # of cache descriptors found", dit.hasNext());
-    } finally {
-      cluster.shutdown();
+    // Create some cache entries
+    int numEntries = 10;
+    String entryPrefix = "/party-";
+    for (int i=0; i<numEntries; i++) {
+      dfs.addPathBasedCacheDirective(
+          new PathBasedCacheDirective.Builder().
+            setPath(new Path(entryPrefix + i)).setPool(pool).build());
     }
+    RemoteIterator<PathBasedCacheDescriptor> dit
+        = dfs.listPathBasedCacheDescriptors(null, null);
+    for (int i=0; i<numEntries; i++) {
+      assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
+      PathBasedCacheDescriptor cd = dit.next();
+      assertEquals(i+1, cd.getEntryId());
+      assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
+      assertEquals(pool, cd.getPool());
+    }
+    assertFalse("Unexpected # of cache descriptors found", dit.hasNext());
+  
+    // Restart namenode
+    cluster.restartNameNode();
+  
+    // Check that state came back up
+    pit = dfs.listCachePools();
+    assertTrue("No cache pools found", pit.hasNext());
+    info = pit.next();
+    assertEquals(pool, info.getPoolName());
+    assertEquals(pool, info.getPoolName());
+    assertEquals(groupName, info.getGroupName());
+    assertEquals(mode, info.getMode());
+    assertEquals(weight, (int)info.getWeight());
+    assertFalse("Unexpected # of cache pools found", pit.hasNext());
+  
+    dit = dfs.listPathBasedCacheDescriptors(null, null);
+    for (int i=0; i<numEntries; i++) {
+      assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
+      PathBasedCacheDescriptor cd = dit.next();
+      assertEquals(i+1, cd.getEntryId());
+      assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
+      assertEquals(pool, cd.getPool());
+    }
+    assertFalse("Unexpected # of cache descriptors found", dit.hasNext());
   }
 
   private static void waitForCachedBlocks(NameNode nn,

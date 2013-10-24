@@ -383,6 +383,7 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mlock_1native(
   JNIEnv *env, jclass clazz,
   jobject buffer, jlong len)
 {
+#ifdef UNIX
   void* buf = (void*)(*env)->GetDirectBufferAddress(env, buffer);
   PASS_EXCEPTIONS(env);
 
@@ -390,6 +391,12 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mlock_1native(
     CHECK_DIRECT_BUFFER_ADDRESS(buf);
     throw_ioe(env, errno);
   }
+#endif
+
+#ifdef WINDOWS
+  THROW(env, "java/io/IOException",
+    "The function POSIX.mlock_native() is not supported on Windows");
+#endif
 }
 
 /**
@@ -404,6 +411,7 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_munlock_1native(
   JNIEnv *env, jclass clazz,
   jobject buffer, jlong len)
 {
+#ifdef UNIX
   void* buf = (void*)(*env)->GetDirectBufferAddress(env, buffer);
   PASS_EXCEPTIONS(env);
 
@@ -411,6 +419,12 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_munlock_1native(
     CHECK_DIRECT_BUFFER_ADDRESS(buf);
     throw_ioe(env, errno);
   }
+#endif
+
+#ifdef WINDOWS
+  THROW(env, "java/io/IOException",
+    "The function POSIX.munlock_native() is not supported on Windows");
+#endif
 }
 
 #ifdef __FreeBSD__
