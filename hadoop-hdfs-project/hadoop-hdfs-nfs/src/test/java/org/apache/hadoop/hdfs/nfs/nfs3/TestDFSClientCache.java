@@ -39,12 +39,12 @@ public class TestDFSClientCache {
 
     DFSClientCache cache = new DFSClientCache(conf, MAX_CACHE_SIZE);
 
-    DFSClient c1 = cache.get("test1");
-    assertTrue(cache.get("test1").toString().contains("ugi=test1"));
-    assertEquals(c1, cache.get("test1"));
+    DFSClient c1 = cache.getDfsClient("test1");
+    assertTrue(cache.getDfsClient("test1").toString().contains("ugi=test1"));
+    assertEquals(c1, cache.getDfsClient("test1"));
     assertFalse(isDfsClientClose(c1));
 
-    cache.get("test2");
+    cache.getDfsClient("test2");
     assertTrue(isDfsClientClose(c1));
     assertEquals(MAX_CACHE_SIZE - 1, cache.clientCache.size());
   }
