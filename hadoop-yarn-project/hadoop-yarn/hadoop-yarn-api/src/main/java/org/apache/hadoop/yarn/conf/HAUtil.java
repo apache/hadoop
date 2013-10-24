@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import java.util.Arrays;
@@ -42,10 +43,13 @@ public class HAUtil {
           YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
           YarnConfiguration.RM_WEBAPP_ADDRESS));
 
+  public static final String BAD_CONFIG_MESSAGE_PREFIX =
+    "Invalid configuration! ";
+
   private HAUtil() { /* Hidden constructor */ }
 
   private static void throwBadConfigurationException(String msg) {
-    throw new YarnRuntimeException("Invalid configuration! " + msg);
+    throw new YarnRuntimeException(BAD_CONFIG_MESSAGE_PREFIX + msg);
   }
 
   /**
@@ -59,29 +63,137 @@ public class HAUtil {
         YarnConfiguration.DEFAULT_RM_HA_ENABLED);
   }
 
-  public static Collection<String> getRMHAIds(Configuration conf) {
-    return conf.getTrimmedStringCollection(YarnConfiguration.RM_HA_IDS);
+  /**
+   * Verify configuration for Resource Manager HA.
+   * @param conf Configuration
+   * @throws YarnRuntimeException
+   */
+  public static void verifyAndSetConfiguration(Configuration conf)
+    throws YarnRuntimeException {
+    verifyAndSetRMHAIds(conf);
+    verifyAndSetRMHAId(conf);
+    verifyAndSetAllRpcAddresses(conf);
+  }
+
+
+  private static void verifyAndSetRMHAIds(Configuration conf) {
+    Collection<String> ids =
+      conf.getTrimmedStringCollection(YarnConfiguration.RM_HA_IDS);
+    if (ids.size() <= 0) {
+      throwBadConfigurationException(
+        getInvalidValueMessage(YarnConfiguration.RM_HA_IDS,
+          conf.get(YarnConfiguration.RM_HA_IDS)));
+    } else if (ids.size() == 1) {
+      LOG.warn(getRMHAIdsWarningMessage(ids.toString()));
+    }
+
+    StringBuilder setValue = new StringBuilder();
+    for (String id: ids) {
+      setValue.append(id);
+      setValue.append(",");
+    }
+    conf.set(YarnConfiguration.RM_HA_IDS,
+      setValue.substring(0, setValue.length() - 1));
+  }
+
+  private static void verifyAndSetRMHAId(Configuration conf) {
+    String rmId = conf.getTrimmed(YarnConfiguration.RM_HA_ID);
+    if (rmId == null) {
+      throwBadConfigurationException(
+        getNeedToSetValueMessage(YarnConfiguration.RM_HA_ID));
+    } else {
+      Collection<String> ids = getRMHAIds(conf);
+      if (!ids.contains(rmId)) {
+        throwBadConfigurationException(
+          getRMHAIdNeedToBeIncludedMessage(ids.toString(), rmId));
+      }
+    }
+    conf.set(YarnConfiguration.RM_HA_ID, rmId);
+  }
+
+  private static void verifyAndSetConfValue(String prefix, Configuration conf) {
+    String confKey = null;
+    String confValue = null;
+    try {
+      confKey = getConfKeyForRMInstance(prefix, conf);
+      confValue = getConfValueForRMInstance(prefix, conf);
+      conf.set(prefix, confValue);
+    } catch (YarnRuntimeException yre) {
+      // Error at getRMHAId()
+      throw yre;
+    } catch (IllegalArgumentException iae) {
+      String errmsg;
+      if (confKey == null) {
+        // Error at addSuffix
+        errmsg = getInvalidValueMessage(YarnConfiguration.RM_HA_ID,
+          getRMHAId(conf));
+      } else {
+        // Error at Configuration#set.
+        errmsg = getNeedToSetValueMessage(confKey);
+      }
+      throwBadConfigurationException(errmsg);
+    }
+  }
+
+  public static void verifyAndSetAllRpcAddresses(Configuration conf) {
+    for (String confKey : RPC_ADDRESS_CONF_KEYS) {
+     verifyAndSetConfValue(confKey, conf);
+    }
   }
 
   /**
-   * @param conf Configuration
+   * @param conf Configuration. Please use getRMHAIds to check.
+   * @return RM Ids on success
+   */
+  public static Collection<String> getRMHAIds(Configuration conf) {
+    return  conf.getStringCollection(YarnConfiguration.RM_HA_IDS);
+  }
+
+  /**
+   * @param conf Configuration. Please use verifyAndSetRMHAId to check.
    * @return RM Id on success
-   * @throws YarnRuntimeException for configurations without a node id
    */
   @VisibleForTesting
-  public static String getRMHAId(Configuration conf) {
-    String rmId = conf.get(YarnConfiguration.RM_HA_ID);
-    if (rmId == null) {
-      throwBadConfigurationException(YarnConfiguration.RM_HA_ID +
-          " needs to be set in a HA configuration");
-    }
-    return rmId;
+  static String getRMHAId(Configuration conf) {
+    return conf.get(YarnConfiguration.RM_HA_ID);
+  }
+
+  @VisibleForTesting
+  static String getNeedToSetValueMessage(String confKey) {
+    return confKey + " needs to be set in a HA configuration.";
+  }
+
+  @VisibleForTesting
+  static String getInvalidValueMessage(String confKey,
+                                              String invalidValue){
+    return "Invalid value of "  + confKey +". "
+      + "Current value is " + invalidValue;
+  }
+
+  @VisibleForTesting
+  static String getRMHAIdNeedToBeIncludedMessage(String ids,
+                                                        String rmId) {
+    return YarnConfiguration.RM_HA_IDS + "("
+      + ids +  ") need to contain " + YarnConfiguration.RM_HA_ID + "("
+      + rmId + ") in a HA configuration.";
+  }
+
+  @VisibleForTesting
+  static String getRMHAIdsWarningMessage(String ids) {
+    return  "Resource Manager HA is enabled, but " +
+      YarnConfiguration.RM_HA_IDS + " has only one id(" +
+      ids.toString() + ")";
+  }
+
+  private static String getConfKeyForRMInstance(String prefix,
+                                                Configuration conf) {
+    return addSuffix(prefix, getRMHAId(conf));
   }
 
   private static String getConfValueForRMInstance(String prefix,
                                                   Configuration conf) {
-    String confKey = addSuffix(prefix, getRMHAId(conf));
-    String retVal = conf.get(confKey);
+    String confKey = getConfKeyForRMInstance(prefix, conf);
+    String retVal = conf.getTrimmed(confKey);
     if (LOG.isTraceEnabled()) {
       LOG.trace("getConfValueForRMInstance: prefix = " + prefix +
           "; confKey being looked up = " + confKey +
@@ -94,16 +206,6 @@ public class HAUtil {
                                           Configuration conf) {
     String value = getConfValueForRMInstance(prefix, conf);
     return (value == null) ? defaultValue : value;
-  }
-
-  private static void setConfValue(String prefix, Configuration conf) {
-    conf.set(prefix, getConfValueForRMInstance(prefix, conf));
-  }
-
-  public static void setAllRpcAddresses(Configuration conf) {
-    for (String confKey : RPC_ADDRESS_CONF_KEYS) {
-      setConfValue(confKey, conf);
-    }
   }
 
   /** Add non empty and non null suffix to a key */

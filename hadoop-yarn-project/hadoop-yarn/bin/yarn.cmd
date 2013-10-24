@@ -149,7 +149,7 @@ goto :eof
   goto :eof
 
 :rmadmin
-  set CLASS=org.apache.hadoop.yarn.server.resourcemanager.tools.RMAdmin
+  set CLASS=org.apache.hadoop.yarn.client.cli.RMAdminCLI
   set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
   goto :eof
 
@@ -200,7 +200,7 @@ goto :eof
   goto :eof
 
 :logs
-  set CLASS=org.apache.hadoop.yarn.logaggregation.LogDumper
+  set CLASS=org.apache.hadoop.yarn.client.cli.LogsCLI
   set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
   goto :eof
 
@@ -237,7 +237,6 @@ goto :eof
   @echo        where COMMAND is one of:
   @echo   resourcemanager      run the ResourceManager
   @echo   nodemanager          run a nodemanager on each slave
-  @echo   historyserver        run job history servers as a standalone daemon
   @echo   rmadmin              admin tools
   @echo   version              print the version
   @echo   jar ^<jar^>          run a jar file

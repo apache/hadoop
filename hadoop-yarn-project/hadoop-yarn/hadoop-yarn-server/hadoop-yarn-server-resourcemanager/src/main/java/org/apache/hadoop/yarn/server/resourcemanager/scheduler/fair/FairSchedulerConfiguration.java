@@ -50,7 +50,7 @@ public class FairSchedulerConfiguration extends Configuration {
   
   private static final String CONF_PREFIX =  "yarn.scheduler.fair.";
 
-  protected static final String ALLOCATION_FILE = CONF_PREFIX + "allocation.file";
+  public static final String ALLOCATION_FILE = CONF_PREFIX + "allocation.file";
   protected static final String DEFAULT_ALLOCATION_FILE = "fair-scheduler.xml";
   protected static final String EVENT_LOG_DIR = "eventlog.dir";
 
@@ -113,6 +113,10 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final String MAX_ASSIGN = CONF_PREFIX + "max.assign";
   protected static final int DEFAULT_MAX_ASSIGN = -1;
 
+  public FairSchedulerConfiguration() {
+    super();
+  }
+  
   public FairSchedulerConfiguration(Configuration conf) {
     super(conf);
   }

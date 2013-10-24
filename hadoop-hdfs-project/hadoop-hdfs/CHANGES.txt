@@ -255,7 +255,15 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5342. Provide more information in the FSNamesystem JMX interfaces.
     (Haohui Mai via jing9)
- 
+
+    HDFS-5334. Implement dfshealth.jsp in HTML pages. (Haohui Mai via jing9)
+
+    HDFS-5379. Update links to datanode information in dfshealth.html. (Haohui
+    Mai via jing9)
+
+    HDFS-5382. Implement the UI of browsing filesystems in HTML 5 page. (Haohui
+    Mai via jing9)
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)
@@ -319,9 +327,23 @@ Release 2.3.0 - UNRELEASED
     HDFS-5130. Add test for snapshot related FsShell and DFSAdmin commands.
     (Binglin Chang via jing9)
 
+    HDFS-5374. Remove deadcode in DFSOutputStream. (suresh)
+
+    HDFS-4511. Cover package org.apache.hadoop.hdfs.tools with unit test
+    (Andrey Klochkov via jeagles)
+
+    HDFS-4885. Improve the verifyBlockPlacement() API in BlockPlacementPolicy.
+    (Junping Du via szetszwo)
+
+    HDFS-5363. Refactor WebHdfsFileSystem: move SPENGO-authenticated connection
+    creation to URLConnectionFactory. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
+
+    HDFS-5341. Reduce fsdataset lock duration during directory scanning.
+    (Qus-Jiawei via kihwal)
 
   BUG FIXES
     HDFS-5034.  Remove debug prints from GetFileLinkInfo (Andrew Wang via Colin
@@ -354,6 +376,14 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4376. Fix race conditions in Balancer.  (Junping Du via szetszwo)
 
+    HDFS-5375. hdfs.cmd does not expose several snapshot commands. (cnauroth)
+
+    HDFS-5336. DataNode should not output 'StartupProgress' metrics.
+    (Akira Ajisaka via cnauroth)
+
+    HDFS-5400.  DFS_CLIENT_MMAP_CACHE_THREAD_RUNS_PER_TIMEOUT constant is set
+    to the wrong value.  (Colin Patrick McCabe)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -364,6 +394,9 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5360. Improvement of usage message of renameSnapshot and
     deleteSnapshot. (Shinichi Yamashita via wang)
+
+    HDFS-5331. make SnapshotDiff.java to a o.a.h.util.Tool interface implementation. 
+    (Vinayakumar B via umamahesh)
 
   OPTIMIZATIONS
 
@@ -399,6 +432,13 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5370. Typo in Error Message: different between range in condition
     and range in error message. (Kousuke Saruta via suresh)
+
+    HDFS-5365. Fix libhdfs compile error on FreeBSD9. (Radim Kolar via cnauroth)
+    
+    HDFS-5347. Add HDFS NFS user guide. (brandonli)
+
+    HDFS-5403. WebHdfs client cannot communicate with older WebHdfs servers
+    post HDFS-5306. (atm)
 
 Release 2.2.0 - 2013-10-13
 

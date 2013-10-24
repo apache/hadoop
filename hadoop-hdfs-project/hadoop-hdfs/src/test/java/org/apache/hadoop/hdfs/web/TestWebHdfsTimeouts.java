@@ -25,9 +25,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
@@ -41,6 +43,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -71,8 +74,9 @@ public class TestWebHdfsTimeouts {
   @Before
   public void setUp() throws Exception {
     Configuration conf = WebHdfsTestUtil.createConf();
-    nnHttpAddress = NameNode.getHttpAddress(conf);
-    serverSocket = new ServerSocket(nnHttpAddress.getPort(), CONNECTION_BACKLOG);
+    serverSocket = new ServerSocket(0, CONNECTION_BACKLOG);
+    nnHttpAddress = new InetSocketAddress("localhost", serverSocket.getLocalPort());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "localhost:" + serverSocket.getLocalPort());
     fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf);
     fs.connectionFactory = connectionFactory;
     clients = new ArrayList<SocketChannel>();

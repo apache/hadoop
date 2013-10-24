@@ -270,10 +270,6 @@ public class NameNode implements NameNodeStatusMXBean {
 
   static NameNodeMetrics metrics;
   private static final StartupProgress startupProgress = new StartupProgress();
-  static {
-    StartupProgressMetrics.register(startupProgress);
-  }
-
   /** Return the {@link FSNamesystem} object.
    * @return {@link FSNamesystem} object.
    */
@@ -485,6 +481,7 @@ public class NameNode implements NameNodeStatusMXBean {
     loginAsNameNodeUser(conf);
 
     NameNode.initMetrics(conf, this.getRole());
+    StartupProgressMetrics.register(startupProgress);
 
     if (NamenodeRole.NAMENODE == role) {
       startHttpServer(conf);
