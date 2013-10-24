@@ -6922,16 +6922,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   PathBasedCacheDescriptor addPathBasedCacheDirective(
       PathBasedCacheDirective directive) throws IOException {
+    checkOperation(OperationCategory.WRITE);
+    final FSPermissionChecker pc = isPermissionEnabled ?
+        getPermissionChecker() : null;
     CacheEntryWithPayload cacheEntry =
         RetryCache.waitForCompletion(retryCache, null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return (PathBasedCacheDescriptor) cacheEntry.getPayload();
     }
-    final FSPermissionChecker pc = isPermissionEnabled ?
-        getPermissionChecker() : null;
     boolean success = false;
     PathBasedCacheDescriptor result = null;
-    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6957,14 +6957,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void removePathBasedCacheDescriptor(Long id) throws IOException {
+    checkOperation(OperationCategory.WRITE);
+    final FSPermissionChecker pc = isPermissionEnabled ?
+        getPermissionChecker() : null;
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
-    final FSPermissionChecker pc = isPermissionEnabled ?
-        getPermissionChecker() : null;
     boolean success = false;
-    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6988,10 +6988,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   BatchedListEntries<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(
       long startId, String pool, String path) throws IOException {
+    checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     BatchedListEntries<PathBasedCacheDescriptor> results;
-    checkOperation(OperationCategory.READ);
     readLock();
     boolean success = false;
     try {
@@ -7010,13 +7010,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   public void addCachePool(CachePoolInfo req) throws IOException {
+    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
-    checkOperation(OperationCategory.WRITE);
     writeLock();
     boolean success = false;
     try {
@@ -7043,13 +7043,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   public void modifyCachePool(CachePoolInfo req) throws IOException {
+    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc =
         isPermissionEnabled ? getPermissionChecker() : null;
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
-    checkOperation(OperationCategory.WRITE);
     writeLock();
     boolean success = false;
     try {
@@ -7076,13 +7076,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   public void removeCachePool(String cachePoolName) throws IOException {
+    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc =
         isPermissionEnabled ? getPermissionChecker() : null;
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
-    checkOperation(OperationCategory.WRITE);
     writeLock();
     boolean success = false;
     try {
