@@ -196,6 +196,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5403. WebHdfs client cannot communicate with older WebHdfs servers
     post HDFS-5306. (atm)
 
+    HDFS-5171. NFS should create input stream for a file and try to share it
+    with multiple read requests. (Haohui Mai via brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
