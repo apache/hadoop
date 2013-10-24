@@ -82,6 +82,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9291. enhance unit-test coverage of package o.a.h.metrics2 (Ivan A.
     Veselovsky via jeagles)
 
+    HADOOP-10064. Upgrade to maven antrun plugin version 1.7 (Arpit Agarwal via
+    jeagles)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
