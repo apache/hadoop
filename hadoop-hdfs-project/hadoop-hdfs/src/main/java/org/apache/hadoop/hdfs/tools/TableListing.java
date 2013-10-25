@@ -124,23 +124,14 @@ public class TableListing {
     public Builder() {
     }
 
-    /**
-     * See {@link #addField(String, Justification, boolean)
-     */
     public Builder addField(String title) {
       return addField(title, Justification.LEFT, false);
     }
 
-    /**
-     * See {@link #addField(String, Justification, boolean)
-     */
     public Builder addField(String title, Justification justification) {
       return addField(title, justification, false);
     }
 
-    /**
-     * See {@link #addField(String, Justification, boolean)
-     */
     public Builder addField(String title, boolean wrap) {
       return addField(title, Justification.LEFT, wrap);
     }
@@ -150,7 +141,7 @@ public class TableListing {
      * 
      * @param title Field title.
      * @param justification Right or left justification. Defaults to left.
-     * @Param wrapWidth Width at which to auto-wrap the content of the cell.
+     * @param wrap Width at which to auto-wrap the content of the cell.
      *        Defaults to Integer.MAX_VALUE.
      * @return This Builder object
      */

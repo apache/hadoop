@@ -83,6 +83,8 @@ public final class CachedBlock implements Element,
 
   @Override
   public boolean equals(Object o) {
+    if (o == null) { return false; }
+    if (o == this) { return true; }
     if (o.getClass() != this.getClass()) {
       return false;
     }
@@ -100,7 +102,7 @@ public final class CachedBlock implements Element,
   }
 
   public short getReplication() {
-    return (short)(replicationAndMark >>> 1);
+    return (short) (replicationAndMark >>> 1);
   }
 
   /**

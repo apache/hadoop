@@ -65,9 +65,9 @@ public abstract class BatchedRemoteIterator<K, E> implements RemoteIterator<E> {
 
   /**
    * Perform the actual remote request.
-   *
-   * @param key                    The key to send.
-   * @return                       A list of replies.
+   * 
+   * @param prevKey The key to send.
+   * @return A list of replies.
    */
   public abstract BatchedEntries<E> makeRequest(K prevKey) throws IOException;
 

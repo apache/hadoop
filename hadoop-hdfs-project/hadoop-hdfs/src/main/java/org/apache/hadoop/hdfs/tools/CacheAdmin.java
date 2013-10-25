@@ -720,7 +720,7 @@ public class CacheAdmin extends Configured implements Tool {
         return 0;
       }
       String commandName = args.get(0);
-      commandName.replaceAll("^[-]*", "");
+      commandName = commandName.replaceAll("^[-]*", "");
       Command command = determineCommand(commandName);
       if (command == null) {
         System.err.print("Sorry, I don't know the command '" +

@@ -121,3 +121,5 @@ HDFS-4949 (Unreleased)
     HDFS-5405. Fix possible RetryCache hang for caching RPC handlers in
     FSNamesystem. (wang)
 
+    HDFS-5419. Fixup test-patch.sh warnings on HDFS-4949 branch. (wang)
+

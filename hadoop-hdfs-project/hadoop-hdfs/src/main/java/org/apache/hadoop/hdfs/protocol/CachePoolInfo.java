@@ -115,25 +115,26 @@ public class CachePoolInfo {
       append(", ownerName:").append(ownerName).
       append(", groupName:").append(groupName).
       append(", mode:").append((mode == null) ? "null" :
-          String.format("0%03o", mode)).
+          String.format("0%03o", mode.toShort())).
       append(", weight:").append(weight).
       append("}").toString();
   }
   
   @Override
   public boolean equals(Object o) {
-    try {
-      CachePoolInfo other = (CachePoolInfo)o;
-      return new EqualsBuilder().
-          append(poolName, other.poolName).
-          append(ownerName, other.ownerName).
-          append(groupName, other.groupName).
-          append(mode, other.mode).
-          append(weight, other.weight).
-          isEquals();
-    } catch (ClassCastException e) {
+    if (o == null) { return false; }
+    if (o == this) { return true; }
+    if (o.getClass() != getClass()) {
       return false;
     }
+    CachePoolInfo other = (CachePoolInfo)o;
+    return new EqualsBuilder().
+        append(poolName, other.poolName).
+        append(ownerName, other.ownerName).
+        append(groupName, other.groupName).
+        append(mode, other.mode).
+        append(weight, other.weight).
+        isEquals();
   }
 
   @Override
