@@ -1102,6 +1102,11 @@ public class DFSOutputStream extends FSOutputSummer
     //
     private boolean createBlockOutputStream(DatanodeInfo[] nodes, long newGS,
         boolean recoveryFlag) {
+      if (nodes.length == 0) {
+        DFSClient.LOG.info("nodes are empty for write pipeline of block "
+            + block);
+        return false;
+      }
       Status pipelineStatus = SUCCESS;
       String firstBadLink = "";
       if (DFSClient.LOG.isDebugEnabled()) {
