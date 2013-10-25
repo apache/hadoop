@@ -108,6 +108,9 @@ Release 2.2.1 - UNRELEASED
 
     YARN-1315. TestQueueACLs should also test FairScheduler (Sandy Ryza)
 
+    YARN-1335. Move duplicate code from FSSchedulerApp and FiCaSchedulerApp
+    into SchedulerApplication (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
