@@ -47,3 +47,5 @@ IMPROVEMENTS:
     (Arpit Agarwal)
 
     HDFS-5401. Fix NPE in Directory Scanner. (Arpit Agarwal)
+
+    HDFS-5417. Fix storage IDs in PBHelper and UpgradeUtilities.  (szetszwo)

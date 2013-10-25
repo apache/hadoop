@@ -581,7 +581,10 @@ public class PBHelper {
         builder.addStorageTypes(PBHelper.convertStorageType(storageTypes[i]));
       }
     }
-    builder.addAllStorageIDs(Arrays.asList(b.getStorageIDs()));
+    final String[] storageIDs = b.getStorageIDs();
+    if (storageIDs != null) {
+      builder.addAllStorageIDs(Arrays.asList(b.getStorageIDs()));
+    }
 
     return builder.setB(PBHelper.convert(b.getBlock()))
         .setBlockToken(PBHelper.convert(b.getBlockToken()))
@@ -609,9 +612,11 @@ public class PBHelper {
       }
     }
 
+    final int storageIDsCount = proto.getStorageIDsCount();
+    final String[] storageIDs = storageIDsCount == 0? null
+        : proto.getStorageIDsList().toArray(new String[storageIDsCount]);
     LocatedBlock lb = new LocatedBlock(PBHelper.convert(proto.getB()), targets,
-        proto.getStorageIDsList().toArray(new String[proto.getStorageIDsCount()]),
-        storageTypes, proto.getOffset(), proto.getCorrupt());
+        storageIDs, storageTypes, proto.getOffset(), proto.getCorrupt());
     lb.setBlockToken(PBHelper.convert(proto.getBlockToken()));
     return lb;
   }
