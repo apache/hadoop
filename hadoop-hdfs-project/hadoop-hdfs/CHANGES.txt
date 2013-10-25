@@ -384,6 +384,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5400.  DFS_CLIENT_MMAP_CACHE_THREAD_RUNS_PER_TIMEOUT constant is set
     to the wrong value.  (Colin Patrick McCabe)
 
+    HDFS-5257. addBlock() retry should return LocatedBlock with locations else client 
+    will get AIOBE. (Vinay via jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

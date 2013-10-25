@@ -2507,8 +2507,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       final INodeFileUnderConstruction pendingFile =
           (INodeFileUnderConstruction) inodes[inodes.length - 1];
 
-      if(onRetryBlock[0] != null) {
-        // This is a retry. Just return the last block.
+      if (onRetryBlock[0] != null && onRetryBlock[0].getLocations().length > 0) {
+        // This is a retry. Just return the last block if having locations.
         return onRetryBlock[0];
       }
       if (pendingFile.getBlocks().length >= maxBlocksPerFile) {
@@ -2545,9 +2545,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       final INodeFileUnderConstruction pendingFile =
           (INodeFileUnderConstruction) inodes[inodes.length - 1];
 
-      if(onRetryBlock[0] != null) {
-        // This is a retry. Just return the last block.
-        return onRetryBlock[0];
+      if (onRetryBlock[0] != null) {
+        if (onRetryBlock[0].getLocations().length > 0) {
+          // This is a retry. Just return the last block if having locations.
+          return onRetryBlock[0];
+        } else {
+          // add new chosen targets to already allocated block and return
+          BlockInfo lastBlockInFile = pendingFile.getLastBlock();
+          ((BlockInfoUnderConstruction) lastBlockInFile)
+              .setExpectedLocations(targets);
+          offset = pendingFile.computeFileSize();
+          return makeLocatedBlock(lastBlockInFile, targets, offset);
+        }
       }
 
       // commit the last block and complete it if it has minimum replicas
