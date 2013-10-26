@@ -35,6 +35,7 @@ public class TestNfsExports {
       Nfs3Constant.EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT * 1000 * 1000;
   
   private static final int CacheSize = Nfs3Constant.EXPORTS_CACHE_SIZE_DEFAULT;
+  private static final long NanosPerMillis = 1000000;
 
   @Test
   public void testWildcardRW() {
@@ -185,7 +186,15 @@ public class TestNfsExports {
     
     Thread.sleep(1000);
     // no cache for address2 now
-    Assert.assertEquals(AccessPrivilege.NONE,
-        matcher.getAccessPrivilege(address2, address2));
+    AccessPrivilege ap;
+    long startNanos = System.nanoTime();
+    do {
+      ap = matcher.getAccessPrivilege(address2, address2);
+      if (ap == AccessPrivilege.NONE) {
+        break;
+      }
+      Thread.sleep(500);
+    } while ((System.nanoTime() - startNanos) / NanosPerMillis < 5000);
+    Assert.assertEquals(AccessPrivilege.NONE, ap);
   }
 }

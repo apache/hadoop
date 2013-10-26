@@ -161,6 +161,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-10055. FileSystemShell.apt.vm doc has typo "numRepicas".
     (Akira Ajisaka via cnauroth)
 
+    HADOOP-10072. TestNfsExports#testMultiMatchers fails due to non-deterministic
+    timing around cache expiry check. (cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
