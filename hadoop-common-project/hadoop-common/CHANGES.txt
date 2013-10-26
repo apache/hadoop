@@ -35,6 +35,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-10052. Temporarily disable client-side symlink resolution
     (branch-2.2 only change). (wang)
 
+    HADOOP-10072. TestNfsExports#testMultiMatchers fails due to non-deterministic
+    timing around cache expiry check. (cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
