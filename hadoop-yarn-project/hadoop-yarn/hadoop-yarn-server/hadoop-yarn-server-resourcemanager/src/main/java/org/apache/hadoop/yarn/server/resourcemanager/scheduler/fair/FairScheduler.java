@@ -882,6 +882,8 @@ public class FairScheduler implements ResourceScheduler {
       for (RMContainer container : application.getPreemptionContainers()) {
         preemptionContainerIds.add(container.getContainerId());
       }
+
+      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
       
       return new Allocation(application.pullNewlyAllocatedContainers(),
           application.getHeadroom(), preemptionContainerIds);
