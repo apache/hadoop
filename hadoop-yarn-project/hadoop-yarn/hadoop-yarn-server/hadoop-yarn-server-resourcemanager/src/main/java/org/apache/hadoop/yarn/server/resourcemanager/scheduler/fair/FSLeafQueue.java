@@ -33,6 +33,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
@@ -155,6 +156,10 @@ public class FSLeafQueue extends FSQueue {
     Collections.sort(appScheds, comparator);
     for (AppSchedulable sched : appScheds) {
       if (sched.getRunnable()) {
+        if (SchedulerAppUtils.isBlacklisted(sched.getApp(), node, LOG)) {
+          continue;
+        }
+
         assigned = sched.assignContainer(node);
         if (!assigned.equals(Resources.none())) {
           break;
