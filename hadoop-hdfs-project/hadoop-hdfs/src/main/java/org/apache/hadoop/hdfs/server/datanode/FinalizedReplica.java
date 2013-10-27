@@ -61,6 +61,10 @@ public class FinalizedReplica extends ReplicaInfo {
     this.unlinked = from.isUnlinked();
   }
 
+  public FinalizedReplica(ReplicaInfo replicaInfo) {
+    super(replicaInfo);
+  }
+
   @Override  // ReplicaInfo
   public ReplicaState getState() {
     return ReplicaState.FINALIZED;

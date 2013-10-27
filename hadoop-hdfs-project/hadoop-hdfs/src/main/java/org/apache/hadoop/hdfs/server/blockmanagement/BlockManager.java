@@ -1833,7 +1833,10 @@ public class BlockManager {
       ReplicaState iState = itBR.getCurrentReplicaState();
       BlockInfo storedBlock = processReportedBlock(dn, storage.getStorageID(),
           iblk, iState, toAdd, toInvalidate, toCorrupt, toUC);
-      toRemove.remove(storedBlock);
+
+      if (storedBlock != null) {
+        toRemove.remove(storedBlock);
+      }
     }
   }
 

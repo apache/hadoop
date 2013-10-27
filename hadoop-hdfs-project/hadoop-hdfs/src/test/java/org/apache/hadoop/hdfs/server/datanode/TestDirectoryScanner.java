@@ -447,7 +447,7 @@ public class TestDirectoryScanner {
   
   void testScanInfoObject(long blockId) throws Exception {
     DirectoryScanner.ScanInfo scanInfo =
-        new DirectoryScanner.ScanInfo(blockId);
+        new DirectoryScanner.ScanInfo(blockId, null, null, null);
     assertEquals(blockId, scanInfo.getBlockId());
     assertNull(scanInfo.getBlockFile());
     assertNull(scanInfo.getMetaFile());

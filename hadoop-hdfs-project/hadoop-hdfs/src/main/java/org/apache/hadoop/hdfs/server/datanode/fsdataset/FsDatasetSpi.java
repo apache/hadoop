@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipelineInterface;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetFactory;
@@ -98,7 +99,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   public Map<String, Object> getVolumeInfoMap();
 
   /** @return a list of finalized blocks for the given block pool. */
-  public List<Block> getFinalizedBlocks(String bpid);
+  public List<FinalizedReplica> getFinalizedBlocks(String bpid);
 
   /**
    * Check whether the in-memory block record matches the block on the disk,
