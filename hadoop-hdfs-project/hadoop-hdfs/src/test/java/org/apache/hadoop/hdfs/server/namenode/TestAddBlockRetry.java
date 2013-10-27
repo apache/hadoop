@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
@@ -138,5 +139,34 @@ public class TestAddBlockRetry {
     lb1 = lbs.get(0);
     assertEquals("Wrong replication", REPLICATION, lb1.getLocations().length);
     assertEquals("Blocks are not equal", lb1.getBlock(), lb2.getBlock());
+  }
+
+  /*
+   * Since NameNode will not persist any locations of the block, addBlock()
+   * retry call after restart NN should re-select the locations and return to
+   * client. refer HDFS-5257
+   */
+  @Test
+  public void testAddBlockRetryShouldReturnBlockWithLocations()
+      throws Exception {
+    final String src = "/testAddBlockRetryShouldReturnBlockWithLocations";
+    NamenodeProtocols nameNodeRpc = cluster.getNameNodeRpc();
+    // create file
+    nameNodeRpc.create(src, FsPermission.getFileDefault(), "clientName",
+        new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true,
+        (short) 3, 1024);
+    // start first addBlock()
+    LOG.info("Starting first addBlock for " + src);
+    LocatedBlock lb1 = nameNodeRpc.addBlock(src, "clientName", null, null,
+        INodeId.GRANDFATHER_INODE_ID, null);
+    assertTrue("Block locations should be present",
+        lb1.getLocations().length > 0);
+
+    cluster.restartNameNode();
+    nameNodeRpc = cluster.getNameNodeRpc();
+    LocatedBlock lb2 = nameNodeRpc.addBlock(src, "clientName", null, null,
+        INodeId.GRANDFATHER_INODE_ID, null);
+    assertEquals("Blocks are not equal", lb1.getBlock(), lb2.getBlock());
+    assertTrue("Wrong locations with retry", lb2.getLocations().length > 0);
   }
 }
