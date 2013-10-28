@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.jobhistory;
 import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -498,5 +499,73 @@ public class JobHistoryUtils {
     FileContext fc = FileContext.getFileContext(histDirPath.toUri(), conf);
     return fc.makeQualified(JobHistoryUtils.getStagingJobHistoryFile(
         histDirPath,jobId, (applicationAttemptId.getAttemptId() - 1)));
+  }
+
+  /**
+   * Looks for the dirs to clean.  The folder structure is YYYY/MM/DD/Serial so
+   * we can use that to more efficiently find the directories to clean by
+   * comparing the cutoff timestamp with the timestamp from the folder
+   * structure.
+   *
+   * @param fc done dir FileContext
+   * @param root folder for completed jobs
+   * @param cutoff The cutoff for the max history age
+   * @return The list of directories for cleaning
+   * @throws IOException
+   */
+  public static List<FileStatus> getHistoryDirsForCleaning(FileContext fc,
+      Path root, long cutoff) throws IOException {
+    List<FileStatus> fsList = new ArrayList<FileStatus>();
+    Calendar cCal = Calendar.getInstance();
+    cCal.setTimeInMillis(cutoff);
+    int cYear = cCal.get(Calendar.YEAR);
+    int cMonth = cCal.get(Calendar.MONTH) + 1;
+    int cDate = cCal.get(Calendar.DATE);
+
+    RemoteIterator<FileStatus> yearDirIt = fc.listStatus(root);
+    while (yearDirIt.hasNext()) {
+      FileStatus yearDir = yearDirIt.next();
+      try {
+        int year = Integer.parseInt(yearDir.getPath().getName());
+        if (year <= cYear) {
+          RemoteIterator<FileStatus> monthDirIt =
+              fc.listStatus(yearDir.getPath());
+          while (monthDirIt.hasNext()) {
+            FileStatus monthDir = monthDirIt.next();
+            try {
+              int month = Integer.parseInt(monthDir.getPath().getName());
+              // If we only checked the month here, then something like 07/2013
+              // would incorrectly not pass when the cutoff is 06/2014
+              if (year < cYear || month <= cMonth) {
+                RemoteIterator<FileStatus> dateDirIt =
+                    fc.listStatus(monthDir.getPath());
+                while (dateDirIt.hasNext()) {
+                  FileStatus dateDir = dateDirIt.next();
+                  try {
+                    int date = Integer.parseInt(dateDir.getPath().getName());
+                    // If we only checked the date here, then something like
+                    // 07/21/2013 would incorrectly not pass when the cutoff is
+                    // 08/20/2013 or 07/20/2012
+                    if (year < cYear || month < cMonth || date <= cDate) {
+                      fsList.addAll(remoteIterToList(
+                          fc.listStatus(dateDir.getPath())));
+                    }
+                  } catch (NumberFormatException nfe) {
+                    // the directory didn't fit the format we're looking for so
+                    // skip the dir
+                  }
+                }
+              }
+            } catch (NumberFormatException nfe) {
+              // the directory didn't fit the format we're looking for so skip
+              // the dir
+            }
+          }
+        }
+      } catch (NumberFormatException nfe) {
+        // the directory didn't fit the format we're looking for so skip the dir
+      }
+    }
+    return fsList;
   }
 }
