@@ -62,7 +62,8 @@ public class JQueryUI extends HtmlBlock {
   @Override
   protected void render(Block html) {
     html.
-      link(root_url("static/jquery/themes-1.8.16/base/jquery-ui.css")).
+      link("https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/themes/base"
+          + "/jquery-ui.css").
       link(root_url("static/dt-1.9.4/css/jui-dt.css")).
       script(root_url("static/jquery-1.8.2.min.js")).
       script(root_url("static/jquery-ui-1.9.1.custom.min.js")).
