@@ -133,7 +133,21 @@ if "%1" == "--config" (
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\*
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_LIB_JARS_DIR%\*
 
-  call :%yarn-command% %yarn-command-arguments%
+  if %yarn-command% == classpath (
+    @echo %CLASSPATH%
+    goto :eof
+  )
+
+  set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar application node logs daemonlog
+  for %%i in ( %yarncommands% ) do (
+    if %yarn-command% == %%i set yarncommand=true
+  )
+  if defined yarncommand (
+    call :%yarn-command%
+  ) else (
+    set CLASSPATH=%CLASSPATH%;%CD%
+    set CLASS=%yarn-command%
+  )
 
   if defined JAVA_LIBRARY_PATH (
     set YARN_OPTS=%YARN_OPTS% -Djava.library.path=%JAVA_LIBRARY_PATH%
