@@ -134,6 +134,9 @@ Release 2.2.1 - UNRELEASED
     (Sandy Ryza)
     
     YARN-1022. Unnecessary INFO logs in AMRMClientAsync (haosdent via bikas)
+    
+    YARN-1349. yarn.cmd does not support passthrough to any arbitrary class.
+    (cnauroth)
 
 Release 2.2.0 - 2013-10-13
 
