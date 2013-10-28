@@ -77,6 +77,9 @@ Release 2.2.1 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-4680. Job history cleaner should only check timestamps of files in
+    old enough directories (Robert Kanter via Sandy Ryza)
+
   BUG FIXES
 
     MAPREDUCE-5569. FloatSplitter is not generating correct splits (Nathan

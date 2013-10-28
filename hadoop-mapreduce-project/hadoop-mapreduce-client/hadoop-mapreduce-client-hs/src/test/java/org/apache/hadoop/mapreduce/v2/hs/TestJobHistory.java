@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.junit.After;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
@@ -175,7 +176,8 @@ public class TestJobHistory {
     doReturn(list2).when(historyManager).scanDirectoryForHistoryFiles(
         eq(donePathToday), any(FileContext.class));
 
-    doReturn(fileStatusList).when(historyManager).findTimestampedDirectories();
+    doReturn(fileStatusList).when(historyManager)
+        .getHistoryDirsForCleaning(Mockito.anyLong());
     doReturn(true).when(historyManager).deleteDir(any(FileStatus.class));
 
     JobListCache jobListCache = mock(JobListCache.class);
