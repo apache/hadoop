@@ -446,6 +446,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5171. NFS should create input stream for a file and try to share it
     with multiple read requests. (Haohui Mai via brandonli)
 
+    HDFS-5413. hdfs.cmd does not support passthrough to any arbitrary class.
+    (cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
