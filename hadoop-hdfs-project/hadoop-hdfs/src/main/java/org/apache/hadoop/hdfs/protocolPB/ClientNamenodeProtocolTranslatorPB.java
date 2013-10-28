@@ -788,7 +788,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setOldBlock(PBHelper.convert(oldBlock))
         .setNewBlock(PBHelper.convert(newBlock))
         .addAllNewNodes(Arrays.asList(PBHelper.convert(newNodes)))
-        .addAllStorageIDs(Arrays.asList(storageIDs))
+        .addAllStorageIDs(storageIDs == null ? null : Arrays.asList(storageIDs))
         .build();
     try {
       rpcProxy.updatePipeline(null, req);

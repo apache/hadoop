@@ -311,7 +311,6 @@ public class DFSOutputStream extends FSOutputSummer
     private DataInputStream blockReplyStream;
     private ResponseProcessor response = null;
     private volatile DatanodeInfo[] nodes = null; // list of targets for current block
-    //TODO: update storage IDs
     private volatile String[] storageIDs = null;
     private LoadingCache<DatanodeInfo, DatanodeInfo> excludedNodes =
         CacheBuilder.newBuilder()
@@ -404,6 +403,7 @@ public class DFSOutputStream extends FSOutputSummer
 
       // setup pipeline to append to the last block XXX retries??
       nodes = lastBlock.getLocations();
+      storageIDs = lastBlock.getStorageIDs();
       errorIndex = -1;   // no errors yet.
       if (nodes.length < 1) {
         throw new IOException("Unable to retrieve blocks locations " +

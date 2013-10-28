@@ -51,3 +51,6 @@ IMPROVEMENTS:
     HDFS-5417. Fix storage IDs in PBHelper and UpgradeUtilities.  (szetszwo)
 
     HDFS-5214. Fix NPEs in BlockManager and DirectoryScanner. (Arpit Agarwal)
+
+    HDFS-5435. File append fails to initialize storageIDs. (Junping Du via
+    Arpit Agarwal)
