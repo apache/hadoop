@@ -147,6 +147,8 @@ Release 2.2.1 - UNRELEASED
 
     YARN-1330. Fair Scheduler: defaultQueueSchedulingPolicy does not take effect
     (Sandy Ryza)
+    
+    YARN-1022. Unnecessary INFO logs in AMRMClientAsync (haosdent via bikas)
 
 Release 2.2.0 - 2013-10-13
 
