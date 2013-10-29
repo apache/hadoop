@@ -72,7 +72,7 @@ public class TestCombineTextInputFormat {
     new Path(new Path(System.getProperty("test.build.data", "."), "data"),
              "TestCombineTextInputFormat");
 
-  @Test(timeout=10000)
+  @Test//(timeout=10000)
   public void testFormat() throws Exception {
     Job job = Job.getInstance(new Configuration(defaultConf));
 

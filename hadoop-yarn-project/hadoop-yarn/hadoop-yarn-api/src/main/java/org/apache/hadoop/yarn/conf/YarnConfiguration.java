@@ -24,6 +24,7 @@ import java.util.Arrays;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -278,9 +279,21 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_PREFIX = RM_PREFIX + "ha.";
   public static final String RM_HA_ENABLED = RM_HA_PREFIX + "enabled";
   public static final boolean DEFAULT_RM_HA_ENABLED = false;
-  
+
   public static final String RM_HA_IDS = RM_HA_PREFIX + "rm-ids";
   public static final String RM_HA_ID = RM_HA_PREFIX + "id";
+
+  @org.apache.hadoop.classification.InterfaceAudience.Private
+  // TODO Remove after YARN-1318
+  public static final String RM_HA_ADMIN_ADDRESS =
+      RM_HA_PREFIX + "admin.address";
+  public static final int DEFAULT_RM_HA_ADMIN_PORT = 8034;
+  public static String DEFAULT_RM_HA_ADMIN_ADDRESS =
+      "0.0.0.0:" + DEFAULT_RM_HA_ADMIN_PORT;
+  public static final String RM_HA_ADMIN_CLIENT_THREAD_COUNT =
+      RM_HA_PREFIX + "admin.client.thread-count";
+  public static final int DEFAULT_RM_HA_ADMIN_CLIENT_THREAD_COUNT = 1;
+  // end @Private
 
   ////////////////////////////////
   // RM state store configs
@@ -753,6 +766,11 @@ public class YarnConfiguration extends Configuration {
   public static final String 
   YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER =
       "security.resourcelocalizer.protocol.acl";
+  @org.apache.hadoop.classification.InterfaceAudience.Private
+  // TODO Remove after YARN-1318
+  public static final String
+  YARN_SECURITY_SERVICE_AUTHORIZATION_HA_SERVICE_PROTOCOL =
+      CommonConfigurationKeys.SECURITY_HA_SERVICE_PROTOCOL_ACL;
 
   /** No. of milliseconds to wait between sending a SIGTERM and SIGKILL
    * to a running container */
@@ -910,5 +928,15 @@ public class YarnConfiguration extends Configuration {
       address = get(name, defaultAddress);
     }
     return NetUtils.createSocketAddr(address, defaultPort, name);
+  }
+
+  @Override
+  public InetSocketAddress updateConnectAddr(String name,
+                                             InetSocketAddress addr) {
+    String prefix = name;
+    if (HAUtil.isHAEnabled(this)) {
+      prefix = HAUtil.addSuffix(prefix, HAUtil.getRMHAId(this));
+    }
+    return super.updateConnectAddr(prefix, addr);
   }
 }

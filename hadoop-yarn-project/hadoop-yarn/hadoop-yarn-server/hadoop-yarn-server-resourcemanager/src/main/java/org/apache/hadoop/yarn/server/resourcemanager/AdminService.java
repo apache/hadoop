@@ -26,7 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -52,7 +51,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsC
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
-import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 
@@ -135,36 +133,11 @@ public class AdminService extends AbstractService implements ResourceManagerAdmi
   }
 
   private UserGroupInformation checkAcls(String method) throws YarnException {
-    UserGroupInformation user;
     try {
-      user = UserGroupInformation.getCurrentUser();
+      return RMServerUtils.verifyAccess(adminAcl, method, LOG);
     } catch (IOException ioe) {
-      LOG.warn("Couldn't get current user", ioe);
-
-      RMAuditLogger.logFailure("UNKNOWN", method,
-          adminAcl.toString(), "AdminService",
-          "Couldn't get current user");
       throw RPCUtil.getRemoteException(ioe);
     }
-
-    if (!adminAcl.isUserAllowed(user)) {
-      LOG.warn("User " + user.getShortUserName() + " doesn't have permission" +
-      " to call '" + method + "'");
-
-      RMAuditLogger.logFailure(user.getShortUserName(), method,
-          adminAcl.toString(), "AdminService",
-          AuditConstants.UNAUTHORIZED_USER);
-
-      throw RPCUtil.getRemoteException(
-          new AccessControlException("User " + user.getShortUserName() + 
-              " doesn't have permission" +
-              " to call '" + method + "'")
-          );
-    }
-    LOG.info("RM Admin: " + method + " invoked by user " + 
-        user.getShortUserName());
-      
-    return user;
   }
   
   @Override

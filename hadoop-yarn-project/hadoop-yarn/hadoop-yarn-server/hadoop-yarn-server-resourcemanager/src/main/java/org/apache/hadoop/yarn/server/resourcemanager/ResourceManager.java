@@ -182,7 +182,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     validateConfigs(conf);
     this.conf = conf;
 
-    haService = new RMHAProtocolService(this);
+    haService = createRMHAProtocolService();
     addService(haService);
     super.serviceInit(conf);
   }
@@ -196,6 +196,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected void setRMStateStore(RMStateStore rmStore) {
     rmStore.setRMDispatcher(rmDispatcher);
     ((RMContextImpl) rmContext).setStateStore(rmStore);
+  }
+
+  protected RMHAProtocolService createRMHAProtocolService() {
+    return new RMHAProtocolService(this);
   }
 
   protected RMContainerTokenSecretManager createContainerTokenSecretManager(

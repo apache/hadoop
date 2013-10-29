@@ -63,7 +63,7 @@ public abstract class HAAdmin extends Configured implements Tool {
 
   private int rpcTimeoutForChecks = -1;
   
-  private static Map<String, UsageInfo> USAGE =
+  protected final static Map<String, UsageInfo> USAGE =
     ImmutableMap.<String, UsageInfo>builder()
     .put("-transitionToActive",
         new UsageInfo("<serviceId>", "Transitions the service into Active state"))
@@ -90,6 +90,14 @@ public abstract class HAAdmin extends Configured implements Tool {
   protected PrintStream errOut = System.err;
   protected PrintStream out = System.out;
   private RequestSource requestSource = RequestSource.REQUEST_BY_USER;
+
+  protected HAAdmin() {
+    super();
+  }
+
+  protected HAAdmin(Configuration conf) {
+    super(conf);
+  }
 
   protected abstract HAServiceTarget resolveTarget(String string);
 
@@ -461,9 +469,9 @@ public abstract class HAAdmin extends Configured implements Tool {
     return 0;
   }
   
-  private static class UsageInfo {
-    private final String args;
-    private final String help;
+  protected static class UsageInfo {
+    public final String args;
+    public final String help;
     
     public UsageInfo(String args, String help) {
       this.args = args;
