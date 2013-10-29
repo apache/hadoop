@@ -212,6 +212,9 @@ Release 2.2.1 - UNRELEASED
     MAPREDUCE-5457. Add a KeyOnlyTextOutputReader to enable streaming to write
     out text files without separators (Sandy Ryza)
 
+    MAPREDUCE-5596. Allow configuring the number of threads used to serve
+    shuffle connections (Sandy Ryza via jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4680. Job history cleaner should only check timestamps of files in
