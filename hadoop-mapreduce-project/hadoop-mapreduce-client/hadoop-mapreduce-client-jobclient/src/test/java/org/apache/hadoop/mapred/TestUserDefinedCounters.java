@@ -40,7 +40,8 @@ public class TestUserDefinedCounters extends TestCase {
   
   private static String TEST_ROOT_DIR =
     new File(System.getProperty("test.build.data", "/tmp")).toURI()
-    .toString().replace(' ', '+');
+    .toString().replace(' ', '+')
+    + "/" + TestUserDefinedCounters.class.getName();
 
   private final Path INPUT_DIR = new Path(TEST_ROOT_DIR + "/input");
   private final Path OUTPUT_DIR = new Path(TEST_ROOT_DIR + "/out");
@@ -61,7 +62,7 @@ public class TestUserDefinedCounters extends TestCase {
   }
   
   private void cleanAndCreateInput(FileSystem fs) throws IOException {
-    fs.delete(INPUT_FILE, true);
+    fs.delete(INPUT_DIR, true);
     fs.delete(OUTPUT_DIR, true);
 
     OutputStream os = fs.create(INPUT_FILE);
