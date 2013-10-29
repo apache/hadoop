@@ -32,6 +32,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
+import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.HostFileManager;
 import org.apache.hadoop.hdfs.server.namenode.HostFileManager.Entry;
 import org.apache.hadoop.hdfs.server.namenode.HostFileManager.EntrySet;
@@ -45,6 +47,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
@@ -143,6 +146,12 @@ public class DatanodeManager {
   private boolean hasClusterEverBeenMultiRack = false;
 
   private final boolean checkIpHostnameInRegistration;
+  /**
+   * Whether we should tell datanodes what to cache in replies to
+   * heartbeat messages.
+   */
+  private boolean sendCachingCommands = false;
+
   /**
    * The number of datanodes for each software version. This list should change
    * during rolling upgrades.
@@ -1215,8 +1224,8 @@ public class DatanodeManager {
   public DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
       final String blockPoolId,
       long capacity, long dfsUsed, long remaining, long blockPoolUsed,
-      int xceiverCount, int maxTransfers, int failedVolumes
-      ) throws IOException {
+      long cacheCapacity, long cacheUsed, int xceiverCount, int maxTransfers,
+      int failedVolumes) throws IOException {
     synchronized (heartbeatManager) {
       synchronized (datanodeMap) {
         DatanodeDescriptor nodeinfo = null;
@@ -1237,7 +1246,8 @@ public class DatanodeManager {
         }
 
         heartbeatManager.updateHeartbeat(nodeinfo, capacity, dfsUsed,
-            remaining, blockPoolUsed, xceiverCount, failedVolumes);
+            remaining, blockPoolUsed, cacheCapacity, cacheUsed, xceiverCount,
+            failedVolumes);
 
         // If we are in safemode, do not send back any recovery / replication
         // requests. Don't even drain the existing queue of work.
@@ -1298,7 +1308,19 @@ public class DatanodeManager {
           cmds.add(new BlockCommand(DatanodeProtocol.DNA_INVALIDATE,
               blockPoolId, blks));
         }
-        
+        DatanodeCommand pendingCacheCommand =
+            getCacheCommand(nodeinfo.getPendingCached(), nodeinfo,
+              DatanodeProtocol.DNA_CACHE, blockPoolId);
+        if (pendingCacheCommand != null) {
+          cmds.add(pendingCacheCommand);
+        }
+        DatanodeCommand pendingUncacheCommand =
+            getCacheCommand(nodeinfo.getPendingUncached(), nodeinfo,
+              DatanodeProtocol.DNA_UNCACHE, blockPoolId);
+        if (pendingUncacheCommand != null) {
+          cmds.add(pendingUncacheCommand);
+        }
+
         blockManager.addKeyUpdateCommand(cmds, nodeinfo);
 
         // check for balancer bandwidth update
@@ -1315,6 +1337,40 @@ public class DatanodeManager {
     }
 
     return new DatanodeCommand[0];
+  }
+
+  /**
+   * Convert a CachedBlockList into a DatanodeCommand with a list of blocks.
+   *
+   * @param list       The {@link CachedBlocksList}.  This function 
+   *                   clears the list.
+   * @param datanode   The datanode.
+   * @param action     The action to perform in the command.
+   * @param poolId     The block pool id.
+   * @return           A DatanodeCommand to be sent back to the DN, or null if
+   *                   there is nothing to be done.
+   */
+  private DatanodeCommand getCacheCommand(CachedBlocksList list,
+      DatanodeDescriptor datanode, int action, String poolId) {
+    int length = list.size();
+    if (length == 0) {
+      return null;
+    }
+    // Read and clear the existing cache commands.
+    long[] blockIds = new long[length];
+    int i = 0;
+    for (Iterator<CachedBlock> iter = list.iterator();
+            iter.hasNext(); ) {
+      CachedBlock cachedBlock = iter.next();
+      blockIds[i++] = cachedBlock.getBlockId();
+      iter.remove();
+    }
+    if (!sendCachingCommands) {
+      // Do not send caching commands unless the FSNamesystem told us we
+      // should.
+      return null;
+    }
+    return new BlockIdCommand(action, poolId, blockIds);
   }
 
   /**
@@ -1364,5 +1420,9 @@ public class DatanodeManager {
   @Override
   public String toString() {
     return getClass().getSimpleName() + ": " + host2DatanodeMap;
+  }
+
+  public void setSendCachingCommands(boolean sendCachingCommands) {
+    this.sendCachingCommands = sendCachingCommands;
   }
 }

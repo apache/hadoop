@@ -98,6 +98,7 @@ import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -107,6 +108,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -115,6 +117,8 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -2286,7 +2290,73 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException();
     }
   }
+
+  public PathBasedCacheDescriptor addPathBasedCacheDirective(
+      PathBasedCacheDirective directive) throws IOException {
+    checkOpen();
+    try {
+      return namenode.addPathBasedCacheDirective(directive);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
   
+  public void removePathBasedCacheDescriptor(long id)
+      throws IOException {
+    checkOpen();
+    try {
+      namenode.removePathBasedCacheDescriptor(id);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+  
+  public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(
+      String pool, String path) throws IOException {
+    checkOpen();
+    try {
+      return namenode.listPathBasedCacheDescriptors(0, pool, path);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  public void addCachePool(CachePoolInfo info) throws IOException {
+    checkOpen();
+    try {
+      namenode.addCachePool(info);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  public void modifyCachePool(CachePoolInfo info) throws IOException {
+    checkOpen();
+    try {
+      namenode.modifyCachePool(info);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  public void removeCachePool(String poolName) throws IOException {
+    checkOpen();
+    try {
+      namenode.removeCachePool(poolName);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  public RemoteIterator<CachePoolInfo> listCachePools() throws IOException {
+    checkOpen();
+    try {
+      return namenode.listCachePools("");
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
   /**
    * Save namespace image.
    * 

@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -465,6 +466,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     return new BlockListAsLongs(blocks, null);
   }
 
+  @Override // FsDatasetSpi
+  public List<Long> getCacheReport(String bpid) {
+    return new LinkedList<Long>();
+  }
+
   @Override // FSDatasetMBean
   public long getCapacity() {
     return storage.getCapacity();
@@ -488,6 +494,16 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override // FSDatasetMBean
   public int getNumFailedVolumes() {
     return storage.getNumFailedVolumes();
+  }
+
+  @Override // FSDatasetMBean
+  public long getDnCacheUsed() {
+    return 0l;
+  }
+
+  @Override // FSDatasetMBean
+  public long getDnCacheCapacity() {
+    return 0l;
   }
 
   @Override // FsDatasetSpi
@@ -557,6 +573,18 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     if (error) {
       throw new IOException("Invalidate: Missing blocks.");
     }
+  }
+
+  @Override // FSDatasetSpi
+  public void cache(String bpid, long[] cacheBlks) {
+    throw new UnsupportedOperationException(
+        "SimulatedFSDataset does not support cache operation!");
+  }
+
+  @Override // FSDatasetSpi
+  public void uncache(String bpid, long[] uncacheBlks) {
+    throw new UnsupportedOperationException(
+        "SimulatedFSDataset does not support uncache operation!");
   }
 
   private BInfo getBInfo(final ExtendedBlock b) {

@@ -85,7 +85,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     this.bc = bc;
   }
 
-  DatanodeDescriptor getDatanode(int index) {
+  public DatanodeDescriptor getDatanode(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
     return (DatanodeDescriptor)triplets[index*3];
@@ -153,7 +153,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return info;
   }
 
-  int getCapacity() {
+  public int getCapacity() {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert triplets.length % 3 == 0 : "Malformed BlockInfo";
     return triplets.length / 3;

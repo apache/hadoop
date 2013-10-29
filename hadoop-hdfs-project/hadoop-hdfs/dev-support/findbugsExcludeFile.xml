@@ -346,4 +346,22 @@
       <Method name="create" />
       <Bug pattern="UL_UNRELEASED_LOCK" />
     </Match>
+    <!-- Manually verified to be okay, we want to throw away the top bit here -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.namenode.CachedBlock" />
+      <Method name="getReplication" />
+      <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT" />
+    </Match>
+    <!-- These two are used for shutting down and kicking the CRMon, do not need strong sync -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor" />
+      <Field name="shutdown" />
+      <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor" />
+      <Field name="rescanImmediately" />
+      <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
+
  </FindBugsFilter>

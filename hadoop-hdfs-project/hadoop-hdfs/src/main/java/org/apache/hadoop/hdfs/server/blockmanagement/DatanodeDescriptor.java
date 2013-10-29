@@ -22,13 +22,19 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
+import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.Time;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /**
  * This class extends the DatanodeInfo class with ephemeral information (eg
@@ -94,8 +100,74 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
+  /**
+   * A list of CachedBlock objects on this datanode.
+   */
+  public static class CachedBlocksList extends IntrusiveCollection<CachedBlock> {
+    public enum Type {
+      PENDING_CACHED,
+      CACHED,
+      PENDING_UNCACHED
+    }
+
+    private final DatanodeDescriptor datanode;
+
+    private final Type type;
+
+    CachedBlocksList(DatanodeDescriptor datanode, Type type) {
+      this.datanode = datanode;
+      this.type = type;
+    }
+
+    public DatanodeDescriptor getDatanode() {
+      return datanode;
+    }
+
+    public Type getType() {
+      return type;
+    }
+  }
+
+  /**
+   * The blocks which we want to cache on this DataNode.
+   */
+  private final CachedBlocksList pendingCached = 
+      new CachedBlocksList(this, CachedBlocksList.Type.PENDING_CACHED);
+
+  /**
+   * The blocks which we know are cached on this datanode.
+   * This list is updated by periodic cache reports.
+   */
+  private final CachedBlocksList cached = 
+      new CachedBlocksList(this, CachedBlocksList.Type.CACHED);
+
+  /**
+   * The blocks which we want to uncache on this DataNode.
+   */
+  private final CachedBlocksList pendingUncached = 
+      new CachedBlocksList(this, CachedBlocksList.Type.PENDING_UNCACHED);
+
+  public CachedBlocksList getPendingCached() {
+    return pendingCached;
+  }
+
+  public CachedBlocksList getCached() {
+    return cached;
+  }
+
+  public CachedBlocksList getPendingUncached() {
+    return pendingUncached;
+  }
+
+  /**
+   * Head of the list of blocks on the datanode
+   */
   private volatile BlockInfo blockList = null;
+  /**
+   * Number of blocks on the datanode
+   */
   private int numBlocks = 0;
+
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
   public boolean isAlive = false;
@@ -160,7 +232,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param nodeID id of the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID) {
-    this(nodeID, 0L, 0L, 0L, 0L, 0, 0);
+    this(nodeID, 0L, 0L, 0L, 0L, 0L, 0L, 0, 0);
   }
 
   /**
@@ -170,7 +242,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public DatanodeDescriptor(DatanodeID nodeID, 
                             String networkLocation) {
-    this(nodeID, networkLocation, 0L, 0L, 0L, 0L, 0, 0);
+    this(nodeID, networkLocation, 0L, 0L, 0L, 0L, 0L, 0L, 0, 0);
   }
   
   /**
@@ -180,6 +252,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param dfsUsed space used by the data node
    * @param remaining remaining capacity of the data node
    * @param bpused space used by the block pool corresponding to this namenode
+   * @param cacheCapacity cache capacity of the data node
+   * @param cacheUsed cache used on the data node
    * @param xceiverCount # of data transfers at the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID, 
@@ -187,11 +261,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
                             long dfsUsed,
                             long remaining,
                             long bpused,
+                            long cacheCapacity,
+                            long cacheUsed,
                             int xceiverCount,
                             int failedVolumes) {
     super(nodeID);
-    updateHeartbeat(capacity, dfsUsed, remaining, bpused, xceiverCount, 
-        failedVolumes);
+    updateHeartbeat(capacity, dfsUsed, remaining, bpused, cacheCapacity,
+        cacheUsed, xceiverCount, failedVolumes);
   }
 
   /**
@@ -202,6 +278,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param dfsUsed the used space by dfs datanode
    * @param remaining remaining capacity of the data node
    * @param bpused space used by the block pool corresponding to this namenode
+   * @param cacheCapacity cache capacity of the data node
+   * @param cacheUsed cache used on the data node
    * @param xceiverCount # of data transfers at the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID,
@@ -210,11 +288,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
                             long dfsUsed,
                             long remaining,
                             long bpused,
+                            long cacheCapacity,
+                            long cacheUsed,
                             int xceiverCount,
                             int failedVolumes) {
     super(nodeID, networkLocation);
-    updateHeartbeat(capacity, dfsUsed, remaining, bpused, xceiverCount, 
-        failedVolumes);
+    updateHeartbeat(capacity, dfsUsed, remaining, bpused, cacheCapacity,
+        cacheUsed, xceiverCount, failedVolumes);
   }
 
   /**
@@ -257,6 +337,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Used for testing only
    * @return the head of the blockList
    */
+  @VisibleForTesting
   protected BlockInfo getHead(){
     return blockList;
   }
@@ -285,6 +366,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.blockList = null;
     this.invalidateBlocks.clear();
     this.volumeFailures = 0;
+    // pendingCached, cached, and pendingUncached are protected by the
+    // FSN lock.
+    this.pendingCached.clear();
+    this.cached.clear();
+    this.pendingUncached.clear();
   }
   
   public void clearBlockQueues() {
@@ -293,6 +379,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
       this.recoverBlocks.clear();
       this.replicateBlocks.clear();
     }
+    // pendingCached, cached, and pendingUncached are protected by the
+    // FSN lock.
+    this.pendingCached.clear();
+    this.cached.clear();
+    this.pendingUncached.clear();
   }
 
   public int numBlocks() {
@@ -303,11 +394,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Updates stats from datanode heartbeat.
    */
   public void updateHeartbeat(long capacity, long dfsUsed, long remaining,
-      long blockPoolUsed, int xceiverCount, int volFailures) {
+      long blockPoolUsed, long cacheCapacity, long cacheUsed, int xceiverCount,
+      int volFailures) {
     setCapacity(capacity);
     setRemaining(remaining);
     setBlockPoolUsed(blockPoolUsed);
     setDfsUsed(dfsUsed);
+    setCacheCapacity(cacheCapacity);
+    setCacheUsed(cacheUsed);
     setXceiverCount(xceiverCount);
     setLastUpdate(Time.now());    
     this.volumeFailures = volFailures;
@@ -348,7 +442,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public Iterator<BlockInfo> getBlockIterator() {
     return new BlockIterator(this.blockList, this);
   }
-  
+
   /**
    * Store block replication work.
    */
@@ -380,7 +474,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
       }
     }
   }
-
+  
   /**
    * The number of work items that are pending to be replicated
    */
@@ -397,7 +491,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
       return invalidateBlocks.size();
     }
   }
-  
+
   public List<BlockTargetPair> getReplicationCommand(int maxTransfers) {
     return replicateBlocks.poll(maxTransfers);
   }

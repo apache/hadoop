@@ -255,4 +255,30 @@ class FSPermissionChecker {
     throw new AccessControlException("Permission denied by sticky bit setting:" +
       " user=" + user + ", inode=" + inode);
   }
+
+  /**
+   * Whether a cache pool can be accessed by the current context
+   *
+   * @param pool CachePool being accessed
+   * @param access type of action being performed on the cache pool
+   * @return if the pool can be accessed
+   */
+  public boolean checkPermission(CachePool pool, FsAction access) {
+    FsPermission mode = pool.getMode();
+    if (isSuperUser()) {
+      return true;
+    }
+    if (user.equals(pool.getOwnerName())
+        && mode.getUserAction().implies(access)) {
+      return true;
+    }
+    if (groups.contains(pool.getGroupName())
+        && mode.getGroupAction().implies(access)) {
+      return true;
+    }
+    if (mode.getOtherAction().implies(access)) {
+      return true;
+    }
+    return false;
+  }
 }

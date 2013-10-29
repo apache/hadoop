@@ -142,7 +142,8 @@ public class TestDeadDatanode {
     // that asks datanode to register again
     StorageReport[] rep = { new StorageReport(reg.getStorageID(), false, 0, 0,
         0, 0) };
-    DatanodeCommand[] cmd = dnp.sendHeartbeat(reg, rep, 0, 0, 0).getCommands();
+    DatanodeCommand[] cmd = dnp.sendHeartbeat(reg, rep, 0L, 0L, 0, 0, 0)
+        .getCommands();
     assertEquals(1, cmd.length);
     assertEquals(cmd[0].getAction(), RegisterCommand.REGISTER
         .getAction());

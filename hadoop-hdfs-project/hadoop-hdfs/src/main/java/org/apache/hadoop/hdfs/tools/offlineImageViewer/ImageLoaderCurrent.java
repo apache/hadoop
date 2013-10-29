@@ -126,7 +126,7 @@ class ImageLoaderCurrent implements ImageLoader {
                                       new SimpleDateFormat("yyyy-MM-dd HH:mm");
   private static int[] versions = { -16, -17, -18, -19, -20, -21, -22, -23,
       -24, -25, -26, -27, -28, -30, -31, -32, -33, -34, -35, -36, -37, -38, -39,
-      -40, -41, -42, -43, -44, -45, -46, -47 };
+      -40, -41, -42, -43, -44, -45, -46, -47, -48 };
   private int imageVersion = 0;
   
   private final Map<Long, String> subtreeMap = new HashMap<Long, String>();
@@ -216,6 +216,9 @@ class ImageLoaderCurrent implements ImageLoader {
         processDelegationTokens(in, v);
       }
       
+      if (LayoutVersion.supports(Feature.CACHING, imageVersion)) {
+        processCacheManagerState(in, v);
+      }
       v.leaveEnclosingElement(); // FSImage
       done = true;
     } finally {
@@ -227,6 +230,25 @@ class ImageLoaderCurrent implements ImageLoader {
     }
   }
 
+  /**
+   * Process CacheManager state from the fsimage.
+   */
+  private void processCacheManagerState(DataInputStream in, ImageVisitor v)
+      throws IOException {
+    v.visit(ImageElement.CACHE_NEXT_ENTRY_ID, in.readLong());
+    final int numPools = in.readInt();
+    for (int i=0; i<numPools; i++) {
+      v.visit(ImageElement.CACHE_POOL_NAME, Text.readString(in));
+      processCachePoolPermission(in, v);
+      v.visit(ImageElement.CACHE_POOL_WEIGHT, in.readInt());
+    }
+    final int numEntries = in.readInt();
+    for (int i=0; i<numEntries; i++) {
+      v.visit(ImageElement.CACHE_ENTRY_PATH, Text.readString(in));
+      v.visit(ImageElement.CACHE_ENTRY_REPLICATION, in.readShort());
+      v.visit(ImageElement.CACHE_ENTRY_POOL_NAME, Text.readString(in));
+    }
+  }
   /**
    * Process the Delegation Token related section in fsimage.
    * 
@@ -381,6 +403,22 @@ class ImageLoaderCurrent implements ImageLoader {
     v.visit(ImageElement.GROUP_NAME, Text.readString(in));
     FsPermission fsp = new FsPermission(in.readShort());
     v.visit(ImageElement.PERMISSION_STRING, fsp.toString());
+    v.leaveEnclosingElement(); // Permissions
+  }
+
+  /**
+   * Extract CachePool permissions stored in the fsimage file.
+   *
+   * @param in Datastream to process
+   * @param v Visitor to walk over inodes
+   */
+  private void processCachePoolPermission(DataInputStream in, ImageVisitor v)
+      throws IOException {
+    v.visitEnclosingElement(ImageElement.PERMISSIONS);
+    v.visit(ImageElement.CACHE_POOL_OWNER_NAME, Text.readString(in));
+    v.visit(ImageElement.CACHE_POOL_GROUP_NAME, Text.readString(in));
+    FsPermission fsp = new FsPermission(in.readShort());
+    v.visit(ImageElement.CACHE_POOL_PERMISSION_STRING, fsp.toString());
     v.leaveEnclosingElement(); // Permissions
   }
 

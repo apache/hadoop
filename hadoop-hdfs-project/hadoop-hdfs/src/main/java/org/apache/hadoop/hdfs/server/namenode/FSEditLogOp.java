@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_CACHE_POOL;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_PATH_BASED_CACHE_DIRECTIVE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ALLOCATE_BLOCK_ID;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ALLOW_SNAPSHOT;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_CANCEL_DELEGATION_TOKEN;
@@ -32,7 +34,10 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_END_LOG
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_GET_DELEGATION_TOKEN;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_INVALID;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_MKDIR;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_MODIFY_CACHE_POOL;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REASSIGN_LEASE;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REMOVE_CACHE_POOL;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_OLD;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_SNAPSHOT;
@@ -56,6 +61,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
@@ -73,6 +79,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
@@ -97,7 +104,9 @@ import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
 /**
  * Helper classes for reading the ops from an InputStream.
@@ -153,6 +162,13 @@ public abstract class FSEditLogOp {
       inst.put(OP_RENAME_SNAPSHOT, new RenameSnapshotOp());
       inst.put(OP_SET_GENSTAMP_V2, new SetGenstampV2Op());
       inst.put(OP_ALLOCATE_BLOCK_ID, new AllocateBlockIdOp());
+      inst.put(OP_ADD_PATH_BASED_CACHE_DIRECTIVE,
+          new AddPathBasedCacheDirectiveOp());
+      inst.put(OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR,
+          new RemovePathBasedCacheDescriptorOp());
+      inst.put(OP_ADD_CACHE_POOL, new AddCachePoolOp());
+      inst.put(OP_MODIFY_CACHE_POOL, new ModifyCachePoolOp());
+      inst.put(OP_REMOVE_CACHE_POOL, new RemoveCachePoolOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
@@ -528,8 +544,7 @@ public abstract class FSEditLogOp {
       } else {
         this.blocks = new Block[0];
       }
-      this.permissions =
-          permissionStatusFromXml(st.getChildren("PERMISSION_STATUS").get(0));
+      this.permissions = permissionStatusFromXml(st);
       readRpcIdsFromXml(st);
     }
   }
@@ -1208,8 +1223,7 @@ public abstract class FSEditLogOp {
       this.inodeId = Long.valueOf(st.getValue("INODEID"));
       this.path = st.getValue("PATH");
       this.timestamp = Long.valueOf(st.getValue("TIMESTAMP"));
-      this.permissions =
-          permissionStatusFromXml(st.getChildren("PERMISSION_STATUS").get(0));
+      this.permissions = permissionStatusFromXml(st);
     }
   }
 
@@ -1940,8 +1954,7 @@ public abstract class FSEditLogOp {
       this.value = st.getValue("VALUE");
       this.mtime = Long.valueOf(st.getValue("MTIME"));
       this.atime = Long.valueOf(st.getValue("ATIME"));
-      this.permissionStatus =
-          permissionStatusFromXml(st.getChildren("PERMISSION_STATUS").get(0));
+      this.permissionStatus = permissionStatusFromXml(st);
       
       readRpcIdsFromXml(st);
     }
@@ -2848,6 +2861,317 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /**
+   * {@literal @AtMostOnce} for
+   * {@link ClientProtocol#addPathBasedCacheDirective}
+   */
+  static class AddPathBasedCacheDirectiveOp extends FSEditLogOp {
+    String path;
+    short replication;
+    String pool;
+
+    public AddPathBasedCacheDirectiveOp() {
+      super(OP_ADD_PATH_BASED_CACHE_DIRECTIVE);
+    }
+
+    static AddPathBasedCacheDirectiveOp getInstance(OpInstanceCache cache) {
+      return (AddPathBasedCacheDirectiveOp) cache
+          .get(OP_ADD_PATH_BASED_CACHE_DIRECTIVE);
+    }
+
+    public AddPathBasedCacheDirectiveOp setPath(String path) {
+      this.path = path;
+      return this;
+    }
+
+    public AddPathBasedCacheDirectiveOp setReplication(short replication) {
+      this.replication = replication;
+      return this;
+    }
+
+    public AddPathBasedCacheDirectiveOp setPool(String pool) {
+      this.pool = pool;
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      this.path = FSImageSerialization.readString(in);
+      this.replication = FSImageSerialization.readShort(in);
+      this.pool = FSImageSerialization.readString(in);
+      readRpcIds(in, logVersion);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(path, out);
+      FSImageSerialization.writeShort(replication, out);
+      FSImageSerialization.writeString(pool, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "PATH", path);
+      XMLUtils.addSaxString(contentHandler, "REPLICATION",
+          Short.toString(replication));
+      XMLUtils.addSaxString(contentHandler, "POOL", pool);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      path = st.getValue("PATH");
+      replication = Short.parseShort(st.getValue("REPLICATION"));
+      pool = st.getValue("POOL");
+      readRpcIdsFromXml(st);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("AddPathBasedCacheDirective [");
+      builder.append("path=" + path + ",");
+      builder.append("replication=" + replication + ",");
+      builder.append("pool=" + pool);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
+  /**
+   * {@literal @AtMostOnce} for
+   * {@link ClientProtocol#removePathBasedCacheDescriptor}
+   */
+  static class RemovePathBasedCacheDescriptorOp extends FSEditLogOp {
+    long id;
+
+    public RemovePathBasedCacheDescriptorOp() {
+      super(OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR);
+    }
+
+    static RemovePathBasedCacheDescriptorOp getInstance(OpInstanceCache cache) {
+      return (RemovePathBasedCacheDescriptorOp) cache
+          .get(OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR);
+    }
+
+    public RemovePathBasedCacheDescriptorOp setId(long id) {
+      this.id = id;
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      this.id = FSImageSerialization.readLong(in);
+      readRpcIds(in, logVersion);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(id, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "ID", Long.toString(id));
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      this.id = Long.parseLong(st.getValue("ID"));
+      readRpcIdsFromXml(st);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("RemovePathBasedCacheDescriptor [");
+      builder.append("id=" + Long.toString(id));
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#addCachePool} */
+  static class AddCachePoolOp extends FSEditLogOp {
+    CachePoolInfo info;
+
+    public AddCachePoolOp() {
+      super(OP_ADD_CACHE_POOL);
+    }
+
+    static AddCachePoolOp getInstance(OpInstanceCache cache) {
+      return (AddCachePoolOp) cache.get(OP_ADD_CACHE_POOL);
+    }
+
+    public AddCachePoolOp setPool(CachePoolInfo info) {
+      this.info = info;
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      info = CachePoolInfo.readFrom(in);
+      readRpcIds(in, logVersion);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      info .writeTo(out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      info.writeXmlTo(contentHandler);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      this.info = CachePoolInfo.readXmlFrom(st);
+      readRpcIdsFromXml(st);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("AddCachePoolOp [");
+      builder.append("poolName=" + info.getPoolName() + ",");
+      builder.append("ownerName=" + info.getOwnerName() + ",");
+      builder.append("groupName=" + info.getGroupName() + ",");
+      builder.append("mode=" + Short.toString(info.getMode().toShort()) + ",");
+      builder.append("weight=" + Integer.toString(info.getWeight()));
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#modifyCachePool} */
+  static class ModifyCachePoolOp extends FSEditLogOp {
+    CachePoolInfo info;
+
+    public ModifyCachePoolOp() {
+      super(OP_MODIFY_CACHE_POOL);
+    }
+
+    static ModifyCachePoolOp getInstance(OpInstanceCache cache) {
+      return (ModifyCachePoolOp) cache.get(OP_MODIFY_CACHE_POOL);
+    }
+
+    public ModifyCachePoolOp setInfo(CachePoolInfo info) {
+      this.info = info;
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      info = CachePoolInfo.readFrom(in);
+      readRpcIds(in, logVersion);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      info.writeTo(out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      cachePoolInfoToXml(contentHandler, info);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      this.info = cachePoolInfoFromXml(st);
+      readRpcIdsFromXml(st);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("ModifyCachePoolOp [");
+      ArrayList<String> fields = new ArrayList<String>(5);
+      if (info.getPoolName() != null) {
+        fields.add("poolName=" + info.getPoolName());
+      }
+      if (info.getOwnerName() != null) {
+        fields.add("ownerName=" + info.getOwnerName());
+      }
+      if (info.getGroupName() != null) {
+        fields.add("groupName=" + info.getGroupName());
+      }
+      if (info.getMode() != null) {
+        fields.add("mode=" + info.getMode().toString());
+      }
+      if (info.getWeight() != null) {
+        fields.add("weight=" + info.getWeight());
+      }
+      builder.append(Joiner.on(",").join(fields));
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
+  /** {@literal @AtMostOnce} for {@link ClientProtocol#removeCachePool} */
+  static class RemoveCachePoolOp extends FSEditLogOp {
+    String poolName;
+
+    public RemoveCachePoolOp() {
+      super(OP_REMOVE_CACHE_POOL);
+    }
+
+    static RemoveCachePoolOp getInstance(OpInstanceCache cache) {
+      return (RemoveCachePoolOp) cache.get(OP_REMOVE_CACHE_POOL);
+    }
+
+    public RemoveCachePoolOp setPoolName(String poolName) {
+      this.poolName = poolName;
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      poolName = FSImageSerialization.readString(in);
+      readRpcIds(in, logVersion);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(poolName, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "POOLNAME", poolName);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      this.poolName = st.getValue("POOLNAME");
+      readRpcIdsFromXml(st);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("RemoveCachePoolOp [");
+      builder.append("poolName=" + poolName);
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
   static private short readShort(DataInputStream in) throws IOException {
     return Short.parseShort(FSImageSerialization.readString(in));
   }
@@ -3235,16 +3559,65 @@ public abstract class FSEditLogOp {
     contentHandler.startElement("", "", "PERMISSION_STATUS", new AttributesImpl());
     XMLUtils.addSaxString(contentHandler, "USERNAME", perm.getUserName());
     XMLUtils.addSaxString(contentHandler, "GROUPNAME", perm.getGroupName());
-    XMLUtils.addSaxString(contentHandler, "MODE",
-        Short.valueOf(perm.getPermission().toShort()).toString());
+    fsPermissionToXml(contentHandler, perm.getPermission());
     contentHandler.endElement("", "", "PERMISSION_STATUS");
   }
 
   public static PermissionStatus permissionStatusFromXml(Stanza st)
       throws InvalidXmlException {
-    String username = st.getValue("USERNAME");
-    String groupname = st.getValue("GROUPNAME");
+    Stanza status = st.getChildren("PERMISSION_STATUS").get(0);
+    String username = status.getValue("USERNAME");
+    String groupname = status.getValue("GROUPNAME");
+    FsPermission mode = fsPermissionFromXml(status);
+    return new PermissionStatus(username, groupname, mode);
+  }
+
+  public static void fsPermissionToXml(ContentHandler contentHandler,
+      FsPermission mode) throws SAXException {
+    XMLUtils.addSaxString(contentHandler, "MODE", Short.valueOf(mode.toShort())
+        .toString());
+  }
+
+  public static FsPermission fsPermissionFromXml(Stanza st)
+      throws InvalidXmlException {
     short mode = Short.valueOf(st.getValue("MODE"));
-    return new PermissionStatus(username, groupname, new FsPermission(mode));
+    return new FsPermission(mode);
+  }
+
+  public static void cachePoolInfoToXml(ContentHandler contentHandler,
+      CachePoolInfo info) throws SAXException {
+    XMLUtils.addSaxString(contentHandler, "POOLNAME", info.getPoolName());
+    if (info.getOwnerName() != null) {
+      XMLUtils.addSaxString(contentHandler, "OWNERNAME", info.getOwnerName());
+    }
+    if (info.getGroupName() != null) {
+      XMLUtils.addSaxString(contentHandler, "GROUPNAME", info.getGroupName());
+    }
+    if (info.getMode() != null) {
+      fsPermissionToXml(contentHandler, info.getMode());
+    }
+    if (info.getWeight() != null) {
+      XMLUtils.addSaxString(contentHandler, "WEIGHT",
+          Integer.toString(info.getWeight()));
+    }
+  }
+
+  public static CachePoolInfo cachePoolInfoFromXml(Stanza st)
+      throws InvalidXmlException {
+    String poolName = st.getValue("POOLNAME");
+    CachePoolInfo info = new CachePoolInfo(poolName);
+    if (st.hasChildren("OWNERNAME")) {
+      info.setOwnerName(st.getValue("OWNERNAME"));
+    }
+    if (st.hasChildren("GROUPNAME")) {
+      info.setGroupName(st.getValue("GROUPNAME"));
+    }
+    if (st.hasChildren("MODE")) {
+      info.setMode(FSEditLogOp.fsPermissionFromXml(st));
+    }
+    if (st.hasChildren("WEIGHT")) {
+      info.setWeight(Integer.parseInt(st.getValue("WEIGHT")));
+    }
+    return info;
   }
 }

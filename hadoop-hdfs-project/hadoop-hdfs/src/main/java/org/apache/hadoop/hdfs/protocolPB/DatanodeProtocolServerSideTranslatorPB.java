@@ -27,6 +27,8 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReceive
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReceivedAndDeletedResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CacheReportRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CacheReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto;
@@ -55,6 +57,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 
+import com.google.common.primitives.Longs;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -109,8 +112,9 @@ public class DatanodeProtocolServerSideTranslatorPB implements
             p.getBlockPoolUsed());
       }
       response = impl.sendHeartbeat(PBHelper.convert(request.getRegistration()),
-          report, request.getXmitsInProgress(), request.getXceiverCount(),
-          request.getFailedVolumes());
+          report, request.getDnCacheCapacity(), request.getDnCacheUsed(),
+          request.getXmitsInProgress(),
+          request.getXceiverCount(), request.getFailedVolumes());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -158,6 +162,27 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     }
     return builder.build();
   }
+
+  @Override
+  public CacheReportResponseProto cacheReport(RpcController controller,
+      CacheReportRequestProto request) throws ServiceException {
+    DatanodeCommand cmd = null;
+    try {
+      cmd = impl.cacheReport(
+          PBHelper.convert(request.getRegistration()),
+          request.getBlockPoolId(),
+          request.getBlocksList());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    CacheReportResponseProto.Builder builder =
+        CacheReportResponseProto.newBuilder();
+    if (cmd != null) {
+      builder.setCmd(PBHelper.convert(cmd));
+    }
+    return builder.build();
+  }
+
 
   @Override
   public BlockReceivedAndDeletedResponseProto blockReceivedAndDeleted(

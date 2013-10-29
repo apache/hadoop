@@ -79,6 +79,8 @@ public class TestJsonUtil {
     response.put("xceiverCount", 4096l);
     response.put("networkLocation", "foo.bar.baz");
     response.put("adminState", "NORMAL");
+    response.put("cacheCapacity", 123l);
+    response.put("cacheUsed", 321l);
     
     JsonUtil.toDatanodeInfo(response);
   }

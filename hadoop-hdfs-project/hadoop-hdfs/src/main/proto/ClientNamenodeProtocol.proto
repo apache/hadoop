@@ -363,6 +363,91 @@ message IsFileClosedResponseProto {
   required bool result = 1;
 }
 
+message PathBasedCacheDirectiveProto {
+  required string path = 1;
+  required uint32 replication = 2;
+  required string pool = 3;
+}
+
+message AddPathBasedCacheDirectiveRequestProto {
+  required PathBasedCacheDirectiveProto directive = 1;
+}
+
+message AddPathBasedCacheDirectiveResponseProto {
+  required int64 descriptorId = 1;
+}
+
+message RemovePathBasedCacheDescriptorRequestProto {
+  required int64 descriptorId = 1;
+}
+
+message RemovePathBasedCacheDescriptorResponseProto {
+}
+
+message ListPathBasedCacheDescriptorsRequestProto {
+  required int64 prevId = 1;
+  optional string pool = 2;
+  optional string path = 3;
+}
+
+message ListPathBasedCacheDescriptorsElementProto {
+  required int64 id = 1;
+  required string pool = 2;
+  required uint32 replication = 3;
+  required string path = 4;
+}
+
+message ListPathBasedCacheDescriptorsResponseProto {
+  repeated ListPathBasedCacheDescriptorsElementProto elements = 1;
+  required bool hasMore = 2;
+}
+
+message AddCachePoolRequestProto {
+  required string poolName = 1;
+  optional string ownerName = 2;
+  optional string groupName = 3;
+  optional int32 mode = 4;
+  optional int32 weight = 5;
+}
+
+message AddCachePoolResponseProto { // void response
+}
+
+message ModifyCachePoolRequestProto {
+  required string poolName = 1;
+  optional string ownerName = 2;
+  optional string groupName = 3;
+  optional int32 mode = 4;
+  optional int32 weight = 5;
+}
+
+message ModifyCachePoolResponseProto { // void response
+}
+
+message RemoveCachePoolRequestProto {
+  required string poolName = 1;
+}
+
+message RemoveCachePoolResponseProto { // void response
+}
+
+message ListCachePoolsRequestProto {
+  required string prevPoolName = 1;
+}
+
+message ListCachePoolsResponseProto {
+  repeated ListCachePoolsResponseElementProto elements = 1;
+  required bool hasMore = 2;
+}
+
+message ListCachePoolsResponseElementProto {
+  required string poolName = 1;
+  required string ownerName = 2;
+  required string groupName = 3;
+  required int32 mode = 4;
+  required int32 weight = 5;
+}
+
 message GetFileLinkInfoRequestProto {
   required string src = 1;
 }
@@ -544,6 +629,20 @@ service ClientNamenodeProtocol {
       returns(ListCorruptFileBlocksResponseProto);
   rpc metaSave(MetaSaveRequestProto) returns(MetaSaveResponseProto);
   rpc getFileInfo(GetFileInfoRequestProto) returns(GetFileInfoResponseProto);
+  rpc addPathBasedCacheDirective(AddPathBasedCacheDirectiveRequestProto)
+      returns (AddPathBasedCacheDirectiveResponseProto);
+  rpc removePathBasedCacheDescriptor(RemovePathBasedCacheDescriptorRequestProto)
+      returns (RemovePathBasedCacheDescriptorResponseProto);
+  rpc listPathBasedCacheDescriptors(ListPathBasedCacheDescriptorsRequestProto)
+      returns (ListPathBasedCacheDescriptorsResponseProto);
+  rpc addCachePool(AddCachePoolRequestProto)
+      returns(AddCachePoolResponseProto);
+  rpc modifyCachePool(ModifyCachePoolRequestProto)
+      returns(ModifyCachePoolResponseProto);
+  rpc removeCachePool(RemoveCachePoolRequestProto)
+      returns(RemoveCachePoolResponseProto);
+  rpc listCachePools(ListCachePoolsRequestProto)
+      returns(ListCachePoolsResponseProto);
   rpc getFileLinkInfo(GetFileLinkInfoRequestProto)
       returns(GetFileLinkInfoResponseProto);
   rpc getContentSummary(GetContentSummaryRequestProto)

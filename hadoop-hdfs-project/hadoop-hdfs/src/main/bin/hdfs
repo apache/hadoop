@@ -59,6 +59,7 @@ function print_usage(){
   echo "						Use -help to see options"
   echo "  portmap              run a portmap service"
   echo "  nfs3                 run an NFS version 3 gateway"
+  echo "  cacheadmin           configure the HDFS cache"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
@@ -155,6 +156,8 @@ elif [ "$COMMAND" = "portmap" ] ; then
   CLASS=org.apache.hadoop.portmap.Portmap
 elif [ "$COMMAND" = "nfs3" ] ; then
   CLASS=org.apache.hadoop.hdfs.nfs.nfs3.Nfs3
+elif [ "$COMMAND" = "cacheadmin" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.CacheAdmin
 else
   CLASS="$COMMAND"
 fi

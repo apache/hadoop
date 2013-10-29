@@ -70,6 +70,7 @@ message DatanodeCommandProto {
     RegisterCommand = 5;
     UnusedUpgradeCommand = 6;
     NullDatanodeCommand = 7;
+    BlockIdCommand = 8;
   }
 
   required Type cmdType = 1;    // Type of the command
@@ -82,6 +83,7 @@ message DatanodeCommandProto {
   optional FinalizeCommandProto finalizeCmd = 5;
   optional KeyUpdateCommandProto keyUpdateCmd = 6;
   optional RegisterCommandProto registerCmd = 7;
+  optional BlockIdCommandProto blkIdCmd = 8;
 }
 
 /**
@@ -102,12 +104,26 @@ message BlockCommandProto {
   enum Action {  
     TRANSFER = 1;   // Transfer blocks to another datanode
     INVALIDATE = 2; // Invalidate blocks
-    SHUTDOWN = 3; // Shutdown the datanode
+    SHUTDOWN = 3;   // Shutdown the datanode
   }
   required Action action = 1;
   required string blockPoolId = 2;
   repeated BlockProto blocks = 3;
   repeated DatanodeInfosProto targets = 4;
+}
+
+/**
+ * Command to instruct datanodes to perform certain action
+ * on the given set of block IDs.
+ */
+message BlockIdCommandProto {
+  enum Action {
+    CACHE = 1;
+    UNCACHE = 2;
+  }
+  required Action action = 1;
+  required string blockPoolId = 2;
+  repeated uint64 blockIds = 3 [packed=true];
 }
 
 /**
@@ -163,6 +179,8 @@ message RegisterDatanodeResponseProto {
  * xmitsInProgress - number of transfers from this datanode to others
  * xceiverCount - number of active transceiver threads
  * failedVolumes - number of failed volumes
+ * cacheCapacity - total cache capacity available at the datanode
+ * cacheUsed - amount of cache used
  */
 message HeartbeatRequestProto {
   required DatanodeRegistrationProto registration = 1; // Datanode info
@@ -170,6 +188,8 @@ message HeartbeatRequestProto {
   optional uint32 xmitsInProgress = 3 [ default = 0 ];
   optional uint32 xceiverCount = 4 [ default = 0 ];
   optional uint32 failedVolumes = 5 [ default = 0 ];
+  optional uint64 dnCacheCapacity = 6 [ default = 0 ];
+  optional uint64 dnCacheUsed = 7 [default = 0 ];
 }
 
 message StorageReportProto {
@@ -202,9 +222,11 @@ message HeartbeatResponseProto {
 /**
  * registration - datanode registration information
  * blockPoolID  - block pool ID of the reported blocks
- * blocks       - each block is represented as two longs in the array.
+ * blocks       - each block is represented as multiple longs in the array.
  *                first long represents block ID
  *                second long represents length
+ *                third long represents gen stamp
+ *                fourth long (if under construction) represents replica state
  */
 message BlockReportRequestProto {
   required DatanodeRegistrationProto registration = 1;
@@ -226,6 +248,21 @@ message StorageBlockReportProto {
 message BlockReportResponseProto {
   optional DatanodeCommandProto cmd = 1;
 } 
+
+/**
+ * registration - datanode registration information
+ * blockPoolId  - block pool ID of the reported blocks
+ * blocks       - representation of blocks as longs for efficiency reasons
+ */
+message CacheReportRequestProto {
+  required DatanodeRegistrationProto registration = 1;
+  required string blockPoolId = 2;
+  repeated uint64 blocks = 3 [packed=true];
+}
+
+message CacheReportResponseProto {
+  optional DatanodeCommandProto cmd = 1;
+}
 
 /**
  * Data structure to send received or deleted block information
@@ -343,6 +380,11 @@ service DatanodeProtocolService {
    * Report blocks at a given datanode to the namenode
    */
   rpc blockReport(BlockReportRequestProto) returns(BlockReportResponseProto);
+
+  /**
+   * Report cached blocks at a datanode to the namenode
+   */
+  rpc cacheReport(CacheReportRequestProto) returns(CacheReportResponseProto);
 
   /**
    * Incremental block report from the DN. This contains info about recently
