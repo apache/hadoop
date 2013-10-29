@@ -114,6 +114,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1333. Support blacklisting in the Fair Scheduler (Tsuyoshi Ozawa via
     Sandy Ryza)
 
+    YARN-1109. Demote NodeManager "Sending out status for container" logs to
+    debug (haosdent via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES

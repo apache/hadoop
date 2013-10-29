@@ -74,7 +74,14 @@ public class ContainerStatusPBImpl extends ContainerStatus {
 
   @Override
   public String toString() {
-    return TextFormat.shortDebugString(getProto());
+    StringBuilder sb = new StringBuilder();
+    sb.append("ContainerStatus: [");
+    sb.append("ContainerId: ").append(getContainerId()).append(", ");
+    sb.append("State: ").append(getState()).append(", ");
+    sb.append("Diagnostics: ").append(getDiagnostics()).append(", ");
+    sb.append("ExitStatus: ").append(getExitStatus()).append(", ");
+    sb.append("]");
+    return sb.toString();
   }
 
   private void mergeLocalToBuilder() {
