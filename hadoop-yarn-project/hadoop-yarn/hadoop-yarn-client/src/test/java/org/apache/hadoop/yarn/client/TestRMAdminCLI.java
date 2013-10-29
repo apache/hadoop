@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -31,7 +32,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceStatus;
+import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.yarn.client.cli.RMAdminCLI;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -46,11 +52,20 @@ import org.mockito.ArgumentMatcher;
 public class TestRMAdminCLI {
 
   private ResourceManagerAdministrationProtocol admin;
+  private HAServiceProtocol haadmin;
   private RMAdminCLI rmAdminCLI;
 
   @Before
-  public void configure() {
+  public void configure() throws IOException {
     admin = mock(ResourceManagerAdministrationProtocol.class);
+
+    haadmin = mock(HAServiceProtocol.class);
+    when(haadmin.getServiceStatus()).thenReturn(new HAServiceStatus(
+        HAServiceProtocol.HAServiceState.INITIALIZING));
+
+    final HAServiceTarget haServiceTarget = mock(HAServiceTarget.class);
+    when(haServiceTarget.getProxy(any(Configuration.class), anyInt()))
+        .thenReturn(haadmin);
     rmAdminCLI = new RMAdminCLI() {
 
       @Override
@@ -58,7 +73,11 @@ public class TestRMAdminCLI {
           throws IOException {
         return admin;
       }
-      
+
+      @Override
+      protected HAServiceTarget resolveTarget(String rmId) {
+        return haServiceTarget;
+      }
     };
   }
   
@@ -128,6 +147,36 @@ public class TestRMAdminCLI {
     }
   }
 
+  @Test(timeout = 500)
+  public void testTransitionToActive() throws Exception {
+    String[] args = {"-transitionToActive", "rm1"};
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(haadmin).transitionToActive(
+        any(HAServiceProtocol.StateChangeRequestInfo.class));
+  }
+
+  @Test(timeout = 500)
+  public void testTransitionToStandby() throws Exception {
+    String[] args = {"-transitionToStandby", "rm1"};
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(haadmin).transitionToStandby(
+        any(HAServiceProtocol.StateChangeRequestInfo.class));
+  }
+
+  @Test(timeout = 500)
+  public void testGetServiceState() throws Exception {
+    String[] args = {"-getServiceState", "rm1"};
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(haadmin).getServiceStatus();
+  }
+
+  @Test(timeout = 500)
+  public void testCheckHealth() throws Exception {
+    String[] args = {"-checkHealth", "rm1"};
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(haadmin).monitorHealth();
+  }
+
   /**
    * Test printing of help messages
    */
@@ -142,18 +191,22 @@ public class TestRMAdminCLI {
     try {
       String[] args = { "-help" };
       assertEquals(0, rmAdminCLI.run(args));
+      oldOutPrintStream.println(dataOut);
       assertTrue(dataOut
           .toString()
           .contains(
-              "rmadmin is the command to execute Map-Reduce" +
-              " administrative commands."));
+              "rmadmin is the command to execute YARN administrative commands."));
       assertTrue(dataOut
           .toString()
           .contains(
-              "hadoop rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper" +
+              "yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper" +
               "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
-              " [username]] [-help [cmd]]"));
+              " [username]] [-help [cmd]] [-transitionToActive <serviceId>]" +
+              " [-transitionToStandby <serviceId>] [-failover [--forcefence] " +
+                  "[--forceactive] <serviceId> <serviceId>] " +
+                  "[-getServiceState <serviceId>] [-checkHealth <serviceId>]"
+          ));
       assertTrue(dataOut
           .toString()
           .contains(
@@ -184,7 +237,7 @@ public class TestRMAdminCLI {
       assertTrue(dataOut
           .toString()
           .contains(
-              "-help [cmd]: \tDisplays help for the given command or all " +
+              "-help [cmd]: Displays help for the given command or all " +
               "commands if none"));
 
       testError(new String[] { "-help", "-refreshQueues" },
@@ -199,12 +252,24 @@ public class TestRMAdminCLI {
           dataErr, 0);
       testError(new String[] { "-help", "-refreshAdminAcls" },
           "Usage: java RMAdmin [-refreshAdminAcls]", dataErr, 0);
-      testError(new String[] { "-help", "-refreshService" },
+      testError(new String[] { "-help", "-refreshServiceAcl" },
           "Usage: java RMAdmin [-refreshServiceAcl]", dataErr, 0);
       testError(new String[] { "-help", "-getGroups" },
           "Usage: java RMAdmin [-getGroups [username]]", dataErr, 0);
+      testError(new String[] { "-help", "-transitionToActive" },
+          "Usage: java RMAdmin [-transitionToActive <serviceId>]", dataErr, 0);
+      testError(new String[] { "-help", "-transitionToStandby" },
+          "Usage: java RMAdmin [-transitionToStandby <serviceId>]", dataErr, 0);
+      testError(new String[] { "-help", "-getServiceState" },
+          "Usage: java RMAdmin [-getServiceState <serviceId>]", dataErr, 0);
+      testError(new String[] { "-help", "-checkHealth" },
+          "Usage: java RMAdmin [-checkHealth <serviceId>]", dataErr, 0);
+      testError(new String[] { "-help", "-failover" },
+          "Usage: java RMAdmin " +
+              "[-failover [--forcefence] [--forceactive] " +
+              "<serviceId> <serviceId>]",
+          dataErr, 0);
 
-      
       testError(new String[] { "-help", "-badParameter" },
           "Usage: java RMAdmin", dataErr, 0);
       testError(new String[] { "-badParameter" },

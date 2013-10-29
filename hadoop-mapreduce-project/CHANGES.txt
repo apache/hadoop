@@ -212,6 +212,9 @@ Release 2.2.1 - UNRELEASED
     MAPREDUCE-5457. Add a KeyOnlyTextOutputReader to enable streaming to write
     out text files without separators (Sandy Ryza)
 
+    MAPREDUCE-5596. Allow configuring the number of threads used to serve
+    shuffle connections (Sandy Ryza via jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4680. Job history cleaner should only check timestamps of files in
@@ -230,6 +233,9 @@ Release 2.2.1 - UNRELEASED
 
     MAPREDUCE-5561. org.apache.hadoop.mapreduce.v2.app.job.impl.TestJobImpl
     testcase failing on trunk (Karthik Kambatla via jlowe)
+
+    MAPREDUCE-5598. TestUserDefinedCounters.testMapReduceJob is flakey
+    (Robert Kanter via jlowe)
 
 Release 2.2.0 - 2013-10-13
 
