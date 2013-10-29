@@ -15,6 +15,10 @@ Release 2.2.1 - UNRELEASED
     HDFS-5331. make SnapshotDiff.java to a o.a.h.util.Tool interface implementation. 
     (Vinayakumar B via umamahesh)
 
+    HDFS-4657.  Limit the number of blocks logged by the NN after a block
+    report to a configurable value.  (Aaron Twinning Meyers via Colin Patrick
+    McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
