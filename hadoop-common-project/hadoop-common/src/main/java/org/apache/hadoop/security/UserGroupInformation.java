@@ -1254,6 +1254,14 @@ public class UserGroupInformation {
     return null;
   }
 
+  public String getPrimaryGroupName() throws IOException {
+    String[] groups = getGroupNames();
+    if (groups.length == 0) {
+      throw new IOException("There is no primary group for UGI " + this);
+    }
+    return groups[0];
+  }
+
   /**
    * Get the user's full principal name.
    * @return the user's full principal name.

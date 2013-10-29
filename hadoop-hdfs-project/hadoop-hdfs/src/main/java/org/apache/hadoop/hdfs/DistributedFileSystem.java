@@ -57,6 +57,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -66,6 +67,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
@@ -1579,5 +1582,113 @@ public class DistributedFileSystem extends FileSystem {
       }
     }.resolve(this, absF);
   }
+
+  /**
+   * Add a new PathBasedCacheDirective.
+   * 
+   * @param directive A PathBasedCacheDirectives to add
+   * @return PathBasedCacheDescriptor associated with the added directive
+   * @throws IOException if the directive could not be added
+   */
+  public PathBasedCacheDescriptor addPathBasedCacheDirective(
+      PathBasedCacheDirective directive) throws IOException {
+    Path path = new Path(getPathName(fixRelativePart(directive.getPath()))).
+        makeQualified(getUri(), getWorkingDirectory());
+    return dfs.addPathBasedCacheDirective(new PathBasedCacheDirective.Builder().
+        setPath(path).
+        setReplication(directive.getReplication()).
+        setPool(directive.getPool()).
+        build());
+  }
   
+  /**
+   * Remove a PathBasedCacheDescriptor.
+   * 
+   * @param descriptor PathBasedCacheDescriptor to remove
+   * @throws IOException if the descriptor could not be removed
+   */
+  public void removePathBasedCacheDescriptor(PathBasedCacheDescriptor descriptor)
+      throws IOException {
+    dfs.removePathBasedCacheDescriptor(descriptor.getEntryId());
+  }
+  
+  /**
+   * List the set of cached paths of a cache pool. Incrementally fetches results
+   * from the server.
+   * 
+   * @param pool The cache pool to list, or null to list all pools.
+   * @param path The path name to list, or null to list all paths.
+   * @return A RemoteIterator which returns PathBasedCacheDescriptor objects.
+   */
+  public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(
+      String pool, final Path path) throws IOException {
+    String pathName = path != null ? getPathName(fixRelativePart(path)) : null;
+    final RemoteIterator<PathBasedCacheDescriptor> iter =
+        dfs.listPathBasedCacheDescriptors(pool, pathName);
+    return new RemoteIterator<PathBasedCacheDescriptor>() {
+      @Override
+      public boolean hasNext() throws IOException {
+        return iter.hasNext();
+      }
+
+      @Override
+      public PathBasedCacheDescriptor next() throws IOException {
+        PathBasedCacheDescriptor desc = iter.next();
+        Path qualPath = desc.getPath().makeQualified(getUri(), path);
+        return new PathBasedCacheDescriptor(desc.getEntryId(), qualPath,
+            desc.getReplication(), desc.getPool());
+      }
+    };
+  }
+
+  /**
+   * Add a cache pool.
+   *
+   * @param info
+   *          The request to add a cache pool.
+   * @throws IOException 
+   *          If the request could not be completed.
+   */
+  public void addCachePool(CachePoolInfo info) throws IOException {
+    CachePoolInfo.validate(info);
+    dfs.addCachePool(info);
+  }
+
+  /**
+   * Modify an existing cache pool.
+   *
+   * @param info
+   *          The request to modify a cache pool.
+   * @throws IOException 
+   *          If the request could not be completed.
+   */
+  public void modifyCachePool(CachePoolInfo info) throws IOException {
+    CachePoolInfo.validate(info);
+    dfs.modifyCachePool(info);
+  }
+    
+  /**
+   * Remove a cache pool.
+   *
+   * @param poolName
+   *          Name of the cache pool to remove.
+   * @throws IOException 
+   *          if the cache pool did not exist, or could not be removed.
+   */
+  public void removeCachePool(String poolName) throws IOException {
+    CachePoolInfo.validateName(poolName);
+    dfs.removeCachePool(poolName);
+  }
+
+  /**
+   * List all cache pools.
+   *
+   * @return A remote iterator from which you can get CachePoolInfo objects.
+   *          Requests will be made as needed.
+   * @throws IOException
+   *          If there was an error listing cache pools.
+   */
+  public RemoteIterator<CachePoolInfo> listCachePools() throws IOException {
+    return dfs.listCachePools();
+  }
 }

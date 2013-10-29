@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -82,6 +83,8 @@ class BPServiceActor implements Runnable {
   volatile long lastDeletedReport = 0;
 
   boolean resetBlockReportTime = true;
+
+  volatile long lastCacheReport = 0;
 
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
@@ -249,7 +252,7 @@ class BPServiceActor implements Runnable {
     // TODO: Corrupt flag is set to false for compatibility. We can probably
     // set it to true here.
     LocatedBlock[] blocks = {
-        new LocatedBlock(block, dnArr, uuids, types, -1, false) };
+        new LocatedBlock(block, dnArr, uuids, types, -1, false, null) };
     
     try {
       bpNamenode.reportBadBlocks(blocks);  
@@ -473,6 +476,35 @@ class BPServiceActor implements Runnable {
     return cmd;
   }
   
+  DatanodeCommand cacheReport() throws IOException {
+    // If caching is disabled, do not send a cache report
+    if (dn.getFSDataset().getDnCacheCapacity() == 0) {
+      return null;
+    }
+    // send cache report if timer has expired.
+    DatanodeCommand cmd = null;
+    long startTime = Time.monotonicNow();
+    if (startTime - lastCacheReport > dnConf.cacheReportInterval) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Sending cacheReport from service actor: " + this);
+      }
+      lastCacheReport = startTime;
+
+      String bpid = bpos.getBlockPoolId();
+      List<Long> blockIds = dn.getFSDataset().getCacheReport(bpid);
+      long createTime = Time.monotonicNow();
+
+      cmd = bpNamenode.cacheReport(bpRegistration, bpid, blockIds);
+      long sendTime = Time.monotonicNow();
+      long createCost = createTime - startTime;
+      long sendCost = sendTime - createTime;
+      dn.getMetrics().addCacheReport(sendCost);
+      LOG.info("CacheReport of " + blockIds.size()
+          + " blocks took " + createCost + " msec to generate and "
+          + sendCost + " msecs for RPC and NN processing");
+    }
+    return cmd;
+  }
   
   HeartbeatResponse sendHeartBeat() throws IOException {
     StorageReport[] reports =
@@ -484,6 +516,8 @@ class BPServiceActor implements Runnable {
 
     return bpNamenode.sendHeartbeat(bpRegistration,
         reports,
+        dn.getFSDataset().getDnCacheCapacity(),
+        dn.getFSDataset().getDnCacheUsed(),
         dn.getXmitsInProgress(),
         dn.getXceiverCount(),
         dn.getFSDataset().getNumFailedVolumes());
@@ -537,11 +571,12 @@ class BPServiceActor implements Runnable {
    * forever calling remote NameNode functions.
    */
   private void offerService() throws Exception {
-    LOG.info("For namenode " + nnAddr + " using DELETEREPORT_INTERVAL of "
-        + dnConf.deleteReportInterval + " msec " + " BLOCKREPORT_INTERVAL of "
-        + dnConf.blockReportInterval + "msec" + " Initial delay: "
-        + dnConf.initialBlockReportDelay + "msec" + "; heartBeatInterval="
-        + dnConf.heartBeatInterval);
+    LOG.info("For namenode " + nnAddr + " using"
+        + " DELETEREPORT_INTERVAL of " + dnConf.deleteReportInterval + " msec "
+        + " BLOCKREPORT_INTERVAL of " + dnConf.blockReportInterval + "msec"
+        + " CACHEREPORT_INTERVAL of " + dnConf.cacheReportInterval + "msec"
+        + " Initial delay: " + dnConf.initialBlockReportDelay + "msec"
+        + "; heartBeatInterval=" + dnConf.heartBeatInterval);
 
     //
     // Now loop for a long time....
@@ -594,6 +629,9 @@ class BPServiceActor implements Runnable {
         }
 
         DatanodeCommand cmd = blockReport();
+        processCommand(new DatanodeCommand[]{ cmd });
+
+        cmd = cacheReport();
         processCommand(new DatanodeCommand[]{ cmd });
 
         // Now safe to start scanning the block pool.

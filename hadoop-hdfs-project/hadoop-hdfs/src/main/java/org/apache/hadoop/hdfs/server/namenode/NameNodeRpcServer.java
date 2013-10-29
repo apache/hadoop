@@ -36,6 +36,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BatchedRemoteIterator;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -59,6 +61,9 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -193,9 +198,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
     NamenodeProtocolServerSideTranslatorPB namenodeProtocolXlator = 
         new NamenodeProtocolServerSideTranslatorPB(this);
-	  BlockingService NNPbService = NamenodeProtocolService
+    BlockingService NNPbService = NamenodeProtocolService
           .newReflectiveBlockingService(namenodeProtocolXlator);
-	  
+    
     RefreshAuthorizationPolicyProtocolServerSideTranslatorPB refreshAuthPolicyXlator = 
         new RefreshAuthorizationPolicyProtocolServerSideTranslatorPB(this);
     BlockingService refreshAuthService = RefreshAuthorizationPolicyProtocolService
@@ -215,7 +220,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
         new HAServiceProtocolServerSideTranslatorPB(this);
     BlockingService haPbService = HAServiceProtocolService
         .newReflectiveBlockingService(haServiceProtocolXlator);
-	  
+    
     WritableRpcEngine.ensureInitialized();
 
     InetSocketAddress serviceRpcAddr = nn.getServiceRpcServerAddress(conf);
@@ -957,11 +962,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // DatanodeProtocol
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration nodeReg,
-      StorageReport[] report, int xmitsInProgress, int xceiverCount,
+      StorageReport[] report, long dnCacheCapacity, long dnCacheUsed,
+      int xmitsInProgress, int xceiverCount,
       int failedVolumes) throws IOException {
     verifyRequest(nodeReg);
-    return namesystem.handleHeartbeat(nodeReg, report, xceiverCount,
-        xmitsInProgress, failedVolumes);
+    return namesystem.handleHeartbeat(nodeReg, report,
+        dnCacheCapacity, dnCacheUsed, xceiverCount, xmitsInProgress,
+        failedVolumes);
   }
 
   @Override // DatanodeProtocol
@@ -980,6 +987,18 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
     if (nn.getFSImage().isUpgradeFinalized() && !nn.isStandbyState())
       return new FinalizeCommand(poolId);
+    return null;
+  }
+
+  @Override
+  public DatanodeCommand cacheReport(DatanodeRegistration nodeReg,
+      String poolId, List<Long> blockIds) throws IOException {
+    verifyRequest(nodeReg);
+    if (blockStateChangeLog.isDebugEnabled()) {
+      blockStateChangeLog.debug("*BLOCK* NameNode.cacheReport: "
+           + "from " + nodeReg + " " + blockIds.size() + " blocks");
+    }
+    namesystem.getCacheManager().processCacheReport(nodeReg, blockIds);
     return null;
   }
 
@@ -1216,4 +1235,88 @@ class NameNodeRpcServer implements NamenodeProtocols {
     metrics.incrSnapshotDiffReportOps();
     return report;
   }
+
+  @Override
+  public PathBasedCacheDescriptor addPathBasedCacheDirective(
+      PathBasedCacheDirective path) throws IOException {
+    return namesystem.addPathBasedCacheDirective(path);
+  }
+
+  @Override
+  public void removePathBasedCacheDescriptor(Long id) throws IOException {
+    namesystem.removePathBasedCacheDescriptor(id);
+  }
+
+  private class ServerSidePathBasedCacheEntriesIterator
+      extends BatchedRemoteIterator<Long, PathBasedCacheDescriptor> {
+
+    private final String pool;
+
+    private final String path;
+
+    public ServerSidePathBasedCacheEntriesIterator(Long firstKey, String pool,
+        String path) {
+      super(firstKey);
+      this.pool = pool;
+      this.path = path;
+    }
+
+    @Override
+    public BatchedEntries<PathBasedCacheDescriptor> makeRequest(
+        Long nextKey) throws IOException {
+      return namesystem.listPathBasedCacheDescriptors(nextKey, pool, path);
+    }
+
+    @Override
+    public Long elementToPrevKey(PathBasedCacheDescriptor entry) {
+      return entry.getEntryId();
+    }
+  }
+  
+  @Override
+  public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(long prevId,
+      String pool, String path) throws IOException {
+    return new ServerSidePathBasedCacheEntriesIterator(prevId, pool, path);
+  }
+
+  @Override
+  public void addCachePool(CachePoolInfo info) throws IOException {
+    namesystem.addCachePool(info);
+  }
+
+  @Override
+  public void modifyCachePool(CachePoolInfo info) throws IOException {
+    namesystem.modifyCachePool(info);
+  }
+
+  @Override
+  public void removeCachePool(String cachePoolName) throws IOException {
+    namesystem.removeCachePool(cachePoolName);
+  }
+
+  private class ServerSideCachePoolIterator 
+      extends BatchedRemoteIterator<String, CachePoolInfo> {
+
+    public ServerSideCachePoolIterator(String prevKey) {
+      super(prevKey);
+    }
+
+    @Override
+    public BatchedEntries<CachePoolInfo> makeRequest(String prevKey)
+        throws IOException {
+      return namesystem.listCachePools(prevKey);
+    }
+
+    @Override
+    public String elementToPrevKey(CachePoolInfo element) {
+      return element.getPoolName();
+    }
+  }
+
+  @Override
+  public RemoteIterator<CachePoolInfo> listCachePools(String prevKey)
+      throws IOException {
+    return new ServerSideCachePoolIterator(prevKey);
+  }
 }
+

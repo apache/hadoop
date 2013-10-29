@@ -123,7 +123,73 @@ Trunk (Unreleased)
     HDFS-5041. Add the time of last heartbeat to dead server Web UI (Shinichi
     Yamashita via brandonli)
 
+    HDFS-5049.  Add JNI mlock support.  (Andrew Wang via Colin Patrick McCabe)
+
+    HDFS-5051.  Propagate cache status information from the DataNode to the
+    NameNode  (Andrew Wang via Colin Patrick McCabe)
+
+    HDFS-5052.  Add cacheRequest/uncacheRequest support to NameNode.
+    (contributed by Colin Patrick McCabe)
+
+    HDFS-5050.  Add DataNode support for mlock and munlock
+    (Andrew Wang via Colin Patrick McCabe)
+
+    HDFS-5141. Add cache status information to datanode heartbeat.
+    (Contributed by Andrew Wang)
+
+    HDFS-5121. Add RPCs for creating and manipulating cache pools.
+    (Contributed by Colin Patrick McCabe)
+
+    HDFS-5163. Miscellaneous cache pool RPC fixes.  (Contributed by Colin
+    Patrick McCabe)
+
+    HDFS-5120. Add command-line support for manipulating cache pools.
+    (Contributed by Colin Patrick McCabe)
+
+    HDFS-5158. Add command-line support for manipulating cache directives.
+    (Contributed by Colin Patrick McCabe)
+
+    HDFS-5053. NameNode should invoke DataNode APIs to coordinate caching.
+    (Andrew Wang)
+
+    HDFS-5197. Document dfs.cachereport.intervalMsec in hdfs-default.xml.
+    (cnauroth)
+
+    HDFS-5213. Separate PathBasedCacheEntry and PathBasedCacheDirectiveWithId.
+    (Contributed by Colin Patrick McCabe)
+
+    HDFS-5236. Change PathBasedCacheDirective APIs to be a single value
+    rather than batch. (Contributed by Andrew Wang)
+
+    HDFS-5191. Revisit zero-copy API in FSDataInputStream to make it more
+    intuitive.  (Contributed by Colin Patrick McCabe)
+
+    HDFS-5119. Persist CacheManager state in the edit log.
+    (Contributed by Andrew Wang)
+
+    HDFS-5190. Move cache pool related CLI commands to CacheAdmin.
+    (Contributed by Andrew Wang)
+
+    HDFS-5304. Expose if a block replica is cached in getFileBlockLocations.
+    (Contributed by Andrew Wang)
+
+    HDFS-5224. Refactor PathBasedCache* methods to use a Path rather than a
+    String. (cnauroth)
+
+    HDFS-5358. Add replication field to PathBasedCacheDirective.
+    (Contributed by Colin Patrick McCabe)
+
+    HDFS-5359. Allow LightWeightGSet#Iterator to remove elements.
+    (Contributed by Colin Patrick McCabe)
+
+    HDFS-5096. Automatically cache new data added to a cached path.
+    (Contributed by Colin Patrick McCabe)
+
+    HDFS-5378. In CacheReport, don't send genstamp and length on the wire
+    (Contributed by Colin Patrick McCabe)
+
   OPTIMIZATIONS
+    HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
   BUG FIXES
     HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
@@ -240,6 +306,53 @@ Trunk (Unreleased)
 
     HDFS-4366. Block Replication Policy Implementation May Skip Higher-Priority
     Blocks for Lower-Priority Blocks (Derek Dagit via kihwal)
+
+    HDFS-5169. hdfs.c: translateZCRException: null pointer deref when
+    translating some exceptions.  (Contributed by Colin Patrick McCabe)
+
+    HDFS-5198. NameNodeRpcServer must not send back DNA_FINALIZE in reply to a
+    cache report.  (Contributed by Colin Patrick McCabe)
+
+    HDFS-5195. Prevent passing null pointer to mlock and munlock. (cnauroth)
+
+    HDFS-5201. NativeIO: consolidate getrlimit into NativeIO#getMemlockLimit
+    (Contributed by Colin Patrick McCabe)
+
+    HDFS-5210. Fix some failing unit tests on HDFS-4949 branch.
+    (Contributed by Andrew Wang)
+
+    HDFS-5266. ElasticByteBufferPool#Key does not implement equals. (cnauroth)
+
+    HDFS-5309. Fix failing caching unit tests. (Andrew Wang)
+
+    HDFS-5314. Do not expose CachePool type in AddCachePoolOp (Colin Patrick
+    McCabe)
+
+    HDFS-5348. Fix error message when dfs.datanode.max.locked.memory is
+    improperly configured. (Colin Patrick McCabe)
+
+    HDFS-5373. hdfs cacheadmin -addDirective short usage does not mention
+    -replication parameter. (cnauroth)
+
+    HDFS-5383. fix broken caching unit tests. (Andrew Wang)
+
+    HDFS-5388. Loading fsimage fails to find cache pools during namenode
+    startup.  (Chris Nauroth via Colin Patrick McCabe)
+
+    HDFS-5203. Concurrent clients that add a cache directive on the same path
+    may prematurely uncache from each other.  (Chris Nauroth via Colin Patrick
+    McCabe)
+
+    HDFS-5385. Caching RPCs are AtMostOnce, but do not persist client ID and
+    call ID to edit log.  (Chris Nauroth via Colin Patrick McCabe)
+
+    HDFS-5404. Resolve regressions in Windows compatibility on HDFS-4949
+    branch. (Chris Nauroth via Andrew Wang)
+
+    HDFS-5405. Fix possible RetryCache hang for caching RPC handlers in
+    FSNamesystem. (wang)
+
+    HDFS-5419. Fixup test-patch.sh warnings on HDFS-4949 branch. (wang)
 
 Release 2.3.0 - UNRELEASED
 

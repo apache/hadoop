@@ -126,6 +126,8 @@ public class TestBPOfferService {
       .when(mock).sendHeartbeat(
           Mockito.any(DatanodeRegistration.class),
           Mockito.any(StorageReport[].class),
+          Mockito.anyLong(),
+          Mockito.anyLong(),
           Mockito.anyInt(),
           Mockito.anyInt(),
           Mockito.anyInt());

@@ -61,4 +61,15 @@ public class LogVerificationAppender extends AppenderSkeleton {
     }
     return count;
   }
+
+  public int countLinesWithMessage(final String text) {
+    int count = 0;
+    for (LoggingEvent e: getLog()) {
+      String msg = e.getRenderedMessage();
+      if (msg != null && msg.contains(text)) {
+        count++;
+      }
+    }
+    return count;
+  }
 }

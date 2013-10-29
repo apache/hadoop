@@ -112,7 +112,8 @@ public class NameNodeAdapter {
   public static HeartbeatResponse sendHeartBeat(DatanodeRegistration nodeReg,
       DatanodeDescriptor dd, FSNamesystem namesystem) throws IOException {
     return namesystem.handleHeartbeat(nodeReg,
-        BlockManagerTestUtil.getStorageReportsForDatanode(dd), 0, 0, 0);
+        BlockManagerTestUtil.getStorageReportsForDatanode(dd),
+        dd.getCacheCapacity(), dd.getCacheRemaining(), 0, 0, 0);
   }
 
   public static boolean setReplication(final FSNamesystem ns,
@@ -232,3 +233,4 @@ public class NameNodeAdapter {
     return NNStorage.getInProgressEditsFile(sd, startTxId);
   }
 }
+

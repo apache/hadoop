@@ -63,7 +63,13 @@ public enum FSEditLogOpCodes {
   OP_ALLOW_SNAPSHOT             ((byte) 29),
   OP_DISALLOW_SNAPSHOT          ((byte) 30),
   OP_SET_GENSTAMP_V2            ((byte) 31),
-  OP_ALLOCATE_BLOCK_ID          ((byte) 32);
+  OP_ALLOCATE_BLOCK_ID          ((byte) 32),
+  OP_ADD_PATH_BASED_CACHE_DIRECTIVE        ((byte) 33),
+  OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR    ((byte) 34),
+  OP_ADD_CACHE_POOL             ((byte) 35),
+  OP_MODIFY_CACHE_POOL          ((byte) 36),
+  OP_REMOVE_CACHE_POOL          ((byte) 37);
+
   private byte opCode;
 
   /**

@@ -107,8 +107,10 @@ public class LayoutVersion {
         "block IDs in the edits log and image files"),
     EDITLOG_SUPPORT_RETRYCACHE(-47, "Record ClientId and CallId in editlog to " 
         + "enable rebuilding retry cache in case of HA failover"),
-    DATANODE_ID(-48, "UUID per Datanode and distinct StorageID per storage "
+    CACHING(-48, "Support for cache pools and path-based caching"),
+    DATANODE_ID(-49, "UUID per Datanode and distinct StorageID per storage "
         + "directory.");
+
     
     final int lv;
     final int ancestorLV;
@@ -249,3 +251,4 @@ public class LayoutVersion {
     throw new AssertionError("All layout versions are reserved.");
   }
 }
+

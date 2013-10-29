@@ -16524,7 +16524,7 @@
       </comparators>
     </test>
   
-  <test> <!--Tested -->
+    <test> <!--Tested -->
       <description>Verifying clrSpaceQuota operation is not permitted in safemode</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /test </command>

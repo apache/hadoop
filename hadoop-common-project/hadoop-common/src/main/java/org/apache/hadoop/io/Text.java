@@ -454,10 +454,7 @@ public class Text extends BinaryComparable
   /** Read a UTF8 encoded string from in
    */
   public static String readString(DataInput in) throws IOException {
-    int length = WritableUtils.readVInt(in);
-    byte [] bytes = new byte[length];
-    in.readFully(bytes, 0, length);
-    return decode(bytes);
+    return readString(in, Integer.MAX_VALUE);
   }
   
   /** Read a UTF8 encoded string with a maximum size
