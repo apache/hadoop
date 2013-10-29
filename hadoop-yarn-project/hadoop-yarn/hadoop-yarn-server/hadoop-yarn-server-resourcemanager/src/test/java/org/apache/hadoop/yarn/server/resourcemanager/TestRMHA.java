@@ -60,7 +60,7 @@ public class TestRMHA {
     rm.init(conf);
   }
 
-  private void checkMonitorHealth() {
+  private void checkMonitorHealth() throws IOException {
     try {
       rm.haService.monitorHealth();
     } catch (HealthCheckFailedException e) {

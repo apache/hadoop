@@ -41,7 +41,9 @@ public class HAUtil {
           YarnConfiguration.RM_SCHEDULER_ADDRESS,
           YarnConfiguration.RM_ADMIN_ADDRESS,
           YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
-          YarnConfiguration.RM_WEBAPP_ADDRESS));
+          YarnConfiguration.RM_WEBAPP_ADDRESS,
+          // TODO Remove after YARN-1318
+          YarnConfiguration.RM_HA_ADMIN_ADDRESS));
 
   public static final String BAD_CONFIG_MESSAGE_PREFIX =
     "Invalid configuration! ";

@@ -297,6 +297,16 @@ public class MockRM extends ResourceManager {
   }
 
   @Override
+  protected RMHAProtocolService createRMHAProtocolService() {
+    return new RMHAProtocolService(this) {
+      @Override
+      protected void startHAAdminServer() {
+        // do nothing
+      }
+    };
+  }
+
+  @Override
   protected ClientRMService createClientRMService() {
     return new ClientRMService(getRMContext(), getResourceScheduler(),
         rmAppManager, applicationACLsManager, queueACLsManager,

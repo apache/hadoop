@@ -20,18 +20,26 @@ package org.apache.hadoop.yarn.client.cli;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.ha.HAAdmin;
+import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
+import org.apache.hadoop.yarn.client.RMHAServiceTarget;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
@@ -44,10 +52,34 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMapp
 
 @Private
 @Unstable
-public class RMAdminCLI extends Configured implements Tool {
+public class RMAdminCLI extends HAAdmin {
 
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
+
+  protected final static Map<String, UsageInfo> ADMIN_USAGE =
+      ImmutableMap.<String, UsageInfo>builder()
+          .put("-refreshQueues", new UsageInfo("",
+              "Reload the queues' acls, states and scheduler specific " +
+                  "properties. \n\t\tResourceManager will reload the " +
+                  "mapred-queues configuration file."))
+          .put("-refreshNodes", new UsageInfo("",
+              "Refresh the hosts information at the ResourceManager."))
+          .put("-refreshSuperUserGroupsConfiguration", new UsageInfo("",
+              "Refresh superuser proxy groups mappings"))
+          .put("-refreshUserToGroupsMappings", new UsageInfo("",
+              "Refresh user-to-groups mappings"))
+          .put("-refreshAdminAcls", new UsageInfo("",
+              "Refresh acls for administration of ResourceManager"))
+          .put("-refreshServiceAcl", new UsageInfo("",
+              "Reload the service-level authorization policy file. \n\t\t" +
+                  "ResoureceManager will reload the authorization policy file."))
+          .put("-getGroups", new UsageInfo("[username]",
+              "Get the groups which given user belongs to."))
+          .put("-help", new UsageInfo("[cmd]",
+              "Displays help for the given command or all commands if none " +
+                  "is specified."))
+          .build();
 
   public RMAdminCLI() {
     super();
@@ -57,10 +89,64 @@ public class RMAdminCLI extends Configured implements Tool {
     super(conf);
   }
 
+  private static void appendHAUsage(final StringBuilder usageBuilder) {
+    for (String cmdKey : USAGE.keySet()) {
+      if (cmdKey.equals("-help")) {
+        continue;
+      }
+      UsageInfo usageInfo = USAGE.get(cmdKey);
+      usageBuilder.append(" [" + cmdKey + " " + usageInfo.args + "]");
+    }
+  }
+
+  private static void buildHelpMsg(String cmd, StringBuilder builder) {
+    UsageInfo usageInfo = ADMIN_USAGE.get(cmd);
+    if (usageInfo == null) {
+      usageInfo = USAGE.get(cmd);
+      if (usageInfo == null) {
+        return;
+      }
+    }
+    String space = (usageInfo.args == "") ? "" : " ";
+    builder.append("   " + cmd + space + usageInfo.args + ": " +
+        usageInfo.help);
+  }
+
+  private static void buildIndividualUsageMsg(String cmd,
+                                              StringBuilder builder ) {
+    UsageInfo usageInfo = ADMIN_USAGE.get(cmd);
+    if (usageInfo == null) {
+      usageInfo = USAGE.get(cmd);
+      if (usageInfo == null) {
+        return;
+      }
+    }
+    String space = (usageInfo.args == "") ? "" : " ";
+    builder.append("Usage: java RMAdmin ["
+        + cmd + space + usageInfo.args
+        + "]\n");
+  }
+
+  private static void buildUsageMsg(StringBuilder builder) {
+    builder.append("Usage: java RMAdmin");
+    for (String cmdKey : ADMIN_USAGE.keySet()) {
+      UsageInfo usageInfo = ADMIN_USAGE.get(cmdKey);
+      builder.append("   " + cmdKey + " " + usageInfo.args + "\n");
+    }
+    for (String cmdKey : USAGE.keySet()) {
+      if (!cmdKey.equals("-help")) {
+        UsageInfo usageInfo = USAGE.get(cmdKey);
+        builder.append("   " + cmdKey + " " + usageInfo.args + "\n");
+      }
+    }
+  }
+
   private static void printHelp(String cmd) {
-    String summary = "rmadmin is the command to execute Map-Reduce administrative commands.\n" +
-    "The full syntax is: \n\n" +
-    "hadoop rmadmin" +
+    StringBuilder summary = new StringBuilder();
+    summary.append("rmadmin is the command to execute YARN administrative " +
+        "commands.\n");
+    summary.append("The full syntax is: \n\n" +
+    "yarn rmadmin" +
       " [-refreshQueues]" +
       " [-refreshNodes]" +
       " [-refreshSuperUserGroupsConfiguration]" +
@@ -68,64 +154,25 @@ public class RMAdminCLI extends Configured implements Tool {
       " [-refreshAdminAcls]" +
       " [-refreshServiceAcl]" +
       " [-getGroup [username]]" +
-      " [-help [cmd]]\n";
+      " [-help [cmd]]");
+    appendHAUsage(summary);
+    summary.append("\n");
 
-    String refreshQueues =
-      "-refreshQueues: Reload the queues' acls, states and "
-      + "scheduler specific properties.\n"
-      + "\t\tResourceManager will reload the mapred-queues configuration file.\n";
-
-    String refreshNodes = 
-      "-refreshNodes: Refresh the hosts information at the ResourceManager.\n";
-    
-    String refreshUserToGroupsMappings = 
-      "-refreshUserToGroupsMappings: Refresh user-to-groups mappings\n";
-    
-    String refreshSuperUserGroupsConfiguration = 
-      "-refreshSuperUserGroupsConfiguration: Refresh superuser proxy groups mappings\n";
-
-    String refreshAdminAcls =
-      "-refreshAdminAcls: Refresh acls for administration of ResourceManager\n";
-
-    String refreshServiceAcl = 
-      "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
-      "\t\tResoureceManager will reload the authorization policy file.\n";
-    
-    String getGroups = 
-      "-getGroups [username]: Get the groups which given user belongs to\n";
-
-    String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
-      "\t\tis specified.\n";
-
-    if ("refreshQueues".equals(cmd)) {
-      System.out.println(refreshQueues);
-    }  else if ("refreshNodes".equals(cmd)) {
-      System.out.println(refreshNodes);
-    } else if ("refreshUserToGroupsMappings".equals(cmd)) {
-      System.out.println(refreshUserToGroupsMappings);
-    } else if ("refreshSuperUserGroupsConfiguration".equals(cmd)) {
-      System.out.println(refreshSuperUserGroupsConfiguration);
-    } else if ("refreshAdminAcls".equals(cmd)) {
-      System.out.println(refreshAdminAcls);
-    } else if ("refreshServiceAcl".equals(cmd)) {
-      System.out.println(refreshServiceAcl);
-    } else if ("getGroups".equals(cmd)) {
-      System.out.println(getGroups);
-    } else if ("help".equals(cmd)) {
-      System.out.println(help);
-    } else {
-      System.out.println(summary);
-      System.out.println(refreshQueues);
-      System.out.println(refreshNodes);
-      System.out.println(refreshUserToGroupsMappings);
-      System.out.println(refreshSuperUserGroupsConfiguration);
-      System.out.println(refreshAdminAcls);
-      System.out.println(refreshServiceAcl);
-      System.out.println(getGroups);
-      System.out.println(help);
-      System.out.println();
-      ToolRunner.printGenericCommandUsage(System.out);
+    StringBuilder helpBuilder = new StringBuilder();
+    System.out.println(summary);
+    for (String cmdKey : ADMIN_USAGE.keySet()) {
+      buildHelpMsg(cmdKey, helpBuilder);
+      helpBuilder.append("\n");
     }
+    for (String cmdKey : USAGE.keySet()) {
+      if (!cmdKey.equals("-help")) {
+        buildHelpMsg(cmdKey, helpBuilder);
+        helpBuilder.append("\n");
+      }
+    }
+    System.out.println(helpBuilder);
+    System.out.println();
+    ToolRunner.printGenericCommandUsage(System.out);
   }
 
   /**
@@ -133,33 +180,15 @@ public class RMAdminCLI extends Configured implements Tool {
    * @param cmd The command that is being executed.
    */
   private static void printUsage(String cmd) {
-    if ("-refreshQueues".equals(cmd)) {
-      System.err.println("Usage: java RMAdmin" + " [-refreshQueues]");
-    } else if ("-refreshNodes".equals(cmd)){
-      System.err.println("Usage: java RMAdmin" + " [-refreshNodes]");
-    } else if ("-refreshUserToGroupsMappings".equals(cmd)){
-      System.err.println("Usage: java RMAdmin" + " [-refreshUserToGroupsMappings]");
-    } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)){
-      System.err.println("Usage: java RMAdmin" + " [-refreshSuperUserGroupsConfiguration]");
-    } else if ("-refreshAdminAcls".equals(cmd)){
-      System.err.println("Usage: java RMAdmin" + " [-refreshAdminAcls]");
-    } else if ("-refreshService".equals(cmd)){
-      System.err.println("Usage: java RMAdmin" + " [-refreshServiceAcl]");
-    } else if ("-getGroups".equals(cmd)){
-      System.err.println("Usage: java RMAdmin" + " [-getGroups [username]]");
+    StringBuilder usageBuilder = new StringBuilder();
+    if (ADMIN_USAGE.containsKey(cmd) || USAGE.containsKey(cmd)) {
+      buildIndividualUsageMsg(cmd, usageBuilder);
     } else {
-      System.err.println("Usage: java RMAdmin");
-      System.err.println("           [-refreshQueues]");
-      System.err.println("           [-refreshNodes]");
-      System.err.println("           [-refreshUserToGroupsMappings]");
-      System.err.println("           [-refreshSuperUserGroupsConfiguration]");
-      System.err.println("           [-refreshAdminAcls]");
-      System.err.println("           [-refreshServiceAcl]");
-      System.err.println("           [-getGroups [username]]");
-      System.err.println("           [-help [cmd]]");
-      System.err.println();
-      ToolRunner.printGenericCommandUsage(System.err);
+      buildUsageMsg(usageBuilder);
     }
+    System.err.println(usageBuilder);
+    ToolRunner.printGenericCommandUsage(System.err);
+
   }
 
   protected ResourceManagerAdministrationProtocol createAdminProtocol() throws IOException {
@@ -255,6 +284,21 @@ public class RMAdminCLI extends Configured implements Tool {
     int exitCode = -1;
     int i = 0;
     String cmd = args[i++];
+
+    exitCode = 0;
+    if ("-help".equals(cmd)) {
+      if (i < args.length) {
+        printUsage(args[i]);
+      } else {
+        printHelp("");
+      }
+      return exitCode;
+    }
+
+    if (USAGE.containsKey(cmd)) {
+      return super.run(args);
+    }
+
     //
     // verify that we have enough command line parameters
     //
@@ -268,7 +312,6 @@ public class RMAdminCLI extends Configured implements Tool {
       }
     }
     
-    exitCode = 0;
     try {
       if ("-refreshQueues".equals(cmd)) {
         exitCode = refreshQueues();
@@ -285,12 +328,6 @@ public class RMAdminCLI extends Configured implements Tool {
       } else if ("-getGroups".equals(cmd)) {
         String[] usernames = Arrays.copyOfRange(args, i, args.length);
         exitCode = getGroups(usernames);
-      } else if ("-help".equals(cmd)) {
-        if (i < args.length) {
-          printUsage(args[i]);
-        } else {
-          printHelp("");
-        }
       } else {
         exitCode = -1;
         System.err.println(cmd.substring(1) + ": Unknown command");
@@ -322,6 +359,40 @@ public class RMAdminCLI extends Configured implements Tool {
                          + e.getLocalizedMessage());
     }
     return exitCode;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    if (conf != null) {
+      if (!(conf instanceof YarnConfiguration)) {
+        conf = new YarnConfiguration(conf);
+      }
+    }
+    super.setConf(conf);
+  }
+
+  @Override
+  protected HAServiceTarget resolveTarget(String rmId) {
+    Collection<String> rmIds = HAUtil.getRMHAIds(getConf());
+    if (!rmIds.contains(rmId)) {
+      StringBuilder msg = new StringBuilder();
+      msg.append(rmId + " is not a valid serviceId. It should be one of ");
+      for (String id : rmIds) {
+        msg.append(id + " ");
+      }
+      throw new IllegalArgumentException(msg.toString());
+    }
+    try {
+      YarnConfiguration conf = new YarnConfiguration(getConf());
+      conf.set(YarnConfiguration.RM_HA_ID, rmId);
+      return new RMHAServiceTarget(conf);
+    } catch (IllegalArgumentException iae) {
+      throw new YarnRuntimeException("Could not connect to " + rmId +
+          "; the configuration for it might be missing");
+    } catch (IOException ioe) {
+      throw new YarnRuntimeException(
+          "Could not connect to RM HA Admin for node " + rmId);
+    }
   }
 
   public static void main(String[] args) throws Exception {

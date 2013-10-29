@@ -14,6 +14,11 @@ Release 2.3.0 - UNRELEASED
     YARN-1010. FairScheduler: decouple container scheduling from nodemanager
     heartbeats. (Wei Yan via Sandy Ryza)
 
+    YARN-1027. Implement RMHAProtocolService (Karthik Kambatla via bikas)
+
+    YARN-1068. Add admin support for HA operations (Karthik Kambatla via
+    bikas)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
@@ -22,8 +27,6 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1098. Separate out RM services into Always On and Active (Karthik
     Kambatla via bikas)
-
-    YARN-1027. Implement RMHAProtocolService (Karthik Kambatla via bikas)
 
     YARN-353. Add Zookeeper-based store implementation for RMStateStore.
     (Bikas Saha, Jian He and Karthik Kambatla via hitesh)
