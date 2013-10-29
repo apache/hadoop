@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.web;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -38,16 +38,21 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster.Builder;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.web.HftpFileSystem;
+import org.apache.hadoop.hdfs.web.HsftpFileSystem;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.log4j.Level;
 import org.junit.*;
 
 public class TestHftpFileSystem {
   private static final Random RAN = new Random();
-  
+
   private static Configuration config = null;
   private static MiniDFSCluster cluster = null;
   private static String blockPoolId = null;
@@ -94,17 +99,17 @@ public class TestHftpFileSystem {
     config = new Configuration();
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(2).build();
     blockPoolId = cluster.getNamesystem().getBlockPoolId();
-    hftpUri = 
+    hftpUri =
       "hftp://" + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
   }
-  
+
   @AfterClass
   public static void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
-  
+
   @Before
   public void initFileSystems() throws IOException {
     hdfs = cluster.getFileSystem();
@@ -119,9 +124,9 @@ public class TestHftpFileSystem {
   public void resetFileSystems() throws IOException {
     FileSystem.closeAll();
   }
-  
+
   /**
-   * Test file creation and access with file names that need encoding. 
+   * Test file creation and access with file names that need encoding.
    */
   @Test
   public void testFileNameEncoding() throws IOException, URISyntaxException {
@@ -159,13 +164,13 @@ public class TestHftpFileSystem {
 
     // Get the path's block location so we can determine
     // if we were redirected to the right DN.
-    BlockLocation[] locations = 
+    BlockLocation[] locations =
         hdfs.getFileBlockLocations(path, 0, 10);
     String xferAddr = locations[0].getNames()[0];
 
     // Connect to the NN to get redirected
     URL u = hftpFs.getNamenodeURL(
-        "/data" + ServletUtil.encodePath(path.toUri().getPath()), 
+        "/data" + ServletUtil.encodePath(path.toUri().getPath()),
         "ugi=userx,groupy");
     HttpURLConnection conn = (HttpURLConnection)u.openConnection();
     HttpURLConnection.setFollowRedirects(true);
@@ -176,7 +181,7 @@ public class TestHftpFileSystem {
     // Find the datanode that has the block according to locations
     // and check that the URL was redirected to this DN's info port
     for (DataNode node : cluster.getDataNodes()) {
-      DatanodeRegistration dnR = 
+      DatanodeRegistration dnR =
         DataNodeTestUtils.getDNRegistrationForBP(node, blockPoolId);
       if (dnR.getXferAddr().equals(xferAddr)) {
         checked = true;
@@ -207,25 +212,25 @@ public class TestHftpFileSystem {
     FSDataOutputStream out = hdfs.create(testFile, true);
     out.writeBytes("0123456789");
     out.close();
-    
+
     FSDataInputStream in = hftpFs.open(testFile);
-    
+
     // Test read().
     for (int i = 0; i < 5; ++i) {
       assertEquals(i, in.getPos());
       in.read();
     }
-    
+
     // Test read(b, off, len).
     assertEquals(5, in.getPos());
     byte[] buffer = new byte[10];
     assertEquals(2, in.read(buffer, 0, 2));
     assertEquals(7, in.getPos());
-    
+
     // Test read(b).
     int bytesRead = in.read(buffer);
     assertEquals(7 + bytesRead, in.getPos());
-    
+
     // Test EOF.
     for (int i = 0; i < 100; ++i) {
       in.read();
@@ -261,21 +266,21 @@ public class TestHftpFileSystem {
     in.close();
     checkClosedStream(in);
     checkClosedStream(in.getWrappedStream());
-    
+
     // force the stream to connect and then close it
     in = hftpFs.open(testFile);
-    int ch = in.read(); 
+    int ch = in.read();
     assertEquals('0', ch);
     in.close();
     checkClosedStream(in);
     checkClosedStream(in.getWrappedStream());
-    
+
     // make sure seeking doesn't automagically reopen the stream
     in.seek(4);
     checkClosedStream(in);
     checkClosedStream(in.getWrappedStream());
   }
-  
+
   private void checkClosedStream(InputStream is) {
     IOException ioe = null;
     try {
@@ -286,7 +291,7 @@ public class TestHftpFileSystem {
     assertNotNull("No exception on closed read", ioe);
     assertEquals("Stream closed", ioe.getMessage());
   }
-  
+
   @Test
   public void testHftpDefaultPorts() throws IOException {
     Configuration conf = new Configuration();
@@ -304,7 +309,7 @@ public class TestHftpFileSystem {
         fs.getCanonicalServiceName()
     );
   }
-  
+
   @Test
   public void testHftpCustomDefaultPorts() throws IOException {
     Configuration conf = new Configuration();
@@ -314,7 +319,7 @@ public class TestHftpFileSystem {
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(123, fs.getDefaultPort());
-    
+
     assertEquals(uri, fs.getUri());
 
     // HFTP uses http to get the token so canonical service name should
@@ -349,8 +354,8 @@ public class TestHftpFileSystem {
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(123, fs.getDefaultPort());
-   
-    assertEquals(uri, fs.getUri()); 
+
+    assertEquals(uri, fs.getUri());
     assertEquals(
         "127.0.0.1:789",
         fs.getCanonicalServiceName()
@@ -384,7 +389,7 @@ public class TestHftpFileSystem {
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(456, fs.getDefaultPort());
-    
+
     assertEquals(uri, fs.getUri());
     assertEquals(
         "127.0.0.1:456",

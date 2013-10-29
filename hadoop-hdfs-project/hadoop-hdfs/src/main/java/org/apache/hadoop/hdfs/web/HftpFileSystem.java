@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.web;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -47,11 +47,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
-import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.hdfs.web.ByteRangeInputStream.URLOpener;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -161,7 +163,7 @@ public class HftpFileSystem extends FileSystem
   public String getCanonicalServiceName() {
     return SecurityUtil.buildTokenService(nnUri).toString();
   }
-  
+
   @Override
   protected URI canonicalizeUri(URI uri) {
     return NetUtils.getCanonicalUri(uri, getDefaultPort());
@@ -183,7 +185,7 @@ public class HftpFileSystem extends FileSystem
   throws IOException {
     super.initialize(name, conf);
     setConf(conf);
-    this.ugi = UserGroupInformation.getCurrentUser(); 
+    this.ugi = UserGroupInformation.getCurrentUser();
     this.nnUri = getNamenodeUri(name);
     try {
       this.hftpURI = new URI(name.getScheme(), name.getAuthority(),
@@ -224,7 +226,7 @@ public class HftpFileSystem extends FileSystem
       UserGroupInformation ugi) {
     return hftpTokenSelector.selectToken(nnUri, ugi.getTokens(), getConf());
   }
-  
+
 
   @Override
   public Token<?> getRenewToken() {
@@ -315,7 +317,7 @@ public class HftpFileSystem extends FileSystem
 
   /**
    * Get encoded UGI parameter string for a URL.
-   * 
+   *
    * @return user_shortname,group1,group2...
    */
   private String getEncodedUgiParameter() {
@@ -359,7 +361,7 @@ public class HftpFileSystem extends FileSystem
 
   static class RangeHeaderUrlOpener extends ByteRangeInputStream.URLOpener {
     URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
-    
+
     RangeHeaderUrlOpener(final URL url) {
       super(url);
     }
@@ -379,7 +381,7 @@ public class HftpFileSystem extends FileSystem
       }
       conn.connect();
 
-      //Expects HTTP_OK or HTTP_PARTIAL response codes. 
+      //Expects HTTP_OK or HTTP_PARTIAL response codes.
       final int code = conn.getResponseCode();
       if (offset != 0L && code != HttpURLConnection.HTTP_PARTIAL) {
         throw new IOException("HTTP_PARTIAL expected, received " + code);
@@ -387,7 +389,7 @@ public class HftpFileSystem extends FileSystem
         throw new IOException("HTTP_OK expected, received " + code);
       }
       return conn;
-    }  
+    }
   }
 
   static class RangeHeaderInputStream extends ByteRangeInputStream {
@@ -410,7 +412,7 @@ public class HftpFileSystem extends FileSystem
     f = f.makeQualified(getUri(), getWorkingDirectory());
     String path = "/data" + ServletUtil.encodePath(f.toUri().getPath());
     String query = addDelegationTokenParam("ugi=" + getEncodedUgiParameter());
-    URL u = getNamenodeURL(path, query);    
+    URL u = getNamenodeURL(path, query);
     return new FSDataInputStream(new RangeHeaderInputStream(u));
   }
 
@@ -533,7 +535,7 @@ public class HftpFileSystem extends FileSystem
 
     private FileChecksum getFileChecksum(String f) throws IOException {
       final HttpURLConnection connection = openConnection(
-          "/fileChecksum" + ServletUtil.encodePath(f), 
+          "/fileChecksum" + ServletUtil.encodePath(f),
           "ugi=" + getEncodedUgiParameter());
       try {
         final XMLReader xr = XMLReaderFactory.createXMLReader();
@@ -585,11 +587,11 @@ public class HftpFileSystem extends FileSystem
     throw new IOException("Not supported");
   }
 
-  @Override 
+  @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
     throw new IOException("Not supported");
   }
-  
+
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     throw new IOException("Not supported");
@@ -615,18 +617,18 @@ public class HftpFileSystem extends FileSystem
     }
 
     /**
-     * Connect to the name node and get content summary.  
+     * Connect to the name node and get content summary.
      * @param path The path
      * @return The content summary for the path.
      * @throws IOException
      */
     private ContentSummary getContentSummary(String path) throws IOException {
       final HttpURLConnection connection = openConnection(
-          "/contentSummary" + ServletUtil.encodePath(path), 
+          "/contentSummary" + ServletUtil.encodePath(path),
           "ugi=" + getEncodedUgiParameter());
       InputStream in = null;
       try {
-        in = connection.getInputStream();        
+        in = connection.getInputStream();
 
         final XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);
@@ -713,12 +715,12 @@ public class HftpFileSystem extends FileSystem
 
     @SuppressWarnings("unchecked")
     @Override
-    public long renew(Token<?> token, 
+    public long renew(Token<?> token,
                       Configuration conf) throws IOException {
       // update the kerberos credentials, if they are coming from a keytab
       UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
-      return 
+      return
         DelegationTokenFetcher.renewDelegationToken
         (DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr).toString(),
          (Token<DelegationTokenIdentifier>) token);
@@ -726,7 +728,7 @@ public class HftpFileSystem extends FileSystem
 
     @SuppressWarnings("unchecked")
     @Override
-    public void cancel(Token<?> token, 
+    public void cancel(Token<?> token,
                        Configuration conf) throws IOException {
       // update the kerberos credentials, if they are coming from a keytab
       UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
@@ -734,9 +736,9 @@ public class HftpFileSystem extends FileSystem
       DelegationTokenFetcher.cancelDelegationToken
         (DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr).toString(),
          (Token<DelegationTokenIdentifier>) token);
-    }    
+    }
   }
-  
+
   private static class HftpDelegationTokenSelector
   extends AbstractDelegationTokenSelector<DelegationTokenIdentifier> {
     private static final DelegationTokenSelector hdfsTokenSelector =
@@ -745,14 +747,14 @@ public class HftpFileSystem extends FileSystem
     public HftpDelegationTokenSelector() {
       super(TOKEN_KIND);
     }
-    
+
     Token<DelegationTokenIdentifier> selectToken(URI nnUri,
         Collection<Token<?>> tokens, Configuration conf) {
       Token<DelegationTokenIdentifier> token =
           selectToken(SecurityUtil.buildTokenService(nnUri), tokens);
       if (token == null) {
         // try to get a HDFS token
-        token = hdfsTokenSelector.selectToken(nnUri, tokens, conf); 
+        token = hdfsTokenSelector.selectToken(nnUri, tokens, conf);
       }
       return token;
     }

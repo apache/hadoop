@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.web;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -34,6 +34,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
+import org.apache.hadoop.hdfs.web.HftpFileSystem;
 import org.junit.Test;
 
 public class TestByteRangeInputStream {
@@ -41,24 +42,24 @@ public static class MockHttpURLConnection extends HttpURLConnection {
   public MockHttpURLConnection(URL u) {
     super(u);
   }
-  
+
   @Override
   public boolean usingProxy(){
     return false;
   }
-  
+
   @Override
   public void disconnect() {
   }
-  
+
   @Override
   public void connect() {
   }
-  
+
   @Override
   public InputStream getInputStream() throws IOException {
     return new ByteArrayInputStream("asdf".getBytes());
-  } 
+  }
 
   @Override
   public URL getURL() {
@@ -70,7 +71,7 @@ public static class MockHttpURLConnection extends HttpURLConnection {
     }
     return u;
   }
-  
+
   @Override
   public int getResponseCode() {
     if (responseCode != -1) {
@@ -87,13 +88,13 @@ public static class MockHttpURLConnection extends HttpURLConnection {
   public void setResponseCode(int resCode) {
     responseCode = resCode;
   }
-  
+
   @Override
   public String getHeaderField(String field) {
     return (field.equalsIgnoreCase(StreamFile.CONTENT_LENGTH)) ? "65535" : null;
   }
 }
-  
+
   @Test
   public void testByteRange() throws IOException {
     HftpFileSystem.RangeHeaderUrlOpener ospy = spy(
@@ -149,7 +150,7 @@ public static class MockHttpURLConnection extends HttpURLConnection {
 
     ((MockHttpURLConnection) rspy.openConnection()).setResponseCode(200);
     is.seek(500);
-    
+
     try {
       is.read();
       fail("Exception should be thrown when 200 response is given "
@@ -171,31 +172,31 @@ public static class MockHttpURLConnection extends HttpURLConnection {
                    "HTTP_OK expected, received 206", e.getMessage());
     }
   }
-  
+
   @Test
   public void testPropagatedClose() throws IOException {
     ByteRangeInputStream brs = spy(
         new HftpFileSystem.RangeHeaderInputStream(new URL("http://test/")));
-    
+
     InputStream mockStream = mock(InputStream.class);
     doReturn(mockStream).when(brs).openInputStream();
 
     int brisOpens = 0;
     int brisCloses = 0;
     int isCloses = 0;
-    
+
     // first open, shouldn't close underlying stream
     brs.getInputStream();
     verify(brs, times(++brisOpens)).openInputStream();
     verify(brs, times(brisCloses)).close();
     verify(mockStream, times(isCloses)).close();
-    
+
     // stream is open, shouldn't close underlying stream
     brs.getInputStream();
     verify(brs, times(brisOpens)).openInputStream();
     verify(brs, times(brisCloses)).close();
     verify(mockStream, times(isCloses)).close();
-    
+
     // seek forces a reopen, should close underlying stream
     brs.seek(1);
     brs.getInputStream();
@@ -221,12 +222,12 @@ public static class MockHttpURLConnection extends HttpURLConnection {
     brs.close();
     verify(brs, times(++brisCloses)).close();
     verify(mockStream, times(++isCloses)).close();
-    
+
     // it's already closed, underlying stream should not close
     brs.close();
     verify(brs, times(++brisCloses)).close();
     verify(mockStream, times(isCloses)).close();
-    
+
     // it's closed, don't reopen it
     boolean errored = false;
     try {
