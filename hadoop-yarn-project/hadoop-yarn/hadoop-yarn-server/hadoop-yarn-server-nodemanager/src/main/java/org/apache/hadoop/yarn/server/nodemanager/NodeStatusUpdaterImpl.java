@@ -341,7 +341,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           container.cloneAndGetContainerStatus();
       containersStatuses.add(containerStatus);
       ++numActiveContainers;
-      LOG.info("Sending out status for container: " + containerStatus);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Sending out status for container: " + containerStatus);
+      }
 
       if (containerStatus.getState() == ContainerState.COMPLETE) {
         // Remove
