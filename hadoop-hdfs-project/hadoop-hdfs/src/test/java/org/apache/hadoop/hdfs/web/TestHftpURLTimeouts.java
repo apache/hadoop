@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.web;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -33,6 +33,8 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.web.HftpFileSystem;
+import org.apache.hadoop.hdfs.web.HsftpFileSystem;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.junit.Test;
 
@@ -83,7 +85,7 @@ public class TestHftpURLTimeouts {
 
     HsftpFileSystem fs = (HsftpFileSystem)FileSystem.get(uri, conf);
     fs.connectionFactory = new URLConnectionFactory(5);
-    
+
     try {
       HttpURLConnection conn = null;
       timedout = false;
@@ -104,7 +106,7 @@ public class TestHftpURLTimeouts {
       fs.close();
     }
   }
-  
+
   private boolean checkConnectTimeout(HftpFileSystem fs, boolean ignoreReadTimeout)
       throws IOException {
     boolean timedout = false;

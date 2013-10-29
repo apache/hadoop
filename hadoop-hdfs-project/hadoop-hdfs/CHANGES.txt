@@ -93,6 +93,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5363. Refactor WebHdfsFileSystem: move SPENGO-authenticated connection
     creation to URLConnectionFactory. (Haohui Mai via jing9)
 
+    HDFS-5436. Move HsFtpFileSystem and HFtpFileSystem into org.apache.hdfs.web
+    (Haohui Mai via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
