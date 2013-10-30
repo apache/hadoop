@@ -150,6 +150,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1357. TestContainerLaunch.testContainerEnvVariables fails on Windows.
     (Chuan Liu via cnauroth)
 
+    YARN-1358. TestYarnCLI fails on Windows due to line endings. (Chuan Liu via
+    cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
