@@ -188,6 +188,9 @@ Trunk (Unreleased)
     HDFS-5378. In CacheReport, don't send genstamp and length on the wire
     (Contributed by Colin Patrick McCabe)
 
+    HDFS-5386. Add feature documentation for datanode caching.
+    (Colin Patrick McCabe via cnauroth)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
@@ -447,6 +450,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5363. Refactor WebHdfsFileSystem: move SPENGO-authenticated connection
     creation to URLConnectionFactory. (Haohui Mai via jing9)
 
+    HDFS-5436. Move HsFtpFileSystem and HFtpFileSystem into org.apache.hdfs.web
+    (Haohui Mai via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -561,6 +567,12 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5413. hdfs.cmd does not support passthrough to any arbitrary class.
     (cnauroth)
+
+    HDFS-5433. When reloading fsimage during checkpointing, we should clear
+    existing snapshottable directories. (Aaron T. Myers via wang)
+
+    HDFS-5432. TestDatanodeJsp fails on Windows due to assumption that loopback
+    address resolves to host name localhost. (cnauroth)
 
 Release 2.2.0 - 2013-10-13
 

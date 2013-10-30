@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.web;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -40,13 +40,15 @@ import javax.net.ssl.X509TrustManager;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.Time;
 
 /**
  * An implementation of a protocol for accessing filesystems over HTTPS. The
  * following implementation provides a limited, read-only interface to a
  * filesystem over HTTPS.
- * 
+ *
  * @see org.apache.hadoop.hdfs.server.namenode.ListPathsServlet
  * @see org.apache.hadoop.hdfs.server.namenode.FileDataServlet
  */
@@ -85,7 +87,7 @@ public class HsftpFileSystem extends HftpFileSystem {
 
   /**
    * Set up SSL resources
-   * 
+   *
    * @throws IOException
    */
   private static void setupSsl(Configuration conf) throws IOException {

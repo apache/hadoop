@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.web;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,28 +34,28 @@ import com.google.common.net.HttpHeaders;
 
 /**
  * To support HTTP byte streams, a new connection to an HTTP server needs to be
- * created each time. This class hides the complexity of those multiple 
+ * created each time. This class hides the complexity of those multiple
  * connections from the client. Whenever seek() is called, a new connection
- * is made on the successive read(). The normal input stream functions are 
- * connected to the currently active input stream. 
+ * is made on the successive read(). The normal input stream functions are
+ * connected to the currently active input stream.
  */
 public abstract class ByteRangeInputStream extends FSInputStream {
-  
+
   /**
    * This class wraps a URL and provides method to open connection.
    * It can be overridden to change how a connection is opened.
    */
   public static abstract class URLOpener {
     protected URL url;
-  
+
     public URLOpener(URL u) {
       url = u;
     }
-  
+
     public void setURL(URL u) {
       url = u;
     }
-  
+
     public URL getURL() {
       return url;
     }
@@ -78,7 +78,7 @@ public abstract class ByteRangeInputStream extends FSInputStream {
   StreamStatus status = StreamStatus.SEEK;
 
   /**
-   * Create with the specified URLOpeners. Original url is used to open the 
+   * Create with the specified URLOpeners. Original url is used to open the
    * stream for the first time. Resolved url is used in subsequent requests.
    * @param o Original url
    * @param r Resolved url
@@ -87,7 +87,7 @@ public abstract class ByteRangeInputStream extends FSInputStream {
     this.originalURL = o;
     this.resolvedURL = r;
   }
-  
+
   protected abstract URL getResolvedUrl(final HttpURLConnection connection
       ) throws IOException;
 
@@ -108,12 +108,12 @@ public abstract class ByteRangeInputStream extends FSInputStream {
     }
     return in;
   }
-  
+
   @VisibleForTesting
   protected InputStream openInputStream() throws IOException {
     // Use the original url if no resolved url exists, eg. if
     // it's the first time a request is made.
-    final boolean resolved = resolvedURL.getURL() != null; 
+    final boolean resolved = resolvedURL.getURL() != null;
     final URLOpener opener = resolved? resolvedURL: originalURL;
 
     final HttpURLConnection connection = opener.connect(startPos, resolved);
@@ -141,7 +141,7 @@ public abstract class ByteRangeInputStream extends FSInputStream {
 
     return in;
   }
-  
+
   private static boolean isChunkedTransferEncoding(
       final Map<String, List<String>> headers) {
     return contains(headers, HttpHeaders.TRANSFER_ENCODING, "chunked")
@@ -186,7 +186,7 @@ public abstract class ByteRangeInputStream extends FSInputStream {
   public int read(byte b[], int off, int len) throws IOException {
     return update(getInputStream().read(b, off, len));
   }
-  
+
   /**
    * Seek to the given offset from the start of the file.
    * The next read() will be from that location.  Can't
@@ -219,7 +219,7 @@ public abstract class ByteRangeInputStream extends FSInputStream {
   public boolean seekToNewSource(long targetPos) throws IOException {
     return false;
   }
-  
+
   @Override
   public void close() throws IOException {
     if (in != null) {
