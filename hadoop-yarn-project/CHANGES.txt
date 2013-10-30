@@ -146,6 +146,9 @@ Release 2.2.1 - UNRELEASED
     
     YARN-1349. yarn.cmd does not support passthrough to any arbitrary class.
     (cnauroth)
+    
+    YARN-1357. TestContainerLaunch.testContainerEnvVariables fails on Windows.
+    (Chuan Liu via cnauroth)
 
 Release 2.2.0 - 2013-10-13
 
