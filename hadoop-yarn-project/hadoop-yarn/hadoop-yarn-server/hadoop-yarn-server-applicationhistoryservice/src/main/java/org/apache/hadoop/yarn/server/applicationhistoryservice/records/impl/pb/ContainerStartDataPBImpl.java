@@ -19,33 +19,30 @@
 package org.apache.hadoop.yarn.server.applicationhistoryservice.records.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
-import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ContainerHistoryDataProto;
-import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ContainerHistoryDataProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ContainerStartDataProto;
+import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ContainerStartDataProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerHistoryData;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerStartData;
+
+import com.google.protobuf.TextFormat;
 
 
-public class ContainerHistoryDataPBImpl
-    extends ProtoBase<ContainerHistoryDataProto>
-        implements ContainerHistoryData {
+public class ContainerStartDataPBImpl
+    extends ContainerStartData {
 
-  ContainerHistoryDataProto proto =
-      ContainerHistoryDataProto.getDefaultInstance();
-  ContainerHistoryDataProto.Builder builder = null;
+  ContainerStartDataProto proto =
+      ContainerStartDataProto.getDefaultInstance();
+  ContainerStartDataProto.Builder builder = null;
   boolean viaProto = false;
 
   private ContainerId containerId;
@@ -53,21 +50,21 @@ public class ContainerHistoryDataPBImpl
   private NodeId nodeId;
   private Priority priority;
 
-  public ContainerHistoryDataPBImpl() {
-    builder = ContainerHistoryDataProto.newBuilder();
+  public ContainerStartDataPBImpl() {
+    builder = ContainerStartDataProto.newBuilder();
   }
 
-  public ContainerHistoryDataPBImpl(ContainerHistoryDataProto proto) {
+  public ContainerStartDataPBImpl(ContainerStartDataProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
   @Override
   public ContainerId getContainerId() {
-    if (this != null) {
+    if (this.containerId != null) {
       return this.containerId;
     }
-    ContainerHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ContainerStartDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasContainerId()) {
       return null;
     }
@@ -86,10 +83,10 @@ public class ContainerHistoryDataPBImpl
 
   @Override
   public Resource getAllocatedResource() {
-    if (this != null) {
+    if (this.resource != null) {
       return this.resource;
     }
-    ContainerHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ContainerStartDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasAllocatedResource()) {
       return null;
     }
@@ -108,10 +105,10 @@ public class ContainerHistoryDataPBImpl
 
   @Override
   public NodeId getAssignedNode() {
-    if (this != null) {
+    if (this.nodeId != null) {
       return this.nodeId;
     }
-    ContainerHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ContainerStartDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasAssignedNodeId()) {
       return null;
     }
@@ -130,10 +127,10 @@ public class ContainerHistoryDataPBImpl
 
   @Override
   public Priority getPriority() {
-    if (this != null) {
+    if (this.priority != null) {
       return this.priority;
     }
-    ContainerHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ContainerStartDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasPriority()) {
       return null;
     }
@@ -152,7 +149,7 @@ public class ContainerHistoryDataPBImpl
 
   @Override
   public long getStartTime() {
-    ContainerHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ContainerStartDataProtoOrBuilder p = viaProto ? proto : builder;
     return p.getStartTime();
   }
 
@@ -162,79 +159,7 @@ public class ContainerHistoryDataPBImpl
     builder.setStartTime(startTime);
   }
 
-  @Override
-  public long getFinishTime() {
-    ContainerHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getFinishTime();
-  }
-
-  @Override
-  public void setFinishTime(long finishTime) {
-    maybeInitBuilder();
-    builder.setFinishTime(finishTime);
-  }
-
-  @Override
-  public String getDiagnosticsInfo() {
-    ContainerHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasDiagnosticsInfo()) {
-      return null;
-    }
-    return p.getDiagnosticsInfo();
-  }
-
-  @Override
-  public void setDiagnosticsInfo(String diagnosticInfo) {
-    maybeInitBuilder();
-    if (diagnosticInfo == null) {
-      builder.clearDiagnosticsInfo();
-      return;
-    }
-    builder.setDiagnosticsInfo(diagnosticInfo);
-  }
-
-  @Override
-  public String getLogURL() {
-    ContainerHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasLogUrl()) {
-      return null;
-    }
-    return p.getLogUrl();
-  }
-
-  @Override
-  public void setLogURL(String logURL) {
-    maybeInitBuilder();
-    if (logURL == null) {
-      builder.clearLogUrl();
-      return;
-    }
-    builder.setLogUrl(logURL);
-  }
-
-  @Override
-  public ContainerState getFinalContainerStatus() {
-    ContainerHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasFinalContainerStatus()) {
-      return null;
-    }
-    return convertFromProtoFormat(p.getFinalContainerStatus());
-  }
-
-  @Override
-  public void setFinalContainerStatus(
-      ContainerState finalContainerState) {
-    maybeInitBuilder();
-    if (finalContainerState == null) {
-      builder.clearFinalContainerStatus();
-      return;
-    }
-    builder.setFinalContainerStatus(
-        convertToProtoFormat(finalContainerState));
-  }
-
-  @Override
-  public ContainerHistoryDataProto getProto() {
+  public ContainerStartDataProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -258,7 +183,7 @@ public class ContainerHistoryDataPBImpl
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {
@@ -291,13 +216,13 @@ public class ContainerHistoryDataPBImpl
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = ContainerHistoryDataProto.newBuilder(proto);
+      builder = ContainerStartDataProto.newBuilder(proto);
     }
     viaProto = false;
   }
 
   private ContainerIdProto convertToProtoFormat(
-      ContainerId ContainerId) {
+      ContainerId containerId) {
     return ((ContainerIdPBImpl) containerId).getProto();
   }
 
@@ -328,16 +253,6 @@ public class ContainerHistoryDataPBImpl
 
   private PriorityPBImpl convertFromProtoFormat(PriorityProto priority) {
     return new PriorityPBImpl(priority);
-  }
-
-  private ContainerState convertFromProtoFormat(
-      ContainerStateProto finalContainerStatus) {
-    return ProtoUtils.convertFromProtoFormat(finalContainerStatus);
-  }
-
-  private ContainerStateProto convertToProtoFormat(
-      ContainerState finalContainerStatus) {
-    return ProtoUtils.convertToProtoFormat(finalContainerStatus);
   }
 
 }

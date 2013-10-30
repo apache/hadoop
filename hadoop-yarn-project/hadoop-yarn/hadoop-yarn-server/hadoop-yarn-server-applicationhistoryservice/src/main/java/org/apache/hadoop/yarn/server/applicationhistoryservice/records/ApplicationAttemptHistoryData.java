@@ -23,69 +23,150 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 
 /**
- * The class contains all the fields that need to be stored persistently for
+ * The class contains all the fields that are stored persistently for
  * <code>RMAppAttempt</code>.
  */
 @Public
 @Unstable
-public interface ApplicationAttemptHistoryData {
+public class ApplicationAttemptHistoryData {
+
+  private ApplicationAttemptId applicationAttemptId;
+
+  private String host;
+
+  private int rpcPort;
+
+  private String trackingURL;
+
+  private String diagnosticsInfo;
+
+  private FinalApplicationStatus finalApplicationStatus;
+
+  private ContainerId masterContainerId;
+
+  private YarnApplicationAttemptState yarnApplicationAttemptState;
 
   @Public
   @Unstable
-  ApplicationAttemptId getApplicationAttemptId();
+  public static ApplicationAttemptHistoryData newInstance(
+      ApplicationAttemptId appAttemptId, String host, int rpcPort,
+      ContainerId masterContainerId, String diagnosticsInfo,
+      String trackingURL,
+      FinalApplicationStatus finalApplicationStatus,
+      YarnApplicationAttemptState yarnApplicationAttemptState) {
+    ApplicationAttemptHistoryData appAttemptHD =
+        new ApplicationAttemptHistoryData();
+    appAttemptHD.setApplicationAttemptId(appAttemptId);
+    appAttemptHD.setHost(host);
+    appAttemptHD.setRPCPort(rpcPort);
+    appAttemptHD.setMasterContainerId(masterContainerId);
+    appAttemptHD.setDiagnosticsInfo(diagnosticsInfo);
+    appAttemptHD.setTrackingURL(trackingURL);
+    appAttemptHD.setFinalApplicationStatus(finalApplicationStatus);
+    appAttemptHD.setYarnApplicationAttemptState(yarnApplicationAttemptState);
+    return appAttemptHD;
+  }
 
   @Public
   @Unstable
-  void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
+  public ApplicationAttemptId getApplicationAttemptId() {
+    return applicationAttemptId;
+  }
 
   @Public
   @Unstable
-  String getHost();
+  public void setApplicationAttemptId(
+      ApplicationAttemptId applicationAttemptId) {
+    this.applicationAttemptId = applicationAttemptId;
+  }
 
   @Public
   @Unstable
-  void setHost(String host);
+  public String getHost() {
+    return host;
+  }
 
   @Public
   @Unstable
-  int getRPCPort();
+  public void setHost(String host) {
+    this.host = host;
+  }
 
   @Public
   @Unstable
-  void setRPCPort(int rpcPort);
+  public int getRPCPort() {
+    return rpcPort;
+  }
 
   @Public
   @Unstable
-  String getTrackingURL();
+  public void setRPCPort(int rpcPort) {
+    this.rpcPort = rpcPort;
+  }
 
   @Public
   @Unstable
-  void setTrackingURL(String trackingURL);
+  public String getTrackingURL() {
+    return trackingURL;
+  }
 
   @Public
   @Unstable
-  String getDiagnosticsInfo();
+  public void setTrackingURL(String trackingURL) {
+    this.trackingURL = trackingURL;
+  }
 
   @Public
   @Unstable
-  void setDiagnosticsInfo(String diagnosticsInfo);
+  public String getDiagnosticsInfo() {
+    return diagnosticsInfo;
+  }
 
   @Public
   @Unstable
-  FinalApplicationStatus getFinalApplicationStatus();
+  public void setDiagnosticsInfo(String diagnosticsInfo) {
+    this.diagnosticsInfo = diagnosticsInfo;
+  }
 
   @Public
   @Unstable
-  void setFinalApplicationStatus(FinalApplicationStatus finalApplicationStatus);
+  public FinalApplicationStatus getFinalApplicationStatus() {
+    return finalApplicationStatus;
+  }
 
   @Public
   @Unstable
-  ContainerId getMasterContainerId();
+  public void setFinalApplicationStatus(
+      FinalApplicationStatus finalApplicationStatus) {
+    this.finalApplicationStatus = finalApplicationStatus;
+  }
 
   @Public
   @Unstable
-  void setMasterContainerId(ContainerId masterContainerId);
+  public ContainerId getMasterContainerId() {
+    return masterContainerId;
+  }
+
+  @Public
+  @Unstable
+  public void setMasterContainerId(ContainerId masterContainerId) {
+    this.masterContainerId = masterContainerId;
+  }
+
+  @Public
+  @Unstable
+  public YarnApplicationAttemptState getYarnApplicationAttemptState() {
+    return yarnApplicationAttemptState;
+  }
+
+  @Public
+  @Unstable
+  public void setYarnApplicationAttemptState(
+      YarnApplicationAttemptState yarnApplicationAttemptState) {
+    this.yarnApplicationAttemptState = yarnApplicationAttemptState;
+  }
 
 }
