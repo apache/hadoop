@@ -211,6 +211,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5433. When reloading fsimage during checkpointing, we should clear
     existing snapshottable directories. (Aaron T. Myers via wang)
 
+    HDFS-5432. TestDatanodeJsp fails on Windows due to assumption that loopback
+    address resolves to host name localhost. (cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

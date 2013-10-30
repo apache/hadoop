@@ -88,7 +88,8 @@ public class TestDatanodeJsp {
     regex = "<a.+href=\"(.+?)\">Go\\s*Back\\s*to\\s*File\\s*View\\<\\/a\\>";
     assertFileContents(regex, "Go Back to File View");
 
-    regex = "<a href=\"///localhost:" + nnHttpAddress.getPort() + "/dfshealth.jsp\">Go back to DFS home</a>";
+    regex = "<a href=\"///" + nnHttpAddress.getHostName() + ":" +
+      nnHttpAddress.getPort() + "/dfshealth.jsp\">Go back to DFS home</a>";
     assertTrue("page should generate DFS home scheme without explicit scheme", viewFilePage.contains(regex));
   }
   
