@@ -518,6 +518,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     generationStampV1Limit = GenerationStamp.GRANDFATHER_GENERATION_STAMP;
     leaseManager.removeAllLeases();
     inodeId.setCurrentValue(INodeId.LAST_RESERVED_ID);
+    snapshotManager.clearSnapshottableDirs();
   }
 
   @VisibleForTesting
