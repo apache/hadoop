@@ -208,6 +208,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5413. hdfs.cmd does not support passthrough to any arbitrary class.
     (cnauroth)
 
+    HDFS-5433. When reloading fsimage during checkpointing, we should clear
+    existing snapshottable directories. (Aaron T. Myers via wang)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

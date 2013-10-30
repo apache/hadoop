@@ -357,6 +357,10 @@ public class SnapshotManager implements SnapshotStats {
     
     return snapshotRoot.computeDiff(from, to);
   }
+  
+  public void clearSnapshottableDirs() {
+    snapshottables.clear();
+  }
 
   /**
    * Returns the maximum allowable snapshot ID based on the bit width of the
