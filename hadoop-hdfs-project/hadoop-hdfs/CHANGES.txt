@@ -73,6 +73,8 @@ Release 2.2.1 - UNRELEASED
     HDFS-5432. TestDatanodeJsp fails on Windows due to assumption that loopback
     address resolves to host name localhost. (cnauroth)
 
+    HDFS-5065. TestSymlinkHdfsDisable fails on Windows. (ivanmi)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
