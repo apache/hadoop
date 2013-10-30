@@ -214,6 +214,9 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5065. TestSymlinkHdfsDisable fails on Windows. (ivanmi)
 
+    HDFS-4633 TestDFSClientExcludedNodes fails sporadically if excluded nodes
+    cache expires too quickly  (Chris Nauroth via Sanjay)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
