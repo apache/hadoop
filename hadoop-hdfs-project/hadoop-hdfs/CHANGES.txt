@@ -188,6 +188,9 @@ Trunk (Unreleased)
     HDFS-5378. In CacheReport, don't send genstamp and length on the wire
     (Contributed by Colin Patrick McCabe)
 
+    HDFS-5386. Add feature documentation for datanode caching.
+    (Colin Patrick McCabe via cnauroth)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

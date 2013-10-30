@@ -1487,6 +1487,24 @@
 </property>
 
 <property>
+  <name>dfs.namenode.list.cache.descriptors.num.responses</name>
+  <value>100</value>
+  <description>
+    This value controls the number of cache descriptors that the NameNode will
+    send over the wire in response to a listDirectives RPC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.list.cache.pools.num.responses</name>
+  <value>100</value>
+  <description>
+    This value controls the number of cache pools that the NameNode will
+    send over the wire in response to a listPools RPC.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.path.based.cache.refresh.interval.ms</name>
   <value>300000</value>
   <description>
