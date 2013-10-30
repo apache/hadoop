@@ -105,6 +105,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1109. Demote NodeManager "Sending out status for container" logs to
     debug (haosdent via Sandy Ryza)
 
+    YARN-1321. Changed NMTokenCache to support both singleton and an instance
+    usage. (Alejandro Abdelnur via vinodkv) 
+
   OPTIMIZATIONS
 
   BUG FIXES

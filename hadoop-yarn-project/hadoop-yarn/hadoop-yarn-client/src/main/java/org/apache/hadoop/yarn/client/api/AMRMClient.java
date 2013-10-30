@@ -59,9 +59,12 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     return client;
   }
 
+  private NMTokenCache nmTokenCache;
+
   @Private
   protected AMRMClient(String name) {
     super(name);
+    nmTokenCache = NMTokenCache.getSingleton();
   }
 
   /**
@@ -297,4 +300,33 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    */
   public abstract void updateBlacklist(List<String> blacklistAdditions,
       List<String> blacklistRemovals);
+
+  /**
+   * Set the NM token cache for the <code>AMRMClient</code>. This cache must
+   * be shared with the {@link NMClient} used to manage containers for the
+   * <code>AMRMClient</code>
+   * <p/>
+   * If a NM token cache is not set, the {@link NMTokenCache#getSingleton()}
+   * singleton instance will be used.
+   *
+   * @param nmTokenCache the NM token cache to use.
+   */
+  public void setNMTokenCache(NMTokenCache nmTokenCache) {
+    this.nmTokenCache = nmTokenCache;
+  }
+
+  /**
+   * Get the NM token cache of the <code>AMRMClient</code>. This cache must be
+   * shared with the {@link NMClient} used to manage containers for the
+   * <code>AMRMClient</code>.
+   * <p/>
+   * If a NM token cache is not set, the {@link NMTokenCache#getSingleton()}
+   * singleton instance will be used.
+   *
+   * @return the NM token cache.
+   */
+  public NMTokenCache getNMTokenCache() {
+    return nmTokenCache;
+  }
+
 }
