@@ -58,6 +58,8 @@ public abstract class NMClient extends AbstractService {
     return client;
   }
 
+  private NMTokenCache nmTokenCache = NMTokenCache.getSingleton();
+
   @Private
   protected NMClient(String name) {
     super(name);
@@ -118,4 +120,33 @@ public abstract class NMClient extends AbstractService {
    * @param enabled whether the feature is enabled or not
    */
   public abstract void cleanupRunningContainersOnStop(boolean enabled);
+
+  /**
+   * Set the NM Token cache of the <code>NMClient</code>. This cache must be
+   * shared with the {@link AMRMClient} that requested the containers managed
+   * by this <code>NMClient</code>
+   * <p/>
+   * If a NM token cache is not set, the {@link NMTokenCache#getSingleton()}
+   * singleton instance will be used.
+   *
+   * @param nmTokenCache the NM token cache to use.
+   */
+  public void setNMTokenCache(NMTokenCache nmTokenCache) {
+    this.nmTokenCache = nmTokenCache;
+  }
+
+  /**
+   * Get the NM token cache of the <code>NMClient</code>. This cache must be
+   * shared with the {@link AMRMClient} that requested the containers managed
+   * by this <code>NMClient</code>
+   * <p/>
+   * If a NM token cache is not set, the {@link NMTokenCache#getSingleton()}
+   * singleton instance will be used.
+   *
+   * @return the NM token cache
+   */
+  public NMTokenCache getNMTokenCache() {
+    return nmTokenCache;
+  }
+
 }
