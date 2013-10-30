@@ -57,11 +57,4 @@
     <name>yarn.scheduler.capacity.root.sls_queue_3.maximum-capacity</name>
     <value>100</value>
   </property>
-  
-  <property>
-    <name>yarn.scheduler.capacity.maximum-applications</name>
-    <value>1000</value>
-    <description>Maximum number of applications in the system which 
-    can be concurrently active both running and pending</description>
-  </property>
 </configuration>

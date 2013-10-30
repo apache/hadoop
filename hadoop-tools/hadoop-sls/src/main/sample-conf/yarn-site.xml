@@ -57,4 +57,24 @@
     <value>false</value>
   </property>
 
+  <property>
+    <name>yarn.scheduler.capacity.maximum-applications</name>
+    <value>1000</value>
+    <description>Maximum number of applications in the system which
+      can be concurrently active both running and pending</description>
+  </property>
+
+  <property>
+    <description>Whether to use preemption. Note that preemption is experimental
+      in the current version. Defaults to false.</description>
+    <name>yarn.scheduler.fair.preemption</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>Whether to allow multiple container assignments in one
+      heartbeat. Defaults to false.</description>
+    <name>yarn.scheduler.fair.assignmultiple</name>
+    <value>true</value>
+  </property>
 </configuration>
