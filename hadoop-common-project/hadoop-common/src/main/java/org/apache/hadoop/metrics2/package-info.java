@@ -234,7 +234,7 @@
     patterns.
   </p>
   <p>Similarly, you can specify the <code>record.filter</code> and
-    <code>metrics.filter</code> options, which operate at record and metric
+    <code>metric.filter</code> options, which operate at record and metric
     level, respectively. Filters can be combined to optimize
     the filtering efficiency.</p>
 

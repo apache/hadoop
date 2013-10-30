@@ -17,20 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.HashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +25,14 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Progressable;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.util.*;
 
 /**
  * This is an implementation of the Hadoop Archive 
@@ -53,7 +47,7 @@ import org.apache.hadoop.util.Progressable;
  * index for ranges of hashcodes.
  */
 
-public class HarFileSystem extends FilterFileSystem {
+public class HarFileSystem extends FileSystem {
 
   private static final Log LOG = LogFactory.getLog(HarFileSystem.class);
 
@@ -75,11 +69,13 @@ public class HarFileSystem extends FilterFileSystem {
   // pointer into the static metadata cache
   private HarMetaData metadata;
 
+  private FileSystem fs;
+
   /**
    * public construction of harfilesystem
-   *
    */
   public HarFileSystem() {
+    // Must call #initialize() method to set the underlying file system
   }
 
   /**
@@ -96,10 +92,11 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * Constructor to create a HarFileSystem with an
    * underlying filesystem.
-   * @param fs
+   * @param fs underlying file system
    */
   public HarFileSystem(FileSystem fs) {
-    super(fs);
+    this.fs = fs;
+    this.statistics = fs.statistics;
   }
  
   private synchronized void initializeMetadataCache(Configuration conf) {
@@ -171,6 +168,11 @@ public class HarFileSystem extends FilterFileSystem {
     }
   }
 
+  @Override
+  public Configuration getConf() {
+    return fs.getConf();
+  }
+
   // get the version of the filesystem from the masterindex file
   // the version is currently not useful since its the first version
   // of archives
@@ -236,8 +238,7 @@ public class HarFileSystem extends FilterFileSystem {
       throw new IOException("query component in Path not supported  " + rawURI);
     }
  
-    URI tmp = null;
- 
+    URI tmp;
     try {
       // convert <scheme>-<host> to <scheme>://<host>
       URI baseUri = new URI(authority.replaceFirst("-", "://"));
@@ -256,7 +257,7 @@ public class HarFileSystem extends FilterFileSystem {
     return URLDecoder.decode(str, "UTF-8");
   }
 
-  private String decodeFileName(String fname) 
+  private String decodeFileName(String fname)
     throws UnsupportedEncodingException {
     int version = metadata.getVersion();
     if (version == 2 || version == 3){
@@ -272,19 +273,30 @@ public class HarFileSystem extends FilterFileSystem {
   public Path getWorkingDirectory() {
     return new Path(uri.toString());
   }
-  
+
+  @Override
+  public Path getInitialWorkingDirectory() {
+    return getWorkingDirectory();
+  }
+
+  @Override
+  public FsStatus getStatus(Path p) throws IOException {
+    return fs.getStatus(p);
+  }
+
   /**
    * Create a har specific auth 
    * har-underlyingfs:port
-   * @param underLyingURI the uri of underlying
+   * @param underLyingUri the uri of underlying
    * filesystem
    * @return har specific auth
    */
   private String getHarAuth(URI underLyingUri) {
     String auth = underLyingUri.getScheme() + "-";
     if (underLyingUri.getHost() != null) {
-      auth += underLyingUri.getHost() + ":";
+      auth += underLyingUri.getHost();
       if (underLyingUri.getPort() != -1) {
+        auth += ":";
         auth +=  underLyingUri.getPort();
       }
     }
@@ -293,7 +305,21 @@ public class HarFileSystem extends FilterFileSystem {
     }
     return auth;
   }
-  
+
+  /**
+   * Used for delegation token related functionality. Must delegate to
+   * underlying file system.
+   */
+  @Override
+  protected URI getCanonicalUri() {
+    return fs.getCanonicalUri();
+  }
+
+  @Override
+  protected URI canonicalizeUri(URI uri) {
+    return fs.canonicalizeUri(uri);
+  }
+
   /**
    * Returns the uri of this filesystem.
    * The uri is of the form 
@@ -304,6 +330,16 @@ public class HarFileSystem extends FilterFileSystem {
     return this.uri;
   }
   
+  @Override
+  protected void checkPath(Path path) {
+    fs.checkPath(path);
+  }
+
+  @Override
+  public Path resolvePath(Path p) throws IOException {
+    return fs.resolvePath(p);
+  }
+
   /**
    * this method returns the path 
    * inside the har filesystem.
@@ -418,7 +454,7 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * Get block locations from the underlying fs and fix their
    * offsets and lengths.
-   * @param file the input filestatus to get block locations
+   * @param file the input file status to get block locations
    * @param start the start of the desired range in the contained file
    * @param len the length of the desired range
    * @return block locations for this segment of file
@@ -440,8 +476,7 @@ public class HarFileSystem extends FilterFileSystem {
   }
   
   /**
-   * the hash of the path p inside iniside
-   * the filesystem
+   * the hash of the path p inside  the filesystem
    * @param p the path in the harfilesystem
    * @return the hash code of the path.
    */
@@ -474,13 +509,9 @@ public class HarFileSystem extends FilterFileSystem {
    *          the parent path directory
    * @param statuses
    *          the list to add the children filestatuses to
-   * @param children
-   *          the string list of children for this parent
-   * @param archiveIndexStat
-   *          the archive index filestatus
    */
-  private void fileStatusesInIndex(HarStatus parent, List<FileStatus> statuses,
-      List<String> children) throws IOException {
+  private void fileStatusesInIndex(HarStatus parent, List<FileStatus> statuses)
+          throws IOException {
     String parentString = parent.getName();
     if (!parentString.endsWith(Path.SEPARATOR)){
         parentString += Path.SEPARATOR;
@@ -546,7 +577,7 @@ public class HarFileSystem extends FilterFileSystem {
   // stored in a single line in the index files 
   // the format is of the form 
   // filename "dir"/"file" partFileName startIndex length 
-  // <space seperated children>
+  // <space separated children>
   private class HarStatus {
     boolean isDir;
     String name;
@@ -665,7 +696,6 @@ public class HarFileSystem extends FilterFileSystem {
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     // get the fs DataInputStream for the underlying file
     HarStatus hstatus = getFileHarStatus(f);
-    // we got it.. woo hooo!!! 
     if (hstatus.isDir()) {
       throw new FileNotFoundException(f + " : not a file in " +
                 archivePath);
@@ -674,20 +704,39 @@ public class HarFileSystem extends FilterFileSystem {
         hstatus.getPartName()),
         hstatus.getStartIndex(), hstatus.getLength(), bufferSize);
   }
- 
+
+  /**
+   * Used for delegation token related functionality. Must delegate to
+   * underlying file system.
+   */
   @Override
-  public FSDataOutputStream create(Path f,
-      FsPermission permission,
-      boolean overwrite,
-      int bufferSize,
-      short replication,
-      long blockSize,
+  public FileSystem[] getChildFileSystems() {
+    return new FileSystem[]{fs};
+  }
+
+  @Override
+  public FSDataOutputStream create(Path f, FsPermission permission,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     throw new IOException("Har: create not allowed.");
   }
-  
+
+  @SuppressWarnings("deprecation")
+  @Override
+  public FSDataOutputStream createNonRecursive(Path f, boolean overwrite,
+      int bufferSize, short replication, long blockSize, Progressable progress)
+      throws IOException {
+    throw new IOException("Har: create not allowed.");
+  }
+
+  @Override
+  public FSDataOutputStream append(Path f, int bufferSize, Progressable progress) throws IOException {
+    throw new IOException("Har: append not allowed.");
+  }
+
   @Override
   public void close() throws IOException {
+    super.close();
     if (fs != null) {
       try {
         fs.close();
@@ -703,9 +752,19 @@ public class HarFileSystem extends FilterFileSystem {
    */
   @Override
   public boolean setReplication(Path src, short replication) throws IOException{
-    throw new IOException("Har: setreplication not allowed");
+    throw new IOException("Har: setReplication not allowed");
   }
-  
+
+  @Override
+  public boolean rename(Path src, Path dst) throws IOException {
+    throw new IOException("Har: rename not allowed");
+  }
+
+  @Override
+  public FSDataOutputStream append(Path f) throws IOException {
+    throw new IOException("Har: append not allowed");
+  }
+
   /**
    * Not implemented.
    */
@@ -713,7 +772,7 @@ public class HarFileSystem extends FilterFileSystem {
   public boolean delete(Path f, boolean recursive) throws IOException { 
     throw new IOException("Har: delete not allowed");
   }
-  
+
   /**
    * liststatus returns the children of a directory 
    * after looking up the index files.
@@ -732,7 +791,7 @@ public class HarFileSystem extends FilterFileSystem {
       throw new FileNotFoundException("File " + f + " not found in " + archivePath);
     }
     if (hstatus.isDir()) {
-      fileStatusesInIndex(hstatus, statuses, hstatus.children);
+      fileStatusesInIndex(hstatus, statuses);
     } else {
       statuses.add(toFileStatus(hstatus, null));
     }
@@ -747,7 +806,7 @@ public class HarFileSystem extends FilterFileSystem {
   public Path getHomeDirectory() {
     return new Path(uri.toString());
   }
-  
+
   @Override
   public void setWorkingDirectory(Path newDir) {
     //does nothing.
@@ -765,11 +824,17 @@ public class HarFileSystem extends FilterFileSystem {
    * not implemented.
    */
   @Override
-  public void copyFromLocalFile(boolean delSrc, Path src, Path dst) throws 
-        IOException {
+  public void copyFromLocalFile(boolean delSrc, boolean overwrite,
+      Path src, Path dst) throws IOException {
     throw new IOException("Har: copyfromlocalfile not allowed");
   }
-  
+
+  @Override
+  public void copyFromLocalFile(boolean delSrc, boolean overwrite,
+      Path[] srcs, Path dst) throws IOException {
+    throw new IOException("Har: copyfromlocalfile not allowed");
+  }
+
   /**
    * copies the file in the har filesystem to a local file.
    */
@@ -806,11 +871,16 @@ public class HarFileSystem extends FilterFileSystem {
     throw new IOException("Har: setowner not allowed");
   }
 
+  @Override
+  public void setTimes(Path p, long mtime, long atime) throws IOException {
+    throw new IOException("Har: setTimes not allowed");
+  }
+
   /**
    * Not implemented.
    */
   @Override
-  public void setPermission(Path p, FsPermission permisssion) 
+  public void setPermission(Path p, FsPermission permission)
     throws IOException {
     throw new IOException("Har: setPermission not allowed");
   }
@@ -828,11 +898,15 @@ public class HarFileSystem extends FilterFileSystem {
       private long position, start, end;
       //The underlying data input stream that the
       // underlying filesystem will return.
-      private FSDataInputStream underLyingStream;
+      private final FSDataInputStream underLyingStream;
       //one byte buffer
-      private byte[] oneBytebuff = new byte[1];
+      private final byte[] oneBytebuff = new byte[1];
+      
       HarFsInputStream(FileSystem fs, Path path, long start,
           long length, int bufferSize) throws IOException {
+        if (length < 0) {
+          throw new IllegalArgumentException("Negative length ["+length+"]");
+        }
         underLyingStream = fs.open(path, bufferSize);
         underLyingStream.seek(start);
         // the start of this file in the part file
@@ -846,7 +920,7 @@ public class HarFileSystem extends FilterFileSystem {
       @Override
       public synchronized int available() throws IOException {
         long remaining = end - underLyingStream.getPos();
-        if (remaining > (long)Integer.MAX_VALUE) {
+        if (remaining > Integer.MAX_VALUE) {
           return Integer.MAX_VALUE;
         }
         return (int) remaining;
@@ -878,10 +952,14 @@ public class HarFileSystem extends FilterFileSystem {
         return (ret <= 0) ? -1: (oneBytebuff[0] & 0xff);
       }
       
+      // NB: currently this method actually never executed becusae
+      // java.io.DataInputStream.read(byte[]) directly delegates to 
+      // method java.io.InputStream.read(byte[], int, int).
+      // However, potentially it can be invoked, so leave it intact for now.
       @Override
       public synchronized int read(byte[] b) throws IOException {
-        int ret = read(b, 0, b.length);
-        if (ret != -1) {
+        final int ret = read(b, 0, b.length);
+        if (ret > 0) {
           position += ret;
         }
         return ret;
@@ -899,7 +977,7 @@ public class HarFileSystem extends FilterFileSystem {
           newlen = (int) (end - position);
         }
         // end case
-        if (newlen == 0) 
+        if (newlen == 0)
           return ret;
         ret = underLyingStream.read(b, offset, newlen);
         position += ret;
@@ -910,15 +988,19 @@ public class HarFileSystem extends FilterFileSystem {
       public synchronized long skip(long n) throws IOException {
         long tmpN = n;
         if (tmpN > 0) {
-          if (position + tmpN > end) {
-            tmpN = end - position;
-          }
+          final long actualRemaining = end - position; 
+          if (tmpN > actualRemaining) {
+            tmpN = actualRemaining;
+          }   
           underLyingStream.seek(tmpN + position);
           position += tmpN;
           return tmpN;
-        }
-        return (tmpN < 0)? -1 : 0;
-      }
+        }   
+        // NB: the contract is described in java.io.InputStream.skip(long):
+        // this method returns the number of bytes actually skipped, so,
+        // the return value should never be negative. 
+        return 0;
+      }   
       
       @Override
       public synchronized long getPos() throws IOException {
@@ -926,18 +1008,27 @@ public class HarFileSystem extends FilterFileSystem {
       }
       
       @Override
-      public synchronized void seek(long pos) throws IOException {
-        if (pos < 0 || (start + pos > end)) {
-          throw new IOException("Failed to seek: EOF");
-        }
+      public synchronized void seek(final long pos) throws IOException {
+        validatePosition(pos);
         position = start + pos;
         underLyingStream.seek(position);
       }
 
+      private void validatePosition(final long pos) throws IOException {
+        if (pos < 0) {
+          throw new IOException("Negative position: "+pos);
+         }
+         final long length = end - start;
+         if (pos > length) {
+           throw new IOException("Position behind the end " +
+               "of the stream (length = "+length+"): " + pos);
+         }
+      }
+
       @Override
       public boolean seekToNewSource(long targetPos) throws IOException {
-        //do not need to implement this
-        // hdfs in itself does seektonewsource 
+        // do not need to implement this
+        // hdfs in itself does seektonewsource
         // while reading.
         return false;
       }
@@ -950,7 +1041,12 @@ public class HarFileSystem extends FilterFileSystem {
       throws IOException {
         int nlength = length;
         if (start + nlength + pos > end) {
-          nlength = (int) (end - (start + pos));
+          // length corrected to the real remaining length:
+          nlength = (int) (end - start - pos);
+        }
+        if (nlength <= 0) {
+          // EOS:
+          return -1;
         }
         return underLyingStream.read(pos + start , b, offset, nlength);
       }
@@ -973,14 +1069,12 @@ public class HarFileSystem extends FilterFileSystem {
       }
 
       @Override
-      public void setReadahead(Long readahead)
-          throws IOException, UnsupportedEncodingException {
+      public void setReadahead(Long readahead) throws IOException {
         underLyingStream.setReadahead(readahead);
       }
 
       @Override
-      public void setDropBehind(Boolean dropBehind)
-          throws IOException, UnsupportedEncodingException {
+      public void setDropBehind(Boolean dropBehind) throws IOException {
         underLyingStream.setDropBehind(dropBehind);
       }
     }
@@ -997,19 +1091,6 @@ public class HarFileSystem extends FilterFileSystem {
     public HarFSDataInputStream(FileSystem fs, Path  p, long start, 
         long length, int bufsize) throws IOException {
         super(new HarFsInputStream(fs, p, start, length, bufsize));
-    }
-
-    /**
-     * constructor for har input stream.
-     * @param fs the underlying filesystem
-     * @param p the path in the underlying file system
-     * @param start the start position in the part file
-     * @param length the length of valid data in the part file.
-     * @throws IOException
-     */
-    public HarFSDataInputStream(FileSystem fs, Path  p, long start, long length)
-      throws IOException {
-        super(new HarFsInputStream(fs, p, start, length, 0));
     }
   }
 
@@ -1057,7 +1138,7 @@ public class HarFileSystem extends FilterFileSystem {
     }
 
     private void parseMetaData() throws IOException {
-      Text line;
+      Text line = new Text();
       long read;
       FSDataInputStream in = null;
       LineReader lin = null;
@@ -1067,7 +1148,6 @@ public class HarFileSystem extends FilterFileSystem {
         FileStatus masterStat = fs.getFileStatus(masterIndexPath);
         masterIndexTimestamp = masterStat.getModificationTime();
         lin = new LineReader(in, getConf());
-        line = new Text();
         read = lin.readLine(line);
 
         // the first line contains the version of the index file
@@ -1081,7 +1161,7 @@ public class HarFileSystem extends FilterFileSystem {
         }
 
         // each line contains a hashcode range and the index file name
-        String[] readStr = null;
+        String[] readStr;
         while(read < masterStat.getLen()) {
           int b = lin.readLine(line);
           read += b;
@@ -1093,6 +1173,9 @@ public class HarFileSystem extends FilterFileSystem {
               endHash));
           line.clear();
         }
+      } catch (IOException ioe) {
+        LOG.warn("Encountered exception ", ioe);
+        throw ioe;
       } finally {
         IOUtils.cleanup(LOG, lin, in);
       }
@@ -1143,5 +1226,44 @@ public class HarFileSystem extends FilterFileSystem {
     protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
         return size() > MAX_ENTRIES;
     }
+  }
+
+  @SuppressWarnings("deprecation")
+  @Override
+  public FsServerDefaults getServerDefaults() throws IOException {
+    return fs.getServerDefaults();
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults(Path f) throws IOException {
+    return fs.getServerDefaults(f);
+  }
+
+  @Override
+  public long getUsed() throws IOException{
+    return fs.getUsed();
+  }
+
+  @SuppressWarnings("deprecation")
+  @Override
+  public long getDefaultBlockSize() {
+    return fs.getDefaultBlockSize();
+  }
+
+  @SuppressWarnings("deprecation")
+  @Override
+  public long getDefaultBlockSize(Path f) {
+    return fs.getDefaultBlockSize(f);
+  }
+
+  @SuppressWarnings("deprecation")
+  @Override
+  public short getDefaultReplication() {
+    return fs.getDefaultReplication();
+  }
+
+  @Override
+  public short getDefaultReplication(Path f) {
+    return fs.getDefaultReplication(f);
   }
 }

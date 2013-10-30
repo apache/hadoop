@@ -19,30 +19,19 @@
 package org.apache.hadoop.security.token;
 
 import com.google.common.collect.Maps;
-
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.ServiceLoader;
-
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-  
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import java.io.*;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.ServiceLoader;
 
 /**
  * The client-side form of the token.
@@ -193,6 +182,19 @@ public class Token<T extends TokenIdentifier> implements Writable {
    */
   public void setService(Text newService) {
     service = newService;
+  }
+
+  /**
+   * Indicates whether the token is a clone.  Used by HA failover proxy
+   * to indicate a token should not be visible to the user via
+   * UGI.getCredentials()
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static class PrivateToken<T extends TokenIdentifier> extends Token<T> {
+    public PrivateToken(Token<T> token) {
+      super(token);
+    }
   }
 
   @Override

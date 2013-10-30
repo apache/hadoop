@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.http.HttpServerFunctionalTest;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -48,8 +49,7 @@ import com.google.common.collect.ImmutableList;
 
 public class TestTransferFsImage {
 
-  private static final File TEST_DIR = new File(
-      System.getProperty("test.build.data","build/test/data"));
+  private static final File TEST_DIR = PathUtils.getTestDir(TestTransferFsImage.class);
 
   /**
    * Regression test for HDFS-1997. Test that, if an exception

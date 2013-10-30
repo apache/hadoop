@@ -38,7 +38,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
 
 /** Redirect queries about the hosted filesystem to an appropriate datanode.
- * @see org.apache.hadoop.hdfs.HftpFileSystem
+ * @see org.apache.hadoop.hdfs.web.HftpFileSystem
  */
 @InterfaceAudience.Private
 public class FileDataServlet extends DfsServlet {
@@ -61,9 +61,14 @@ public class FileDataServlet extends DfsServlet {
     } else {
       hostname = host.getIpAddr();
     }
-    final int port = "https".equals(scheme)
-      ? (Integer)getServletContext().getAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY)
-      : host.getInfoPort();
+    int port = host.getInfoPort();
+    if ("https".equals(scheme)) {
+      final Integer portObject = (Integer) getServletContext().getAttribute(
+          DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY);
+      if (portObject != null) {
+        port = portObject;
+      }
+    }
 
     String dtParam = "";
     if (dt != null) {

@@ -39,6 +39,12 @@ import org.jboss.netty.channel.Channel;
 public class Nfs3Utils {
   public final static String INODEID_PATH_PREFIX = "/.reserved/.inodes/";
 
+  
+  public final static String READ_RPC_START =  "READ_RPC_CALL_START____";
+  public final static String READ_RPC_END =    "READ_RPC_CALL_END______";
+  public final static String WRITE_RPC_START = "WRITE_RPC_CALL_START____";
+  public final static String WRITE_RPC_END =   "WRITE_RPC_CALL_END______";
+  
   public static String getFileIdPath(FileHandle handle) {
     return getFileIdPath(handle.getFileId());
   }
@@ -49,7 +55,7 @@ public class Nfs3Utils {
 
   public static HdfsFileStatus getFileStatus(DFSClient client, String fileIdPath)
       throws IOException {
-    return client.getFileInfo(fileIdPath);
+    return client.getFileLinkInfo(fileIdPath);
   }
 
   public static Nfs3FileAttributes getNfs3FileAttrFromFileStatus(
@@ -59,7 +65,10 @@ public class Nfs3Utils {
      * client takes only the lower 32bit of the fileId and treats it as signed
      * int. When the 32th bit is 1, the client considers it invalid.
      */
-    return new Nfs3FileAttributes(fs.isDir(), fs.getChildrenNum(), fs
+    NfsFileType fileType = fs.isDir() ? NfsFileType.NFSDIR : NfsFileType.NFSREG;
+    fileType = fs.isSymlink() ? NfsFileType.NFSLNK : fileType;
+    
+    return new Nfs3FileAttributes(fileType, fs.getChildrenNum(), fs
         .getPermission().toShort(), iug.getUidAllowingUnknown(fs.getOwner()),
         iug.getGidAllowingUnknown(fs.getGroup()), fs.getLen(), 0 /* fsid */,
         fs.getFileId(), fs.getModificationTime(), fs.getAccessTime());
@@ -99,7 +108,18 @@ public class Nfs3Utils {
   /**
    * Send a write response to the netty network socket channel
    */
-  public static void writeChannel(Channel channel, XDR out) {
+  public static void writeChannel(Channel channel, XDR out, int xid) {
+    if (RpcProgramNfs3.LOG.isDebugEnabled()) {
+      RpcProgramNfs3.LOG.debug(WRITE_RPC_END + xid);
+    }
+    ChannelBuffer outBuf = XDR.writeMessageTcp(out, true);
+    channel.write(outBuf);
+  }
+  
+  public static void writeChannelCommit(Channel channel, XDR out, int xid) {
+    if (RpcProgramNfs3.LOG.isDebugEnabled()) {
+      RpcProgramNfs3.LOG.debug("Commit done:" + xid);
+    }
     ChannelBuffer outBuf = XDR.writeMessageTcp(out, true);
     channel.write(outBuf);
   }

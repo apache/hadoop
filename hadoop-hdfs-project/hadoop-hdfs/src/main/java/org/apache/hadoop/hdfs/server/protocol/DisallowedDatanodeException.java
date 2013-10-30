@@ -37,7 +37,12 @@ public class DisallowedDatanodeException extends IOException {
   /** for java.io.Serializable */
   private static final long serialVersionUID = 1L;
 
+  public DisallowedDatanodeException(DatanodeID nodeID, String reason) {
+    super("Datanode denied communication with namenode because "
+        + reason + ": " + nodeID);
+  }
+
   public DisallowedDatanodeException(DatanodeID nodeID) {
-    super("Datanode denied communication with namenode: " + nodeID);
+    this(nodeID, "the host is not in the include-list");
   }
 }

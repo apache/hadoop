@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
@@ -303,9 +304,12 @@ public class ApplicationMasterService extends AbstractService implements
               .getTrackingUrl(), request.getFinalApplicationStatus(), request
               .getDiagnostics()));
 
-      FinishApplicationMasterResponse response = recordFactory
-          .newRecordInstance(FinishApplicationMasterResponse.class);
-      return response;
+      if (rmContext.getRMApps().get(applicationAttemptId.getApplicationId())
+          .isAppSafeToUnregister()) {
+        return FinishApplicationMasterResponse.newInstance(true);
+      } else {
+        return FinishApplicationMasterResponse.newInstance(false);
+      }
     }
   }
 

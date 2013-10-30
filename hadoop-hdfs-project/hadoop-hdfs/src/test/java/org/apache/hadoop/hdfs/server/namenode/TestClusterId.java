@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.After;
@@ -72,7 +73,7 @@ public class TestClusterId {
   public void setUp() throws IOException {
     ExitUtil.disableSystemExit();
 
-    String baseDir = System.getProperty("test.build.data", "build/test/data");
+    String baseDir = PathUtils.getTestDirName(getClass());
 
     hdfsDir = new File(baseDir, "dfs/name");
     if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {

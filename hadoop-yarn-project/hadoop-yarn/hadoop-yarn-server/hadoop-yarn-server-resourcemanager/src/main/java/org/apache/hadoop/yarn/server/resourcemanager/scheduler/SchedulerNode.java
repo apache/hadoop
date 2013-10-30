@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
@@ -66,5 +67,17 @@ public abstract class SchedulerNode {
    * @return number of active containers on the node
    */
   public abstract int getNumContainers();
+
+  /**
+   * Get total resources on the node.
+   * @return total resources on the node.
+   */
+  public abstract Resource getTotalResource();
+  
+  /**
+   * Get the ID of the node which contains both its hostname and port.
+   * @return the ID of the node
+   */
+  public abstract NodeId getNodeID();
 
 }

@@ -24,6 +24,9 @@ import java.util.List;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.Verifier;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * READDIR3 Response
@@ -48,7 +51,8 @@ public class READDIR3Response extends NFS3Response {
       return fileId;
     }
 
-    String getName() {
+    @VisibleForTesting
+    public String getName() {
       return name;
     }
 
@@ -64,6 +68,11 @@ public class READDIR3Response extends NFS3Response {
     public DirList3(Entry3[] entries, boolean eof) {
       this.entries = Collections.unmodifiableList(Arrays.asList(entries));
       this.eof = eof;
+    }
+    
+    @VisibleForTesting
+    public List<Entry3> getEntries() {
+      return this.entries;
     }
   }
 
@@ -96,8 +105,8 @@ public class READDIR3Response extends NFS3Response {
   }
 
   @Override
-  public XDR send(XDR xdr, int xid) {
-    super.send(xdr, xid);
+  public XDR writeHeaderAndResponse(XDR xdr, int xid, Verifier verifier) {
+    super.writeHeaderAndResponse(xdr, xid, verifier);
     xdr.writeBoolean(true); // Attributes follow
     postOpDirAttr.serialize(xdr);
 

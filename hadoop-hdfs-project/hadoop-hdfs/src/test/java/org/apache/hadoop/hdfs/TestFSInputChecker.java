@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 /**
@@ -260,7 +261,7 @@ public class TestFSInputChecker {
     // create a file and verify that checksum corruption results in 
     // a checksum exception on LocalFS
     
-    String dir = System.getProperty("test.build.data", ".");
+    String dir = PathUtils.getTestDirName(getClass());
     Path file = new Path(dir + "/corruption-test.dat");
     Path crcFile = new Path(dir + "/.corruption-test.dat.crc");
     

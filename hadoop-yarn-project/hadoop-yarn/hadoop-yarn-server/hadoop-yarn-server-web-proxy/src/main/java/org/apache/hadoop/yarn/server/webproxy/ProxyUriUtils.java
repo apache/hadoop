@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
-import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -26,11 +30,7 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.TrackingUriPlugin;
+import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 
 public class ProxyUriUtils {
   @SuppressWarnings("unused")
@@ -137,14 +137,44 @@ public class ProxyUriUtils {
   
   /**
    * Create a URI form a no scheme Url, such as is returned by the AM.
+   * @param url the URL format returned by an AM. This may or may not contain
+   * scheme.
+   * @return a URI with an http scheme
+   * @throws URISyntaxException if the url is not formatted correctly.
+   */
+  public static URI getUriFromAMUrl(String url)
+    throws URISyntaxException {
+    if (getSchemeFromUrl(url).isEmpty()) {
+      /*
+       * check is made to make sure if AM reports with scheme then it will be
+       * used by default otherwise it will default to the one configured using
+       * "yarn.http.policy".
+       */
+      return new URI(HttpConfig.getSchemePrefix() + url);
+    } else {
+      return new URI(url);
+    }
+  }
+  
+  /**
+   * Create a URI form a no scheme Url, such as is returned by the AM.
    * @param noSchemeUrl the URL formate returned by an AM
    * @return a URI with an http scheme
    * @throws URISyntaxException if the url is not formatted correctly.
    */
-  public static URI getUriFromAMUrl(String noSchemeUrl)
-    throws URISyntaxException {
-      return new URI(HttpConfig.getSchemePrefix() + noSchemeUrl);
-  }
+  public static URI getUriFromAMUrl(String scheme, String noSchemeUrl)
+      throws URISyntaxException {
+      if (getSchemeFromUrl(noSchemeUrl).isEmpty()) {
+        /*
+         * check is made to make sure if AM reports with scheme then it will be
+         * used by default otherwise it will default to the one configured using
+         * "yarn.http.policy".
+         */
+        return new URI(scheme + "://" + noSchemeUrl);
+      } else {
+        return new URI(noSchemeUrl);
+      }
+    }
 
   /**
    * Returns the first valid tracking link, if any, from the given id from the
@@ -168,5 +198,21 @@ public class ProxyUriUtils {
       }
     }
     return null;
+  }
+  
+  /**
+   * Returns the scheme if present in the url
+   * eg. "https://issues.apache.org/jira/browse/YARN" > "https"
+   */
+  public static String getSchemeFromUrl(String url) {
+    int index = 0;
+    if (url != null) {
+      index = url.indexOf("://");
+    }
+    if (index > 0) {
+      return url.substring(0, index);
+    } else {
+      return "";
+    }
   }
 }

@@ -23,8 +23,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServlet;
@@ -167,18 +169,23 @@ public class WebApps {
       webapp.setWebServices(wsName);
       String basePath = "/" + name;
       webapp.setRedirectPath(basePath);
+      List<String> pathList = new ArrayList<String>();
       if (basePath.equals("/")) { 
         webapp.addServePathSpec("/*");
+        pathList.add("/*");
       }  else {
         webapp.addServePathSpec(basePath);
         webapp.addServePathSpec(basePath + "/*");
+        pathList.add(basePath + "/*");
       }
       if (wsName != null && !wsName.equals(basePath)) {
         if (wsName.equals("/")) { 
           webapp.addServePathSpec("/*");
+          pathList.add("/*");
         } else {
           webapp.addServePathSpec("/" + wsName);
           webapp.addServePathSpec("/" + wsName + "/*");
+          pathList.add("/" + wsName + "/*");
         }
       }
       if (conf == null) {
@@ -212,7 +219,7 @@ public class WebApps {
         HttpServer server =
             new HttpServer(name, bindAddress, port, findPort, conf,
                 new AdminACLsManager(conf).getAdminAcl(), null,
-                webapp.getServePathSpecs()) {
+                pathList.toArray(new String[0])) {
 
               {
                 if (UserGroupInformation.isSecurityEnabled()) {

@@ -44,6 +44,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.BZip2Codec;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -60,10 +61,10 @@ import static org.junit.Assert.*;
 public class TestDFSShell {
   private static final Log LOG = LogFactory.getLog(TestDFSShell.class);
   private static AtomicInteger counter = new AtomicInteger();
+  private final int SUCCESS = 0;
+  private final int ERROR = 1;
 
-  static final String TEST_ROOT_DIR =
-    new Path(System.getProperty("test.build.data","/tmp"))
-    .toString().replace(' ', '+');
+  static final String TEST_ROOT_DIR = PathUtils.getTestDirName(TestDFSShell.class);
 
   static Path writeFile(FileSystem fs, Path f) throws IOException {
     DataOutputStream out = fs.create(f);
@@ -482,12 +483,11 @@ public class TestDFSShell {
     Configuration dstConf = new HdfsConfiguration();
     MiniDFSCluster srcCluster =  null;
     MiniDFSCluster dstCluster = null;
-    String bak = System.getProperty("test.build.data");
+    File bak = new File(PathUtils.getTestDir(getClass()), "dfs_tmp_uri");
+    bak.mkdirs();
     try{
       srcCluster = new MiniDFSCluster.Builder(srcConf).numDataNodes(2).build();
-      File nameDir = new File(new File(bak), "dfs_tmp_uri/");
-      nameDir.mkdirs();
-      System.setProperty("test.build.data", nameDir.toString());
+      dstConf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, bak.getAbsolutePath());
       dstCluster = new MiniDFSCluster.Builder(dstConf).numDataNodes(2).build();
       FileSystem srcFs = srcCluster.getFileSystem();
       FileSystem dstFs = dstCluster.getFileSystem();
@@ -559,7 +559,6 @@ public class TestDFSShell {
       ret = ToolRunner.run(shell, argv);
       assertEquals("default works for rm/rmr", 0, ret);
     } finally {
-      System.setProperty("test.build.data", bak);
       if (null != srcCluster) {
         srcCluster.shutdown();
       }
@@ -1606,9 +1605,6 @@ public class TestDFSShell {
   // force Copy Option is -f
   @Test (timeout = 30000)
   public void testCopyCommandsWithForceOption() throws Exception {
-    final int SUCCESS = 0;
-    final int ERROR = 1;
-
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .format(true).build();
@@ -1669,7 +1665,55 @@ public class TestDFSShell {
       }
       cluster.shutdown();
     }
+  }
 
+  // setrep for file and directory.
+  @Test (timeout = 30000)
+  public void testSetrep() throws Exception {
+
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+                                                             .format(true).build();
+    FsShell shell = null;
+    FileSystem fs = null;
+
+    final String testdir1 = "/tmp/TestDFSShell-testSetrep-" + counter.getAndIncrement();
+    final String testdir2 = testdir1 + "/nestedDir";
+    final Path hdfsFile1 = new Path(testdir1, "testFileForSetrep");
+    final Path hdfsFile2 = new Path(testdir2, "testFileForSetrep");
+    final Short oldRepFactor = new Short((short) 1);
+    final Short newRepFactor = new Short((short) 3);
+    try {
+      String[] argv;
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      assertThat(fs.mkdirs(new Path(testdir2)), is(true));
+      shell = new FsShell(conf);
+
+      fs.create(hdfsFile1, true).close();
+      fs.create(hdfsFile2, true).close();
+
+      // Tests for setrep on a file.
+      argv = new String[] { "-setrep", newRepFactor.toString(), hdfsFile1.toString() };
+      assertThat(shell.run(argv), is(SUCCESS));
+      assertThat(fs.getFileStatus(hdfsFile1).getReplication(), is(newRepFactor));
+      assertThat(fs.getFileStatus(hdfsFile2).getReplication(), is(oldRepFactor));
+
+      // Tests for setrep
+
+      // Tests for setrep on a directory and make sure it is applied recursively.
+      argv = new String[] { "-setrep", newRepFactor.toString(), testdir1 };
+      assertThat(shell.run(argv), is(SUCCESS));
+      assertThat(fs.getFileStatus(hdfsFile1).getReplication(), is(newRepFactor));
+      assertThat(fs.getFileStatus(hdfsFile2).getReplication(), is(newRepFactor));
+
+    } finally {
+      if (shell != null) {
+        shell.close();
+      }
+
+      cluster.shutdown();
+    }
   }
 
   /**

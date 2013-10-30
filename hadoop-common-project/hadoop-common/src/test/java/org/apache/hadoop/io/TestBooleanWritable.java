@@ -50,4 +50,28 @@ public class TestBooleanWritable {
     out.flush();
     return out;
   }
+  
+  /**
+   * test {@link BooleanWritable} methods hashCode(), equals(), compareTo() 
+   */
+  @Test
+  public void testCommonMethods() {    
+    assertTrue("testCommonMethods1 error !!!", newInstance(true).equals(newInstance(true)));
+    assertTrue("testCommonMethods2 error  !!!", newInstance(false).equals(newInstance(false)));
+    assertFalse("testCommonMethods3 error !!!", newInstance(false).equals(newInstance(true)));
+    assertTrue("testCommonMethods4 error !!!", checkHashCode(newInstance(true), newInstance(true)));
+    assertFalse("testCommonMethods5 error !!! ", checkHashCode(newInstance(true), newInstance(false)));
+    assertTrue("testCommonMethods6 error !!!", newInstance(true).compareTo(newInstance(false)) > 0 );
+    assertTrue("testCommonMethods7 error !!!", newInstance(false).compareTo(newInstance(true)) < 0 );
+    assertTrue("testCommonMethods8 error !!!", newInstance(false).compareTo(newInstance(false)) == 0 );
+    assertEquals("testCommonMethods9 error !!!", "true", newInstance(true).toString());
+  }
+  
+  private boolean checkHashCode(BooleanWritable f, BooleanWritable s) {
+    return f.hashCode() == s.hashCode();
+  }    
+  
+  private static BooleanWritable newInstance(boolean flag) {
+    return new BooleanWritable(flag);
+  }
 }

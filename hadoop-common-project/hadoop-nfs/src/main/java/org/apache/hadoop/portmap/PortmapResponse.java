@@ -22,30 +22,31 @@ import java.util.Collection;
 
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 
 /**
  * Helper utility for sending portmap response.
  */
 public class PortmapResponse {
   public static XDR voidReply(XDR xdr, int xid) {
-    RpcAcceptedReply.voidReply(xdr, xid);
+    RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(xdr);
     return xdr;
   }
 
   public static XDR intReply(XDR xdr, int xid, int value) {
-    RpcAcceptedReply.voidReply(xdr, xid);
+    RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(xdr);
     xdr.writeInt(value);
     return xdr;
   }
 
   public static XDR booleanReply(XDR xdr, int xid, boolean value) {
-    RpcAcceptedReply.voidReply(xdr, xid);
+    RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(xdr);
     xdr.writeBoolean(value);
     return xdr;
   }
 
   public static XDR pmapList(XDR xdr, int xid, Collection<PortmapMapping> list) {
-    RpcAcceptedReply.voidReply(xdr, xid);
+    RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(xdr);
     for (PortmapMapping mapping : list) {
       System.out.println(mapping);
       xdr.writeBoolean(true); // Value follows

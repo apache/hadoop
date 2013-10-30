@@ -151,6 +151,25 @@ public class RegisterNodeManagerResponsePBImpl extends ProtoBase<RegisterNodeMan
   }
 
   @Override
+  public String getRMVersion() {
+    RegisterNodeManagerResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasRmVersion()) {
+      return null;
+    }
+    return p.getRmVersion();
+  }
+
+  @Override
+  public void setRMVersion(String rmVersion) {
+    maybeInitBuilder();
+    if (rmVersion == null) {
+      builder.clearRmIdentifier();
+      return;
+    }
+    builder.setRmVersion(rmVersion);
+  }
+
+  @Override
   public NodeAction getNodeAction() {
     RegisterNodeManagerResponseProtoOrBuilder p = viaProto ? proto : builder;
     if(!p.hasNodeAction()) {

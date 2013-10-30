@@ -19,6 +19,7 @@ package org.apache.hadoop.oncrpc;
 
 import org.apache.hadoop.oncrpc.RpcDeniedReply.RejectState;
 import org.apache.hadoop.oncrpc.RpcReply.ReplyState;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,10 +40,8 @@ public class TestRpcDeniedReply {
   
   @Test
   public void testConstructor() {
-    RpcDeniedReply reply = new RpcDeniedReply(0, RpcMessage.Type.RPC_REPLY,
-        ReplyState.MSG_ACCEPTED, RejectState.AUTH_ERROR) {
-      // Anonymous class
-    };
+    RpcDeniedReply reply = new RpcDeniedReply(0, ReplyState.MSG_ACCEPTED,
+        RejectState.AUTH_ERROR, new VerifierNone());
     Assert.assertEquals(0, reply.getXid());
     Assert.assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());
     Assert.assertEquals(ReplyState.MSG_ACCEPTED, reply.getState());

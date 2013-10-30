@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.junit.After;
 import org.junit.Test;
 
@@ -249,6 +250,59 @@ public class TestResourceTrackerService {
   }
 
   @Test
+  public void testNodeRegistrationSuccess() throws Exception {
+    writeToHostsFile("host2");
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, hostFile
+        .getAbsolutePath());
+    rm = new MockRM(conf);
+    rm.start();
+
+    ResourceTrackerService resourceTrackerService = rm.getResourceTrackerService();
+    RegisterNodeManagerRequest req = Records.newRecord(
+        RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host2", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    req.setResource(capability);
+    req.setNodeId(nodeId);
+    req.setHttpPort(1234);
+    req.setNMVersion(YarnVersionInfo.getVersion());
+    // trying to register a invalid node.
+    RegisterNodeManagerResponse response = resourceTrackerService.registerNodeManager(req);
+    Assert.assertEquals(NodeAction.NORMAL,response.getNodeAction());
+  }
+
+  @Test
+  public void testNodeRegistrationVersionLessThanRM() throws Exception {
+    writeToHostsFile("host2");
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, hostFile
+        .getAbsolutePath());
+    conf.set(YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,"EqualToRM" );
+    rm = new MockRM(conf);
+    rm.start();
+    String nmVersion = "1.9.9";
+
+    ResourceTrackerService resourceTrackerService = rm.getResourceTrackerService();
+    RegisterNodeManagerRequest req = Records.newRecord(
+        RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host2", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    req.setResource(capability);
+    req.setNodeId(nodeId);
+    req.setHttpPort(1234);
+    req.setNMVersion(nmVersion);
+    // trying to register a invalid node.
+    RegisterNodeManagerResponse response = resourceTrackerService.registerNodeManager(req);
+    Assert.assertEquals(NodeAction.SHUTDOWN,response.getNodeAction());
+    Assert.assertTrue("Diagnostic message did not contain: 'Disallowed NodeManager " +
+        "Version "+ nmVersion + ", is less than the minimum version'",
+        response.getDiagnosticsMessage().contains("Disallowed NodeManager Version " +
+            nmVersion + ", is less than the minimum version "));
+
+  }
+
+  @Test
   public void testNodeRegistrationFailure() throws Exception {
     writeToHostsFile("host1");
     Configuration conf = new Configuration();
@@ -283,7 +337,7 @@ public class TestResourceTrackerService {
     RegisterNodeManagerResponse response = nm.registerNode();
 
     // Verify the RMIdentifier is correctly set in RegisterNodeManagerResponse
-    Assert.assertEquals(ResourceManager.clusterTimeStamp,
+    Assert.assertEquals(ResourceManager.getClusterTimeStamp(),
       response.getRMIdentifier());
   }
 
@@ -452,6 +506,14 @@ public class TestResourceTrackerService {
     dispatcher.await();
     Assert.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
     checkUnealthyNMCount(rm, nm2, true, 1);
+    
+    // unhealthy node changed back to healthy
+    nm2 = rm.registerNode("host2:5678", 5120);
+    dispatcher.await();
+    response = nm2.nodeHeartbeat(true);
+    response = nm2.nodeHeartbeat(true);
+    dispatcher.await();
+    Assert.assertEquals(5120 + 5120, metrics.getAvailableMB());
 
     // reconnect of node with changed capability
     nm1 = rm.registerNode("host2:5678", 10240);

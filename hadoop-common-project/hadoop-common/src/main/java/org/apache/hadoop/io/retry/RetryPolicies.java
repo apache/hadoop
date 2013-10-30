@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
 
@@ -531,6 +532,15 @@ public class RetryPolicies {
       this.maxDelayBase = maxDelayBase;
     }
 
+    /**
+     * @return 0 if this is our first failover/retry (i.e., retry immediately),
+     *         sleep exponentially otherwise
+     */
+    private long getFailoverOrRetrySleepTime(int times) {
+      return times == 0 ? 0 : 
+        calculateExponentialTime(delayMillis, times, maxDelayBase);
+    }
+    
     @Override
     public RetryAction shouldRetry(Exception e, int retries,
         int failovers, boolean isIdempotentOrAtMostOnce) throws Exception {
@@ -546,11 +556,8 @@ public class RetryPolicies {
           e instanceof StandbyException ||
           e instanceof ConnectTimeoutException ||
           isWrappedStandbyException(e)) {
-        return new RetryAction(
-            RetryAction.RetryDecision.FAILOVER_AND_RETRY,
-            // retry immediately if this is our first failover, sleep otherwise
-            failovers == 0 ? 0 :
-                calculateExponentialTime(delayMillis, failovers, maxDelayBase));
+        return new RetryAction(RetryAction.RetryDecision.FAILOVER_AND_RETRY,
+            getFailoverOrRetrySleepTime(failovers));
       } else if (e instanceof SocketException ||
                  (e instanceof IOException && !(e instanceof RemoteException))) {
         if (isIdempotentOrAtMostOnce) {
@@ -561,8 +568,14 @@ public class RetryPolicies {
               "whether it was invoked");
         }
       } else {
-        return fallbackPolicy.shouldRetry(e, retries, failovers,
-            isIdempotentOrAtMostOnce);
+        RetriableException re = getWrappedRetriableException(e);
+        if (re != null) {
+          return new RetryAction(RetryAction.RetryDecision.RETRY,
+              getFailoverOrRetrySleepTime(retries));
+        } else {
+          return fallbackPolicy.shouldRetry(e, retries, failovers,
+              isIdempotentOrAtMostOnce);
+        }
       }
     }
     
@@ -595,5 +608,15 @@ public class RetryPolicies {
     Exception unwrapped = ((RemoteException)e).unwrapRemoteException(
         StandbyException.class);
     return unwrapped instanceof StandbyException;
+  }
+  
+  private static RetriableException getWrappedRetriableException(Exception e) {
+    if (!(e instanceof RemoteException)) {
+      return null;
+    }
+    Exception unwrapped = ((RemoteException)e).unwrapRemoteException(
+        RetriableException.class);
+    return unwrapped instanceof RetriableException ? 
+        (RetriableException) unwrapped : null;
   }
 }

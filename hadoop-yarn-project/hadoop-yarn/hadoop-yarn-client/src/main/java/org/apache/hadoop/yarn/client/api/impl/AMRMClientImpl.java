@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -165,7 +166,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   protected void serviceStart() throws Exception {
     final YarnConfiguration conf = new YarnConfiguration(getConfig());
     try {
-      rmClient = ClientRMProxy.createRMProxy(conf, ApplicationMasterProtocol.class);
+      rmClient =
+          ClientRMProxy.createRMProxy(conf, ApplicationMasterProtocol.class);
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }
@@ -186,8 +188,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       throws YarnException, IOException {
     Preconditions.checkArgument(appHostName != null,
         "The host name should not be null");
-    Preconditions.checkArgument(appHostPort >= 0,
-        "Port number of the host should not be negative");
+    Preconditions.checkArgument(appHostPort >= -1, "Port number of the host"
+        + " should be any integers larger than or equal to -1");
     // do this only once ???
     RegisterApplicationMasterRequest request =
         RegisterApplicationMasterRequest.newInstance(appHostName, appHostPort,
@@ -300,11 +302,24 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       String appMessage, String appTrackingUrl) throws YarnException,
       IOException {
     Preconditions.checkArgument(appStatus != null,
-        "AppStatus should not be null.");
+      "AppStatus should not be null.");
     FinishApplicationMasterRequest request =
         FinishApplicationMasterRequest.newInstance(appStatus, appMessage,
           appTrackingUrl);
-    rmClient.finishApplicationMaster(request);
+    try {
+      while (true) {
+        FinishApplicationMasterResponse response =
+            rmClient.finishApplicationMaster(request);
+        if (response.getIsUnregistered()) {
+          break;
+        }
+        LOG.info("Waiting for application to be successfully unregistered.");
+        Thread.sleep(100);
+      }
+    } catch (InterruptedException e) {
+      LOG.info("Interrupted while waiting for application"
+          + " to be removed from RMStateStore");
+    }
   }
   
   @Override

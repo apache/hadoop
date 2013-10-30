@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.google.common.util.concurrent.Uninterruptibles;
+
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 
 /**
@@ -44,6 +46,38 @@ public abstract class FCStatisticsBaseTest {
   //fc should be set appropriately by the deriving test.
   protected static FileContext fc = null;
   
+  @Test(timeout=60000)
+  public void testStatisticsOperations() throws Exception {
+    final Statistics stats = new Statistics("file");
+    Assert.assertEquals(0L, stats.getBytesRead());
+    Assert.assertEquals(0L, stats.getBytesWritten());
+    Assert.assertEquals(0, stats.getWriteOps());
+    stats.incrementBytesWritten(1000);
+    Assert.assertEquals(1000L, stats.getBytesWritten());
+    Assert.assertEquals(0, stats.getWriteOps());
+    stats.incrementWriteOps(123);
+    Assert.assertEquals(123, stats.getWriteOps());
+    
+    Thread thread = new Thread() {
+      @Override
+      public void run() {
+        stats.incrementWriteOps(1);
+      }
+    };
+    thread.start();
+    Uninterruptibles.joinUninterruptibly(thread);
+    Assert.assertEquals(124, stats.getWriteOps());
+    // Test copy constructor and reset function
+    Statistics stats2 = new Statistics(stats);
+    stats.reset();
+    Assert.assertEquals(0, stats.getWriteOps());
+    Assert.assertEquals(0L, stats.getBytesWritten());
+    Assert.assertEquals(0L, stats.getBytesRead());
+    Assert.assertEquals(124, stats2.getWriteOps());
+    Assert.assertEquals(1000L, stats2.getBytesWritten());
+    Assert.assertEquals(0L, stats2.getBytesRead());
+  }
+
   @Test
   public void testStatistics() throws IOException, URISyntaxException {
     URI fsUri = getFsUri();

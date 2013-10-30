@@ -34,7 +34,11 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Before;
@@ -62,13 +66,18 @@ public class TestResourceManager {
       registerNode(String hostName, int containerManagerPort, int httpPort,
           String rackName, Resource capability) throws IOException,
           YarnException {
-    return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
-        hostName, containerManagerPort, httpPort, rackName, capability,
-        resourceManager.getResourceTrackerService(), resourceManager
-            .getRMContext());
+    org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm = 
+        new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
+            hostName, containerManagerPort, httpPort, rackName, capability,
+            resourceManager);
+    NodeAddedSchedulerEvent nodeAddEvent1 = 
+        new NodeAddedSchedulerEvent(resourceManager.getRMContext()
+            .getRMNodes().get(nm.getNodeId()));
+    resourceManager.getResourceScheduler().handle(nodeAddEvent1);
+    return nm;
   }
 
-//  @Test
+  @Test
   public void testResourceAllocation() throws IOException,
       YarnException {
     LOG.info("--- START: testResourceAllocation ---");
@@ -80,14 +89,12 @@ public class TestResourceManager {
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
       registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
           Resources.createResource(memory, 1));
-    nm1.heartbeat();
     
     // Register node2
     String host2 = "host2";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm2 = 
       registerNode(host2, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
           Resources.createResource(memory/2, 1));
-    nm2.heartbeat();
 
     // Submit an application
     Application application = new Application("user1", resourceManager);
@@ -105,23 +112,22 @@ public class TestResourceManager {
     
     Task t1 = new Task(application, priority1, new String[] {host1, host2});
     application.addTask(t1);
-        
+    
     final int memory2 = 2048;
     Resource capability2 = Resources.createResource(memory2, 1);
     Priority priority0 = 
-      org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.create(0); // higher
+        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.create(0); // higher
     application.addResourceRequestSpec(priority0, capability2);
     
     // Send resource requests to the scheduler
     application.schedule();
-    
-    // Send a heartbeat to kick the tires on the Scheduler
-    nm1.heartbeat();
+
+   // Send a heartbeat to kick the tires on the Scheduler
+    nodeUpdate(nm1);
     
     // Get allocations from the scheduler
     application.schedule();
     
-    nm1.heartbeat();
     checkResourceUsage(nm1, nm2);
     
     LOG.info("Adding new tasks...");
@@ -137,18 +143,13 @@ public class TestResourceManager {
     checkResourceUsage(nm1, nm2);
     
     // Send a heartbeat to kick the tires on the Scheduler
-    LOG.info("Sending hb from host2");
-    nm2.heartbeat();
-    
-    LOG.info("Sending hb from host1");
-    nm1.heartbeat();
+    nodeUpdate(nm2);
+    nodeUpdate(nm1);
     
     // Get allocations from the scheduler
     LOG.info("Trying to allocate...");
     application.schedule();
 
-    nm1.heartbeat();
-    nm2.heartbeat();
     checkResourceUsage(nm1, nm2);
     
     // Complete tasks
@@ -157,12 +158,22 @@ public class TestResourceManager {
     application.finishTask(t2);
     application.finishTask(t3);
     
-    // Send heartbeat
-    nm1.heartbeat();
-    nm2.heartbeat();
+    // Notify scheduler application is finished.
+    AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
+        application.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
+    resourceManager.getResourceScheduler().handle(appRemovedEvent1);
+    
     checkResourceUsage(nm1, nm2);
     
     LOG.info("--- END: testResourceAllocation ---");
+  }
+
+  private void nodeUpdate(
+      org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1) {
+    RMNode node = resourceManager.getRMContext().getRMNodes().get(nm1.getNodeId());
+    // Send a heartbeat to kick the tires on the Scheduler
+    NodeUpdateSchedulerEvent nodeUpdate = new NodeUpdateSchedulerEvent(node);
+    resourceManager.getResourceScheduler().handle(nodeUpdate);
   }
   
   @Test

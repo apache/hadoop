@@ -96,6 +96,8 @@ public class TestBackupNode {
         "${" + DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + "}");
     c.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY,
         "127.0.0.1:0");
+    c.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
+            "127.0.0.1:0");
 
     BackupNode bn = (BackupNode)NameNode.createNameNode(
         new String[]{startupOpt.getName()}, c);

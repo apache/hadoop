@@ -72,14 +72,14 @@ public class QueueManager {
    * (this is done to prevent loading a file that hasn't been fully written).
    */
   public static final long ALLOC_RELOAD_WAIT = 5 * 1000;
+  
+  private static final AccessControlList EVERYBODY_ACL = new AccessControlList("*");
+  private static final AccessControlList NOBODY_ACL = new AccessControlList(" ");
 
   private final FairScheduler scheduler;
 
-  private Object allocFile; // Path to XML file containing allocations. This
-                            // is either a URL to specify a classpath resource
-                            // (if the fair-scheduler.xml on the classpath is
-                            // used) or a String to specify an absolute path (if
-                            // mapred.fairscheduler.allocation.file is used).
+  // Path to XML file containing allocations. 
+  private File allocFile; 
 
   private final Collection<FSLeafQueue> leafQueues = 
       new CopyOnWriteArrayList<FSLeafQueue>();
@@ -107,40 +107,32 @@ public class QueueManager {
     queues.put(rootQueue.getName(), rootQueue);
     
     this.allocFile = conf.getAllocationFile();
-    if (allocFile == null) {
-      // No allocation file specified in jobconf. Use the default allocation
-      // file, fair-scheduler.xml, looking for it on the classpath.
-      allocFile = new Configuration().getResource("fair-scheduler.xml");
-      if (allocFile == null) {
-        LOG.error("The fair scheduler allocation file fair-scheduler.xml was "
-            + "not found on the classpath, and no other config file is given "
-            + "through mapred.fairscheduler.allocation.file.");
-      }
-    }
+    
     reloadAllocs();
     lastSuccessfulReload = scheduler.getClock().getTime();
     lastReloadAttempt = scheduler.getClock().getTime();
     // Create the default queue
-    getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
+    getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME, true);
   }
   
   /**
-   * Get a queue by name, creating it if necessary.  If the queue
-   * is not or can not be a leaf queue, i.e. it already exists as a parent queue,
-   * or one of the parents in its name is already a leaf queue, null is returned.
+   * Get a queue by name, creating it if the create param is true and is necessary.
+   * If the queue is not or can not be a leaf queue, i.e. it already exists as a
+   * parent queue, or one of the parents in its name is already a leaf queue,
+   * null is returned.
    * 
    * The root part of the name is optional, so a queue underneath the root 
    * named "queue1" could be referred to  as just "queue1", and a queue named
    * "queue2" underneath a parent named "parent1" that is underneath the root 
    * could be referred to as just "parent1.queue2".
    */
-  public FSLeafQueue getLeafQueue(String name) {
+  public FSLeafQueue getLeafQueue(String name, boolean create) {
     if (!name.startsWith(ROOT_QUEUE + ".")) {
       name = ROOT_QUEUE + "." + name;
     }
     synchronized (queues) {
       FSQueue queue = queues.get(name);
-      if (queue == null) {
+      if (queue == null && create) {
         FSLeafQueue leafQueue = createLeafQueue(name);
         if (leafQueue == null) {
           return null;
@@ -236,13 +228,6 @@ public class QueueManager {
   }
 
   /**
-   * Get the queue for a given AppSchedulable.
-   */
-  public FSLeafQueue getQueueForApp(AppSchedulable app) {
-    return getLeafQueue(app.getApp().getQueueName());
-  }
-
-  /**
    * Reload allocations file if it hasn't been loaded in a while
    */
   public void reloadAllocsIfNecessary() {
@@ -255,14 +240,7 @@ public class QueueManager {
       try {
         // Get last modified time of alloc file depending whether it's a String
         // (for a path name) or an URL (for a classloader resource)
-        long lastModified;
-        if (allocFile instanceof String) {
-          File file = new File((String) allocFile);
-          lastModified = file.lastModified();
-        } else { // allocFile is an URL
-          URLConnection conn = ((URL) allocFile).openConnection();
-          lastModified = conn.getLastModified();
-        }
+        long lastModified = allocFile.lastModified();
         if (lastModified > lastSuccessfulReload &&
             time > lastModified + ALLOC_RELOAD_WAIT) {
           reloadAllocs();
@@ -321,65 +299,75 @@ public class QueueManager {
       DocumentBuilderFactory.newInstance();
     docBuilderFactory.setIgnoringComments(true);
     DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-    Document doc;
-    if (allocFile instanceof String) {
-      doc = builder.parse(new File((String) allocFile));
-    } else {
-      doc = builder.parse(allocFile.toString());
-    }
+    Document doc = builder.parse(allocFile);
     Element root = doc.getDocumentElement();
     if (!"allocations".equals(root.getTagName()))
       throw new AllocationConfigurationException("Bad fair scheduler config " +
           "file: top-level element not <allocations>");
     NodeList elements = root.getChildNodes();
+    List<Element> queueElements = new ArrayList<Element>();
     for (int i = 0; i < elements.getLength(); i++) {
       Node node = elements.item(i);
-      if (!(node instanceof Element))
-        continue;
-      Element element = (Element)node;
-      if ("queue".equals(element.getTagName()) ||
-    	  "pool".equals(element.getTagName())) {
-        loadQueue("root", element, minQueueResources, maxQueueResources, queueMaxApps,
-            userMaxApps, queueWeights, queuePolicies, minSharePreemptionTimeouts,
-            queueAcls, queueNamesInAllocFile);
-      } else if ("user".equals(element.getTagName())) {
-        String userName = element.getAttribute("name");
-        NodeList fields = element.getChildNodes();
-        for (int j = 0; j < fields.getLength(); j++) {
-          Node fieldNode = fields.item(j);
-          if (!(fieldNode instanceof Element))
-            continue;
-          Element field = (Element) fieldNode;
-          if ("maxRunningApps".equals(field.getTagName())) {
-            String text = ((Text)field.getFirstChild()).getData().trim();
-            int val = Integer.parseInt(text);
-            userMaxApps.put(userName, val);
+      if (node instanceof Element) {
+        Element element = (Element)node;
+        if ("queue".equals(element.getTagName()) ||
+      	  "pool".equals(element.getTagName())) {
+          queueElements.add(element);
+        } else if ("user".equals(element.getTagName())) {
+          String userName = element.getAttribute("name");
+          NodeList fields = element.getChildNodes();
+          for (int j = 0; j < fields.getLength(); j++) {
+            Node fieldNode = fields.item(j);
+            if (!(fieldNode instanceof Element))
+              continue;
+            Element field = (Element) fieldNode;
+            if ("maxRunningApps".equals(field.getTagName())) {
+              String text = ((Text)field.getFirstChild()).getData().trim();
+              int val = Integer.parseInt(text);
+              userMaxApps.put(userName, val);
+            }
           }
+        } else if ("userMaxAppsDefault".equals(element.getTagName())) {
+          String text = ((Text)element.getFirstChild()).getData().trim();
+          int val = Integer.parseInt(text);
+          userMaxAppsDefault = val;
+        } else if ("fairSharePreemptionTimeout".equals(element.getTagName())) {
+          String text = ((Text)element.getFirstChild()).getData().trim();
+          long val = Long.parseLong(text) * 1000L;
+          fairSharePreemptionTimeout = val;
+        } else if ("defaultMinSharePreemptionTimeout".equals(element.getTagName())) {
+          String text = ((Text)element.getFirstChild()).getData().trim();
+          long val = Long.parseLong(text) * 1000L;
+          defaultMinSharePreemptionTimeout = val;
+        } else if ("queueMaxAppsDefault".equals(element.getTagName())) {
+          String text = ((Text)element.getFirstChild()).getData().trim();
+          int val = Integer.parseInt(text);
+          queueMaxAppsDefault = val;
+        } else if ("defaultQueueSchedulingPolicy".equals(element.getTagName())
+            || "defaultQueueSchedulingMode".equals(element.getTagName())) {
+          String text = ((Text)element.getFirstChild()).getData().trim();
+          SchedulingPolicy.setDefault(text);
+          defaultSchedPolicy = SchedulingPolicy.getDefault();
+        } else {
+          LOG.warn("Bad element in allocations file: " + element.getTagName());
         }
-      } else if ("userMaxAppsDefault".equals(element.getTagName())) {
-        String text = ((Text)element.getFirstChild()).getData().trim();
-        int val = Integer.parseInt(text);
-        userMaxAppsDefault = val;
-      } else if ("fairSharePreemptionTimeout".equals(element.getTagName())) {
-        String text = ((Text)element.getFirstChild()).getData().trim();
-        long val = Long.parseLong(text) * 1000L;
-        fairSharePreemptionTimeout = val;
-      } else if ("defaultMinSharePreemptionTimeout".equals(element.getTagName())) {
-        String text = ((Text)element.getFirstChild()).getData().trim();
-        long val = Long.parseLong(text) * 1000L;
-        defaultMinSharePreemptionTimeout = val;
-      } else if ("queueMaxAppsDefault".equals(element.getTagName())) {
-        String text = ((Text)element.getFirstChild()).getData().trim();
-        int val = Integer.parseInt(text);
-        queueMaxAppsDefault = val;
-      } else if ("defaultQueueSchedulingPolicy".equals(element.getTagName())
-          || "defaultQueueSchedulingMode".equals(element.getTagName())) {
-        String text = ((Text)element.getFirstChild()).getData().trim();
-        SchedulingPolicy.setDefault(text);
-        defaultSchedPolicy = SchedulingPolicy.getDefault();
-      } else {
-        LOG.warn("Bad element in allocations file: " + element.getTagName());
       }
+    }
+    
+    // Load queue elements.  A root queue can either be included or omitted.  If
+    // it's included, all other queues must be inside it.
+    for (Element element : queueElements) {
+      String parent = "root";
+      if (element.getAttribute("name").equalsIgnoreCase("root")) {
+        if (queueElements.size() > 1) {
+          throw new AllocationConfigurationException("If configuring root queue,"
+          		+ " no other queues can be placed alongside it.");
+        }
+        parent = null;
+      }
+      loadQueue(parent, element, minQueueResources, maxQueueResources, queueMaxApps,
+          userMaxApps, queueWeights, queuePolicies, minSharePreemptionTimeouts,
+          queueAcls, queueNamesInAllocFile);
     }
 
     // Commit the reload; also create any queue defined in the alloc file
@@ -390,31 +378,24 @@ public class QueueManager {
           queueMaxAppsDefault, defaultSchedPolicy, minSharePreemptionTimeouts,
           queueAcls, fairSharePreemptionTimeout, defaultMinSharePreemptionTimeout);
       
-      // Update metrics
+      // Make sure all queues exist
+      for (String name: queueNamesInAllocFile) {
+        getLeafQueue(name, true);
+      }
+      
       for (FSQueue queue : queues.values()) {
+        // Update queue metrics
         FSQueueMetrics queueMetrics = queue.getMetrics();
         queueMetrics.setMinShare(queue.getMinShare());
         queueMetrics.setMaxShare(queue.getMaxShare());
+        // Set scheduling policies
+        if (queuePolicies.containsKey(queue.getName())) {
+          queue.setPolicy(queuePolicies.get(queue.getName()));
+        } else {
+          queue.setPolicy(SchedulingPolicy.getDefault());
+        }
       }
-      
-      // Root queue should have empty ACLs.  As a queue's ACL is the union of
-      // its ACL and all its parents' ACLs, setting the roots' to empty will
-      // neither allow nor prohibit more access to its children.
-      Map<QueueACL, AccessControlList> rootAcls =
-          new HashMap<QueueACL, AccessControlList>();
-      rootAcls.put(QueueACL.SUBMIT_APPLICATIONS, new AccessControlList(" "));
-      rootAcls.put(QueueACL.ADMINISTER_QUEUE, new AccessControlList(" "));
-      queueAcls.put(ROOT_QUEUE, rootAcls);
  
-      // Create all queus
-      for (String name: queueNamesInAllocFile) {
-        getLeafQueue(name);
-      }
-      
-      // Set custom policies as specified
-      for (Map.Entry<String, SchedulingPolicy> entry : queuePolicies.entrySet()) {
-        queues.get(entry.getKey()).setPolicy(entry.getValue());
-      }
     }
   }
   
@@ -428,7 +409,10 @@ public class QueueManager {
       Map<String, Long> minSharePreemptionTimeouts,
       Map<String, Map<QueueACL, AccessControlList>> queueAcls, List<String> queueNamesInAllocFile) 
       throws AllocationConfigurationException {
-    String queueName = parentName + "." + element.getAttribute("name");
+    String queueName = element.getAttribute("name");
+    if (parentName != null) {
+      queueName = parentName + "." + queueName;
+    }
     Map<QueueACL, AccessControlList> acls =
         new HashMap<QueueACL, AccessControlList>();
     NodeList fields = element.getChildNodes();
@@ -466,10 +450,10 @@ public class QueueManager {
         policy.initialize(scheduler.getClusterCapacity());
         queuePolicies.put(queueName, policy);
       } else if ("aclSubmitApps".equals(field.getTagName())) {
-        String text = ((Text)field.getFirstChild()).getData().trim();
+        String text = ((Text)field.getFirstChild()).getData();
         acls.put(QueueACL.SUBMIT_APPLICATIONS, new AccessControlList(text));
       } else if ("aclAdministerApps".equals(field.getTagName())) {
-        String text = ((Text)field.getFirstChild()).getData().trim();
+        String text = ((Text)field.getFirstChild()).getData();
         acls.put(QueueACL.ADMINISTER_QUEUE, new AccessControlList(text));
       } else if ("queue".endsWith(field.getTagName()) || 
           "pool".equals(field.getTagName())) {
@@ -589,21 +573,16 @@ public class QueueManager {
 
   /**
    * Get the ACLs associated with this queue. If a given ACL is not explicitly
-   * configured, include the default value for that ACL.
+   * configured, include the default value for that ACL.  The default for the
+   * root queue is everybody ("*") and the default for all other queues is
+   * nobody ("")
    */
-  public Map<QueueACL, AccessControlList> getQueueAcls(String queue) {
-    HashMap<QueueACL, AccessControlList> out = new HashMap<QueueACL, AccessControlList>();
-    Map<QueueACL, AccessControlList> queueAcl = info.queueAcls.get(queue);
-    if (queueAcl != null) {
-      out.putAll(queueAcl);
+  public AccessControlList getQueueAcl(String queue, QueueACL operation) {
+    Map<QueueACL, AccessControlList> queueAcls = info.queueAcls.get(queue);
+    if (queueAcls == null || !queueAcls.containsKey(operation)) {
+      return (queue.equals(ROOT_QUEUE)) ? EVERYBODY_ACL : NOBODY_ACL;
     }
-    if (!out.containsKey(QueueACL.ADMINISTER_QUEUE)) {
-      out.put(QueueACL.ADMINISTER_QUEUE, new AccessControlList("*"));
-    }
-    if (!out.containsKey(QueueACL.SUBMIT_APPLICATIONS)) {
-      out.put(QueueACL.SUBMIT_APPLICATIONS, new AccessControlList("*"));
-    }
-    return out;
+    return queueAcls.get(operation);
   }
   
   static class QueueManagerInfo {

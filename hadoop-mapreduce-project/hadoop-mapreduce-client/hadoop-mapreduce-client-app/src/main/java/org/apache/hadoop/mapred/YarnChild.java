@@ -41,6 +41,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
@@ -76,6 +77,8 @@ class YarnChild {
     LOG.debug("Child starting");
 
     final JobConf job = new JobConf();
+    // Initing with our JobConf allows us to avoid loading confs twice
+    Limits.init(job);
     job.addResource(MRJobConfig.JOB_CONF_FILE);
     UserGroupInformation.setConfiguration(job);
 

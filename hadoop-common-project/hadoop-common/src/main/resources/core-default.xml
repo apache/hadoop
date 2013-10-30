@@ -492,6 +492,11 @@
   </description>
 </property>
 
+<property>
+  <name>fs.swift.impl</name>
+  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
+  <description>The implementation class of the OpenStack Swift Filesystem</description>
+</property>
 
 <property>
   <name>fs.automatic.close</name>
@@ -1219,4 +1224,19 @@
   </description>
 </property>
 
+<property>
+  <name>nfs3.server.port</name>
+  <value>2049</value>
+  <description>
+      Specify the port number used by Hadoop NFS.
+  </description>
+</property>
+
+<property>
+  <name>nfs3.mountd.port</name>
+  <value>4242</value>
+  <description>
+      Specify the port number used by Hadoop mount daemon.
+  </description>
+</property>
 </configuration>

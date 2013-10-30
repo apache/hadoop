@@ -44,6 +44,7 @@
   <value>10000</value>
   <description>Truststore reload check interval, in milliseconds.
   Default value is 10000 (10 seconds).
+  </description>
 </property>
 
 <property>

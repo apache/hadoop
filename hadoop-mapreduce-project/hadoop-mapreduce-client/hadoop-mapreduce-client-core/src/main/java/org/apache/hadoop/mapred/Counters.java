@@ -62,8 +62,8 @@ import com.google.common.collect.Iterators;
 public class Counters
     extends AbstractCounters<Counters.Counter, Counters.Group> {
   
-  public static int MAX_COUNTER_LIMIT = Limits.COUNTERS_MAX;
-  public static int MAX_GROUP_LIMIT = Limits.GROUPS_MAX;
+  public static int MAX_COUNTER_LIMIT = Limits.getCountersMax();
+  public static int MAX_GROUP_LIMIT = Limits.getGroupsMax();
   private static HashMap<String, String> depricatedCounterMap =
       new HashMap<String, String>();
   

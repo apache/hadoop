@@ -44,7 +44,6 @@ public class CapacitySchedulerQueueInfo {
   protected float absoluteMaxCapacity;
   protected float absoluteUsedCapacity;
   protected int numApplications;
-  protected String usedResources;
   protected String queueName;
   protected QueueState state;
   protected CapacitySchedulerQueueInfoList queues;
@@ -67,7 +66,6 @@ public class CapacitySchedulerQueueInfo {
     absoluteMaxCapacity = cap(q.getAbsoluteMaximumCapacity(), 0f, 1f) * 100;
     absoluteUsedCapacity = cap(q.getAbsoluteUsedCapacity(), 0f, 1f) * 100;
     numApplications = q.getNumApplications();
-    usedResources = q.getUsedResources().toString();
     queueName = q.getQueueName();
     state = q.getState();
     resourcesUsed = new ResourceInfo(q.getUsedResources());
@@ -99,10 +97,6 @@ public class CapacitySchedulerQueueInfo {
 
   public int getNumApplications() {
     return numApplications;
-  }
-
-  public String getUsedResources() {
-    return usedResources;
   }
 
   public String getQueueName() {

@@ -47,7 +47,17 @@ if "%1" == "--config" (
       goto print_usage
   )
 
-  call :%hdfs-command% %hdfs-command-arguments%
+  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir
+  for %%i in ( %hdfscommands% ) do (
+    if %hdfs-command% == %%i set hdfscommand=true
+  )
+  if defined hdfscommand (
+    call :%hdfs-command%
+  ) else (
+    set CLASSPATH=%CLASSPATH%;%CD%
+    set CLASS=%hdfs-command%
+  )
+
   set java_arguments=%JAVA_HEAP_MAX% %HADOOP_OPTS% -classpath %CLASSPATH% %CLASS% %hdfs-command-arguments%
   call %JAVA% %java_arguments%
 
@@ -56,6 +66,11 @@ goto :eof
 :namenode
   set CLASS=org.apache.hadoop.hdfs.server.namenode.NameNode
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_NAMENODE_OPTS%
+  goto :eof
+
+:journalnode
+  set CLASS=org.apache.hadoop.hdfs.qjournal.server.JournalNode
+  set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_JOURNALNODE_OPTS%
   goto :eof
 
 :zkfc
@@ -123,6 +138,14 @@ goto :eof
   set CLASS=org.apache.hadoop.hdfs.tools.GetGroups
   goto :eof
 
+:snapshotDiff
+  set CLASS=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
+  goto :eof
+
+:lsSnapshottableDir
+  set CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
+  goto :eof
+
 @rem This changes %1, %2 etc. Hence those cannot be used after calling this.
 :make_command_arguments
   if "%1" == "--config" (
@@ -153,9 +176,11 @@ goto :eof
   @echo   namenode -format     format the DFS filesystem
   @echo   secondarynamenode    run the DFS secondary namenode
   @echo   namenode             run the DFS namenode
+  @echo   journalnode          run the DFS journalnode
   @echo   zkfc                 run the ZK Failover Controller daemon
   @echo   datanode             run a DFS datanode
   @echo   dfsadmin             run a DFS admin client
+  @echo   haadmin              run a DFS HA admin client
   @echo   fsck                 run a DFS filesystem checking utility
   @echo   balancer             run a cluster balancing utility
   @echo   jmxget               get JMX exported values from NameNode or DataNode.
@@ -164,7 +189,10 @@ goto :eof
   @echo   fetchdt              fetch a delegation token from the NameNode
   @echo   getconf              get config values from configuration
   @echo   groups               get the groups which users belong to
-  @echo                        Use -help to see options
+  @echo   snapshotDiff         diff two snapshots of a directory or diff the
+  @echo                        current directory contents with a snapshot
+  @echo   lsSnapshottableDir   list all snapshottable dirs owned by the current user
+  @echo 						Use -help to see options
   @echo.
   @echo Most commands print help when invoked w/o parameters.
 

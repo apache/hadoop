@@ -19,12 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -45,12 +43,6 @@ public interface Queue {
   QueueMetrics getMetrics();
 
   /**
-   * Get ACLs for the queue.
-   * @return ACLs for the queue
-   */
-  public Map<QueueACL, AccessControlList> getQueueAcls();
-  
-  /**
    * Get queue information
    * @param includeChildQueues include child queues?
    * @param recursive recursively get child queue information?
@@ -64,4 +56,6 @@ public interface Queue {
    * @return queue ACLs for user
    */
   List<QueueUserACLInfo> getQueueUserAclInfo(UserGroupInformation user);
+
+  boolean hasAccess(QueueACL acl, UserGroupInformation user);
 }

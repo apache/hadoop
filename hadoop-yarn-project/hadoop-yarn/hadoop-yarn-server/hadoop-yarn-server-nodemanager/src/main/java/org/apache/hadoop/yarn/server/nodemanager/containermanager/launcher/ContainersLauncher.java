@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
@@ -65,6 +66,7 @@ public class ContainersLauncher extends AbstractService
   private final Context context;
   private final ContainerExecutor exec;
   private final Dispatcher dispatcher;
+  private final ContainerManagerImpl containerManager;
 
   private LocalDirsHandlerService dirsHandler;
   @VisibleForTesting
@@ -73,28 +75,19 @@ public class ContainersLauncher extends AbstractService
         new ThreadFactoryBuilder()
           .setNameFormat("ContainersLauncher #%d")
           .build());
-  private final Map<ContainerId,RunningContainer> running =
-    Collections.synchronizedMap(new HashMap<ContainerId,RunningContainer>());
-
-  private static final class RunningContainer {
-    public RunningContainer(Future<Integer> submit,
-        ContainerLaunch launcher) {
-      this.runningcontainer = submit;
-      this.launcher = launcher;
-    }
-
-    Future<Integer> runningcontainer;
-    ContainerLaunch launcher;
-  }
-
+  @VisibleForTesting
+  public final Map<ContainerId, ContainerLaunch> running =
+    Collections.synchronizedMap(new HashMap<ContainerId, ContainerLaunch>());
 
   public ContainersLauncher(Context context, Dispatcher dispatcher,
-      ContainerExecutor exec, LocalDirsHandlerService dirsHandler) {
+      ContainerExecutor exec, LocalDirsHandlerService dirsHandler,
+      ContainerManagerImpl containerManager) {
     super("containers-launcher");
     this.exec = exec;
     this.context = context;
     this.dispatcher = dispatcher;
     this.dirsHandler = dirsHandler;
+    this.containerManager = containerManager;
   }
 
   @Override
@@ -128,39 +121,21 @@ public class ContainersLauncher extends AbstractService
 
         ContainerLaunch launch =
             new ContainerLaunch(context, getConfig(), dispatcher, exec, app,
-              event.getContainer(), dirsHandler);
-        running.put(containerId,
-            new RunningContainer(containerLauncher.submit(launch), 
-                launch));
+              event.getContainer(), dirsHandler, containerManager);
+        containerLauncher.submit(launch);
+        running.put(containerId, launch);
         break;
       case CLEANUP_CONTAINER:
-        RunningContainer rContainerDatum = running.remove(containerId);
-        if (rContainerDatum == null) {
+        ContainerLaunch launcher = running.remove(containerId);
+        if (launcher == null) {
           // Container not launched. So nothing needs to be done.
           return;
-        }
-        Future<Integer> rContainer = rContainerDatum.runningcontainer;
-        if (rContainer != null 
-            && !rContainer.isDone()) {
-          // Cancel the future so that it won't be launched if it isn't already.
-          // If it is going to be canceled, make sure CONTAINER_KILLED_ON_REQUEST
-          // will not be missed if the container is already at KILLING
-          if (rContainer.cancel(false)) {
-            if (container.getContainerState() == ContainerState.KILLING) {
-              dispatcher.getEventHandler().handle(
-                  new ContainerExitEvent(containerId,
-                      ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
-                      Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() : 
-                        ExitCode.TERMINATED.getExitCode(),
-                      "Container terminated before launch."));
-            }
-          }
         }
 
         // Cleanup a container whether it is running/killed/completed, so that
         // no sub-processes are alive.
         try {
-          rContainerDatum.launcher.cleanupContainer();
+          launcher.cleanupContainer();
         } catch (IOException e) {
           LOG.warn("Got exception while cleaning container " + containerId
               + ". Ignoring.");

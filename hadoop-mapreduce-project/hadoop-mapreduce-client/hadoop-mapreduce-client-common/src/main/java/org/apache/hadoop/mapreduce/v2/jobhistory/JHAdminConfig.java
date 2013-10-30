@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.jobhistory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
  * Stores Job History configuration keys that can be set by administrators of
@@ -123,12 +124,25 @@ public class JHAdminConfig {
   public static final String MR_HISTORY_PRINCIPAL = 
     MR_HISTORY_PREFIX + "principal";
   
+  /** To enable https in MR history server */
+  public static final String MR_HS_HTTP_POLICY = MR_HISTORY_PREFIX
+      + "http.policy";
+  public static String DEFAULT_MR_HS_HTTP_POLICY =
+          CommonConfigurationKeysPublic.HTTP_POLICY_HTTP_ONLY;
+  
   /**The address the history server webapp is on.*/
   public static final String MR_HISTORY_WEBAPP_ADDRESS =
     MR_HISTORY_PREFIX + "webapp.address";
   public static final int DEFAULT_MR_HISTORY_WEBAPP_PORT = 19888;
   public static final String DEFAULT_MR_HISTORY_WEBAPP_ADDRESS =
     "0.0.0.0:" + DEFAULT_MR_HISTORY_WEBAPP_PORT;
+  
+  /**The https address the history server webapp is on.*/
+  public static final String MR_HISTORY_WEBAPP_HTTPS_ADDRESS =
+      MR_HISTORY_PREFIX + "webapp.https.address";
+  public static final int DEFAULT_MR_HISTORY_WEBAPP_HTTPS_PORT = 19890;
+  public static final String DEFAULT_MR_HISTORY_WEBAPP_HTTPS_ADDRESS =
+      "0.0.0.0:" + DEFAULT_MR_HISTORY_WEBAPP_HTTPS_PORT;
   
   /**The kerberos principal to be used for spnego filter for history server*/
   public static final String MR_WEBAPP_SPNEGO_USER_NAME_KEY =
@@ -150,10 +164,31 @@ public class JHAdminConfig {
   public static final String MR_HISTORY_STORAGE =
     MR_HISTORY_PREFIX + "store.class";
 
+  /**
+   * Enable the history server to store server state and recover server state
+   * upon startup.
+   */
+  public static final String MR_HS_RECOVERY_ENABLE =
+      MR_HISTORY_PREFIX + "recovery.enable";
+  public static final boolean DEFAULT_MR_HS_RECOVERY_ENABLE = false;
+
+  /**
+   * The HistoryServerStateStoreService class to store and recover server state
+   */
+  public static final String MR_HS_STATE_STORE =
+      MR_HISTORY_PREFIX + "recovery.store.class";
+
+  /**
+   * The URI where server state will be stored when
+   * HistoryServerFileSystemStateStoreService is configured as the state store
+   */
+  public static final String MR_HS_FS_STATE_STORE_URI =
+      MR_HISTORY_PREFIX + "recovery.store.fs.uri";
+
   /** Whether to use fixed ports with the minicluster. */
   public static final String MR_HISTORY_MINICLUSTER_FIXED_PORTS = MR_HISTORY_PREFIX
        + "minicluster.fixed.ports";
-
+  
   /**
    * Default is false to be able to run tests concurrently without port
    * conflicts.

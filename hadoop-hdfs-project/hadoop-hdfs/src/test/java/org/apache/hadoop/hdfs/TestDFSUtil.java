@@ -20,20 +20,25 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
-import org.apache.hadoop.util.Shell;
-
-import static org.junit.Assert.*;
-import org.junit.Assume;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -54,8 +59,11 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Shell;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -537,6 +545,55 @@ public class TestDFSUtil {
     // We can determine the nameservice ID, there's only one listed
     assertEquals("ns1", DFSUtil.getNamenodeNameServiceId(conf));
     assertEquals("ns1", DFSUtil.getSecondaryNameServiceId(conf));
+  }
+
+  @Test
+  public void testGetHaNnHttpAddresses() throws IOException {
+    final String LOGICAL_HOST_NAME = "ns1";
+    final String NS1_NN1_ADDR      = "ns1-nn1.example.com:8020";
+    final String NS1_NN2_ADDR      = "ns1-nn2.example.com:8020";
+
+    Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
+
+    Map<String, Map<String, InetSocketAddress>> map =
+        DFSUtil.getHaNnHttpAddresses(conf);
+
+    assertEquals(NS1_NN1_ADDR, map.get("ns1").get("nn1").toString());
+    assertEquals(NS1_NN2_ADDR, map.get("ns1").get("nn2").toString());
+  }
+
+  @Test
+  public void testResolve() throws IOException, URISyntaxException {
+    final String LOGICAL_HOST_NAME = "ns1";
+    final String NS1_NN1_HOST      = "ns1-nn1.example.com";
+    final String NS1_NN2_HOST      = "ns1-nn2.example.com";
+    final String NS1_NN1_ADDR      = "ns1-nn1.example.com:8020";
+    final String NS1_NN2_ADDR      = "ns1-nn2.example.com:8020";
+    final int DEFAULT_PORT         = NameNode.DEFAULT_PORT;
+
+    Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
+    URI uri = new URI("webhdfs://ns1");
+    assertTrue(HAUtil.isLogicalUri(conf, uri));
+    InetSocketAddress[] addrs = DFSUtil.resolve(uri, DEFAULT_PORT, conf);
+    assertArrayEquals(new InetSocketAddress[] {
+      new InetSocketAddress(NS1_NN1_HOST, DEFAULT_PORT),
+      new InetSocketAddress(NS1_NN2_HOST, DEFAULT_PORT),
+    }, addrs);
+  }
+
+  private static Configuration createWebHDFSHAConfiguration(String logicalHostName, String nnaddr1, String nnaddr2) {
+    HdfsConfiguration conf = new HdfsConfiguration();
+
+    conf.set(DFS_NAMESERVICES, "ns1");
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"),"nn1,nn2");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn1"), nnaddr1);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn2"), nnaddr2);
+
+    conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + logicalHostName,
+        ConfiguredFailoverProxyProvider.class.getName());
+    return conf;
   }
 
   @Test

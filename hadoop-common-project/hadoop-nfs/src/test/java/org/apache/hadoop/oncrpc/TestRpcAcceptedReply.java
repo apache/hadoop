@@ -20,8 +20,9 @@ package org.apache.hadoop.oncrpc;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
-import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
 import org.apache.hadoop.oncrpc.RpcReply.ReplyState;
+import org.apache.hadoop.oncrpc.security.Verifier;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.junit.Test;
 
 /**
@@ -45,8 +46,8 @@ public class TestRpcAcceptedReply {
   
   @Test
   public void testConstructor() {
-    RpcAuthInfo verifier = new RpcAuthInfo(AuthFlavor.AUTH_NONE, new byte[0]);
-    RpcAcceptedReply reply = new RpcAcceptedReply(0, RpcMessage.Type.RPC_REPLY,
+    Verifier verifier = new VerifierNone();
+    RpcAcceptedReply reply = new RpcAcceptedReply(0, 
         ReplyState.MSG_ACCEPTED, verifier, AcceptState.SUCCESS);
     assertEquals(0, reply.getXid());
     assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());

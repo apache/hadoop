@@ -20,12 +20,14 @@ package org.apache.hadoop.hdfs.tools.snapshot;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * A tool used to get the difference report between two snapshots, or between
@@ -38,7 +40,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
  * </pre>
  */
 @InterfaceAudience.Private
-public class SnapshotDiff {
+public class SnapshotDiff extends Configured implements Tool {
   private static String getSnapshotName(String name) {
     if (Path.CUR_DIR.equals(name)) { // current directory
       return "";
@@ -57,7 +59,8 @@ public class SnapshotDiff {
     return name.substring(i + HdfsConstants.DOT_SNAPSHOT_DIR.length() + 1);
   }
   
-  public static void main(String[] argv) throws IOException {
+  @Override
+  public int run(String[] argv) throws Exception {
     String description = "SnapshotDiff <snapshotDir> <from> <to>:\n" +
     "\tGet the difference between two snapshots, \n" + 
     "\tor between a snapshot and the current tree of a directory.\n" +
@@ -67,15 +70,14 @@ public class SnapshotDiff {
     
     if(argv.length != 3) {
       System.err.println("Usage: \n" + description);
-      System.exit(1);
+      return 1;
     }
     
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.get(conf);
+    FileSystem fs = FileSystem.get(getConf());
     if (! (fs instanceof DistributedFileSystem)) {
       System.err.println(
           "SnapshotDiff can only be used in DistributedFileSystem");
-      System.exit(1);
+      return 1;
     }
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     
@@ -89,7 +91,14 @@ public class SnapshotDiff {
     } catch (IOException e) {
       String[] content = e.getLocalizedMessage().split("\n");
       System.err.println("snapshotDiff: " + content[0]);
+      return 1;
     }
+    return 0;
+  }
+
+  public static void main(String[] argv) throws Exception {
+    int rc = ToolRunner.run(new SnapshotDiff(), argv);
+    System.exit(rc);
   }
 
 }

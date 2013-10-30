@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,38 +51,26 @@ class Globber {
     this.filter = filter;
   }
 
-  private FileStatus getFileStatus(Path path) {
+  private FileStatus getFileStatus(Path path) throws IOException {
     try {
       if (fs != null) {
         return fs.getFileStatus(path);
       } else {
         return fc.getFileStatus(path);
       }
-    } catch (IOException e) {
+    } catch (FileNotFoundException e) {
       return null;
     }
   }
 
-  private FileStatus getFileLinkStatus(Path path) {
-    try {
-      if (fs != null) {
-        return fs.getFileLinkStatus(path);
-      } else {
-        return fc.getFileLinkStatus(path);
-      }
-    } catch (IOException e) {
-      return null;
-    }
-  }
-
-  private FileStatus[] listStatus(Path path) {
+  private FileStatus[] listStatus(Path path) throws IOException {
     try {
       if (fs != null) {
         return fs.listStatus(path);
       } else {
         return fc.util().listStatus(path);
       }
-    } catch (IOException e) {
+    } catch (FileNotFoundException e) {
       return new FileStatus[0];
     }
   }
@@ -92,6 +81,15 @@ class Globber {
     } else {
       return fc.fixRelativePart(path);
     }
+  }
+
+  /**
+   * Convert a path component that contains backslash ecape sequences to a
+   * literal string.  This is necessary when you want to explicitly refer to a
+   * path that contains globber metacharacters.
+   */
+  private static String unescapePathComponent(String name) {
+    return name.replaceAll("\\\\(.)", "$1");
   }
 
   /**
@@ -132,18 +130,6 @@ class Globber {
       }
     }
     return authority ;
-  }
-
-  /**
-   * The glob filter builds a regexp per path component.  If the component
-   * does not contain a shell metachar, then it falls back to appending the
-   * raw string to the list of built up paths.  This raw path needs to have
-   * the quoting removed.  Ie. convert all occurrences of "\X" to "X"
-   * @param name of the path component
-   * @return the unquoted path component
-   */
-  private static String unquotePathComponent(String name) {
-    return name.replaceAll("\\\\(.)", "$1");
   }
 
   public FileStatus[] glob() throws IOException {
@@ -189,39 +175,54 @@ class Globber {
             new Path(scheme, authority, Path.SEPARATOR)));
       }
       
-      for (String component : components) {
+      for (int componentIdx = 0; componentIdx < components.size();
+          componentIdx++) {
         ArrayList<FileStatus> newCandidates =
             new ArrayList<FileStatus>(candidates.size());
-        GlobFilter globFilter = new GlobFilter(component);
+        GlobFilter globFilter = new GlobFilter(components.get(componentIdx));
+        String component = unescapePathComponent(components.get(componentIdx));
         if (globFilter.hasPattern()) {
           sawWildcard = true;
         }
         if (candidates.isEmpty() && sawWildcard) {
+          // Optimization: if there are no more candidates left, stop examining 
+          // the path components.  We can only do this if we've already seen
+          // a wildcard component-- otherwise, we still need to visit all path 
+          // components in case one of them is a wildcard.
           break;
         }
+        if ((componentIdx < components.size() - 1) &&
+            (!globFilter.hasPattern())) {
+          // Optimization: if this is not the terminal path component, and we 
+          // are not matching against a glob, assume that it exists.  If it 
+          // doesn't exist, we'll find out later when resolving a later glob
+          // or the terminal path component.
+          for (FileStatus candidate : candidates) {
+            candidate.setPath(new Path(candidate.getPath(), component));
+          }
+          continue;
+        }
         for (FileStatus candidate : candidates) {
-          FileStatus resolvedCandidate = candidate;
-          if (candidate.isSymlink()) {
-            // We have to resolve symlinks, because otherwise we don't know
-            // whether they are directories.
-            resolvedCandidate = getFileStatus(candidate.getPath());
-          }
-          if (resolvedCandidate == null ||
-              resolvedCandidate.isDirectory() == false) {
-            continue;
-          }
-          // For components without pattern, we get its FileStatus directly
-          // using getFileLinkStatus for two reasons:
-          // 1. It should be faster to only get FileStatus needed rather than
-          //    get all children.
-          // 2. Some special filesystem directories (e.g. HDFS snapshot
-          //    directories) are not returned by listStatus, but do exist if
-          //    checked explicitly via getFileLinkStatus.
           if (globFilter.hasPattern()) {
             FileStatus[] children = listStatus(candidate.getPath());
+            if (children.length == 1) {
+              // If we get back only one result, this could be either a listing
+              // of a directory with one entry, or it could reflect the fact
+              // that what we listed resolved to a file.
+              //
+              // Unfortunately, we can't just compare the returned paths to
+              // figure this out.  Consider the case where you have /a/b, where
+              // b is a symlink to "..".  In that case, listing /a/b will give
+              // back "/a/b" again.  If we just went by returned pathname, we'd
+              // incorrectly conclude that /a/b was a file and should not match
+              // /a/*/*.  So we use getFileStatus of the path we just listed to
+              // disambiguate.
+              if (!getFileStatus(candidate.getPath()).isDirectory()) {
+                continue;
+              }
+            }
             for (FileStatus child : children) {
               // Set the child path based on the parent path.
-              // This keeps the symlinks in our path.
               child.setPath(new Path(candidate.getPath(),
                       child.getPath().getName()));
               if (globFilter.accept(child.getPath())) {
@@ -229,13 +230,17 @@ class Globber {
               }
             }
           } else {
-            Path p = new Path(candidate.getPath(), unquotePathComponent(component));
-            FileStatus s = getFileLinkStatus(p);
-            if (s != null) {
-              s.setPath(p);
-              newCandidates.add(s);
-            }
-          }
+            // When dealing with non-glob components, use getFileStatus 
+            // instead of listStatus.  This is an optimization, but it also
+            // is necessary for correctness in HDFS, since there are some
+            // special HDFS directories like .reserved and .snapshot that are
+            // not visible to listStatus, but which do exist.  (See HADOOP-9877)
+            FileStatus childStatus = getFileStatus(
+                new Path(candidate.getPath(), component));
+            if (childStatus != null) {
+              newCandidates.add(childStatus);
+             }
+           }
         }
         candidates = newCandidates;
       }

@@ -90,7 +90,7 @@ public class FloatSplitter implements DBSplitter {
     // Catch any overage and create the closed interval for the last split.
     if (curLower <= maxVal || splits.size() == 1) {
       splits.add(new DataDrivenDBInputFormat.DataDrivenDBInputSplit(
-          lowClausePrefix + Double.toString(curUpper),
+          lowClausePrefix + Double.toString(curLower),
           colName + " <= " + Double.toString(maxVal)));
     }
 

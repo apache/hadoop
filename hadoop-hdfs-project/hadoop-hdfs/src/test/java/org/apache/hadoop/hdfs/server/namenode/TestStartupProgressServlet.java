@@ -73,24 +73,28 @@ public class TestStartupProgressServlet {
       .put("phases", Arrays.<Object>asList(
         ImmutableMap.<String, Object>builder()
           .put("name", "LoadingFsImage")
+          .put("desc", "Loading fsimage")
           .put("status", "PENDING")
           .put("percentComplete", 0.0f)
           .put("steps", Collections.emptyList())
           .build(),
         ImmutableMap.<String, Object>builder()
           .put("name", "LoadingEdits")
+          .put("desc", "Loading edits")
           .put("status", "PENDING")
           .put("percentComplete", 0.0f)
           .put("steps", Collections.emptyList())
           .build(),
         ImmutableMap.<String, Object>builder()
           .put("name", "SavingCheckpoint")
+          .put("desc", "Saving checkpoint")
           .put("status", "PENDING")
           .put("percentComplete", 0.0f)
           .put("steps", Collections.emptyList())
           .build(),
         ImmutableMap.<String, Object>builder()
           .put("name", "SafeMode")
+          .put("desc", "Safe mode")
           .put("status", "PENDING")
           .put("percentComplete", 0.0f)
           .put("steps", Collections.emptyList())
@@ -111,11 +115,13 @@ public class TestStartupProgressServlet {
       .put("phases", Arrays.<Object>asList(
         ImmutableMap.<String, Object>builder()
           .put("name", "LoadingFsImage")
+          .put("desc", "Loading fsimage")
           .put("status", "COMPLETE")
           .put("percentComplete", 1.0f)
           .put("steps", Collections.<Object>singletonList(
             ImmutableMap.<String, Object>builder()
               .put("name", "Inodes")
+              .put("desc", "inodes")
               .put("count", 100L)
               .put("total", 100L)
               .put("percentComplete", 1.0f)
@@ -124,6 +130,7 @@ public class TestStartupProgressServlet {
           .build(),
         ImmutableMap.<String, Object>builder()
           .put("name", "LoadingEdits")
+          .put("desc", "Loading edits")
           .put("status", "RUNNING")
           .put("percentComplete", 0.5f)
           .put("steps", Collections.<Object>singletonList(
@@ -138,12 +145,14 @@ public class TestStartupProgressServlet {
           .build(),
         ImmutableMap.<String, Object>builder()
           .put("name", "SavingCheckpoint")
+          .put("desc", "Saving checkpoint")
           .put("status", "PENDING")
           .put("percentComplete", 0.0f)
           .put("steps", Collections.emptyList())
           .build(),
         ImmutableMap.<String, Object>builder()
           .put("name", "SafeMode")
+          .put("desc", "Safe mode")
           .put("status", "PENDING")
           .put("percentComplete", 0.0f)
           .put("steps", Collections.emptyList())
@@ -164,11 +173,13 @@ public class TestStartupProgressServlet {
       .put("phases", Arrays.<Object>asList(
         ImmutableMap.<String, Object>builder()
           .put("name", "LoadingFsImage")
+          .put("desc", "Loading fsimage")
           .put("status", "COMPLETE")
           .put("percentComplete", 1.0f)
           .put("steps", Collections.<Object>singletonList(
             ImmutableMap.<String, Object>builder()
               .put("name", "Inodes")
+              .put("desc", "inodes")
               .put("count", 100L)
               .put("total", 100L)
               .put("percentComplete", 1.0f)
@@ -177,6 +188,7 @@ public class TestStartupProgressServlet {
           .build(),
         ImmutableMap.<String, Object>builder()
           .put("name", "LoadingEdits")
+          .put("desc", "Loading edits")
           .put("status", "COMPLETE")
           .put("percentComplete", 1.0f)
           .put("steps", Collections.<Object>singletonList(
@@ -191,11 +203,13 @@ public class TestStartupProgressServlet {
           .build(),
         ImmutableMap.<String, Object>builder()
           .put("name", "SavingCheckpoint")
+          .put("desc", "Saving checkpoint")
           .put("status", "COMPLETE")
           .put("percentComplete", 1.0f)
           .put("steps", Collections.<Object>singletonList(
             ImmutableMap.<String, Object>builder()
               .put("name", "Inodes")
+              .put("desc", "inodes")
               .put("count", 300L)
               .put("total", 300L)
               .put("percentComplete", 1.0f)
@@ -204,11 +218,13 @@ public class TestStartupProgressServlet {
           .build(),
         ImmutableMap.<String, Object>builder()
           .put("name", "SafeMode")
+          .put("desc", "Safe mode")
           .put("status", "COMPLETE")
           .put("percentComplete", 1.0f)
           .put("steps", Collections.<Object>singletonList(
             ImmutableMap.<String, Object>builder()
               .put("name", "AwaitingReportedBlocks")
+              .put("desc", "awaiting reported blocks")
               .put("count", 400L)
               .put("total", 400L)
               .put("percentComplete", 1.0f)

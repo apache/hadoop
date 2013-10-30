@@ -63,7 +63,37 @@ public class SchedulerUtils {
   
   public static final String UNRESERVED_CONTAINER =
       "Container reservation no longer required.";
-  
+
+  /**
+   * Utility to create a {@link ContainerStatus} during exceptional
+   * circumstances.
+   *
+   * @param containerId {@link ContainerId} of returned/released/lost container.
+   * @param diagnostics diagnostic message
+   * @return <code>ContainerStatus</code> for an returned/released/lost 
+   *         container
+   */
+  public static ContainerStatus createAbnormalContainerStatus(
+      ContainerId containerId, String diagnostics) {
+    return createAbnormalContainerStatus(containerId, 
+        ContainerExitStatus.ABORTED, diagnostics);
+  }
+
+  /**
+   * Utility to create a {@link ContainerStatus} during exceptional
+   * circumstances.
+   *
+   * @param containerId {@link ContainerId} of returned/released/lost container.
+   * @param diagnostics diagnostic message
+   * @return <code>ContainerStatus</code> for an returned/released/lost
+   *         container
+   */
+  public static ContainerStatus createPreemptedContainerStatus(
+      ContainerId containerId, String diagnostics) {
+    return createAbnormalContainerStatus(containerId, 
+        ContainerExitStatus.PREEMPTED, diagnostics);
+  }
+
   /**
    * Utility to create a {@link ContainerStatus} during exceptional
    * circumstances.
@@ -73,14 +103,13 @@ public class SchedulerUtils {
    * @return <code>ContainerStatus</code> for an returned/released/lost 
    *         container
    */
-  public static ContainerStatus createAbnormalContainerStatus(
-      ContainerId containerId, String diagnostics) {
+  private static ContainerStatus createAbnormalContainerStatus(
+      ContainerId containerId, int exitStatus, String diagnostics) {
     ContainerStatus containerStatus = 
         recordFactory.newRecordInstance(ContainerStatus.class);
     containerStatus.setContainerId(containerId);
     containerStatus.setDiagnostics(diagnostics);
-    containerStatus.setExitStatus(
-        ContainerExitStatus.ABORTED);
+    containerStatus.setExitStatus(exitStatus);
     containerStatus.setState(ContainerState.COMPLETE);
     return containerStatus;
   }

@@ -100,6 +100,7 @@ class BlockPoolSliceScanner {
   private long currentPeriodStart = Time.now();
   private long bytesLeft = 0; // Bytes to scan in this period
   private long totalBytesToScan = 0;
+  private boolean isNewPeriod = true;
   
   private final LogFileHandler verificationLog;
   
@@ -126,7 +127,10 @@ class BlockPoolSliceScanner {
       public int compare(BlockScanInfo left, BlockScanInfo right) {
         final long l = left.lastScanTime;
         final long r = right.lastScanTime;
-        return l < r? -1: l > r? 1: 0; 
+        // compare blocks itself if scantimes are same to avoid.
+        // because TreeMap uses comparator if available to check existence of
+        // the object. 
+        return l < r? -1: l > r? 1: left.compareTo(right); 
       }
     };
 
@@ -148,8 +152,6 @@ class BlockPoolSliceScanner {
     public boolean equals(Object that) {
       if (this == that) {
         return true;
-      } else if (that == null || !(that instanceof BlockScanInfo)) {
-        return false;
       }
       return super.equals(that);
     }
@@ -539,10 +541,12 @@ class BlockPoolSliceScanner {
                   entry.genStamp));
               if (info != null) {
                 if (processedBlocks.get(entry.blockId) == null) {
-                  updateBytesLeft(-info.getNumBytes());
+                  if (isNewPeriod) {
+                    updateBytesLeft(-info.getNumBytes());
+                  }
                   processedBlocks.put(entry.blockId, 1);
                 }
-                if (logIterator.isPrevious()) {
+                if (logIterator.isLastReadFromPrevious()) {
                   // write the log entry to current file
                   // so that the entry is preserved for later runs.
                   verificationLog.append(entry.verificationTime, entry.genStamp,
@@ -557,6 +561,7 @@ class BlockPoolSliceScanner {
       } finally {
         IOUtils.closeStream(logIterator);
       }
+      isNewPeriod = false;
     }
     
     
@@ -597,6 +602,7 @@ class BlockPoolSliceScanner {
     // reset the byte counts :
     bytesLeft = totalBytesToScan;
     currentPeriodStart = Time.now();
+    isNewPeriod = true;
   }
   
   private synchronized boolean workRemainingInCurrentPeriod() {

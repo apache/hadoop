@@ -24,6 +24,7 @@ public enum RMAppState {
   SUBMITTED,
   ACCEPTED,
   RUNNING,
+  REMOVING,
   FINISHING,
   FINISHED,
   FAILED,

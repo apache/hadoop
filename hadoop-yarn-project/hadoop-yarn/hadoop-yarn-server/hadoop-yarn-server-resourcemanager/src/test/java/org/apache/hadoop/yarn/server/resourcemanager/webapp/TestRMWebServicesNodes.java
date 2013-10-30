@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -86,6 +87,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
       bind(RMContext.class).toInstance(rm.getRMContext());
       bind(ApplicationACLsManager.class).toInstance(
           rm.getApplicationACLsManager());
+      bind(QueueACLsManager.class).toInstance(rm.getQueueACLsManager());
       serve("/*").with(GuiceContainer.class);
     }
   });
@@ -653,13 +655,14 @@ public class TestRMWebServicesNodes extends JerseyTest {
           WebServicesTestUtils.getXmlString(element, "healthReport"),
           WebServicesTestUtils.getXmlInt(element, "numContainers"),
           WebServicesTestUtils.getXmlLong(element, "usedMemoryMB"),
-          WebServicesTestUtils.getXmlLong(element, "availMemoryMB"));
+          WebServicesTestUtils.getXmlLong(element, "availMemoryMB"),
+          WebServicesTestUtils.getXmlString(element, "version"));
     }
   }
 
   public void verifyNodeInfo(JSONObject nodeInfo, MockNM nm)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 10, nodeInfo.length());
+    assertEquals("incorrect number of elements", 11, nodeInfo.length());
 
     verifyNodeInfoGeneric(nm, nodeInfo.getString("state"),
         nodeInfo.getString("rack"),
@@ -667,14 +670,15 @@ public class TestRMWebServicesNodes extends JerseyTest {
         nodeInfo.getString("nodeHTTPAddress"),
         nodeInfo.getLong("lastHealthUpdate"),
         nodeInfo.getString("healthReport"), nodeInfo.getInt("numContainers"),
-        nodeInfo.getLong("usedMemoryMB"), nodeInfo.getLong("availMemoryMB"));
+        nodeInfo.getLong("usedMemoryMB"), nodeInfo.getLong("availMemoryMB"),
+        nodeInfo.getString("version"));
 
   }
 
   public void verifyNodeInfoGeneric(MockNM nm, String state, String rack,
       String id, String nodeHostName,
       String nodeHTTPAddress, long lastHealthUpdate, String healthReport,
-      int numContainers, long usedMemoryMB, long availMemoryMB)
+      int numContainers, long usedMemoryMB, long availMemoryMB, String version)
       throws JSONException, Exception {
 
     RMNode node = rm.getRMContext().getRMNodes().get(nm.getNodeId());
@@ -693,6 +697,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
         + nm.getHttpPort();
     WebServicesTestUtils.checkStringMatch("nodeHTTPAddress",
         expectedHttpAddress, nodeHTTPAddress);
+    WebServicesTestUtils.checkStringMatch("version",
+        node.getNodeManagerVersion(), version);
 
     long expectedHealthUpdate = node.getLastHealthReportTime();
     assertEquals("lastHealthUpdate doesn't match, got: " + lastHealthUpdate

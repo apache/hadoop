@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -47,19 +48,22 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.SecurityUtilTestHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import com.google.common.base.Joiner;
 
@@ -78,8 +82,12 @@ public class TestDelegationTokensWithHA {
   private static DelegationTokenSecretManager dtSecretManager;
   private static DistributedFileSystem dfs;
 
-  @BeforeClass
-  public static void setupCluster() throws Exception {
+  private volatile boolean catchup = false;
+  
+  @Before
+  public void setupCluster() throws Exception {
+    SecurityUtilTestHelper.setTokenServiceUseIp(true);
+    
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
@@ -101,17 +109,11 @@ public class TestDelegationTokensWithHA {
         nn0.getNamesystem());
   }
 
-  @AfterClass
-  public static void shutdownCluster() throws IOException {
+  @After
+  public void shutdownCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
     }
-  }
-
-
-  @Before
-  public void prepTest() {
-    SecurityUtilTestHelper.setTokenServiceUseIp(true);
   }
   
   @Test
@@ -152,6 +154,96 @@ public class TestDelegationTokensWithHA {
     cluster.transitionToActive(1);
     doRenewOrCancel(token, clientConf, TokenTestAction.RENEW);
     
+    doRenewOrCancel(token, clientConf, TokenTestAction.CANCEL);
+  }
+  
+  private class EditLogTailerForTest extends EditLogTailer {
+    public EditLogTailerForTest(FSNamesystem namesystem, Configuration conf) {
+      super(namesystem, conf);
+    }
+    
+    public void catchupDuringFailover() throws IOException {
+      synchronized (TestDelegationTokensWithHA.this) {
+        while (!catchup) {
+          try {
+            LOG.info("The editlog tailer is waiting to catchup...");
+            TestDelegationTokensWithHA.this.wait();
+          } catch (InterruptedException e) {}
+        }
+      }
+      super.catchupDuringFailover();
+    }
+  }
+  
+  /**
+   * Test if correct exception (StandbyException or RetriableException) can be
+   * thrown during the NN failover. 
+   */
+  @Test
+  public void testDelegationTokenDuringNNFailover() throws Exception {
+    EditLogTailer editLogTailer = nn1.getNamesystem().getEditLogTailer();
+    // stop the editLogTailer of nn1
+    editLogTailer.stop();
+    Configuration conf = (Configuration) Whitebox.getInternalState(
+        editLogTailer, "conf");
+    nn1.getNamesystem().setEditLogTailerForTests(
+        new EditLogTailerForTest(nn1.getNamesystem(), conf));
+    
+    // create token
+    final Token<DelegationTokenIdentifier> token =
+        getDelegationToken(fs, "JobTracker");
+    DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
+    byte[] tokenId = token.getIdentifier();
+    identifier.readFields(new DataInputStream(
+             new ByteArrayInputStream(tokenId)));
+
+    // Ensure that it's present in the nn0 secret manager and can
+    // be renewed directly from there.
+    LOG.info("A valid token should have non-null password, " +
+        "and should be renewed successfully");
+    assertTrue(null != dtSecretManager.retrievePassword(identifier));
+    dtSecretManager.renewToken(token, "JobTracker");
+    
+    // transition nn0 to standby
+    cluster.transitionToStandby(0);
+    
+    try {
+      cluster.getNameNodeRpc(0).renewDelegationToken(token);
+      fail("StandbyException is expected since nn0 is in standby state");
+    } catch (StandbyException e) {
+      GenericTestUtils.assertExceptionContains(
+          HAServiceState.STANDBY.toString(), e);
+    }
+    
+    new Thread() {
+      @Override
+      public void run() {
+        try {
+          cluster.transitionToActive(1);
+        } catch (Exception e) {
+          LOG.error("Transition nn1 to active failed", e);
+        }    
+      }
+    }.start();
+    
+    Thread.sleep(1000);
+    try {
+      nn1.getNamesystem().verifyToken(token.decodeIdentifier(),
+          token.getPassword());
+      fail("RetriableException/StandbyException is expected since nn1 is in transition");
+    } catch (IOException e) {
+      assertTrue(e instanceof StandbyException
+          || e instanceof RetriableException);
+      LOG.info("Got expected exception", e);
+    }
+    
+    catchup = true;
+    synchronized (this) {
+      this.notifyAll();
+    }
+    
+    Configuration clientConf = dfs.getConf();
+    doRenewOrCancel(token, clientConf, TokenTestAction.RENEW);
     doRenewOrCancel(token, clientConf, TokenTestAction.CANCEL);
   }
   

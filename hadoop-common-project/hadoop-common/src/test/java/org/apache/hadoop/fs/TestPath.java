@@ -460,6 +460,13 @@ public class TestPath extends TestCase {
       Path.mergePaths(new Path("/C:/foo"),
         new Path("/C:/bar")));
 
+    assertEquals(new Path(Shell.WINDOWS ? "/C:/bar" : "/C:/C:/bar"),
+        Path.mergePaths(new Path("/C:/"),
+          new Path("/C:/bar")));
+
+    assertEquals(new Path("/bar"),
+        Path.mergePaths(new Path("/"), new Path("/bar")));
+
     assertEquals(new Path("viewfs:///foo/bar"),
       Path.mergePaths(new Path("viewfs:///foo"),
         new Path("file:///bar")));
@@ -467,5 +474,17 @@ public class TestPath extends TestCase {
     assertEquals(new Path("viewfs://vfsauthority/foo/bar"),
       Path.mergePaths(new Path("viewfs://vfsauthority/foo"),
         new Path("file://fileauthority/bar")));
+  }
+
+  @Test (timeout = 30000)
+  public void testIsWindowsAbsolutePath() {
+    if (!Shell.WINDOWS) return;
+    assertTrue(Path.isWindowsAbsolutePath("C:\\test", false));
+    assertTrue(Path.isWindowsAbsolutePath("C:/test", false));
+    assertTrue(Path.isWindowsAbsolutePath("/C:/test", true));
+    assertFalse(Path.isWindowsAbsolutePath("/test", false));
+    assertFalse(Path.isWindowsAbsolutePath("/test", true));
+    assertFalse(Path.isWindowsAbsolutePath("C:test", false));
+    assertFalse(Path.isWindowsAbsolutePath("/C:test", true));
   }
 }

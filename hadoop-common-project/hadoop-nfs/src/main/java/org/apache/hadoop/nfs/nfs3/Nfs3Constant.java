@@ -205,4 +205,7 @@ public class Nfs3Constant {
   public static final String FILE_DUMP_DIR_DEFAULT = "/tmp/.hdfs-nfs";
   public static final String ENABLE_FILE_DUMP_KEY = "dfs.nfs3.enableDump";
   public static final boolean ENABLE_FILE_DUMP_DEFAULT = true;
+  
+  public final static String UNKNOWN_USER = "nobody";
+  public final static String UNKNOWN_GROUP = "nobody";
 }

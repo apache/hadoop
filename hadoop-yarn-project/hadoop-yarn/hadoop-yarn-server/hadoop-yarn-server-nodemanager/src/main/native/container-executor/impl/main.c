@@ -49,7 +49,7 @@ void display_usage(FILE *stream) {
           "Usage: container-executor --mount-cgroups "\
           "hierarchy controller=path...\n");
   fprintf(stream,
-      "Usage: container-executor user command command-args\n");
+      "Usage: container-executor user yarn-user command command-args\n");
   fprintf(stream, "Commands:\n");
   fprintf(stream, "   initialize container: %2d appid tokens " \
    "nm-local-dirs nm-log-dirs cmd app...\n", INITIALIZE_CONTAINER);
@@ -178,18 +178,29 @@ int main(int argc, char **argv) {
   if (ret != 0) {
     return ret;
   }
+
+  // this string is used for building pathnames, the
+  // process management is done based on the 'user_detail'
+  // global, which was set by 'set_user()' above
+  optind = optind + 1;
+  char *yarn_user_name = argv[optind];
+  if (yarn_user_name == NULL) {
+    fprintf(ERRORFILE, "Invalid yarn user name.\n");
+    return INVALID_USER_NAME;
+  }
  
   optind = optind + 1;
   command = atoi(argv[optind++]);
 
   fprintf(LOGFILE, "main : command provided %d\n",command);
   fprintf(LOGFILE, "main : user is %s\n", user_detail->pw_name);
+  fprintf(LOGFILE, "main : requested yarn user is %s\n", yarn_user_name);
   fflush(LOGFILE);
 
   switch (command) {
   case INITIALIZE_CONTAINER:
-    if (argc < 8) {
-      fprintf(ERRORFILE, "Too few arguments (%d vs 8) for initialize container\n",
+    if (argc < 9) {
+      fprintf(ERRORFILE, "Too few arguments (%d vs 9) for initialize container\n",
 	      argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
@@ -198,13 +209,13 @@ int main(int argc, char **argv) {
     cred_file = argv[optind++];
     local_dirs = argv[optind++];// good local dirs as a comma separated list
     log_dirs = argv[optind++];// good log dirs as a comma separated list
-    exit_code = initialize_app(user_detail->pw_name, app_id, cred_file,
+    exit_code = initialize_app(yarn_user_name, app_id, cred_file,
                                extract_values(local_dirs),
                                extract_values(log_dirs), argv + optind);
     break;
   case LAUNCH_CONTAINER:
-    if (argc != 12) {
-      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 12) for launch container\n",
+    if (argc != 13) {
+      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 13) for launch container\n",
 	      argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
@@ -230,7 +241,7 @@ int main(int argc, char **argv) {
         return INVALID_ARGUMENT_NUMBER;
     }
     char** resources_values = extract_values(resources_value);
-    exit_code = launch_container_as_user(user_detail->pw_name, app_id,
+    exit_code = launch_container_as_user(yarn_user_name, app_id,
                     container_id, current_dir, script_file, cred_file,
                     pid_file, extract_values(local_dirs),
                     extract_values(log_dirs), resources_key,
@@ -239,8 +250,8 @@ int main(int argc, char **argv) {
     free(resources_value);
     break;
   case SIGNAL_CONTAINER:
-    if (argc != 5) {
-      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 5) for " \
+    if (argc != 6) {
+      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 6) for " \
           "signal container\n", argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
@@ -260,12 +271,12 @@ int main(int argc, char **argv) {
         fflush(ERRORFILE);
         return INVALID_ARGUMENT_NUMBER;
       }
-      exit_code = signal_container_as_user(user_detail->pw_name, container_pid, signal);
+      exit_code = signal_container_as_user(yarn_user_name, container_pid, signal);
     }
     break;
   case DELETE_AS_USER:
     dir_to_be_deleted = argv[optind++];
-    exit_code= delete_as_user(user_detail->pw_name, dir_to_be_deleted,
+    exit_code= delete_as_user(yarn_user_name, dir_to_be_deleted,
                               argv + optind);
     break;
   default:

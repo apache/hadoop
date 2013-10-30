@@ -1239,6 +1239,9 @@ public class FileUtil {
     List<String> classPathEntryList = new ArrayList<String>(
       classPathEntries.length);
     for (String classPathEntry: classPathEntries) {
+      if (classPathEntry.length() == 0) {
+        continue;
+      }
       if (classPathEntry.endsWith("*")) {
         // Append all jars that match the wildcard
         Path globPath = new Path(classPathEntry).suffix("{.jar,.JAR}");
@@ -1252,7 +1255,14 @@ public class FileUtil {
         }
       } else {
         // Append just this entry
-        String classPathEntryUrl = new File(classPathEntry).toURI().toURL()
+        File fileCpEntry = null;
+        if(!new Path(classPathEntry).isAbsolute()) {
+          fileCpEntry = new File(workingDir, classPathEntry);
+        }
+        else {
+          fileCpEntry = new File(classPathEntry);
+        }
+        String classPathEntryUrl = fileCpEntry.toURI().toURL()
           .toExternalForm();
 
         // File.toURI only appends trailing '/' if it can determine that it is a

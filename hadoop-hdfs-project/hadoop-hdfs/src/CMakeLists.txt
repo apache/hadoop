@@ -62,6 +62,11 @@ endfunction()
 INCLUDE(CheckCSourceCompiles)
 CHECK_C_SOURCE_COMPILES("int main(void) { static __thread int i = 0; return 0; }" HAVE_BETTER_TLS)
 
+# Check if we need to link dl library to get dlopen.
+# dlopen on Linux is in separate library but on FreeBSD its in libc
+INCLUDE(CheckLibraryExists)
+CHECK_LIBRARY_EXISTS(dl dlopen "" NEED_LINK_DL)
+
 find_package(JNI REQUIRED)
 if (NOT GENERATED_JAVAH)
     # Must identify where the generated headers have been placed
@@ -89,9 +94,13 @@ add_dual_library(hdfs
     main/native/libhdfs/jni_helper.c
     main/native/libhdfs/hdfs.c
 )
+if (NEED_LINK_DL)
+   set(LIB_DL dl)
+endif(NEED_LINK_DL)
+
 target_link_dual_libraries(hdfs
     ${JAVA_JVM_LIBRARY}
-    dl
+    ${LIB_DL}
     pthread
 )
 dual_output_directory(hdfs target/usr/local/lib)
@@ -142,9 +151,20 @@ target_link_libraries(test_native_mini_dfs
 )
 
 add_executable(test_libhdfs_threaded
+    main/native/libhdfs/expect.c
     main/native/libhdfs/test_libhdfs_threaded.c
 )
 target_link_libraries(test_libhdfs_threaded
+    hdfs
+    native_mini_dfs
+    pthread
+)
+
+add_executable(test_libhdfs_zerocopy
+    main/native/libhdfs/expect.c
+    main/native/libhdfs/test/test_libhdfs_zerocopy.c
+)
+target_link_libraries(test_libhdfs_zerocopy
     hdfs
     native_mini_dfs
     pthread

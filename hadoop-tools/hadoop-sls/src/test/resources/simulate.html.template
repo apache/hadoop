@@ -1,0 +1,278 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+      <link rel="stylesheet" href="css/bootstrap.min.css" media="screen">
+      <link rel="stylesheet" href="css/bootstrap-responsive.min.css">
+      <style type="text/css">
+        body '{' font: 20px sans-serif; '}'
+        .axis path,
+        .axis line '{' fill: none; stroke: #000; shape-rendering: crispEdges; '}'
+        .axis text '{' font-family: sans-serif; font-size: 20px; '}'
+        .line '{' fill: none; stroke: steelblue; stroke-width: 3px; '}'
+        .legend '{'
+          padding: 5px;
+          font: 18px sans-serif;
+          background: yellow;
+          box-shadow: 2px 2px 1px #888;
+        '}'
+        .title '{' font: 24px sans-serif; '}'
+        .divborder '{'
+          border-width: 1px;
+          border-style: solid;
+          border-color: black;
+          margin-top:10px
+        '}'
+      </style>
+      <script src="js/thirdparty/d3.v3.js"></script>
+      <script src="js/thirdparty/jquery.js"></script>
+      <script src="js/thirdparty/bootstrap.min.js"></script>
+    </head>
+  <body>
+    <div class="row">
+      <div class="span10 offset2"><br>
+        <input type="button" style="float: right;" value="Stop"
+               onClick="stop()" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="divborder span8" style="margin-left:50px" id="area1"></div>
+      <div class="divborder span8" id="area2"></div>
+    </div>
+    <div class="row">
+      <div class="divborder span8" style="margin-left:50px" id="area3"></div>
+      <div class="divborder span8" id="area4"></div>
+    </div>
+    <div class="row">
+      <div class="divborder span8" style="margin-left:50px" id="area5"></div>
+      <div class="divborder span8" id="area6"></div>
+    </div>
+    <div class="row">
+      <div class="divborder span8" style="margin-left:50px" id="area7"></div>
+      <div class="span8" id="area8"></div>
+    </div><br/><br/>
+
+    <script>
+      var basetime = 0;
+      var running = 1;
+      var data = [];
+      var width, height;
+      var legends = [];
+      var titles = [];
+      var yLabels = [];
+      var isAreas = [];
+      var svgs = [];
+      var xs = [];
+      var ys = [];
+      var xAxiss = [];
+      var yAxiss = [];
+      var lineAreas = [];
+      var stacks = [];
+
+      // legends
+      legends[0] = [''running.applications'', ''running.containers''];
+      legends[1] = [''jvm.free.memory'', ''jvm.max.memory'', ''jvm.total.memory''];
+      legends[2] = [''cluster.allocated.memory'', ''cluster.available.memory''];
+      legends[3] = [''cluster.allocated.vcores'', ''cluster.available.vcores''];
+      legends[4] = [];
+      legends[5] = [];
+      {0}
+      legends[6] = [''scheduler.allocate.timecost'',
+                    ''scheduler.handle-NODE_ADDED.timecost'',
+                    ''scheduler.handle-NODE_REMOVED.timecost'',
+                    ''scheduler.handle-NODE_UPDATE.timecost'',
+                    ''scheduler.handle-APP_ADDED.timecost'',
+                    ''scheduler.handle-APP_REMOVED.timecost'',
+                    ''scheduler.handle-CONTAINER_EXPIRED.timecost''];
+
+      // title
+      titles[0] = ''Cluster running applications & containers'';
+      titles[1] = ''JVM memory'';
+      titles[2] = ''Cluster allocated & available memory'';
+      titles[3] = ''Cluster allocated & available vcores'';
+      titles[4] = ''Queue allocated memory'';
+      titles[5] = ''Queue allocated vcores'';
+      titles[6] = ''Scheduler allocate & handle operation timecost'';
+
+      // ylabels
+      yLabels[0] = ''Number'';
+      yLabels[1] = ''Memory (GB)'';
+      yLabels[2] = ''Memory (GB)'';
+      yLabels[3] = ''Number'';
+      yLabels[4] = ''Memory (GB)'';
+      yLabels[5] = ''Number'';
+      yLabels[6] = ''Timecost (ms)'';
+
+      // is area?
+      isAreas = [0, 0, 0, 0, 1, 1, 0];
+
+      // draw all charts
+      for (var i = 0; i < 7; i ++) '{'
+        drawEachChart(i);
+      '}'
+
+      // draw each chart
+      function drawEachChart(index) '{'
+        var margin = '{'top: 50, right: 250, bottom: 50, left: 70'}';
+        width = 750 - margin.left - margin.right;
+        height = 420 - margin.top - margin.bottom;
+
+      xs[index] = d3.scale.linear().range([0, width]);
+      ys[index] = d3.scale.linear().range([height, 0]);
+      xAxiss[index] = d3.svg.axis().scale(xs[index]).orient(''bottom'');
+      yAxiss[index] = d3.svg.axis().scale(ys[index]).orient(''left'');
+
+      if (isAreas[index] == 1)'{'
+        lineAreas[index] = d3.svg.area()
+                            .x(function(d) '{' return xs[index](d.time); '}')
+                            .y0(function(d) '{' return ys[index](d.y0); '}')
+                            .y1(function(d) '{' return ys[index](d.y0 + d.y); '}');
+
+        stacks[index] = d3.layout.stack()
+                          .values(function(d) '{' return d.values; '}');
+      '}' else '{'
+        lineAreas[index] = d3.svg.line()
+                            .interpolate(''basis'')
+                            .x(function(d) '{' return xs[index](d.time); '}')
+                            .y(function(d) '{' return ys[index](d.value); '}');
+      '}'
+
+      svgs[index] = d3.select(''#area'' + (index + 1)).append(''svg'')
+        .attr(''width'', width + margin.left + margin.right)
+        .attr(''height'', height + margin.top + margin.bottom)
+        .append(''g'')
+        .attr(''transform'', ''translate('' + margin.left + '','' + margin.top + '')'');
+
+      // x, y and title
+      svgs[index].append(''text'')
+        .attr(''transform'', ''translate('' + (width / 2) + '' ,'' +
+              (height + margin.bottom - 10 ) + '')'')
+        .style(''text-anchor'', ''middle'')
+        .text(''Time ({1})'');
+
+      svgs[index].append(''text'')
+        .attr(''transform'', ''rotate(-90)'')
+        .attr(''y'', 0 - margin.left)
+        .attr(''x'',0 - (height / 2))
+        .attr(''dy'', ''1em'')
+        .style(''text-anchor'', ''middle'')
+        .text(yLabels[index]);
+
+      svgs[index].append(''text'')
+        .attr(''x'', (width / 2))
+        .attr(''y'', 10 - (margin.top / 2))
+        .attr(''text-anchor'', ''middle'')
+        .text(titles[index]);
+    '}'
+
+    // request data
+    function requestData() '{'
+      $.ajax('{'url: ''simulateMetrics'',
+        success: function(point) '{'
+          // update data
+          if (basetime == 0)  basetime = point.time;
+          point.time = (point.time - basetime) / {2};
+          data.push(point);
+
+          // clear old
+          for (var i = 0; i < 7; i ++) '{'
+            svgs[i].selectAll(''g.tick'').remove();
+            svgs[i].selectAll(''g'').remove();
+            var color = d3.scale.category10();
+            color.domain(d3.keys(data[0]).filter(function(key) '{'
+              return $.inArray(key, legends[i]) !== -1;
+            '}'));
+
+            var values;
+            if (isAreas[i] == 1) '{'
+              values = stacks[i](color.domain().map(function(name) '{'
+                return '{'
+                  name: name,
+                  values: data.map(function(d) '{'
+                    return '{'time: d.time, y: d[name]'}';
+                  '}')
+                '}'
+              '}'));
+              xs[i].domain(d3.extent(data, function(d) '{' return d.time;'}'));
+              ys[i].domain([
+                d3.min(values, function(c) '{' return 0; '}'),
+                d3.max(values, function(c) '{' return 1.1 * d3.max(c.values,
+                                        function(v) '{' return v.y + v.y0; '}'); '}')
+              ]);
+            '}' else '{'
+              values = color.domain().map(function(name) '{'
+                return '{'
+                  name: name,
+                  values: data.map(function(d) '{'
+                    return '{'time: d.time, value: d[name]'}';
+                  '}')
+                '}'
+              '}');
+              xs[i].domain(d3.extent(data, function(d) '{' return d.time;'}'));
+              ys[i].domain([
+                d3.min(values, function(c) '{' return 0; '}'),
+                d3.max(values, function(c) '{' return 1.1 * d3.max(c.values,
+                                        function(v) '{' return v.value; '}'); '}')
+              ]);
+            '}'
+
+            svgs[i].append(''g'').attr(''class'', ''x axis'')
+              .attr(''transform'', ''translate(0,'' + height + '')'').call(xAxiss[i]);
+
+            svgs[i].append(''g'').attr(''class'', ''y axis'').call(yAxiss[i]);
+
+            var value = svgs[i].selectAll(''.path'')
+              .data(values).enter().append(''g'').attr(''class'', ''line'');
+
+            if(isAreas[i] == 1) '{'
+              value.append(''path'').attr(''class'', ''area'')
+                    .attr(''d'', function(d) '{'return lineAreas[i](d.values); '}')
+                    .style(''fill'', function(d) '{'return color(d.name); '}');
+            '}' else '{'
+              value.append(''path'').attr(''class'', ''line'')
+                    .attr(''d'', function(d) '{'return lineAreas[i](d.values); '}')
+                    .style(''stroke'', function(d) '{'return color(d.name); '}');
+            '}'
+
+            // legend
+            var legend = svgs[i].append(''g'')
+              .attr(''class'', ''legend'')
+              .attr(''x'', width + 5)
+              .attr(''y'', 25)
+              .attr(''height'', 120)
+              .attr(''width'', 140);
+            legend.selectAll(''g'').data(legends[i])
+              .enter()
+              .append(''g'')
+              .each(function(d, i) '{'
+                var g = d3.select(this);
+                g.append(''rect'')
+                  .attr(''x'', width + 5)
+                  .attr(''y'', i*20)
+                  .attr(''width'', 10)
+                  .attr(''height'', 10)
+                  .style(''fill'', color(d));
+                g.append(''text'')
+                  .attr(''x'', width + 25)
+                  .attr(''y'', i * 20 + 8)
+                  .attr(''height'',30)
+                  .attr(''width'',250)
+                  .style(''fill'', color(d))
+                  .text(d);
+              '}');
+            '}'
+
+            if(running == 1)
+              setTimeout(requestData, {3});
+          '}',
+          cache: false
+        '}');
+      '}'
+
+      // stop
+      function stop() '{'
+        running = 0;
+      '}'
+      requestData();
+    </script>
+  </body>
+</html>

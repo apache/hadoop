@@ -332,6 +332,7 @@ public class TestCopyCommitter {
     } finally {
       TestDistCpUtils.delete(fs, workPath);
       TestDistCpUtils.delete(fs, finalPath);
+      conf.setBoolean(DistCpConstants.CONF_LABEL_ATOMIC_COPY, false);
     }
   }
 
@@ -373,6 +374,7 @@ public class TestCopyCommitter {
     } finally {
       TestDistCpUtils.delete(fs, workPath);
       TestDistCpUtils.delete(fs, finalPath);
+      conf.setBoolean(DistCpConstants.CONF_LABEL_ATOMIC_COPY, false);
     }
   }
 

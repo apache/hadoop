@@ -23,12 +23,17 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.security.PrivilegedAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -45,7 +50,9 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiffList;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -777,7 +784,40 @@ public class TestSnapshotDeletion {
     assertEquals("user1", statusOfS1.getOwner());
     assertEquals("group1", statusOfS1.getGroup());
   }
-  
+
+  @Test
+  public void testDeleteSnapshotWithPermissionsDisabled() throws Exception {
+    cluster.shutdown();
+    Configuration newConf = new Configuration(conf);
+    newConf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+    cluster = new MiniDFSCluster.Builder(newConf).numDataNodes(0).build();
+    cluster.waitActive();
+    hdfs = cluster.getFileSystem();
+
+    final Path path = new Path("/dir");
+    hdfs.mkdirs(path);
+    hdfs.allowSnapshot(path);
+    hdfs.mkdirs(new Path(path, "/test"));
+    hdfs.createSnapshot(path, "s1");
+    UserGroupInformation anotherUser = UserGroupInformation
+        .createRemoteUser("anotheruser");
+    anotherUser.doAs(new PrivilegedAction<Object>() {
+      @Override
+      public Object run() {
+        DistributedFileSystem anotherUserFS = null;
+        try {
+          anotherUserFS = cluster.getFileSystem();
+          anotherUserFS.deleteSnapshot(path, "s1");
+        } catch (IOException e) {
+          fail("Failed to delete snapshot : " + e.getLocalizedMessage());
+        } finally {
+          IOUtils.closeStream(anotherUserFS);
+        }
+        return null;
+      }
+    });
+  }
+
   /** 
    * A test covering the case where the snapshot diff to be deleted is renamed 
    * to its previous snapshot. 
@@ -883,5 +923,30 @@ public class TestSnapshotDeletion {
     // combination
     subFile1Status = hdfs.getFileStatus(subFile1SCopy);
     assertEquals(REPLICATION_1, subFile1Status.getReplication());
+  }
+  
+  @Test
+  public void testDeleteSnapshotCommandWithIllegalArguments() throws Exception {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream psOut = new PrintStream(out);
+    System.setOut(psOut);
+    System.setErr(psOut);
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    
+    String[] argv1 = {"-deleteSnapshot", "/tmp"};
+    int val = shell.run(argv1);
+    assertTrue(val == -1);
+    assertTrue(out.toString().contains(
+        argv1[0] + ": Incorrect number of arguments."));
+    out.reset();
+    
+    String[] argv2 = {"-deleteSnapshot", "/tmp", "s1", "s2"};
+    val = shell.run(argv2);
+    assertTrue(val == -1);
+    assertTrue(out.toString().contains(
+        argv2[0] + ": Incorrect number of arguments."));
+    psOut.close();
+    out.close();
   }
 }

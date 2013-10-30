@@ -33,11 +33,13 @@ import org.apache.hadoop.nfs.nfs3.request.SetAttr3;
 import org.apache.hadoop.nfs.nfs3.request.WRITE3Request;
 import org.apache.hadoop.oncrpc.RegistrationClient;
 import org.apache.hadoop.oncrpc.RpcCall;
-import org.apache.hadoop.oncrpc.RpcFrameDecoder;
 import org.apache.hadoop.oncrpc.RpcReply;
+import org.apache.hadoop.oncrpc.RpcUtil;
 import org.apache.hadoop.oncrpc.SimpleTcpClient;
 import org.apache.hadoop.oncrpc.SimpleTcpClientHandler;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.CredentialsNone;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -58,15 +60,9 @@ public class TestOutOfOrderWrite {
 
   static XDR create() {
     XDR request = new XDR();
-    RpcCall.write(request, 0x8000004c, Nfs3Constant.PROGRAM,
-        Nfs3Constant.VERSION, Nfs3Constant.NFSPROC3.CREATE.getValue());
-
-    // credentials
-    request.writeInt(0); // auth null
-    request.writeInt(0); // length zero
-    // verifier
-    request.writeInt(0); // auth null
-    request.writeInt(0); // length zero
+    RpcCall.getInstance(0x8000004c, Nfs3Constant.PROGRAM, Nfs3Constant.VERSION,
+        Nfs3Constant.NFSPROC3.CREATE.getValue(), new CredentialsNone(),
+        new VerifierNone()).write(request);
 
     SetAttr3 objAttr = new SetAttr3();
     CREATE3Request createReq = new CREATE3Request(new FileHandle("/"),
@@ -78,15 +74,10 @@ public class TestOutOfOrderWrite {
   static XDR write(FileHandle handle, int xid, long offset, int count,
       byte[] data) {
     XDR request = new XDR();
-    RpcCall.write(request, xid, Nfs3Constant.PROGRAM, Nfs3Constant.VERSION,
-        Nfs3Constant.NFSPROC3.WRITE.getValue());
+    RpcCall.getInstance(xid, Nfs3Constant.PROGRAM, Nfs3Constant.VERSION,
+        Nfs3Constant.NFSPROC3.CREATE.getValue(), new CredentialsNone(),
+        new VerifierNone()).write(request);
 
-    // credentials
-    request.writeInt(0); // auth null
-    request.writeInt(0); // length zero
-    // verifier
-    request.writeInt(0); // auth null
-    request.writeInt(0); // length zero
     WRITE3Request write1 = new WRITE3Request(handle, offset, count,
         WriteStableHow.UNSTABLE, ByteBuffer.wrap(data));
     write1.serialize(request);
@@ -145,8 +136,9 @@ public class TestOutOfOrderWrite {
     protected ChannelPipelineFactory setPipelineFactory() {
       this.pipelineFactory = new ChannelPipelineFactory() {
         public ChannelPipeline getPipeline() {
-          return Channels.pipeline(new RpcFrameDecoder(), new WriteHandler(
-              request));
+          return Channels.pipeline(
+              RpcUtil.constructRpcFrameDecoder(),
+              new WriteHandler(request));
         }
       };
       return this.pipelineFactory;
@@ -174,11 +166,11 @@ public class TestOutOfOrderWrite {
     XDR writeReq;
 
     writeReq = write(handle, 0x8000005c, 2000, 1000, data3);
-    Nfs3Utils.writeChannel(channel, writeReq);
+    Nfs3Utils.writeChannel(channel, writeReq, 1);
     writeReq = write(handle, 0x8000005d, 1000, 1000, data2);
-    Nfs3Utils.writeChannel(channel, writeReq);
+    Nfs3Utils.writeChannel(channel, writeReq, 2);
     writeReq = write(handle, 0x8000005e, 0, 1000, data1);
-    Nfs3Utils.writeChannel(channel, writeReq);
+    Nfs3Utils.writeChannel(channel, writeReq, 3);
 
     // TODO: convert to Junit test, and validate result automatically
   }

@@ -18,14 +18,6 @@
 
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell;
@@ -33,6 +25,14 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.util.HashSet;
+import java.util.Set;
+
+import static org.junit.Assert.*;
 
 /**
  * This test class checks basic operations with {@link HarFileSystem} including
@@ -69,7 +69,7 @@ public class TestHarFileSystemBasics {
   /*
    * creates and returns fully initialized HarFileSystem
    */
-  private HarFileSystem createHarFileSysten(final Configuration conf)
+  private HarFileSystem createHarFileSystem(final Configuration conf)
       throws Exception {
     localFileSystem = FileSystem.getLocal(conf);
     localFileSystem.initialize(new URI("file:///"), conf);
@@ -130,7 +130,7 @@ public class TestHarFileSystemBasics {
     }
     // create Har to test:
     conf = new Configuration();
-    harFileSystem = createHarFileSysten(conf);
+    harFileSystem = createHarFileSystem(conf);
   }
 
   @After
@@ -219,6 +219,43 @@ public class TestHarFileSystemBasics {
     final HarFileSystem hfs = new HarFileSystem();
     final URI uri = new URI("har://" + harPath.toString());
     hfs.initialize(uri, new Configuration());
+  }
+
+  @Test
+  public void testPositiveListFilesNotEndInColon() throws Exception {
+    // re-initialize the har file system with host name
+    // make sure the qualified path name does not append ":" at the end of host name
+    final URI uri = new URI("har://file-localhost" + harPath.toString());
+    harFileSystem.initialize(uri, conf);
+    Path p1 = new Path("har://file-localhost" + harPath.toString());
+    Path p2 = harFileSystem.makeQualified(p1);
+    assertTrue(p2.toUri().toString().startsWith("har://file-localhost/"));
+  }
+
+ @Test
+  public void testListLocatedStatus() throws Exception {
+    String testHarPath = this.getClass().getResource("/test.har").getPath();
+    URI uri = new URI("har://" + testHarPath);
+    HarFileSystem hfs = new HarFileSystem(localFileSystem);
+    hfs.initialize(uri, new Configuration());
+
+    // test.har has the following contents:
+    //   dir1/1.txt
+    //   dir1/2.txt
+    Set<String> expectedFileNames = new HashSet<String>();
+    expectedFileNames.add("1.txt");
+    expectedFileNames.add("2.txt");
+
+    // List contents of dir, and ensure we find all expected files
+    Path path = new Path("dir1");
+    RemoteIterator<LocatedFileStatus> fileList = hfs.listLocatedStatus(path);
+    while (fileList.hasNext()) {
+      String fileName = fileList.next().getPath().getName();
+      assertTrue(fileName + " not in expected files list", expectedFileNames.contains(fileName));
+      expectedFileNames.remove(fileName);
+    }
+    assertEquals("Didn't find all of the expected file names: " + expectedFileNames,
+                 0, expectedFileNames.size());
   }
 
   // ========== Negative:

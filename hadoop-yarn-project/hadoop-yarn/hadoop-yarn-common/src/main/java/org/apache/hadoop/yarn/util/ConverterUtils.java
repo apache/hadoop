@@ -69,6 +69,9 @@ public class ConverterUtils {
     String authority = "";
     if (url.getHost() != null) {
       authority = url.getHost();
+      if (url.getUserInfo() != null) {
+        authority = url.getUserInfo() + "@" + authority;
+      }
       if (url.getPort() > 0) {
         authority += ":" + url.getPort();
       }
@@ -101,6 +104,9 @@ public class ConverterUtils {
     URL url = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(URL.class);
     if (uri.getHost() != null) {
       url.setHost(uri.getHost());
+    }
+    if (uri.getUserInfo() != null) {
+      url.setUserInfo(uri.getUserInfo());
     }
     url.setPort(uri.getPort());
     url.setScheme(uri.getScheme());

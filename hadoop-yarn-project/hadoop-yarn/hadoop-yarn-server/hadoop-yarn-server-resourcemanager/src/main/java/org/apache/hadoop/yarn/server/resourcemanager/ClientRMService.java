@@ -43,10 +43,10 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -78,7 +79,6 @@ import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -88,10 +88,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -121,15 +121,18 @@ public class ClientRMService extends AbstractService implements
   InetSocketAddress clientBindAddress;
 
   private final ApplicationACLsManager applicationsACLsManager;
+  private final QueueACLsManager queueACLsManager;
 
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
       RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager,
+      QueueACLsManager queueACLsManager,
       RMDelegationTokenSecretManager rmDTSecretManager) {
     super(ClientRMService.class.getName());
     this.scheduler = scheduler;
     this.rmContext = rmContext;
     this.rmAppManager = rmAppManager;
     this.applicationsACLsManager = applicationACLsManager;
+    this.queueACLsManager = queueACLsManager;
     this.rmDTSecretManager = rmDTSecretManager;
   }
 
@@ -160,9 +163,6 @@ public class ClientRMService extends AbstractService implements
     this.server.start();
     clientBindAddress = conf.updateConnectAddr(YarnConfiguration.RM_ADDRESS,
                                                server.getListenerAddress());
-    // enable RM to short-circuit token operations directly to itself
-    RMDelegationTokenIdentifier.Renewer.setSecretManager(
-        rmDTSecretManager, clientBindAddress);
     super.serviceStart();
   }
 
@@ -190,18 +190,21 @@ public class ClientRMService extends AbstractService implements
    * @param callerUGI
    * @param owner
    * @param operationPerformed
-   * @param applicationId
+   * @param application
    * @return
    */
   private boolean checkAccess(UserGroupInformation callerUGI, String owner,
-      ApplicationAccessType operationPerformed, ApplicationId applicationId) {
+      ApplicationAccessType operationPerformed,
+      RMApp application) {
     return applicationsACLsManager.checkAccess(callerUGI, operationPerformed,
-        owner, applicationId);
+        owner, application.getApplicationId())
+        || queueACLsManager.checkAccess(callerUGI, QueueACL.ADMINISTER_QUEUE,
+            application.getQueue());
   }
 
   ApplicationId getNewApplicationId() {
     ApplicationId applicationId = org.apache.hadoop.yarn.server.utils.BuilderUtils
-        .newApplicationId(recordFactory, ResourceManager.clusterTimeStamp,
+        .newApplicationId(recordFactory, ResourceManager.getClusterTimeStamp(),
             applicationCounter.incrementAndGet());
     LOG.info("Allocated new applicationId: " + applicationId.getId());
     return applicationId;
@@ -246,7 +249,7 @@ public class ClientRMService extends AbstractService implements
     }
 
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
-        ApplicationAccessType.VIEW_APP, applicationId);
+        ApplicationAccessType.VIEW_APP, application);
     ApplicationReport report =
         application.createAndGetApplicationReport(callerUGI.getUserName(),
             allowAccess);
@@ -362,7 +365,7 @@ public class ClientRMService extends AbstractService implements
     }
 
     if (!checkAccess(callerUGI, application.getUser(),
-        ApplicationAccessType.MODIFY_APP, applicationId)) {
+        ApplicationAccessType.MODIFY_APP, application)) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.KILL_APP_REQUEST,
           "User doesn't have permissions to "
@@ -419,13 +422,13 @@ public class ClientRMService extends AbstractService implements
       }
 
       if (applicationStates != null && !applicationStates.isEmpty()) {
-        if (!applicationStates.contains(RMServerUtils
-            .createApplicationState(application.getState()))) {
+        if (!applicationStates.contains(application
+            .createApplicationState())) {
           continue;
         }
       }
       boolean allowAccess = checkAccess(callerUGI, application.getUser(),
-          ApplicationAccessType.VIEW_APP, application.getApplicationId());
+          ApplicationAccessType.VIEW_APP, application);
       reports.add(application.createAndGetApplicationReport(
           callerUGI.getUserName(), allowAccess));
     }

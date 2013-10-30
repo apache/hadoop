@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.portmap;
 
-import org.apache.hadoop.oncrpc.RpcAuthInfo.AuthFlavor;
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.RpcUtil;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.CredentialsNone;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.portmap.PortmapInterface.Procedure;
 
 /**
@@ -33,14 +34,12 @@ public class PortmapRequest {
 
   public static XDR create(PortmapMapping mapping) {
     XDR request = new XDR();
-    RpcCall.write(request,
+    RpcCall call = RpcCall.getInstance(
         RpcUtil.getNewXid(String.valueOf(RpcProgramPortmap.PROGRAM)),
         RpcProgramPortmap.PROGRAM, RpcProgramPortmap.VERSION,
-        Procedure.PMAPPROC_SET.getValue());
-    request.writeInt(AuthFlavor.AUTH_NONE.getValue());
-    request.writeInt(0);
-    request.writeInt(0);
-    request.writeInt(0);
+        Procedure.PMAPPROC_SET.getValue(), new CredentialsNone(),
+        new VerifierNone());
+    call.write(request);
     return mapping.serialize(request);
   }
 }

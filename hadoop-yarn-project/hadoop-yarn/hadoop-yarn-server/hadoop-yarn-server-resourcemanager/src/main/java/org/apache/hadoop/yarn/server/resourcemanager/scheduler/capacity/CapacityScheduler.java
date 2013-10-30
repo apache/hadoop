@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -79,6 +80,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import com.google.common.annotations.VisibleForTesting;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -179,7 +182,8 @@ public class CapacityScheduler
   private Resource minimumAllocation;
   private Resource maximumAllocation;
 
-  private Map<ApplicationAttemptId, FiCaSchedulerApp> applications = 
+  @VisibleForTesting
+  protected Map<ApplicationAttemptId, FiCaSchedulerApp> applications = 
       new ConcurrentHashMap<ApplicationAttemptId, FiCaSchedulerApp>();
 
   private boolean initialized = false;
@@ -568,8 +572,7 @@ public class CapacityScheduler
         application.showRequests();
   
         // Update application requests
-        application.updateResourceRequests(ask, 
-            blacklistAdditions, blacklistRemovals);
+        application.updateResourceRequests(ask);
   
         LOG.debug("allocate: post-update");
         application.showRequests();
@@ -580,6 +583,8 @@ public class CapacityScheduler
           " applicationAttemptId=" + applicationAttemptId + 
           " #ask=" + ask.size());
       }
+
+      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
 
       return application.getAllocation(getResourceCalculator(),
                    clusterResource, getMinimumResourceCapability());
@@ -904,10 +909,24 @@ public class CapacityScheduler
       LOG.debug("KILL_CONTAINER: container" + cont.toString());
     }
     completedContainer(cont,
-        SchedulerUtils.createAbnormalContainerStatus(
+        SchedulerUtils.createPreemptedContainerStatus(
             cont.getContainerId(),"Container being forcibly preempted:"
         + cont.getContainerId()),
         RMContainerEventType.KILL);
+  }
+
+  @Override
+  public synchronized boolean checkAccess(UserGroupInformation callerUGI,
+      QueueACL acl, String queueName) {
+    CSQueue queue = getQueue(queueName);
+    if (queue == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("ACL not found for queue access-type " + acl
+            + " for queue " + queueName);
+      }
+      return false;
+    }
+    return queue.hasAccess(acl, callerUGI);
   }
 
 }

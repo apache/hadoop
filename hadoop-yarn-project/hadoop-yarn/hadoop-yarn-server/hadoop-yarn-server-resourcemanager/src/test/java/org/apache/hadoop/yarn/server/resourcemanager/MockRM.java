@@ -232,6 +232,14 @@ public class MockRM extends ResourceManager {
     return nm;
   }
 
+  public MockNM registerNode(String nodeIdStr, int memory, int vCores)
+      throws Exception {
+    MockNM nm =
+        new MockNM(nodeIdStr, memory, vCores, getResourceTrackerService());
+    nm.registerNode();
+    return nm;
+  }
+
   public void sendNodeStarted(MockNM nm) throws Exception {
     RMNodeImpl node = (RMNodeImpl) getRMContext().getRMNodes().get(
         nm.getNodeId());
@@ -289,9 +297,20 @@ public class MockRM extends ResourceManager {
   }
 
   @Override
+  protected RMHAProtocolService createRMHAProtocolService() {
+    return new RMHAProtocolService(this) {
+      @Override
+      protected void startHAAdminServer() {
+        // do nothing
+      }
+    };
+  }
+
+  @Override
   protected ClientRMService createClientRMService() {
     return new ClientRMService(getRMContext(), getResourceScheduler(),
-        rmAppManager, applicationACLsManager, rmDTSecretManager) {
+        rmAppManager, applicationACLsManager, queueACLsManager,
+        rmDTSecretManager) {
       @Override
       protected void serviceStart() {
         // override to not start rpc handler

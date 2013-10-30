@@ -826,7 +826,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         cId, ContainerState.COMPLETE);
 
     this.containerManager.handle(new CMgrCompletedAppsEvent(Arrays
-        .asList(appId)));
+        .asList(appId), CMgrCompletedAppsEvent.Reason.ON_SHUTDOWN));
     this.containerManager.stop();
   }
 

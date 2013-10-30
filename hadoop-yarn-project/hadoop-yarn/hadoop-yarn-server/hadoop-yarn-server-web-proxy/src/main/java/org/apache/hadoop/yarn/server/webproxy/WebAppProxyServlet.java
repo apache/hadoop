@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 public class WebAppProxyServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
@@ -94,7 +95,7 @@ public class WebAppProxyServlet extends HttpServlet {
         conf.getInstances(YarnConfiguration.YARN_TRACKING_URL_GENERATOR,
             TrackingUriPlugin.class);
     this.rmAppPageUrlBase = StringHelper.pjoin(
-        YarnConfiguration.getRMWebAppURL(conf), "cluster", "app");
+        WebAppUtils.getResolvedRMWebAppURLWithScheme(conf), "cluster", "app");
   }
 
   /**
@@ -163,7 +164,6 @@ public class WebAppProxyServlet extends HttpServlet {
     }
     config.setLocalAddress(localAddress);
     HttpMethod method = new GetMethod(uri.getEscapedURI());
-
     @SuppressWarnings("unchecked")
     Enumeration<String> names = req.getHeaderNames();
     while(names.hasMoreElements()) {
@@ -293,14 +293,17 @@ public class WebAppProxyServlet extends HttpServlet {
       }
       String original = applicationReport.getOriginalTrackingUrl();
       URI trackingUri = null;
-      if (original != null) {
-        trackingUri = ProxyUriUtils.getUriFromAMUrl(original);
-      }
       // fallback to ResourceManager's app page if no tracking URI provided
       if(original == null || original.equals("N/A")) {
         resp.sendRedirect(resp.encodeRedirectURL(
             StringHelper.pjoin(rmAppPageUrlBase, id.toString())));
         return;
+      } else {
+        if (ProxyUriUtils.getSchemeFromUrl(original).isEmpty()) {
+          trackingUri = ProxyUriUtils.getUriFromAMUrl("http", original);
+        } else {
+          trackingUri = new URI(original);
+        }
       }
 
       String runningUser = applicationReport.getUser();
@@ -311,8 +314,7 @@ public class WebAppProxyServlet extends HttpServlet {
             req.getQueryString(), true), runningUser, id);
         return;
       }
-      
-      URI toFetch = new URI(req.getScheme(), 
+      URI toFetch = new URI(trackingUri.getScheme(), 
           trackingUri.getAuthority(),
           StringHelper.ujoin(trackingUri.getPath(), rest), req.getQueryString(),
           null);

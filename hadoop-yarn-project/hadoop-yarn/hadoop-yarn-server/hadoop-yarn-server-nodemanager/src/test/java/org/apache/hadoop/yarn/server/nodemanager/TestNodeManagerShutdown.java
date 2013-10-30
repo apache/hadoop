@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -163,7 +164,8 @@ public class TestNodeManagerShutdown {
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
-    NodeId nodeId = BuilderUtils.newNodeId("localhost", 12345);
+    NodeId nodeId = BuilderUtils.newNodeId(InetAddress.getByName("localhost")
+        .getCanonicalHostName(), 12345);
  
     URL localResourceUri =
         ConverterUtils.getYarnUrlFromPath(localFS
@@ -240,6 +242,7 @@ public class TestNodeManagerShutdown {
     conf.set(YarnConfiguration.NM_LOG_DIRS, logsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, nmLocalDir.getAbsolutePath());
+    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     return conf;
   }
   

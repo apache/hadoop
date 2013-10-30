@@ -189,20 +189,6 @@ public abstract class ContainerExecutor implements Configurable {
     }
   }
   
-  /** Return a command to execute the given command in OS shell.
-   *  On Windows, the passed in groupId can be used to launch
-   *  and associate the given groupId in a process group. On
-   *  non-Windows, groupId is ignored. */
-  protected static String[] getRunCommand(String command,
-                                          String groupId) {
-    if (Shell.WINDOWS) {
-      return new String[] { Shell.WINUTILS, "task", "create", groupId,
-        "cmd /c " + command };
-    } else {
-      return new String[] { "bash", "-c", command };
-    }
-  }
-
   /** 
    * Return a command to execute the given command in OS shell.
    * On Windows, the passed in groupId can be used to launch
@@ -226,7 +212,7 @@ public abstract class ContainerExecutor implements Configurable {
       List<String> retCommand = new ArrayList<String>();
       retCommand.addAll(Arrays.asList("nice", "-n",
           Integer.toString(containerSchedPriorityAdjustment)));
-      retCommand.addAll(Arrays.asList("bash", "-c", command));
+      retCommand.addAll(Arrays.asList("bash", command));
       return retCommand.toArray(new String[retCommand.size()]);
     }
   }   

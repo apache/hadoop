@@ -42,4 +42,7 @@ public interface RegisterNodeManagerResponse {
 
   void setDiagnosticsMessage(String diagnosticsMessage);
 
+  void setRMVersion(String version);
+
+  String getRMVersion();
 }

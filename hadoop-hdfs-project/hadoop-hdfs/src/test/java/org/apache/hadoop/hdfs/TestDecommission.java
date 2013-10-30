@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.HostFileManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -76,7 +77,7 @@ public class TestDecommission {
     // Set up the hosts/exclude files.
     localFileSys = FileSystem.getLocal(conf);
     Path workingDir = localFileSys.getWorkingDirectory();
-    Path dir = new Path(workingDir, System.getProperty("test.build.data", "target/test/data") + "/work-dir/decommission");
+    Path dir = new Path(workingDir, PathUtils.getTestDirName(getClass()) + "/work-dir/decommission");
     hostsFile = new Path(dir, "hosts");
     excludeFile = new Path(dir, "exclude");
     
@@ -370,13 +371,20 @@ public class TestDecommission {
       for (int i = 0; i < numNamenodes; i++) {
         ArrayList<DatanodeInfo> decommissionedNodes = namenodeDecomList.get(i);
         FileSystem fileSys = cluster.getFileSystem(i);
+        FSNamesystem ns = cluster.getNamesystem(i);
+
         writeFile(fileSys, file1, replicas);
-        
+
+        int deadDecomissioned = ns.getNumDecomDeadDataNodes();
+        int liveDecomissioned = ns.getNumDecomLiveDataNodes();
+
         // Decommission one node. Verify that node is decommissioned.
         DatanodeInfo decomNode = decommissionNode(i, decommissionedNodes,
             AdminStates.DECOMMISSIONED);
         decommissionedNodes.add(decomNode);
-        
+        assertEquals(deadDecomissioned, ns.getNumDecomDeadDataNodes());
+        assertEquals(liveDecomissioned + 1, ns.getNumDecomLiveDataNodes());
+
         // Ensure decommissioned datanode is not automatically shutdown
         DFSClient client = getDfsClient(cluster.getNameNode(i), conf);
         assertEquals("All datanodes must be alive", numDatanodes, 

@@ -240,7 +240,7 @@ extends AMRMClientAsync<T> {
               }
               break;
             } catch (InterruptedException ex) {
-              LOG.info("Interrupted while waiting to put on response queue", ex);
+              LOG.debug("Interrupted while waiting to put on response queue", ex);
             }
           }
         }
@@ -248,7 +248,7 @@ extends AMRMClientAsync<T> {
         try {
           Thread.sleep(heartbeatIntervalMs.get());
         } catch (InterruptedException ex) {
-          LOG.info("Heartbeater interrupted", ex);
+          LOG.debug("Heartbeater interrupted", ex);
         }
       }
     }

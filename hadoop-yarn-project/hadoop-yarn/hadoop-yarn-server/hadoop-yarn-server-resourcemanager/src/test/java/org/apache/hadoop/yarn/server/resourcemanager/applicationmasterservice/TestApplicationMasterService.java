@@ -88,7 +88,7 @@ public class TestApplicationMasterService {
     ContainerTokenIdentifier tokenId =
         BuilderUtils.newContainerTokenIdentifier(allocatedContainer
           .getContainerToken());
-    Assert.assertEquals(MockRM.clusterTimeStamp, tokenId.getRMIdentifer());
+    Assert.assertEquals(MockRM.getClusterTimeStamp(), tokenId.getRMIdentifer());
     rm.stop();
   }
   

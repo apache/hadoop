@@ -25,7 +25,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.hdfs.DFSInputStream.ReadStatistics;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,11 +35,26 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestBlockReaderLocal {
+  private static TemporarySocketDirectory sockDir;
+  
+  @BeforeClass
+  public static void init() {
+    sockDir = new TemporarySocketDirectory();
+    DomainSocket.disableBindPathValidation();
+  }
+  
+  @AfterClass
+  public static void shutdown() throws IOException {
+    sockDir.close();
+  }
+  
   public static void assertArrayRegionsEqual(byte []buf1, int off1, byte []buf2,
       int off2, int len) {
     for (int i = 0; i < len; i++) {
@@ -100,10 +114,11 @@ public class TestBlockReaderLocal {
     FSDataInputStream fsIn = null;
     byte original[] = new byte[BlockReaderLocalTest.TEST_LENGTH];
     
+    FileSystem fs = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive();
-      FileSystem fs = cluster.getFileSystem();
+      fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, TEST_PATH,
           BlockReaderLocalTest.TEST_LENGTH, (short)1, RANDOM_SEED);
       try {
@@ -138,6 +153,7 @@ public class TestBlockReaderLocal {
       test.doTest(blockReaderLocal, original);
     } finally {
       if (fsIn != null) fsIn.close();
+      if (fs != null) fs.close();
       if (cluster != null) cluster.shutdown();
       if (dataIn != null) dataIn.close();
       if (checkIn != null) checkIn.close();
@@ -382,10 +398,11 @@ public class TestBlockReaderLocal {
     final long RANDOM_SEED = 4567L;
     FSDataInputStream fsIn = null;
     byte original[] = new byte[BlockReaderLocalTest.TEST_LENGTH];
+    FileSystem fs = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive();
-      FileSystem fs = cluster.getFileSystem();
+      fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, TEST_PATH,
           BlockReaderLocalTest.TEST_LENGTH, (short)1, RANDOM_SEED);
       try {
@@ -417,6 +434,7 @@ public class TestBlockReaderLocal {
     } finally {
       DFSInputStream.tcpReadsDisabledForTesting = false;
       if (fsIn != null) fsIn.close();
+      if (fs != null) fs.close();
       if (cluster != null) cluster.shutdown();
       if (sockDir != null) sockDir.close();
     }

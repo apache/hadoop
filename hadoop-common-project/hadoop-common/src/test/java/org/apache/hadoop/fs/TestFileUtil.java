@@ -24,6 +24,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URI;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,15 +34,20 @@ import java.util.List;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.tools.tar.TarEntry;
+import org.apache.tools.tar.TarOutputStream;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class TestFileUtil {
   private static final Log LOG = LogFactory.getLog(TestFileUtil.class);
@@ -48,14 +55,14 @@ public class TestFileUtil {
   private static final String TEST_ROOT_DIR = System.getProperty(
       "test.build.data", "/tmp") + "/fu";
   private static final File TEST_DIR = new File(TEST_ROOT_DIR);
-  private static String FILE = "x";
-  private static String LINK = "y";
-  private static String DIR = "dir";
-  private File del = new File(TEST_DIR, "del");
-  private File tmp = new File(TEST_DIR, "tmp");
-  private File dir1 = new File(del, DIR + "1");
-  private File dir2 = new File(del, DIR + "2");
-  private File partitioned = new File(TEST_DIR, "partitioned");
+  private static final String FILE = "x";
+  private static final String LINK = "y";
+  private static final String DIR = "dir";
+  private final File del = new File(TEST_DIR, "del");
+  private final File tmp = new File(TEST_DIR, "tmp");
+  private final File dir1 = new File(del, DIR + "1");
+  private final File dir2 = new File(del, DIR + "2");
+  private final File partitioned = new File(TEST_DIR, "partitioned");
 
   /**
    * Creates multiple directories for testing.
@@ -116,17 +123,17 @@ public class TestFileUtil {
    * @param contents String non-null file contents.
    * @throws IOException if an I/O error occurs.
    */
-  private void createFile(File directory, String name, String contents)
+  private File createFile(File directory, String name, String contents)
       throws IOException {
     File newFile = new File(directory, name);
     PrintWriter pw = new PrintWriter(newFile);
-
     try {
       pw.println(contents);
     }
     finally {
       pw.close();
     }
+    return newFile;
   }
 
   @Test (timeout = 30000)
@@ -553,14 +560,283 @@ public class TestFileUtil {
    * @throws IOException
    */
   @Test (timeout = 30000)
-  public void testGetDU() throws IOException {
+  public void testGetDU() throws Exception {
     setupDirs();
 
     long du = FileUtil.getDU(TEST_DIR);
     // Only two files (in partitioned).  Each has 3 characters + system-specific
     // line separator.
-    long expected = 2 * (3 + System.getProperty("line.separator").length());
+    final long expected = 2 * (3 + System.getProperty("line.separator").length());
     Assert.assertEquals(expected, du);
+    
+    // target file does not exist:
+    final File doesNotExist = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
+    long duDoesNotExist = FileUtil.getDU(doesNotExist);
+    assertEquals(0, duDoesNotExist);
+    
+    // target file is not a directory:
+    File notADirectory = new File(partitioned, "part-r-00000");
+    long duNotADirectoryActual = FileUtil.getDU(notADirectory);
+    long duNotADirectoryExpected = 3 + System.getProperty("line.separator").length();
+    assertEquals(duNotADirectoryExpected, duNotADirectoryActual);
+    
+    try {
+      // one of target files is not accessible, but the containing directory
+      // is accessible:
+      try {
+        FileUtil.chmod(notADirectory.getAbsolutePath(), "0000");
+      } catch (InterruptedException ie) {
+        // should never happen since that method never throws InterruptedException.      
+        assertNull(ie);  
+      }
+      assertFalse(notADirectory.canRead());
+      final long du3 = FileUtil.getDU(partitioned);
+      assertEquals(expected, du3);
+
+      // some target files and containing directory are not accessible:
+      try {
+        FileUtil.chmod(partitioned.getAbsolutePath(), "0000");
+      } catch (InterruptedException ie) {
+        // should never happen since that method never throws InterruptedException.      
+        assertNull(ie);  
+      }
+      assertFalse(partitioned.canRead());
+      final long du4 = FileUtil.getDU(partitioned);
+      assertEquals(0, du4);
+    } finally {
+      // Restore the permissions so that we can delete the folder 
+      // in @After method:
+      FileUtil.chmod(partitioned.getAbsolutePath(), "0777", true/*recursive*/);
+    }
+  }
+  
+  @Test (timeout = 30000)
+  public void testUnTar() throws IOException {
+    setupDirs();
+    
+    // make a simple tar:
+    final File simpleTar = new File(del, FILE);
+    OutputStream os = new FileOutputStream(simpleTar); 
+    TarOutputStream tos = new TarOutputStream(os);
+    try {
+      TarEntry te = new TarEntry("foo");
+      byte[] data = "some-content".getBytes("UTF-8");
+      te.setSize(data.length);
+      tos.putNextEntry(te);
+      tos.write(data);
+      tos.closeEntry();
+      tos.flush();
+      tos.finish();
+    } finally {
+      tos.close();
+    }
+
+    // successfully untar it into an existing dir:
+    FileUtil.unTar(simpleTar, tmp);
+    // check result:
+    assertTrue(new File(tmp, "foo").exists());
+    assertEquals(12, new File(tmp, "foo").length());
+    
+    final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
+    regularFile.createNewFile();
+    assertTrue(regularFile.exists());
+    try {
+      FileUtil.unTar(simpleTar, regularFile);
+      assertTrue("An IOException expected.", false);
+    } catch (IOException ioe) {
+      // okay
+    }
+  }
+  
+  @Test (timeout = 30000)
+  public void testReplaceFile() throws IOException {
+    setupDirs();
+    final File srcFile = new File(tmp, "src");
+    
+    // src exists, and target does not exist:
+    srcFile.createNewFile();
+    assertTrue(srcFile.exists());
+    final File targetFile = new File(tmp, "target");
+    assertTrue(!targetFile.exists());
+    FileUtil.replaceFile(srcFile, targetFile);
+    assertTrue(!srcFile.exists());
+    assertTrue(targetFile.exists());
+
+    // src exists and target is a regular file: 
+    srcFile.createNewFile();
+    assertTrue(srcFile.exists());
+    FileUtil.replaceFile(srcFile, targetFile);
+    assertTrue(!srcFile.exists());
+    assertTrue(targetFile.exists());
+    
+    // src exists, and target is a non-empty directory: 
+    srcFile.createNewFile();
+    assertTrue(srcFile.exists());
+    targetFile.delete();
+    targetFile.mkdirs();
+    File obstacle = new File(targetFile, "obstacle");
+    obstacle.createNewFile();
+    assertTrue(obstacle.exists());
+    assertTrue(targetFile.exists() && targetFile.isDirectory());
+    try {
+      FileUtil.replaceFile(srcFile, targetFile);
+      assertTrue(false);
+    } catch (IOException ioe) {
+      // okay
+    }
+    // check up the post-condition: nothing is deleted:
+    assertTrue(srcFile.exists());
+    assertTrue(targetFile.exists() && targetFile.isDirectory());
+    assertTrue(obstacle.exists());
+  }
+  
+  @Test (timeout = 30000)
+  public void testCreateLocalTempFile() throws IOException {
+    setupDirs();
+    final File baseFile = new File(tmp, "base");
+    File tmp1 = FileUtil.createLocalTempFile(baseFile, "foo", false);
+    File tmp2 = FileUtil.createLocalTempFile(baseFile, "foo", true);
+    assertFalse(tmp1.getAbsolutePath().equals(baseFile.getAbsolutePath()));
+    assertFalse(tmp2.getAbsolutePath().equals(baseFile.getAbsolutePath()));
+    assertTrue(tmp1.exists() && tmp2.exists());
+    assertTrue(tmp1.canWrite() && tmp2.canWrite());
+    assertTrue(tmp1.canRead() && tmp2.canRead());
+    tmp1.delete();
+    tmp2.delete();
+    assertTrue(!tmp1.exists() && !tmp2.exists());
+  }
+  
+  @Test (timeout = 30000)
+  public void testUnZip() throws IOException {
+    // make sa simple zip
+    setupDirs();
+    
+    // make a simple tar:
+    final File simpleZip = new File(del, FILE);
+    OutputStream os = new FileOutputStream(simpleZip); 
+    ZipOutputStream tos = new ZipOutputStream(os);
+    try {
+      ZipEntry ze = new ZipEntry("foo");
+      byte[] data = "some-content".getBytes("UTF-8");
+      ze.setSize(data.length);
+      tos.putNextEntry(ze);
+      tos.write(data);
+      tos.closeEntry();
+      tos.flush();
+      tos.finish();
+    } finally {
+      tos.close();
+    }
+    
+    // successfully untar it into an existing dir:
+    FileUtil.unZip(simpleZip, tmp);
+    // check result:
+    assertTrue(new File(tmp, "foo").exists());
+    assertEquals(12, new File(tmp, "foo").length());
+    
+    final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
+    regularFile.createNewFile();
+    assertTrue(regularFile.exists());
+    try {
+      FileUtil.unZip(simpleZip, regularFile);
+      assertTrue("An IOException expected.", false);
+    } catch (IOException ioe) {
+      // okay
+    }
+  }  
+  
+  @Test (timeout = 30000)
+  /*
+   * Test method copy(FileSystem srcFS, Path src, File dst, boolean deleteSource, Configuration conf)
+   */
+  public void testCopy5() throws IOException {
+    setupDirs();
+    
+    URI uri = tmp.toURI();
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.newInstance(uri, conf);
+    final String content = "some-content";
+    File srcFile = createFile(tmp, "src", content);
+    Path srcPath = new Path(srcFile.toURI());
+    
+    // copy regular file:
+    final File dest = new File(del, "dest");
+    boolean result = FileUtil.copy(fs, srcPath, dest, false, conf);
+    assertTrue(result);
+    assertTrue(dest.exists());
+    assertEquals(content.getBytes().length 
+        + System.getProperty("line.separator").getBytes().length, dest.length());
+    assertTrue(srcFile.exists()); // should not be deleted
+    
+    // copy regular file, delete src:
+    dest.delete();
+    assertTrue(!dest.exists());
+    result = FileUtil.copy(fs, srcPath, dest, true, conf);
+    assertTrue(result);
+    assertTrue(dest.exists());
+    assertEquals(content.getBytes().length 
+        + System.getProperty("line.separator").getBytes().length, dest.length());
+    assertTrue(!srcFile.exists()); // should be deleted
+    
+    // copy a dir:
+    dest.delete();
+    assertTrue(!dest.exists());
+    srcPath = new Path(partitioned.toURI());
+    result = FileUtil.copy(fs, srcPath, dest, true, conf);
+    assertTrue(result);
+    assertTrue(dest.exists() && dest.isDirectory());
+    File[] files = dest.listFiles();
+    assertTrue(files != null);
+    assertEquals(2, files.length);
+    for (File f: files) {
+      assertEquals(3 
+          + System.getProperty("line.separator").getBytes().length, f.length());
+    }
+    assertTrue(!partitioned.exists()); // should be deleted
+  }  
+
+  @Test (timeout = 30000)
+  public void testStat2Paths1() {
+    assertNull(FileUtil.stat2Paths(null));
+    
+    FileStatus[] fileStatuses = new FileStatus[0]; 
+    Path[] paths = FileUtil.stat2Paths(fileStatuses);
+    assertEquals(0, paths.length);
+    
+    Path path1 = new Path("file://foo");
+    Path path2 = new Path("file://moo");
+    fileStatuses = new FileStatus[] { 
+        new FileStatus(3, false, 0, 0, 0, path1), 
+        new FileStatus(3, false, 0, 0, 0, path2) 
+        };
+    paths = FileUtil.stat2Paths(fileStatuses);
+    assertEquals(2, paths.length);
+    assertEquals(paths[0], path1);
+    assertEquals(paths[1], path2);
+  }
+  
+  @Test (timeout = 30000)
+  public void testStat2Paths2()  {
+    Path defaultPath = new Path("file://default");
+    Path[] paths = FileUtil.stat2Paths(null, defaultPath);
+    assertEquals(1, paths.length);
+    assertEquals(defaultPath, paths[0]);
+
+    paths = FileUtil.stat2Paths(null, null);
+    assertTrue(paths != null);
+    assertEquals(1, paths.length);
+    assertEquals(null, paths[0]);
+    
+    Path path1 = new Path("file://foo");
+    Path path2 = new Path("file://moo");
+    FileStatus[] fileStatuses = new FileStatus[] { 
+        new FileStatus(3, false, 0, 0, 0, path1), 
+        new FileStatus(3, false, 0, 0, 0, path2) 
+        };
+    paths = FileUtil.stat2Paths(fileStatuses, defaultPath);
+    assertEquals(2, paths.length);
+    assertEquals(paths[0], path1);
+    assertEquals(paths[1], path2);
   }
 
   @Test (timeout = 30000)
@@ -757,7 +1033,7 @@ public class TestFileUtil {
     String wildcardPath = tmp.getCanonicalPath() + File.separator + "*";
     String nonExistentSubdir = tmp.getCanonicalPath() + Path.SEPARATOR + "subdir"
       + Path.SEPARATOR;
-    List<String> classPaths = Arrays.asList("cp1.jar", "cp2.jar", wildcardPath,
+    List<String> classPaths = Arrays.asList("", "cp1.jar", "cp2.jar", wildcardPath,
       "cp3.jar", nonExistentSubdir);
     String inputClassPath = StringUtils.join(File.pathSeparator, classPaths);
     String classPathJar = FileUtil.createJarWithClassPath(inputClassPath,
@@ -776,20 +1052,32 @@ public class TestFileUtil {
       Assert.assertNotNull(classPathAttr);
       List<String> expectedClassPaths = new ArrayList<String>();
       for (String classPath: classPaths) {
+        if (classPath.length() == 0) {
+          continue;
+        }
         if (wildcardPath.equals(classPath)) {
           // add wildcard matches
           for (File wildcardMatch: wildcardMatches) {
             expectedClassPaths.add(wildcardMatch.toURI().toURL()
               .toExternalForm());
           }
-        } else if (nonExistentSubdir.equals(classPath)) {
-          // expect to maintain trailing path separator if present in input, even
-          // if directory doesn't exist yet
-          expectedClassPaths.add(new File(classPath).toURI().toURL()
-            .toExternalForm() + Path.SEPARATOR);
         } else {
-          expectedClassPaths.add(new File(classPath).toURI().toURL()
-            .toExternalForm());
+          File fileCp = null;
+          if(!new Path(classPath).isAbsolute()) {
+            fileCp = new File(tmp, classPath);
+          }
+          else {
+            fileCp = new File(classPath);
+          }
+          if (nonExistentSubdir.equals(classPath)) {
+            // expect to maintain trailing path separator if present in input, even
+            // if directory doesn't exist yet
+            expectedClassPaths.add(fileCp.toURI().toURL()
+              .toExternalForm() + Path.SEPARATOR);
+          } else {
+            expectedClassPaths.add(fileCp.toURI().toURL()
+              .toExternalForm());
+          }
         }
       }
       List<String> actualClassPaths = Arrays.asList(classPathAttr.split(" "));

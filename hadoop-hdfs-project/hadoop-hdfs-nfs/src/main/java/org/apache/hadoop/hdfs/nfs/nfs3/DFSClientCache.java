@@ -19,67 +19,180 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
 
 /**
  * A cache saves DFSClient objects for different users
  */
-public class DFSClientCache {
-  static final Log LOG = LogFactory.getLog(DFSClientCache.class);
-  private final LruCache<String, DFSClient> lruTable;
+class DFSClientCache {
+  private static final Log LOG = LogFactory.getLog(DFSClientCache.class);
+  /**
+   * Cache that maps User id to the corresponding DFSClient.
+   */
+  @VisibleForTesting
+  final LoadingCache<String, DFSClient> clientCache;
+
+  final static int DEFAULT_DFS_CLIENT_CACHE_SIZE = 256;
+
+  /**
+   * Cache that maps <DFSClient, inode path> to the corresponding
+   * FSDataInputStream.
+   */
+  final LoadingCache<DFSInputStreamCaheKey, FSDataInputStream> inputstreamCache;
+
+  /**
+   * Time to live for a DFSClient (in seconds)
+   */
+  final static int DEFAULT_DFS_INPUTSTREAM_CACHE_SIZE = 1024;
+  final static int DEFAULT_DFS_INPUTSTREAM_CACHE_TTL = 10 * 60;
+
   private final Configuration config;
 
-  public DFSClientCache(Configuration config) {
-    // By default, keep 256 DFSClient instance for 256 active users
-    this(config, 256);
+  private static class DFSInputStreamCaheKey {
+    final String userId;
+    final String inodePath;
+
+    private DFSInputStreamCaheKey(String userId, String inodePath) {
+      super();
+      this.userId = userId;
+      this.inodePath = inodePath;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (obj instanceof DFSInputStreamCaheKey) {
+        DFSInputStreamCaheKey k = (DFSInputStreamCaheKey) obj;
+        return userId.equals(k.userId) && inodePath.equals(k.inodePath);
+      }
+      return false;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(userId, inodePath);
+    }
   }
 
-  public DFSClientCache(Configuration config, int size) {
-    lruTable = new LruCache<String, DFSClient>(size);
+  DFSClientCache(Configuration config) {
+    this(config, DEFAULT_DFS_CLIENT_CACHE_SIZE);
+  }
+
+  DFSClientCache(Configuration config, int clientCache) {
     this.config = config;
+    this.clientCache = CacheBuilder.newBuilder()
+        .maximumSize(clientCache)
+        .removalListener(clientRemovealListener())
+        .build(clientLoader());
+
+    this.inputstreamCache = CacheBuilder.newBuilder()
+        .maximumSize(DEFAULT_DFS_INPUTSTREAM_CACHE_SIZE)
+        .expireAfterAccess(DEFAULT_DFS_INPUTSTREAM_CACHE_TTL, TimeUnit.SECONDS)
+        .removalListener(inputStreamRemovalListener())
+        .build(inputStreamLoader());
   }
 
-  public void put(String uname, DFSClient client) {
-    lruTable.put(uname, client);
+  private CacheLoader<String, DFSClient> clientLoader() {
+    return new CacheLoader<String, DFSClient>() {
+      @Override
+      public DFSClient load(String userName) throws Exception {
+        UserGroupInformation ugi = UserGroupInformation
+            .createRemoteUser(userName);
+
+        // Guava requires CacheLoader never returns null.
+        return ugi.doAs(new PrivilegedExceptionAction<DFSClient>() {
+          public DFSClient run() throws IOException {
+            return new DFSClient(NameNode.getAddress(config), config);
+          }
+        });
+      }
+    };
   }
 
-  synchronized public DFSClient get(String uname) {
-    DFSClient client = lruTable.get(uname);
-    if (client != null) {
-      return client;
-    }
-
-    // Not in table, create one.
-    try {
-      UserGroupInformation ugi = UserGroupInformation.createRemoteUser(uname);
-      client = ugi.doAs(new PrivilegedExceptionAction<DFSClient>() {
-        public DFSClient run() throws IOException {
-          return new DFSClient(NameNode.getAddress(config), config);
+  private RemovalListener<String, DFSClient> clientRemovealListener() {
+    return new RemovalListener<String, DFSClient>() {
+      @Override
+      public void onRemoval(RemovalNotification<String, DFSClient> notification) {
+        DFSClient client = notification.getValue();
+        try {
+          client.close();
+        } catch (IOException e) {
+          LOG.warn(String.format(
+              "IOException when closing the DFSClient(%s), cause: %s", client,
+              e));
         }
-      });
-    } catch (IOException e) {
-      LOG.error("Create DFSClient failed for user:" + uname);
-      e.printStackTrace();
+      }
+    };
+  }
 
-    } catch (InterruptedException e) {
-      e.printStackTrace();
+  private RemovalListener<DFSInputStreamCaheKey, FSDataInputStream> inputStreamRemovalListener() {
+    return new RemovalListener<DFSClientCache.DFSInputStreamCaheKey, FSDataInputStream>() {
+
+      @Override
+      public void onRemoval(
+          RemovalNotification<DFSInputStreamCaheKey, FSDataInputStream> notification) {
+        try {
+          notification.getValue().close();
+        } catch (IOException e) {
+        }
+      }
+    };
+  }
+
+  private CacheLoader<DFSInputStreamCaheKey, FSDataInputStream> inputStreamLoader() {
+    return new CacheLoader<DFSInputStreamCaheKey, FSDataInputStream>() {
+
+      @Override
+      public FSDataInputStream load(DFSInputStreamCaheKey key) throws Exception {
+        DFSClient client = getDfsClient(key.userId);
+        DFSInputStream dis = client.open(key.inodePath);
+        return new FSDataInputStream(dis);
+      }
+    };
+  }
+
+  DFSClient getDfsClient(String userName) {
+    DFSClient client = null;
+    try {
+      client = clientCache.get(userName);
+    } catch (ExecutionException e) {
+      LOG.error("Failed to create DFSClient for user:" + userName + " Cause:"
+          + e);
     }
-    // Add new entry
-    lruTable.put(uname, client);
     return client;
   }
 
-  public int usedSize() {
-    return lruTable.usedSize();
+  FSDataInputStream getDfsInputStream(String userName, String inodePath) {
+    DFSInputStreamCaheKey k = new DFSInputStreamCaheKey(userName, inodePath);
+    FSDataInputStream s = null;
+    try {
+      s = inputstreamCache.get(k);
+    } catch (ExecutionException e) {
+      LOG.warn("Failed to create DFSInputStream for user:" + userName
+          + " Cause:" + e);
+    }
+    return s;
   }
 
-  public boolean containsKey(String key) {
-    return lruTable.containsKey(key);
+  public void invalidateDfsInputStream(String userName, String inodePath) {
+    DFSInputStreamCaheKey k = new DFSInputStreamCaheKey(userName, inodePath);
+    inputstreamCache.invalidate(k);
   }
 }

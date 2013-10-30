@@ -568,6 +568,9 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
         enterNeutralMode();
         reJoinElection(0);
         break;
+      case SaslAuthenticated:
+        LOG.info("Successfully authenticated to ZooKeeper using SASL.");
+        break;
       default:
         fatalError("Unexpected Zookeeper watch event state: "
             + event.getState());
