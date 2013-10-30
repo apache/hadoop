@@ -115,9 +115,6 @@ Trunk (Unreleased)
     HDFS-3358. Specify explicitly that the NN UI status total is talking
     of persistent objects on heap. (harsh)
 
-    HDFS-4633 TestDFSClientExcludedNodes fails sporadically if excluded nodes
-    cache expires too quickly  (Chris Nauroth via Sanjay)
-
     HDFS-4904. Remove JournalService. (Arpit Agarwal via cnauroth)
 
     HDFS-5041. Add the time of last heartbeat to dead server Web UI (Shinichi
@@ -573,6 +570,9 @@ Release 2.2.1 - UNRELEASED
     address resolves to host name localhost. (cnauroth)
 
     HDFS-5065. TestSymlinkHdfsDisable fails on Windows. (ivanmi)
+
+    HDFS-4633 TestDFSClientExcludedNodes fails sporadically if excluded nodes
+    cache expires too quickly  (Chris Nauroth via Sanjay)
 
 Release 2.2.0 - 2013-10-13
 
