@@ -110,8 +110,6 @@ Release 2.3.0 - UNRELEASED
     HDFS-5035.  getFileLinkStatus and rename do not correctly check permissions
     of symlinks.  (Andrew Wang via Colin Patrick McCabe)
 
-    HDFS-5065. TestSymlinkHdfsDisable fails on Windows. (ivanmi)
-
     HDFS-4816. transitionToActive blocks if the SBN is doing checkpoint image
     transfer. (Andrew Wang)
 
@@ -213,6 +211,8 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5432. TestDatanodeJsp fails on Windows due to assumption that loopback
     address resolves to host name localhost. (cnauroth)
+
+    HDFS-5065. TestSymlinkHdfsDisable fails on Windows. (ivanmi)
 
 Release 2.2.0 - 2013-10-13
 
