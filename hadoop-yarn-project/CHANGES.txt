@@ -43,6 +43,9 @@ Release 0.23.10 - UNRELEASED
     YARN-155. TestAppManager intermittently fails with jdk7 (Thomas Graves via
     jlowe)
 
+    YARN-1031. JQuery UI components reference external css in branch-23
+    (Jonathan Eagles and Jason Lowe via jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
