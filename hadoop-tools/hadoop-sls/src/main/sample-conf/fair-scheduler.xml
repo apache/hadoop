@@ -20,28 +20,31 @@
   The documentation also includes a sample config file.
 -->
 
-<configuration>
-  <property>
-    <description>Absolute path to allocation file. An allocation file is an XML
-    manifest describing queues and their properties, in addition to certain
-    policy defaults. This file must be in XML format as described in
-    http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/FairScheduler.html.
-    </description>
-    <name>yarn.scheduler.fair.allocation.file</name>
-    <value>fair-scheduler-allocation.xml</value>
-  </property>
-
-  <property>
-    <description>Whether to use preemption. Note that preemption is experimental
-    in the current version. Defaults to false.</description>
-    <name>yarn.scheduler.fair.preemption</name>
-    <value>true</value>
-  </property>
-
-  <property>
-    <description>Whether to allow multiple container assignments in one
-    heartbeat. Defaults to false.</description>
-    <name>yarn.scheduler.fair.assignmultiple</name>
-    <value>true</value>
-  </property>
-</configuration>
+<allocations>
+  <user name="jenkins">
+    <!-- Limit on running jobs for the user across all pools. If more
+      jobs than this are submitted, only the first <maxRunningJobs> will
+      be scheduled at any given time. Defaults to infinity or the
+      userMaxJobsDefault value set below. -->
+    <maxRunningJobs>1000</maxRunningJobs>
+  </user>
+  <userMaxAppsDefault>1000</userMaxAppsDefault>
+  <queue name="sls_queue_1">
+    <minResources>1024 mb, 1 vcores</minResources>
+    <schedulingMode>fair</schedulingMode>
+    <weight>0.25</weight>
+    <minSharePreemptionTimeout>2</minSharePreemptionTimeout>
+  </queue>
+  <queue name="sls_queue_2">
+    <minResources>1024 mb, 1 vcores</minResources>
+    <schedulingMode>fair</schedulingMode>
+    <weight>0.25</weight>
+    <minSharePreemptionTimeout>2</minSharePreemptionTimeout>
+  </queue>
+  <queue name="sls_queue_3">
+    <minResources>1024 mb, 1 vcores</minResources>
+    <weight>0.5</weight>
+    <schedulingMode>fair</schedulingMode>
+    <minSharePreemptionTimeout>2</minSharePreemptionTimeout>
+  </queue>
+</allocations>

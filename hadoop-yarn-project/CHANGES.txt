@@ -52,6 +52,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9598. Improve code coverage of RMAdminCLI (Aleksey Gorshkov and
     Andrey Klochkov via jeagles)
 
+    YARN-1306. Clean up hadoop-sls sample-conf according to YARN-1228 (Wei Yan
+    via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
