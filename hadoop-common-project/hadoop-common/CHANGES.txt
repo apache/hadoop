@@ -452,6 +452,8 @@ Release 2.2.1 - UNRELEASED
     HADOOP-10072. TestNfsExports#testMultiMatchers fails due to non-deterministic
     timing around cache expiry check. (cnauroth)
 
+    HADOOP-9898. Set SO_KEEPALIVE on all our sockets. (todd via wang)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
