@@ -156,6 +156,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1358. TestYarnCLI fails on Windows due to line endings. (Chuan Liu via
     cnauroth)
 
+    YARN-1343. NodeManagers additions/restarts are not reported as node updates 
+    in AllocateResponse responses to AMs. (tucu)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
