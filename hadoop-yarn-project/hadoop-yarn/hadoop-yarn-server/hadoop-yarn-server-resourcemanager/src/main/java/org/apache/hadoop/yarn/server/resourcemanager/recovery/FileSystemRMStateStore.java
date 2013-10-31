@@ -133,8 +133,11 @@ public class FileSystemRMStateStore extends RMStateStore {
                   ApplicationStateDataProto.parseFrom(childData));
             ApplicationState appState =
                 new ApplicationState(appStateData.getSubmitTime(),
+                  appStateData.getStartTime(),
                   appStateData.getApplicationSubmissionContext(),
-                  appStateData.getUser());
+                  appStateData.getUser(),
+                  appStateData.getState(),
+                  appStateData.getDiagnostics(), appStateData.getFinishTime());
             // assert child node name is same as actual applicationId
             assert appId.equals(appState.context.getApplicationId());
             rmState.appState.put(appId, appState);
@@ -156,7 +159,12 @@ public class FileSystemRMStateStore extends RMStateStore {
             }
             ApplicationAttemptState attemptState =
                 new ApplicationAttemptState(attemptId,
-                  attemptStateData.getMasterContainer(), credentials);
+                  attemptStateData.getMasterContainer(), credentials,
+                  attemptStateData.getStartTime(),
+                  attemptStateData.getState(),
+                  attemptStateData.getFinalTrackingUrl(),
+                  attemptStateData.getDiagnostics(),
+                  attemptStateData.getFinalApplicationStatus());
 
             // assert child node name is same as application attempt id
             assert attemptId.equals(attemptState.getAttemptId());
@@ -232,7 +240,7 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void storeApplicationState(String appId,
+  public synchronized void storeApplicationStateInternal(String appId,
       ApplicationStateDataPBImpl appStateDataPB) throws Exception {
     Path appDirPath = getAppDir(rmAppRoot, appId);
     fs.mkdirs(appDirPath);
@@ -251,15 +259,34 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void storeApplicationAttemptState(String attemptId,
-      ApplicationAttemptStateDataPBImpl attemptStateDataPB) throws Exception {
+  public synchronized void updateApplicationStateInternal(String appId,
+      ApplicationStateDataPBImpl appStateDataPB) throws Exception {
+    Path appDirPath = getAppDir(rmAppRoot, appId);
+    Path nodeCreatePath = getNodePath(appDirPath, appId);
+
+    LOG.info("Updating info for app: " + appId + " at: " + nodeCreatePath);
+    byte[] appStateData = appStateDataPB.getProto().toByteArray();
+    try {
+      // currently throw all exceptions. May need to respond differently for HA
+      // based on whether we have lost the right to write to FS
+      updateFile(nodeCreatePath, appStateData);
+    } catch (Exception e) {
+      LOG.info("Error updating info for app: " + appId, e);
+      throw e;
+    }
+  }
+
+  @Override
+  public synchronized void storeApplicationAttemptStateInternal(
+      String attemptId, ApplicationAttemptStateDataPBImpl attemptStateDataPB)
+      throws Exception {
     ApplicationAttemptId appAttemptId =
         ConverterUtils.toApplicationAttemptId(attemptId);
     Path appDirPath =
         getAppDir(rmAppRoot, appAttemptId.getApplicationId().toString());
     Path nodeCreatePath = getNodePath(appDirPath, attemptId);
-    LOG.info("Storing info for attempt: " + attemptId
-             + " at: " + nodeCreatePath);
+    LOG.info("Storing info for attempt: " + attemptId + " at: "
+        + nodeCreatePath);
     byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
     try {
       // currently throw all exceptions. May need to respond differently for HA
@@ -267,6 +294,28 @@ public class FileSystemRMStateStore extends RMStateStore {
       writeFile(nodeCreatePath, attemptStateData);
     } catch (Exception e) {
       LOG.info("Error storing info for attempt: " + attemptId, e);
+      throw e;
+    }
+  }
+
+  @Override
+  public synchronized void updateApplicationAttemptStateInternal(
+      String attemptId, ApplicationAttemptStateDataPBImpl attemptStateDataPB)
+      throws Exception {
+    ApplicationAttemptId appAttemptId =
+        ConverterUtils.toApplicationAttemptId(attemptId);
+    Path appDirPath =
+        getAppDir(rmAppRoot, appAttemptId.getApplicationId().toString());
+    Path nodeCreatePath = getNodePath(appDirPath, attemptId);
+    LOG.info("Updating info for attempt: " + attemptId + " at: "
+        + nodeCreatePath);
+    byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
+    try {
+      // currently throw all exceptions. May need to respond differently for HA
+      // based on whether we have lost the right to write to FS
+      updateFile(nodeCreatePath, attemptStateData);
+    } catch (Exception e) {
+      LOG.info("Error updating info for attempt: " + attemptId, e);
       throw e;
     }
   }
@@ -373,10 +422,19 @@ public class FileSystemRMStateStore extends RMStateStore {
     Path tempPath =
         new Path(outputPath.getParent(), outputPath.getName() + ".tmp");
     FSDataOutputStream fsOut = null;
-    fsOut = fs.create(tempPath, false);
+    // This file will be overwritten when app/attempt finishes for saving the
+    // final status.
+    fsOut = fs.create(tempPath, true);
     fsOut.write(data);
     fsOut.close();
     fs.rename(tempPath, outputPath);
+  }
+
+  private void updateFile(Path outputPath, byte[] data) throws Exception {
+    if (fs.exists(outputPath)) {
+      deleteFile(outputPath);
+    }
+    writeFile(outputPath, data);
   }
 
   private boolean renameFile(Path src, Path dst) throws Exception {

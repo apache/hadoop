@@ -73,6 +73,10 @@ Release 2.3.0 - UNRELEASED
     YARN-1306. Clean up hadoop-sls sample-conf according to YARN-1228 (Wei Yan
     via Sandy Ryza)
 
+    YARN-891. Modified ResourceManager state-store to remember completed
+    applications so that clients can get information about them post RM-restart.
+    (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

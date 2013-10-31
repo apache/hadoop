@@ -202,6 +202,12 @@ public class MockAM {
     final FinishApplicationMasterRequest req =
         FinishApplicationMasterRequest.newInstance(
           FinalApplicationStatus.SUCCEEDED, "", "");
+    unregisterAppAttempt(req);
+  }
+
+  public void unregisterAppAttempt(final FinishApplicationMasterRequest req)
+      throws Exception {
+    waitForState(RMAppAttemptState.RUNNING);
     UserGroupInformation ugi =
         UserGroupInformation.createRemoteUser(attemptId.toString());
     Token<AMRMTokenIdentifier> token =
@@ -215,5 +221,9 @@ public class MockAM {
         return null;
       }
     });
+  }
+
+  public ApplicationAttemptId getApplicationAttemptId() {
+    return this.attemptId;
   }
 }

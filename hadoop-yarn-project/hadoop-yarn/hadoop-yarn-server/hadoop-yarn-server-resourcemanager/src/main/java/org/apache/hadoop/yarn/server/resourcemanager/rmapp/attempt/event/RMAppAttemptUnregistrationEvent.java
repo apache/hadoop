@@ -25,20 +25,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 
 public class RMAppAttemptUnregistrationEvent extends RMAppAttemptEvent {
 
-  private final String trackingUrl;
+  private final String finalTrackingUrl;
   private final FinalApplicationStatus finalStatus;
   private final String diagnostics;
 
   public RMAppAttemptUnregistrationEvent(ApplicationAttemptId appAttemptId,
       String trackingUrl, FinalApplicationStatus finalStatus, String diagnostics) {
     super(appAttemptId, RMAppAttemptEventType.UNREGISTERED);
-    this.trackingUrl = trackingUrl;
+    this.finalTrackingUrl = trackingUrl;
     this.finalStatus = finalStatus;
     this.diagnostics = diagnostics;
   }
 
-  public String getTrackingUrl() {
-    return this.trackingUrl;
+  public String getFinalTrackingUrl() {
+    return this.finalTrackingUrl;
   }
 
   public FinalApplicationStatus getFinalApplicationStatus() {

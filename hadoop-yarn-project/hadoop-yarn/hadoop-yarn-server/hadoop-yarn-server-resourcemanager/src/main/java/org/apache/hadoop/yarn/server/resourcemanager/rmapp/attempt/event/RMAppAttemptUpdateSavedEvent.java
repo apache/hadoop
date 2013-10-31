@@ -16,21 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 
-public class RMAppStoredEvent extends RMAppEvent {
+public class RMAppAttemptUpdateSavedEvent extends RMAppAttemptEvent {
 
-  private final Exception storedException;
+  final Exception updatedException;
 
-  public RMAppStoredEvent(ApplicationId appId, Exception storedException) {
-    super(appId, RMAppEventType.APP_SAVED);
-    this.storedException = storedException;
+  public RMAppAttemptUpdateSavedEvent(ApplicationAttemptId appAttemptId,
+      Exception updatedException) {
+    super(appAttemptId, RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED);
+    this.updatedException = updatedException;
   }
 
-  public Exception getStoredException() {
-    return storedException;
+  public Exception getUpdatedException() {
+    return updatedException;
   }
-
 }
