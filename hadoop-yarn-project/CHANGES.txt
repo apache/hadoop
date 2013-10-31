@@ -59,6 +59,9 @@ Release 2.3.0 - UNRELEASED
     applications so that clients can get information about them post RM-restart.
     (Jian He via vinodkv)
 
+    YARN-1290. Let continuous scheduling achieve more balanced task assignment
+    (Wei Yan via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
