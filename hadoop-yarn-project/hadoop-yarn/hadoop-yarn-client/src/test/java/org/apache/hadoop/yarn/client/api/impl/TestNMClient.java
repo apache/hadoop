@@ -78,6 +78,7 @@ public class TestNMClient {
   List<NodeReport> nodeReports = null;
   ApplicationAttemptId attemptId = null;
   int nodeCount = 3;
+  NMTokenCache nmTokenCache = null;
   
   @Before
   public void setup() throws YarnException, IOException {
@@ -155,10 +156,16 @@ public class TestNMClient {
       .createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
     UserGroupInformation.getCurrentUser().addToken(appAttempt.getAMRMToken());
 
+    //creating an instance NMTokenCase
+    nmTokenCache = new NMTokenCache();
+    
     // start am rm client
     rmClient =
         (AMRMClientImpl<ContainerRequest>) AMRMClient
           .<ContainerRequest> createAMRMClient();
+
+    //setting an instance NMTokenCase
+    rmClient.setNMTokenCache(nmTokenCache);
     rmClient.init(conf);
     rmClient.start();
     assertNotNull(rmClient);
@@ -166,6 +173,9 @@ public class TestNMClient {
 
     // start am nm client
     nmClient = (NMClientImpl) NMClient.createNMClient();
+    
+    //propagating the AMRMClient NMTokenCache instance
+    nmClient.setNMTokenCache(rmClient.getNMTokenCache());
     nmClient.init(conf);
     nmClient.start();
     assertNotNull(nmClient);
@@ -258,7 +268,7 @@ public class TestNMClient {
       }
       if (!allocResponse.getNMTokens().isEmpty()) {
         for (NMToken token : allocResponse.getNMTokens()) {
-          NMTokenCache.setNMToken(token.getNodeId().toString(),
+          rmClient.getNMTokenCache().setToken(token.getNodeId().toString(),
               token.getToken());
         }
       }

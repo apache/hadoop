@@ -35,6 +35,7 @@ public enum RMAppEventType {
   NODE_UPDATE,
 
   // Source: RMStateStore
-  APP_SAVED,
+  APP_NEW_SAVED,
+  APP_UPDATE_SAVED,
   APP_REMOVED
 }

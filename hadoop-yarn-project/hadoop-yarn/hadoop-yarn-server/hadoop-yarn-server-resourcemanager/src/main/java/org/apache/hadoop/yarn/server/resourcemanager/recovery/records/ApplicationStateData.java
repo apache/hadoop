@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 
 /**
  * Contains all the state data that needs to be stored persistently 
@@ -42,7 +45,19 @@ public interface ApplicationStateData {
   @Public
   @Unstable
   public void setSubmitTime(long submitTime);
-  
+
+  /**
+   * Get the <em>start time</em> of the application.
+   * @return <em>start time</em> of the application
+   */
+  @Public
+  @Stable
+  public abstract long getStartTime();
+
+  @Private
+  @Unstable
+  public abstract void setStartTime(long startTime);
+
   /**
    * The application submitter
    */
@@ -66,6 +81,29 @@ public interface ApplicationStateData {
   @Public
   @Unstable
   public void setApplicationSubmissionContext(
-                                          ApplicationSubmissionContext context);
+      ApplicationSubmissionContext context);
 
+  /**
+   * Get the final state of the application.
+   * @return the final state of the application.
+   */
+  public RMAppState getState();
+
+  public void setState(RMAppState state);
+
+  /**
+   * Get the diagnostics information for the application master.
+   * @return the diagnostics information for the application master.
+   */
+  public String getDiagnostics();
+
+  public void setDiagnostics(String diagnostics);
+
+  /**
+   * The finish time of the application.
+   * @return the finish time of the application.,
+   */
+  public long getFinishTime();
+
+  public void setFinishTime(long finishTime);
 }

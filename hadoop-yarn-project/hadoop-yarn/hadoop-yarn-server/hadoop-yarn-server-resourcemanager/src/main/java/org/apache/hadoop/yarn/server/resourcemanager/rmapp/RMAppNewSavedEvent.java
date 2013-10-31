@@ -16,10 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-public enum RMAppAttemptState {
-  NEW, SUBMITTED, SCHEDULED, ALLOCATED, LAUNCHED, FAILED, RUNNING, FINISHING, 
-  FINISHED, KILLED, ALLOCATED_SAVING, LAUNCHED_UNMANAGED_SAVING, RECOVERED,
-  FINAL_SAVING
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+
+public class RMAppNewSavedEvent extends RMAppEvent {
+
+  private final Exception storedException;
+
+  public RMAppNewSavedEvent(ApplicationId appId, Exception storedException) {
+    super(appId, RMAppEventType.APP_NEW_SAVED);
+    this.storedException = storedException;
+  }
+
+  public Exception getStoredException() {
+    return storedException;
+  }
+
 }

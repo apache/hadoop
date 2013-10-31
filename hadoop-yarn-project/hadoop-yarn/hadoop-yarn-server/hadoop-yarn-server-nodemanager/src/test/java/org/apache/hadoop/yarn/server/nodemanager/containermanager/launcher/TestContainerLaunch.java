@@ -388,8 +388,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           + processStartFile);
       for (String serviceName : containerManager.getAuxServiceMetaData()
           .keySet()) {
-        fileWriter.println("@echo" + AuxiliaryServiceHelper.NM_AUX_SERVICE
-            + serviceName + " >> "
+        fileWriter.println("@echo %" + AuxiliaryServiceHelper.NM_AUX_SERVICE
+            + serviceName + "%>> "
             + processStartFile);
       }
       fileWriter.println("@echo " + cId + ">> " + processStartFile);

@@ -63,7 +63,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private static final Log LOG = LogFactory.getLog(RMAppManager.class);
 
   private int completedAppsMax = YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS;
-  private int globalMaxAppAttempts;
   private LinkedList<ApplicationId> completedApps = new LinkedList<ApplicationId>();
 
   private final RMContext rmContext;
@@ -83,8 +82,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     setCompletedAppsMax(conf.getInt(
         YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
         YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS));
-    globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
   }
 
   /**
@@ -302,10 +299,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       throw RPCUtil.getRemoteException(ie);
     }
 
-    // All done, start the RMApp
-    this.rmContext.getDispatcher().getEventHandler().handle(
-        new RMAppEvent(applicationId, isRecovered ? RMAppEventType.RECOVER:
-            RMAppEventType.START));
+    if (!isRecovered) {
+      // All done, start the RMApp
+      this.rmContext.getDispatcher().getEventHandler()
+        .handle(new RMAppEvent(applicationId, RMAppEventType.START));
+    }
   }
   
   private Credentials parseCredentials(ApplicationSubmissionContext application) 
@@ -328,53 +326,19 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // recover applications
     Map<ApplicationId, ApplicationState> appStates = state.getApplicationState();
     LOG.info("Recovering " + appStates.size() + " applications");
-    for(ApplicationState appState : appStates.values()) {
-      boolean shouldRecover = true;
-      if(appState.getApplicationSubmissionContext().getUnmanagedAM()) {
-        // do not recover unmanaged applications since current recovery 
-        // mechanism of restarting attempts does not work for them.
-        // This will need to be changed in work preserving recovery in which 
-        // RM will re-connect with the running AM's instead of restarting them
-        LOG.info("Not recovering unmanaged application " + appState.getAppId());
-        shouldRecover = false;
-      }
-      int individualMaxAppAttempts = appState.getApplicationSubmissionContext()
-          .getMaxAppAttempts();
-      int maxAppAttempts;
-      if (individualMaxAppAttempts <= 0 ||
-          individualMaxAppAttempts > globalMaxAppAttempts) {
-        maxAppAttempts = globalMaxAppAttempts;
-        LOG.warn("The specific max attempts: " + individualMaxAppAttempts
-            + " for application: " + appState.getAppId()
-            + " is invalid, because it is out of the range [1, "
-            + globalMaxAppAttempts + "]. Use the global max attempts instead.");
-      } else {
-        maxAppAttempts = individualMaxAppAttempts;
-      }
-      // In work-preserve restart, if attemptCount == maxAttempts, the job still
-      // needs to be recovered because the last attempt may still be running.
-      if(appState.getAttemptCount() >= maxAppAttempts) {
-        LOG.info("Not recovering application " + appState.getAppId() +
-            " due to recovering attempt is beyond maxAppAttempt limit");
-        shouldRecover = false;
-      }
-
-      // re-submit the application
-      // this is going to send an app start event but since the async dispatcher
-      // has not started that event will be queued until we have completed re
-      // populating the state
-      if(shouldRecover) {
-        LOG.info("Recovering application " + appState.getAppId());
-        submitApplication(appState.getApplicationSubmissionContext(), 
-                        appState.getSubmitTime(), true, appState.getUser());
-        // re-populate attempt information in application
-        RMAppImpl appImpl = (RMAppImpl) rmContext.getRMApps().get(
-                                                        appState.getAppId());
-        appImpl.recover(state);
-      }
-      else {
-        store.removeApplication(appState);
-      }
+    for (ApplicationState appState : appStates.values()) {
+      LOG.info("Recovering application " + appState.getAppId());
+      submitApplication(appState.getApplicationSubmissionContext(),
+        appState.getSubmitTime(), true, appState.getUser());
+      // re-populate attempt information in application
+      RMAppImpl appImpl =
+          (RMAppImpl) rmContext.getRMApps().get(appState.getAppId());
+      appImpl.recover(state);
+      // Recover the app synchronously, as otherwise client is possible to see
+      // the application not recovered before it is actually recovered because
+      // ClientRMService is already started at this point of time.
+      appImpl.handle(new RMAppEvent(appImpl.getApplicationId(),
+        RMAppEventType.RECOVER));
     }
   }
 

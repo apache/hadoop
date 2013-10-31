@@ -73,6 +73,10 @@ Release 2.3.0 - UNRELEASED
     YARN-1306. Clean up hadoop-sls sample-conf according to YARN-1228 (Wei Yan
     via Sandy Ryza)
 
+    YARN-891. Modified ResourceManager state-store to remember completed
+    applications so that clients can get information about them post RM-restart.
+    (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -123,6 +127,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1109. Demote NodeManager "Sending out status for container" logs to
     debug (haosdent via Sandy Ryza)
 
+    YARN-1321. Changed NMTokenCache to support both singleton and an instance
+    usage. (Alejandro Abdelnur via vinodkv) 
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -161,6 +168,15 @@ Release 2.2.1 - UNRELEASED
     
     YARN-1349. yarn.cmd does not support passthrough to any arbitrary class.
     (cnauroth)
+    
+    YARN-1357. TestContainerLaunch.testContainerEnvVariables fails on Windows.
+    (Chuan Liu via cnauroth)
+
+    YARN-1358. TestYarnCLI fails on Windows due to line endings. (Chuan Liu via
+    cnauroth)
+
+    YARN-1343. NodeManagers additions/restarts are not reported as node updates 
+    in AllocateResponse responses to AMs. (tucu)
 
 Release 2.2.0 - 2013-10-13
 
