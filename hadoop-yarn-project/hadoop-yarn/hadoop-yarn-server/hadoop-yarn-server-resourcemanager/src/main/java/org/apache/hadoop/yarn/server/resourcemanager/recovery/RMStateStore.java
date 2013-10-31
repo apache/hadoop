@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -50,10 +51,14 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppStoredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRemovedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNewSavedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
 
 @Private
 @Unstable
@@ -86,13 +91,32 @@ public abstract class RMStateStore extends AbstractService {
     final ApplicationAttemptId attemptId;
     final Container masterContainer;
     final Credentials appAttemptCredentials;
+    long startTime = 0;
+    // fields set when attempt completes
+    RMAppAttemptState state;
+    String finalTrackingUrl = "N/A";
+    String diagnostics;
+    FinalApplicationStatus amUnregisteredFinalStatus;
 
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
-        Container masterContainer,
-        Credentials appAttemptCredentials) {
+        Container masterContainer, Credentials appAttemptCredentials,
+        long startTime) {
+      this(attemptId, masterContainer, appAttemptCredentials, startTime, null,
+        null, "", null);
+    }
+
+    public ApplicationAttemptState(ApplicationAttemptId attemptId,
+        Container masterContainer, Credentials appAttemptCredentials,
+        long startTime, RMAppAttemptState state, String finalTrackingUrl,
+        String diagnostics, FinalApplicationStatus amUnregisteredFinalStatus) {
       this.attemptId = attemptId;
       this.masterContainer = masterContainer;
       this.appAttemptCredentials = appAttemptCredentials;
+      this.startTime = startTime;
+      this.state = state;
+      this.finalTrackingUrl = finalTrackingUrl;
+      this.diagnostics = diagnostics == null ? "" : diagnostics;
+      this.amUnregisteredFinalStatus = amUnregisteredFinalStatus;
     }
 
     public Container getMasterContainer() {
@@ -104,6 +128,21 @@ public abstract class RMStateStore extends AbstractService {
     public Credentials getAppAttemptCredentials() {
       return appAttemptCredentials;
     }
+    public RMAppAttemptState getState(){
+      return state;
+    }
+    public String getFinalTrackingUrl() {
+      return finalTrackingUrl;
+    }
+    public String getDiagnostics() {
+      return diagnostics;
+    }
+    public long getStartTime() {
+      return startTime;
+    }
+    public FinalApplicationStatus getFinalApplicationStatus() {
+      return amUnregisteredFinalStatus;
+    }
   }
   
   /**
@@ -112,15 +151,30 @@ public abstract class RMStateStore extends AbstractService {
   public static class ApplicationState {
     final ApplicationSubmissionContext context;
     final long submitTime;
+    final long startTime;
     final String user;
     Map<ApplicationAttemptId, ApplicationAttemptState> attempts =
                   new HashMap<ApplicationAttemptId, ApplicationAttemptState>();
-    
-    ApplicationState(long submitTime, ApplicationSubmissionContext context,
-        String user) {
+    // fields set when application completes.
+    RMAppState state;
+    String diagnostics;
+    long finishTime;
+
+    public ApplicationState(long submitTime,
+        long startTime, ApplicationSubmissionContext context, String user) {
+      this(submitTime, startTime, context, user, null, "", 0);
+    }
+
+    public ApplicationState(long submitTime,
+        long startTime,ApplicationSubmissionContext context,
+        String user, RMAppState state, String diagnostics, long finishTime) {
       this.submitTime = submitTime;
+      this.startTime = startTime;
       this.context = context;
       this.user = user;
+      this.state = state;
+      this.diagnostics = diagnostics == null ? "" : diagnostics;
+      this.finishTime = finishTime;
     }
 
     public ApplicationId getAppId() {
@@ -128,6 +182,9 @@ public abstract class RMStateStore extends AbstractService {
     }
     public long getSubmitTime() {
       return submitTime;
+    }
+    public long getStartTime() {
+      return startTime;
     }
     public int getAttemptCount() {
       return attempts.size();
@@ -140,6 +197,15 @@ public abstract class RMStateStore extends AbstractService {
     }
     public String getUser() {
       return user;
+    }
+    public RMAppState getState() {
+      return state;
+    }
+    public String getDiagnostics() {
+      return diagnostics;
+    }
+    public long getFinishTime() {
+      return finishTime;
     }
   }
 
@@ -249,23 +315,31 @@ public abstract class RMStateStore extends AbstractService {
    * RMAppStoredEvent will be sent on completion to notify the RMApp
    */
   @SuppressWarnings("unchecked")
-  public synchronized void storeApplication(RMApp app) {
+  public synchronized void storeNewApplication(RMApp app) {
     ApplicationSubmissionContext context = app
                                             .getApplicationSubmissionContext();
     assert context instanceof ApplicationSubmissionContextPBImpl;
-    ApplicationState appState = new ApplicationState(
-        app.getSubmitTime(), context, app.getUser());
+    ApplicationState appState =
+        new ApplicationState(app.getSubmitTime(), app.getStartTime(), context,
+          app.getUser());
     dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
   }
-    
+
+  @SuppressWarnings("unchecked")
+  public synchronized void updateApplicationState(ApplicationState appState) {
+    dispatcher.getEventHandler().handle(new RMStateUpdateAppEvent(appState));
+  }
+
   /**
    * Blocking API
    * Derived classes must implement this method to store the state of an 
    * application.
    */
-  protected abstract void storeApplicationState(String appId,
-                                      ApplicationStateDataPBImpl appStateData) 
-                                      throws Exception;
+  protected abstract void storeApplicationStateInternal(String appId,
+      ApplicationStateDataPBImpl appStateData) throws Exception;
+
+  protected abstract void updateApplicationStateInternal(String appId,
+      ApplicationStateDataPBImpl appStateData) throws Exception;
   
   @SuppressWarnings("unchecked")
   /**
@@ -274,26 +348,35 @@ public abstract class RMStateStore extends AbstractService {
    * This does not block the dispatcher threads
    * RMAppAttemptStoredEvent will be sent on completion to notify the RMAppAttempt
    */
-  public synchronized void storeApplicationAttempt(RMAppAttempt appAttempt) {
+  public synchronized void storeNewApplicationAttempt(RMAppAttempt appAttempt) {
     Credentials credentials = getCredentialsFromAppAttempt(appAttempt);
 
     ApplicationAttemptState attemptState =
         new ApplicationAttemptState(appAttempt.getAppAttemptId(),
-          appAttempt.getMasterContainer(), credentials);
+          appAttempt.getMasterContainer(), credentials,
+          appAttempt.getStartTime());
 
     dispatcher.getEventHandler().handle(
       new RMStateStoreAppAttemptEvent(attemptState));
   }
-  
+
+  @SuppressWarnings("unchecked")
+  public synchronized void updateApplicationAttemptState(
+      ApplicationAttemptState attemptState) {
+    dispatcher.getEventHandler().handle(
+      new RMStateUpdateAppAttemptEvent(attemptState));
+  }
+
   /**
    * Blocking API
    * Derived classes must implement this method to store the state of an 
    * application attempt
    */
-  protected abstract void storeApplicationAttemptState(String attemptId,
-                            ApplicationAttemptStateDataPBImpl attemptStateData) 
-                            throws Exception;
+  protected abstract void storeApplicationAttemptStateInternal(String attemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception;
 
+  protected abstract void updateApplicationAttemptStateInternal(String attemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception;
 
   /**
    * RMDTSecretManager call this to store the state of a delegation token
@@ -372,13 +455,14 @@ public abstract class RMStateStore extends AbstractService {
    */
   public synchronized void removeApplication(RMApp app) {
     ApplicationState appState = new ApplicationState(
-            app.getSubmitTime(), app.getApplicationSubmissionContext(),
-            app.getUser());
+            app.getSubmitTime(), app.getStartTime(),
+            app.getApplicationSubmissionContext(), app.getUser());
     for(RMAppAttempt appAttempt : app.getAppAttempts().values()) {
       Credentials credentials = getCredentialsFromAppAttempt(appAttempt);
       ApplicationAttemptState attemptState =
           new ApplicationAttemptState(appAttempt.getAppAttemptId(),
-            appAttempt.getMasterContainer(), credentials);
+            appAttempt.getMasterContainer(), credentials,
+            appAttempt.getStartTime());
       appState.attempts.put(attemptState.getAttemptId(), attemptState);
     }
     
@@ -409,7 +493,7 @@ public abstract class RMStateStore extends AbstractService {
   public static final Text AM_CLIENT_TOKEN_MASTER_KEY_NAME =
       new Text("YARN_CLIENT_TOKEN_MASTER_KEY");
   
-  private Credentials getCredentialsFromAppAttempt(RMAppAttempt appAttempt) {
+  public Credentials getCredentialsFromAppAttempt(RMAppAttempt appAttempt) {
     Credentials credentials = new Credentials();
     Token<AMRMTokenIdentifier> appToken = appAttempt.getAMRMToken();
     if(appToken != null){
@@ -427,92 +511,123 @@ public abstract class RMStateStore extends AbstractService {
   // Dispatcher related code
   
   private synchronized void handleStoreEvent(RMStateStoreEvent event) {
-    switch(event.getType()) {
-      case STORE_APP:
-        {
-          ApplicationState apptState =
-              ((RMStateStoreAppEvent) event).getAppState();
-          Exception storedException = null;
-          ApplicationStateDataPBImpl appStateData =
-              new ApplicationStateDataPBImpl();
-          appStateData.setSubmitTime(apptState.getSubmitTime());
-          appStateData.setApplicationSubmissionContext(
-              apptState.getApplicationSubmissionContext());
-          appStateData.setUser(apptState.getUser());
-          ApplicationId appId =
-              apptState.getApplicationSubmissionContext().getApplicationId();
+    if (event.getType().equals(RMStateStoreEventType.STORE_APP)
+        || event.getType().equals(RMStateStoreEventType.UPDATE_APP)) {
+      ApplicationState appState = null;
+      if (event.getType().equals(RMStateStoreEventType.STORE_APP)) {
+        appState = ((RMStateStoreAppEvent) event).getAppState();
+      } else {
+        assert event.getType().equals(RMStateStoreEventType.UPDATE_APP);
+        appState = ((RMStateUpdateAppEvent) event).getAppState();
+      }
 
-          LOG.info("Storing info for app: " + appId);
-          try {
-            storeApplicationState(appId.toString(), appStateData);
-          } catch (Exception e) {
-            LOG.error("Error storing app: " + appId, e);
-            storedException = e;
-          } finally {
-            notifyDoneStoringApplication(appId, storedException);
-          }
-        }
-        break;
-      case STORE_APP_ATTEMPT:
-        {
-          ApplicationAttemptState attemptState = 
-                    ((RMStateStoreAppAttemptEvent) event).getAppAttemptState();
-          Exception storedException = null;
+      Exception storedException = null;
+      ApplicationStateDataPBImpl appStateData =
+          (ApplicationStateDataPBImpl) ApplicationStateDataPBImpl
+            .newApplicationStateData(appState.getSubmitTime(),
+              appState.getStartTime(), appState.getUser(),
+              appState.getApplicationSubmissionContext(), appState.getState(),
+              appState.getDiagnostics(), appState.getFinishTime());
 
-          Credentials credentials = attemptState.getAppAttemptCredentials();
-          ByteBuffer appAttemptTokens = null;
-          try {
-            if(credentials != null){
-              DataOutputBuffer dob = new DataOutputBuffer();
-                credentials.writeTokenStorageToStream(dob);
-              appAttemptTokens =
-                  ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-            }
-            ApplicationAttemptStateDataPBImpl attemptStateData =
-              (ApplicationAttemptStateDataPBImpl) ApplicationAttemptStateDataPBImpl
-                  .newApplicationAttemptStateData(attemptState.getAttemptId(),
-                    attemptState.getMasterContainer(), appAttemptTokens);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Storing info for attempt: " + attemptState.getAttemptId());
-            }
-            storeApplicationAttemptState(attemptState.getAttemptId().toString(), 
-                                         attemptStateData);
-          } catch (Exception e) {
-            LOG.error("Error storing appAttempt: " 
-                      + attemptState.getAttemptId(), e);
-            storedException = e;
-          } finally {
-            notifyDoneStoringApplicationAttempt(attemptState.getAttemptId(), 
-                                                storedException);            
-          }
+      ApplicationId appId =
+          appState.getApplicationSubmissionContext().getApplicationId();
+
+      LOG.info("Storing info for app: " + appId);
+      try {
+        if (event.getType().equals(RMStateStoreEventType.STORE_APP)) {
+          storeApplicationStateInternal(appId.toString(), appStateData);
+        } else {
+          assert event.getType().equals(RMStateStoreEventType.UPDATE_APP);
+          updateApplicationStateInternal(appId.toString(), appStateData);
         }
-        break;
-      case REMOVE_APP:
-        {
-          ApplicationState appState = 
-                          ((RMStateStoreRemoveAppEvent) event).getAppState();
-          ApplicationId appId = appState.getAppId();
-          Exception removedException = null;
-          LOG.info("Removing info for app: " + appId);
-          try {
-            removeApplicationState(appState);
-          } catch (Exception e) {
-            LOG.error("Error removing app: " + appId, e);
-            removedException = e;
-          } finally {
-            notifyDoneRemovingApplcation(appId, removedException);
-          }
+      } catch (Exception e) {
+        LOG.error("Error storing app: " + appId, e);
+        storedException = e;
+      } finally {
+        if (event.getType().equals(RMStateStoreEventType.STORE_APP)) {
+          notifyDoneStoringApplication(appId, storedException);
+        } else {
+          notifyDoneUpdatingApplication(appId, storedException);
         }
-        break;
-      default:
-        LOG.error("Unknown RMStateStoreEvent type: " + event.getType());
+      }
+    } else if (event.getType().equals(RMStateStoreEventType.STORE_APP_ATTEMPT)
+        || event.getType().equals(RMStateStoreEventType.UPDATE_APP_ATTEMPT)) {
+
+      ApplicationAttemptState attemptState = null;
+      if (event.getType().equals(RMStateStoreEventType.STORE_APP_ATTEMPT)) {
+        attemptState =
+            ((RMStateStoreAppAttemptEvent) event).getAppAttemptState();
+      } else {
+        assert event.getType().equals(RMStateStoreEventType.UPDATE_APP_ATTEMPT);
+        attemptState =
+            ((RMStateUpdateAppAttemptEvent) event).getAppAttemptState();
+      }
+
+      Exception storedException = null;
+      Credentials credentials = attemptState.getAppAttemptCredentials();
+      ByteBuffer appAttemptTokens = null;
+      try {
+        if (credentials != null) {
+          DataOutputBuffer dob = new DataOutputBuffer();
+          credentials.writeTokenStorageToStream(dob);
+          appAttemptTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+        }
+        ApplicationAttemptStateDataPBImpl attemptStateData =
+            (ApplicationAttemptStateDataPBImpl) ApplicationAttemptStateDataPBImpl
+              .newApplicationAttemptStateData(attemptState.getAttemptId(),
+                attemptState.getMasterContainer(), appAttemptTokens,
+                attemptState.getStartTime(), attemptState.getState(),
+                attemptState.getFinalTrackingUrl(),
+                attemptState.getDiagnostics(),
+                attemptState.getFinalApplicationStatus());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Storing info for attempt: " + attemptState.getAttemptId());
+        }
+        if (event.getType().equals(RMStateStoreEventType.STORE_APP_ATTEMPT)) {
+          storeApplicationAttemptStateInternal(attemptState.getAttemptId()
+            .toString(), attemptStateData);
+        } else {
+          assert event.getType().equals(
+            RMStateStoreEventType.UPDATE_APP_ATTEMPT);
+          updateApplicationAttemptStateInternal(attemptState.getAttemptId()
+            .toString(), attemptStateData);
+        }
+      } catch (Exception e) {
+        LOG
+          .error("Error storing appAttempt: " + attemptState.getAttemptId(), e);
+        storedException = e;
+      } finally {
+        if (event.getType().equals(RMStateStoreEventType.STORE_APP_ATTEMPT)) {
+          notifyDoneStoringApplicationAttempt(attemptState.getAttemptId(),
+            storedException);
+        } else {
+          notifyDoneUpdatingApplicationAttempt(attemptState.getAttemptId(),
+            storedException);
+        }
+      }
+    } else if (event.getType().equals(RMStateStoreEventType.REMOVE_APP)) {
+      ApplicationState appState =
+          ((RMStateStoreRemoveAppEvent) event).getAppState();
+      ApplicationId appId = appState.getAppId();
+      Exception removedException = null;
+      LOG.info("Removing info for app: " + appId);
+      try {
+        removeApplicationState(appState);
+      } catch (Exception e) {
+        LOG.error("Error removing app: " + appId, e);
+        removedException = e;
+      } finally {
+        notifyDoneRemovingApplcation(appId, removedException);
+      }
+    } else {
+      LOG.error("Unknown RMStateStoreEvent type: " + event.getType());
     }
   }
 
   @SuppressWarnings("unchecked")
   /**
    * In (@link handleStoreEvent}, this method is called to notify the
-   * application about operation completion
+   * application that new application is stored in state store
    * @param appId id of the application that has been saved
    * @param storedException the exception that is thrown when storing the
    * application
@@ -520,19 +635,33 @@ public abstract class RMStateStore extends AbstractService {
   private void notifyDoneStoringApplication(ApplicationId appId,
                                                   Exception storedException) {
     rmDispatcher.getEventHandler().handle(
-        new RMAppStoredEvent(appId, storedException));
+        new RMAppNewSavedEvent(appId, storedException));
   }
-  
+
+  @SuppressWarnings("unchecked")
+  private void notifyDoneUpdatingApplication(ApplicationId appId,
+      Exception storedException) {
+    rmDispatcher.getEventHandler().handle(
+      new RMAppUpdateSavedEvent(appId, storedException));
+  }
+
   @SuppressWarnings("unchecked")
   /**
    * In (@link handleStoreEvent}, this method is called to notify the
-   * application attempt about operation completion
+   * application attempt that new attempt is stored in state store
    * @param appAttempt attempt that has been saved
    */
   private void notifyDoneStoringApplicationAttempt(ApplicationAttemptId attemptId,
                                                   Exception storedException) {
     rmDispatcher.getEventHandler().handle(
-        new RMAppAttemptStoredEvent(attemptId, storedException));
+        new RMAppAttemptNewSavedEvent(attemptId, storedException));
+  }
+
+  @SuppressWarnings("unchecked")
+  private void notifyDoneUpdatingApplicationAttempt(ApplicationAttemptId attemptId,
+      Exception updatedException) {
+    rmDispatcher.getEventHandler().handle(
+      new RMAppAttemptUpdateSavedEvent(attemptId, updatedException));
   }
 
   @SuppressWarnings("unchecked")

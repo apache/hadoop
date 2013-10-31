@@ -22,14 +22,19 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RMAppAttemptStateProto;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 
 public class ApplicationAttemptStateDataPBImpl
 extends ProtoBase<ApplicationAttemptStateDataProto> 
@@ -156,14 +161,125 @@ implements ApplicationAttemptStateData {
     this.appAttemptTokens = attemptTokens;
   }
 
+  @Override
+  public RMAppAttemptState getState() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasAppAttemptState()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getAppAttemptState());
+  }
+
+  @Override
+  public void setState(RMAppAttemptState state) {
+    maybeInitBuilder();
+    if (state == null) {
+      builder.clearAppAttemptState();
+      return;
+    }
+    builder.setAppAttemptState(convertToProtoFormat(state));
+  }
+
+  @Override
+  public String getFinalTrackingUrl() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasFinalTrackingUrl()) {
+      return null;
+    }
+    return p.getFinalTrackingUrl();
+  }
+
+  @Override
+  public void setFinalTrackingUrl(String url) {
+    maybeInitBuilder();
+    if (url == null) {
+      builder.clearFinalTrackingUrl();
+      return;
+    }
+    builder.setFinalTrackingUrl(url);
+  }
+
+  @Override
+  public String getDiagnostics() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasDiagnostics()) {
+      return null;
+    }
+    return p.getDiagnostics();
+  }
+
+  @Override
+  public void setDiagnostics(String diagnostics) {
+    maybeInitBuilder();
+    if (diagnostics == null) {
+      builder.clearDiagnostics();
+      return;
+    }
+    builder.setDiagnostics(diagnostics);
+  }
+
+  @Override
+  public long getStartTime() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getStartTime();
+  }
+
+  @Override
+  public void setStartTime(long startTime) {
+    maybeInitBuilder();
+    builder.setStartTime(startTime);
+  }
+
+  @Override
+  public FinalApplicationStatus getFinalApplicationStatus() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasFinalApplicationStatus()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getFinalApplicationStatus());
+  }
+
+  @Override
+  public void setFinalApplicationStatus(FinalApplicationStatus finishState) {
+    maybeInitBuilder();
+    if (finishState == null) {
+      builder.clearFinalApplicationStatus();
+      return;
+    }
+    builder.setFinalApplicationStatus(convertToProtoFormat(finishState));
+  }
+
   public static ApplicationAttemptStateData newApplicationAttemptStateData(
       ApplicationAttemptId attemptId, Container container,
-      ByteBuffer attemptTokens) {
+      ByteBuffer attemptTokens, long startTime, RMAppAttemptState finalState,
+      String finalTrackingUrl, String diagnostics,
+      FinalApplicationStatus amUnregisteredFinalStatus) {
     ApplicationAttemptStateData attemptStateData =
         recordFactory.newRecordInstance(ApplicationAttemptStateData.class);
     attemptStateData.setAttemptId(attemptId);
     attemptStateData.setMasterContainer(container);
     attemptStateData.setAppAttemptTokens(attemptTokens);
+    attemptStateData.setState(finalState);
+    attemptStateData.setFinalTrackingUrl(finalTrackingUrl);
+    attemptStateData.setDiagnostics(diagnostics);
+    attemptStateData.setStartTime(startTime);
+    attemptStateData.setFinalApplicationStatus(amUnregisteredFinalStatus);
     return attemptStateData;
   }
+
+  private static String RM_APP_ATTEMPT_PREFIX = "RMATTEMPT_";
+  public static RMAppAttemptStateProto convertToProtoFormat(RMAppAttemptState e) {
+    return RMAppAttemptStateProto.valueOf(RM_APP_ATTEMPT_PREFIX + e.name());
+  }
+  public static RMAppAttemptState convertFromProtoFormat(RMAppAttemptStateProto e) {
+    return RMAppAttemptState.valueOf(e.name().replace(RM_APP_ATTEMPT_PREFIX, ""));
+  }
+
+  private FinalApplicationStatusProto convertToProtoFormat(FinalApplicationStatus s) {
+    return ProtoUtils.convertToProtoFormat(s);
+  }
+  private FinalApplicationStatus convertFromProtoFormat(FinalApplicationStatusProto s) {
+    return ProtoUtils.convertFromProtoFormat(s);
+  }
+
 }

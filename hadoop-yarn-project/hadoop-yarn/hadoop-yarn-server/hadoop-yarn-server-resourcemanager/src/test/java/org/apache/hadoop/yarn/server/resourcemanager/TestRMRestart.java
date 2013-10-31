@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -41,16 +42,24 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -90,13 +99,12 @@ public class TestRMRestart {
     UserGroupInformation.setConfiguration(conf);
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
-
     rmAddr = new InetSocketAddress("localhost", 8032);
+    Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
   }
 
   @Test (timeout=180000)
   public void testRMRestart() throws Exception {
-    Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
 
@@ -122,7 +130,7 @@ public class TestRMRestart {
     nm1.registerNode();
     nm2.registerNode(); // nm2 will not heartbeat with RM1
     
-    // create app that will not be saved because it will finish
+    // create app that will finish and the final state should be saved.
     RMApp app0 = rm1.submitApp(200);
     RMAppAttempt attempt0 = app0.getCurrentAppAttempt();
     // spot check that app is saved
@@ -130,14 +138,8 @@ public class TestRMRestart {
     nm1.nodeHeartbeat(true);
     MockAM am0 = rm1.sendAMLaunched(attempt0.getAppAttemptId());
     am0.registerAppAttempt();
-    am0.unregisterAppAttempt();
-    nm1.nodeHeartbeat(attempt0.getAppAttemptId(), 1, ContainerState.COMPLETE);
-    am0.waitForState(RMAppAttemptState.FINISHED);
-    rm1.waitForState(app0.getApplicationId(), RMAppState.FINISHED);
+    finishApplicationMaster(app0, rm1, nm1, am0);
 
-    // spot check that app is not saved anymore
-    Assert.assertEquals(0, rmAppState.size());
-        
     // create app that gets launched and does allocate before RM restart
     RMApp app1 = rm1.submitApp(200);
     // assert app1 info is saved
@@ -209,7 +211,6 @@ public class TestRMRestart {
         .getApplicationId(), appUnmanaged.getApplicationSubmissionContext()
         .getApplicationId());  
     
-    
     // PHASE 2: create new RM and start from old state
     
     // create new RM to represent restart and recover state
@@ -223,11 +224,17 @@ public class TestRMRestart {
     nm2.setResourceTrackerService(rm2.getResourceTrackerService());
 
     // verify load of old state
-    // only 2 apps are loaded since unmanaged app is not loaded back since it
-    // cannot be restarted by the RM this will change with work preserving RM
-    // restart in which AMs/NMs are not rebooted
-    Assert.assertEquals(2, rm2.getRMContext().getRMApps().size());
-    
+    // 4 apps are loaded.
+    // FINISHED app and attempt is also loaded back.
+    // Unmanaged app state is still loaded back but it cannot be restarted by
+    // the RM. this will change with work preserving RM restart in which AMs/NMs
+    // are not rebooted.
+    Assert.assertEquals(4, rm2.getRMContext().getRMApps().size());
+    // check that earlier finished app and attempt is also loaded back and move
+    // to finished state.
+    rm2.waitForState(app0.getApplicationId(), RMAppState.FINISHED);
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
+
     // verify correct number of attempts and other data
     RMApp loadedApp1 = rm2.getRMContext().getRMApps().get(app1.getApplicationId());
     Assert.assertNotNull(loadedApp1);
@@ -331,29 +338,343 @@ public class TestRMRestart {
           new ArrayList<ContainerId>()).getAllocatedContainers());
       Thread.sleep(500);
     }
+    // finish the AMs
+    finishApplicationMaster(loadedApp1, rm2, am1Node, am1);
+    finishApplicationMaster(loadedApp2, rm2, am2Node, am2);
 
-    // finish the AM's
-    am1.unregisterAppAttempt();
-    rm2.waitForState(loadedApp1.getApplicationId(), RMAppState.FINISHING);
-    am1Node.nodeHeartbeat(attempt1.getAppAttemptId(), 1, ContainerState.COMPLETE);
-    am1.waitForState(RMAppAttemptState.FINISHED);
-    
-    am2.unregisterAppAttempt();
-    rm2.waitForState(loadedApp2.getApplicationId(), RMAppState.FINISHING);
-    am2Node.nodeHeartbeat(attempt2.getAppAttemptId(), 1, ContainerState.COMPLETE);
-    am2.waitForState(RMAppAttemptState.FINISHED);
-    
     // stop RM's
     rm2.stop();
     rm1.stop();
     
-    // completed apps should be removed
-    Assert.assertEquals(0, rmAppState.size());
+    // completed apps are not removed immediately after app finish
+    // And finished app is also loaded back.
+    Assert.assertEquals(4, rmAppState.size());
  }
-  
+
+  @Test
+  public void testRMRestartAppRunningAMFailed() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+      YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the AM
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = launchAM(app0, rm1, nm1);
+
+    // fail the AM by sending CONTAINER_FINISHED event without registering.
+    nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    am0.waitForState(RMAppAttemptState.FAILED);
+
+    ApplicationState appState = rmAppState.get(app0.getApplicationId());
+    // assert the AM failed state is saved.
+    Assert.assertEquals(RMAppAttemptState.FAILED,
+      appState.getAttempt(am0.getApplicationAttemptId()).getState());
+
+    // assert app state has not been saved.
+    Assert.assertNull(rmAppState.get(app0.getApplicationId()).getState());
+
+    // new AM started but not registered, app still stays at ACCECPTED state.
+    rm1.waitForState(app0.getApplicationId(), RMAppState.ACCEPTED);
+
+    // start new RM
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    // assert the previous AM state is loaded back on RM recovery.
+    RMApp recoveredApp =
+        rm2.getRMContext().getRMApps().get(app0.getApplicationId());
+    Assert.assertEquals(RMAppAttemptState.FAILED, recoveredApp
+      .getAppAttempts().get(am0.getApplicationAttemptId()).getAppAttemptState());
+  }
+
+  @Test
+  public void testRMRestartFailedApp() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the AM
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = launchAM(app0, rm1, nm1);
+
+    // fail the AM by sending CONTAINER_FINISHED event without registering.
+    nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    am0.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(app0.getApplicationId(), RMAppState.FAILED);
+
+    // assert the app/attempt failed state is saved.
+    ApplicationState appState = rmAppState.get(app0.getApplicationId());
+    Assert.assertEquals(RMAppState.FAILED, appState.getState());
+    Assert.assertEquals(RMAppAttemptState.FAILED,
+      appState.getAttempt(am0.getApplicationAttemptId()).getState());
+
+    // start new RM
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    RMApp loadedApp0 = rm2.getRMContext().getRMApps().get(app0.getApplicationId());
+    rm2.waitForState(app0.getApplicationId(), RMAppState.FAILED);
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    // no new attempt is created.
+    Assert.assertEquals(1, loadedApp0.getAppAttempts().size());
+
+    verifyAppReportAfterRMRestart(app0, rm2);
+    Assert.assertTrue(app0.getDiagnostics().toString()
+      .contains("Failing the application."));
+    // failed diagnostics from attempt is lost because the diagnostics from
+    // attempt is not yet available by the time app is saving the app state.
+  }
+
+  @Test
+  public void testRMRestartKilledApp() throws Exception{
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+      YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the AM
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = launchAM(app0, rm1, nm1);
+
+    // kill the app.
+    rm1.killApp(app0.getApplicationId());
+    rm1.waitForState(app0.getApplicationId(), RMAppState.KILLED);
+    rm1.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.KILLED);
+
+    // killed state is saved.
+    ApplicationState appState = rmAppState.get(app0.getApplicationId());
+    Assert.assertEquals(RMAppState.KILLED, appState.getState());
+    Assert.assertEquals(RMAppAttemptState.KILLED,
+      appState.getAttempt(am0.getApplicationAttemptId()).getState());
+
+    // restart rm
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    RMApp loadedApp0 = rm2.getRMContext().getRMApps().get(app0.getApplicationId());
+    rm2.waitForState(app0.getApplicationId(), RMAppState.KILLED);
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.KILLED);
+    // no new attempt is created.
+    Assert.assertEquals(1, loadedApp0.getAppAttempts().size());
+
+    ApplicationReport appReport = verifyAppReportAfterRMRestart(app0, rm2);
+    Assert.assertEquals(app0.getDiagnostics().toString(),
+      appReport.getDiagnostics());
+  }
+
+  @Test
+  public void testRMRestartSucceededApp() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+      YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create an app and finish the app.
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = launchAM(app0, rm1, nm1);
+
+    // unregister am
+    FinishApplicationMasterRequest req =
+        FinishApplicationMasterRequest.newInstance(
+          FinalApplicationStatus.SUCCEEDED, "diagnostics", "trackingUrl");
+    finishApplicationMaster(app0, rm1, nm1, am0, req);
+ 
+    // check the state store about the unregistered info.
+    ApplicationState appState = rmAppState.get(app0.getApplicationId());
+    ApplicationAttemptState attemptState0 =
+      appState.getAttempt(am0.getApplicationAttemptId());
+    Assert.assertEquals("diagnostics", attemptState0.getDiagnostics());
+    Assert.assertEquals(FinalApplicationStatus.SUCCEEDED,
+      attemptState0.getFinalApplicationStatus());
+    Assert.assertEquals("trackingUrl", attemptState0.getFinalTrackingUrl());
+    Assert.assertEquals(app0.getFinishTime(), appState.getFinishTime());
+
+    // restart rm
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+
+    // verify application report returns the same app info as the app info
+    // before RM restarts.
+    ApplicationReport appReport = verifyAppReportAfterRMRestart(app0, rm2);
+    Assert.assertEquals(FinalApplicationStatus.SUCCEEDED,
+      appReport.getFinalApplicationStatus());
+    Assert.assertEquals("trackingUrl", appReport.getOriginalTrackingUrl());
+  }
+
+  @Test
+  public void testRMRestartGetApplicationList() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // a succeeded app.
+    RMApp app0 = rm1.submitApp(200, "name", "user", null,
+      false, "default", 1, null, "myType");
+    MockAM am0 = launchAM(app0, rm1, nm1);
+    finishApplicationMaster(app0, rm1, nm1, am0);
+
+    // a failed app.
+    RMApp app1 = rm1.submitApp(200, "name", "user", null,
+      false, "default", 1, null, "myType");
+    MockAM am1 = launchAM(app1, rm1, nm1);
+    // fail the AM by sending CONTAINER_FINISHED event without registering.
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    am1.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(app1.getApplicationId(), RMAppState.FAILED);
+
+    // a killed app.
+    RMApp app2 = rm1.submitApp(200, "name", "user", null,
+      false, "default", 1, null, "myType");
+    MockAM am2 = launchAM(app2, rm1, nm1);
+    rm1.killApp(app2.getApplicationId());
+    rm1.waitForState(app2.getApplicationId(), RMAppState.KILLED);
+    rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.KILLED);
+
+    // restart rm
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+
+    GetApplicationsRequest request1 =
+        GetApplicationsRequest.newInstance(EnumSet.of(
+          YarnApplicationState.FINISHED, YarnApplicationState.KILLED,
+          YarnApplicationState.FAILED));
+    GetApplicationsResponse response1 =
+        rm2.getClientRMService().getApplications(request1);
+    List<ApplicationReport> appList1 = response1.getApplicationList();
+
+    // assert all applications exist according to application state after RM
+    // restarts.
+    boolean forApp0 = false, forApp1 = false, forApp2 = false;
+    for (ApplicationReport report : appList1) {
+      if (report.getApplicationId().equals(app0.getApplicationId())) {
+        Assert.assertEquals(YarnApplicationState.FINISHED,
+          report.getYarnApplicationState());
+        forApp0 = true;
+      }
+      if (report.getApplicationId().equals(app1.getApplicationId())) {
+        Assert.assertEquals(YarnApplicationState.FAILED,
+          report.getYarnApplicationState());
+        forApp1 = true;
+      }
+      if (report.getApplicationId().equals(app2.getApplicationId())) {
+        Assert.assertEquals(YarnApplicationState.KILLED,
+          report.getYarnApplicationState());
+        forApp2 = true;
+      }
+    }
+    Assert.assertTrue(forApp0 && forApp1 && forApp2);
+
+    // assert all applications exist according to application type after RM
+    // restarts.
+    Set<String> appTypes = new HashSet<String>();
+    appTypes.add("myType");
+    GetApplicationsRequest request2 =
+        GetApplicationsRequest.newInstance(appTypes);
+    GetApplicationsResponse response2 =
+        rm2.getClientRMService().getApplications(request2);
+    List<ApplicationReport> appList2 = response2.getApplicationList();
+    Assert.assertTrue(3 == appList2.size());
+  }
+
+  private MockAM launchAM(RMApp app, MockRM rm, MockNM nm)
+      throws Exception {
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+    nm.nodeHeartbeat(true);
+    MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
+    am.registerAppAttempt();
+    rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
+    return am;
+  }
+
+  private ApplicationReport verifyAppReportAfterRMRestart(RMApp app, MockRM rm)
+      throws Exception {
+    GetApplicationReportRequest reportRequest =
+        GetApplicationReportRequest.newInstance(app.getApplicationId());
+    GetApplicationReportResponse response =
+        rm.getClientRMService().getApplicationReport(reportRequest);
+    ApplicationReport report = response.getApplicationReport();
+    Assert.assertEquals(app.getStartTime(), report.getStartTime());
+    Assert.assertEquals(app.getFinishTime(), report.getFinishTime());
+    Assert.assertEquals(app.createApplicationState(),
+      report.getYarnApplicationState());
+    Assert.assertTrue(1 == report.getProgress());
+    return response.getApplicationReport();
+  }
+
+  private void finishApplicationMaster(RMApp rmApp, MockRM rm, MockNM nm,
+      MockAM am) throws Exception {
+    final FinishApplicationMasterRequest req =
+        FinishApplicationMasterRequest.newInstance(
+          FinalApplicationStatus.SUCCEEDED, "", "");
+    finishApplicationMaster(rmApp, rm, nm, am, req);
+  }
+
+  private void finishApplicationMaster(RMApp rmApp, MockRM rm, MockNM nm,
+      MockAM am, FinishApplicationMasterRequest req) throws Exception {
+    RMState rmState =
+        ((MemoryRMStateStore) rm.getRMContext().getStateStore()).getState();
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();
+    am.unregisterAppAttempt(req);
+    am.waitForState(RMAppAttemptState.FINISHING);
+    nm.nodeHeartbeat(am.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    am.waitForState(RMAppAttemptState.FINISHED);
+    rm.waitForState(rmApp.getApplicationId(), RMAppState.FINISHED);
+    // check that app/attempt is saved with the final state
+    ApplicationState appState = rmAppState.get(rmApp.getApplicationId());
+    Assert
+      .assertEquals(RMAppState.FINISHED, appState.getState());
+    Assert.assertEquals(RMAppAttemptState.FINISHED,
+      appState.getAttempt(am.getApplicationAttemptId()).getState());
+  }
+
   @Test
   public void testRMRestartOnMaxAppAttempts() throws Exception {
-    Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
 
@@ -407,16 +728,17 @@ public class TestRMRestart {
         rm2.getRMContext().getRMApps().get(app2.getApplicationId())
         .getMaxAppAttempts());
 
-    // verify that app2 exists  app1 is removed
-    Assert.assertEquals(1, rm2.getRMContext().getRMApps().size());
-    Assert.assertNotNull(rm2.getRMContext().getRMApps()
-        .get(app2.getApplicationId()));
-    Assert.assertNull(rm2.getRMContext().getRMApps()
-        .get(app1.getApplicationId()));
+    // app1 and app2 are loaded back, but app1 failed because it's
+    // hitting max-retry.
+    Assert.assertEquals(2, rm2.getRMContext().getRMApps().size());
+    rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
+    rm2.waitForState(app2.getApplicationId(), RMAppState.ACCEPTED);
 
-    // verify that app2 is stored, app1 is removed
-    Assert.assertNotNull(rmAppState.get(app2.getApplicationId()));
-    Assert.assertNull(rmAppState.get(app1.getApplicationId()));
+    // app1 failed state is saved in state store. app2 final saved state is not
+    // determined yet.
+    Assert.assertEquals(RMAppState.FAILED,
+      rmAppState.get(app1.getApplicationId()).getState());
+    Assert.assertNull(rmAppState.get(app2.getApplicationId()).getState());
 
     // stop the RM  
     rm1.stop();

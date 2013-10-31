@@ -21,14 +21,20 @@ package org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RMAppStateProto;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 
 public class ApplicationStateDataPBImpl 
 extends ProtoBase<ApplicationStateDataProto> 
 implements ApplicationStateData {
-  
+  private static final RecordFactory recordFactory = RecordFactoryProvider
+      .getRecordFactory(null);
+
   ApplicationStateDataProto proto = 
             ApplicationStateDataProto.getDefaultInstance();
   ApplicationStateDataProto.Builder builder = null;
@@ -92,6 +98,18 @@ implements ApplicationStateData {
   }
 
   @Override
+  public long getStartTime() {
+    ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getStartTime();
+  }
+
+  @Override
+  public void setStartTime(long startTime) {
+    maybeInitBuilder();
+    builder.setStartTime(startTime);
+  }
+
+  @Override
   public String getUser() {
     ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasUser()) {
@@ -132,4 +150,78 @@ implements ApplicationStateData {
     this.applicationSubmissionContext = context;
   }
 
+  @Override
+  public RMAppState getState() {
+    ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasApplicationState()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getApplicationState());
+  }
+
+  @Override
+  public void setState(RMAppState finalState) {
+    maybeInitBuilder();
+    if (finalState == null) {
+      builder.clearApplicationState();
+      return;
+    }
+    builder.setApplicationState(convertToProtoFormat(finalState));
+  }
+
+  @Override
+  public String getDiagnostics() {
+    ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasDiagnostics()) {
+      return null;
+    }
+    return p.getDiagnostics();
+  }
+
+  @Override
+  public void setDiagnostics(String diagnostics) {
+    maybeInitBuilder();
+    if (diagnostics == null) {
+      builder.clearDiagnostics();
+      return;
+    }
+    builder.setDiagnostics(diagnostics);
+  }
+
+  @Override
+  public long getFinishTime() {
+    ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getFinishTime();
+  }
+
+  @Override
+  public void setFinishTime(long finishTime) {
+    maybeInitBuilder();
+    builder.setFinishTime(finishTime);
+  }
+
+  public static ApplicationStateData newApplicationStateData(long submitTime,
+      long startTime, String user,
+      ApplicationSubmissionContext submissionContext, RMAppState state,
+      String diagnostics, long finishTime) {
+
+    ApplicationStateData appState =
+        recordFactory.newRecordInstance(ApplicationStateData.class);
+    appState.setSubmitTime(submitTime);
+    appState.setStartTime(startTime);
+    appState.setUser(user);
+    appState.setApplicationSubmissionContext(submissionContext);
+    appState.setState(state);
+    appState.setDiagnostics(diagnostics);
+    appState.setFinishTime(finishTime);
+    return appState;
+  }
+
+  private static String RM_APP_PREFIX = "RMAPP_";
+  public static RMAppStateProto convertToProtoFormat(RMAppState e) {
+    return RMAppStateProto.valueOf(RM_APP_PREFIX + e.name());
+  }
+  public static RMAppState convertFromProtoFormat(RMAppStateProto e) {
+    return RMAppState.valueOf(e.name().replace(RM_APP_PREFIX, ""));
+  }
 }

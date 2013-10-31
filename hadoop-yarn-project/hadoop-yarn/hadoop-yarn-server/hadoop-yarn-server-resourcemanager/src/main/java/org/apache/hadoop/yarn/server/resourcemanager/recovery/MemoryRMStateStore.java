@@ -76,22 +76,39 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  public void storeApplicationState(String appId, 
+  public void storeApplicationStateInternal(String appId, 
                                      ApplicationStateDataPBImpl appStateData)
       throws Exception {
-    ApplicationState appState = new ApplicationState(
-        appStateData.getSubmitTime(),
-        appStateData.getApplicationSubmissionContext(), appStateData.getUser());
-    if (state.appState.containsKey(appState.getAppId())) {
-      Exception e = new IOException("App: " + appId + " is already stored.");
-      LOG.info("Error storing info for app: " + appId, e);
-      throw e;
-    }
+    ApplicationState appState =
+        new ApplicationState(appStateData.getSubmitTime(),
+          appStateData.getStartTime(),
+          appStateData.getApplicationSubmissionContext(),
+          appStateData.getUser());
     state.appState.put(appState.getAppId(), appState);
   }
 
   @Override
-  public synchronized void storeApplicationAttemptState(String attemptIdStr, 
+  public void updateApplicationStateInternal(String appId,
+      ApplicationStateDataPBImpl appStateData) throws Exception {
+    ApplicationState updatedAppState =
+        new ApplicationState(appStateData.getSubmitTime(),
+          appStateData.getStartTime(),
+          appStateData.getApplicationSubmissionContext(),
+          appStateData.getUser(), appStateData.getState(),
+          appStateData.getDiagnostics(), appStateData.getFinishTime());
+    LOG.info("Updating final state " + appStateData.getState() + " for app: "
+        + appId);
+    ApplicationId applicationId = updatedAppState.getAppId();
+    if (state.appState.get(applicationId) != null) {
+      // add the earlier attempts back
+      updatedAppState.attempts
+        .putAll(state.appState.get(applicationId).attempts);
+    }
+    state.appState.put(applicationId, updatedAppState);
+  }
+
+  @Override
+  public synchronized void storeApplicationAttemptStateInternal(String attemptIdStr, 
                             ApplicationAttemptStateDataPBImpl attemptStateData)
                             throws Exception {
     ApplicationAttemptId attemptId = ConverterUtils
@@ -105,22 +122,48 @@ public class MemoryRMStateStore extends RMStateStore {
     }
     ApplicationAttemptState attemptState =
         new ApplicationAttemptState(attemptId,
-          attemptStateData.getMasterContainer(), credentials);
+          attemptStateData.getMasterContainer(), credentials,
+          attemptStateData.getStartTime());
 
     ApplicationState appState = state.getApplicationState().get(
         attemptState.getAttemptId().getApplicationId());
     if (appState == null) {
       throw new YarnRuntimeException("Application doesn't exist");
     }
-
-    if (appState.attempts.containsKey(attemptState.getAttemptId())) {
-      Exception e = new IOException("Attempt: " +
-          attemptState.getAttemptId() + " is already stored.");
-      LOG.info("Error storing info for attempt: " +
-          attemptState.getAttemptId(), e);
-      throw e;
-    }
     appState.attempts.put(attemptState.getAttemptId(), attemptState);
+  }
+
+  @Override
+  public synchronized void updateApplicationAttemptStateInternal(
+      String attemptIdStr, ApplicationAttemptStateDataPBImpl attemptStateData)
+      throws Exception {
+    ApplicationAttemptId attemptId =
+        ConverterUtils.toApplicationAttemptId(attemptIdStr);
+    Credentials credentials = null;
+    if (attemptStateData.getAppAttemptTokens() != null) {
+      DataInputByteBuffer dibb = new DataInputByteBuffer();
+      credentials = new Credentials();
+      dibb.reset(attemptStateData.getAppAttemptTokens());
+      credentials.readTokenStorageStream(dibb);
+    }
+    ApplicationAttemptState updatedAttemptState =
+        new ApplicationAttemptState(attemptId,
+          attemptStateData.getMasterContainer(), credentials,
+          attemptStateData.getStartTime(), attemptStateData.getState(),
+          attemptStateData.getFinalTrackingUrl(),
+          attemptStateData.getDiagnostics(),
+          attemptStateData.getFinalApplicationStatus());
+
+    ApplicationState appState =
+        state.getApplicationState().get(
+          updatedAttemptState.getAttemptId().getApplicationId());
+    if (appState == null) {
+      throw new YarnRuntimeException("Application doesn't exist");
+    }
+    LOG.info("Updating final state " + updatedAttemptState.getState()
+        + " for attempt: " + updatedAttemptState.getAttemptId());
+    appState.attempts.put(updatedAttemptState.getAttemptId(),
+      updatedAttemptState);
   }
 
   @Override

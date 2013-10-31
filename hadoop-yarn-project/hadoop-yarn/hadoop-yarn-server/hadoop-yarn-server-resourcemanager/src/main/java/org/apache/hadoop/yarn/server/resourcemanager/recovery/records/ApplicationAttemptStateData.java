@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 
 /*
  * Contains the state data that needs to be persisted for an ApplicationAttempt
@@ -61,4 +63,50 @@ public interface ApplicationAttemptStateData {
   public ByteBuffer getAppAttemptTokens();
 
   public void setAppAttemptTokens(ByteBuffer attemptTokens);
+
+  /**
+   * Get the final state of the application attempt.
+   * @return the final state of the application attempt.
+   */
+  public RMAppAttemptState getState();
+
+  public void setState(RMAppAttemptState state);
+
+  /**
+   * Get the original not-proxied <em>final tracking url</em> for the
+   * application. This is intended to only be used by the proxy itself.
+   * 
+   * @return the original not-proxied <em>final tracking url</em> for the
+   *         application
+   */
+  public String getFinalTrackingUrl();
+
+  /**
+   * Set the final tracking Url of the AM.
+   * @param url
+   */
+  public void setFinalTrackingUrl(String url);
+  /**
+   * Get the <em>diagnositic information</em> of the attempt 
+   * @return <em>diagnositic information</em> of the attempt
+   */
+  public String getDiagnostics();
+
+  public void setDiagnostics(String diagnostics);
+
+  /**
+   * Get the <em>start time</em> of the application.
+   * @return <em>start time</em> of the application
+   */
+  public long getStartTime();
+
+  public void setStartTime(long startTime);
+
+  /**
+   * Get the <em>final finish status</em> of the application.
+   * @return <em>final finish status</em> of the application
+   */
+  public FinalApplicationStatus getFinalApplicationStatus();
+
+  public void setFinalApplicationStatus(FinalApplicationStatus finishState);
 }

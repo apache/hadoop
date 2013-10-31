@@ -18,7 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -27,6 +34,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.ZKUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -37,9 +46,6 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.ZKUtil;
-
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
@@ -51,13 +57,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import com.google.common.annotations.VisibleForTesting;
 
 @Private
 @Unstable
@@ -224,8 +224,11 @@ public class ZKRMStateStore extends RMStateStore {
                 ApplicationStateDataProto.parseFrom(childData));
         ApplicationState appState =
             new ApplicationState(appStateData.getSubmitTime(),
-                appStateData.getApplicationSubmissionContext(),
-                appStateData.getUser());
+              appStateData.getStartTime(),
+              appStateData.getApplicationSubmissionContext(),
+              appStateData.getUser(),
+              appStateData.getState(),
+              appStateData.getDiagnostics(), appStateData.getFinishTime());
         if (!appId.equals(appState.context.getApplicationId())) {
           throw new YarnRuntimeException("The child node name is different " +
               "from the application id");
@@ -249,7 +252,12 @@ public class ZKRMStateStore extends RMStateStore {
         }
         ApplicationAttemptState attemptState =
             new ApplicationAttemptState(attemptId,
-                attemptStateData.getMasterContainer(), credentials);
+              attemptStateData.getMasterContainer(), credentials,
+              attemptStateData.getStartTime(),
+              attemptStateData.getState(),
+              attemptStateData.getFinalTrackingUrl(),
+              attemptStateData.getDiagnostics(),
+              attemptStateData.getFinalApplicationStatus());
         if (!attemptId.equals(attemptState.getAttemptId())) {
           throw new YarnRuntimeException("The child node name is different " +
               "from the application attempt id");
@@ -280,21 +288,34 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void storeApplicationState(
-      String appId, ApplicationStateDataPBImpl appStateDataPB) throws
-      Exception {
+  public synchronized void storeApplicationStateInternal(String appId,
+      ApplicationStateDataPBImpl appStateDataPB) throws Exception {
     String nodeCreatePath = getNodePath(rmAppRoot, appId);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Storing info for app: " + appId + " at: " + nodeCreatePath);
     }
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
-    createWithRetries(
-        nodeCreatePath, appStateData, zkAcl, CreateMode.PERSISTENT);
+    createWithRetries(nodeCreatePath, appStateData, zkAcl,
+      CreateMode.PERSISTENT);
+
   }
 
   @Override
-  public synchronized void storeApplicationAttemptState(
+  public synchronized void updateApplicationStateInternal(String appId,
+      ApplicationStateDataPBImpl appStateDataPB) throws Exception {
+    String nodeCreatePath = getNodePath(rmAppRoot, appId);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Storing final state info for app: " + appId + " at: "
+          + nodeCreatePath);
+    }
+    byte[] appStateData = appStateDataPB.getProto().toByteArray();
+    setDataWithRetries(nodeCreatePath, appStateData, 0);
+  }
+
+  @Override
+  public synchronized void storeApplicationAttemptStateInternal(
       String attemptId, ApplicationAttemptStateDataPBImpl attemptStateDataPB)
       throws Exception {
     String nodeCreatePath = getNodePath(rmAppRoot, attemptId);
@@ -304,7 +325,20 @@ public class ZKRMStateStore extends RMStateStore {
     }
     byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
     createWithRetries(nodeCreatePath, attemptStateData, zkAcl,
-        CreateMode.PERSISTENT);
+      CreateMode.PERSISTENT);
+  }
+
+  @Override
+  public synchronized void updateApplicationAttemptStateInternal(
+      String attemptId, ApplicationAttemptStateDataPBImpl attemptStateDataPB)
+      throws Exception {
+    String nodeCreatePath = getNodePath(rmAppRoot, attemptId);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Storing final state info for attempt: " + attemptId + " at: "
+          + nodeCreatePath);
+    }
+    byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
+    setDataWithRetries(nodeCreatePath, attemptStateData, 0);
   }
 
   @Override
