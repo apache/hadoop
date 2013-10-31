@@ -499,13 +499,15 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     for (String location : locations) {
         TreeMap<Resource, ResourceRequestInfo> reqs =
             remoteRequests.get(location);
-        if (reqs != null && !reqs.isEmpty()
-            && reqs.values().iterator().next().remoteRequest.getRelaxLocality()
-            != relaxLocality) {
-          throw new InvalidContainerRequestException("Cannot submit a "
-              + "ContainerRequest asking for location " + location
-              + " with locality relaxation " + relaxLocality + " when it has "
-              + "already been requested with locality relaxation " + relaxLocality);
+        if (reqs != null && !reqs.isEmpty()) {
+          boolean existingRelaxLocality =
+              reqs.values().iterator().next().remoteRequest.getRelaxLocality();
+          if (relaxLocality != existingRelaxLocality) {
+            throw new InvalidContainerRequestException("Cannot submit a "
+                + "ContainerRequest asking for location " + location
+                + " with locality relaxation " + relaxLocality + " when it has "
+                + "already been requested with locality relaxation " + existingRelaxLocality);
+          }
         }
       }
   }
