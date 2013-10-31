@@ -759,6 +759,7 @@ public abstract class Server {
 
         channel.configureBlocking(false);
         channel.socket().setTcpNoDelay(tcpNoDelay);
+        channel.socket().setKeepAlive(true);
         
         Reader reader = getReader();
         try {
