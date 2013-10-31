@@ -252,7 +252,7 @@ class BPServiceActor implements Runnable {
     // TODO: Corrupt flag is set to false for compatibility. We can probably
     // set it to true here.
     LocatedBlock[] blocks = {
-        new LocatedBlock(block, dnArr, uuids, types, -1, false, null) };
+        new LocatedBlock(block, dnArr, uuids, types) };
     
     try {
       bpNamenode.reportBadBlocks(blocks);  

@@ -1029,7 +1029,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public StorageReport[] getStorageReports(String bpid) {
-    throw new UnsupportedOperationException();
+    return new StorageReport[0];
   }
 
   @Override

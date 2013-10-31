@@ -54,3 +54,6 @@ IMPROVEMENTS:
 
     HDFS-5435. File append fails to initialize storageIDs. (Junping Du via
     Arpit Agarwal)
+
+    HDFS-5437. Fix TestBlockReport and TestBPOfferService failures. (Arpit
+    Agarwal)
