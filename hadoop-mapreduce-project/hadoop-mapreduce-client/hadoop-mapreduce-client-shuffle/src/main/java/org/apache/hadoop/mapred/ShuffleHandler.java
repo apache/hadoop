@@ -625,6 +625,9 @@ public class ShuffleHandler extends AuxiliaryService {
             //      attribute to appropriate spill output
           @Override
           public void operationComplete(ChannelFuture future) {
+            if (future.isSuccess()) {
+              partition.transferSuccessful();
+            }
             partition.releaseExternalResources();
           }
         });
