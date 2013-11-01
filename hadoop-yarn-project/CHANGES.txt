@@ -80,6 +80,8 @@ Release 2.3.0 - UNRELEASED
     YARN-1290. Let continuous scheduling achieve more balanced task assignment
     (Wei Yan via Sandy Ryza)
 
+    YARN-786. Expose application resource usage in RM REST API (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES

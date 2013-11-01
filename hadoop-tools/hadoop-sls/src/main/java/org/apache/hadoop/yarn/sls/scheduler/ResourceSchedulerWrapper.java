@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -859,6 +860,12 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
   public synchronized boolean checkAccess(UserGroupInformation callerUGI,
       QueueACL acl, String queueName) {
     return scheduler.checkAccess(callerUGI, acl, queueName);
+  }
+
+  @Override
+  public ApplicationResourceUsageReport getAppResourceUsageReport(
+      ApplicationAttemptId appAttemptId) {
+    return scheduler.getAppResourceUsageReport(appAttemptId);
   }
 }
 

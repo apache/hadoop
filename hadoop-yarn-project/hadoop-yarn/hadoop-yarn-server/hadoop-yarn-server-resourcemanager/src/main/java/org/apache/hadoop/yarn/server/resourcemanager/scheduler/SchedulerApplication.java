@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -396,6 +397,13 @@ public abstract class SchedulerApplication {
       long currentTimeMs) {
     lastScheduledContainer.put(priority, currentTimeMs);
     schedulingOpportunities.setCount(priority, 0);
+  }
+  
+  public synchronized ApplicationResourceUsageReport getResourceUsageReport() {
+    return ApplicationResourceUsageReport.newInstance(liveContainers.size(),
+        reservedContainers.size(), Resources.clone(currentConsumption),
+        Resources.clone(currentReservation),
+        Resources.add(currentConsumption, currentReservation));
   }
 
 }
