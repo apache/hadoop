@@ -574,6 +574,8 @@ Release 2.2.1 - UNRELEASED
     HDFS-4633 TestDFSClientExcludedNodes fails sporadically if excluded nodes
     cache expires too quickly  (Chris Nauroth via Sanjay)
 
+    HDFS-5037. Active NN should trigger its own edit log rolls (wang)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

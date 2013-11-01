@@ -38,6 +38,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECI
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DEFAULT_AUDIT_LOGGER_NAME;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY;
@@ -49,6 +51,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_DEFAULT;
@@ -395,6 +401,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   Daemon nnrmthread = null; // NamenodeResourceMonitor thread
 
+  Daemon nnEditLogRoller = null; // NameNodeEditLogRoller thread
+  /**
+   * When an active namenode will roll its own edit log, in # edits
+   */
+  private final long editLogRollerThreshold;
+  /**
+   * Check interval of an active namenode's edit log roller thread 
+   */
+  private final int editLogRollerInterval;
+
   private volatile boolean hasResourcesAvailable = false;
   private volatile boolean fsRunning = true;
   
@@ -708,7 +724,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
       this.standbyShouldCheckpoint = conf.getBoolean(
           DFS_HA_STANDBY_CHECKPOINTS_KEY, DFS_HA_STANDBY_CHECKPOINTS_DEFAULT);
-      
+      // # edit autoroll threshold is a multiple of the checkpoint threshold 
+      this.editLogRollerThreshold = (long)
+          (conf.getFloat(
+              DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD,
+              DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT) *
+          conf.getLong(
+              DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
+              DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT));
+      this.editLogRollerInterval = conf.getInt(
+          DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS,
+          DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT);
       this.inodeId = new INodeId();
       
       // For testing purposes, allow the DT secret manager to be started regardless
@@ -983,6 +1009,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       //ResourceMonitor required only at ActiveNN. See HDFS-2914
       this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
       nnrmthread.start();
+
+      nnEditLogRoller = new Daemon(new NameNodeEditLogRoller(
+          editLogRollerThreshold, editLogRollerInterval));
+      nnEditLogRoller.start();
+
       cacheManager.activate();
       blockManager.getDatanodeManager().setSendCachingCommands(true);
     } finally {
@@ -1021,6 +1052,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (nnrmthread != null) {
         ((NameNodeResourceMonitor) nnrmthread.getRunnable()).stopMonitor();
         nnrmthread.interrupt();
+      }
+      if (nnEditLogRoller != null) {
+        ((NameNodeEditLogRoller)nnEditLogRoller.getRunnable()).stop();
+        nnEditLogRoller.interrupt();
       }
       if (dir != null && dir.fsImage != null) {
         if (dir.fsImage.editLog != null) {
@@ -4163,7 +4198,48 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       shouldNNRmRun = false;
     }
  }
-  
+
+  class NameNodeEditLogRoller implements Runnable {
+
+    private boolean shouldRun = true;
+    private final long rollThreshold;
+    private final long sleepIntervalMs;
+
+    public NameNodeEditLogRoller(long rollThreshold, int sleepIntervalMs) {
+        this.rollThreshold = rollThreshold;
+        this.sleepIntervalMs = sleepIntervalMs;
+    }
+
+    @Override
+    public void run() {
+      while (fsRunning && shouldRun) {
+        try {
+          FSEditLog editLog = getFSImage().getEditLog();
+          long numEdits =
+              editLog.getLastWrittenTxId() - editLog.getCurSegmentTxId();
+          if (numEdits > rollThreshold) {
+            FSNamesystem.LOG.info("NameNode rolling its own edit log because"
+                + " number of edits in open segment exceeds threshold of "
+                + rollThreshold);
+            rollEditLog();
+          }
+          Thread.sleep(sleepIntervalMs);
+        } catch (InterruptedException e) {
+          FSNamesystem.LOG.info(NameNodeEditLogRoller.class.getSimpleName()
+              + " was interrupted, exiting");
+          break;
+        } catch (Exception e) {
+          FSNamesystem.LOG.error("Swallowing exception in "
+              + NameNodeEditLogRoller.class.getSimpleName() + ":", e);
+        }
+      }
+    }
+
+    public void stop() {
+      shouldRun = false;
+    }
+  }
+
   public FSImage getFSImage() {
     return dir.fsImage;
   }
@@ -5180,7 +5256,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       checkOperation(OperationCategory.JOURNAL);
       checkNameNodeSafeMode("Log not rolled");
-      LOG.info("Roll Edit Log from " + Server.getRemoteAddress());
+      if (Server.isRpcInvocation()) {
+        LOG.info("Roll Edit Log from " + Server.getRemoteAddress());
+      }
       return getFSImage().rollEditLog();
     } finally {
       writeUnlock();
