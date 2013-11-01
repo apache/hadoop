@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -129,6 +130,16 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @Stable
   SchedulerAppReport getSchedulerAppInfo(ApplicationAttemptId appAttemptId);
 
+  /**
+   * Get a resource usage report from a given app attempt ID.
+   * @param appAttemptId the id of the application attempt
+   * @return resource usage report for this given attempt
+   */
+  @LimitedPrivate("yarn")
+  @Evolving
+  ApplicationResourceUsageReport getAppResourceUsageReport(
+      ApplicationAttemptId appAttemptId);
+  
   /**
    * Get the root queue for the scheduler.
    * @return the root queue for the scheduler.

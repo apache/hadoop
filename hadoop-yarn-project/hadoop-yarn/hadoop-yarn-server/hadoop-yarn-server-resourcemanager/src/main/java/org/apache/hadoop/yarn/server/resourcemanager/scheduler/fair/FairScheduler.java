@@ -38,6 +38,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -1049,6 +1050,17 @@ public class FairScheduler implements ResourceScheduler {
       return null;
     }
     return new SchedulerAppReport(applications.get(appAttemptId));
+  }
+  
+  @Override
+  public ApplicationResourceUsageReport getAppResourceUsageReport(
+      ApplicationAttemptId appAttemptId) {
+    FSSchedulerApp app = applications.get(appAttemptId);
+    if (app == null) {
+      LOG.error("Request for appInfo of unknown attempt" + appAttemptId);
+      return null;
+    }
+    return app.getResourceUsageReport();
   }
   
   /**

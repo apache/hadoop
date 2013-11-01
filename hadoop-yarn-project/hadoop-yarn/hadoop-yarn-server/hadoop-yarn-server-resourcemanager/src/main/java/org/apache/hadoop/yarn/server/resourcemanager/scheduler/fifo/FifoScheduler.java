@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -325,6 +326,13 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       ApplicationAttemptId applicationAttemptId) {
     FiCaSchedulerApp app = getApplication(applicationAttemptId);
     return app == null ? null : new SchedulerAppReport(app);
+  }
+  
+  @Override
+  public ApplicationResourceUsageReport getAppResourceUsageReport(
+      ApplicationAttemptId applicationAttemptId) {
+    FiCaSchedulerApp app = getApplication(applicationAttemptId);
+    return app == null ? null : app.getResourceUsageReport();
   }
   
   private FiCaSchedulerNode getNode(NodeId nodeId) {

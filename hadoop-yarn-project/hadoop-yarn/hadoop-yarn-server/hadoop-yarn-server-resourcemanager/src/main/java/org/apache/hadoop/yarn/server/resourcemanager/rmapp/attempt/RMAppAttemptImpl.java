@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -54,7 +53,6 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -84,9 +82,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
@@ -98,7 +94,6 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
@@ -673,38 +668,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   @Override
   public ApplicationResourceUsageReport getApplicationResourceUsageReport() {
     this.readLock.lock();
-    
     try {
-      int numUsedContainers = 0;
-      int numReservedContainers = 0;
-      Resource currentConsumption = Resources.createResource(0, 0);
-      Resource reservedResources = Resources.createResource(0, 0);
-      
-      SchedulerAppReport schedApp = 
-          scheduler.getSchedulerAppInfo(this.getAppAttemptId());
-      Collection<RMContainer> liveContainers;
-      Collection<RMContainer> reservedContainers;
-      if (schedApp != null) {
-        liveContainers = schedApp.getLiveContainers();
-        reservedContainers = schedApp.getReservedContainers();
-        if (liveContainers != null) {
-          numUsedContainers = liveContainers.size();
-          for (RMContainer lc : liveContainers) {
-            Resources.addTo(currentConsumption, lc.getContainer().getResource());
-          }
-        }
-        if (reservedContainers != null) {
-          numReservedContainers = reservedContainers.size();
-          for (RMContainer rc : reservedContainers) {
-            Resources.addTo(reservedResources, rc.getContainer().getResource());
-          }
-        }
-      }
-
-      return BuilderUtils.newApplicationResourceUsageReport(
-          numUsedContainers, numReservedContainers,
-          currentConsumption, reservedResources,
-          Resources.add(currentConsumption, reservedResources));
+      return scheduler.getAppResourceUsageReport(this.getAppAttemptId());
     } finally {
       this.readLock.unlock();
     }

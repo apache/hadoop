@@ -1177,7 +1177,10 @@ ResourceManager REST API's.
           "elapsedTime" : 25196,
           "diagnostics" : "",
           "trackingUrl" : "http://host.domain.com:8088/proxy/application_1326815542473_0001/jobhistory/job/job_1326815542473_1_1",
-          "queue" : "default"
+          "queue" : "default",
+          "allocatedMB" : 0,
+          "allocatedVCores" : 0,
+          "runningContainers" : 0
        },
        {
           "finishedTime" : 1326815789546,
@@ -1195,7 +1198,10 @@ ResourceManager REST API's.
           "elapsedTime" : 148166,
           "diagnostics" : "",
           "trackingUrl" : "http://host.domain.com:8088/proxy/application_1326815542473_0002/jobhistory/job/job_1326815542473_2_2",
-          "queue" : "default"
+          "queue" : "default",
+          "allocatedMB" : 0,
+          "allocatedVCores" : 0,
+          "runningContainers" : 1
        } 
     ]
   }
@@ -1245,6 +1251,9 @@ ResourceManager REST API's.
     <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0001
 _01_000001</amContainerLogs>
     <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+    <allocatedMB>0</allocatedMB>
+    <allocatedVCores>0</allocatedVCores>
+    <runningContainers>0</runningContainers>
   </app>
   <app>
     <id>application_1326815542473_0002</id>
@@ -1264,6 +1273,9 @@ _01_000001</amContainerLogs>
     <elapsedTime>148166</elapsedTime>
     <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0002_01_000001</amContainerLogs>
     <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+    <allocatedMB>0</allocatedMB>
+    <allocatedVCores>0</allocatedVCores>
+    <runningContainers>0</runningContainers>
   </app>
 </apps>
 
@@ -1457,6 +1469,12 @@ _01_000001</amContainerLogs>
 *---------------+--------------+--------------------------------+
 | amHostHttpAddress | string | The nodes http address of the application master |
 *---------------+--------------+--------------------------------+
+| allocatedMB | int | The sum of memory in MB allocated to the application's running containers |
+*---------------------------------------------------------------+
+| allocatedVCores | int | The sum of virtual cores allocated to the application's running containers |
++---------------------------------------------------------------+
+| runningContainers | int | The number of containers currently running for the application |
++---------------------------------------------------------------+
 
 ** Response Examples
 
