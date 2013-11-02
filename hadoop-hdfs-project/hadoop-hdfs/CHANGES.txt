@@ -107,9 +107,6 @@ Release 2.3.0 - UNRELEASED
     HDFS-5034.  Remove debug prints from GetFileLinkInfo (Andrew Wang via Colin
     Patrick McCabe)
 
-    HDFS-5035.  getFileLinkStatus and rename do not correctly check permissions
-    of symlinks.  (Andrew Wang via Colin Patrick McCabe)
-
     HDFS-4816. transitionToActive blocks if the SBN is doing checkpoint image
     transfer. (Andrew Wang)
 
@@ -218,6 +215,9 @@ Release 2.2.1 - UNRELEASED
     cache expires too quickly  (Chris Nauroth via Sanjay)
 
     HDFS-5037. Active NN should trigger its own edit log rolls. (wang)
+
+    HDFS-5035.  getFileLinkStatus and rename do not correctly check permissions
+    of symlinks.  (Andrew Wang via Colin Patrick McCabe)
 
 Release 2.2.0 - 2013-10-13
 
