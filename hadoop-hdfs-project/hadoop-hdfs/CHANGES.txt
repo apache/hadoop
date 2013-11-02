@@ -19,6 +19,8 @@ Release 2.2.1 - UNRELEASED
     report to a configurable value.  (Aaron Twinning Meyers via Colin Patrick
     McCabe)
 
+    HDFS-5344. Make LsSnapshottableDir as Tool interface implementation. (Sathish via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
