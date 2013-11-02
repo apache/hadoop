@@ -457,6 +457,9 @@ Release 2.2.1 - UNRELEASED
 
     HADOOP-9898. Set SO_KEEPALIVE on all our sockets. (todd via wang)
 
+    HADOOP-9478. Fix race conditions during the initialization of Configuration
+    related to deprecatedKeyMap (cmccabe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

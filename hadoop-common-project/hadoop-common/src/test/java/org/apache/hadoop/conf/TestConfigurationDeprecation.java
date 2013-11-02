@@ -26,12 +26,27 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import junit.framework.Assert;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configuration.DeprecationDelta;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.util.concurrent.Uninterruptibles;
 
  
 public class TestConfigurationDeprecation {
@@ -320,4 +335,68 @@ public class TestConfigurationDeprecation {
     assertNull(conf.get("nK"));
   }
 
+  private static String getTestKeyName(int threadIndex, int testIndex) {
+    return "testConcurrentDeprecateAndManipulate.testKey." +
+                  threadIndex + "." + testIndex;
+  }
+  
+  /**
+   * Run a set of threads making changes to the deprecations
+   * concurrently with another set of threads calling get()
+   * and set() on Configuration objects.
+   */
+  @SuppressWarnings("deprecation")
+  @Test(timeout=60000)
+  public void testConcurrentDeprecateAndManipulate() throws Exception {
+    final int NUM_THREAD_IDS = 10;
+    final int NUM_KEYS_PER_THREAD = 1000;
+    ScheduledThreadPoolExecutor executor =
+      new ScheduledThreadPoolExecutor(2 * NUM_THREAD_IDS,
+      new ThreadFactoryBuilder().setDaemon(true).
+      setNameFormat("testConcurrentDeprecateAndManipulate modification thread %d").
+      build());
+    final CountDownLatch latch = new CountDownLatch(1);
+    final AtomicInteger highestModificationThreadId = new AtomicInteger(1);
+    List<Future<Void>> futures = new LinkedList<Future<Void>>();
+    for (int i = 0; i < NUM_THREAD_IDS; i++) {
+      futures.add(executor.schedule(new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          latch.await();
+          int threadIndex = highestModificationThreadId.addAndGet(1);
+          for (int i = 0; i < NUM_KEYS_PER_THREAD; i++) {
+            String testKey = getTestKeyName(threadIndex, i);
+            String testNewKey = testKey + ".new";
+            Configuration.addDeprecations(
+              new DeprecationDelta[] {
+                new DeprecationDelta(testKey, testNewKey)
+              });
+          }
+          return null;
+        }
+      }, 0, TimeUnit.SECONDS));
+    }
+    final AtomicInteger highestAccessThreadId = new AtomicInteger(1);
+    for (int i = 0; i < NUM_THREAD_IDS; i++) {
+      futures.add(executor.schedule(new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          Configuration conf = new Configuration();
+          latch.await();
+          int threadIndex = highestAccessThreadId.addAndGet(1);
+          for (int i = 0; i < NUM_KEYS_PER_THREAD; i++) {
+            String testNewKey = getTestKeyName(threadIndex, i) + ".new";
+            String value = "value." + threadIndex + "." + i;
+            conf.set(testNewKey, value);
+            Assert.assertEquals(value, conf.get(testNewKey));
+          }
+          return null;
+        }
+      }, 0, TimeUnit.SECONDS));
+    }
+    latch.countDown(); // allow all threads to proceed
+    for (Future<Void> future : futures) {
+      Uninterruptibles.getUninterruptibly(future);
+    }
+  }
 }
