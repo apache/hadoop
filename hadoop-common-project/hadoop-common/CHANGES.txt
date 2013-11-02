@@ -428,6 +428,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-10046. Print a log message when SSL is enabled.
     (David S. Wang via wang)
 
+    HADOOP-10079. log a warning message if group resolution takes too long.
+    (cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
