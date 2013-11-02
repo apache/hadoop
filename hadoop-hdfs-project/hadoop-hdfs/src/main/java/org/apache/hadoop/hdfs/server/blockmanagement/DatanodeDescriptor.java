@@ -43,9 +43,6 @@ import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-
 /**
  * This class extends the DatanodeInfo class with ephemeral information (eg
  * health, capacity, what blocks are associated with the Datanode) that is
@@ -218,26 +215,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public DatanodeDescriptor(DatanodeID nodeID, 
                             String networkLocation) {
-    this(nodeID, networkLocation, 0, 0, 0, 0);
-  }
-
-  /**
-   * DatanodeDescriptor constructor
-   * @param nodeID id of the data node
-   * @param networkLocation location of the data node in network
-   * @param cacheCapacity cache capacity of the data node
-   * @param cacheUsed cache used on the data node
-   * @param xceiverCount # of data transfers at the data node
-   */
-  public DatanodeDescriptor(DatanodeID nodeID,
-                            String networkLocation,
-                            long cacheCapacity,
-                            long cacheUsed,
-                            int xceiverCount,
-                            int failedVolumes) {
     super(nodeID, networkLocation);
-    updateHeartbeat(StorageReport.EMPTY_ARRAY, cacheCapacity, cacheUsed,
-      xceiverCount, failedVolumes);
   }
 
   /**
@@ -638,7 +616,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return sb.toString();
   }
 
-  DatanodeStorageInfo updateStorage(DatanodeStorage s) {
+  @VisibleForTesting
+  public DatanodeStorageInfo updateStorage(DatanodeStorage s) {
     synchronized (storageMap) {
       DatanodeStorageInfo storage = storageMap.get(s.getStorageID());
       if (storage == null) {

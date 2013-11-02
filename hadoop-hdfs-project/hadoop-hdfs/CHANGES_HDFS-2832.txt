@@ -57,3 +57,6 @@ IMPROVEMENTS:
 
     HDFS-5437. Fix TestBlockReport and TestBPOfferService failures. (Arpit
     Agarwal)
+
+    HDFS-5447. Fix TestJspHelper. (Arpit Agarwal)
+

@@ -25,6 +25,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -451,10 +453,24 @@ public class TestJspHelper {
         1234, 2345, 3456, 4567);
     DatanodeID dnId2 = new DatanodeID("127.0.0.2", "localhost2", "datanode2",
         1235, 2346, 3457, 4568);
-    DatanodeDescriptor dnDesc1 = new DatanodeDescriptor(
-        dnId1, "rack1", 5l, 3l, 10, 2);
-    DatanodeDescriptor dnDesc2 = new DatanodeDescriptor(
-        dnId2, "rack2", 10l, 2l, 20, 1);
+
+    // Setup DatanodeDescriptors with one storage each.
+    DatanodeDescriptor dnDesc1 = new DatanodeDescriptor(dnId1, "rack1");
+    DatanodeDescriptor dnDesc2 = new DatanodeDescriptor(dnId2, "rack2");
+
+    // Update the DatanodeDescriptors with their attached storages.
+    dnDesc1.updateStorage(new DatanodeStorage("dnStorage1"));
+    dnDesc2.updateStorage(new DatanodeStorage("dnStorage2"));
+
+    StorageReport[] report1 = new StorageReport[] {
+        new StorageReport("dnStorage1", false, 1024, 100, 924, 100)
+    };
+    StorageReport[] report2 = new StorageReport[] {
+        new StorageReport("dnStorage2", false, 2500, 200, 1848, 200)
+    };
+    dnDesc1.updateHeartbeat(report1, 5l, 3l, 10, 2);
+    dnDesc2.updateHeartbeat(report2, 10l, 2l, 20, 1);
+
     ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     live.add(dnDesc1);
     live.add(dnDesc2);
