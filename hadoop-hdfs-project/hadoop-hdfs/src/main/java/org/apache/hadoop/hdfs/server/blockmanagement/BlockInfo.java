@@ -94,8 +94,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   DatanodeStorageInfo getStorageInfo(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
-    DatanodeStorageInfo storage = (DatanodeStorageInfo)triplets[index*3];
-    return storage;
+    return (DatanodeStorageInfo)triplets[index*3];
   }
 
   private BlockInfo getPrevious(int index) {
@@ -118,7 +117,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return info;
   }
 
-  void setStorageInfo(int index, DatanodeStorageInfo storage) {
+  private void setStorageInfo(int index, DatanodeStorageInfo storage) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
     triplets[index*3] = storage;

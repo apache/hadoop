@@ -474,7 +474,7 @@ public class TestReplicationPolicy {
     assertFalse(log.size() == 0);
     final LoggingEvent lastLogEntry = log.get(log.size() - 1);
     
-    assertEquals(lastLogEntry.getLevel(), Level.WARN);
+    assertTrue(Level.WARN.isGreaterOrEqual(lastLogEntry.getLevel()));
     // Suppose to place replicas on each node but two data nodes are not
     // available for placing replica, so here we expect a short of 2
     assertTrue(((String)lastLogEntry.getMessage()).contains("in need of 2"));

@@ -2628,17 +2628,10 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   @VisibleForTesting
   void addBlock(DatanodeDescriptor node, String storageID, Block block, String delHint)
       throws IOException {
-    // Decrement number of blocks scheduled to this storage.
+    // Decrement number of blocks scheduled to this datanode.
     // for a retry request (of DatanodeProtocol#blockReceivedAndDeleted with 
     // RECEIVED_BLOCK), we currently also decrease the approximate number. 
-    DatanodeStorageInfo storageInfo = node.getStorageInfo(storageID);
-    if (storageInfo != null) {
-      storageInfo.decrementBlocksScheduled();
-    } else {
-      throw new IllegalArgumentException(
-          "Unrecognized storageID " + storageID + " in block report " +
-          "from Datanode " + node.toString());
-    }
+    node.decrementBlocksScheduled();
 
     // get the deletion hint node
     DatanodeDescriptor delHintNode = null;

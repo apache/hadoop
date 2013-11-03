@@ -60,3 +60,5 @@ IMPROVEMENTS:
 
     HDFS-5447. Fix TestJspHelper. (Arpit Agarwal)
 
+    HDFS-5452. Fix TestReplicationPolicy and TestBlocksScheduledCounter.
+    (szetszwo)

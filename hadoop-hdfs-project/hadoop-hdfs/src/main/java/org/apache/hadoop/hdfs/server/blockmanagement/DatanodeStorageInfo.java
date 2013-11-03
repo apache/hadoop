@@ -121,16 +121,6 @@ public class DatanodeStorageInfo {
    */
   private boolean blockContentsStale = true;
 
-  /* Variables for maintaining number of blocks scheduled to be written to
-   * this storage. This count is approximate and might be slightly bigger
-   * in case of errors (e.g. datanode does not report if an error occurs
-   * while writing the block).
-   */
-  private int currApproxBlocksScheduled = 0;
-  private int prevApproxBlocksScheduled = 0;
-  private long lastBlocksScheduledRollTime = 0;
-  private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
-
   public DatanodeStorageInfo(DatanodeDescriptor dn, DatanodeStorage s) {
     this.dn = dn;
     this.storageID = s.getStorageID();
@@ -155,10 +145,9 @@ public class DatanodeStorageInfo {
     blockContentsStale = true;
   }
 
-  void receivedHeartbeat(StorageReport report, final long lastUpdate) {
+  void receivedHeartbeat(StorageReport report) {
     updateState(report);
     heartbeatedSinceFailover = true;
-    rollBlocksScheduled(lastUpdate);
   }
 
   void receivedBlockReport() {
@@ -249,42 +238,10 @@ public class DatanodeStorageInfo {
     return dn;
   }
 
-  /**
-   * @return Approximate number of blocks currently scheduled to be written
-   *         to this storage.
-   */
-  int getBlocksScheduled() {
-    return currApproxBlocksScheduled + prevApproxBlocksScheduled;
-  }
-
   /** Increment the number of blocks scheduled for each given storage */ 
   public static void incrementBlocksScheduled(DatanodeStorageInfo... storages) {
     for (DatanodeStorageInfo s : storages) {
-      s.incrementBlocksScheduled();
-    }
-  }
-
-  /** Increment the number of blocks scheduled. */
-  private void incrementBlocksScheduled() {
-    currApproxBlocksScheduled++;
-  }
-  
-  /** Decrement the number of blocks scheduled. */
-  void decrementBlocksScheduled() {
-    if (prevApproxBlocksScheduled > 0) {
-      prevApproxBlocksScheduled--;
-    } else if (currApproxBlocksScheduled > 0) {
-      currApproxBlocksScheduled--;
-    } 
-    // its ok if both counters are zero.
-  }
-  
-  /** Adjusts curr and prev number of blocks scheduled every few minutes. */
-  private void rollBlocksScheduled(long now) {
-    if (now - lastBlocksScheduledRollTime > BLOCKS_SCHEDULED_ROLL_INTERVAL) {
-      prevApproxBlocksScheduled = currApproxBlocksScheduled;
-      currApproxBlocksScheduled = 0;
-      lastBlocksScheduledRollTime = now;
+      s.getDatanodeDescriptor().incrementBlocksScheduled();
     }
   }
 
