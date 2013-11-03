@@ -38,7 +38,7 @@ public class ActiveState extends HAState {
 
   @Override
   public void checkOperation(HAContext context, OperationCategory op) {
-    return; // Other than journal all operations are allowed in active state
+    return; // All operations are allowed in active state
   }
   
   @Override

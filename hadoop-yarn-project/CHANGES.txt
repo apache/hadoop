@@ -77,6 +77,11 @@ Release 2.3.0 - UNRELEASED
     applications so that clients can get information about them post RM-restart.
     (Jian He via vinodkv)
 
+    YARN-1290. Let continuous scheduling achieve more balanced task assignment
+    (Wei Yan via Sandy Ryza)
+
+    YARN-786. Expose application resource usage in RM REST API (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -177,6 +182,9 @@ Release 2.2.1 - UNRELEASED
 
     YARN-1343. NodeManagers additions/restarts are not reported as node updates 
     in AllocateResponse responses to AMs. (tucu)
+
+    YARN-1381. Same relaxLocality appears twice in exception message of
+    AMRMClientImpl#checkLocalityRelaxationConflict() (Ted Yu via Sandy Ryza)
 
 Release 2.2.0 - 2013-10-13
 

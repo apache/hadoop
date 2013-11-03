@@ -38,6 +38,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -181,6 +182,8 @@ public class FairScheduler implements ResourceScheduler {
   protected WeightAdjuster weightAdjuster; // Can be null for no weight adjuster
   protected boolean continuousSchedulingEnabled; // Continuous Scheduling enabled or not
   protected int continuousSchedulingSleepMs; // Sleep time for each pass in continuous scheduling
+  private Comparator nodeAvailableResourceComparator =
+          new NodeAvailableResourceComparator(); // Node available resource comparator
   protected double nodeLocalityThreshold; // Cluster threshold for node locality
   protected double rackLocalityThreshold; // Cluster threshold for rack locality
   protected long nodeLocalityDelayMs; // Delay for node locality
@@ -948,14 +951,22 @@ public class FairScheduler implements ResourceScheduler {
 
   private void continuousScheduling() {
     while (true) {
-      for (FSSchedulerNode node : nodes.values()) {
-        try {
-          if (Resources.fitsIn(minimumAllocation, node.getAvailableResource())) {
-            attemptScheduling(node);
+      List<NodeId> nodeIdList = new ArrayList<NodeId>(nodes.keySet());
+      Collections.sort(nodeIdList, nodeAvailableResourceComparator);
+
+      // iterate all nodes
+      for (NodeId nodeId : nodeIdList) {
+        if (nodes.containsKey(nodeId)) {
+          FSSchedulerNode node = nodes.get(nodeId);
+          try {
+            if (Resources.fitsIn(minimumAllocation,
+                    node.getAvailableResource())) {
+              attemptScheduling(node);
+            }
+          } catch (Throwable ex) {
+            LOG.warn("Error while attempting scheduling for node " + node +
+                    ": " + ex.toString(), ex);
           }
-        } catch (Throwable ex) {
-          LOG.warn("Error while attempting scheduling for node " + node + ": " +
-                  ex.toString(), ex);
         }
       }
       try {
@@ -964,6 +975,17 @@ public class FairScheduler implements ResourceScheduler {
         LOG.warn("Error while doing sleep in continuous scheduling: " +
                 e.toString(), e);
       }
+    }
+  }
+
+  /** Sort nodes by available resource */
+  private class NodeAvailableResourceComparator implements Comparator<NodeId> {
+
+    @Override
+    public int compare(NodeId n1, NodeId n2) {
+      return RESOURCE_CALCULATOR.compare(clusterCapacity,
+              nodes.get(n2).getAvailableResource(),
+              nodes.get(n1).getAvailableResource());
     }
   }
   
@@ -1028,6 +1050,17 @@ public class FairScheduler implements ResourceScheduler {
       return null;
     }
     return new SchedulerAppReport(applications.get(appAttemptId));
+  }
+  
+  @Override
+  public ApplicationResourceUsageReport getAppResourceUsageReport(
+      ApplicationAttemptId appAttemptId) {
+    FSSchedulerApp app = applications.get(appAttemptId);
+    if (app == null) {
+      LOG.error("Request for appInfo of unknown attempt" + appAttemptId);
+      return null;
+    }
+    return app.getResourceUsageReport();
   }
   
   /**

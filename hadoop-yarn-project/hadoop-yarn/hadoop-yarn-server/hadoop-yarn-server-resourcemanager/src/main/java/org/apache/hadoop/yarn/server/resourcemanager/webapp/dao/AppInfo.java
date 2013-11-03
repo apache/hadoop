@@ -26,8 +26,10 @@ import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -71,6 +73,9 @@ public class AppInfo {
   protected long elapsedTime;
   protected String amContainerLogs;
   protected String amHostHttpAddress;
+  protected int allocatedMB;
+  protected int allocatedVCores;
+  protected int runningContainers;
 
   public AppInfo() {
   } // JAXB needs this
@@ -131,6 +136,15 @@ public class AppInfo {
                 "/", app.getUser());
             this.amContainerLogs = url;
             this.amHostHttpAddress = masterContainer.getNodeHttpAddress();
+          }
+          
+          ApplicationResourceUsageReport resourceReport = attempt
+              .getApplicationResourceUsageReport();
+          if (resourceReport != null) {
+            Resource usedResources = resourceReport.getUsedResources();
+            allocatedMB = usedResources.getMemory();
+            allocatedVCores = usedResources.getVirtualCores();
+            runningContainers = resourceReport.getNumUsedContainers();
           }
         }
       }
@@ -224,5 +238,17 @@ public class AppInfo {
   public String getApplicationType() {
     return this.applicationType;
   }
-
+  
+  public int getRunningContainers() {
+    return this.runningContainers;
+  }
+  
+  public int getAllocatedMB() {
+    return this.allocatedMB;
+  }
+  
+  public int getAllocatedVCores() {
+    return this.allocatedVCores;
+  }
+  
 }

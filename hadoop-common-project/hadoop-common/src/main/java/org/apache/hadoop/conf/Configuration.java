@@ -55,6 +55,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -65,6 +67,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.apache.commons.collections.map.UnmodifiableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -87,6 +90,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
+
 import com.google.common.base.Preconditions;
 
 /** 
@@ -254,13 +258,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * warning message which can be logged whenever the deprecated key is used.
    */
   private static class DeprecatedKeyInfo {
-    private String[] newKeys;
-    private String customMessage;
-    private boolean accessed;
+    private final String[] newKeys;
+    private final String customMessage;
+    private final AtomicBoolean accessed = new AtomicBoolean(false);
+
     DeprecatedKeyInfo(String[] newKeys, String customMessage) {
       this.newKeys = newKeys;
       this.customMessage = customMessage;
-      accessed = false;
     }
 
     /**
@@ -286,26 +290,170 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       else {
         warningMessage = customMessage;
       }
-      accessed = true;
       return warningMessage;
+    }
+
+    boolean getAndSetAccessed() {
+      return accessed.getAndSet(true);
+    }
+
+    public void clearAccessed() {
+      accessed.set(false);
     }
   }
   
   /**
-   * Stores the deprecated keys, the new keys which replace the deprecated keys
-   * and custom message(if any provided).
+   * A pending addition to the global set of deprecated keys.
    */
-  private static Map<String, DeprecatedKeyInfo> deprecatedKeyMap = 
-      new HashMap<String, DeprecatedKeyInfo>();
-  
-  /**
-   * Stores a mapping from superseding keys to the keys which they deprecate.
-   */
-  private static Map<String, String> reverseDeprecatedKeyMap =
-      new HashMap<String, String>();
+  public static class DeprecationDelta {
+    private final String key;
+    private final String[] newKeys;
+    private final String customMessage;
+
+    DeprecationDelta(String key, String[] newKeys, String customMessage) {
+      Preconditions.checkNotNull(key);
+      Preconditions.checkNotNull(newKeys);
+      Preconditions.checkArgument(newKeys.length > 0);
+      this.key = key;
+      this.newKeys = newKeys;
+      this.customMessage = customMessage;
+    }
+
+    public DeprecationDelta(String key, String newKey, String customMessage) {
+      this(key, new String[] { newKey }, customMessage);
+    }
+
+    public DeprecationDelta(String key, String newKey) {
+      this(key, new String[] { newKey }, null);
+    }
+
+    public String getKey() {
+      return key;
+    }
+
+    public String[] getNewKeys() {
+      return newKeys;
+    }
+
+    public String getCustomMessage() {
+      return customMessage;
+    }
+  }
 
   /**
-   * Adds the deprecated key to the deprecation map.
+   * The set of all keys which are deprecated.
+   *
+   * DeprecationContext objects are immutable.
+   */
+  private static class DeprecationContext {
+    /**
+     * Stores the deprecated keys, the new keys which replace the deprecated keys
+     * and custom message(if any provided).
+     */
+    private final Map<String, DeprecatedKeyInfo> deprecatedKeyMap;
+
+    /**
+     * Stores a mapping from superseding keys to the keys which they deprecate.
+     */
+    private final Map<String, String> reverseDeprecatedKeyMap;
+
+    /**
+     * Create a new DeprecationContext by copying a previous DeprecationContext
+     * and adding some deltas.
+     *
+     * @param other   The previous deprecation context to copy, or null to start
+     *                from nothing.
+     * @param deltas  The deltas to apply.
+     */
+    @SuppressWarnings("unchecked")
+    DeprecationContext(DeprecationContext other, DeprecationDelta[] deltas) {
+      HashMap<String, DeprecatedKeyInfo> newDeprecatedKeyMap = 
+        new HashMap<String, DeprecatedKeyInfo>();
+      HashMap<String, String> newReverseDeprecatedKeyMap =
+        new HashMap<String, String>();
+      if (other != null) {
+        for (Entry<String, DeprecatedKeyInfo> entry :
+            other.deprecatedKeyMap.entrySet()) {
+          newDeprecatedKeyMap.put(entry.getKey(), entry.getValue());
+        }
+        for (Entry<String, String> entry :
+            other.reverseDeprecatedKeyMap.entrySet()) {
+          newReverseDeprecatedKeyMap.put(entry.getKey(), entry.getValue());
+        }
+      }
+      for (DeprecationDelta delta : deltas) {
+        if (!newDeprecatedKeyMap.containsKey(delta.getKey())) {
+          DeprecatedKeyInfo newKeyInfo =
+            new DeprecatedKeyInfo(delta.getNewKeys(), delta.getCustomMessage());
+          newDeprecatedKeyMap.put(delta.key, newKeyInfo);
+          for (String newKey : delta.getNewKeys()) {
+            newReverseDeprecatedKeyMap.put(newKey, delta.key);
+          }
+        }
+      }
+      this.deprecatedKeyMap =
+        UnmodifiableMap.decorate(newDeprecatedKeyMap);
+      this.reverseDeprecatedKeyMap =
+        UnmodifiableMap.decorate(newReverseDeprecatedKeyMap);
+    }
+
+    Map<String, DeprecatedKeyInfo> getDeprecatedKeyMap() {
+      return deprecatedKeyMap;
+    }
+
+    Map<String, String> getReverseDeprecatedKeyMap() {
+      return reverseDeprecatedKeyMap;
+    }
+  }
+  
+  private static DeprecationDelta[] defaultDeprecations = 
+    new DeprecationDelta[] {
+      new DeprecationDelta("topology.script.file.name", 
+        CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY),
+      new DeprecationDelta("topology.script.number.args", 
+        CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY),
+      new DeprecationDelta("hadoop.configured.node.mapping", 
+        CommonConfigurationKeys.NET_TOPOLOGY_CONFIGURED_NODE_MAPPING_KEY),
+      new DeprecationDelta("topology.node.switch.mapping.impl", 
+        CommonConfigurationKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY),
+      new DeprecationDelta("dfs.df.interval", 
+        CommonConfigurationKeys.FS_DF_INTERVAL_KEY),
+      new DeprecationDelta("hadoop.native.lib", 
+        CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY),
+      new DeprecationDelta("fs.default.name", 
+        CommonConfigurationKeys.FS_DEFAULT_NAME_KEY),
+      new DeprecationDelta("dfs.umaskmode",
+        CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY)
+    };
+
+  /**
+   * The global DeprecationContext.
+   */
+  private static AtomicReference<DeprecationContext> deprecationContext =
+      new AtomicReference<DeprecationContext>(
+          new DeprecationContext(null, defaultDeprecations));
+
+  /**
+   * Adds a set of deprecated keys to the global deprecations.
+   *
+   * This method is lockless.  It works by means of creating a new
+   * DeprecationContext based on the old one, and then atomically swapping in
+   * the new context.  If someone else updated the context in between us reading
+   * the old context and swapping in the new one, we try again until we win the
+   * race.
+   *
+   * @param deltas   The deprecations to add.
+   */
+  public static void addDeprecations(DeprecationDelta[] deltas) {
+    DeprecationContext prev, next;
+    do {
+      prev = deprecationContext.get();
+      next = new DeprecationContext(prev, deltas);
+    } while (!deprecationContext.compareAndSet(prev, next));
+  }
+
+  /**
+   * Adds the deprecated key to the global deprecation map.
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
@@ -314,6 +462,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * If a key is deprecated in favor of multiple keys, they are all treated as 
    * aliases of each other, and setting any one of them resets all the others 
    * to the new value.
+   *
+   * If you have multiple deprecation entries to add, it is more efficient to
+   * use #addDeprecations(DeprecationDelta[] deltas) instead.
    * 
    * @param key
    * @param newKeys
@@ -322,41 +473,35 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       String customMessage)} instead
    */
   @Deprecated
-  public synchronized static void addDeprecation(String key, String[] newKeys,
+  public static void addDeprecation(String key, String[] newKeys,
       String customMessage) {
-    if (key == null || key.length() == 0 ||
-        newKeys == null || newKeys.length == 0) {
-      throw new IllegalArgumentException();
-    }
-    if (!isDeprecated(key)) {
-      DeprecatedKeyInfo newKeyInfo;
-      newKeyInfo = new DeprecatedKeyInfo(newKeys, customMessage);
-      deprecatedKeyMap.put(key, newKeyInfo);
-      for (String newKey : newKeys) {
-        reverseDeprecatedKeyMap.put(newKey, key);
-      }
-    }
+    addDeprecations(new DeprecationDelta[] {
+      new DeprecationDelta(key, newKeys, customMessage)
+    });
   }
-  
+
   /**
-   * Adds the deprecated key to the deprecation map.
+   * Adds the deprecated key to the global deprecation map.
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
    * would lead to <tt>UnsupportedOperationException</tt>
    * 
+   * If you have multiple deprecation entries to add, it is more efficient to
+   * use #addDeprecations(DeprecationDelta[] deltas) instead.
+   *
    * @param key
    * @param newKey
    * @param customMessage
    */
-  public synchronized static void addDeprecation(String key, String newKey,
+  public static void addDeprecation(String key, String newKey,
 	      String customMessage) {
 	  addDeprecation(key, new String[] {newKey}, customMessage);
   }
 
   /**
-   * Adds the deprecated key to the deprecation map when no custom message
-   * is provided.
+   * Adds the deprecated key to the global deprecation map when no custom
+   * message is provided.
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
@@ -366,28 +511,34 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * aliases of each other, and setting any one of them resets all the others 
    * to the new value.
    * 
+   * If you have multiple deprecation entries to add, it is more efficient to
+   * use #addDeprecations(DeprecationDelta[] deltas) instead.
+   *
    * @param key Key that is to be deprecated
    * @param newKeys list of keys that take up the values of deprecated key
    * @deprecated use {@link #addDeprecation(String key, String newKey)} instead
    */
   @Deprecated
-  public synchronized static void addDeprecation(String key, String[] newKeys) {
+  public static void addDeprecation(String key, String[] newKeys) {
     addDeprecation(key, newKeys, null);
   }
   
   /**
-   * Adds the deprecated key to the deprecation map when no custom message
-   * is provided.
+   * Adds the deprecated key to the global deprecation map when no custom
+   * message is provided.
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
    * would lead to <tt>UnsupportedOperationException</tt>
    * 
+   * If you have multiple deprecation entries to add, it is more efficient to
+   * use #addDeprecations(DeprecationDelta[] deltas) instead.
+   *
    * @param key Key that is to be deprecated
    * @param newKey key that takes up the value of deprecated key
    */
-  public synchronized static void addDeprecation(String key, String newKey) {
-	addDeprecation(key, new String[] {newKey}, null);
+  public static void addDeprecation(String key, String newKey) {
+    addDeprecation(key, new String[] {newKey}, null);
   }
   
   /**
@@ -398,7 +549,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *         <code>false</code> otherwise.
    */
   public static boolean isDeprecated(String key) {
-    return deprecatedKeyMap.containsKey(key);
+    return deprecationContext.get().getDeprecatedKeyMap().containsKey(key);
   }
 
   /**
@@ -410,13 +561,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   private String[] getAlternateNames(String name) {
     String altNames[] = null;
-    DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
+    DeprecationContext cur = deprecationContext.get();
+    DeprecatedKeyInfo keyInfo = cur.getDeprecatedKeyMap().get(name);
     if (keyInfo == null) {
-      altNames = (reverseDeprecatedKeyMap.get(name) != null ) ? 
-        new String [] {reverseDeprecatedKeyMap.get(name)} : null;
+      altNames = (cur.getReverseDeprecatedKeyMap().get(name) != null ) ? 
+        new String [] {cur.getReverseDeprecatedKeyMap().get(name)} : null;
       if(altNames != null && altNames.length > 0) {
     	//To help look for other new configs for this deprecated config
-    	keyInfo = deprecatedKeyMap.get(altNames[0]);
+    	keyInfo = cur.getDeprecatedKeyMap().get(altNames[0]);
       }      
     } 
     if(keyInfo != null && keyInfo.newKeys.length > 0) {
@@ -442,11 +594,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return the first property in the list of properties mapping
    *         the <code>name</code> or the <code>name</code> itself.
    */
-  private String[] handleDeprecation(String name) {
+  private String[] handleDeprecation(DeprecationContext deprecations,
+      String name) {
     ArrayList<String > names = new ArrayList<String>();
 	if (isDeprecated(name)) {
-      DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
-      warnOnceIfDeprecated(name);
+      DeprecatedKeyInfo keyInfo = deprecations.getDeprecatedKeyMap().get(name);
+      warnOnceIfDeprecated(deprecations, name);
       for (String newKey : keyInfo.newKeys) {
         if(newKey != null) {
           names.add(newKey);
@@ -457,7 +610,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     	names.add(name);
     }
     for(String n : names) {
-	  String deprecatedKey = reverseDeprecatedKeyMap.get(n);
+	  String deprecatedKey = deprecations.getReverseDeprecatedKeyMap().get(n);
 	  if (deprecatedKey != null && !getOverlay().containsKey(n) &&
 	      getOverlay().containsKey(deprecatedKey)) {
 	    getProps().setProperty(n, getOverlay().getProperty(deprecatedKey));
@@ -469,11 +622,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
  
   private void handleDeprecation() {
     LOG.debug("Handling deprecation for all properties in config...");
+    DeprecationContext deprecations = deprecationContext.get();
     Set<Object> keys = new HashSet<Object>();
     keys.addAll(getProps().keySet());
     for (Object item: keys) {
       LOG.debug("Handling deprecation for " + (String)item);
-      handleDeprecation((String)item);
+      handleDeprecation(deprecations, (String)item);
     }
   }
  
@@ -492,13 +646,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     addDefaultResource("core-default.xml");
     addDefaultResource("core-site.xml");
-    //Add code for managing deprecated key mapping
-    //for example
-    //addDeprecation("oldKey1",new String[]{"newkey1","newkey2"});
-    //adds deprecation for oldKey1 to two new keys(newkey1, newkey2).
-    //so get or set of oldKey1 will correctly populate/access values of 
-    //newkey1 and newkey2
-    addDeprecatedKeys();
   }
   
   private Properties properties;
@@ -721,7 +868,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *         or null if no such property exists.
    */
   public String get(String name) {
-    String[] names = handleDeprecation(name);
+    String[] names = handleDeprecation(deprecationContext.get(), name);
     String result = null;
     for(String n : names) {
       result = substituteVars(getProps().getProperty(n));
@@ -778,7 +925,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *         its replacing property and null if no such property exists.
    */
   public String getRaw(String name) {
-    String[] names = handleDeprecation(name);
+    String[] names = handleDeprecation(deprecationContext.get(), name);
     String result = null;
     for(String n : names) {
       result = getProps().getProperty(n);
@@ -816,7 +963,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     Preconditions.checkArgument(
         value != null,
         "Property value must not be null");
-    if (deprecatedKeyMap.isEmpty()) {
+    DeprecationContext deprecations = deprecationContext.get();
+    if (deprecations.getDeprecatedKeyMap().isEmpty()) {
       getProps();
     }
     getOverlay().setProperty(name, value);
@@ -837,12 +985,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
       }
     }
-    warnOnceIfDeprecated(name);
+    warnOnceIfDeprecated(deprecations, name);
   }
 
-  private void warnOnceIfDeprecated(String name) {
-    DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
-    if (keyInfo != null && !keyInfo.accessed) {
+  private void warnOnceIfDeprecated(DeprecationContext deprecations, String name) {
+    DeprecatedKeyInfo keyInfo = deprecations.getDeprecatedKeyMap().get(name);
+    if (keyInfo != null && !keyInfo.getAndSetAccessed()) {
       LOG_DEPRECATION.info(keyInfo.getWarningMessage(name));
     }
   }
@@ -893,7 +1041,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *         doesn't exist.                    
    */
   public String get(String name, String defaultValue) {
-    String[] names = handleDeprecation(name);
+    String[] names = handleDeprecation(deprecationContext.get(), name);
     String result = null;
     for(String n : names) {
       result = substituteVars(getProps().getProperty(n, defaultValue));
@@ -2100,6 +2248,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       if (!"configuration".equals(root.getTagName()))
         LOG.fatal("bad conf file: top-level element not <configuration>");
       NodeList props = root.getChildNodes();
+      DeprecationContext deprecations = deprecationContext.get();
       for (int i = 0; i < props.getLength(); i++) {
         Node propNode = props.item(i);
         if (!(propNode instanceof Element))
@@ -2137,9 +2286,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         
         // Ignore this parameter if it has already been marked as 'final'
         if (attr != null) {
-          if (deprecatedKeyMap.containsKey(attr)) {
-            DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(attr);
-            keyInfo.accessed = false;
+          if (deprecations.getDeprecatedKeyMap().containsKey(attr)) {
+            DeprecatedKeyInfo keyInfo =
+                deprecations.getDeprecatedKeyMap().get(attr);
+            keyInfo.clearAccessed();
             for (String key:keyInfo.newKeys) {
               // update new keys with deprecated key's value 
               loadProperty(toAddTo, name, key, value, finalParameter, 
@@ -2433,26 +2583,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return result;
   }
 
-  //Load deprecated keys in common
-  private static void addDeprecatedKeys() {
-    Configuration.addDeprecation("topology.script.file.name", 
-               new String[]{CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY});
-    Configuration.addDeprecation("topology.script.number.args", 
-               new String[]{CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY});
-    Configuration.addDeprecation("hadoop.configured.node.mapping", 
-               new String[]{CommonConfigurationKeys.NET_TOPOLOGY_CONFIGURED_NODE_MAPPING_KEY});
-    Configuration.addDeprecation("topology.node.switch.mapping.impl", 
-               new String[]{CommonConfigurationKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY});
-    Configuration.addDeprecation("dfs.df.interval", 
-               new String[]{CommonConfigurationKeys.FS_DF_INTERVAL_KEY});
-    Configuration.addDeprecation("hadoop.native.lib", 
-               new String[]{CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY});
-    Configuration.addDeprecation("fs.default.name", 
-               new String[]{CommonConfigurationKeys.FS_DEFAULT_NAME_KEY});
-    Configuration.addDeprecation("dfs.umaskmode",
-        new String[]{CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY});
-  }
-  
   /**
    * A unique class which is used as a sentinel value in the caching
    * for getClassByName. {@link Configuration#getClassByNameOrNull(String)}
@@ -2460,7 +2590,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private static abstract class NegativeCacheSentinel {}
 
   public static void dumpDeprecatedKeys() {
-    for (Map.Entry<String, DeprecatedKeyInfo> entry : deprecatedKeyMap.entrySet()) {
+    DeprecationContext deprecations = deprecationContext.get();
+    for (Map.Entry<String, DeprecatedKeyInfo> entry :
+        deprecations.getDeprecatedKeyMap().entrySet()) {
       StringBuilder newKeys = new StringBuilder();
       for (String newKey : entry.getValue().newKeys) {
         newKeys.append(newKey).append("\t");

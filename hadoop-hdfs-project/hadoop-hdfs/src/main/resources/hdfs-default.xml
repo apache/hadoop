@@ -1543,4 +1543,29 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.edit.log.autoroll.multiplier.threshold</name>
+  <value>2.0</value>
+  <description>
+    Determines when an active namenode will roll its own edit log.
+    The actual threshold (in number of edits) is determined by multiplying
+    this value by dfs.namenode.checkpoint.txns.
+
+    This prevents extremely large edit files from accumulating on the active
+    namenode, which can cause timeouts during namenode startup and pose an
+    administrative hassle. This behavior is intended as a failsafe for when
+    the standby or secondary namenode fail to roll the edit log by the normal
+    checkpoint threshold.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edit.log.autoroll.check.interval.ms</name>
+  <value>300000</value>
+  <description>
+    How often an active namenode will check if it needs to roll its edit log,
+    in milliseconds.
+  </description>
+</property>
+
 </configuration>

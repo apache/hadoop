@@ -33,6 +33,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -2348,7 +2352,7 @@ public class TestFairScheduler {
         fs.applications, FSSchedulerApp.class);
   }
 
-  @Test (timeout = 5000)
+  @Test (timeout = 10000)
   public void testContinuousScheduling() throws Exception {
     // set continuous scheduling enabled
     FairScheduler fs = new FairScheduler();
@@ -2359,16 +2363,21 @@ public class TestFairScheduler {
     Assert.assertTrue("Continuous scheduling should be enabled.",
             fs.isContinuousSchedulingEnabled());
 
-    // Add one node
+    // Add two nodes
     RMNode node1 =
             MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
                     "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     fs.handle(nodeEvent1);
+    RMNode node2 =
+            MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 2,
+                    "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    fs.handle(nodeEvent2);
 
     // available resource
-    Assert.assertEquals(fs.getClusterCapacity().getMemory(), 8 * 1024);
-    Assert.assertEquals(fs.getClusterCapacity().getVirtualCores(), 8);
+    Assert.assertEquals(fs.getClusterCapacity().getMemory(), 16 * 1024);
+    Assert.assertEquals(fs.getClusterCapacity().getVirtualCores(), 16);
 
     // send application request
     ApplicationAttemptId appAttemptId =
@@ -2387,10 +2396,32 @@ public class TestFairScheduler {
     FSSchedulerApp app = fs.applications.get(appAttemptId);
     // Wait until app gets resources.
     while (app.getCurrentConsumption().equals(Resources.none())) { }
-    
+
     // check consumption
     Assert.assertEquals(1024, app.getCurrentConsumption().getMemory());
     Assert.assertEquals(1, app.getCurrentConsumption().getVirtualCores());
+
+    // another request
+    request =
+            createResourceRequest(1024, 1, ResourceRequest.ANY, 2, 1, true);
+    ask.clear();
+    ask.add(request);
+    fs.allocate(appAttemptId, ask, new ArrayList<ContainerId>(), null, null);
+
+    // Wait until app gets resources
+    while (app.getCurrentConsumption()
+            .equals(Resources.createResource(1024, 1))) { }
+
+    Assert.assertEquals(2048, app.getCurrentConsumption().getMemory());
+    Assert.assertEquals(2, app.getCurrentConsumption().getVirtualCores());
+
+    // 2 containers should be assigned to 2 nodes
+    Set<NodeId> nodes = new HashSet<NodeId>();
+    Iterator<RMContainer> it = app.getLiveContainers().iterator();
+    while (it.hasNext()) {
+      nodes.add(it.next().getContainer().getNodeId());
+    }
+    Assert.assertEquals(2, nodes.size());
   }
 
   
