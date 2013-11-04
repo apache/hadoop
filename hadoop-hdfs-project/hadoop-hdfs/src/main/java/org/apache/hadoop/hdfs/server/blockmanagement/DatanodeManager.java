@@ -845,18 +845,6 @@ public class DatanodeManager {
         return;
       }
 
-      // This is a new datanode.
-      if (nodeReg.getDatanodeUuid() == null ||
-          nodeReg.getDatanodeUuid().isEmpty()) {
-        // this data node has never been registered
-        nodeReg.generateNewDatanodeUuid();
-        if (NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug(
-              "BLOCK* NameSystem.registerDatanode: "
-              + "new Datanode UUID " + nodeReg.getDatanodeUuid() + " assigned.");
-        }
-      }
-      
       DatanodeDescriptor nodeDescr 
         = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK);
       boolean success = false;

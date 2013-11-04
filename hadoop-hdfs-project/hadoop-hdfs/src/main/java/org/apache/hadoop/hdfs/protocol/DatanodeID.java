@@ -113,11 +113,6 @@ public class DatanodeID implements Comparable<DatanodeID> {
     }
   }
 
-  public String generateNewDatanodeUuid() {
-    datanodeUuid = UUID.randomUUID().toString();
-    return datanodeUuid;
-  }
-
   /**
    * @return ipAddr;
    */

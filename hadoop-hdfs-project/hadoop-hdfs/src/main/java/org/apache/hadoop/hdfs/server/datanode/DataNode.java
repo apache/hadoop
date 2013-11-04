@@ -694,15 +694,34 @@ public class DataNode extends Configured
   }
   
   /**
+   * Verify that the DatanodeUuid has been initialized. If this is a new
+   * datanode then we generate a new Datanode Uuid and persist it to disk.
+   *
+   * @throws IOException
+   */
+  private synchronized void checkDatanodeUuid() throws IOException {
+    if (storage.getDatanodeUuid() == null) {
+      storage.setDatanodeUuid(UUID.randomUUID().toString());
+      storage.writeAll();
+      LOG.info("Generated and persisted new Datanode UUID " +
+               storage.getDatanodeUuid());
+    }
+  }
+
+  /**
    * Create a DatanodeRegistration for a specific block pool.
    * @param nsInfo the namespace info from the first part of the NN handshake
    */
-  DatanodeRegistration createBPRegistration(NamespaceInfo nsInfo) {
+  DatanodeRegistration createBPRegistration(NamespaceInfo nsInfo)
+      throws IOException {
     StorageInfo storageInfo = storage.getBPStorage(nsInfo.getBlockPoolID());
     if (storageInfo == null) {
       // it's null in the case of SimulatedDataSet
       storageInfo = new StorageInfo(nsInfo);
     }
+
+    checkDatanodeUuid();
+
     DatanodeID dnId = new DatanodeID(
         streamingAddr.getAddress().getHostAddress(), hostName, 
         storage.getDatanodeUuid(), getXferPort(), getInfoPort(),
@@ -724,13 +743,7 @@ public class DataNode extends Configured
       id = bpRegistration;
     }
 
-    if (storage.getDatanodeUuid() == null) {
-      // This is a fresh datanode, persist the NN-provided Datanode ID
-      storage.setDatanodeUuid(bpRegistration.getDatanodeUuid());
-      storage.writeAll();
-      LOG.info("Datanode ID " + bpRegistration.getDatanodeUuid()
-          + " is assigned to new storage " + bpRegistration);
-    } else if(!storage.getDatanodeUuid().equals(bpRegistration.getDatanodeUuid())) {
+    if(!storage.getDatanodeUuid().equals(bpRegistration.getDatanodeUuid())) {
       throw new IOException("Inconsistent Datanode IDs. Name-node returned "
           + bpRegistration.getDatanodeUuid()
           + ". Expecting " + storage.getDatanodeUuid());

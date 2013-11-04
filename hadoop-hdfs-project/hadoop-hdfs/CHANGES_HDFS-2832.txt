@@ -61,4 +61,7 @@ IMPROVEMENTS:
     HDFS-5447. Fix TestJspHelper. (Arpit Agarwal)
 
     HDFS-5452. Fix TestReplicationPolicy and TestBlocksScheduledCounter.
-    (szetszwo)
+
+    HDFS-5448. Datanode should generate its ID on first registration. (Arpit
+    Agarwal)
+
