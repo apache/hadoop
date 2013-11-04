@@ -5774,7 +5774,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         DatanodeInfo[] nodes = blocks[i].getLocations();
         String[] storageIDs = blocks[i].getStorageIDs();
         for (int j = 0; j < nodes.length; j++) {
-          blockManager.findAndMarkBlockAsCorrupt(blk, nodes[j], storageIDs[j], 
+          blockManager.findAndMarkBlockAsCorrupt(blk, nodes[j],
+              storageIDs == null ? null: storageIDs[j], 
               "client machine reported it");
         }
       }

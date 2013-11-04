@@ -385,7 +385,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     @Override
     public boolean hasNext() {
       update();
-      return iterators.get(index).hasNext();
+      return !iterators.isEmpty() && iterators.get(index).hasNext();
     }
 
     @Override

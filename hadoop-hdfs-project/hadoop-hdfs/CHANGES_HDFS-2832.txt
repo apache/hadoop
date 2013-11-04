@@ -70,3 +70,6 @@ IMPROVEMENTS:
 
     HDFS-5455. NN should update storageMap on first heartbeat. (Arpit Agarwal)
 
+    HDFS-5457. Fix TestDatanodeRegistration, TestFsck and TestAddBlockRetry.
+    (Contributed bt szetszwo)
+
