@@ -68,3 +68,5 @@ IMPROVEMENTS:
     HDFS-5448. Fix break caused by previous checkin for HDFS-5448. (Arpit
     Agarwal)
 
+    HDFS-5455. NN should update storageMap on first heartbeat. (Arpit Agarwal)
+

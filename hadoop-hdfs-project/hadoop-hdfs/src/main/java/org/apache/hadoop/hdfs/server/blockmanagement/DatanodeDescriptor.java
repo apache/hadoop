@@ -350,18 +350,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.volumeFailures = volFailures;
     for (StorageReport report : reports) {
       DatanodeStorageInfo storage = storageMap.get(report.getStorageID());
-      if (storage != null) {
-        storage.receivedHeartbeat(report);
-        totalCapacity += report.getCapacity();
-        totalRemaining += report.getRemaining();
-        totalBlockPoolUsed += report.getBlockPoolUsed();
-        totalDfsUsed += report.getDfsUsed();
-      } else {
-        // This warning is generally benign during cluster initialization
-        // when the heartbeat is received before the initial block reports
-        // from each storage.
-        LOG.warn("Unrecognized storage ID " + report.getStorageID());
+      if (storage == null) {
+        // This is seen during cluster initialization when the heartbeat
+        // is received before the initial block reports from each storage.
+        storage = updateStorage(new DatanodeStorage(report.getStorageID()));
       }
+      storage.receivedHeartbeat(report);
+      totalCapacity += report.getCapacity();
+      totalRemaining += report.getRemaining();
+      totalBlockPoolUsed += report.getBlockPoolUsed();
+      totalDfsUsed += report.getDfsUsed();
     }
     rollBlocksScheduled(getLastUpdate());
 
@@ -651,6 +649,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     synchronized (storageMap) {
       DatanodeStorageInfo storage = storageMap.get(s.getStorageID());
       if (storage == null) {
+        LOG.info("Adding new storage ID " + s.getStorageID() +
+                 " for DN " + getXferAddr());
         storage = new DatanodeStorageInfo(this, s);
         storageMap.put(s.getStorageID(), storage);
       } else {
