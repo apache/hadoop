@@ -65,3 +65,6 @@ IMPROVEMENTS:
     HDFS-5448. Datanode should generate its ID on first registration. (Arpit
     Agarwal)
 
+    HDFS-5448. Fix break caused by previous checkin for HDFS-5448. (Arpit
+    Agarwal)
+
