@@ -629,6 +629,10 @@ public class CapacityScheduler
     }
 
     FiCaSchedulerNode node = getNode(nm.getNodeID());
+    
+    // Update resource if any change
+    SchedulerUtils.updateResourceIfChanged(node, nm, clusterResource, LOG);
+    
     List<UpdatedContainerInfo> containerInfoList = nm.pullContainerUpdates();
     List<ContainerStatus> newlyLaunchedContainers = new ArrayList<ContainerStatus>();
     List<ContainerStatus> completedContainers = new ArrayList<ContainerStatus>();
@@ -695,7 +699,7 @@ public class CapacityScheduler
           node.getReservedContainer().getContainerId().getApplicationAttemptId()
           );
     }
-
+  
   }
 
   private void containerLaunchedOnNode(ContainerId containerId, FiCaSchedulerNode node) {

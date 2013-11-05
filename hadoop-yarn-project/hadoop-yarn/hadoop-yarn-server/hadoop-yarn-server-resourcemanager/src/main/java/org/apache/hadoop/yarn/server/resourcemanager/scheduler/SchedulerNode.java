@@ -67,6 +67,12 @@ public abstract class SchedulerNode {
    * @return number of active containers on the node
    */
   public abstract int getNumContainers();
+  
+  /**
+   * Apply delta resource on node's available resource.
+   * @param deltaResource the delta of resource need to apply to node
+   */
+  public abstract void applyDeltaOnAvailableResource(Resource deltaResource);
 
   /**
    * Get total resources on the node.

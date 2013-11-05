@@ -100,7 +100,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   private final static List<Container> EMPTY_CONTAINER_LIST = Arrays.asList(EMPTY_CONTAINER_ARRAY);
   private RMContext rmContext;
 
-  private Map<NodeId, FiCaSchedulerNode> nodes = new ConcurrentHashMap<NodeId, FiCaSchedulerNode>();
+  protected Map<NodeId, FiCaSchedulerNode> nodes = new ConcurrentHashMap<NodeId, FiCaSchedulerNode>();
 
   private boolean initialized;
   private Resource minimumAllocation;
@@ -628,6 +628,9 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   private synchronized void nodeUpdate(RMNode rmNode) {
     FiCaSchedulerNode node = getNode(rmNode.getNodeID());
     
+    // Update resource if any change
+    SchedulerUtils.updateResourceIfChanged(node, rmNode, clusterResource, LOG);
+    
     List<UpdatedContainerInfo> containerInfoList = rmNode.pullContainerUpdates();
     List<ContainerStatus> newlyLaunchedContainers = new ArrayList<ContainerStatus>();
     List<ContainerStatus> completedContainers = new ArrayList<ContainerStatus>();
@@ -661,7 +664,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     
     metrics.setAvailableResourcesToQueue(
         Resources.subtract(clusterResource, usedResource));
-  }  
+  }
 
   @Override
   public void handle(SchedulerEvent event) {

@@ -19,20 +19,19 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.List;
 
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
-import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -146,6 +145,37 @@ public class SchedulerUtils {
         resourceCalculator, ask.getCapability(), minimumResource,
         maximumResource, minimumResource);
     ask.setCapability(normalized);
+  }
+  
+  /**
+   * Update resource in SchedulerNode if any resource change in RMNode.
+   * @param node SchedulerNode with old resource view
+   * @param rmNode RMNode with new resource view
+   * @param clusterResource the cluster's resource that need to update
+   * @param log Scheduler's log for resource change
+   */
+  public static void updateResourceIfChanged(SchedulerNode node, 
+      RMNode rmNode, Resource clusterResource, Log log) {
+    Resource oldAvailableResource = node.getAvailableResource();
+    Resource newAvailableResource = Resources.subtract(
+        rmNode.getTotalCapability(), node.getUsedResource());
+    
+    if (!newAvailableResource.equals(oldAvailableResource)) {
+      Resource deltaResource = Resources.subtract(newAvailableResource,
+          oldAvailableResource);
+      // Reflect resource change to scheduler node.
+      node.applyDeltaOnAvailableResource(deltaResource);
+      // Reflect resource change to clusterResource.
+      Resources.addTo(clusterResource, deltaResource);
+      // TODO process resource over-commitment case (allocated containers
+      // > total capacity) in different option by getting value of
+      // overCommitTimeoutMillis.
+      
+      // Log resource change
+      log.info("Resource change on node: " + rmNode.getNodeAddress() 
+          + " with delta: CPU: " + deltaResource.getMemory() + "core, Memory: "
+          + deltaResource.getMemory() +"MB");
+    }
   }
 
   /**
