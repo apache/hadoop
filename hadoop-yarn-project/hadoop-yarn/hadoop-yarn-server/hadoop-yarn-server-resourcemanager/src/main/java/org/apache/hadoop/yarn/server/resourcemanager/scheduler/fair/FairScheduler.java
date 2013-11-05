@@ -920,6 +920,9 @@ public class FairScheduler implements ResourceScheduler {
     eventLog.log("HEARTBEAT", nm.getHostName());
     FSSchedulerNode node = nodes.get(nm.getNodeID());
 
+    // Update resource if any change
+    SchedulerUtils.updateResourceIfChanged(node, nm, clusterCapacity, LOG);
+    
     List<UpdatedContainerInfo> containerInfoList = nm.pullContainerUpdates();
     List<ContainerStatus> newlyLaunchedContainers = new ArrayList<ContainerStatus>();
     List<ContainerStatus> completedContainers = new ArrayList<ContainerStatus>();

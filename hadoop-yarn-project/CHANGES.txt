@@ -19,6 +19,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1068. Add admin support for HA operations (Karthik Kambatla via
     bikas)
 
+    YARN-311. RM/scheduler support for dynamic resource configuration.
+    (Junping Du via llu)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
