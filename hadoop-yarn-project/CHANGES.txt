@@ -109,6 +109,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1305. RMHAProtocolService#serviceInit should handle HAUtil's
     IllegalArgumentException (Tsuyoshi Ozawa via bikas)
 
+    YARN-1374. Changed ResourceManager to start the preemption policy monitors
+    as active services. (Karthik Kambatla via vinodkv)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
