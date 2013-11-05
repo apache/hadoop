@@ -120,6 +120,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1321. Changed NMTokenCache to support both singleton and an instance
     usage. (Alejandro Abdelnur via vinodkv) 
 
+    YARN-1388. Fair Scheduler page always displays blank fair share (Liyin Liang
+    via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
