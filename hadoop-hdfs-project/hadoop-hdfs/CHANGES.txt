@@ -227,6 +227,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5456. NameNode startup progress creates new steps if caller attempts to
     create a counter for a step that doesn't already exist.  (cnauroth)
 
+    HDFS-5458. Datanode failed volume threshold ignored if exception is thrown
+    in getDataDirsFromURIs. (Mike Mellenthin via wang)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
