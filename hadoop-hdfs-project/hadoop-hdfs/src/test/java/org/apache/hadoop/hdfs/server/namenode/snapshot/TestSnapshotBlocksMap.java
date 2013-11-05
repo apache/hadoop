@@ -21,6 +21,7 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -204,5 +207,71 @@ public class TestSnapshotBlocksMap {
     } catch (IOException e) {
       assertExceptionContains("File does not exist: " + s1f0, e);
     }
+  }
+
+  /*
+   * Try to read the files inside snapshot but deleted in original place after
+   * restarting post checkpoint. refer HDFS-5427
+   */
+  @Test(timeout = 30000)
+  public void testReadSnapshotFileWithCheckpoint() throws Exception {
+    Path foo = new Path("/foo");
+    hdfs.mkdirs(foo);
+    hdfs.allowSnapshot(foo);
+    Path bar = new Path("/foo/bar");
+    DFSTestUtil.createFile(hdfs, bar, 100, (short) 2, 100024L);
+    hdfs.createSnapshot(foo, "s1");
+    assertTrue(hdfs.delete(bar, true));
+
+    // checkpoint
+    NameNode nameNode = cluster.getNameNode();
+    NameNodeAdapter.enterSafeMode(nameNode, false);
+    NameNodeAdapter.saveNamespace(nameNode);
+    NameNodeAdapter.leaveSafeMode(nameNode);
+
+    // restart namenode to load snapshot files from fsimage
+    cluster.restartNameNode(true);
+    String snapshotPath = Snapshot.getSnapshotPath(foo.toString(), "s1/bar");
+    DFSTestUtil.readFile(hdfs, new Path(snapshotPath));
+  }
+
+  /*
+   * Try to read the files inside snapshot but renamed to different file and
+   * deleted after restarting post checkpoint. refer HDFS-5427
+   */
+  @Test(timeout = 30000)
+  public void testReadRenamedSnapshotFileWithCheckpoint() throws Exception {
+    final Path foo = new Path("/foo");
+    final Path foo2 = new Path("/foo2");
+    hdfs.mkdirs(foo);
+    hdfs.mkdirs(foo2);
+
+    hdfs.allowSnapshot(foo);
+    hdfs.allowSnapshot(foo2);
+    final Path bar = new Path(foo, "bar");
+    final Path bar2 = new Path(foo2, "bar");
+    DFSTestUtil.createFile(hdfs, bar, 100, (short) 2, 100024L);
+    hdfs.createSnapshot(foo, "s1");
+    // rename to another snapshottable directory and take snapshot
+    assertTrue(hdfs.rename(bar, bar2));
+    hdfs.createSnapshot(foo2, "s2");
+    // delete the original renamed file to make sure blocks are not updated by
+    // the original file
+    assertTrue(hdfs.delete(bar2, true));
+
+    // checkpoint
+    NameNode nameNode = cluster.getNameNode();
+    NameNodeAdapter.enterSafeMode(nameNode, false);
+    NameNodeAdapter.saveNamespace(nameNode);
+    NameNodeAdapter.leaveSafeMode(nameNode);
+    // restart namenode to load snapshot files from fsimage
+    cluster.restartNameNode(true);
+    // file in first snapshot
+    String barSnapshotPath = Snapshot.getSnapshotPath(foo.toString(), "s1/bar");
+    DFSTestUtil.readFile(hdfs, new Path(barSnapshotPath));
+    // file in second snapshot after rename+delete
+    String bar2SnapshotPath = Snapshot.getSnapshotPath(foo2.toString(),
+        "s2/bar");
+    DFSTestUtil.readFile(hdfs, new Path(bar2SnapshotPath));
   }
 }
