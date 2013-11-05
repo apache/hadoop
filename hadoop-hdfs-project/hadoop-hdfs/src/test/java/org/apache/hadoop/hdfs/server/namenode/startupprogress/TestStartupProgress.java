@@ -179,6 +179,14 @@ public class TestStartupProgress {
     startupProgress.endStep(LOADING_FSIMAGE, step);
     startupProgress.endPhase(LOADING_FSIMAGE);
 
+    // Also attempt a whole new step that wasn't used last time.
+    startupProgress.beginPhase(LOADING_EDITS);
+    Step newStep = new Step("file1");
+    startupProgress.beginStep(LOADING_EDITS, newStep);
+    incrementCounter(startupProgress, LOADING_EDITS, newStep, 100L);
+    startupProgress.endStep(LOADING_EDITS, newStep);
+    startupProgress.endPhase(LOADING_EDITS);
+
     StartupProgressView after = startupProgress.createView();
 
     // Expect that data was frozen after completion of entire startup process, so
@@ -200,6 +208,7 @@ public class TestStartupProgress {
       after.getTotal(LOADING_FSIMAGE));
     assertEquals(before.getTotal(LOADING_FSIMAGE, step),
       after.getTotal(LOADING_FSIMAGE, step));
+    assertFalse(after.getSteps(LOADING_EDITS).iterator().hasNext());
   }
 
   @Test(timeout=10000)
