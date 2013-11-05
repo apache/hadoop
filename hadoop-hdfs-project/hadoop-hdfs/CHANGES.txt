@@ -137,6 +137,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5257. addBlock() retry should return LocatedBlock with locations else client 
     will get AIOBE. (Vinay via jing9)
 
+    HDFS-5427. Not able to read deleted files from snapshot directly under 
+    snapshottable dir after checkpoint and NN restart. (Vinay via jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
