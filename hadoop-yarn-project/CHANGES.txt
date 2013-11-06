@@ -391,6 +391,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-1379. Moved AHS protocols to be in yarn proto package after YARN-1170.
   (vinodkv)
 
+  YARN-1123. Added a new ContainerReport and its Protobuf implementation. (Mayank
+  Bansal via vinodkv)
+
 Release 2.1.1-beta - UNRELEASED
 
     YARN-948. Changed ResourceManager to validate the release container list
