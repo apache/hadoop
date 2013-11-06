@@ -496,7 +496,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       builder.setLength(0);
       builder.append("[");
     }
-    boolean goodTarget = false;
+    boolean badTarget = false;
     DatanodeStorageInfo firstChosen = null;
     while(numOfReplicas > 0 && numOfAvailableNodes > 0) {
       DatanodeDescriptor chosenNode = 
@@ -506,26 +506,30 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
         final DatanodeStorageInfo[] storages = DFSUtil.shuffle(
             chosenNode.getStorageInfos());
-        for(int i = 0; i < storages.length && !goodTarget; i++) {
+        int i;
+        for(i = 0; i < storages.length; i++) {
           final int newExcludedNodes = addIfIsGoodTarget(storages[i],
               excludedNodes, blocksize, maxNodesPerRack, considerLoad, results,
               avoidStaleNodes, storageType);
-          goodTarget = newExcludedNodes >= 0;
-          if (goodTarget) {
+          if (newExcludedNodes >= 0) {
             numOfReplicas--;
             if (firstChosen == null) {
               firstChosen = storages[i];
             }
             numOfAvailableNodes -= newExcludedNodes;
+            break;
           }
         }
+
+        // If no candidate storage was found on this DN then set badTarget.
+        badTarget = (i == storages.length);
       }
     }
       
     if (numOfReplicas>0) {
       String detail = enableDebugLogging;
       if (LOG.isDebugEnabled()) {
-        if (!goodTarget && builder != null) {
+        if (badTarget && builder != null) {
           detail = builder.append("]").toString();
           builder.setLength(0);
         } else detail = "";

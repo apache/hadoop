@@ -267,8 +267,6 @@ class BPServiceActor implements Runnable {
   
   /**
    * Report received blocks and delete hints to the Namenode
-   * TODO: Fix reportReceivedDeletedBlocks to send reports per-volume.
-   * 
    * @throws IOException
    */
   private void reportReceivedDeletedBlocks() throws IOException {

@@ -1332,7 +1332,8 @@ public class BlockManager {
           // Move the block-replication into a "pending" state.
           // The reason we use 'pending' is so we can retry
           // replications that fail after an appropriate amount of time.
-          pendingReplications.increment(block, targets);
+          pendingReplications.increment(block,
+              DatanodeStorageInfo.toDatanodeDescriptors(targets));
           if(blockLog.isDebugEnabled()) {
             blockLog.debug(
                 "BLOCK* block " + block
@@ -1357,7 +1358,7 @@ public class BlockManager {
           StringBuilder targetList = new StringBuilder("datanode(s)");
           for (int k = 0; k < targets.length; k++) {
             targetList.append(' ');
-            targetList.append(targets[k]);
+            targetList.append(targets[k].getDatanodeDescriptor());
           }
           blockLog.info("BLOCK* ask " + rw.srcNode
               + " to replicate " + rw.block + " to " + targetList);
@@ -2645,7 +2646,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     //
     // Modify the blocks->datanode map and node's map.
     //
-    pendingReplications.decrement(block, node, storageID);
+    pendingReplications.decrement(block, node);
     processAndHandleReportedBlock(node, storageID, block, ReplicaState.FINALIZED,
         delHintNode);
   }

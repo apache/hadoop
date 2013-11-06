@@ -76,3 +76,6 @@ IMPROVEMENTS:
     HDFS-5466. Update storage IDs when the pipeline is updated. (Contributed
     by szetszwo)
 
+    HDFS-5439. Fix TestPendingReplication. (Contributed by Junping Du, Arpit
+    Agarwal)
+

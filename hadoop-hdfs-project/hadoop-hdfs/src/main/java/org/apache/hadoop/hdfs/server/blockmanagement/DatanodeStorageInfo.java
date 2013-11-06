@@ -46,6 +46,15 @@ public class DatanodeStorageInfo {
     return datanodes;
   }
 
+  static DatanodeDescriptor[] toDatanodeDescriptors(
+      DatanodeStorageInfo[] storages) {
+    DatanodeDescriptor[] datanodes = new DatanodeDescriptor[storages.length];
+    for (int i = 0; i < storages.length; ++i) {
+      datanodes[i] = storages[i].getDatanodeDescriptor();
+    }
+    return datanodes;
+  }
+
   public static String[] toStorageIDs(DatanodeStorageInfo[] storages) {
     String[] storageIDs = new String[storages.length];
     for(int i = 0; i < storageIDs.length; i++) {

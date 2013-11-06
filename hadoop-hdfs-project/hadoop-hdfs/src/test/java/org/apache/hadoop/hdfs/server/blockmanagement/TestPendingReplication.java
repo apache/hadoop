@@ -67,7 +67,8 @@ public class TestPendingReplication {
       Block block = new Block(i, i, 0);
       DatanodeStorageInfo[] targets = new DatanodeStorageInfo[i];
       System.arraycopy(storages, 0, targets, 0, i);
-      pendingReplications.increment(block, targets);
+      pendingReplications.increment(block,
+          DatanodeStorageInfo.toDatanodeDescriptors(targets));
     }
     assertEquals("Size of pendingReplications ",
                  10, pendingReplications.size());
@@ -77,18 +78,18 @@ public class TestPendingReplication {
     // remove one item and reinsert it
     //
     Block blk = new Block(8, 8, 0);
-    pendingReplications.decrement(blk, storages[7].getDatanodeDescriptor(),
-        storages[7].getStorageID()); // removes one replica
+    pendingReplications.decrement(blk, storages[7].getDatanodeDescriptor()); // removes one replica
     assertEquals("pendingReplications.getNumReplicas ",
                  7, pendingReplications.getNumReplicas(blk));
 
     for (int i = 0; i < 7; i++) {
       // removes all replicas
-      pendingReplications.decrement(blk, storages[i].getDatanodeDescriptor(),
-          storages[i].getStorageID());
+      pendingReplications.decrement(blk, storages[i].getDatanodeDescriptor());
     }
     assertTrue(pendingReplications.size() == 9);
-    pendingReplications.increment(blk, DFSTestUtil.createDatanodeStorageInfos(8));
+    pendingReplications.increment(blk,
+        DatanodeStorageInfo.toDatanodeDescriptors(
+            DFSTestUtil.createDatanodeStorageInfos(8)));
     assertTrue(pendingReplications.size() == 10);
 
     //
@@ -116,7 +117,9 @@ public class TestPendingReplication {
 
     for (int i = 10; i < 15; i++) {
       Block block = new Block(i, i, 0);
-      pendingReplications.increment(block, DFSTestUtil.createDatanodeStorageInfos(i));
+      pendingReplications.increment(block,
+          DatanodeStorageInfo.toDatanodeDescriptors(
+              DFSTestUtil.createDatanodeStorageInfos(i)));
     }
     assertTrue(pendingReplications.size() == 15);
 
@@ -198,7 +201,7 @@ public class TestPendingReplication {
           DatanodeRegistration dnR = datanodes.get(i).getDNRegistrationForBP(
               poolId);
           StorageReceivedDeletedBlocks[] report = { 
-              new StorageReceivedDeletedBlocks(dnR.getDatanodeUuid(),
+              new StorageReceivedDeletedBlocks("Fake-storage-ID-Ignored",
               new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
                   blocks[0], BlockStatus.RECEIVED_BLOCK, "") }) };
           cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, report);
@@ -215,7 +218,7 @@ public class TestPendingReplication {
           DatanodeRegistration dnR = datanodes.get(i).getDNRegistrationForBP(
               poolId);
           StorageReceivedDeletedBlocks[] report = 
-            { new StorageReceivedDeletedBlocks(dnR.getDatanodeUuid(),
+            { new StorageReceivedDeletedBlocks("Fake-storage-ID-Ignored",
               new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
                   blocks[0], BlockStatus.RECEIVED_BLOCK, "") }) };
           cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, report);
