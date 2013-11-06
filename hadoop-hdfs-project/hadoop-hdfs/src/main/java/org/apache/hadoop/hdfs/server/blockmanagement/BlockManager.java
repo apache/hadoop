@@ -1620,7 +1620,6 @@ public class BlockManager {
       // To minimize startup time, we discard any second (or later) block reports
       // that we receive while still in startup phase.
       final DatanodeStorageInfo storageInfo = node.updateStorage(storage);
-      LOG.info("XXX storageInfo=" + storageInfo + ", storage=" + storage);
       if (namesystem.isInStartupSafeMode()
           && storageInfo.getBlockReportCount() > 0) {
         blockLog.info("BLOCK* processReport: "
