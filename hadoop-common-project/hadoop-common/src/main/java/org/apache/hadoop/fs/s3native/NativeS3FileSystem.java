@@ -273,7 +273,7 @@ public class NativeS3FileSystem extends FileSystem {
     setConf(conf);
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir =
-      new Path("/user", System.getProperty("user.name")).makeQualified(this);
+      new Path("/user", System.getProperty("user.name")).makeQualified(this.uri, this.getWorkingDirectory());
   }
   
   private static NativeFileSystemStore createDefaultStore(Configuration conf) {
@@ -511,11 +511,11 @@ public class NativeS3FileSystem extends FileSystem {
   
   private FileStatus newFile(FileMetadata meta, Path path) {
     return new FileStatus(meta.getLength(), false, 1, getDefaultBlockSize(),
-        meta.getLastModified(), path.makeQualified(this));
+        meta.getLastModified(), path.makeQualified(this.getUri(), this.getWorkingDirectory()));
   }
   
   private FileStatus newDirectory(Path path) {
-    return new FileStatus(0, true, 1, 0, 0, path.makeQualified(this));
+    return new FileStatus(0, true, 1, 0, 0, path.makeQualified(this.getUri(), this.getWorkingDirectory()));
   }
 
   @Override
