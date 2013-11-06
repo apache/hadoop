@@ -243,6 +243,9 @@ Release 2.2.1 - UNRELEASED
     MAPREDUCE-5604. TestMRAMWithNonNormalizedCapabilities fails on Windows due to
     exceeding max path length. (cnauroth)
 
+    MAPREDUCE-5451. MR uses LD_LIBRARY_PATH which doesn't mean anything in
+    Windows. (Yingda Chen via cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
