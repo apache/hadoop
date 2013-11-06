@@ -46,6 +46,9 @@ Release 1.3.0 - unreleased
     HDFS-5367. Restoring namenode storage locks namenode due to unnecessary
     fsimage write. (Jonh Zhao via suresh)
 
+    MAPREDUCE-5609. Add debug log message when sending job end notification. 
+    (rkanter via tucu)
+
   BUG FIXES
 
     HADOOP-9863. Backport HADOOP-8686 to support BigEndian on ppc64. 

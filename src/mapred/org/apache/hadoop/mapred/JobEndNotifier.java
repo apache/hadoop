@@ -49,6 +49,7 @@ public class JobEndNotifier {
           public void run() {
             try {
               while (running) {
+                LOG.debug("Pending notifications: " + queue.size());
                 sendNotification(queue.take());
               }
             }
@@ -61,6 +62,7 @@ public class JobEndNotifier {
 
           private void sendNotification(JobEndStatusInfo notification) {
             try {
+              LOG.debug("Sending notification [" + notification + "]");
               int code = httpNotification(notification.getUri(),
                   notification.getTimeout());
               if (code != 200) {
