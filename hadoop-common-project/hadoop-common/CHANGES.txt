@@ -143,6 +143,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-10079. log a warning message if group resolution takes too long.
     (cmccabe)
 
+    HADOOP-9623. Update jets3t dependency to 0.9.0 (Amandeep Khurana via Colin
+    Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
