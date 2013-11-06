@@ -588,8 +588,12 @@ public class FSImageFormat {
     namesystem.dir.cacheName(child);
 
     if (child.isFile()) {
+      updateBlocksMap(child.asFile());
+    }
+  }
+
+    public void updateBlocksMap(INodeFile file) {
       // Add file->block mapping
-      final INodeFile file = child.asFile();
       final BlockInfo[] blocks = file.getBlocks();
       if (blocks != null) {
         final BlockManager bm = namesystem.getBlockManager();
@@ -598,7 +602,6 @@ public class FSImageFormat {
         } 
       }
     }
-  }
 
     /** @return The FSDirectory of the namesystem where the fsimage is loaded */
     public FSDirectory getFSDirectoryInLoading() {

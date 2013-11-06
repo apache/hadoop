@@ -77,7 +77,8 @@ public class FairSchedulerPage extends RmView {
       if (maxApps < Integer.MAX_VALUE) {
           ri._("Max Running Applications:", qinfo.getMaxApplications());
       }
-      ri._("Fair Share:", qinfo.getFairShare().toString());
+      ri._("Fair Share:", StringEscapeUtils.escapeHtml(
+        qinfo.getFairShare().toString()));
 
       html._(InfoBlock.class);
 

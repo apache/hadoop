@@ -268,4 +268,10 @@ public class FiCaSchedulerNode extends SchedulerNode {
     return reservedContainer;
   }
 
+  @Override
+  public synchronized void applyDeltaOnAvailableResource(Resource deltaResource) {
+    // we can only adjust available resource if total resource is changed.
+    Resources.addTo(this.availableResource, deltaResource);
+  }
+
 }

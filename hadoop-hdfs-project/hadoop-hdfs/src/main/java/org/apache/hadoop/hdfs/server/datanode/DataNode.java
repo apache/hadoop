@@ -1764,7 +1764,7 @@ public class DataNode extends Configured
       } catch (IOException ioe) {
         LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "
             + location.getFile() + " : ", ioe);
-        invalidDirs.append("\"").append(location.getFile().getCanonicalPath()).append("\" ");
+        invalidDirs.append("\"").append(location.getUri().getPath()).append("\" ");
       }
     }
     if (locations.size() == 0) {
