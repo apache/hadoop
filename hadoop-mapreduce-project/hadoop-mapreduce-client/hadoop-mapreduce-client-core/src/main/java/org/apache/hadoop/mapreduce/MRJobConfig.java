@@ -570,8 +570,10 @@ public interface MRJobConfig {
   public static final String MAPRED_ADMIN_USER_ENV =
       "mapreduce.admin.user.env";
 
-  public static final String DEFAULT_MAPRED_ADMIN_USER_ENV =
-      "LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native";
+  public final String DEFAULT_MAPRED_ADMIN_USER_ENV = 
+      Shell.WINDOWS ? 
+          "PATH=%PATH%;%HADOOP_COMMON_HOME%\\bin":
+          "LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native";
 
   public static final String WORKDIR = "work";
 
