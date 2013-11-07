@@ -68,7 +68,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
@@ -82,6 +81,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 
 /****************************************************************
@@ -1586,57 +1586,74 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Add a new PathBasedCacheDirective.
    * 
-   * @param directive A PathBasedCacheDirectives to add
-   * @return PathBasedCacheDescriptor associated with the added directive
+   * @param directive A directive to add.
+   * @return the ID of the directive that was created.
    * @throws IOException if the directive could not be added
    */
-  public PathBasedCacheDescriptor addPathBasedCacheDirective(
+  public long addPathBasedCacheDirective(
       PathBasedCacheDirective directive) throws IOException {
+    Preconditions.checkNotNull(directive.getPath());
     Path path = new Path(getPathName(fixRelativePart(directive.getPath()))).
         makeQualified(getUri(), getWorkingDirectory());
-    return dfs.addPathBasedCacheDirective(new PathBasedCacheDirective.Builder().
-        setPath(path).
-        setReplication(directive.getReplication()).
-        setPool(directive.getPool()).
-        build());
+    return dfs.addPathBasedCacheDirective(
+        new PathBasedCacheDirective.Builder(directive).
+            setPath(path).
+            build());
   }
   
+  public void modifyPathBasedCacheDirective(
+      PathBasedCacheDirective directive) throws IOException {
+    if (directive.getPath() != null) {
+      directive = new PathBasedCacheDirective.Builder(directive).
+          setPath(new Path(getPathName(fixRelativePart(directive.getPath()))).
+              makeQualified(getUri(), getWorkingDirectory())).build();
+    }
+    dfs.modifyPathBasedCacheDirective(directive);
+  }
+
   /**
-   * Remove a PathBasedCacheDescriptor.
+   * Remove a PathBasedCacheDirective.
    * 
-   * @param descriptor PathBasedCacheDescriptor to remove
-   * @throws IOException if the descriptor could not be removed
+   * @param id identifier of the PathBasedCacheDirective to remove
+   * @throws IOException if the directive could not be removed
    */
-  public void removePathBasedCacheDescriptor(PathBasedCacheDescriptor descriptor)
+  public void removePathBasedCacheDirective(long id)
       throws IOException {
-    dfs.removePathBasedCacheDescriptor(descriptor.getEntryId());
+    dfs.removePathBasedCacheDirective(id);
   }
   
   /**
    * List the set of cached paths of a cache pool. Incrementally fetches results
    * from the server.
    * 
-   * @param pool The cache pool to list, or null to list all pools.
-   * @param path The path name to list, or null to list all paths.
-   * @return A RemoteIterator which returns PathBasedCacheDescriptor objects.
+   * @param filter Filter parameters to use when listing the directives, null to
+   *               list all directives visible to us.
+   * @return A RemoteIterator which returns PathBasedCacheDirective objects.
    */
-  public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(
-      String pool, final Path path) throws IOException {
-    String pathName = path != null ? getPathName(fixRelativePart(path)) : null;
-    final RemoteIterator<PathBasedCacheDescriptor> iter =
-        dfs.listPathBasedCacheDescriptors(pool, pathName);
-    return new RemoteIterator<PathBasedCacheDescriptor>() {
+  public RemoteIterator<PathBasedCacheDirective> listPathBasedCacheDirectives(
+      PathBasedCacheDirective filter) throws IOException {
+    if (filter == null) {
+      filter = new PathBasedCacheDirective.Builder().build();
+    }
+    if (filter.getPath() != null) {
+      filter = new PathBasedCacheDirective.Builder(filter).
+          setPath(filter.getPath().
+              makeQualified(getUri(), filter.getPath())).
+                build();
+    }
+    final RemoteIterator<PathBasedCacheDirective> iter =
+        dfs.listPathBasedCacheDirectives(filter);
+    return new RemoteIterator<PathBasedCacheDirective>() {
       @Override
       public boolean hasNext() throws IOException {
         return iter.hasNext();
       }
 
       @Override
-      public PathBasedCacheDescriptor next() throws IOException {
-        PathBasedCacheDescriptor desc = iter.next();
-        Path qualPath = desc.getPath().makeQualified(getUri(), path);
-        return new PathBasedCacheDescriptor(desc.getEntryId(), qualPath,
-            desc.getReplication(), desc.getPool());
+      public PathBasedCacheDirective next() throws IOException {
+        PathBasedCacheDirective desc = iter.next();
+        Path p = desc.getPath().makeQualified(getUri(), desc.getPath());
+        return new PathBasedCacheDirective.Builder(desc).setPath(p).build();
       }
     };
   }

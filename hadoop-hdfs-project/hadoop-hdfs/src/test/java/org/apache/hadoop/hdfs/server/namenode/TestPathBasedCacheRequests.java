@@ -42,6 +42,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.IdNotFoundException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -49,17 +50,12 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPathNameError;
-import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPoolNameError;
-import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.PoolWritePermissionDeniedError;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.InvalidIdException;
-import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException.NoSuchIdException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.GSet;
@@ -86,7 +82,7 @@ public class TestPathBasedCacheRequests {
     conf = new HdfsConfiguration();
     // set low limits here for testing purposes
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES, 2);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DESCRIPTORS_NUM_RESPONSES, 2);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES, 2);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
@@ -296,21 +292,21 @@ public class TestPathBasedCacheRequests {
   }
 
   private static void validateListAll(
-      RemoteIterator<PathBasedCacheDescriptor> iter,
-      PathBasedCacheDescriptor... descriptors) throws Exception {
-    for (PathBasedCacheDescriptor descriptor: descriptors) {
+      RemoteIterator<PathBasedCacheDirective> iter,
+      Long... ids) throws Exception {
+    for (Long id: ids) {
       assertTrue("Unexpectedly few elements", iter.hasNext());
-      assertEquals("Unexpected descriptor", descriptor, iter.next());
+      assertEquals("Unexpected directive ID", id, iter.next().getId());
     }
     assertFalse("Unexpectedly many list elements", iter.hasNext());
   }
 
-  private static PathBasedCacheDescriptor addAsUnprivileged(
+  private static long addAsUnprivileged(
       final PathBasedCacheDirective directive) throws Exception {
     return unprivilegedUser
-        .doAs(new PrivilegedExceptionAction<PathBasedCacheDescriptor>() {
+        .doAs(new PrivilegedExceptionAction<Long>() {
           @Override
-          public PathBasedCacheDescriptor run() throws IOException {
+          public Long run() throws IOException {
             DistributedFileSystem myDfs =
                 (DistributedFileSystem) FileSystem.get(conf);
             return myDfs.addPathBasedCacheDirective(directive);
@@ -342,12 +338,12 @@ public class TestPathBasedCacheRequests {
         setPool("pool1").
         build();
 
-    PathBasedCacheDescriptor alphaD = addAsUnprivileged(alpha);
-    PathBasedCacheDescriptor alphaD2 = addAsUnprivileged(alpha);
-    assertFalse("Expected to get unique descriptors when re-adding an "
+    long alphaId = addAsUnprivileged(alpha);
+    long alphaId2 = addAsUnprivileged(alpha);
+    assertFalse("Expected to get unique directives when re-adding an "
         + "existing PathBasedCacheDirective",
-        alphaD.getEntryId() == alphaD2.getEntryId());
-    PathBasedCacheDescriptor betaD = addAsUnprivileged(beta);
+        alphaId == alphaId2);
+    long betaId = addAsUnprivileged(beta);
 
     try {
       addAsUnprivileged(new PathBasedCacheDirective.Builder().
@@ -355,8 +351,8 @@ public class TestPathBasedCacheRequests {
           setPool("no_such_pool").
           build());
       fail("expected an error when adding to a non-existent pool.");
-    } catch (IOException ioe) {
-      assertTrue(ioe instanceof InvalidPoolNameError);
+    } catch (IdNotFoundException ioe) {
+      GenericTestUtils.assertExceptionContains("no such pool as", ioe);
     }
 
     try {
@@ -366,8 +362,9 @@ public class TestPathBasedCacheRequests {
           build());
       fail("expected an error when adding to a pool with " +
           "mode 0 (no permissions for anyone).");
-    } catch (IOException ioe) {
-      assertTrue(ioe instanceof PoolWritePermissionDeniedError);
+    } catch (AccessControlException e) {
+      GenericTestUtils.
+          assertExceptionContains("permission denied for pool", e);
     }
 
     try {
@@ -378,7 +375,7 @@ public class TestPathBasedCacheRequests {
       fail("expected an error when adding a malformed path " +
           "to the cache directives.");
     } catch (IllegalArgumentException e) {
-      // expected
+      GenericTestUtils.assertExceptionContains("is not a valid DFS filename", e);
     }
 
     try {
@@ -389,59 +386,74 @@ public class TestPathBasedCacheRequests {
           build());
       Assert.fail("expected an error when adding a PathBasedCache " +
           "directive with an empty pool name.");
-    } catch (IOException ioe) {
-      Assert.assertTrue(ioe instanceof InvalidPoolNameError);
+    } catch (IdNotFoundException e) {
+      GenericTestUtils.assertExceptionContains("pool name was empty", e);
     }
 
-    PathBasedCacheDescriptor deltaD = addAsUnprivileged(delta);
+    long deltaId = addAsUnprivileged(delta);
 
     // We expect the following to succeed, because DistributedFileSystem
     // qualifies the path.
-    PathBasedCacheDescriptor relativeD = addAsUnprivileged(
+    long relativeId = addAsUnprivileged(
         new PathBasedCacheDirective.Builder().
             setPath(new Path("relative")).
             setPool("pool1").
             build());
 
-    RemoteIterator<PathBasedCacheDescriptor> iter;
-    iter = dfs.listPathBasedCacheDescriptors(null, null);
-    validateListAll(iter, alphaD, alphaD2, betaD, deltaD, relativeD);
-    iter = dfs.listPathBasedCacheDescriptors("pool3", null);
+    RemoteIterator<PathBasedCacheDirective> iter;
+    iter = dfs.listPathBasedCacheDirectives(null);
+    validateListAll(iter, alphaId, alphaId2, betaId, deltaId, relativeId );
+    iter = dfs.listPathBasedCacheDirectives(
+        new PathBasedCacheDirective.Builder().setPool("pool3").build());
     Assert.assertFalse(iter.hasNext());
-    iter = dfs.listPathBasedCacheDescriptors("pool1", null);
-    validateListAll(iter, alphaD, alphaD2, deltaD, relativeD);
-    iter = dfs.listPathBasedCacheDescriptors("pool2", null);
-    validateListAll(iter, betaD);
+    iter = dfs.listPathBasedCacheDirectives(
+        new PathBasedCacheDirective.Builder().setPool("pool1").build());
+    validateListAll(iter, alphaId, alphaId2, deltaId, relativeId );
+    iter = dfs.listPathBasedCacheDirectives(
+        new PathBasedCacheDirective.Builder().setPool("pool2").build());
+    validateListAll(iter, betaId);
 
-    dfs.removePathBasedCacheDescriptor(betaD);
-    iter = dfs.listPathBasedCacheDescriptors("pool2", null);
+    dfs.removePathBasedCacheDirective(betaId);
+    iter = dfs.listPathBasedCacheDirectives(
+        new PathBasedCacheDirective.Builder().setPool("pool2").build());
     Assert.assertFalse(iter.hasNext());
 
     try {
-      dfs.removePathBasedCacheDescriptor(betaD);
+      dfs.removePathBasedCacheDirective(betaId);
       Assert.fail("expected an error when removing a non-existent ID");
-    } catch (IOException ioe) {
-      Assert.assertTrue(ioe instanceof NoSuchIdException);
+    } catch (IdNotFoundException e) {
+      GenericTestUtils.assertExceptionContains("id not found", e);
     }
 
     try {
-      proto.removePathBasedCacheDescriptor(-42l);
+      proto.removePathBasedCacheDirective(-42l);
       Assert.fail("expected an error when removing a negative ID");
-    } catch (IOException ioe) {
-      Assert.assertTrue(ioe instanceof InvalidIdException);
+    } catch (IdNotFoundException e) {
+      GenericTestUtils.assertExceptionContains(
+          "invalid non-positive directive ID", e);
     }
     try {
-      proto.removePathBasedCacheDescriptor(43l);
+      proto.removePathBasedCacheDirective(43l);
       Assert.fail("expected an error when removing a non-existent ID");
-    } catch (IOException ioe) {
-      Assert.assertTrue(ioe instanceof NoSuchIdException);
+    } catch (IdNotFoundException e) {
+      GenericTestUtils.assertExceptionContains("id not found", e);
     }
 
-    dfs.removePathBasedCacheDescriptor(alphaD);
-    dfs.removePathBasedCacheDescriptor(alphaD2);
-    dfs.removePathBasedCacheDescriptor(deltaD);
-    dfs.removePathBasedCacheDescriptor(relativeD);
-    iter = dfs.listPathBasedCacheDescriptors(null, null);
+    dfs.removePathBasedCacheDirective(alphaId);
+    dfs.removePathBasedCacheDirective(alphaId2);
+    dfs.removePathBasedCacheDirective(deltaId);
+
+    dfs.modifyPathBasedCacheDirective(new PathBasedCacheDirective.Builder().
+        setId(relativeId).
+        setReplication((short)555).
+        build());
+    iter = dfs.listPathBasedCacheDirectives(null);
+    assertTrue(iter.hasNext());
+    PathBasedCacheDirective modified = iter.next();
+    assertEquals(relativeId, modified.getId().longValue());
+    assertEquals((short)555, modified.getReplication().shortValue());
+    dfs.removePathBasedCacheDirective(relativeId);
+    iter = dfs.listPathBasedCacheDirectives(null);
     assertFalse(iter.hasNext());
   }
 
@@ -481,16 +493,16 @@ public class TestPathBasedCacheRequests {
           new PathBasedCacheDirective.Builder().
             setPath(new Path(entryPrefix + i)).setPool(pool).build());
     }
-    RemoteIterator<PathBasedCacheDescriptor> dit
-        = dfs.listPathBasedCacheDescriptors(null, null);
+    RemoteIterator<PathBasedCacheDirective> dit
+        = dfs.listPathBasedCacheDirectives(null);
     for (int i=0; i<numEntries; i++) {
       assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
-      PathBasedCacheDescriptor cd = dit.next();
-      assertEquals(i+1, cd.getEntryId());
+      PathBasedCacheDirective cd = dit.next();
+      assertEquals(i+1, cd.getId().longValue());
       assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
       assertEquals(pool, cd.getPool());
     }
-    assertFalse("Unexpected # of cache descriptors found", dit.hasNext());
+    assertFalse("Unexpected # of cache directives found", dit.hasNext());
   
     // Restart namenode
     cluster.restartNameNode();
@@ -506,15 +518,15 @@ public class TestPathBasedCacheRequests {
     assertEquals(weight, (int)info.getWeight());
     assertFalse("Unexpected # of cache pools found", pit.hasNext());
   
-    dit = dfs.listPathBasedCacheDescriptors(null, null);
+    dit = dfs.listPathBasedCacheDirectives(null);
     for (int i=0; i<numEntries; i++) {
       assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
-      PathBasedCacheDescriptor cd = dit.next();
-      assertEquals(i+1, cd.getEntryId());
+      PathBasedCacheDirective cd = dit.next();
+      assertEquals(i+1, cd.getId().longValue());
       assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
       assertEquals(pool, cd.getPool());
     }
-    assertFalse("Unexpected # of cache descriptors found", dit.hasNext());
+    assertFalse("Unexpected # of cache directives found", dit.hasNext());
   }
 
   private static void waitForCachedBlocks(NameNode nn,
@@ -625,21 +637,16 @@ public class TestPathBasedCacheRequests {
               setPath(new Path(paths.get(i))).
               setPool(pool).
               build();
-        PathBasedCacheDescriptor descriptor =
-            nnRpc.addPathBasedCacheDirective(directive);
-        assertEquals("Descriptor does not match requested path",
-            new Path(paths.get(i)), descriptor.getPath());
-        assertEquals("Descriptor does not match requested pool", pool,
-            descriptor.getPool());
+        nnRpc.addPathBasedCacheDirective(directive);
         expected += numBlocksPerFile;
         waitForCachedBlocks(namenode, expected, expected);
       }
       // Uncache and check each path in sequence
-      RemoteIterator<PathBasedCacheDescriptor> entries =
-          nnRpc.listPathBasedCacheDescriptors(0, null, null);
+      RemoteIterator<PathBasedCacheDirective> entries =
+          nnRpc.listPathBasedCacheDirectives(0, null);
       for (int i=0; i<numFiles; i++) {
-        PathBasedCacheDescriptor descriptor = entries.next();
-        nnRpc.removePathBasedCacheDescriptor(descriptor.getEntryId());
+        PathBasedCacheDirective directive = entries.next();
+        nnRpc.removePathBasedCacheDirective(directive.getId());
         expected -= numBlocksPerFile;
         waitForCachedBlocks(namenode, expected, expected);
       }
@@ -723,17 +730,15 @@ public class TestPathBasedCacheRequests {
       }
       waitForCachedBlocks(namenode, 0, 0);
       // cache entire directory
-      PathBasedCacheDescriptor descriptor = dfs.addPathBasedCacheDirective(
+      long id = dfs.addPathBasedCacheDirective(
             new PathBasedCacheDirective.Builder().
               setPath(new Path("/foo")).
               setReplication((short)2).
               setPool(pool).
               build());
-      assertEquals("Descriptor does not match requested pool", pool,
-          descriptor.getPool());
       waitForCachedBlocks(namenode, 4, 8);
       // remove and watch numCached go to 0
-      dfs.removePathBasedCacheDescriptor(descriptor);
+      dfs.removePathBasedCacheDirective(id);
       waitForCachedBlocks(namenode, 0, 0);
     } finally {
       cluster.shutdown();

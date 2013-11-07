@@ -17,32 +17,27 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.IOException;
-
-import com.google.common.base.Preconditions;
+import java.net.URI;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPoolNameError;
-import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException.InvalidPathNameError;
 
 /**
- * A directive to add a path to a cache pool.
+ * Describes a path-based cache directive.
  */
 @InterfaceStability.Evolving
 @InterfaceAudience.Public
 public class PathBasedCacheDirective {
-
   /**
    * A builder for creating new PathBasedCacheDirective instances.
    */
   public static class Builder {
+    private Long id;
     private Path path;
-    private short replication = (short)1;
+    private Short replication;
     private String pool;
 
     /**
@@ -51,7 +46,37 @@ public class PathBasedCacheDirective {
      * @return New PathBasedCacheDirective.
      */
     public PathBasedCacheDirective build() {
-      return new PathBasedCacheDirective(path, replication, pool);
+      return new PathBasedCacheDirective(id, path, replication, pool);
+    }
+
+    /**
+     * Creates an empty builder.
+     */
+    public Builder() {
+    }
+
+    /**
+     * Creates a builder with all elements set to the same values as the
+     * given PathBasedCacheDirective.
+     */
+    public Builder(PathBasedCacheDirective directive) {
+      this.id = directive.getId();
+      // deep-copy URI
+      URI uri = directive.getPath().toUri();
+      this.path = new Path(uri.getScheme(), uri.getAuthority(), uri.getPath());
+      this.replication = directive.getReplication();
+      this.pool = directive.getPool();
+    }
+
+    /**
+     * Sets the id used in this request.
+     * 
+     * @param id The id used in this request.
+     * @return This builder, for call chaining.
+     */
+    public Builder setId(Long id) {
+      this.id = id;
+      return this;
     }
 
     /**
@@ -71,7 +96,7 @@ public class PathBasedCacheDirective {
      * @param replication The replication used in this request.
      * @return This builder, for call chaining.
      */
-    public Builder setReplication(short replication) {
+    public Builder setReplication(Short replication) {
       this.replication = replication;
       return this;
     }
@@ -88,9 +113,24 @@ public class PathBasedCacheDirective {
     }
   }
 
+  private final Long id;
   private final Path path;
-  private final short replication;
+  private final Short replication;
   private final String pool;
+
+  PathBasedCacheDirective(Long id, Path path, Short replication, String pool) {
+    this.id = id;
+    this.path = path;
+    this.replication = replication;
+    this.pool = pool;
+  }
+
+  /**
+   * @return The ID of this directive.
+   */
+  public Long getId() {
+    return id;
+  }
 
   /**
    * @return The path used in this request.
@@ -102,7 +142,7 @@ public class PathBasedCacheDirective {
   /**
    * @return The number of times the block should be cached.
    */
-  public short getReplication() {
+  public Short getReplication() {
     return replication;
   }
 
@@ -111,25 +151,6 @@ public class PathBasedCacheDirective {
    */
   public String getPool() {
     return pool;
-  }
-
-  /**
-   * Check if this PathBasedCacheDirective is valid.
-   * 
-   * @throws IOException
-   *     If this PathBasedCacheDirective is not valid.
-   */
-  public void validate() throws IOException {
-    if (!DFSUtil.isValidName(path.toUri().getPath())) {
-      throw new InvalidPathNameError(this);
-    }
-    if (replication <= 0) {
-      throw new IOException("Tried to request a cache replication " +
-          "factor of " + replication + ", but that is less than 1.");
-    }
-    if (pool.isEmpty()) {
-      throw new InvalidPoolNameError(this);
-    }
   }
 
   @Override
@@ -141,7 +162,8 @@ public class PathBasedCacheDirective {
       return false;
     }
     PathBasedCacheDirective other = (PathBasedCacheDirective)o;
-    return new EqualsBuilder().append(getPath(), other.getPath()).
+    return new EqualsBuilder().append(getId(), other.getId()).
+        append(getPath(), other.getPath()).
         append(getReplication(), other.getReplication()).
         append(getPool(), other.getPool()).
         isEquals();
@@ -149,34 +171,35 @@ public class PathBasedCacheDirective {
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().append(getPath()).
+    return new HashCodeBuilder().append(id).
+        append(path).
         append(replication).
-        append(getPool()).
+        append(pool).
         hashCode();
   }
 
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("{ path:").append(path).
-      append(", replication:").append(replication).
-      append(", pool:").append(pool).
-      append(" }");
+    builder.append("{");
+    String prefix = "";
+    if (id != null) {
+      builder.append(prefix).append("id: ").append(id);
+      prefix = ",";
+    }
+    if (path != null) {
+      builder.append(prefix).append("path: ").append(path);
+      prefix = ",";
+    }
+    if (replication != null) {
+      builder.append(prefix).append("replication: ").append(replication);
+      prefix = ",";
+    }
+    if (pool != null) {
+      builder.append(prefix).append("pool: ").append(pool);
+      prefix = ",";
+    }
+    builder.append("}");
     return builder.toString();
-  }
-
-  /**
-   * Protected constructor.  Callers use Builder to create new instances.
-   * 
-   * @param path The path used in this request.
-   * @param replication The replication used in this request.
-   * @param pool The pool used in this request.
-   */
-  protected PathBasedCacheDirective(Path path, short replication, String pool) {
-    Preconditions.checkNotNull(path);
-    Preconditions.checkNotNull(pool);
-    this.path = path;
-    this.replication = replication;
-    this.pool = pool;
   }
 };

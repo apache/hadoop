@@ -993,19 +993,26 @@ public class DFSTestUtil {
       locatedBlocks = DFSClientAdapter.callGetBlockLocations(
           cluster.getNameNodeRpc(nnIndex), filePath, 0L, bytes.length);
     } while (locatedBlocks.isUnderConstruction());
-    // OP_ADD_CACHE_POOL 35
+    // OP_ADD_CACHE_POOL
     filesystem.addCachePool(new CachePoolInfo("pool1"));
-    // OP_MODIFY_CACHE_POOL 36
+    // OP_MODIFY_CACHE_POOL
     filesystem.modifyCachePool(new CachePoolInfo("pool1").setWeight(99));
-    // OP_ADD_PATH_BASED_CACHE_DIRECTIVE 33
-    PathBasedCacheDescriptor pbcd = filesystem.addPathBasedCacheDirective(
+    // OP_ADD_PATH_BASED_CACHE_DIRECTIVE
+    long id = filesystem.addPathBasedCacheDirective(
         new PathBasedCacheDirective.Builder().
             setPath(new Path("/path")).
+            setReplication((short)1).
             setPool("pool1").
             build());
-    // OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR 34
-    filesystem.removePathBasedCacheDescriptor(pbcd);
-    // OP_REMOVE_CACHE_POOL 37
+    // OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE
+    filesystem.modifyPathBasedCacheDirective(
+        new PathBasedCacheDirective.Builder().
+            setId(id).
+            setReplication((short)2).
+            build());
+    // OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE
+    filesystem.removePathBasedCacheDirective(id);
+    // OP_REMOVE_CACHE_POOL
     filesystem.removeCachePool("pool1");
   }
 

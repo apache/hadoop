@@ -252,8 +252,23 @@ public class XMLUtils {
      * @return            the entry
      */
     public String getValue(String name) throws InvalidXmlException {
-      if (!subtrees.containsKey(name)) {
+      String ret = getValueOrNull(name);
+      if (ret == null) {
         throw new InvalidXmlException("no entry found for " + name);
+      }
+      return ret;
+    }
+
+    /** 
+     * Pull a string entry from a stanza, or null.
+     *
+     * @param name        entry to look for
+     * 
+     * @return            the entry, or null if it was not found.
+     */
+    public String getValueOrNull(String name) throws InvalidXmlException {
+      if (!subtrees.containsKey(name)) {
+        return null;
       }
       LinkedList <Stanza> l = subtrees.get(name);
       if (l.size() != 1) {

@@ -188,6 +188,8 @@ Trunk (Unreleased)
     HDFS-5386. Add feature documentation for datanode caching.
     (Colin Patrick McCabe via cnauroth)
 
+    HDFS-5326. add modifyDirective to cacheAdmin.  (cmccabe)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

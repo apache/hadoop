@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
@@ -58,9 +57,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DisallowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.GetDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ModifyCachePoolOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ModifyPathBasedCacheDirectiveOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ReassignLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCachePoolOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemovePathBasedCacheDescriptorOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemovePathBasedCacheDirectiveOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
@@ -642,23 +642,28 @@ public class FSEditLogLoader {
     }
     case OP_ADD_PATH_BASED_CACHE_DIRECTIVE: {
       AddPathBasedCacheDirectiveOp addOp = (AddPathBasedCacheDirectiveOp) op;
-      PathBasedCacheDirective d = new PathBasedCacheDirective.Builder().
-          setPath(new Path(addOp.path)).
-          setReplication(addOp.replication).
-          setPool(addOp.pool).
-          build();
-      PathBasedCacheDescriptor descriptor =
-          fsNamesys.getCacheManager().addDirective(d, null);
+      PathBasedCacheDirective result = fsNamesys.
+          getCacheManager().addDirective(addOp.directive, null);
       if (toAddRetryCache) {
-        fsNamesys.addCacheEntryWithPayload(op.rpcClientId, op.rpcCallId,
-            descriptor);
+        Long id = result.getId();
+        fsNamesys.addCacheEntryWithPayload(op.rpcClientId, op.rpcCallId, id);
       }
       break;
     }
-    case OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR: {
-      RemovePathBasedCacheDescriptorOp removeOp =
-          (RemovePathBasedCacheDescriptorOp) op;
-      fsNamesys.getCacheManager().removeDescriptor(removeOp.id, null);
+    case OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE: {
+      ModifyPathBasedCacheDirectiveOp modifyOp =
+          (ModifyPathBasedCacheDirectiveOp) op;
+      fsNamesys.getCacheManager().modifyDirective(
+          modifyOp.directive, null);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    }
+    case OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE: {
+      RemovePathBasedCacheDirectiveOp removeOp =
+          (RemovePathBasedCacheDirectiveOp) op;
+      fsNamesys.getCacheManager().removeDirective(removeOp.id, null);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
       }

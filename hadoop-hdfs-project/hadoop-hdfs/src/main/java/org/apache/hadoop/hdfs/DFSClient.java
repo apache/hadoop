@@ -117,7 +117,6 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -2291,7 +2290,7 @@ public class DFSClient implements java.io.Closeable {
     }
   }
 
-  public PathBasedCacheDescriptor addPathBasedCacheDirective(
+  public long addPathBasedCacheDirective(
       PathBasedCacheDirective directive) throws IOException {
     checkOpen();
     try {
@@ -2301,21 +2300,31 @@ public class DFSClient implements java.io.Closeable {
     }
   }
   
-  public void removePathBasedCacheDescriptor(long id)
+  public void modifyPathBasedCacheDirective(
+      PathBasedCacheDirective directive) throws IOException {
+    checkOpen();
+    try {
+      namenode.modifyPathBasedCacheDirective(directive);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  public void removePathBasedCacheDirective(long id)
       throws IOException {
     checkOpen();
     try {
-      namenode.removePathBasedCacheDescriptor(id);
+      namenode.removePathBasedCacheDirective(id);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     }
   }
   
-  public RemoteIterator<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(
-      String pool, String path) throws IOException {
+  public RemoteIterator<PathBasedCacheDirective> listPathBasedCacheDirectives(
+      PathBasedCacheDirective filter) throws IOException {
     checkOpen();
     try {
-      return namenode.listPathBasedCacheDescriptors(0, pool, path);
+      return namenode.listPathBasedCacheDirectives(0, filter);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     }

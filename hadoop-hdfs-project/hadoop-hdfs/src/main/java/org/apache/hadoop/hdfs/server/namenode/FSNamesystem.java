@@ -152,7 +152,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -7008,7 +7007,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  PathBasedCacheDescriptor addPathBasedCacheDirective(
+  long addPathBasedCacheDirective(
       PathBasedCacheDirective directive) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
@@ -7016,20 +7015,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     CacheEntryWithPayload cacheEntry =
         RetryCache.waitForCompletion(retryCache, null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (PathBasedCacheDescriptor) cacheEntry.getPayload();
+      return (Long) cacheEntry.getPayload();
     }
     boolean success = false;
-    PathBasedCacheDescriptor result = null;
     writeLock();
+    Long result = null;
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException(
             "Cannot add PathBasedCache directive", safeMode);
       }
-      result = cacheManager.addDirective(directive, pc);
-      getEditLog().logAddPathBasedCacheDirective(directive,
+      if (directive.getId() != null) {
+        throw new IOException("addDirective: you cannot specify an ID " +
+            "for this operation.");
+      }
+      PathBasedCacheDirective effectiveDirective = 
+          cacheManager.addDirective(directive, pc);
+      getEditLog().logAddPathBasedCacheDirective(effectiveDirective,
           cacheEntry != null);
+      result = effectiveDirective.getId();
       success = true;
     } finally {
       writeUnlock();
@@ -7044,7 +7049,40 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return result;
   }
 
-  void removePathBasedCacheDescriptor(Long id) throws IOException {
+  void modifyPathBasedCacheDirective(
+      PathBasedCacheDirective directive) throws IOException {
+    checkOperation(OperationCategory.WRITE);
+    final FSPermissionChecker pc = isPermissionEnabled ?
+        getPermissionChecker() : null;
+    boolean success = false;
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return;
+    }
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      if (isInSafeMode()) {
+        throw new SafeModeException(
+            "Cannot add PathBasedCache directive", safeMode);
+      }
+      cacheManager.modifyDirective(directive, pc);
+      getEditLog().logModifyPathBasedCacheDirective(directive,
+          cacheEntry != null);
+      success = true;
+    } finally {
+      writeUnlock();
+      if (success) {
+        getEditLog().logSync();
+      }
+      if (isAuditEnabled() && isExternalInvocation()) {
+        logAuditEvent(success, "addPathBasedCacheDirective", null, null, null);
+      }
+      RetryCache.setState(cacheEntry, success);
+    }
+  }
+
+  void removePathBasedCacheDirective(Long id) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
@@ -7060,13 +7098,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException(
             "Cannot remove PathBasedCache directives", safeMode);
       }
-      cacheManager.removeDescriptor(id, pc);
-      getEditLog().logRemovePathBasedCacheDescriptor(id, cacheEntry != null);
+      cacheManager.removeDirective(id, pc);
+      getEditLog().logRemovePathBasedCacheDirective(id, cacheEntry != null);
       success = true;
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "removePathBasedCacheDescriptor", null, null,
+        logAuditEvent(success, "removePathBasedCacheDirective", null, null,
             null);
       }
       RetryCache.setState(cacheEntry, success);
@@ -7074,23 +7112,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
   }
 
-  BatchedListEntries<PathBasedCacheDescriptor> listPathBasedCacheDescriptors(
-      long startId, String pool, String path) throws IOException {
+  BatchedListEntries<PathBasedCacheDirective> listPathBasedCacheDirectives(
+      long startId, PathBasedCacheDirective filter) throws IOException {
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
-    BatchedListEntries<PathBasedCacheDescriptor> results;
+    BatchedListEntries<PathBasedCacheDirective> results;
     readLock();
     boolean success = false;
     try {
       checkOperation(OperationCategory.READ);
       results =
-          cacheManager.listPathBasedCacheDescriptors(startId, pool, path, pc);
+          cacheManager.listPathBasedCacheDirectives(startId, filter, pc);
       success = true;
     } finally {
       readUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "listPathBasedCacheDescriptors", null, null,
+        logAuditEvent(success, "listPathBasedCacheDirectives", null, null,
             null);
       }
     }
