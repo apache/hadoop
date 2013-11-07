@@ -1816,13 +1816,15 @@ public class BlockManager {
       Collection<BlockToMarkCorrupt> toCorrupt, // add to corrupt replicas list
       Collection<StatefulBlockInfo> toUC) { // add to under-construction list
 
-    dn.updateStorage(storage);
+    final DatanodeStorageInfo storageInfo = dn.updateStorage(storage);
 
-    // add all blocks to remove list
-    for(Iterator<BlockInfo> it = dn.getBlockIterator(storage.getStorageID());
-        it.hasNext(); ) {
-      toRemove.add(it.next());
-    }
+    // place a delimiter in the list which separates blocks 
+    // that have been reported from those that have not
+    BlockInfo delimiter = new BlockInfo(new Block(), 1);
+    boolean added = storageInfo.addBlock(delimiter);
+    assert added : "Delimiting block cannot be present in the node";
+    int headIndex = 0; //currently the delimiter is in the head of the list
+    int curIndex;
 
     if (newReport == null)
       newReport = new BlockListAsLongs();
@@ -1834,10 +1836,18 @@ public class BlockManager {
       BlockInfo storedBlock = processReportedBlock(dn, storage.getStorageID(),
           iblk, iState, toAdd, toInvalidate, toCorrupt, toUC);
 
-      if (storedBlock != null) {
-        toRemove.remove(storedBlock);
+      // move block to the head of the list
+      if (storedBlock != null && (curIndex = storedBlock.findDatanode(dn)) >= 0) {
+        headIndex = storageInfo.moveBlockToHead(storedBlock, curIndex, headIndex);
       }
     }
+
+    // collect blocks that have not been reported
+    // all of them are next to the delimiter
+    Iterator<BlockInfo> it = storageInfo.new BlockIterator(delimiter.getNext(0));
+    while(it.hasNext())
+      toRemove.add(it.next());
+    storageInfo.removeBlock(delimiter);
   }
 
   /**

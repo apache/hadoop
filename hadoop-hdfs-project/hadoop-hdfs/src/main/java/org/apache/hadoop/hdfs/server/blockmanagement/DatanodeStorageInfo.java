@@ -74,13 +74,11 @@ public class DatanodeStorageInfo {
   /**
    * Iterates over the list of blocks belonging to the data-node.
    */
-  static class BlockIterator implements Iterator<BlockInfo> {
+  class BlockIterator implements Iterator<BlockInfo> {
     private BlockInfo current;
-    private DatanodeStorageInfo node;
 
-    BlockIterator(BlockInfo head, DatanodeStorageInfo dn) {
+    BlockIterator(BlockInfo head) {
       this.current = head;
-      this.node = dn;
     }
 
     public boolean hasNext() {
@@ -89,7 +87,7 @@ public class DatanodeStorageInfo {
 
     public BlockInfo next() {
       BlockInfo res = current;
-      current = current.getNext(current.findStorageInfo(node));
+      current = current.getNext(current.findStorageInfo(DatanodeStorageInfo.this));
       return res;
     }
 
@@ -233,7 +231,26 @@ public class DatanodeStorageInfo {
   }
   
   Iterator<BlockInfo> getBlockIterator() {
-    return new BlockIterator(this.blockList, this);
+    return new BlockIterator(blockList);
+
+  }
+
+  /**
+   * Move block to the head of the list of blocks belonging to the data-node.
+   * @return the index of the head of the blockList
+   */
+  int moveBlockToHead(BlockInfo b, int curIndex, int headIndex) {
+    blockList = b.moveBlockToHead(blockList, this, curIndex, headIndex);
+    return curIndex;
+  }
+
+  /**
+   * Used for testing only
+   * @return the head of the blockList
+   */
+  @VisibleForTesting
+  protected BlockInfo getHead(){
+    return blockList;
   }
 
   public void updateState(StorageReport r) {

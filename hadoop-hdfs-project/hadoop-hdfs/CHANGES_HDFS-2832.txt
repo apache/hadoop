@@ -79,3 +79,5 @@ IMPROVEMENTS:
     HDFS-5439. Fix TestPendingReplication. (Contributed by Junping Du, Arpit
     Agarwal)
 
+    HDFS-5470. Add back trunk's reportDiff algorithm to the branch.
+    (szetszwo)
