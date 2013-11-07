@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.MutableBlockCollection;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.Quota.Counts;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
@@ -131,6 +133,39 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
   }
   
   @Override
+  public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
+      final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes, final boolean countDiffChange)
+      throws QuotaExceededException {
+    if (snapshot == null && prior != null) {
+      cleanZeroSizeBlock(collectedBlocks);
+      return Counts.newInstance();
+    } else {
+      return super.cleanSubtree(snapshot, prior, collectedBlocks,
+          removedINodes, countDiffChange);
+    }
+  }
+  
+  /**
+   * When deleting a file in the current fs directory, and the file is contained
+   * in a snapshot, we should delete the last block if it's under construction 
+   * and its size is 0.
+   */
+  private void cleanZeroSizeBlock(final BlocksMapUpdateInfo collectedBlocks) {
+    final BlockInfo[] blocks = getBlocks();
+    if (blocks != null && blocks.length > 0
+        && blocks[blocks.length - 1] instanceof BlockInfoUnderConstruction) {
+      BlockInfoUnderConstruction lastUC = 
+          (BlockInfoUnderConstruction) blocks[blocks.length - 1];
+      if (lastUC.getNumBytes() == 0) {
+        // this is a 0-sized block. do not need check its UC state here
+        collectedBlocks.addDeleteBlock(lastUC);
+        removeLastBlock(lastUC);
+      }
+    }
+  }
+  
+  @Override
   public INodeFileUnderConstruction recordModification(final Snapshot latest,
       final INodeMap inodeMap) throws QuotaExceededException {
     if (isInLatestSnapshot(latest)) {
@@ -157,7 +192,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
    * Remove a block from the block list. This block should be
    * the last one on the list.
    */
-  boolean removeLastBlock(Block oldblock) throws IOException {
+  boolean removeLastBlock(Block oldblock) {
     final BlockInfo[] blocks = getBlocks();
     if (blocks == null || blocks.length == 0) {
       return false;

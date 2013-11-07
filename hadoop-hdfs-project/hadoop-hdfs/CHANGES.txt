@@ -140,6 +140,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5427. Not able to read deleted files from snapshot directly under 
     snapshottable dir after checkpoint and NN restart. (Vinay via jing9)
 
+    HDFS-5443. Delete 0-sized block when deleting an under-construction file that 
+    is included in snapshot. (jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
