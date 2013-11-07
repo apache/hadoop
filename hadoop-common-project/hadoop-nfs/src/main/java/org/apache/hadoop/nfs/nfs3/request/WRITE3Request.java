@@ -83,4 +83,10 @@ public class WRITE3Request extends RequestWithHandle {
     xdr.writeInt(count);
     xdr.writeFixedOpaque(data.array(), count);
   }
+  
+  @Override
+  public String toString() {
+    return String.format("fileId: %d offset: %d count: %d stableHow: %s",
+        handle.getFileId(), offset, count, stableHow.name());
+  }
 }

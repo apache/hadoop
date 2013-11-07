@@ -205,6 +205,11 @@ public class Nfs3Constant {
   public static final String FILE_DUMP_DIR_DEFAULT = "/tmp/.hdfs-nfs";
   public static final String ENABLE_FILE_DUMP_KEY = "dfs.nfs3.enableDump";
   public static final boolean ENABLE_FILE_DUMP_DEFAULT = true;
+  public static final String MAX_OPEN_FILES = "dfs.nfs3.max.open.files";
+  public static final int MAX_OPEN_FILES_DEFAULT = 256;
+  public static final String OUTPUT_STREAM_TIMEOUT = "dfs.nfs3.stream.timeout";
+  public static final long OUTPUT_STREAM_TIMEOUT_DEFAULT = 10 * 60 * 1000; // 10 minutes
+  public static final long OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT = 10 * 1000; //10 seconds
   
   public final static String UNKNOWN_USER = "nobody";
   public final static String UNKNOWN_GROUP = "nobody";
