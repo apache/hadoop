@@ -126,6 +126,8 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * RPC program corresponding to nfs daemon. See {@link Nfs3}.
  */
@@ -1974,5 +1976,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return false;
     }
     return true;
+  }
+  
+  @VisibleForTesting
+  WriteManager getWriteManager() {
+    return this.writeManager;
   }
 }
