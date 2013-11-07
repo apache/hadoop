@@ -175,6 +175,10 @@ Release 2.2.1 - UNRELEASED
     HADOOP-9478. Fix race conditions during the initialization of Configuration
     related to deprecatedKeyMap (cmccabe)
 
+    HADOOP-9660. [WINDOWS] Powershell / cmd parses -Dkey=value from command line
+    as [-Dkey, value] which breaks GenericsOptionParser.
+    (Enis Soztutar via cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
