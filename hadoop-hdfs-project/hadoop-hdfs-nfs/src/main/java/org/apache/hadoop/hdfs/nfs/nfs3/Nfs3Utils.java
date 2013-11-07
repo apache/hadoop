@@ -109,6 +109,12 @@ public class Nfs3Utils {
    * Send a write response to the netty network socket channel
    */
   public static void writeChannel(Channel channel, XDR out, int xid) {
+    if (channel == null) {
+      RpcProgramNfs3.LOG
+          .info("Null channel should only happen in tests. Do nothing.");
+      return;
+    }
+    
     if (RpcProgramNfs3.LOG.isDebugEnabled()) {
       RpcProgramNfs3.LOG.debug(WRITE_RPC_END + xid);
     }

@@ -45,6 +45,7 @@ import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.util.Daemon;
 import org.jboss.netty.channel.Channel;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 
 /**
@@ -261,6 +262,11 @@ public class WriteManager {
       }
     }
     return attr;
+  }
+   
+  @VisibleForTesting
+  ConcurrentMap<FileHandle, OpenFileCtx> getOpenFileMap() {
+    return this.openFileMap;
   }
   
   /**
