@@ -348,6 +348,11 @@
         <version>4.2.5</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpcore</artifactId>
+        <version>4.2.5</version>
+      </dependency>
+      <dependency>
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
         <version>1.4</version>
@@ -554,7 +559,7 @@
       <dependency>
         <groupId>net.java.dev.jets3t</groupId>
         <artifactId>jets3t</artifactId>
-        <version>0.6.1</version>
+        <version>0.9.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.mina</groupId>
