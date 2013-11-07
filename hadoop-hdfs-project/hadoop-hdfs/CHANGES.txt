@@ -354,6 +354,9 @@ Trunk (Unreleased)
 
     HDFS-5419. Fixup test-patch.sh warnings on HDFS-4949 branch. (wang)
 
+    HDFS-5468. CacheAdmin help command does not recognize commands  (Stephen
+    Chu via Colin Patrick McCabe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

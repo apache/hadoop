@@ -261,13 +261,13 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " <path>]\n";
+      return "[" + getName() + " -path <path>]\n";
     }
 
     @Override
     public String getLongUsage() {
       TableListing listing = getOptionDescriptionListing();
-      listing.addRow("<path>", "The path of the cache directives to remove.  " +
+      listing.addRow("-path <path>", "The path of the cache directives to remove.  " +
         "You must have write permission on the pool of the directive in order " +
         "to remove it.  To see a list of cache directives, use the " +
         "-listDirectives command.");
@@ -720,7 +720,6 @@ public class CacheAdmin extends Configured implements Tool {
         return 0;
       }
       String commandName = args.get(0);
-      commandName = commandName.replaceAll("^[-]*", "");
       Command command = determineCommand(commandName);
       if (command == null) {
         System.err.print("Sorry, I don't know the command '" +

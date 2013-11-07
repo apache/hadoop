@@ -358,5 +358,20 @@
       </comparators>
     </test>
 
+    <test>
+      <description>Testing the help usage</description>
+      <test-commands>
+        <cache-admin-command>-help -addPool</cache-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Add a new cache pool.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
   </tests>
 </configuration>
