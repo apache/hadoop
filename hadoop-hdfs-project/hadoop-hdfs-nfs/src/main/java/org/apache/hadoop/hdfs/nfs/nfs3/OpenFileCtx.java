@@ -1017,6 +1017,23 @@ class OpenFileCtx {
       }
       
       if (!writeCtx.getReplied()) {
+        if (stableHow != WriteStableHow.UNSTABLE) {
+          LOG.info("Do sync for stable write:" + writeCtx);
+          try {
+            if (stableHow == WriteStableHow.DATA_SYNC) {
+              fos.hsync();
+            } else {
+              Preconditions.checkState(stableHow == WriteStableHow.FILE_SYNC,
+                  "Unknown WriteStableHow:" + stableHow);
+              // Sync file data and length
+              fos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
+            }
+          } catch (IOException e) {
+            LOG.error("hsync failed with writeCtx:" + writeCtx + " error:" + e);
+            throw e;
+          }
+        }
+        
         WccAttr preOpAttr = latestAttr.getWccAttr();
         WccData fileWcc = new WccData(preOpAttr, latestAttr);
         if (writeCtx.getOriginalCount() != WriteCtx.INVALID_ORIGINAL_COUNT) {

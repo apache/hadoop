@@ -230,6 +230,8 @@ Release 2.2.1 - UNRELEASED
     HDFS-5458. Datanode failed volume threshold ignored if exception is thrown
     in getDataDirsFromURIs. (Mike Mellenthin via wang)
 
+    HDFS-5252. Stable write is not handled correctly in someplace. (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
