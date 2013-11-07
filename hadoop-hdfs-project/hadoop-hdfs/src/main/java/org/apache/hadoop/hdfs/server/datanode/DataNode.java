@@ -693,6 +693,10 @@ public class DataNode extends Configured
     readaheadPool = ReadaheadPool.getInstance();
   }
   
+  public static String generateUuid() {
+    return UUID.randomUUID().toString();
+  }
+
   /**
    * Verify that the DatanodeUuid has been initialized. If this is a new
    * datanode then we generate a new Datanode Uuid and persist it to disk.
@@ -701,7 +705,7 @@ public class DataNode extends Configured
    */
   private synchronized void checkDatanodeUuid() throws IOException {
     if (storage.getDatanodeUuid() == null) {
-      storage.setDatanodeUuid(UUID.randomUUID().toString());
+      storage.setDatanodeUuid(generateUuid());
       storage.writeAll();
       LOG.info("Generated and persisted new Datanode UUID " +
                storage.getDatanodeUuid());

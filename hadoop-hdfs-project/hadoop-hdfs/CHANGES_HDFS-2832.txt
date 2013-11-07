@@ -80,4 +80,7 @@ IMPROVEMENTS:
     Agarwal)
 
     HDFS-5470. Add back trunk's reportDiff algorithm to the branch.
-    (szetszwo)
+    (Contributed by szetszwo)
+
+    HDFS-5472. Fix TestDatanodeManager, TestSafeMode and
+    TestNNThroughputBenchmark (Contributed by szetszwo)
