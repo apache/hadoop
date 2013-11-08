@@ -52,6 +52,7 @@ abstract public class MountdBase {
   private void startUDPServer() {
     SimpleUdpServer udpServer = new SimpleUdpServer(rpcProgram.getPort(),
         rpcProgram, 1);
+    rpcProgram.startDaemons();
     udpServer.run();
   }
 
@@ -59,6 +60,7 @@ abstract public class MountdBase {
   private void startTCPServer() {
     SimpleTcpServer tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
         rpcProgram, 1);
+    rpcProgram.startDaemons();
     tcpServer.run();
   }
 

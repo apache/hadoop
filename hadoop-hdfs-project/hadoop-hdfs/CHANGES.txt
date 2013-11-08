@@ -235,6 +235,8 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5252. Stable write is not handled correctly in someplace. (brandonli)
 
+    HDFS-5364. Add OpenFileCtx cache. (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

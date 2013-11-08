@@ -214,6 +214,11 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
   }
   
+  @Override
+  public void startDaemons() {
+     writeManager.startAsyncDataSerivce();
+  }
+  
   /******************************************************
    * RPC call handlers
    ******************************************************/
@@ -778,7 +783,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     int createMode = request.getMode();
     if ((createMode != Nfs3Constant.CREATE_EXCLUSIVE)
-        && request.getObjAttr().getUpdateFields().contains(SetAttrField.SIZE)) {
+        && request.getObjAttr().getUpdateFields().contains(SetAttrField.SIZE)
+        && request.getObjAttr().getSize() != 0) {
       LOG.error("Setting file size is not supported when creating file: "
           + fileName + " dir fileId:" + dirHandle.getFileId());
       return new CREATE3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -831,6 +837,23 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       postOpObjAttr = Nfs3Utils.getFileAttr(dfsClient, fileIdPath, iug);
       dirWcc = Nfs3Utils.createWccData(Nfs3Utils.getWccAttr(preOpDirAttr),
           dfsClient, dirFileIdPath, iug);
+      
+      // Add open stream
+      OpenFileCtx openFileCtx = new OpenFileCtx(fos, postOpObjAttr,
+          writeDumpDir + "/" + postOpObjAttr.getFileId(), dfsClient, iug);
+      fileHandle = new FileHandle(postOpObjAttr.getFileId());
+      if (!writeManager.addOpenFileStream(fileHandle, openFileCtx)) {
+        LOG.warn("Can't add more stream, close it."
+            + " Future write will become append");
+        fos.close();
+        fos = null;
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Opened stream for file:" + fileName + ", fileId:"
+              + fileHandle.getFileId());
+        }
+      }
+      
     } catch (IOException e) {
       LOG.error("Exception", e);
       if (fos != null) {
@@ -857,16 +880,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         return new CREATE3Response(Nfs3Status.NFS3ERR_IO, fileHandle,
             postOpObjAttr, dirWcc);
       }
-    }
-    
-    // Add open stream
-    OpenFileCtx openFileCtx = new OpenFileCtx(fos, postOpObjAttr, writeDumpDir
-        + "/" + postOpObjAttr.getFileId(), dfsClient, iug);
-    fileHandle = new FileHandle(postOpObjAttr.getFileId());
-    writeManager.addOpenFileStream(fileHandle, openFileCtx);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("open stream for file:" + fileName + ", fileId:"
-          + fileHandle.getFileId());
     }
     
     return new CREATE3Response(Nfs3Status.NFS3_OK, fileHandle, postOpObjAttr,
