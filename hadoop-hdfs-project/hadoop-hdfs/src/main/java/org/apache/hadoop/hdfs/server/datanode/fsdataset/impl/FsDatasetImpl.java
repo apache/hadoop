@@ -32,12 +32,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -553,7 +553,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private synchronized ReplicaBeingWritten append(String bpid,
       FinalizedReplica replicaInfo, long newGS, long estimateBlockLen)
       throws IOException {
-    // uncache the block
+    // If the block is cached, start uncaching it.
     cacheManager.uncacheBlock(bpid, replicaInfo.getBlockId());
     // unlink the finalized replica
     replicaInfo.unlinkBlock(1);
@@ -1168,10 +1168,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
         volumeMap.remove(bpid, invalidBlks[i]);
       }
-
-      // Uncache the block synchronously
+      // If the block is cached, start uncaching it.
       cacheManager.uncacheBlock(bpid, invalidBlks[i].getBlockId());
-      // Delete the block asynchronously to make sure we can do it fast enough
+      // Delete the block asynchronously to make sure we can do it fast enough.
+      // It's ok to unlink the block file before the uncache operation
+      // finishes.
       asyncDiskService.deleteAsync(v, f,
           FsDatasetUtil.getMetaFile(f, invalidBlks[i].getGenerationStamp()),
           new ExtendedBlock(bpid, invalidBlks[i]));
@@ -1181,66 +1182,47 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  synchronized boolean validToCache(String bpid, long blockId) {
-    ReplicaInfo info = volumeMap.get(bpid, blockId);
-    if (info == null) {
-      LOG.warn("Failed to cache replica in block pool " + bpid +
-          " with block id " + blockId + ": ReplicaInfo not found.");
-      return false;
-    }
-    FsVolumeImpl volume = (FsVolumeImpl)info.getVolume();
-    if (volume == null) {
-      LOG.warn("Failed to cache block with id " + blockId +
-          ": Volume not found.");
-      return false;
-    }
-    if (info.getState() != ReplicaState.FINALIZED) {
-      LOG.warn("Failed to block with id " + blockId + 
-          ": Replica is not finalized.");
-      return false;
-    }
-    return true;
-  }
-
   /**
    * Asynchronously attempts to cache a single block via {@link FsDatasetCache}.
    */
   private void cacheBlock(String bpid, long blockId) {
-    ReplicaInfo info;
     FsVolumeImpl volume;
+    String blockFileName;
+    long length, genstamp;
+    Executor volumeExecutor;
+
     synchronized (this) {
-      if (!validToCache(bpid, blockId)) {
+      ReplicaInfo info = volumeMap.get(bpid, blockId);
+      if (info == null) {
+        LOG.warn("Failed to cache block with id " + blockId + ", pool " +
+            bpid + ": ReplicaInfo not found.");
         return;
       }
-      info = volumeMap.get(bpid, blockId);
-      volume = (FsVolumeImpl)info.getVolume();
+      if (info.getState() != ReplicaState.FINALIZED) {
+        LOG.warn("Failed to cache block with id " + blockId + ", pool " +
+            bpid + ": replica is not finalized; it is in state " +
+            info.getState());
+        return;
+      }
+      try {
+        volume = (FsVolumeImpl)info.getVolume();
+        if (volume == null) {
+          LOG.warn("Failed to cache block with id " + blockId + ", pool " +
+              bpid + ": volume not found.");
+          return;
+        }
+      } catch (ClassCastException e) {
+        LOG.warn("Failed to cache block with id " + blockId +
+            ": volume was not an instance of FsVolumeImpl.");
+        return;
+      }
+      blockFileName = info.getBlockFile().getAbsolutePath();
+      length = info.getVisibleLength();
+      genstamp = info.getGenerationStamp();
+      volumeExecutor = volume.getCacheExecutor();
     }
-    // Try to open block and meta streams
-    FileInputStream blockIn = null;
-    FileInputStream metaIn = null;
-    boolean success = false;
-    ExtendedBlock extBlk =
-        new ExtendedBlock(bpid, blockId,
-            info.getBytesOnDisk(), info.getGenerationStamp());
-    try {
-      blockIn = (FileInputStream)getBlockInputStream(extBlk, 0);
-      metaIn = (FileInputStream)getMetaDataInputStream(extBlk)
-          .getWrappedStream();
-      success = true;
-    } catch (ClassCastException e) {
-      LOG.warn("Failed to cache replica " + extBlk + ": Underlying blocks"
-          + " are not backed by files.", e);
-    } catch (IOException e) {
-      LOG.warn("Failed to cache replica " + extBlk + ": IOException while"
-          + " trying to open block or meta files.", e);
-    }
-    if (!success) {
-      IOUtils.closeQuietly(blockIn);
-      IOUtils.closeQuietly(metaIn);
-      return;
-    }
-    cacheManager.cacheBlock(bpid, extBlk.getLocalBlock(),
-        volume, blockIn, metaIn);
+    cacheManager.cacheBlock(blockId, bpid, 
+        blockFileName, length, genstamp, volumeExecutor);
   }
 
   @Override // FsDatasetSpi

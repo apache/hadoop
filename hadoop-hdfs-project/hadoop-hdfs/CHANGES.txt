@@ -359,6 +359,8 @@ Trunk (Unreleased)
     HDFS-5468. CacheAdmin help command does not recognize commands  (Stephen
     Chu via Colin Patrick McCabe)
 
+    HDFS-5394. Fix race conditions in DN caching and uncaching (cmccabe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

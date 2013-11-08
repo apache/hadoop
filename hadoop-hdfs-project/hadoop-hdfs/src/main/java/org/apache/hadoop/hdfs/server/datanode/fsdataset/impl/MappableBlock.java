@@ -28,149 +28,139 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.DataChecksum;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
- * Low-level wrapper for a Block and its backing files that provides mmap,
- * mlock, and checksum verification operations.
- * 
- * This could be a private class of FsDatasetCache, not meant for other users.
+ * Represents an HDFS block that is mmapped by the DataNode.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-class MappableBlock implements Closeable {
-
-  private final String bpid;
-  private final Block block;
-  private final FsVolumeImpl volume;
-
-  private final FileInputStream blockIn;
-  private final FileInputStream metaIn;
-  private final FileChannel blockChannel;
-  private final FileChannel metaChannel;
-  private final long blockSize;
-
-  private boolean isMapped;
-  private boolean isLocked;
-  private boolean isChecksummed;
-
-  private MappedByteBuffer blockMapped = null;
-
-  public MappableBlock(String bpid, Block blk, FsVolumeImpl volume,
-      FileInputStream blockIn, FileInputStream metaIn) throws IOException {
-    this.bpid = bpid;
-    this.block = blk;
-    this.volume = volume;
-
-    this.blockIn = blockIn;
-    this.metaIn = metaIn;
-    this.blockChannel = blockIn.getChannel();
-    this.metaChannel = metaIn.getChannel();
-    this.blockSize = blockChannel.size();
-
-    this.isMapped = false;
-    this.isLocked = false;
-    this.isChecksummed = false;
+public class MappableBlock implements Closeable {
+  public static interface Mlocker {
+    void mlock(MappedByteBuffer mmap, long length) throws IOException;
+  }
+  
+  private static class PosixMlocker implements Mlocker {
+    public void mlock(MappedByteBuffer mmap, long length)
+        throws IOException {
+      NativeIO.POSIX.mlock(mmap, length);
+    }
   }
 
-  public String getBlockPoolId() {
-    return bpid;
+  @VisibleForTesting
+  public static Mlocker mlocker = new PosixMlocker();
+
+  private MappedByteBuffer mmap;
+  private final long length;
+
+  MappableBlock(MappedByteBuffer mmap, long length) {
+    this.mmap = mmap;
+    this.length = length;
+    assert length > 0;
   }
 
-  public Block getBlock() {
-    return block;
-  }
-
-  public FsVolumeImpl getVolume() {
-    return volume;
-  }
-
-  public boolean isMapped() {
-    return isMapped;
-  }
-
-  public boolean isLocked() {
-    return isLocked;
-  }
-
-  public boolean isChecksummed() {
-    return isChecksummed;
+  public long getLength() {
+    return length;
   }
 
   /**
-   * Returns the number of bytes on disk for the block file
+   * Load the block.
+   *
+   * mmap and mlock the block, and then verify its checksum.
+   *
+   * @param length         The current length of the block.
+   * @param blockIn        The block input stream.  Should be positioned at the
+   *                       start.  The caller must close this.
+   * @param metaIn         The meta file input stream.  Should be positioned at
+   *                       the start.  The caller must close this.
+   * @param blockFileName  The block file name, for logging purposes.
+   *
+   * @return               The Mappable block.
    */
-  public long getNumBytes() {
-    return blockSize;
+  public static MappableBlock load(long length,
+      FileInputStream blockIn, FileInputStream metaIn,
+      String blockFileName) throws IOException {
+    MappableBlock mappableBlock = null;
+    MappedByteBuffer mmap = null;
+    try {
+      FileChannel blockChannel = blockIn.getChannel();
+      if (blockChannel == null) {
+        throw new IOException("Block InputStream has no FileChannel.");
+      }
+      mmap = blockChannel.map(MapMode.READ_ONLY, 0, length);
+      mlocker.mlock(mmap, length);
+      verifyChecksum(length, metaIn, blockChannel, blockFileName);
+      mappableBlock = new MappableBlock(mmap, length);
+    } finally {
+      if (mappableBlock == null) {
+        if (mmap != null) {
+          NativeIO.POSIX.munmap(mmap); // unmapping also unlocks
+        }
+      }
+    }
+    return mappableBlock;
   }
 
   /**
-   * Maps the block into memory. See mmap(2).
+   * Verifies the block's checksum. This is an I/O intensive operation.
+   * @return if the block was successfully checksummed.
    */
-  public void map() throws IOException {
-    if (isMapped) {
-      return;
+  private static void verifyChecksum(long length,
+      FileInputStream metaIn, FileChannel blockChannel, String blockFileName)
+          throws IOException, ChecksumException {
+    // Verify the checksum from the block's meta file
+    // Get the DataChecksum from the meta file header
+    BlockMetadataHeader header =
+        BlockMetadataHeader.readHeader(new DataInputStream(
+            new BufferedInputStream(metaIn, BlockMetadataHeader
+                .getHeaderSize())));
+    FileChannel metaChannel = metaIn.getChannel();
+    if (metaChannel == null) {
+      throw new IOException("Block InputStream meta file has no FileChannel.");
     }
-    blockMapped = blockChannel.map(MapMode.READ_ONLY, 0, blockSize);
-    isMapped = true;
-  }
-
-  /**
-   * Unmaps the block from memory. See munmap(2).
-   */
-  public void unmap() {
-    if (!isMapped) {
-      return;
+    DataChecksum checksum = header.getChecksum();
+    final int bytesPerChecksum = checksum.getBytesPerChecksum();
+    final int checksumSize = checksum.getChecksumSize();
+    final int numChunks = (8*1024*1024) / bytesPerChecksum;
+    ByteBuffer blockBuf = ByteBuffer.allocate(numChunks*bytesPerChecksum);
+    ByteBuffer checksumBuf = ByteBuffer.allocate(numChunks*checksumSize);
+    // Verify the checksum
+    int bytesVerified = 0;
+    while (bytesVerified < length) {
+      Preconditions.checkState(bytesVerified % bytesPerChecksum == 0,
+          "Unexpected partial chunk before EOF");
+      assert bytesVerified % bytesPerChecksum == 0;
+      int bytesRead = fillBuffer(blockChannel, blockBuf);
+      if (bytesRead == -1) {
+        throw new IOException("checksum verification failed: premature EOF");
+      }
+      blockBuf.flip();
+      // Number of read chunks, including partial chunk at end
+      int chunks = (bytesRead+bytesPerChecksum-1) / bytesPerChecksum;
+      checksumBuf.limit(chunks*checksumSize);
+      fillBuffer(metaChannel, checksumBuf);
+      checksumBuf.flip();
+      checksum.verifyChunkedSums(blockBuf, checksumBuf, blockFileName,
+          bytesVerified);
+      // Success
+      bytesVerified += bytesRead;
+      blockBuf.clear();
+      checksumBuf.clear();
     }
-    if (blockMapped instanceof sun.nio.ch.DirectBuffer) {
-      sun.misc.Cleaner cleaner =
-          ((sun.nio.ch.DirectBuffer)blockMapped).cleaner();
-      cleaner.clean();
-    }
-    isMapped = false;
-    isLocked = false;
-    isChecksummed = false;
-  }
-
-  /**
-   * Locks the block into memory. This prevents the block from being paged out.
-   * See mlock(2).
-   */
-  public void lock() throws IOException {
-    Preconditions.checkArgument(isMapped,
-        "Block must be mapped before it can be locked!");
-    if (isLocked) {
-      return;
-    }
-    NativeIO.POSIX.mlock(blockMapped, blockSize);
-    isLocked = true;
-  }
-
-  /**
-   * Unlocks the block from memory, allowing it to be paged out. See munlock(2).
-   */
-  public void unlock() throws IOException {
-    if (!isLocked || !isMapped) {
-      return;
-    }
-    NativeIO.POSIX.munlock(blockMapped, blockSize);
-    isLocked = false;
-    isChecksummed = false;
   }
 
   /**
    * Reads bytes into a buffer until EOF or the buffer's limit is reached
    */
-  private int fillBuffer(FileChannel channel, ByteBuffer buf)
+  private static int fillBuffer(FileChannel channel, ByteBuffer buf)
       throws IOException {
     int bytesRead = channel.read(buf);
     if (bytesRead < 0) {
@@ -188,62 +178,11 @@ class MappableBlock implements Closeable {
     return bytesRead;
   }
 
-  /**
-   * Verifies the block's checksum. This is an I/O intensive operation.
-   * @return if the block was successfully checksummed.
-   */
-  public void verifyChecksum() throws IOException, ChecksumException {
-    Preconditions.checkArgument(isLocked && isMapped,
-        "Block must be mapped and locked before checksum verification!");
-    // skip if checksum has already been successfully verified
-    if (isChecksummed) {
-      return;
-    }
-    // Verify the checksum from the block's meta file
-    // Get the DataChecksum from the meta file header
-    metaChannel.position(0);
-    BlockMetadataHeader header =
-        BlockMetadataHeader.readHeader(new DataInputStream(
-            new BufferedInputStream(metaIn, BlockMetadataHeader
-                .getHeaderSize())));
-    DataChecksum checksum = header.getChecksum();
-    final int bytesPerChecksum = checksum.getBytesPerChecksum();
-    final int checksumSize = checksum.getChecksumSize();
-    final int numChunks = (8*1024*1024) / bytesPerChecksum;
-    ByteBuffer blockBuf = ByteBuffer.allocate(numChunks*bytesPerChecksum);
-    ByteBuffer checksumBuf = ByteBuffer.allocate(numChunks*checksumSize);
-    // Verify the checksum
-    int bytesVerified = 0;
-    while (bytesVerified < blockChannel.size()) {
-      Preconditions.checkState(bytesVerified % bytesPerChecksum == 0,
-          "Unexpected partial chunk before EOF");
-      assert bytesVerified % bytesPerChecksum == 0;
-      int bytesRead = fillBuffer(blockChannel, blockBuf);
-      if (bytesRead == -1) {
-        throw new IOException("Premature EOF");
-      }
-      blockBuf.flip();
-      // Number of read chunks, including partial chunk at end
-      int chunks = (bytesRead+bytesPerChecksum-1) / bytesPerChecksum;
-      checksumBuf.limit(chunks*checksumSize);
-      fillBuffer(metaChannel, checksumBuf);
-      checksumBuf.flip();
-      checksum.verifyChunkedSums(blockBuf, checksumBuf, block.getBlockName(),
-          bytesVerified);
-      // Success
-      bytesVerified += bytesRead;
-      blockBuf.clear();
-      checksumBuf.clear();
-    }
-    isChecksummed = true;
-    // Can close the backing file since everything is safely in memory
-    blockChannel.close();
-  }
-
   @Override
   public void close() {
-    unmap();
-    IOUtils.closeQuietly(blockIn);
-    IOUtils.closeQuietly(metaIn);
+    if (mmap != null) {
+      NativeIO.POSIX.munmap(mmap);
+      mmap = null;
+    }
   }
 }
