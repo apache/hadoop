@@ -558,27 +558,25 @@ public class RetryPolicies {
           isWrappedStandbyException(e)) {
         return new RetryAction(RetryAction.RetryDecision.FAILOVER_AND_RETRY,
             getFailoverOrRetrySleepTime(failovers));
-      } else if (e instanceof SocketException ||
-                 (e instanceof IOException && !(e instanceof RemoteException))) {
+      } else if (e instanceof RetriableException
+          || getWrappedRetriableException(e) != null) {
+        // RetriableException or RetriableException wrapped 
+        return new RetryAction(RetryAction.RetryDecision.RETRY,
+              getFailoverOrRetrySleepTime(retries));
+      } else if (e instanceof SocketException
+          || (e instanceof IOException && !(e instanceof RemoteException))) {
         if (isIdempotentOrAtMostOnce) {
           return RetryAction.FAILOVER_AND_RETRY;
         } else {
           return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
-              "the invoked method is not idempotent, and unable to determine " +
-              "whether it was invoked");
+              "the invoked method is not idempotent, and unable to determine "
+                  + "whether it was invoked");
         }
       } else {
-        RetriableException re = getWrappedRetriableException(e);
-        if (re != null) {
-          return new RetryAction(RetryAction.RetryDecision.RETRY,
-              getFailoverOrRetrySleepTime(retries));
-        } else {
           return fallbackPolicy.shouldRetry(e, retries, failovers,
               isIdempotentOrAtMostOnce);
-        }
       }
     }
-    
   }
 
   /**
