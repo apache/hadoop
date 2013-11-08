@@ -96,8 +96,10 @@ public class INodeFileWithSnapshot extends INodeFile
       final List<INode> removedINodes, final boolean countDiffChange) 
       throws QuotaExceededException {
     if (snapshot == null) { // delete the current file
-      recordModification(prior, null);
-      isCurrentFileDeleted = true;
+      if (!isCurrentFileDeleted()) {
+        recordModification(prior, null);
+        deleteCurrentFile();
+      }
       Util.collectBlocksAndClear(this, collectedBlocks, removedINodes);
       return Quota.Counts.newInstance();
     } else { // delete a snapshot

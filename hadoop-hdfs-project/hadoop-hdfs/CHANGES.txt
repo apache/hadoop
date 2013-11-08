@@ -143,6 +143,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5443. Delete 0-sized block when deleting an under-construction file that 
     is included in snapshot. (jing9)
 
+    HDFS-5476. Snapshot: clean the blocks/files/directories under a renamed 
+    file/directory while deletion. (jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
