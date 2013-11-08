@@ -297,9 +297,22 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   void addReplicaIfNotPresent(DatanodeStorageInfo storage,
                      Block block,
                      ReplicaState rState) {
-    for(ReplicaUnderConstruction r : replicas)
-      if(r.getExpectedStorageLocation() == storage)
+    Iterator<ReplicaUnderConstruction> it = replicas.iterator();
+    while (it.hasNext()) {
+      ReplicaUnderConstruction r = it.next();
+      if(r.getExpectedStorageLocation() == storage) {
         return;
+      } else if (r.getExpectedStorageLocation().getDatanodeDescriptor() ==
+          storage.getDatanodeDescriptor()) {
+
+        // The Datanode reported that the block is on a different storage
+        // than the one chosen by BlockPlacementPolicy. This can occur as
+        // we allow Datanodes to choose the target storage. Update our
+        // state by removing the stale entry and adding a new one.
+        it.remove();
+        break;
+      }
+    }
     replicas.add(new ReplicaUnderConstruction(block, storage, rState));
   }
 

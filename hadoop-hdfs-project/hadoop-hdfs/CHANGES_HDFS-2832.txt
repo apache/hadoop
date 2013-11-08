@@ -84,3 +84,7 @@ IMPROVEMENTS:
 
     HDFS-5472. Fix TestDatanodeManager, TestSafeMode and
     TestNNThroughputBenchmark (Contributed by szetszwo)
+
+    HDFS-5475.  NN incorrectly tracks more than one replica per DN. (Arpit
+    Agarwal)
+
