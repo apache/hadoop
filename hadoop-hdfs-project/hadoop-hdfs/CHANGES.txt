@@ -457,6 +457,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5436. Move HsFtpFileSystem and HFtpFileSystem into org.apache.hdfs.web
     (Haohui Mai via Arpit Agarwal)
 
+    HDFS-5371. Let client retry the same NN when 
+    "dfs.client.test.drop.namenode.response.number" is enabled. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
