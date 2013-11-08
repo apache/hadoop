@@ -1487,10 +1487,10 @@
 </property>
 
 <property>
-  <name>dfs.namenode.list.cache.descriptors.num.responses</name>
+  <name>dfs.namenode.list.cache.directives.num.responses</name>
   <value>100</value>
   <description>
-    This value controls the number of cache descriptors that the NameNode will
+    This value controls the number of cache directives that the NameNode will
     send over the wire in response to a listDirectives RPC.
   </description>
 </property>

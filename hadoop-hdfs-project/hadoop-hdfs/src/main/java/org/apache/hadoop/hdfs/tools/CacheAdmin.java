@@ -30,11 +30,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.AddPathBasedCacheDirectiveException;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
-import org.apache.hadoop.hdfs.protocol.RemovePathBasedCacheDescriptorException;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.tools.TableListing.Justification;
 import org.apache.hadoop.ipc.RemoteException;
@@ -180,11 +177,9 @@ public class CacheAdmin extends Configured implements Tool {
           setPool(poolName).
           build();
       try {
-        PathBasedCacheDescriptor descriptor =
-            dfs.addPathBasedCacheDirective(directive);
-        System.out.println("Added PathBasedCache entry "
-            + descriptor.getEntryId());
-      } catch (AddPathBasedCacheDirectiveException e) {
+        long id = dfs.addPathBasedCacheDirective(directive);
+        System.out.println("Added PathBasedCache entry " + id);
+      } catch (IOException e) {
         System.err.println(prettifyException(e));
         return 2;
       }
@@ -243,9 +238,9 @@ public class CacheAdmin extends Configured implements Tool {
       }
       DistributedFileSystem dfs = getDFS(conf);
       try {
-        dfs.getClient().removePathBasedCacheDescriptor(id);
+        dfs.getClient().removePathBasedCacheDirective(id);
         System.out.println("Removed PathBasedCache directive " + id);
-      } catch (RemovePathBasedCacheDescriptorException e) {
+      } catch (IOException e) {
         System.err.println(prettifyException(e));
         return 2;
       }
@@ -261,13 +256,13 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " <path>]\n";
+      return "[" + getName() + " -path <path>]\n";
     }
 
     @Override
     public String getLongUsage() {
       TableListing listing = getOptionDescriptionListing();
-      listing.addRow("<path>", "The path of the cache directives to remove.  " +
+      listing.addRow("-path <path>", "The path of the cache directives to remove.  " +
         "You must have write permission on the pool of the directive in order " +
         "to remove it.  To see a list of cache directives, use the " +
         "-listDirectives command.");
@@ -289,16 +284,18 @@ public class CacheAdmin extends Configured implements Tool {
         return 1;
       }
       DistributedFileSystem dfs = getDFS(conf);
-      RemoteIterator<PathBasedCacheDescriptor> iter =
-          dfs.listPathBasedCacheDescriptors(null, new Path(path));
+      RemoteIterator<PathBasedCacheDirective> iter =
+          dfs.listPathBasedCacheDirectives(
+              new PathBasedCacheDirective.Builder().
+                  setPath(new Path(path)).build());
       int exitCode = 0;
       while (iter.hasNext()) {
-        PathBasedCacheDescriptor entry = iter.next();
+        PathBasedCacheDirective directive = iter.next();
         try {
-          dfs.removePathBasedCacheDescriptor(entry);
+          dfs.removePathBasedCacheDirective(directive.getId());
           System.out.println("Removed PathBasedCache directive " +
-              entry.getEntryId());
-        } catch (RemovePathBasedCacheDescriptorException e) {
+              directive.getId());
+        } catch (IOException e) {
           System.err.println(prettifyException(e));
           exitCode = 2;
         }
@@ -338,8 +335,16 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public int run(Configuration conf, List<String> args) throws IOException {
+      PathBasedCacheDirective.Builder builder =
+          new PathBasedCacheDirective.Builder();
       String pathFilter = StringUtils.popOptionWithArgument("-path", args);
+      if (pathFilter != null) {
+        builder.setPath(new Path(pathFilter));
+      }
       String poolFilter = StringUtils.popOptionWithArgument("-pool", args);
+      if (poolFilter != null) {
+        builder.setPool(poolFilter);
+      }
       if (!args.isEmpty()) {
         System.err.println("Can't understand argument: " + args.get(0));
         return 1;
@@ -350,15 +355,14 @@ public class CacheAdmin extends Configured implements Tool {
           addField("PATH", Justification.LEFT).
           build();
       DistributedFileSystem dfs = getDFS(conf);
-      RemoteIterator<PathBasedCacheDescriptor> iter =
-          dfs.listPathBasedCacheDescriptors(poolFilter, pathFilter != null ?
-              new Path(pathFilter) : null);
+      RemoteIterator<PathBasedCacheDirective> iter =
+          dfs.listPathBasedCacheDirectives(builder.build());
       int numEntries = 0;
       while (iter.hasNext()) {
-        PathBasedCacheDescriptor entry = iter.next();
+        PathBasedCacheDirective directive = iter.next();
         String row[] = new String[] {
-            "" + entry.getEntryId(), entry.getPool(),
-            entry.getPath().toUri().getPath(),
+            "" + directive.getId(), directive.getPool(),
+            directive.getPath().toUri().getPath(),
         };
         tableListing.addRow(row);
         numEntries++;
@@ -720,7 +724,6 @@ public class CacheAdmin extends Configured implements Tool {
         return 0;
       }
       String commandName = args.get(0);
-      commandName = commandName.replaceAll("^[-]*", "");
       Command command = determineCommand(commandName);
       if (command == null) {
         System.err.print("Sorry, I don't know the command '" +

@@ -20,7 +20,6 @@ package org.apache.hadoop.nfs.nfs3;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mount.MountdBase;
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.SimpleTcpServer;
 import org.apache.hadoop.portmap.PortmapMapping;
@@ -32,34 +31,27 @@ import org.apache.hadoop.portmap.PortmapMapping;
  */
 public abstract class Nfs3Base {
   public static final Log LOG = LogFactory.getLog(Nfs3Base.class);
-  private final MountdBase mountd;
   private final RpcProgram rpcProgram;
   private final int nfsPort;
-  
-  public MountdBase getMountBase() {
-    return mountd;
-  }
-  
+    
   public RpcProgram getRpcProgram() {
     return rpcProgram;
   }
 
-  protected Nfs3Base(MountdBase mountd, RpcProgram program, Configuration conf) {
-    this.mountd = mountd;
-    this.rpcProgram = program;
+  protected Nfs3Base(RpcProgram rpcProgram, Configuration conf) {
+    this.rpcProgram = rpcProgram;
     this.nfsPort = conf.getInt("nfs3.server.port", Nfs3Constant.PORT);
-    LOG.info("NFS server port set to: "+nfsPort);
+    LOG.info("NFS server port set to: " + nfsPort);
   }
 
-  protected Nfs3Base(MountdBase mountd, RpcProgram program) {
-    this.mountd = mountd;
-    this.rpcProgram = program;
+  protected Nfs3Base(RpcProgram rpcProgram) {
+    this.rpcProgram = rpcProgram;
     this.nfsPort = Nfs3Constant.PORT;
   }
 
   public void start(boolean register) {
-    mountd.start(register); // Start mountd
     startTCPServer(); // Start TCP server
+    
     if (register) {
       rpcProgram.register(PortmapMapping.TRANSPORT_TCP);
     }
@@ -68,6 +60,7 @@ public abstract class Nfs3Base {
   private void startTCPServer() {
     SimpleTcpServer tcpServer = new SimpleTcpServer(nfsPort,
         rpcProgram, 0);
+    rpcProgram.startDaemons();
     tcpServer.run();
   }
 }

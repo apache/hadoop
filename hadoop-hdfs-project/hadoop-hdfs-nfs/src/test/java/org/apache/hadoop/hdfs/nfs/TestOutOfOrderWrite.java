@@ -135,6 +135,7 @@ public class TestOutOfOrderWrite {
     @Override
     protected ChannelPipelineFactory setPipelineFactory() {
       this.pipelineFactory = new ChannelPipelineFactory() {
+        @Override
         public ChannelPipeline getPipeline() {
           return Channels.pipeline(
               RpcUtil.constructRpcFrameDecoder(),

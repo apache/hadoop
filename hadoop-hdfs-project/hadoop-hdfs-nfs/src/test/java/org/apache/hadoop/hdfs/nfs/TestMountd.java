@@ -51,7 +51,7 @@ public class TestMountd {
     Nfs3 nfs3 = new Nfs3(exports, config);
     nfs3.start(false);
 
-    RpcProgramMountd mountd = (RpcProgramMountd) nfs3.getMountBase()
+    RpcProgramMountd mountd = (RpcProgramMountd) nfs3.getMountd()
         .getRpcProgram();
     mountd.nullOp(new XDR(), 1234, InetAddress.getByName("localhost"));
     

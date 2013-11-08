@@ -100,6 +100,9 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
     }
   }
 
+  // Start extra daemons
+  public void startDaemons() {}
+  
   @Override
   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
       throws Exception {

@@ -64,6 +64,15 @@ public final class PathBasedCacheEntry {
     return replication;
   }
 
+  public PathBasedCacheDirective toDirective() {
+    return new PathBasedCacheDirective.Builder().
+        setId(entryId).
+        setPath(new Path(path)).
+        setReplication(replication).
+        setPool(pool.getPoolName()).
+        build();
+  }
+  
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
@@ -75,11 +84,6 @@ public final class PathBasedCacheEntry {
     return builder.toString();
   }
 
-  public PathBasedCacheDescriptor getDescriptor() {
-    return new PathBasedCacheDescriptor(entryId, new Path(path), replication,
-        pool.getPoolName());
-  }
-  
   @Override
   public boolean equals(Object o) {
     if (o == null) { return false; }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_CACHE_POOL;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_PATH_BASED_CACHE_DIRECTIVE;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ALLOCATE_BLOCK_ID;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ALLOW_SNAPSHOT;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_CANCEL_DELEGATION_TOKEN;
@@ -37,7 +38,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_MKDIR;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_MODIFY_CACHE_POOL;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REASSIGN_LEASE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REMOVE_CACHE_POOL;
-import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_OLD;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_SNAPSHOT;
@@ -74,6 +75,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -84,6 +86,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
@@ -164,8 +167,10 @@ public abstract class FSEditLogOp {
       inst.put(OP_ALLOCATE_BLOCK_ID, new AllocateBlockIdOp());
       inst.put(OP_ADD_PATH_BASED_CACHE_DIRECTIVE,
           new AddPathBasedCacheDirectiveOp());
-      inst.put(OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR,
-          new RemovePathBasedCacheDescriptorOp());
+      inst.put(OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE,
+          new ModifyPathBasedCacheDirectiveOp());
+      inst.put(OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE,
+          new RemovePathBasedCacheDirectiveOp());
       inst.put(OP_ADD_CACHE_POOL, new AddCachePoolOp());
       inst.put(OP_MODIFY_CACHE_POOL, new ModifyCachePoolOp());
       inst.put(OP_REMOVE_CACHE_POOL, new RemoveCachePoolOp());
@@ -2866,9 +2871,7 @@ public abstract class FSEditLogOp {
    * {@link ClientProtocol#addPathBasedCacheDirective}
    */
   static class AddPathBasedCacheDirectiveOp extends FSEditLogOp {
-    String path;
-    short replication;
-    String pool;
+    PathBasedCacheDirective directive;
 
     public AddPathBasedCacheDirectiveOp() {
       super(OP_ADD_PATH_BASED_CACHE_DIRECTIVE);
@@ -2879,51 +2882,60 @@ public abstract class FSEditLogOp {
           .get(OP_ADD_PATH_BASED_CACHE_DIRECTIVE);
     }
 
-    public AddPathBasedCacheDirectiveOp setPath(String path) {
-      this.path = path;
-      return this;
-    }
-
-    public AddPathBasedCacheDirectiveOp setReplication(short replication) {
-      this.replication = replication;
-      return this;
-    }
-
-    public AddPathBasedCacheDirectiveOp setPool(String pool) {
-      this.pool = pool;
+    public AddPathBasedCacheDirectiveOp setDirective(
+        PathBasedCacheDirective directive) {
+      this.directive = directive;
+      assert(directive.getId() != null);
+      assert(directive.getPath() != null);
+      assert(directive.getReplication() != null);
+      assert(directive.getPool() != null);
       return this;
     }
 
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
-      this.path = FSImageSerialization.readString(in);
-      this.replication = FSImageSerialization.readShort(in);
-      this.pool = FSImageSerialization.readString(in);
+      long id = FSImageSerialization.readLong(in);
+      String path = FSImageSerialization.readString(in);
+      short replication = FSImageSerialization.readShort(in);
+      String pool = FSImageSerialization.readString(in);
+      directive = new PathBasedCacheDirective.Builder().
+          setId(id).
+          setPath(new Path(path)).
+          setReplication(replication).
+          setPool(pool).
+          build();
       readRpcIds(in, logVersion);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
-      FSImageSerialization.writeString(path, out);
-      FSImageSerialization.writeShort(replication, out);
-      FSImageSerialization.writeString(pool, out);
+      FSImageSerialization.writeLong(directive.getId(), out);
+      FSImageSerialization.writeString(directive.getPath().toUri().getPath(), out);
+      FSImageSerialization.writeShort(directive.getReplication(), out);
+      FSImageSerialization.writeString(directive.getPool(), out);
       writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
-      XMLUtils.addSaxString(contentHandler, "PATH", path);
+      XMLUtils.addSaxString(contentHandler, "ID",
+          directive.getId().toString());
+      XMLUtils.addSaxString(contentHandler, "PATH",
+          directive.getPath().toUri().getPath());
       XMLUtils.addSaxString(contentHandler, "REPLICATION",
-          Short.toString(replication));
-      XMLUtils.addSaxString(contentHandler, "POOL", pool);
+          Short.toString(directive.getReplication()));
+      XMLUtils.addSaxString(contentHandler, "POOL", directive.getPool());
       appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
-      path = st.getValue("PATH");
-      replication = Short.parseShort(st.getValue("REPLICATION"));
-      pool = st.getValue("POOL");
+      directive = new PathBasedCacheDirective.Builder().
+          setId(Long.parseLong(st.getValue("ID"))).
+          setPath(new Path(st.getValue("PATH"))).
+          setReplication(Short.parseShort(st.getValue("REPLICATION"))).
+          setPool(st.getValue("POOL")).
+          build();
       readRpcIdsFromXml(st);
     }
 
@@ -2931,9 +2943,10 @@ public abstract class FSEditLogOp {
     public String toString() {
       StringBuilder builder = new StringBuilder();
       builder.append("AddPathBasedCacheDirective [");
-      builder.append("path=" + path + ",");
-      builder.append("replication=" + replication + ",");
-      builder.append("pool=" + pool);
+      builder.append("id=" + directive.getId() + ",");
+      builder.append("path=" + directive.getPath().toUri().getPath() + ",");
+      builder.append("replication=" + directive.getReplication() + ",");
+      builder.append("pool=" + directive.getPool());
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
@@ -2942,21 +2955,149 @@ public abstract class FSEditLogOp {
 
   /**
    * {@literal @AtMostOnce} for
-   * {@link ClientProtocol#removePathBasedCacheDescriptor}
+   * {@link ClientProtocol#modifyPathBasedCacheDirective}
    */
-  static class RemovePathBasedCacheDescriptorOp extends FSEditLogOp {
+  static class ModifyPathBasedCacheDirectiveOp extends FSEditLogOp {
+    PathBasedCacheDirective directive;
+
+    public ModifyPathBasedCacheDirectiveOp() {
+      super(OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE);
+    }
+
+    static ModifyPathBasedCacheDirectiveOp getInstance(OpInstanceCache cache) {
+      return (ModifyPathBasedCacheDirectiveOp) cache
+          .get(OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE);
+    }
+
+    public ModifyPathBasedCacheDirectiveOp setDirective(
+        PathBasedCacheDirective directive) {
+      this.directive = directive;
+      assert(directive.getId() != null);
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      PathBasedCacheDirective.Builder builder =
+          new PathBasedCacheDirective.Builder();
+      builder.setId(FSImageSerialization.readLong(in));
+      byte flags = in.readByte();
+      if ((flags & 0x1) != 0) {
+        builder.setPath(new Path(FSImageSerialization.readString(in)));
+      }
+      if ((flags & 0x2) != 0) {
+        builder.setReplication(FSImageSerialization.readShort(in));
+      }
+      if ((flags & 0x4) != 0) {
+        builder.setPool(FSImageSerialization.readString(in));
+      }
+      if ((flags & ~0x7) != 0) {
+        throw new IOException("unknown flags set in " +
+            "ModifyPathBasedCacheDirectiveOp: " + flags);
+      }
+      this.directive = builder.build();
+      readRpcIds(in, logVersion);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(directive.getId(), out);
+      byte flags = (byte)(
+          ((directive.getPath() != null) ? 0x1 : 0) |
+          ((directive.getReplication() != null) ? 0x2 : 0) |
+          ((directive.getPool() != null) ? 0x4 : 0)
+        );
+      out.writeByte(flags);
+      if (directive.getPath() != null) {
+        FSImageSerialization.writeString(
+            directive.getPath().toUri().getPath(), out);
+      }
+      if (directive.getReplication() != null) {
+        FSImageSerialization.writeShort(directive.getReplication(), out);
+      }
+      if (directive.getPool() != null) {
+        FSImageSerialization.writeString(directive.getPool(), out);
+      }
+      writeRpcIds(rpcClientId, rpcCallId, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "ID",
+          Long.toString(directive.getId()));
+      if (directive.getPath() != null) {
+        XMLUtils.addSaxString(contentHandler, "PATH",
+            directive.getPath().toUri().getPath());
+      }
+      if (directive.getReplication() != null) {
+        XMLUtils.addSaxString(contentHandler, "REPLICATION",
+            Short.toString(directive.getReplication()));
+      }
+      if (directive.getPool() != null) {
+        XMLUtils.addSaxString(contentHandler, "POOL", directive.getPool());
+      }
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      PathBasedCacheDirective.Builder builder =
+          new PathBasedCacheDirective.Builder();
+      builder.setId(Long.parseLong(st.getValue("ID")));
+      String path = st.getValueOrNull("PATH");
+      if (path != null) {
+        builder.setPath(new Path(path));
+      }
+      String replicationString = st.getValueOrNull("REPLICATION");
+      if (replicationString != null) {
+        builder.setReplication(Short.parseShort(replicationString));
+      }
+      String pool = st.getValueOrNull("POOL");
+      if (pool != null) {
+        builder.setPool(pool);
+      }
+      this.directive = builder.build();
+      readRpcIdsFromXml(st);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("ModifyPathBasedCacheDirectiveOp[");
+      builder.append("id=").append(directive.getId());
+      if (directive.getPath() != null) {
+        builder.append(",").append("path=").append(directive.getPath());
+      }
+      if (directive.getReplication() != null) {
+        builder.append(",").append("replication=").
+            append(directive.getReplication());
+      }
+      if (directive.getPool() != null) {
+        builder.append(",").append("pool=").append(directive.getPool());
+      }
+      appendRpcIdsToString(builder, rpcClientId, rpcCallId);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
+  /**
+   * {@literal @AtMostOnce} for
+   * {@link ClientProtocol#removePathBasedCacheDirective}
+   */
+  static class RemovePathBasedCacheDirectiveOp extends FSEditLogOp {
     long id;
 
-    public RemovePathBasedCacheDescriptorOp() {
-      super(OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR);
+    public RemovePathBasedCacheDirectiveOp() {
+      super(OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE);
     }
 
-    static RemovePathBasedCacheDescriptorOp getInstance(OpInstanceCache cache) {
-      return (RemovePathBasedCacheDescriptorOp) cache
-          .get(OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR);
+    static RemovePathBasedCacheDirectiveOp getInstance(OpInstanceCache cache) {
+      return (RemovePathBasedCacheDirectiveOp) cache
+          .get(OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE);
     }
 
-    public RemovePathBasedCacheDescriptorOp setId(long id) {
+    public RemovePathBasedCacheDirectiveOp setId(long id) {
       this.id = id;
       return this;
     }
@@ -2988,7 +3129,7 @@ public abstract class FSEditLogOp {
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
-      builder.append("RemovePathBasedCacheDescriptor [");
+      builder.append("RemovePathBasedCacheDirective [");
       builder.append("id=" + Long.toString(id));
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");

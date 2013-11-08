@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDescriptor;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -242,14 +241,20 @@ public class OfflineEditsViewerHelper {
         .setMode(new FsPermission((short)0700))
         .setWeight(1989));
     // OP_ADD_PATH_BASED_CACHE_DIRECTIVE 33
-    PathBasedCacheDescriptor descriptor =
-        dfs.addPathBasedCacheDirective(new PathBasedCacheDirective.Builder().
+    long id = dfs.addPathBasedCacheDirective(
+        new PathBasedCacheDirective.Builder().
             setPath(new Path("/bar")).
             setReplication((short)1).
             setPool(pool).
             build());
-    // OP_REMOVE_PATH_BASED_CACHE_DESCRIPTOR 34
-    dfs.removePathBasedCacheDescriptor(descriptor);
+    // OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE 38
+    dfs.modifyPathBasedCacheDirective(
+        new PathBasedCacheDirective.Builder().
+            setId(id).
+            setPath(new Path("/bar2")).
+            build());
+    // OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE 34
+    dfs.removePathBasedCacheDirective(id);
     // OP_REMOVE_CACHE_POOL 37
     dfs.removeCachePool(pool);
     // sync to disk, otherwise we parse partial edits
