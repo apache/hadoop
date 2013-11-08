@@ -23,8 +23,11 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.nfs.mount.Mountd;
+import org.apache.hadoop.mount.MountdBase;
 import org.apache.hadoop.nfs.nfs3.Nfs3Base;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Nfs server. Supports NFS v3 using {@link RpcProgramNfs3}.
@@ -32,24 +35,35 @@ import org.apache.hadoop.util.StringUtils;
  * Only TCP server is supported and UDP is not supported.
  */
 public class Nfs3 extends Nfs3Base {
+  private Mountd mountd;
+  
   static {
     Configuration.addDefaultResource("hdfs-default.xml");
     Configuration.addDefaultResource("hdfs-site.xml");
   }
   
   public Nfs3(List<String> exports) throws IOException {
-    super(new Mountd(exports), new RpcProgramNfs3());
+    super(new RpcProgramNfs3());
+    mountd = new Mountd(exports);
   }
 
+  @VisibleForTesting
   public Nfs3(List<String> exports, Configuration config) throws IOException {
-    super(new Mountd(exports, config), new RpcProgramNfs3(config), config);
+    super(new RpcProgramNfs3(config), config);
+    mountd = new Mountd(exports, config);
   }
 
+  public Mountd getMountd() {
+    return mountd;
+  }
+  
   public static void main(String[] args) throws IOException {
     StringUtils.startupShutdownMessage(Nfs3.class, args, LOG);
     List<String> exports = new ArrayList<String>();
     exports.add("/");
+    
     final Nfs3 nfsServer = new Nfs3(exports);
+    nfsServer.mountd.start(true); // Start mountd
     nfsServer.start(true);
   }
 }

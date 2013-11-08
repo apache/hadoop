@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.security.InvalidParameterException;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -96,7 +95,7 @@ class OpenFileCtx {
   
   // It's updated after each sync to HDFS
   private Nfs3FileAttributes latestAttr;
-
+  
   private final ConcurrentNavigableMap<OffsetRange, WriteCtx> pendingWrites;
   
   private final ConcurrentNavigableMap<Long, CommitCtx> pendingCommits;
@@ -165,8 +164,20 @@ class OpenFileCtx {
     return System.currentTimeMillis() - lastAccessTime > streamTimeout;
   }
   
+  long getLastAccessTime() {
+    return lastAccessTime;  
+  }
+  
   public long getNextOffset() {
     return nextOffset.get();
+  }
+  
+  boolean getActiveState() {
+    return this.activeState;
+  }
+  
+  boolean hasPendingWork() {
+    return (pendingWrites.size() != 0 || pendingCommits.size() != 0);
   }
   
   // Increase or decrease the memory occupation of non-sequential writes
@@ -800,19 +811,18 @@ class OpenFileCtx {
    * @return true, remove stream; false, keep stream
    */
   public synchronized boolean streamCleanup(long fileId, long streamTimeout) {
-    if (streamTimeout < WriteManager.MINIMIUM_STREAM_TIMEOUT) {
-      throw new InvalidParameterException("StreamTimeout" + streamTimeout
-          + "ms is less than MINIMIUM_STREAM_TIMEOUT "
-          + WriteManager.MINIMIUM_STREAM_TIMEOUT + "ms");
+    Preconditions
+        .checkState(streamTimeout >= Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT);
+    if (!activeState) {
+      return true;
     }
     
     boolean flag = false;
     // Check the stream timeout
     if (checkStreamTimeout(streamTimeout)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("closing stream for fileId:" + fileId);
+        LOG.debug("stream can be closed for fileId:" + fileId);
       }
-      cleanup();
       flag = true;
     }
     return flag;
@@ -985,7 +995,7 @@ class OpenFileCtx {
     FileHandle handle = writeCtx.getHandle();
     if (LOG.isDebugEnabled()) {
       LOG.debug("do write, fileId: " + handle.getFileId() + " offset: "
-          + offset + " length:" + count + " stableHow:" + stableHow.getValue());
+          + offset + " length:" + count + " stableHow:" + stableHow.name());
     }
 
     try {
@@ -1066,7 +1076,7 @@ class OpenFileCtx {
     }
   }
 
-  private synchronized void cleanup() {
+  synchronized void cleanup() {
     if (!activeState) {
       LOG.info("Current OpenFileCtx is already inactive, no need to cleanup.");
       return;
@@ -1074,7 +1084,7 @@ class OpenFileCtx {
     activeState = false;
 
     // stop the dump thread
-    if (dumpThread != null) {
+    if (dumpThread != null && dumpThread.isAlive()) {
       dumpThread.interrupt();
       try {
         dumpThread.join(3000);
@@ -1155,5 +1165,11 @@ class OpenFileCtx {
   @VisibleForTesting
   void setActiveStatusForTest(boolean activeState) {
     this.activeState = activeState;
+  }
+  
+  @Override
+  public String toString() {
+    return String.format("activeState: %b asyncStatus: %b nextOffset: %d",
+        activeState, asyncStatus, nextOffset.get());
   }
 }

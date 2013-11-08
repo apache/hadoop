@@ -186,9 +186,8 @@ public class TestWrites {
   private void waitWrite(RpcProgramNfs3 nfsd, FileHandle handle, int maxWaitTime)
       throws InterruptedException {
     int waitedTime = 0;
-    ConcurrentMap<FileHandle, OpenFileCtx> openFileMap = nfsd.getWriteManager()
-        .getOpenFileMap();
-    OpenFileCtx ctx = openFileMap.get(handle);
+    OpenFileCtx ctx = nfsd.getWriteManager()
+        .getOpenFileCtxCache().get(handle);
     assertTrue(ctx != null);
     do {
       Thread.sleep(3000);
