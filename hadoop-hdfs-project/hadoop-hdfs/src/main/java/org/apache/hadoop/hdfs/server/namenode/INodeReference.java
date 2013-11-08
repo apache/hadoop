@@ -646,16 +646,14 @@ public abstract class INodeReference extends INode {
           FileWithSnapshot sfile = (FileWithSnapshot) referred;
           // make sure we mark the file as deleted
           sfile.deleteCurrentFile();
-          if (snapshot != null) {
-            try {
-              // when calling cleanSubtree of the referred node, since we 
-              // compute quota usage updates before calling this destroy 
-              // function, we use true for countDiffChange
-              referred.cleanSubtree(snapshot, prior, collectedBlocks,
-                  removedINodes, true);
-            } catch (QuotaExceededException e) {
-              LOG.error("should not exceed quota while snapshot deletion", e);
-            }
+          try {
+            // when calling cleanSubtree of the referred node, since we 
+            // compute quota usage updates before calling this destroy 
+            // function, we use true for countDiffChange
+            referred.cleanSubtree(snapshot, prior, collectedBlocks,
+                removedINodes, true);
+          } catch (QuotaExceededException e) {
+            LOG.error("should not exceed quota while snapshot deletion", e);
           }
         } else if (referred instanceof INodeDirectoryWithSnapshot) {
           // similarly, if referred is a directory, it must be an
