@@ -149,6 +149,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5476. Snapshot: clean the blocks/files/directories under a renamed 
     file/directory while deletion. (jing9)
 
+    HDFS-5325. Remove WebHdfsFileSystem#ConnRunner. (Haohui Mai via jing9) 
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
