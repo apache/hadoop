@@ -78,11 +78,6 @@ public class WebHdfsTestUtil {
     Assert.assertEquals(expectedResponseCode, conn.getResponseCode());
     return WebHdfsFileSystem.jsonParse(conn, false);
   }
-  
-  public static HttpURLConnection twoStepWrite(final WebHdfsFileSystem webhdfs,
-      final HttpOpParam.Op op, HttpURLConnection conn) throws IOException {
-    return webhdfs.new ConnRunner(op, conn).twoStepWrite();
-  }
 
   public static FSDataOutputStream write(final WebHdfsFileSystem webhdfs,
       final HttpOpParam.Op op, final HttpURLConnection conn,

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -199,7 +198,7 @@ class FsVolumeImpl implements FsVolumeSpi {
     return getBlockPoolSlice(bpid).addBlock(b, f);
   }
 
-  Executor getExecutor() {
+  Executor getCacheExecutor() {
     return cacheExecutor;
   }
 

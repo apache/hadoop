@@ -88,6 +88,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1323. Set HTTPS webapp address along with other RPC addresses in HAUtil
     (Karthik Kambatla via Sandy Ryza)
 
+    YARN-1121. Changed ResourceManager's state-store to drain all events on
+    shut-down. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

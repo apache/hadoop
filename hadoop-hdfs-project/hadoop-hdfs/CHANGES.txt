@@ -359,6 +359,8 @@ Trunk (Unreleased)
     HDFS-5468. CacheAdmin help command does not recognize commands  (Stephen
     Chu via Colin Patrick McCabe)
 
+    HDFS-5394. Fix race conditions in DN caching and uncaching (cmccabe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -455,6 +457,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5436. Move HsFtpFileSystem and HFtpFileSystem into org.apache.hdfs.web
     (Haohui Mai via Arpit Agarwal)
 
+    HDFS-5371. Let client retry the same NN when 
+    "dfs.client.test.drop.namenode.response.number" is enabled. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -505,6 +510,11 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5443. Delete 0-sized block when deleting an under-construction file that 
     is included in snapshot. (jing9)
+
+    HDFS-5476. Snapshot: clean the blocks/files/directories under a renamed 
+    file/directory while deletion. (jing9)
+
+    HDFS-5325. Remove WebHdfsFileSystem#ConnRunner. (Haohui Mai via jing9) 
 
 Release 2.2.1 - UNRELEASED
 
