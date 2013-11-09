@@ -261,17 +261,20 @@ public abstract class RMStateStore extends AbstractService {
   }
   
   AsyncDispatcher dispatcher;
-  
-  public synchronized void serviceInit(Configuration conf) throws Exception{    
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception{
     // create async handler
     dispatcher = new AsyncDispatcher();
     dispatcher.init(conf);
     dispatcher.register(RMStateStoreEventType.class, 
                         new ForwardingEventHandler());
+    dispatcher.setDrainEventsOnStop();
     initInternal(conf);
   }
-  
-  protected synchronized void serviceStart() throws Exception {
+
+  @Override
+  protected void serviceStart() throws Exception {
     dispatcher.start();
     startInternal();
   }
@@ -288,11 +291,12 @@ public abstract class RMStateStore extends AbstractService {
    */
   protected abstract void startInternal() throws Exception;
 
-  public synchronized void serviceStop() throws Exception {
+  @Override
+  protected void serviceStop() throws Exception {
     closeInternal();
     dispatcher.stop();
   }
-  
+
   /**
    * Derived classes close themselves using this method.
    * The base class will be closed and the event dispatcher will be shutdown 
@@ -509,8 +513,7 @@ public abstract class RMStateStore extends AbstractService {
   }
 
   // Dispatcher related code
-  
-  private synchronized void handleStoreEvent(RMStateStoreEvent event) {
+  protected void handleStoreEvent(RMStateStoreEvent event) {
     if (event.getType().equals(RMStateStoreEventType.STORE_APP)
         || event.getType().equals(RMStateStoreEventType.UPDATE_APP)) {
       ApplicationState appState = null;

@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -1060,6 +1061,65 @@ public class TestRMRestart {
     // stop the RM
     rm1.stop();
     rm2.stop();
+  }
+
+  @Test
+  public void testRMStateStoreDispatcherDrainedOnRMStop() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      volatile boolean wait = true;
+      @Override
+      public void serviceStop() throws Exception {
+        // Unblock app saving request.
+        wait = false;
+        super.serviceStop();
+      }
+
+      @Override
+      protected void handleStoreEvent(RMStateStoreEvent event) {
+        // Block app saving request.
+        while (wait);
+        super.handleStoreEvent(event);
+      }
+    };
+    memStore.init(conf);
+
+    // start RM
+    final MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+
+    // create apps.
+    final ArrayList<RMApp> appList = new ArrayList<RMApp>();
+    final int NUM_APPS = 5;
+
+    for (int i = 0; i < NUM_APPS; i++) {
+      RMApp app = rm1.submitApp(200, "name", "user",
+            new HashMap<ApplicationAccessType, String>(), false,
+            "default", -1, null, "MAPREDUCE", false);
+      appList.add(app);
+      rm1.waitForState(app.getApplicationId(), RMAppState.NEW_SAVING);
+    }
+    // all apps's saving request are now enqueued to RMStateStore's dispatcher
+    // queue, and will be processed once rm.stop() is called.
+
+    // Nothing exist in state store before stop is called.
+    Map<ApplicationId, ApplicationState> rmAppState =
+        memStore.getState().getApplicationState();
+    Assert.assertTrue(rmAppState.size() == 0);
+
+    // stop rm
+    rm1.stop();
+
+    // Assert app info is still saved even if stop is called with pending saving
+    // request on dispatcher.
+    for (RMApp app : appList) {
+      ApplicationState appState = rmAppState.get(app.getApplicationId());
+      Assert.assertNotNull(appState);
+      Assert.assertEquals(0, appState.getAttemptCount());
+      Assert.assertEquals(appState.getApplicationSubmissionContext()
+        .getApplicationId(), app.getApplicationSubmissionContext()
+        .getApplicationId());
+    }
+    Assert.assertTrue(rmAppState.size() == NUM_APPS);
   }
 
   public static class TestSecurityMockRM extends MockRM {
