@@ -683,19 +683,6 @@ public class WebHdfsFileSystem extends FileSystem
     }
   }
 
-  @VisibleForTesting
-  final class ConnRunner extends AbstractRunner {
-    protected ConnRunner(final HttpOpParam.Op op, HttpURLConnection conn) {
-      super(op, false);
-      this.conn = conn;
-    }
-
-    @Override
-    protected URL getUrl() {
-      return null;
-    }
-  }
-
   private FsPermission applyUMask(FsPermission permission) {
     if (permission == null) {
       permission = FsPermission.getDefault();
