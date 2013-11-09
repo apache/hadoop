@@ -335,7 +335,7 @@
         <cache-admin-command>-addDirective -path /bar -pool pool1</cache-admin-command>
         <cache-admin-command>-addDirective -path /foo -pool pool2</cache-admin-command>
         <cache-admin-command>-addDirective -path /bar -pool pool2</cache-admin-command>
-        <cache-admin-command>-removeDirectives -path /foo</cache-admin-command>
+        <cache-admin-command>-removeDirectives -path ../../foo</cache-admin-command>
         <cache-admin-command>-listDirectives</cache-admin-command>
       </test-commands>
       <cleanup-commands>

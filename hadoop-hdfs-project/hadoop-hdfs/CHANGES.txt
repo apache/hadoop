@@ -361,6 +361,9 @@ Trunk (Unreleased)
 
     HDFS-5394. Fix race conditions in DN caching and uncaching (cmccabe)
 
+    HDFS-5482. DistributedFileSystem#listPathBasedCacheDirectives must support
+    relative paths. (Colin Patrick McCabe via cnauroth)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
