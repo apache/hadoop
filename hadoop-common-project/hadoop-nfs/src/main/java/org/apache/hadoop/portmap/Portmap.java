@@ -31,14 +31,14 @@ public class Portmap {
   public static final Log LOG = LogFactory.getLog(Portmap.class);
 
   private static void startUDPServer(RpcProgramPortmap rpcProgram) {
-    rpcProgram.register(PortmapMapping.TRANSPORT_UDP);
+    rpcProgram.register(PortmapMapping.TRANSPORT_UDP, RpcProgram.RPCB_PORT);
     SimpleUdpServer udpServer = new SimpleUdpServer(RpcProgram.RPCB_PORT,
         rpcProgram, 1);
     udpServer.run();
   }
 
   private static void startTCPServer(final RpcProgramPortmap rpcProgram) {
-    rpcProgram.register(PortmapMapping.TRANSPORT_TCP);
+    rpcProgram.register(PortmapMapping.TRANSPORT_TCP, RpcProgram.RPCB_PORT);
     SimpleTcpServer tcpServer = new SimpleTcpServer(RpcProgram.RPCB_PORT,
         rpcProgram, 1);
     tcpServer.run();

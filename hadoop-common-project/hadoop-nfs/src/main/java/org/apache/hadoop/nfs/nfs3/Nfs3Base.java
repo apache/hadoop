@@ -33,6 +33,7 @@ public abstract class Nfs3Base {
   public static final Log LOG = LogFactory.getLog(Nfs3Base.class);
   private final RpcProgram rpcProgram;
   private final int nfsPort;
+  private int nfsBoundPort; // Will set after server starts
     
   public RpcProgram getRpcProgram() {
     return rpcProgram;
@@ -40,20 +41,16 @@ public abstract class Nfs3Base {
 
   protected Nfs3Base(RpcProgram rpcProgram, Configuration conf) {
     this.rpcProgram = rpcProgram;
-    this.nfsPort = conf.getInt("nfs3.server.port", Nfs3Constant.PORT);
+    this.nfsPort = conf.getInt(Nfs3Constant.NFS3_SERVER_PORT,
+        Nfs3Constant.NFS3_SERVER_PORT_DEFAULT);
     LOG.info("NFS server port set to: " + nfsPort);
-  }
-
-  protected Nfs3Base(RpcProgram rpcProgram) {
-    this.rpcProgram = rpcProgram;
-    this.nfsPort = Nfs3Constant.PORT;
   }
 
   public void start(boolean register) {
     startTCPServer(); // Start TCP server
     
     if (register) {
-      rpcProgram.register(PortmapMapping.TRANSPORT_TCP);
+      rpcProgram.register(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
     }
   }
 
@@ -62,5 +59,6 @@ public abstract class Nfs3Base {
         rpcProgram, 0);
     rpcProgram.startDaemons();
     tcpServer.run();
+    nfsBoundPort = tcpServer.getBoundPort();
   }
 }

@@ -54,8 +54,8 @@ public class MountResponse {
     RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(xdr);
     for (MountEntry mountEntry : mounts) {
       xdr.writeBoolean(true); // Value follows yes
-      xdr.writeString(mountEntry.host());
-      xdr.writeString(mountEntry.path());
+      xdr.writeString(mountEntry.getHost());
+      xdr.writeString(mountEntry.getPath());
     }
     xdr.writeBoolean(false); // Value follows no
     return xdr;
