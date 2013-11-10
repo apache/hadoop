@@ -26,7 +26,9 @@ import static org.mockito.Mockito.verify;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -46,6 +48,7 @@ import org.mockito.ArgumentCaptor;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class TestRMContainerImpl {
 
+  @SuppressWarnings("resource")
   @Test
   public void testReleaseWhileRunning() {
 
@@ -72,9 +75,12 @@ public class TestRMContainerImpl {
         "host:3465", resource, priority, null);
 
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
-        nodeId, eventHandler, expirer);
+        nodeId, eventHandler, expirer, "user");
 
     assertEquals(RMContainerState.NEW, rmContainer.getState());
+    assertEquals(resource, rmContainer.getAllocatedResource());
+    assertEquals(nodeId, rmContainer.getAllocatedNode());
+    assertEquals(priority, rmContainer.getAllocatedPriority());
 
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
@@ -90,6 +96,9 @@ public class TestRMContainerImpl {
         RMContainerEventType.LAUNCHED));
     drainDispatcher.await();
     assertEquals(RMContainerState.RUNNING, rmContainer.getState());
+    assertEquals(
+        "http://host:3465/node/containerlogs/container_1_0001_01_000001/user",
+        rmContainer.getLogURL());
 
     // In RUNNING state. Verify RELEASED and associated actions.
     reset(appAttemptEventHandler);
@@ -100,6 +109,11 @@ public class TestRMContainerImpl {
         containerStatus, RMContainerEventType.RELEASED));
     drainDispatcher.await();
     assertEquals(RMContainerState.RELEASED, rmContainer.getState());
+    assertEquals(SchedulerUtils.RELEASED_CONTAINER,
+        rmContainer.getDiagnosticsInfo());
+    assertEquals(ContainerExitStatus.ABORTED,
+        rmContainer.getContainerExitStatus());
+    assertEquals(ContainerState.COMPLETE, rmContainer.getContainerState());
 
     ArgumentCaptor<RMAppAttemptContainerFinishedEvent> captor = ArgumentCaptor
         .forClass(RMAppAttemptContainerFinishedEvent.class);
@@ -116,6 +130,7 @@ public class TestRMContainerImpl {
     assertEquals(RMContainerState.RELEASED, rmContainer.getState());
   }
 
+  @SuppressWarnings("resource")
   @Test
   public void testExpireWhileRunning() {
 
@@ -142,9 +157,12 @@ public class TestRMContainerImpl {
         "host:3465", resource, priority, null);
 
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
-        nodeId, eventHandler, expirer);
+        nodeId, eventHandler, expirer, "user");
 
     assertEquals(RMContainerState.NEW, rmContainer.getState());
+    assertEquals(resource, rmContainer.getAllocatedResource());
+    assertEquals(nodeId, rmContainer.getAllocatedNode());
+    assertEquals(priority, rmContainer.getAllocatedPriority());
 
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
@@ -160,6 +178,9 @@ public class TestRMContainerImpl {
         RMContainerEventType.LAUNCHED));
     drainDispatcher.await();
     assertEquals(RMContainerState.RUNNING, rmContainer.getState());
+    assertEquals(
+        "http://host:3465/node/containerlogs/container_1_0001_01_000001/user",
+        rmContainer.getLogURL());
 
     // In RUNNING state. Verify EXPIRE and associated actions.
     reset(appAttemptEventHandler);
