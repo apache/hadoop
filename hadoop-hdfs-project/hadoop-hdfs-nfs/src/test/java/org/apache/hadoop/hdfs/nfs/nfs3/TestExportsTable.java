@@ -15,49 +15,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.nfs.nfs3;
 
-package org.apache.hadoop.hdfs.nfs;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.net.InetAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.nfs.mount.Mountd;
 import org.apache.hadoop.hdfs.nfs.mount.RpcProgramMountd;
-import org.apache.hadoop.hdfs.nfs.nfs3.Nfs3;
-import org.apache.hadoop.hdfs.nfs.nfs3.RpcProgramNfs3;
-import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.junit.Test;
 
-public class TestMountd {
-
-  public static final Log LOG = LogFactory.getLog(TestMountd.class);
-
+public class TestExportsTable {
+ 
   @Test
-  public void testStart() throws IOException {
-    // Start minicluster
+  public void testExportPoint() throws IOException {
     Configuration config = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config).numDataNodes(1)
-        .build();
-    cluster.waitActive();
-    
+    MiniDFSCluster cluster = null;
+
+    String exportPoint = "/myexport1";
+    config.setStrings(Nfs3Constant.EXPORT_POINT, exportPoint);
     // Use emphral port in case tests are running in parallel
     config.setInt("nfs3.mountd.port", 0);
     config.setInt("nfs3.server.port", 0);
     
-    // Start nfs
-    Nfs3 nfs3 = new Nfs3(config);
-    nfs3.startServiceInternal(false);
+    try {
+      cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
+      cluster.waitActive();
 
-    RpcProgramMountd mountd = (RpcProgramMountd) nfs3.getMountd()
-        .getRpcProgram();
-    mountd.nullOp(new XDR(), 1234, InetAddress.getByName("localhost"));
-    
-    RpcProgramNfs3 nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
-    nfsd.nullProcedure();
-    
-    cluster.shutdown();
+      // Start nfs
+      final Nfs3 nfsServer = new Nfs3(config);
+      nfsServer.startServiceInternal(false);
+
+      Mountd mountd = nfsServer.getMountd();
+      RpcProgramMountd rpcMount = (RpcProgramMountd) mountd.getRpcProgram();
+      assertTrue(rpcMount.getExports().size() == 1);
+
+      String exportInMountd = rpcMount.getExports().get(0);
+      assertTrue(exportInMountd.equals(exportPoint));
+
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }

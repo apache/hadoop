@@ -1637,9 +1637,8 @@ public class DistributedFileSystem extends FileSystem {
     }
     if (filter.getPath() != null) {
       filter = new PathBasedCacheDirective.Builder(filter).
-          setPath(filter.getPath().
-              makeQualified(getUri(), filter.getPath())).
-                build();
+          setPath(new Path(getPathName(fixRelativePart(filter.getPath())))).
+          build();
     }
     final RemoteIterator<PathBasedCacheDirective> iter =
         dfs.listPathBasedCacheDirectives(filter);
@@ -1651,8 +1650,11 @@ public class DistributedFileSystem extends FileSystem {
 
       @Override
       public PathBasedCacheDirective next() throws IOException {
+        // Although the paths we get back from the NameNode should always be
+        // absolute, we call makeQualified to add the scheme and authority of
+        // this DistributedFilesystem.
         PathBasedCacheDirective desc = iter.next();
-        Path p = desc.getPath().makeQualified(getUri(), desc.getPath());
+        Path p = desc.getPath().makeQualified(getUri(), getWorkingDirectory());
         return new PathBasedCacheDirective.Builder(desc).setPath(p).build();
       }
     };

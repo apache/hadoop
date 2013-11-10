@@ -26,7 +26,8 @@ public class Nfs3Constant {
   public final static int SUN_RPCBIND = 111;
 
   // The IP port number for NFS.
-  public final static int PORT = 2049;
+  public final static String NFS3_SERVER_PORT = "nfs3.server.port";
+  public final static int NFS3_SERVER_PORT_DEFAULT = 2049;
 
   // The RPC program number for NFS.
   public final static int PROGRAM = 100003;
@@ -213,4 +214,7 @@ public class Nfs3Constant {
   
   public final static String UNKNOWN_USER = "nobody";
   public final static String UNKNOWN_GROUP = "nobody";
+  
+  public final static String EXPORT_POINT = "dfs.nfs3.export.point";
+  public final static String EXPORT_POINT_DEFAULT = "/";
 }
