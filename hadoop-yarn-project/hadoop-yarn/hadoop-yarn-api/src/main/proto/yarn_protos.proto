@@ -58,6 +58,11 @@ message ResourceProto {
   optional int32 virtual_cores = 2;
 }
 
+message ResourceOptionProto {
+  optional ResourceProto resource = 1;
+  optional int32 over_commit_timeout = 2;
+}
+
 message PriorityProto {
   optional int32 priority = 1;
 }

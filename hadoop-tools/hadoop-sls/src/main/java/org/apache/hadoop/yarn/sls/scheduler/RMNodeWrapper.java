@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode
@@ -138,10 +139,19 @@ public class RMNodeWrapper implements RMNode {
     return updates;
   }
 
-@Override
-public String getNodeManagerVersion() {
-	// TODO Auto-generated method stub
-	return null;
-}
+  @Override
+  public String getNodeManagerVersion() {
+    return node.getNodeManagerVersion();
+  }
+
+  @Override
+  public void setResourceOption(ResourceOption resourceOption) {
+    node.setResourceOption(resourceOption);
+  }
+  
+  @Override
+  public ResourceOption getResourceOption() {
+    return node.getResourceOption();
+  }
 
 }

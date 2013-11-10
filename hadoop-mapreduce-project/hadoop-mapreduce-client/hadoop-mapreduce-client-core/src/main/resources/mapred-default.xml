@@ -439,11 +439,16 @@
 
 <property>
   <name>mapreduce.admin.user.env</name>
-  <value>LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native</value>
-  <description>Expert: Additional execution environment entries for 
+  <value></value>
+  <description>
+  Expert: Additional execution environment entries for 
   map and reduce task processes. This is not an additive property.
   You must preserve the original value if you want your map and
   reduce tasks to have access to native libraries (compression, etc). 
+  When this value is empty, the command to set execution 
+  envrionment will be OS dependent: 
+  For linux, use LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native.
+  For windows, use PATH = %PATH%;%HADOOP_COMMON_HOME%\\bin.
   </description>
 </property>
 

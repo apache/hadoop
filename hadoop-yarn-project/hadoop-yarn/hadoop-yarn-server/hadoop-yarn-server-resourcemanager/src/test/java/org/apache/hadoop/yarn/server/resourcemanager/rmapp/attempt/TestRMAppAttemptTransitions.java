@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -75,8 +76,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -114,7 +116,8 @@ public class TestRMAppAttemptTransitions {
   private ApplicationMasterLauncher applicationMasterLauncher;
   private AMLivelinessMonitor amLivelinessMonitor;
   private AMLivelinessMonitor amFinishingMonitor;
-  
+  private RMStateStore store;
+
   private RMApp application;
   private RMAppAttempt applicationAttempt;
 
@@ -209,7 +212,7 @@ public class TestRMAppAttemptTransitions {
           new NMTokenSecretManagerInRM(conf),
           clientToAMTokenManager);
     
-    RMStateStore store = mock(RMStateStore.class);
+    store = mock(RMStateStore.class);
     ((RMContextImpl) rmContext).setStateStore(store);
     
     scheduler = mock(YarnScheduler.class);
@@ -330,6 +333,7 @@ public class TestRMAppAttemptTransitions {
    * {@link RMAppAttemptState#SUBMITTED} -> {@link RMAppAttemptState#FAILED}
    */
   private void testAppAttemptSubmittedToFailedState(String diagnostics) {
+    sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED, 
         applicationAttempt.getAppAttemptState());
     assertEquals(diagnostics, applicationAttempt.getDiagnostics());
@@ -354,6 +358,7 @@ public class TestRMAppAttemptTransitions {
    */
   private void testAppAttemptKilledState(Container amContainer, 
       String diagnostics) {
+    sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.KILLED, 
         applicationAttempt.getAppAttemptState());
     assertEquals(diagnostics, applicationAttempt.getDiagnostics());
@@ -363,6 +368,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0, applicationAttempt.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
+    verifyAttemptFinalStateSaved();
   }
   
   /**
@@ -427,6 +433,7 @@ public class TestRMAppAttemptTransitions {
    */
   private void testAppAttemptFailedState(Container container, 
       String diagnostics) {
+    sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED, 
         applicationAttempt.getAppAttemptState());
     assertEquals(diagnostics, applicationAttempt.getDiagnostics());
@@ -437,8 +444,8 @@ public class TestRMAppAttemptTransitions {
     
     // Check events
     verify(application, times(2)).handle(any(RMAppFailedAttemptEvent.class));
-
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
+    verifyAttemptFinalStateSaved();
   }
 
   /**
@@ -492,6 +499,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(container, applicationAttempt.getMasterContainer());
     assertEquals(finalStatus, applicationAttempt.getFinalApplicationStatus());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 0);
+    verifyAttemptFinalStateSaved();
   }
 
   /**
@@ -507,11 +515,11 @@ public class TestRMAppAttemptTransitions {
     assertEquals(diagnostics, applicationAttempt.getDiagnostics());
     verifyUrl(trackingUrl, applicationAttempt.getOriginalTrackingUrl());
     if (unmanagedAM) {
-      verifyUrl(trackingUrl, applicationAttempt.getTrackingUrl());
-      
+      verifyUrl(trackingUrl, applicationAttempt.getTrackingUrl()); 
     } else {
       assertEquals(getProxyUrl(applicationAttempt),
           applicationAttempt.getTrackingUrl());
+      verifyAttemptFinalStateSaved();
     }
     assertEquals(finishedContainerCount, applicationAttempt
         .getJustFinishedContainers().size());
@@ -539,7 +547,7 @@ public class TestRMAppAttemptTransitions {
       assertEquals(RMAppAttemptState.LAUNCHED_UNMANAGED_SAVING, 
           applicationAttempt.getAppAttemptState());
       applicationAttempt.handle(
-          new RMAppAttemptStoredEvent(
+          new RMAppAttemptNewSavedEvent(
               applicationAttempt.getAppAttemptId(), null));
     }
     
@@ -576,7 +584,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.ALLOCATED_SAVING, 
         applicationAttempt.getAppAttemptState());
     applicationAttempt.handle(
-        new RMAppAttemptStoredEvent(
+        new RMAppAttemptNewSavedEvent(
             applicationAttempt.getAppAttemptId(), null));
     
     testAppAttemptAllocatedState(container);
@@ -617,6 +625,7 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptUnregistrationEvent(
             applicationAttempt.getAppAttemptId(),
             trackingUrl, finalStatus, diagnostics));
+    sendAttemptUpdateSavedEvent(applicationAttempt);
     testAppAttemptFinishingState(container, finalStatus,
         trackingUrl, diagnostics);
   }
@@ -647,7 +656,15 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptFinishedState(null, finalStatus, url, diagnostics, 1,
         true);
   }
-  
+
+  private void sendAttemptUpdateSavedEvent(RMAppAttempt applicationAttempt) {
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+      applicationAttempt.getAppAttemptState());
+    applicationAttempt.handle(
+      new RMAppAttemptUpdateSavedEvent(
+          applicationAttempt.getAppAttemptId(), null));
+  }
+
   @Test
   public void testUnmanagedAMUnexpectedRegistration() {
     unmanagedAM = true;
@@ -745,6 +762,7 @@ public class TestRMAppAttemptTransitions {
           ContainerState.COMPLETE, containerDiagMsg, exitCode);
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
       applicationAttempt.getAppAttemptId(), cs));
+    sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
       applicationAttempt.getAppAttemptState());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
@@ -762,6 +780,20 @@ public class TestRMAppAttemptTransitions {
     ApplicationAttemptId appAttemptId = applicationAttempt.getAppAttemptId();
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
         appAttemptId, cs));
+
+    // ignored ContainerFinished and Expire at FinalSaving if we were supposed
+    // to Failed state.
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+      applicationAttempt.getAppAttemptState()); 
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+      applicationAttempt.getAppAttemptId(), BuilderUtils.newContainerStatus(
+        amContainer.getId(), ContainerState.COMPLETE, "", 0)));
+    applicationAttempt.handle(new RMAppAttemptEvent(
+      applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+      applicationAttempt.getAppAttemptState()); 
+
+    sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
         applicationAttempt.getAppAttemptState());
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
@@ -782,6 +814,20 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptEvent(
             applicationAttempt.getAppAttemptId(),
             RMAppAttemptEventType.KILL));
+
+    // ignored ContainerFinished and Expire at FinalSaving if we were supposed
+    // to Killed state.
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+      applicationAttempt.getAppAttemptState()); 
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+      applicationAttempt.getAppAttemptId(), BuilderUtils.newContainerStatus(
+        amContainer.getId(), ContainerState.COMPLETE, "", 0)));
+    applicationAttempt.handle(new RMAppAttemptEvent(
+      applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+      applicationAttempt.getAppAttemptState()); 
+
+    sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.KILLED,
         applicationAttempt.getAppAttemptState());
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
@@ -800,6 +846,7 @@ public class TestRMAppAttemptTransitions {
     launchApplicationAttempt(amContainer);
     applicationAttempt.handle(new RMAppAttemptEvent(
         applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
+    sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
         applicationAttempt.getAppAttemptState());
     assertTrue("expire diagnostics missing",
@@ -818,6 +865,7 @@ public class TestRMAppAttemptTransitions {
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
     applicationAttempt.handle(new RMAppAttemptEvent(
         applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
+    sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
         applicationAttempt.getAppAttemptState());
     assertTrue("expire diagnostics missing",
@@ -962,7 +1010,64 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptFinishedState(amContainer, finalStatus, trackingUrl,
         diagnostics, 0, false);
   }
-  
+
+  // While attempt is at FINAL_SAVING, Contaienr_Finished event may come before
+  // Attempt_Saved event, we stay on FINAL_SAVING on Container_Finished event
+  // and then directly jump from FINAL_SAVING to FINISHED state on Attempt_Saved
+  // event
+  @Test
+  public void
+      testFinalSavingToFinishedWithContainerFinished() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
+    FinalApplicationStatus finalStatus = FinalApplicationStatus.SUCCEEDED;
+    String trackingUrl = "mytrackingurl";
+    String diagnostics = "Successful";
+    applicationAttempt.handle(new RMAppAttemptUnregistrationEvent(
+      applicationAttempt.getAppAttemptId(), trackingUrl, finalStatus,
+      diagnostics));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+      applicationAttempt.getAppAttemptState());
+    // Container_finished event comes before Attempt_Saved event.
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+      applicationAttempt.getAppAttemptId(), BuilderUtils.newContainerStatus(
+        amContainer.getId(), ContainerState.COMPLETE, "", 0)));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+      applicationAttempt.getAppAttemptState());
+    // send attempt_saved
+    sendAttemptUpdateSavedEvent(applicationAttempt);
+    testAppAttemptFinishedState(amContainer, finalStatus, trackingUrl,
+      diagnostics, 0, false);
+  }
+
+  // While attempt is at FINAL_SAVING, Expire event may come before
+  // Attempt_Saved event, we stay on FINAL_SAVING on Expire event and then
+  // directly jump from FINAL_SAVING to FINISHED state on Attempt_Saved event.
+  @Test
+  public void testFinalSavingToFinishedWithExpire() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
+    FinalApplicationStatus finalStatus = FinalApplicationStatus.SUCCEEDED;
+    String trackingUrl = "mytrackingurl";
+    String diagnostics = "Successssseeeful";
+    applicationAttempt.handle(new RMAppAttemptUnregistrationEvent(
+      applicationAttempt.getAppAttemptId(), trackingUrl, finalStatus,
+      diagnostics));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+      applicationAttempt.getAppAttemptState());
+    // Expire event comes before Attempt_saved event.
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+      .getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+      applicationAttempt.getAppAttemptState());
+    // send attempt_saved
+    sendAttemptUpdateSavedEvent(applicationAttempt);
+    testAppAttemptFinishedState(amContainer, finalStatus, trackingUrl,
+      diagnostics, 0, false);
+  }
+
   private void verifyTokenCount(ApplicationAttemptId appAttemptId, int count) {
     verify(amRMTokenManager, times(count)).applicationMasterFinished(appAttemptId);
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -979,5 +1084,10 @@ public class TestRMAppAttemptTransitions {
     } else {
       assertEquals(url1, url2);
     }
+  }
+
+  private void verifyAttemptFinalStateSaved() {
+    verify(store, times(1)).updateApplicationAttemptState(
+      any(ApplicationAttemptState.class));
   }
 }

@@ -2243,4 +2243,50 @@ public class TestRenameWithSnapshots {
     
     restartClusterAndCheckImage(true);
   }
+  
+  /**
+   * Make sure we clean the whole subtree under a DstReference node after 
+   * deleting a snapshot.
+   * see HDFS-5476.
+   */
+  @Test
+  public void testCleanDstReference() throws Exception {
+    final Path test = new Path("/test");
+    final Path foo = new Path(test, "foo");
+    final Path bar = new Path(foo, "bar");
+    hdfs.mkdirs(bar);
+    SnapshotTestHelper.createSnapshot(hdfs, test, "s0");
+    
+    // create file after s0 so that the file should not be included in s0
+    final Path fileInBar = new Path(bar, "file");
+    DFSTestUtil.createFile(hdfs, fileInBar, BLOCKSIZE, REPL, SEED);
+    // rename foo --> foo2
+    final Path foo2 = new Path(test, "foo2");
+    hdfs.rename(foo, foo2);
+    // create snapshot s1, note the file is included in s1
+    hdfs.createSnapshot(test, "s1");
+    // delete bar and foo2
+    hdfs.delete(new Path(foo2, "bar"), true);
+    hdfs.delete(foo2, true);
+    
+    final Path sfileInBar = SnapshotTestHelper.getSnapshotPath(test, "s1",
+        "foo2/bar/file");
+    assertTrue(hdfs.exists(sfileInBar));
+    
+    hdfs.deleteSnapshot(test, "s1");
+    assertFalse(hdfs.exists(sfileInBar));
+    
+    restartClusterAndCheckImage(true);
+    // make sure the file under bar is deleted 
+    final Path barInS0 = SnapshotTestHelper.getSnapshotPath(test, "s0",
+        "foo/bar");
+    INodeDirectoryWithSnapshot barNode = (INodeDirectoryWithSnapshot) fsdir
+        .getINode(barInS0.toString());
+    assertEquals(0, barNode.getChildrenList(null).size());
+    List<DirectoryDiff> diffList = barNode.getDiffs().asList();
+    assertEquals(1, diffList.size());
+    DirectoryDiff diff = diffList.get(0);
+    assertEquals(0, diff.getChildrenDiff().getList(ListType.DELETED).size());
+    assertEquals(0, diff.getChildrenDiff().getList(ListType.CREATED).size());
+  }
 }

@@ -149,8 +149,8 @@ public class StartupProgress {
    * @return Counter associated with phase and step
    */
   public Counter getCounter(Phase phase, Step step) {
-    final StepTracking tracking = lazyInitStep(phase, step);
     if (!isComplete()) {
+      final StepTracking tracking = lazyInitStep(phase, step);
       return new Counter() {
         @Override
         public void increment() {

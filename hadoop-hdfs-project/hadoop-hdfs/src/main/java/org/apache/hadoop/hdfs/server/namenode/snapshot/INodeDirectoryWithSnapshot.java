@@ -716,14 +716,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         if (priorDiff != null && priorDiff.getSnapshot().equals(prior)) {
           List<INode> cList = priorDiff.diff.getList(ListType.CREATED);
           List<INode> dList = priorDiff.diff.getList(ListType.DELETED);
-          priorCreated = new HashMap<INode, INode>(cList.size());
-          for (INode cNode : cList) {
-            priorCreated.put(cNode, cNode);
-          }
-          priorDeleted = new HashMap<INode, INode>(dList.size());
-          for (INode dNode : dList) {
-            priorDeleted.put(dNode, dNode);
-          }
+          priorCreated = cloneDiffList(cList);
+          priorDeleted = cloneDiffList(dList);
         }
       }
       
@@ -896,6 +890,17 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     counts.add(Content.DIRECTORY, diffs.asList().size());
   }
   
+  private static Map<INode, INode> cloneDiffList(List<INode> diffList) {
+    if (diffList == null || diffList.size() == 0) {
+      return null;
+    }
+    Map<INode, INode> map = new HashMap<INode, INode>(diffList.size());
+    for (INode node : diffList) {
+      map.put(node, node);
+    }
+    return map;
+  }
+  
   /**
    * Destroy a subtree under a DstReference node.
    */
@@ -914,26 +919,28 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         destroyDstSubtree(inode.asReference().getReferredINode(), snapshot,
             prior, collectedBlocks, removedINodes);
       }
-    } else if (inode.isFile() && snapshot != null) {
+    } else if (inode.isFile()) {
       inode.cleanSubtree(snapshot, prior, collectedBlocks, removedINodes, true);
     } else if (inode.isDirectory()) {
       Map<INode, INode> excludedNodes = null;
       if (inode instanceof INodeDirectoryWithSnapshot) {
         INodeDirectoryWithSnapshot sdir = (INodeDirectoryWithSnapshot) inode;
+        
         DirectoryDiffList diffList = sdir.getDiffs();
+        DirectoryDiff priorDiff = diffList.getDiff(prior);
+        if (priorDiff != null && priorDiff.getSnapshot().equals(prior)) {
+          List<INode> dList = priorDiff.diff.getList(ListType.DELETED);
+          excludedNodes = cloneDiffList(dList);
+        }
+        
         if (snapshot != null) {
           diffList.deleteSnapshotDiff(snapshot, prior, sdir, collectedBlocks,
               removedINodes, true);
         }
-        DirectoryDiff priorDiff = diffList.getDiff(prior);
+        priorDiff = diffList.getDiff(prior);
         if (priorDiff != null && priorDiff.getSnapshot().equals(prior)) {
           priorDiff.diff.destroyCreatedList(sdir, collectedBlocks,
               removedINodes);
-          List<INode> dList = priorDiff.diff.getList(ListType.DELETED);
-          excludedNodes = new HashMap<INode, INode>(dList.size());
-          for (INode dNode : dList) {
-            excludedNodes.put(dNode, dNode);
-          }
         }
       }
       for (INode child : inode.asDirectory().getChildrenList(prior)) {

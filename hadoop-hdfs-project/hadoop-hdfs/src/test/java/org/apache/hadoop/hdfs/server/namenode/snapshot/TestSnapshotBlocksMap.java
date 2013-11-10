@@ -21,6 +21,7 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -31,11 +32,14 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -204,5 +208,188 @@ public class TestSnapshotBlocksMap {
     } catch (IOException e) {
       assertExceptionContains("File does not exist: " + s1f0, e);
     }
+  }
+
+  /*
+   * Try to read the files inside snapshot but deleted in original place after
+   * restarting post checkpoint. refer HDFS-5427
+   */
+  @Test(timeout = 30000)
+  public void testReadSnapshotFileWithCheckpoint() throws Exception {
+    Path foo = new Path("/foo");
+    hdfs.mkdirs(foo);
+    hdfs.allowSnapshot(foo);
+    Path bar = new Path("/foo/bar");
+    DFSTestUtil.createFile(hdfs, bar, 100, (short) 2, 100024L);
+    hdfs.createSnapshot(foo, "s1");
+    assertTrue(hdfs.delete(bar, true));
+
+    // checkpoint
+    NameNode nameNode = cluster.getNameNode();
+    NameNodeAdapter.enterSafeMode(nameNode, false);
+    NameNodeAdapter.saveNamespace(nameNode);
+    NameNodeAdapter.leaveSafeMode(nameNode);
+
+    // restart namenode to load snapshot files from fsimage
+    cluster.restartNameNode(true);
+    String snapshotPath = Snapshot.getSnapshotPath(foo.toString(), "s1/bar");
+    DFSTestUtil.readFile(hdfs, new Path(snapshotPath));
+  }
+
+  /*
+   * Try to read the files inside snapshot but renamed to different file and
+   * deleted after restarting post checkpoint. refer HDFS-5427
+   */
+  @Test(timeout = 30000)
+  public void testReadRenamedSnapshotFileWithCheckpoint() throws Exception {
+    final Path foo = new Path("/foo");
+    final Path foo2 = new Path("/foo2");
+    hdfs.mkdirs(foo);
+    hdfs.mkdirs(foo2);
+
+    hdfs.allowSnapshot(foo);
+    hdfs.allowSnapshot(foo2);
+    final Path bar = new Path(foo, "bar");
+    final Path bar2 = new Path(foo2, "bar");
+    DFSTestUtil.createFile(hdfs, bar, 100, (short) 2, 100024L);
+    hdfs.createSnapshot(foo, "s1");
+    // rename to another snapshottable directory and take snapshot
+    assertTrue(hdfs.rename(bar, bar2));
+    hdfs.createSnapshot(foo2, "s2");
+    // delete the original renamed file to make sure blocks are not updated by
+    // the original file
+    assertTrue(hdfs.delete(bar2, true));
+
+    // checkpoint
+    NameNode nameNode = cluster.getNameNode();
+    NameNodeAdapter.enterSafeMode(nameNode, false);
+    NameNodeAdapter.saveNamespace(nameNode);
+    NameNodeAdapter.leaveSafeMode(nameNode);
+    // restart namenode to load snapshot files from fsimage
+    cluster.restartNameNode(true);
+    // file in first snapshot
+    String barSnapshotPath = Snapshot.getSnapshotPath(foo.toString(), "s1/bar");
+    DFSTestUtil.readFile(hdfs, new Path(barSnapshotPath));
+    // file in second snapshot after rename+delete
+    String bar2SnapshotPath = Snapshot.getSnapshotPath(foo2.toString(),
+        "s2/bar");
+    DFSTestUtil.readFile(hdfs, new Path(bar2SnapshotPath));
+  }
+
+  /**
+   * Make sure we delete 0-sized block when deleting an INodeFileUCWithSnapshot
+   */
+  @Test
+  public void testDeletionWithZeroSizeBlock() throws Exception {
+    final Path foo = new Path("/foo");
+    final Path bar = new Path(foo, "bar");
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPLICATION, 0L);
+
+    SnapshotTestHelper.createSnapshot(hdfs, foo, "s0");
+    hdfs.append(bar);
+
+    INodeFile barNode = fsdir.getINode4Write(bar.toString()).asFile();
+    BlockInfo[] blks = barNode.getBlocks();
+    assertEquals(1, blks.length);
+    assertEquals(BLOCKSIZE, blks[0].getNumBytes());
+    ExtendedBlock previous = new ExtendedBlock(fsn.getBlockPoolId(), blks[0]);
+    cluster.getNameNodeRpc()
+        .addBlock(bar.toString(), hdfs.getClient().getClientName(), previous,
+            null, barNode.getId(), null);
+
+    SnapshotTestHelper.createSnapshot(hdfs, foo, "s1");
+
+    barNode = fsdir.getINode4Write(bar.toString()).asFile();
+    blks = barNode.getBlocks();
+    assertEquals(2, blks.length);
+    assertEquals(BLOCKSIZE, blks[0].getNumBytes());
+    assertEquals(0, blks[1].getNumBytes());
+
+    hdfs.delete(bar, true);
+    final Path sbar = SnapshotTestHelper.getSnapshotPath(foo, "s1",
+        bar.getName());
+    barNode = fsdir.getINode(sbar.toString()).asFile();
+    blks = barNode.getBlocks();
+    assertEquals(1, blks.length);
+    assertEquals(BLOCKSIZE, blks[0].getNumBytes());
+  }
+
+  /** Make sure we delete 0-sized block when deleting an INodeFileUC */
+  @Test
+  public void testDeletionWithZeroSizeBlock2() throws Exception {
+    final Path foo = new Path("/foo");
+    final Path subDir = new Path(foo, "sub");
+    final Path bar = new Path(subDir, "bar");
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPLICATION, 0L);
+
+    hdfs.append(bar);
+
+    INodeFile barNode = fsdir.getINode4Write(bar.toString()).asFile();
+    BlockInfo[] blks = barNode.getBlocks();
+    assertEquals(1, blks.length);
+    ExtendedBlock previous = new ExtendedBlock(fsn.getBlockPoolId(), blks[0]);
+    cluster.getNameNodeRpc()
+        .addBlock(bar.toString(), hdfs.getClient().getClientName(), previous,
+            null, barNode.getId(), null);
+
+    SnapshotTestHelper.createSnapshot(hdfs, foo, "s1");
+
+    barNode = fsdir.getINode4Write(bar.toString()).asFile();
+    blks = barNode.getBlocks();
+    assertEquals(2, blks.length);
+    assertEquals(BLOCKSIZE, blks[0].getNumBytes());
+    assertEquals(0, blks[1].getNumBytes());
+
+    hdfs.delete(subDir, true);
+    final Path sbar = SnapshotTestHelper.getSnapshotPath(foo, "s1", "sub/bar");
+    barNode = fsdir.getINode(sbar.toString()).asFile();
+    blks = barNode.getBlocks();
+    assertEquals(1, blks.length);
+    assertEquals(BLOCKSIZE, blks[0].getNumBytes());
+  }
+  
+  /**
+   * 1. rename under-construction file with 0-sized blocks after snapshot.
+   * 2. delete the renamed directory.
+   * make sure we delete the 0-sized block.
+   * see HDFS-5476.
+   */
+  @Test
+  public void testDeletionWithZeroSizeBlock3() throws Exception {
+    final Path foo = new Path("/foo");
+    final Path subDir = new Path(foo, "sub");
+    final Path bar = new Path(subDir, "bar");
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPLICATION, 0L);
+
+    hdfs.append(bar);
+
+    INodeFile barNode = fsdir.getINode4Write(bar.toString()).asFile();
+    BlockInfo[] blks = barNode.getBlocks();
+    assertEquals(1, blks.length);
+    ExtendedBlock previous = new ExtendedBlock(fsn.getBlockPoolId(), blks[0]);
+    cluster.getNameNodeRpc()
+        .addBlock(bar.toString(), hdfs.getClient().getClientName(), previous,
+            null, barNode.getId(), null);
+
+    SnapshotTestHelper.createSnapshot(hdfs, foo, "s1");
+
+    // rename bar
+    final Path bar2 = new Path(subDir, "bar2");
+    hdfs.rename(bar, bar2);
+    
+    INodeFile bar2Node = fsdir.getINode4Write(bar2.toString()).asFile();
+    blks = bar2Node.getBlocks();
+    assertEquals(2, blks.length);
+    assertEquals(BLOCKSIZE, blks[0].getNumBytes());
+    assertEquals(0, blks[1].getNumBytes());
+
+    // delete subDir
+    hdfs.delete(subDir, true);
+    
+    final Path sbar = SnapshotTestHelper.getSnapshotPath(foo, "s1", "sub/bar");
+    barNode = fsdir.getINode(sbar.toString()).asFile();
+    blks = barNode.getBlocks();
+    assertEquals(1, blks.length);
+    assertEquals(BLOCKSIZE, blks[0].getNumBytes());
   }
 }

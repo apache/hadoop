@@ -18,10 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import junit.framework.Assert;
 
@@ -32,9 +36,11 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -55,6 +61,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -210,6 +217,92 @@ public class TestFifoScheduler {
     //Also check that the containers were scheduled
     SchedulerAppReport info = scheduler.getSchedulerAppInfo(appAttemptId);
     Assert.assertEquals(3, info.getLiveContainers().size());
+  }
+  
+  @Test(timeout=2000)
+  public void testUpdateResourceOnNode() throws Exception {
+    AsyncDispatcher dispatcher = new InlineDispatcher();
+    Configuration conf = new Configuration();
+    RMContainerTokenSecretManager containerTokenSecretManager =
+        new RMContainerTokenSecretManager(conf);
+    containerTokenSecretManager.rollMasterKey();
+    NMTokenSecretManagerInRM nmTokenSecretManager =
+        new NMTokenSecretManagerInRM(conf);
+    nmTokenSecretManager.rollMasterKey();
+    RMContext rmContext = new RMContextImpl(dispatcher, null, null, null, null,
+        null, containerTokenSecretManager, nmTokenSecretManager, null);
+
+    FifoScheduler scheduler = new FifoScheduler(){
+      @SuppressWarnings("unused")
+      public Map<NodeId, FiCaSchedulerNode> getNodes(){
+        return nodes;
+      }
+    };
+    scheduler.reinitialize(new Configuration(), rmContext);
+    RMNode node0 = MockNodes.newNodeInfo(1,
+        Resources.createResource(2048, 4), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node0);
+    scheduler.handle(nodeEvent1);
+    
+    Method method = scheduler.getClass().getDeclaredMethod("getNodes");
+    @SuppressWarnings("unchecked")
+    Map<NodeId, FiCaSchedulerNode> schedulerNodes = 
+        (Map<NodeId, FiCaSchedulerNode>) method.invoke(scheduler);
+    assertEquals(schedulerNodes.values().size(), 1);
+    
+    // set resource of RMNode to 1024 and verify it works.
+    node0.setResourceOption(ResourceOption.newInstance(
+        Resources.createResource(1024, 4), RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT));
+    assertEquals(node0.getTotalCapability().getMemory(), 1024);
+    // verify that SchedulerNode's resource hasn't been changed.
+    assertEquals(schedulerNodes.get(node0.getNodeID()).
+        getAvailableResource().getMemory(), 2048);
+    // now, NM heartbeat comes.
+    NodeUpdateSchedulerEvent node0Update = new NodeUpdateSchedulerEvent(node0);
+    scheduler.handle(node0Update);
+    // SchedulerNode's available resource is changed.
+    assertEquals(schedulerNodes.get(node0.getNodeID()).
+        getAvailableResource().getMemory(), 1024);
+    QueueInfo queueInfo = scheduler.getQueueInfo(null, false, false);
+    Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity());
+    
+    int _appId = 1;
+    int _appAttemptId = 1;
+    ApplicationAttemptId appAttemptId = createAppAttemptId(_appId,
+        _appAttemptId);
+    AppAddedSchedulerEvent appEvent1 = new AppAddedSchedulerEvent(appAttemptId,
+        "queue1", "user1");
+    scheduler.handle(appEvent1);
+
+    int memory = 1024;
+    int priority = 1;
+
+    List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
+    ResourceRequest nodeLocal = createResourceRequest(memory,
+        node0.getHostName(), priority, 1);
+    ResourceRequest rackLocal = createResourceRequest(memory,
+        node0.getRackName(), priority, 1);
+    ResourceRequest any = createResourceRequest(memory, ResourceRequest.ANY, priority,
+        1);
+    ask.add(nodeLocal);
+    ask.add(rackLocal);
+    ask.add(any);
+    scheduler.allocate(appAttemptId, ask, new ArrayList<ContainerId>(), null, null);
+
+    // Before the node update event, there are one local request
+    Assert.assertEquals(1, nodeLocal.getNumContainers());
+
+    // Now schedule.
+    scheduler.handle(node0Update);
+
+    // After the node update event, check no local request
+    Assert.assertEquals(0, nodeLocal.getNumContainers());
+    // Also check that one container was scheduled
+    SchedulerAppReport info = scheduler.getSchedulerAppInfo(appAttemptId);
+    Assert.assertEquals(1, info.getLiveContainers().size());
+    // And check the default Queue now is full.
+    queueInfo = scheduler.getQueueInfo(null, false, false);
+    Assert.assertEquals(1.0f, queueInfo.getCurrentCapacity());
   }
   
 //  @Test

@@ -575,6 +575,7 @@ public class Client {
         try {
           this.socket = socketFactory.createSocket();
           this.socket.setTcpNoDelay(tcpNoDelay);
+          this.socket.setKeepAlive(true);
           
           /*
            * Bind the socket to the host specified in the principal name of the

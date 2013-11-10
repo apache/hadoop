@@ -50,13 +50,13 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void storeApplicationState(String appId,
+  protected void storeApplicationStateInternal(String appId,
       ApplicationStateDataPBImpl appStateData) throws Exception {
     // Do nothing
   }
 
   @Override
-  protected void storeApplicationAttemptState(String attemptId,
+  protected void storeApplicationAttemptStateInternal(String attemptId,
       ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
     // Do nothing
   }
@@ -87,6 +87,18 @@ public class NullRMStateStore extends RMStateStore {
 
   @Override
   public void removeRMDTMasterKeyState(DelegationKey delegationKey) throws Exception {
+    // Do nothing
+  }
+
+  @Override
+  protected void updateApplicationStateInternal(String appId,
+      ApplicationStateDataPBImpl appStateData) throws Exception {
+    // Do nothing 
+  }
+
+  @Override
+  protected void updateApplicationAttemptStateInternal(String attemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
     // Do nothing
   }
 }

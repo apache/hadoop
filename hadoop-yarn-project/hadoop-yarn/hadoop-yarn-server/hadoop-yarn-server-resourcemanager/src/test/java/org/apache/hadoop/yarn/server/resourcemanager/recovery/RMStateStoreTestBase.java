@@ -26,10 +26,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 
 import javax.crypto.SecretKey;
@@ -39,13 +37,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -54,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -66,22 +59,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.Appli
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-
-import org.apache.zookeeper.ZooKeeper;
-
-import org.junit.Test;
 
 public class RMStateStoreTestBase extends ClientBaseWithFixes{
 
   public static final Log LOG = LogFactory.getLog(RMStateStoreTestBase.class);
 
   static class TestDispatcher implements
-      Dispatcher, EventHandler<RMAppAttemptStoredEvent> {
+      Dispatcher, EventHandler<RMAppAttemptNewSavedEvent> {
 
     ApplicationAttemptId attemptId;
     Exception storedException;
@@ -95,7 +86,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     }
 
     @Override
-    public void handle(RMAppAttemptStoredEvent event) {
+    public void handle(RMAppAttemptNewSavedEvent event) {
       assertEquals(attemptId, event.getApplicationAttemptId());
       assertEquals(storedException, event.getStoredException());
       notified = true;
@@ -134,18 +125,19 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     dispatcher.notified = false;
   }
 
-  void storeApp(
-      RMStateStore store, ApplicationId appId, long time) throws Exception {
+  void storeApp(RMStateStore store, ApplicationId appId, long submitTime,
+      long startTime) throws Exception {
     ApplicationSubmissionContext context =
         new ApplicationSubmissionContextPBImpl();
     context.setApplicationId(appId);
 
     RMApp mockApp = mock(RMApp.class);
     when(mockApp.getApplicationId()).thenReturn(appId);
-    when(mockApp.getSubmitTime()).thenReturn(time);
+    when(mockApp.getSubmitTime()).thenReturn(submitTime);
+    when(mockApp.getStartTime()).thenReturn(startTime);
     when(mockApp.getApplicationSubmissionContext()).thenReturn(context);
     when(mockApp.getUser()).thenReturn("test");
-    store.storeApplication(mockApp);
+    store.storeNewApplication(mockApp);
   }
 
   ContainerId storeAttempt(RMStateStore store, ApplicationAttemptId attemptId,
@@ -163,7 +155,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
         .thenReturn(clientTokenMasterKey);
     dispatcher.attemptId = attemptId;
     dispatcher.storedException = null;
-    store.storeApplicationAttempt(mockAttempt);
+    store.storeNewApplicationAttempt(mockAttempt);
     waitNotify(dispatcher);
     return container.getId();
   }
@@ -171,6 +163,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
   void testRMAppStateStore(RMStateStoreHelper stateStoreHelper)
       throws Exception {
     long submitTime = System.currentTimeMillis();
+    long startTime = System.currentTimeMillis() + 1234;
     Configuration conf = new YarnConfiguration();
     RMStateStore store = stateStoreHelper.getRMStateStore();
     TestDispatcher dispatcher = new TestDispatcher();
@@ -184,7 +177,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     ApplicationAttemptId attemptId1 = ConverterUtils
         .toApplicationAttemptId("appattempt_1352994193343_0001_000001");
     ApplicationId appId1 = attemptId1.getApplicationId();
-    storeApp(store, appId1, submitTime);
+    storeApp(store, appId1, submitTime, startTime);
 
     // create application token and client token key for attempt1
     Token<AMRMTokenIdentifier> appAttemptToken1 =
@@ -217,7 +210,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     ApplicationAttemptId attemptIdRemoved = ConverterUtils
         .toApplicationAttemptId("appattempt_1352994193343_0002_000001");
     ApplicationId appIdRemoved = attemptIdRemoved.getApplicationId();
-    storeApp(store, appIdRemoved, submitTime);
+    storeApp(store, appIdRemoved, submitTime, startTime);
     storeAttempt(store, attemptIdRemoved,
         "container_1352994193343_0002_01_000001", null, null, dispatcher);
 
@@ -241,6 +234,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
 
     // load state
     store = stateStoreHelper.getRMStateStore();
+    store.setRMDispatcher(dispatcher);
     RMState state = store.loadState();
     Map<ApplicationId, ApplicationState> rmAppState =
         state.getApplicationState();
@@ -250,6 +244,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     assertNotNull(appState);
     // app is loaded correctly
     assertEquals(submitTime, appState.getSubmitTime());
+    assertEquals(startTime, appState.getStartTime());
     // submission context is loaded correctly
     assertEquals(appId1,
                  appState.getApplicationSubmissionContext().getApplicationId());
@@ -282,6 +277,59 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     assertArrayEquals(clientTokenKey2.getEncoded(),
         attemptState.getAppAttemptCredentials()
         .getSecretKey(RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME));
+
+    //******* update application/attempt state *******//
+    ApplicationState appState2 =
+        new ApplicationState(appState.submitTime, appState.startTime,
+          appState.context, appState.user, RMAppState.FINISHED,
+          "appDiagnostics", 1234);
+    appState2.attempts.putAll(appState.attempts);
+    store.updateApplicationState(appState2);
+
+    ApplicationAttemptState oldAttemptState = attemptState;
+    ApplicationAttemptState newAttemptState =
+        new ApplicationAttemptState(oldAttemptState.getAttemptId(),
+          oldAttemptState.getMasterContainer(),
+          oldAttemptState.getAppAttemptCredentials(),
+          oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
+          "myTrackingUrl", "attemptDiagnostics",
+          FinalApplicationStatus.SUCCEEDED);
+    store.updateApplicationAttemptState(newAttemptState);
+    // let things settle down
+    Thread.sleep(1000);
+    store.close();
+
+    // check updated application state.
+    store = stateStoreHelper.getRMStateStore();
+    store.setRMDispatcher(dispatcher);
+    RMState newRMState = store.loadState();
+    Map<ApplicationId, ApplicationState> newRMAppState =
+        newRMState.getApplicationState();
+    ApplicationState updatedAppState = newRMAppState.get(appId1);
+    assertEquals(appState.getAppId(),updatedAppState.getAppId());
+    assertEquals(appState.getSubmitTime(), updatedAppState.getSubmitTime());
+    assertEquals(appState.getStartTime(), updatedAppState.getStartTime());
+    assertEquals(appState.getUser(), updatedAppState.getUser());
+    // new app state fields
+    assertEquals( RMAppState.FINISHED, updatedAppState.getState());
+    assertEquals("appDiagnostics", updatedAppState.getDiagnostics());
+    assertEquals(1234, updatedAppState.getFinishTime());
+
+    // check updated attempt state
+    ApplicationAttemptState updatedAttemptState =
+        updatedAppState.getAttempt(newAttemptState.getAttemptId());
+    assertEquals(oldAttemptState.getAttemptId(),
+      updatedAttemptState.getAttemptId());
+    assertEquals(containerId2, updatedAttemptState.getMasterContainer().getId());
+    assertArrayEquals(clientTokenKey2.getEncoded(),
+      updatedAttemptState.getAppAttemptCredentials().getSecretKey(
+        RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME));
+    // new attempt state fields
+    assertEquals(RMAppAttemptState.FINISHED, updatedAttemptState.getState());
+    assertEquals("myTrackingUrl", updatedAttemptState.getFinalTrackingUrl());
+    assertEquals("attemptDiagnostics", updatedAttemptState.getDiagnostics());
+    assertEquals(FinalApplicationStatus.SUCCEEDED,
+      updatedAttemptState.getFinalApplicationStatus());
 
     // assert store is in expected state after everything is cleaned
     assertTrue(stateStoreHelper.isFinalStateValid());

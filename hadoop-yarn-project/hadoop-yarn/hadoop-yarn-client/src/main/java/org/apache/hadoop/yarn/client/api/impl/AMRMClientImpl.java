@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.InvalidContainerRequestException;
-import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -288,12 +287,12 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   protected void populateNMTokens(AllocateResponse allocateResponse) {
     for (NMToken token : allocateResponse.getNMTokens()) {
       String nodeId = token.getNodeId().toString();
-      if (NMTokenCache.containsNMToken(nodeId)) {
+      if (getNMTokenCache().containsToken(nodeId)) {
         LOG.debug("Replacing token for : " + nodeId);
       } else {
         LOG.debug("Received new token for : " + nodeId);
       }
-      NMTokenCache.setNMToken(nodeId, token.getToken());
+      getNMTokenCache().setToken(nodeId, token.getToken());
     }
   }
 
@@ -500,13 +499,15 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     for (String location : locations) {
         TreeMap<Resource, ResourceRequestInfo> reqs =
             remoteRequests.get(location);
-        if (reqs != null && !reqs.isEmpty()
-            && reqs.values().iterator().next().remoteRequest.getRelaxLocality()
-            != relaxLocality) {
-          throw new InvalidContainerRequestException("Cannot submit a "
-              + "ContainerRequest asking for location " + location
-              + " with locality relaxation " + relaxLocality + " when it has "
-              + "already been requested with locality relaxation " + relaxLocality);
+        if (reqs != null && !reqs.isEmpty()) {
+          boolean existingRelaxLocality =
+              reqs.values().iterator().next().remoteRequest.getRelaxLocality();
+          if (relaxLocality != existingRelaxLocality) {
+            throw new InvalidContainerRequestException("Cannot submit a "
+                + "ContainerRequest asking for location " + location
+                + " with locality relaxation " + relaxLocality + " when it has "
+                + "already been requested with locality relaxation " + existingRelaxLocality);
+          }
         }
       }
   }

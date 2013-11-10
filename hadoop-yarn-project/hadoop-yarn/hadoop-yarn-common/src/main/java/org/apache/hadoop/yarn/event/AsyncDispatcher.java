@@ -49,6 +49,19 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   private final BlockingQueue<Event> eventQueue;
   private volatile boolean stopped = false;
 
+  // Configuration flag for enabling/disabling draining dispatcher's events on
+  // stop functionality.
+  private volatile boolean drainEventsOnStop = false;
+
+  // Indicates all the remaining dispatcher's events on stop have been drained
+  // and processed.
+  private volatile boolean drained = true;
+
+  // For drainEventsOnStop enabled only, block newly coming events into the
+  // queue while stopping.
+  private volatile boolean blockNewEvents = false;
+  private EventHandler handlerInstance = null;
+
   private Thread eventHandlingThread;
   protected final Map<Class<? extends Enum>, EventHandler> eventDispatchers;
   private boolean exitOnDispatchException;
@@ -68,6 +81,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       @Override
       public void run() {
         while (!stopped && !Thread.currentThread().isInterrupted()) {
+          drained = eventQueue.isEmpty();
           Event event;
           try {
             event = eventQueue.take();
@@ -102,8 +116,19 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     eventHandlingThread.start();
   }
 
+  public void setDrainEventsOnStop() {
+    drainEventsOnStop = true;
+  }
+
   @Override
   protected void serviceStop() throws Exception {
+    if (drainEventsOnStop) {
+      blockNewEvents = true;
+      LOG.info("AsyncDispatcher is draining to stop, igonring any new events.");
+      while(!drained) {
+        Thread.yield();
+      }
+    }
     stopped = true;
     if (eventHandlingThread != null) {
       eventHandlingThread.interrupt();
@@ -173,11 +198,19 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
   @Override
   public EventHandler getEventHandler() {
-    return new GenericEventHandler();
+    if (handlerInstance == null) {
+      handlerInstance = new GenericEventHandler();
+    }
+    return handlerInstance;
   }
 
   class GenericEventHandler implements EventHandler<Event> {
     public void handle(Event event) {
+      if (blockNewEvents) {
+        return;
+      }
+      drained = false;
+
       /* all this method does is enqueue all the events onto the queue */
       int qSize = eventQueue.size();
       if (qSize !=0 && qSize %1000 == 0) {

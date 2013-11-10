@@ -106,6 +106,15 @@
 </property>
 
 <property>
+  <name>hadoop.security.groups.cache.warn.after.ms</name>
+  <value>5000</value>
+  <description>
+    If looking up a single user to group takes longer than this amount of
+    milliseconds, we will log a warning message.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.url</name>
   <value></value>
   <description>

@@ -71,14 +71,53 @@ message GetGroupsForUserResponseProto {
 ////////////////////////////////////////////////////////////////////////
 ////// RM recovery related records /////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
+enum RMAppAttemptStateProto {
+  RMATTEMPT_NEW = 1;
+  RMATTEMPT_SUBMITTED = 2;
+  RMATTEMPT_SCHEDULED = 3;
+  RMATTEMPT_ALLOCATED = 4;
+  RMATTEMPT_LAUNCHED = 5;
+  RMATTEMPT_FAILED = 6;
+  RMATTEMPT_RUNNING = 7;
+  RMATTEMPT_FINISHING = 8;
+  RMATTEMPT_FINISHED = 9;
+  RMATTEMPT_KILLED = 10;
+  RMATTEMPT_ALLOCATED_SAVING = 11;
+  RMATTEMPT_LAUNCHED_UNMANAGED_SAVING = 12;
+  RMATTEMPT_RECOVERED = 13;
+  RMATTEMPT_FINAL_SAVING = 14;
+}
+
+enum RMAppStateProto {
+  RMAPP_NEW = 1;
+  RMAPP_NEW_SAVING = 2;
+  RMAPP_SUBMITTED = 3;
+  RMAPP_ACCEPTED = 4;
+  RMAPP_RUNNING = 5;
+  RMAPP_FINAL_SAVING = 6;
+  RMAPP_FINISHING = 7;
+  RMAPP_FINISHED = 8;
+  RMAPP_FAILED = 9;
+  RMAPP_KILLED = 10;
+}
+
 message ApplicationStateDataProto {
   optional int64 submit_time = 1;
-  optional ApplicationSubmissionContextProto application_submission_context = 2;
-  optional string user = 3;
+  optional int64 start_time = 2;
+  optional ApplicationSubmissionContextProto application_submission_context = 3;
+  optional string user = 4;
+  optional RMAppStateProto application_state = 5;
+  optional string diagnostics = 6 [default = "N/A"];
+  optional int64 finish_time = 7;
 }
 
 message ApplicationAttemptStateDataProto {
   optional ApplicationAttemptIdProto attemptId = 1;
   optional ContainerProto master_container = 2;
   optional bytes app_attempt_tokens = 3;
+  optional RMAppAttemptStateProto app_attempt_state = 4;
+  optional string final_tracking_url = 5;
+  optional string diagnostics = 6 [default = "N/A"];
+  optional int64 start_time = 7;
+  optional FinalApplicationStatusProto final_application_status = 8;
 }

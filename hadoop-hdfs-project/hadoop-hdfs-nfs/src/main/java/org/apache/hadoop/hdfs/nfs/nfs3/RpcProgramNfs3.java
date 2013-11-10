@@ -126,6 +126,8 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * RPC program corresponding to nfs daemon. See {@link Nfs3}.
  */
@@ -161,12 +163,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   
   private final RpcCallCache rpcCallCache;
 
-  public RpcProgramNfs3() throws IOException {
-    this(new Configuration());
-  }
-
   public RpcProgramNfs3(Configuration config) throws IOException {
-    super("NFS3", "localhost", Nfs3Constant.PORT, Nfs3Constant.PROGRAM,
+    super("NFS3", "localhost", config.getInt(Nfs3Constant.NFS3_SERVER_PORT,
+        Nfs3Constant.NFS3_SERVER_PORT_DEFAULT), Nfs3Constant.PROGRAM,
         Nfs3Constant.VERSION, Nfs3Constant.VERSION);
    
     config.set(FsPermission.UMASK_LABEL, "000");
@@ -210,6 +209,11 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     if (!dumpDir.mkdirs()) {
       throw new IOException("Cannot create dump directory " + dumpDir);
     }
+  }
+  
+  @Override
+  public void startDaemons() {
+     writeManager.startAsyncDataSerivce();
   }
   
   /******************************************************
@@ -776,7 +780,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     int createMode = request.getMode();
     if ((createMode != Nfs3Constant.CREATE_EXCLUSIVE)
-        && request.getObjAttr().getUpdateFields().contains(SetAttrField.SIZE)) {
+        && request.getObjAttr().getUpdateFields().contains(SetAttrField.SIZE)
+        && request.getObjAttr().getSize() != 0) {
       LOG.error("Setting file size is not supported when creating file: "
           + fileName + " dir fileId:" + dirHandle.getFileId());
       return new CREATE3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -829,6 +834,23 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       postOpObjAttr = Nfs3Utils.getFileAttr(dfsClient, fileIdPath, iug);
       dirWcc = Nfs3Utils.createWccData(Nfs3Utils.getWccAttr(preOpDirAttr),
           dfsClient, dirFileIdPath, iug);
+      
+      // Add open stream
+      OpenFileCtx openFileCtx = new OpenFileCtx(fos, postOpObjAttr,
+          writeDumpDir + "/" + postOpObjAttr.getFileId(), dfsClient, iug);
+      fileHandle = new FileHandle(postOpObjAttr.getFileId());
+      if (!writeManager.addOpenFileStream(fileHandle, openFileCtx)) {
+        LOG.warn("Can't add more stream, close it."
+            + " Future write will become append");
+        fos.close();
+        fos = null;
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Opened stream for file:" + fileName + ", fileId:"
+              + fileHandle.getFileId());
+        }
+      }
+      
     } catch (IOException e) {
       LOG.error("Exception", e);
       if (fos != null) {
@@ -855,16 +877,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         return new CREATE3Response(Nfs3Status.NFS3ERR_IO, fileHandle,
             postOpObjAttr, dirWcc);
       }
-    }
-    
-    // Add open stream
-    OpenFileCtx openFileCtx = new OpenFileCtx(fos, postOpObjAttr, writeDumpDir
-        + "/" + postOpObjAttr.getFileId(), dfsClient, iug);
-    fileHandle = new FileHandle(postOpObjAttr.getFileId());
-    writeManager.addOpenFileStream(fileHandle, openFileCtx);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("open stream for file:" + fileName + ", fileId:"
-          + fileHandle.getFileId());
     }
     
     return new CREATE3Response(Nfs3Status.NFS3_OK, fileHandle, postOpObjAttr,
@@ -1974,5 +1986,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return false;
     }
     return true;
+  }
+  
+  @VisibleForTesting
+  WriteManager getWriteManager() {
+    return this.writeManager;
   }
 }

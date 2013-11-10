@@ -118,6 +118,7 @@ class DFSClientCache {
 
         // Guava requires CacheLoader never returns null.
         return ugi.doAs(new PrivilegedExceptionAction<DFSClient>() {
+          @Override
           public DFSClient run() throws IOException {
             return new DFSClient(NameNode.getAddress(config), config);
           }

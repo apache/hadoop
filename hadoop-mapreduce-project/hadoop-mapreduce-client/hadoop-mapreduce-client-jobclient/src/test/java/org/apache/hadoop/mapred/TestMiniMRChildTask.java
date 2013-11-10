@@ -23,7 +23,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.*;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -46,6 +48,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.util.Apps;
 
 /**
  * Class to test mapred task's 
@@ -107,6 +110,29 @@ public class TestMiniMRChildTask {
         }
       }
   }
+  
+  /**
+   * Map class which checks if hadoop lib location 
+   * is in the execution path
+   */
+  public static class ExecutionEnvCheckMapClass extends MapReduceBase
+      implements Mapper<LongWritable, Text, Text, IntWritable> {
+      public void map (LongWritable key, Text value, 
+          OutputCollector<Text, IntWritable> output, 
+          Reporter reporter) throws IOException {
+      }
+      public void configure(JobConf job) {
+        String executionEnvPathVariable = System.getenv(Shell.WINDOWS ? "PATH"
+            : "LD_LIBRARY_PATH");
+        String hadoopHome = System.getenv("HADOOP_COMMON_HOME");
+        if (hadoopHome == null) {
+          hadoopHome = "";
+        }
+        String hadoopLibLocation = hadoopHome 
+            + (Shell.WINDOWS ? "\\bin" : "/lib/native");
+        assertTrue(executionEnvPathVariable.contains(hadoopLibLocation));
+      }
+  }
 
   // configure a job
   private void configure(JobConf conf, Path inDir, Path outDir, String input,
@@ -153,8 +179,6 @@ public class TestMiniMRChildTask {
                          Path outDir,
                          String input)
   throws IOException, InterruptedException, ClassNotFoundException {
-    configure(conf, inDir, outDir, input, 
-              MapClass.class, IdentityReducer.class);
 
     FileSystem outFs = outDir.getFileSystem(conf);
     
@@ -359,7 +383,8 @@ public class TestMiniMRChildTask {
       Path inDir = new Path("testing/wc/input");
       Path outDir = new Path("testing/wc/output");
       String input = "The input";
-      
+      configure(conf, inDir, outDir, input, 
+          MapClass.class, IdentityReducer.class);
       launchTest(conf, inDir, outDir, input);
       
     } catch(Exception e) {
@@ -369,6 +394,66 @@ public class TestMiniMRChildTask {
     }
   }
 
+  /**
+   * To test OS dependent setting of default execution path for a MapRed task.
+   * Mainly that we can use MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV to set -
+   * for WINDOWS: %HADOOP_COMMON_HOME%\bin is expected to be included in PATH - for
+   * Linux: $HADOOP_COMMON_HOME/lib/native is expected to be included in
+   * LD_LIBRARY_PATH
+   */
+  @Test
+  public void testMapRedExecutionEnv() {
+    // test if the env variable can be set
+    try {
+      // Application environment
+      Map<String, String> environment = new HashMap<String, String>();
+      String setupHadoopHomeCommand = Shell.WINDOWS ? 
+          "HADOOP_COMMON_HOME=C:\\fake\\PATH\\to\\hadoop\\common\\home" :
+          "HADOOP_COMMON_HOME=/fake/path/to/hadoop/common/home";
+      Apps.setEnvFromInputString(environment, setupHadoopHomeCommand);
+            
+      // Add the env variables passed by the admin
+      Apps.setEnvFromInputString(environment, conf.get(
+          MRJobConfig.MAPRED_ADMIN_USER_ENV,
+          MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV));
+      
+      String executionPaths = environment.get(
+          Shell.WINDOWS ? "PATH" : "LD_LIBRARY_PATH");
+      String toFind = Shell.WINDOWS ? 
+          "C:\\fake\\PATH\\to\\hadoop\\common\\home\\bin" : 
+          "/fake/path/to/hadoop/common/home/lib/native";
+      
+      // Ensure execution PATH/LD_LIBRARY_PATH set up pointing to hadoop lib
+      assertTrue("execution path does not include the hadoop lib location "
+          + toFind, executionPaths.contains(toFind));
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail("Exception in testing execution environment for MapReduce task");
+      tearDown();
+    }
+    
+    // now launch a mapreduce job to ensure that the child 
+    // also gets the configured setting for hadoop lib
+    try {
+      
+      JobConf conf = new JobConf(mr.getConfig());      
+      // initialize input, output directories
+      Path inDir = new Path("input");
+      Path outDir = new Path("output");
+      String input = "The input";
+      
+      // set config to use the ExecutionEnvCheckMapClass map class
+      configure(conf, inDir, outDir, input, 
+          ExecutionEnvCheckMapClass.class, IdentityReducer.class);
+      launchTest(conf, inDir, outDir, input);
+                 
+    } catch(Exception e) {
+      e.printStackTrace();
+      fail("Exception in testing propagation of env setting to child task");
+      tearDown();
+    }
+  }
+  
   /**
    * Test to test if the user set env variables reflect in the child
    * processes. Mainly
