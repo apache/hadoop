@@ -21,7 +21,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -43,6 +47,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
@@ -319,15 +324,15 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   private static class SimulatedStorage {
     private Map<String, SimulatedBPStorage> map = 
       new HashMap<String, SimulatedBPStorage>();
-    private final String storageUuid = "SimulatedStorage-UUID";
+    private final String storageUuid = "SimulatedStroage-" + DatanodeStorage.newStorageID();
 
-    private long capacity;  // in bytes
+    private final long capacity;  // in bytes
     
     synchronized long getFree() {
       return capacity - getUsed();
     }
     
-    synchronized long getCapacity() {
+    long getCapacity() {
       return capacity;
     }
     
@@ -383,8 +388,13 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       return bpStorage;
     }
 
-    public String getStorageUuid() {
+    String getStorageUuid() {
       return storageUuid;
+    }
+
+    synchronized StorageReport getStorageReport(String bpid) {
+      return new StorageReport(getStorageUuid(), false, getCapacity(),
+          getUsed(), getFree(), map.get(bpid).getUsed());
     }
   }
   
@@ -400,8 +410,9 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       }
       this.datanodeUuid = storage.getDatanodeUuid();
     } else {
-      this.datanodeUuid = "unknownStorageId-" + UUID.randomUUID();
+      this.datanodeUuid = "SimulatedDatanode-" + DataNode.generateUuid();
     }
+
     registerMBean(datanodeUuid);
     this.storage = new SimulatedStorage(
         conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY));
@@ -478,7 +489,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       String bpid) {
     Map<String, BlockListAsLongs> reports =
         new HashMap<String, BlockListAsLongs>();
-    reports.put("", getBlockReport(bpid));
+    reports.put(storage.storageUuid, getBlockReport(bpid));
     return reports;
   }
 
@@ -1029,7 +1040,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public StorageReport[] getStorageReports(String bpid) {
-    return new StorageReport[0];
+    return new StorageReport[] {storage.getStorageReport(bpid)};
   }
 
   @Override

@@ -328,9 +328,10 @@ public class MiniDFSCluster {
           builder.nameNodePort, builder.nameNodeHttpPort);
     }
     
-    LOG.info("starting cluster with " + 
-        builder.nnTopology.countNameNodes() + " namenodes.");
-    nameNodes = new NameNodeInfo[builder.nnTopology.countNameNodes()];
+    final int numNameNodes = builder.nnTopology.countNameNodes();
+    LOG.info("starting cluster: numNameNodes=" + numNameNodes
+        + ", numDataNodes=" + builder.numDataNodes);
+    nameNodes = new NameNodeInfo[numNameNodes];
       
     initMiniDFSCluster(builder.conf,
                        builder.numDataNodes,
@@ -1920,12 +1921,14 @@ public class MiniDFSCluster {
     
     // Wait for expected number of datanodes to start
     if (dnInfo.length != numDataNodes) {
+      LOG.info("dnInfo.length != numDataNodes");
       return true;
     }
     
     // if one of the data nodes is not fully started, continue to wait
     for (DataNodeProperties dn : dataNodes) {
       if (!dn.datanode.isDatanodeFullyStarted()) {
+        LOG.info("!dn.datanode.isDatanodeFullyStarted()");
         return true;
       }
     }
@@ -1934,6 +1937,7 @@ public class MiniDFSCluster {
     // using (capacity == 0) as proxy.
     for (DatanodeInfo dn : dnInfo) {
       if (dn.getCapacity() == 0) {
+        LOG.info("dn.getCapacity() == 0");
         return true;
       }
     }
@@ -1941,6 +1945,7 @@ public class MiniDFSCluster {
     // If datanode dataset is not initialized then wait
     for (DataNodeProperties dn : dataNodes) {
       if (DataNodeTestUtils.getFSDataset(dn.datanode) == null) {
+        LOG.info("DataNodeTestUtils.getFSDataset(dn.datanode) == null");
         return true;
       }
     }

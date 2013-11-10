@@ -166,8 +166,10 @@ public class TestPBHelper {
   }
 
   private static BlockWithLocations getBlockWithLocations(int bid) {
-    return new BlockWithLocations(new Block(bid, 0, 1), new String[] { "dn1",
-        "dn2", "dn3" });
+    final String[] datanodeUuids = {"dn1", "dn2", "dn3"};
+    final String[] storageIDs = {"s1", "s2", "s3"};
+    return new BlockWithLocations(new Block(bid, 0, 1),
+        datanodeUuids, storageIDs);
   }
 
   private void compare(BlockWithLocations locs1, BlockWithLocations locs2) {

@@ -866,7 +866,8 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.notifyNamenodeReceivedBlock(
           block, delHint, blockReceiver.getReplicaInfo().getStorageUuid());
 
-      LOG.info("Moved " + block + " from " + peer.getRemoteAddressString());
+      LOG.info("Moved " + block + " from " + peer.getRemoteAddressString()
+          + ", delHint=" + delHint);
       
     } catch (IOException ioe) {
       opStatus = ERROR;

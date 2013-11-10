@@ -91,3 +91,5 @@ IMPROVEMENTS:
     HDFS-5481. Fix TestDataNodeVolumeFailure in branch HDFS-2832. (Contributed
     by Junping Du)
 
+    HDFS-5480. Update Balancer for HDFS-2832. (Contributed by szetszwo)
+
