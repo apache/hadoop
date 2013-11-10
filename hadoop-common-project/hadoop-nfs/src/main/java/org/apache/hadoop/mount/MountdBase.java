@@ -18,7 +18,6 @@
 package org.apache.hadoop.mount;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.SimpleTcpServer;
@@ -34,6 +33,8 @@ import org.apache.hadoop.portmap.PortmapMapping;
  */
 abstract public class MountdBase {
   private final RpcProgram rpcProgram;
+  private int udpBoundPort; // Will set after server starts
+  private int tcpBoundPort; // Will set after server starts
 
   public RpcProgram getRpcProgram() {
     return rpcProgram;
@@ -41,10 +42,10 @@ abstract public class MountdBase {
   
   /**
    * Constructor
-   * @param exports
+   * @param program
    * @throws IOException 
    */
-  public MountdBase(List<String> exports, RpcProgram program) throws IOException {
+  public MountdBase(RpcProgram program) throws IOException {
     rpcProgram = program;
   }
 
@@ -54,6 +55,7 @@ abstract public class MountdBase {
         rpcProgram, 1);
     rpcProgram.startDaemons();
     udpServer.run();
+    udpBoundPort = udpServer.getBoundPort();
   }
 
   /* Start TCP server */
@@ -62,14 +64,15 @@ abstract public class MountdBase {
         rpcProgram, 1);
     rpcProgram.startDaemons();
     tcpServer.run();
+    tcpBoundPort = tcpServer.getBoundPort();
   }
 
   public void start(boolean register) {
     startUDPServer();
     startTCPServer();
     if (register) {
-      rpcProgram.register(PortmapMapping.TRANSPORT_UDP);
-      rpcProgram.register(PortmapMapping.TRANSPORT_TCP);
+      rpcProgram.register(PortmapMapping.TRANSPORT_UDP, udpBoundPort);
+      rpcProgram.register(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
     }
   }
 }

@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -67,11 +66,13 @@ public class TestReaddir {
     hdfs = cluster.getFileSystem();
     nn = cluster.getNameNode();
 
+    // Use emphral port in case tests are running in parallel
+    config.setInt("nfs3.mountd.port", 0);
+    config.setInt("nfs3.server.port", 0);
+    
     // Start nfs
-    List<String> exports = new ArrayList<String>();
-    exports.add("/");
-    Nfs3 nfs3 = new Nfs3(exports, config);
-    nfs3.start(false);
+    Nfs3 nfs3 = new Nfs3(config);
+    nfs3.startServiceInternal(false);
 
     nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
 

@@ -40,7 +40,7 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   public static final int RPCB_PORT = 111;
   private final String program;
   private final String host;
-  private final int port;
+  private int port; // Ephemeral port is chosen later
   private final int progNumber;
   private final int lowProgVersion;
   private final int highProgVersion;
@@ -68,20 +68,18 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   /**
    * Register this program with the local portmapper.
    */
-  public void register(int transport) {
+  public void register(int transport, int boundPort) {
+    if (boundPort != port) {
+      LOG.info("The bound port is " + boundPort
+          + ", different with configured port " + port);
+      port = boundPort;
+    }
     // Register all the program versions with portmapper for a given transport
     for (int vers = lowProgVersion; vers <= highProgVersion; vers++) {
-      register(vers, transport);
+      PortmapMapping mapEntry = new PortmapMapping(progNumber, vers, transport,
+          port);
+      register(mapEntry);
     }
-  }
-  
-  /**
-   * Register this program with the local portmapper.
-   */
-  private void register(int progVersion, int transport) {
-    PortmapMapping mapEntry = new PortmapMapping(progNumber, progVersion,
-        transport, port);
-    register(mapEntry);
   }
   
   /**
