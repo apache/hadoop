@@ -613,6 +613,9 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5364. Add OpenFileCtx cache. (brandonli)
 
+    HDFS-5469. Add configuration property for the sub-directroy export path
+    (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

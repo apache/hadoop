@@ -163,12 +163,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   
   private final RpcCallCache rpcCallCache;
 
-  public RpcProgramNfs3() throws IOException {
-    this(new Configuration());
-  }
-
   public RpcProgramNfs3(Configuration config) throws IOException {
-    super("NFS3", "localhost", Nfs3Constant.PORT, Nfs3Constant.PROGRAM,
+    super("NFS3", "localhost", config.getInt(Nfs3Constant.NFS3_SERVER_PORT,
+        Nfs3Constant.NFS3_SERVER_PORT_DEFAULT), Nfs3Constant.PROGRAM,
         Nfs3Constant.VERSION, Nfs3Constant.VERSION);
    
     config.set(FsPermission.UMASK_LABEL, "000");

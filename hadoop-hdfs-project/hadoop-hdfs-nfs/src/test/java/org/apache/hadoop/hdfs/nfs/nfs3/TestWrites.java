@@ -23,10 +23,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 import junit.framework.Assert;
@@ -215,11 +212,13 @@ public class TestWrites {
       cluster.waitActive();
       client = new DFSClient(NameNode.getAddress(config), config);
 
+      // Use emphral port in case tests are running in parallel
+      config.setInt("nfs3.mountd.port", 0);
+      config.setInt("nfs3.server.port", 0);
+      
       // Start nfs
-      List<String> exports = new ArrayList<String>();
-      exports.add("/");
-      Nfs3 nfs3 = new Nfs3(exports, config);
-      nfs3.start(false);
+      Nfs3 nfs3 = new Nfs3(config);
+      nfs3.startServiceInternal(false);
       nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
 
       HdfsFileStatus status = client.getFileInfo("/");

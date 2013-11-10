@@ -36,6 +36,7 @@ import org.apache.hadoop.mount.MountResponse;
 import org.apache.hadoop.nfs.AccessPrivilege;
 import org.apache.hadoop.nfs.NfsExports;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
+import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.RpcCall;
@@ -48,6 +49,8 @@ import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * RPC program corresponding to mountd daemon. See {@link Mountd}.
@@ -71,23 +74,15 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
   
   private final NfsExports hostsMatcher;
 
-  public RpcProgramMountd() throws IOException {
-    this(new ArrayList<String>(0));
-  }
-
-  public RpcProgramMountd(List<String> exports) throws IOException {
-    this(exports, new Configuration());
-  }
-
-  public RpcProgramMountd(List<String> exports, Configuration config)
-      throws IOException {
+  public RpcProgramMountd(Configuration config) throws IOException {
     // Note that RPC cache is not enabled
     super("mountd", "localhost", config.getInt("nfs3.mountd.port", PORT),
         PROGRAM, VERSION_1, VERSION_3);
-    
+    exports = new ArrayList<String>();
+    exports.add(config.get(Nfs3Constant.EXPORT_POINT,
+        Nfs3Constant.EXPORT_POINT_DEFAULT));
     this.hostsMatcher = NfsExports.getInstance(config);
     this.mounts = Collections.synchronizedList(new ArrayList<MountEntry>());
-    this.exports = Collections.unmodifiableList(exports);
     this.dfsClient = new DFSClient(NameNode.getAddress(config), config);
   }
   
@@ -200,7 +195,7 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     } else if (mntproc == MNTPROC.UMNTALL) {
       umntall(out, xid, client);
     } else if (mntproc == MNTPROC.EXPORT) {
-      // Currently only support one NFS export "/"
+      // Currently only support one NFS export 
       List<NfsExports> hostsMatchers = new ArrayList<NfsExports>();
       hostsMatchers.add(hostsMatcher);
       out = MountResponse.writeExportList(out, xid, exports, hostsMatchers);
@@ -219,5 +214,10 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
   protected boolean isIdempotent(RpcCall call) {
     // Not required, because cache is turned off
     return false;
+  }
+
+  @VisibleForTesting
+  public List<String> getExports() {
+    return this.exports;
   }
 }
