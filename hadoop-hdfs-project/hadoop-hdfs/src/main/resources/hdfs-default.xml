@@ -1393,43 +1393,43 @@
 </property>
 
 <property>
-	<name>dfs.namenode.enable.retrycache</name>
-	<value>true</value>
-	<description>
-	  This enables the retry cache on the namenode. Namenode tracks for
-	  non-idempotent requests the corresponding response. If a client retries the
-	  request, the response from the retry cache is sent. Such operations
-	  are tagged with annotation @AtMostOnce in namenode protocols. It is
-	  recommended that this flag be set to true. Setting it to false, will result
-	  in clients getting failure responses to retried request. This flag must 
-	  be enabled in HA setup for transparent fail-overs.
-	  
-	  The entries in the cache have expiration time configurable
-	  using dfs.namenode.retrycache.expirytime.millis.
-	</description>
+  <name>dfs.namenode.enable.retrycache</name>
+  <value>true</value>
+  <description>
+    This enables the retry cache on the namenode. Namenode tracks for
+    non-idempotent requests the corresponding response. If a client retries the
+    request, the response from the retry cache is sent. Such operations
+    are tagged with annotation @AtMostOnce in namenode protocols. It is
+    recommended that this flag be set to true. Setting it to false, will result
+    in clients getting failure responses to retried request. This flag must 
+    be enabled in HA setup for transparent fail-overs.
+
+    The entries in the cache have expiration time configurable
+    using dfs.namenode.retrycache.expirytime.millis.
+  </description>
 </property>
 
 <property>
-	<name>dfs.namenode.retrycache.expirytime.millis</name>
-	<value>600000</value>
-	<description>
-	  The time for which retry cache entries are retained.
-	</description>
+  <name>dfs.namenode.retrycache.expirytime.millis</name>
+  <value>600000</value>
+  <description>
+    The time for which retry cache entries are retained.
+  </description>
 </property>
 
 <property>
-	<name>dfs.namenode.retrycache.heap.percent</name>
-	<value>0.03f</value>
-	<description>
-	  This parameter configures the heap size allocated for retry cache
-	  (excluding the response cached). This corresponds to approximately
-	  4096 entries for every 64MB of namenode process java heap size.
-	  Assuming retry cache entry expiration time (configured using
-	  dfs.namenode.retrycache.expirytime.millis) of 10 minutes, this
-	  enables retry cache to support 7 operations per second sustained
-	  for 10 minutes. As the heap size is increased, the operation rate
-	  linearly increases.
-	</description>
+  <name>dfs.namenode.retrycache.heap.percent</name>
+  <value>0.03f</value>
+  <description>
+    This parameter configures the heap size allocated for retry cache
+    (excluding the response cached). This corresponds to approximately
+    4096 entries for every 64MB of namenode process java heap size.
+    Assuming retry cache entry expiration time (configured using
+    dfs.namenode.retrycache.expirytime.millis) of 10 minutes, this
+    enables retry cache to support 7 operations per second sustained
+    for 10 minutes. As the heap size is increased, the operation rate
+    linearly increases.
+  </description>
 </property>
 
 <property>
