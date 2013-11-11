@@ -99,6 +99,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5371. Let client retry the same NN when 
     "dfs.client.test.drop.namenode.response.number" is enabled. (jing9)
 
+    HDFS-5467. Remove tab characters in hdfs-default.xml.
+    (Shinichi Yamashita via Andrew Wang)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -107,6 +110,7 @@ Release 2.3.0 - UNRELEASED
     (Qus-Jiawei via kihwal)
 
   BUG FIXES
+
     HDFS-5034.  Remove debug prints from GetFileLinkInfo (Andrew Wang via Colin
     Patrick McCabe)
 
