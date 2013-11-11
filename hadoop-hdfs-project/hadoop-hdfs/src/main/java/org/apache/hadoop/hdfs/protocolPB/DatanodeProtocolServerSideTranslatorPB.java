@@ -57,7 +57,6 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 
-import com.google.common.primitives.Longs;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -112,7 +111,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
             p.getBlockPoolUsed());
       }
       response = impl.sendHeartbeat(PBHelper.convert(request.getRegistration()),
-          report, request.getDnCacheCapacity(), request.getDnCacheUsed(),
+          report, request.getCacheCapacity(), request.getCacheUsed(),
           request.getXmitsInProgress(),
           request.getXceiverCount(), request.getFailedVolumes());
     } catch (IOException e) {

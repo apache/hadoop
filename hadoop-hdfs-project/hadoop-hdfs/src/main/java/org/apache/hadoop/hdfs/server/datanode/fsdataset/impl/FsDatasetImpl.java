@@ -290,20 +290,24 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     return volumes.numberOfFailedVolumes();
   }
 
-  /**
-   * Returns the total cache used by the datanode (in bytes).
-   */
   @Override // FSDatasetMBean
-  public long getDnCacheUsed() {
+  public long getCacheUsed() {
     return cacheManager.getDnCacheUsed();
   }
 
-  /**
-   * Returns the total cache capacity of the datanode (in bytes).
-   */
   @Override // FSDatasetMBean
-  public long getDnCacheCapacity() {
+  public long getCacheCapacity() {
     return cacheManager.getDnCacheCapacity();
+  }
+
+  @Override // FSDatasetMBean
+  public long getNumBlocksFailedToCache() {
+    return cacheManager.getNumBlocksFailedToCache();
+  }
+
+  @Override // FSDatasetMBean
+  public long getNumBlocksFailedToUncache() {
+    return cacheManager.getNumBlocksFailedToUncache();
   }
 
   /**
@@ -1193,28 +1197,36 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     synchronized (this) {
       ReplicaInfo info = volumeMap.get(bpid, blockId);
-      if (info == null) {
-        LOG.warn("Failed to cache block with id " + blockId + ", pool " +
-            bpid + ": ReplicaInfo not found.");
-        return;
-      }
-      if (info.getState() != ReplicaState.FINALIZED) {
-        LOG.warn("Failed to cache block with id " + blockId + ", pool " +
-            bpid + ": replica is not finalized; it is in state " +
-            info.getState());
-        return;
-      }
+      boolean success = false;
       try {
-        volume = (FsVolumeImpl)info.getVolume();
-        if (volume == null) {
+        if (info == null) {
           LOG.warn("Failed to cache block with id " + blockId + ", pool " +
-              bpid + ": volume not found.");
+              bpid + ": ReplicaInfo not found.");
           return;
         }
-      } catch (ClassCastException e) {
-        LOG.warn("Failed to cache block with id " + blockId +
-            ": volume was not an instance of FsVolumeImpl.");
-        return;
+        if (info.getState() != ReplicaState.FINALIZED) {
+          LOG.warn("Failed to cache block with id " + blockId + ", pool " +
+              bpid + ": replica is not finalized; it is in state " +
+              info.getState());
+          return;
+        }
+        try {
+          volume = (FsVolumeImpl)info.getVolume();
+          if (volume == null) {
+            LOG.warn("Failed to cache block with id " + blockId + ", pool " +
+                bpid + ": volume not found.");
+            return;
+          }
+        } catch (ClassCastException e) {
+          LOG.warn("Failed to cache block with id " + blockId +
+              ": volume was not an instance of FsVolumeImpl.");
+          return;
+        }
+        success = true;
+      } finally {
+        if (!success) {
+          cacheManager.numBlocksFailedToCache.incrementAndGet();
+        }
       }
       blockFileName = info.getBlockFile().getAbsolutePath();
       length = info.getVisibleLength();

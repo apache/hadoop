@@ -364,6 +364,8 @@ Trunk (Unreleased)
     HDFS-5482. DistributedFileSystem#listPathBasedCacheDirectives must support
     relative paths. (Colin Patrick McCabe via cnauroth)
 
+    HDFS-5320. Add datanode caching metrics. (wang)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

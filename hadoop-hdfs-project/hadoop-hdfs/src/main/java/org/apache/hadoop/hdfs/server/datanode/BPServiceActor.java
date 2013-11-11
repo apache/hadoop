@@ -435,7 +435,7 @@ class BPServiceActor implements Runnable {
   
   DatanodeCommand cacheReport() throws IOException {
     // If caching is disabled, do not send a cache report
-    if (dn.getFSDataset().getDnCacheCapacity() == 0) {
+    if (dn.getFSDataset().getCacheCapacity() == 0) {
       return null;
     }
     // send cache report if timer has expired.
@@ -475,8 +475,8 @@ class BPServiceActor implements Runnable {
         dn.getFSDataset().getRemaining(),
         dn.getFSDataset().getBlockPoolUsed(bpos.getBlockPoolId())) };
     return bpNamenode.sendHeartbeat(bpRegistration, report,
-        dn.getFSDataset().getDnCacheCapacity(),
-        dn.getFSDataset().getDnCacheUsed(),
+        dn.getFSDataset().getCacheCapacity(),
+        dn.getFSDataset().getCacheUsed(),
         dn.getXmitsInProgress(),
         dn.getXceiverCount(),
         dn.getFSDataset().getNumFailedVolumes());

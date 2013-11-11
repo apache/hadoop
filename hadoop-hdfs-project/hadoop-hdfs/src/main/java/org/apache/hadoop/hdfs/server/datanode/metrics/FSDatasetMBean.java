@@ -79,12 +79,22 @@ public interface FSDatasetMBean {
   public int getNumFailedVolumes();
 
   /**
-   * Returns the total cache used by the datanode (in bytes).
+   * Returns the amount of cache used by the datanode (in bytes).
    */
-  public long getDnCacheUsed();
+  public long getCacheUsed();
 
   /**
    * Returns the total cache capacity of the datanode (in bytes).
    */
-  public long getDnCacheCapacity();
+  public long getCacheCapacity();
+
+  /**
+   * Returns the number of blocks that the datanode was unable to cache
+   */
+  public long getNumBlocksFailedToCache();
+
+  /**
+   * Returns the number of blocks that the datanode was unable to uncache
+   */
+  public long getNumBlocksFailedToUncache();
 }
