@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.split;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +40,9 @@ import org.apache.hadoop.mapreduce.split.JobSplit.SplitMetaInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * The class that is used by the Job clients to write splits (both the meta
  * and the raw bytes parts)
@@ -47,6 +51,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public class JobSplitWriter {
 
+  private static final Log LOG = LogFactory.getLog(JobSplitWriter.class);
   private static final int splitVersion = JobSplit.META_SPLIT_VERSION;
   private static final byte[] SPLIT_FILE_HEADER;
 
@@ -129,9 +134,10 @@ public class JobSplitWriter {
         long currCount = out.getPos();
         String[] locations = split.getLocations();
         if (locations.length > maxBlockLocations) {
-          throw new IOException("Max block location exceeded for split: "
+          LOG.warn("Max block location exceeded for split: "
               + split + " splitsize: " + locations.length +
               " maxsize: " + maxBlockLocations);
+          locations = Arrays.copyOf(locations, maxBlockLocations);
         }
         info[i++] = 
           new JobSplit.SplitMetaInfo( 
@@ -159,9 +165,10 @@ public class JobSplitWriter {
         long currLen = out.getPos();
         String[] locations = split.getLocations();
         if (locations.length > maxBlockLocations) {
-          throw new IOException("Max block location exceeded for split: "
+          LOG.warn("Max block location exceeded for split: "
               + split + " splitsize: " + locations.length +
               " maxsize: " + maxBlockLocations);
+          locations = Arrays.copyOf(locations,maxBlockLocations);
         }
         info[i++] = new JobSplit.SplitMetaInfo( 
             locations, offset,
