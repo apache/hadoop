@@ -93,3 +93,5 @@ IMPROVEMENTS:
 
     HDFS-5480. Update Balancer for HDFS-2832. (Contributed by szetszwo)
 
+    HDFS-5486. Fix TestNameNodeMetrics for HDFS-2832. (Arpit Agarwal)
+

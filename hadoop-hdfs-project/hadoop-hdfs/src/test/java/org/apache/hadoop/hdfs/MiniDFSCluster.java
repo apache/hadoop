@@ -124,6 +124,9 @@ public class MiniDFSCluster {
   public static final String  DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
 
+  // Changing this value may break some tests that assume it is 2.
+  public static final int DIRS_PER_DATANODE = 2;
+
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
 
   /**
@@ -1143,15 +1146,16 @@ public class MiniDFSCluster {
       // Set up datanode address
       setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig);
       if (manageDfsDirs) {
-        File dir1 = getInstanceStorageDir(i, 0);
-        File dir2 = getInstanceStorageDir(i, 1);
-        dir1.mkdirs();
-        dir2.mkdirs();
-        if (!dir1.isDirectory() || !dir2.isDirectory()) { 
-          throw new IOException("Mkdirs failed to create directory for DataNode "
-                                + i + ": " + dir1 + " or " + dir2);
+        StringBuilder sb = new StringBuilder();
+        for (int j = 0; j < DIRS_PER_DATANODE; ++j) {
+          File dir = getInstanceStorageDir(i, j);
+          dir.mkdirs();
+          if (!dir.isDirectory()) {
+            throw new IOException("Mkdirs failed to create directory for DataNode " + dir);
+          }
+          sb.append((j > 0 ? "," : "") + fileAsURI(dir));
         }
-        String dirs = fileAsURI(dir1) + "," + fileAsURI(dir2);
+        String dirs = sb.toString();
         dnConf.set(DFS_DATANODE_DATA_DIR_KEY, dirs);
         conf.set(DFS_DATANODE_DATA_DIR_KEY, dirs);
       }
