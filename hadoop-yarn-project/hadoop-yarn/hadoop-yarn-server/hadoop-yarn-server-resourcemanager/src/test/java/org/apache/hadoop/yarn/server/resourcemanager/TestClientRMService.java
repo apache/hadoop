@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.any;
@@ -50,7 +51,6 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
@@ -409,6 +409,89 @@ public class TestClientRMService {
         getAllApplicationsResponse.getApplicationList()
             .get(0).getApplicationId());
   }
+
+  @Test
+  public void testGetApplications() throws IOException, YarnException {
+    /**
+     * 1. Submit 3 applications alternately in two queues
+     * 2. Test each of the filters
+     */
+    // Basic setup
+    YarnScheduler yarnScheduler = mockYarnScheduler();
+    RMContext rmContext = mock(RMContext.class);
+    mockRMContext(yarnScheduler, rmContext);
+    RMStateStore stateStore = mock(RMStateStore.class);
+    when(rmContext.getStateStore()).thenReturn(stateStore);
+    RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler,
+        null, mock(ApplicationACLsManager.class), new Configuration());
+    when(rmContext.getDispatcher().getEventHandler()).thenReturn(
+        new EventHandler<Event>() {
+          public void handle(Event event) {}
+        });
+
+    ApplicationACLsManager mockAclsManager = mock(ApplicationACLsManager.class);
+    QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
+    when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
+        any(QueueACL.class), anyString())).thenReturn(true);
+    ClientRMService rmService =
+        new ClientRMService(rmContext, yarnScheduler, appManager,
+            mockAclsManager, mockQueueACLsManager, null);
+
+    // Initialize appnames and queues
+    String[] queues = {"Q-1", "Q-2"};
+    String[] appNames =
+        {MockApps.newAppName(), MockApps.newAppName(), MockApps.newAppName()};
+    ApplicationId[] appIds =
+        {getApplicationId(101), getApplicationId(102), getApplicationId(103)};
+
+    // Submit applications
+    for (int i = 0; i < appIds.length; i++) {
+      ApplicationId appId = appIds[i];
+      when(mockAclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
+              ApplicationAccessType.VIEW_APP, null, appId)).thenReturn(true);
+      SubmitApplicationRequest submitRequest = mockSubmitAppRequest(
+          appId, appNames[i], queues[i % queues.length]);
+      rmService.submitApplication(submitRequest);
+    }
+
+    // Test different cases of ClientRMService#getApplications()
+    GetApplicationsRequest request = GetApplicationsRequest.newInstance();
+    assertEquals("Incorrect total number of apps", 6,
+        rmService.getApplications(request).getApplicationList().size());
+
+    // Check limit
+    request.setLimit(1L);
+    assertEquals("Failed to limit applications", 1,
+        rmService.getApplications(request).getApplicationList().size());
+
+    // Check queue
+    request = GetApplicationsRequest.newInstance();
+    Set<String> queueSet = new HashSet<String>();
+    request.setQueues(queueSet);
+
+    queueSet.add(queues[0]);
+    assertEquals("Incorrect number of applications in queue", 2,
+        rmService.getApplications(request).getApplicationList().size());
+    assertEquals("Incorrect number of applications in queue", 2,
+        rmService.getApplications(request, false).getApplicationList().size());
+
+    queueSet.add(queues[1]);
+    assertEquals("Incorrect number of applications in queue", 3,
+        rmService.getApplications(request).getApplicationList().size());
+
+    // Check user
+    request = GetApplicationsRequest.newInstance();
+    Set<String> userSet = new HashSet<String>();
+    request.setUsers(userSet);
+
+    userSet.add("random-user-name");
+    assertEquals("Incorrect number of applications for user", 0,
+        rmService.getApplications(request).getApplicationList().size());
+
+    userSet.add(UserGroupInformation.getCurrentUser().getShortUserName());
+    assertEquals("Incorrect number of applications for user", 3,
+        rmService.getApplications(request).getApplicationList().size());
+  }
   
   @Test(timeout=4000)
   public void testConcurrentAppSubmit()
@@ -492,10 +575,10 @@ public class TestClientRMService {
     submissionContext.setResource(resource);
     submissionContext.setApplicationType(appType);
 
-   SubmitApplicationRequest submitRequest =
-       recordFactory.newRecordInstance(SubmitApplicationRequest.class);
-   submitRequest.setApplicationSubmissionContext(submissionContext);
-   return submitRequest;
+    SubmitApplicationRequest submitRequest =
+        recordFactory.newRecordInstance(SubmitApplicationRequest.class);
+    submitRequest.setApplicationSubmissionContext(submissionContext);
+    return submitRequest;
   }
 
   private void mockRMContext(YarnScheduler yarnScheduler, RMContext rmContext)

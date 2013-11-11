@@ -73,6 +73,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1121. Changed ResourceManager's state-store to drain all events on
     shut-down. (Jian He via vinodkv)
 
+    YARN-1387. RMWebServices should use ClientRMService for filtering
+    applications (Karthik Kambatla via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
