@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang.math.LongRange;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
@@ -44,6 +45,10 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
 
   Set<String> applicationTypes = null;
   EnumSet<YarnApplicationState> applicationStates = null;
+  Set<String> users = null;
+  Set<String> queues = null;
+  long limit = Long.MAX_VALUE;
+  LongRange start = null, finish = null;
 
   public GetApplicationsRequestPBImpl() {
     builder = GetApplicationsRequestProto.newBuilder();
@@ -148,6 +153,26 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     }
   }
 
+  private void initUsers() {
+    if (this.users != null) {
+      return;
+    }
+    GetApplicationsRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<String> usersList = p.getUsersList();
+    this.users = new HashSet<String>();
+    this.users.addAll(usersList);
+  }
+
+  private void initQueues() {
+    if (this.queues != null) {
+      return;
+    }
+    GetApplicationsRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<String> queuesList = p.getQueuesList();
+    this.queues = new HashSet<String>();
+    this.queues.addAll(queuesList);
+  }
+
   @Override
   public Set<String> getApplicationTypes() {
     initApplicationTypes();
@@ -175,6 +200,111 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
       builder.clearApplicationStates();
     }
     this.applicationStates = applicationStates;
+  }
+
+  @Override
+  public void setApplicationStates(Set<String> applicationStates) {
+    EnumSet<YarnApplicationState> appStates = null;
+    for (YarnApplicationState state : YarnApplicationState.values()) {
+      if (applicationStates.contains(state.name().toLowerCase())) {
+        if (appStates == null) {
+          appStates = EnumSet.of(state);
+        } else {
+          appStates.add(state);
+        }
+      }
+    }
+    setApplicationStates(appStates);
+  }
+
+  @Override
+  public Set<String> getUsers() {
+    initUsers();
+    return this.users;
+  }
+
+  @Override
+  public void setUsers(Set<String> users) {
+    maybeInitBuilder();
+    if (users == null) {
+      builder.clearUsers();
+    }
+    this.users = users;
+  }
+
+  @Override
+  public Set<String> getQueues() {
+    initQueues();
+    return this.queues;
+  }
+
+  @Override
+  public void setQueues(Set<String> queues) {
+    maybeInitBuilder();
+    if (queues == null) {
+      builder.clearQueues();
+    }
+    this.queues = queues;
+  }
+
+  @Override
+  public long getLimit() {
+    if (this.limit == Long.MAX_VALUE) {
+      GetApplicationsRequestProtoOrBuilder p = viaProto ? proto : builder;
+      this.limit = p.hasLimit() ? p.getLimit() : Long.MAX_VALUE;
+    }
+    return this.limit;
+  }
+
+  @Override
+  public void setLimit(long limit) {
+    maybeInitBuilder();
+    this.limit = limit;
+  }
+
+  @Override
+  public LongRange getStartRange() {
+    if (this.start == null) {
+      GetApplicationsRequestProtoOrBuilder p = viaProto ? proto: builder;
+      if (p.hasStartBegin() || p.hasFinishBegin()) {
+        long begin = p.hasStartBegin() ? p.getStartBegin() : 0L;
+        long end = p.hasStartEnd() ? p.getStartEnd() : Long.MAX_VALUE;
+        this.start = new LongRange(begin, end);
+      }
+    }
+    return this.start;
+  }
+
+  @Override
+  public void setStartRange(long begin, long end)
+      throws IllegalArgumentException {
+    if (begin > end) {
+      throw new IllegalArgumentException("begin > end in range (begin, " +
+          "end): (" + begin + ", " + end + ")");
+    }
+    this.start = new LongRange(begin, end);
+  }
+
+  @Override
+  public LongRange getFinishRange() {
+    if (this.finish == null) {
+      GetApplicationsRequestProtoOrBuilder p = viaProto ? proto: builder;
+      if (p.hasFinishBegin() || p.hasFinishEnd()) {
+        long begin = p.hasFinishBegin() ? p.getFinishBegin() : 0L;
+        long end = p.hasFinishEnd() ? p.getFinishEnd() : Long.MAX_VALUE;
+        this.finish = new LongRange(begin, end);
+      }
+    }
+    return this.finish;
+  }
+
+  @Override
+  public void setFinishRange(long begin, long end) {
+    if (begin > end) {
+      throw new IllegalArgumentException("begin > end in range (begin, " +
+          "end): (" + begin + ", " + end + ")");
+    }
+    this.finish = new LongRange(begin, end);
   }
 
   @Override
