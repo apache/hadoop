@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hdfs.util;
 
-import junit.framework.Assert;
-
 import org.apache.hadoop.hdfs.util.XMLUtils.UnmanglingError;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestXMLUtils {

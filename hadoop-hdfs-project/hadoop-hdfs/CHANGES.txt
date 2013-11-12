@@ -190,6 +190,9 @@ Trunk (Unreleased)
 
     HDFS-5326. add modifyDirective to cacheAdmin.  (cmccabe)
 
+    HDFS-5495. Remove further JUnit3 usages from HDFS.
+    (Jarek Jarcec Cecho via wang)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
