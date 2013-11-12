@@ -595,7 +595,15 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   public void replaceChild(final INode oldChild, final INode newChild,
       final INodeMap inodeMap) {
     super.replaceChild(oldChild, newChild, inodeMap);
-    diffs.replaceChild(ListType.CREATED, oldChild, newChild);
+    if (oldChild.getParentReference() != null && !newChild.isReference()) {
+      // oldChild is referred by a Reference node. Thus we are replacing the 
+      // referred inode, e.g., 
+      // INodeFileWithSnapshot -> INodeFileUnderConstructionWithSnapshot
+      // in this case, we do not need to update the diff list
+      return;
+    } else {
+      diffs.replaceChild(ListType.CREATED, oldChild, newChild);
+    }
   }
   
   /**

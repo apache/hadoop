@@ -822,7 +822,12 @@ public class FSImageFormat {
         final INodesInPath iip = fsDir.getLastINodeInPath(path);
         INodeFile oldnode = INodeFile.valueOf(iip.getINode(0), path);
         cons.setLocalName(oldnode.getLocalNameBytes());
-        cons.setParent(oldnode.getParent());
+        INodeReference parentRef = oldnode.getParentReference();
+        if (parentRef != null) {
+          cons.setParentReference(parentRef);
+        } else {
+          cons.setParent(oldnode.getParent());
+        }
 
         if (oldnode instanceof INodeFileWithSnapshot) {
           cons = new INodeFileUnderConstructionWithSnapshot(cons,
