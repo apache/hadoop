@@ -106,6 +106,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1395. Distributed shell application master launched with debug flag can
     hang waiting for external ls process. (cnauroth)
 
+    YARN-1400. yarn.cmd uses HADOOP_RESOURCEMANAGER_OPTS. Should be
+    YARN_RESOURCEMANAGER_OPTS. (Raja Aluri via cnauroth)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

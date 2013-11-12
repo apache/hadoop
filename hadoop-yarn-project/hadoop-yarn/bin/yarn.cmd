@@ -180,7 +180,7 @@ goto :eof
 :resourcemanager
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\rm-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.resourcemanager.ResourceManager
-  set YARN_OPTS=%YARN_OPTS% %HADOOP_RESOURCEMANAGER_OPTS%
+  set YARN_OPTS=%YARN_OPTS% %YARN_RESOURCEMANAGER_OPTS%
   if defined YARN_RESOURCEMANAGER_HEAPSIZE (
     set JAVA_HEAP_MAX=-Xmx%YARN_RESOURCEMANAGER_HEAPSIZE%m
   )
