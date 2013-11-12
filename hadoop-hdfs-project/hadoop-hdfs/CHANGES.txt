@@ -155,6 +155,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5325. Remove WebHdfsFileSystem#ConnRunner. (Haohui Mai via jing9) 
 
+    HDFS-5488. Clean up TestHftpURLTimeout. (Haohui Mai via jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
