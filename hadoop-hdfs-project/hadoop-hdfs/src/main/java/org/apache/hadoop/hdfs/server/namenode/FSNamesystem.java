@@ -2562,7 +2562,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       final INode[] inodes = analyzeFileState(
           src, fileId, clientName, previous, onRetryBlock).getINodes();
       final INodeFileUnderConstruction pendingFile =
-          (INodeFileUnderConstruction) inodes[inodes.length - 1];
+          (INodeFileUnderConstruction) inodes[inodes.length - 1].asFile();
 
       if (onRetryBlock[0] != null && onRetryBlock[0].getLocations().length > 0) {
         // This is a retry. Just return the last block if having locations.
@@ -2600,7 +2600,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           analyzeFileState(src, fileId, clientName, previous, onRetryBlock);
       INode[] inodes = inodesInPath.getINodes();
       final INodeFileUnderConstruction pendingFile =
-          (INodeFileUnderConstruction) inodes[inodes.length - 1];
+          (INodeFileUnderConstruction) inodes[inodes.length - 1].asFile();
 
       if (onRetryBlock[0] != null) {
         if (onRetryBlock[0].getLocations().length > 0) {

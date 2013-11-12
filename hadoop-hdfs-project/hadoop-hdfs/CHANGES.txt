@@ -529,6 +529,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5488. Clean up TestHftpURLTimeout. (Haohui Mai via jing9)
 
+    HDFS-5425. Renaming underconstruction file with snapshots can make NN failure on 
+    restart. (jing9 and Vinay)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
