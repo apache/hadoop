@@ -293,7 +293,7 @@ public class DataStorage extends Storage {
 
     if (LayoutVersion.supports(Feature.ADD_DATANODE_AND_STORAGE_UUIDS,
           layoutVersion) && datanodeUuid != null) {
-      props.setProperty("datanodeUuid", datanodeUuid);
+      props.setProperty("datanodeUuid", getDatanodeUuid());
     }
 
     // Set NamespaceID in version before federation
@@ -348,7 +348,7 @@ public class DataStorage extends Storage {
       } else if (getDatanodeUuid().compareTo(dnUuid) != 0) {
         throw new InconsistentFSStateException(sd.getRoot(),
             "Root " + sd.getRoot() + ": DatanodeUuid=" + dnUuid +
-            ", does not match " + datanodeUuid + " from other" +
+            ", does not match " + getDatanodeUuid() + " from other" +
             " StorageDirectory.");
       }
     }

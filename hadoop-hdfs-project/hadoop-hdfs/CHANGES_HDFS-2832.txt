@@ -97,3 +97,5 @@ IMPROVEMENTS:
 
     HDFS-5491. Update editsStored for HDFS-2832. (Arpit Agarwal)
 
+    HDFS-5494. Fix findbugs warnings for HDFS-2832. (Arpit Agarwal)
+
