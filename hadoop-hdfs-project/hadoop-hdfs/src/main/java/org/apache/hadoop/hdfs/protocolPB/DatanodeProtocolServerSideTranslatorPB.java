@@ -104,7 +104,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
       final StorageReport[] report = PBHelper.convertStorageReports(
           request.getReportsList());
       response = impl.sendHeartbeat(PBHelper.convert(request.getRegistration()),
-          report, request.getDnCacheCapacity(), request.getDnCacheUsed(),
+          report, request.getCacheCapacity(), request.getCacheUsed(),
           request.getXmitsInProgress(),
           request.getXceiverCount(), request.getFailedVolumes());
     } catch (IOException e) {

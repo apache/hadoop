@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang.math.LongRange;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -401,6 +402,18 @@ public class ClientRMService extends AbstractService implements
   @Override
   public GetApplicationsResponse getApplications(
       GetApplicationsRequest request) throws YarnException {
+    return getApplications(request, true);
+  }
+
+  /**
+   * Get applications matching the {@link GetApplicationsRequest}. If
+   * caseSensitive is set to false, applicationTypes in
+   * GetApplicationRequest are expected to be in all-lowercase
+   */
+  @Private
+  public GetApplicationsResponse getApplications(
+      GetApplicationsRequest request, boolean caseSensitive)
+      throws YarnException {
     UserGroupInformation callerUGI;
     try {
       callerUGI = UserGroupInformation.getCurrentUser();
@@ -412,11 +425,23 @@ public class ClientRMService extends AbstractService implements
     Set<String> applicationTypes = request.getApplicationTypes();
     EnumSet<YarnApplicationState> applicationStates =
         request.getApplicationStates();
+    Set<String> users = request.getUsers();
+    Set<String> queues = request.getQueues();
+    long limit = request.getLimit();
+    LongRange start = request.getStartRange();
+    LongRange finish = request.getFinishRange();
 
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
+    long count = 0;
     for (RMApp application : this.rmContext.getRMApps().values()) {
+      if (++count > limit) {
+        break;
+      }
       if (applicationTypes != null && !applicationTypes.isEmpty()) {
-        if (!applicationTypes.contains(application.getApplicationType())) {
+        String appTypeToMatch = caseSensitive
+            ? application.getApplicationType()
+            : application.getApplicationType().toLowerCase();
+        if (!applicationTypes.contains(appTypeToMatch)) {
           continue;
         }
       }
@@ -427,6 +452,25 @@ public class ClientRMService extends AbstractService implements
           continue;
         }
       }
+
+      if (users != null && !users.isEmpty() &&
+          !users.contains(application.getUser())) {
+        continue;
+      }
+
+      if (queues != null && !queues.isEmpty() &&
+          !queues.contains(application.getQueue())) {
+        continue;
+      }
+
+      if (start != null && !start.containsLong(application.getStartTime())) {
+        continue;
+      }
+
+      if (finish != null && !finish.containsLong(application.getFinishTime())) {
+        continue;
+      }
+
       boolean allowAccess = checkAccess(callerUGI, application.getUser(),
           ApplicationAccessType.VIEW_APP, application);
       reports.add(application.createAndGetApplicationReport(

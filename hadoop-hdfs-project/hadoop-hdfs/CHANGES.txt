@@ -364,6 +364,8 @@ Trunk (Unreleased)
     HDFS-5482. DistributedFileSystem#listPathBasedCacheDirectives must support
     relative paths. (Colin Patrick McCabe via cnauroth)
 
+    HDFS-5320. Add datanode caching metrics. (wang)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -463,6 +465,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5371. Let client retry the same NN when 
     "dfs.client.test.drop.namenode.response.number" is enabled. (jing9)
 
+    HDFS-5467. Remove tab characters in hdfs-default.xml.
+    (Shinichi Yamashita via Andrew Wang)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -518,6 +523,8 @@ Release 2.3.0 - UNRELEASED
     file/directory while deletion. (jing9)
 
     HDFS-5325. Remove WebHdfsFileSystem#ConnRunner. (Haohui Mai via jing9) 
+
+    HDFS-5488. Clean up TestHftpURLTimeout. (Haohui Mai via jing9)
 
 Release 2.2.1 - UNRELEASED
 

@@ -155,7 +155,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
 
   @Override
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
-      StorageReport[] reports, long dnCacheCapacity, long dnCacheUsed,
+      StorageReport[] reports, long cacheCapacity, long cacheUsed,
           int xmitsInProgress, int xceiverCount, int failedVolumes)
               throws IOException {
     HeartbeatRequestProto.Builder builder = HeartbeatRequestProto.newBuilder()
@@ -165,11 +165,11 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     for (StorageReport r : reports) {
       builder.addReports(PBHelper.convert(r));
     }
-    if (dnCacheCapacity != 0) {
-      builder.setDnCacheCapacity(dnCacheCapacity);
+    if (cacheCapacity != 0) {
+      builder.setCacheCapacity(cacheCapacity);
     }
-    if (dnCacheUsed != 0) {
-      builder.setDnCacheUsed(dnCacheUsed);
+    if (cacheUsed != 0) {
+      builder.setCacheUsed(cacheUsed);
     }
     HeartbeatResponseProto resp;
     try {

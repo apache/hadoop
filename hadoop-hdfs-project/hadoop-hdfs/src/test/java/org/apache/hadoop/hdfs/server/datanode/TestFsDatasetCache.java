@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static junit.framework.Assert.assertTrue;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.doReturn;
 
 import java.io.FileInputStream;
@@ -57,14 +59,15 @@ import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 
 public class TestFsDatasetCache {
@@ -94,6 +97,7 @@ public class TestFsDatasetCache {
     conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
         CACHE_CAPACITY);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY, true);
 
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1).build();
@@ -187,7 +191,7 @@ public class TestFsDatasetCache {
       
       @Override
       public Boolean get() {
-        long curDnCacheUsed = fsd.getDnCacheUsed();
+        long curDnCacheUsed = fsd.getCacheUsed();
         if (curDnCacheUsed != expected) {
           if (tries++ > 10) {
             LOG.info("verifyExpectedCacheUsage: expected " +
@@ -222,22 +226,37 @@ public class TestFsDatasetCache {
     final long[] blockSizes = getBlockSizes(locs);
 
     // Check initial state
-    final long cacheCapacity = fsd.getDnCacheCapacity();
-    long cacheUsed = fsd.getDnCacheUsed();
+    final long cacheCapacity = fsd.getCacheCapacity();
+    long cacheUsed = fsd.getCacheUsed();
     long current = 0;
     assertEquals("Unexpected cache capacity", CACHE_CAPACITY, cacheCapacity);
     assertEquals("Unexpected amount of cache used", current, cacheUsed);
+
+    MetricsRecordBuilder dnMetrics;
+    long numCacheCommands = 0;
+    long numUncacheCommands = 0;
 
     // Cache each block in succession, checking each time
     for (int i=0; i<NUM_BLOCKS; i++) {
       setHeartbeatResponse(cacheBlock(locs[i]));
       current = verifyExpectedCacheUsage(current + blockSizes[i]);
+      dnMetrics = getMetrics(dn.getMetrics().name());
+      long cmds = MetricsAsserts.getLongCounter("BlocksCached", dnMetrics);
+      assertTrue("Expected more cache requests from the NN ("
+          + cmds + " <= " + numCacheCommands + ")",
+           cmds > numCacheCommands);
+      numCacheCommands = cmds;
     }
 
     // Uncache each block in succession, again checking each time
     for (int i=0; i<NUM_BLOCKS; i++) {
       setHeartbeatResponse(uncacheBlock(locs[i]));
       current = verifyExpectedCacheUsage(current - blockSizes[i]);
+      dnMetrics = getMetrics(dn.getMetrics().name());
+      long cmds = MetricsAsserts.getLongCounter("BlocksUncached", dnMetrics);
+      assertTrue("Expected more uncache requests from the NN",
+           cmds > numUncacheCommands);
+      numUncacheCommands = cmds;
     }
     LOG.info("finishing testCacheAndUncacheBlock");
   }
@@ -293,6 +312,9 @@ public class TestFsDatasetCache {
         return lines > 0;
       }
     }, 500, 30000);
+    // Also check the metrics for the failure
+    assertTrue("Expected more than 0 failed cache attempts",
+        fsd.getNumBlocksFailedToCache() > 0);
 
     // Uncache the n-1 files
     for (int i=0; i<numFiles-1; i++) {
@@ -322,8 +344,8 @@ public class TestFsDatasetCache {
     final long[] blockSizes = getBlockSizes(locs);
 
     // Check initial state
-    final long cacheCapacity = fsd.getDnCacheCapacity();
-    long cacheUsed = fsd.getDnCacheUsed();
+    final long cacheCapacity = fsd.getCacheCapacity();
+    long cacheUsed = fsd.getCacheUsed();
     long current = 0;
     assertEquals("Unexpected cache capacity", CACHE_CAPACITY, cacheCapacity);
     assertEquals("Unexpected amount of cache used", current, cacheUsed);
@@ -353,5 +375,25 @@ public class TestFsDatasetCache {
     // wait until all caching jobs are finished cancelling.
     current = verifyExpectedCacheUsage(0);
     LOG.info("finishing testUncachingBlocksBeforeCachingFinishes");
+  }
+
+  @Test(timeout=60000)
+  public void testUncacheUnknownBlock() throws Exception {
+    // Create a file
+    Path fileName = new Path("/testUncacheUnknownBlock");
+    int fileLen = 4096;
+    DFSTestUtil.createFile(fs, fileName, fileLen, (short)1, 0xFDFD);
+    HdfsBlockLocation[] locs = (HdfsBlockLocation[])fs.getFileBlockLocations(
+        fileName, 0, fileLen);
+
+    // Try to uncache it without caching it first
+    setHeartbeatResponse(uncacheBlocks(locs));
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return fsd.getNumBlocksFailedToUncache() > 0;
+      }
+    }, 100, 10000);
   }
 }

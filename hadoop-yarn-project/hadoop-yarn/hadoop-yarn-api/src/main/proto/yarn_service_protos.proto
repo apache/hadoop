@@ -125,6 +125,13 @@ message GetClusterMetricsResponseProto {
 message GetApplicationsRequestProto {
   repeated string application_types = 1;
   repeated YarnApplicationStateProto application_states = 2;
+  repeated string users = 3;
+  repeated string queues = 4;
+  optional int64 limit = 5;
+  optional int64 start_begin = 6;
+  optional int64 start_end = 7;
+  optional int64 finish_begin = 8;
+  optional int64 finish_end = 9;
 }
 
 message GetApplicationsResponseProto {

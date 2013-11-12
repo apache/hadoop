@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -46,10 +47,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -262,25 +265,20 @@ public class ApplicationMaster {
           + env.getValue());
     }
 
-    String cmd = "ls -al";
-    Runtime run = Runtime.getRuntime();
-    Process pr = null;
+    BufferedReader buf = null;
     try {
-      pr = run.exec(cmd);
-      pr.waitFor();
-
-      BufferedReader buf = new BufferedReader(new InputStreamReader(
-          pr.getInputStream()));
+      String lines = Shell.WINDOWS ? Shell.execCommand("cmd", "/c", "dir") :
+        Shell.execCommand("ls", "-al");
+      buf = new BufferedReader(new StringReader(lines));
       String line = "";
       while ((line = buf.readLine()) != null) {
         LOG.info("System CWD content: " + line);
         System.out.println("System CWD content: " + line);
       }
-      buf.close();
     } catch (IOException e) {
       e.printStackTrace();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
+    } finally {
+      IOUtils.cleanup(LOG, buf);
     }
   }
 

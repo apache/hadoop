@@ -524,12 +524,22 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override // FSDatasetMBean
-  public long getDnCacheUsed() {
+  public long getCacheUsed() {
     return 0l;
   }
 
   @Override // FSDatasetMBean
-  public long getDnCacheCapacity() {
+  public long getCacheCapacity() {
+    return 0l;
+  }
+
+  @Override
+  public long getNumBlocksFailedToCache() {
+    return 0l;
+  }
+
+  @Override
+  public long getNumBlocksFailedToUncache() {
     return 0l;
   }
 

@@ -91,6 +91,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1121. Changed ResourceManager's state-store to drain all events on
     shut-down. (Jian He via vinodkv)
 
+    YARN-1387. RMWebServices should use ClientRMService for filtering
+    applications (Karthik Kambatla via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -117,6 +120,9 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1374. Changed ResourceManager to start the preemption policy monitors
     as active services. (Karthik Kambatla via vinodkv)
+
+    YARN-1395. Distributed shell application master launched with debug flag can
+    hang waiting for external ls process. (cnauroth)
 
 Release 2.2.1 - UNRELEASED
 

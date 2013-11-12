@@ -226,6 +226,15 @@ public class FsDatasetCache {
    */
   private final long maxBytes;
 
+  /**
+   * Number of cache commands that could not be completed successfully
+   */
+  AtomicLong numBlocksFailedToCache = new AtomicLong(0);
+  /**
+   * Number of uncache commands that could not be completed successfully
+   */
+  AtomicLong numBlocksFailedToUncache = new AtomicLong(0);
+
   public FsDatasetCache(FsDatasetImpl dataset) {
     this.dataset = dataset;
     this.maxBytes = dataset.datanode.getDnConf().getMaxLockedMemory();
@@ -274,6 +283,7 @@ public class FsDatasetCache {
             " already exists in the FsDatasetCache with state " +
             prevValue.state);
       }
+      numBlocksFailedToCache.incrementAndGet();
       return;
     }
     mappableBlockMap.put(key, new Value(null, State.CACHING));
@@ -291,6 +301,7 @@ public class FsDatasetCache {
             "does not need to be uncached, because it is not currently " +
             "in the mappableBlockMap.");
       }
+      numBlocksFailedToUncache.incrementAndGet();
       return;
     }
     switch (prevValue.state) {
@@ -317,6 +328,7 @@ public class FsDatasetCache {
             "does not need to be uncached, because it is " +
             "in state " + prevValue.state + ".");
       }
+      numBlocksFailedToUncache.incrementAndGet();
       break;
     }
   }
@@ -349,7 +361,8 @@ public class FsDatasetCache {
         LOG.warn("Failed to cache block id " + key.id + ", pool " + key.bpid +
             ": could not reserve " + length + " more bytes in the " +
             "cache: " + DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY +
-            " of " + maxBytes + " exceeded."); 
+            " of " + maxBytes + " exceeded.");
+        numBlocksFailedToCache.incrementAndGet();
         return;
       }
       try {
@@ -413,6 +426,7 @@ public class FsDatasetCache {
           if (mappableBlock != null) {
             mappableBlock.close();
           }
+          numBlocksFailedToCache.incrementAndGet();
         }
       }
     }
@@ -449,7 +463,7 @@ public class FsDatasetCache {
     }
   }
 
-  // Stats related methods for FsDatasetMBean
+  // Stats related methods for FSDatasetMBean
 
   /**
    * Get the approximate amount of cache space used.
@@ -464,4 +478,13 @@ public class FsDatasetCache {
   public long getDnCacheCapacity() {
     return maxBytes;
   }
+
+  public long getNumBlocksFailedToCache() {
+    return numBlocksFailedToCache.get();
+  }
+
+  public long getNumBlocksFailedToUncache() {
+    return numBlocksFailedToUncache.get();
+  }
+
 }
