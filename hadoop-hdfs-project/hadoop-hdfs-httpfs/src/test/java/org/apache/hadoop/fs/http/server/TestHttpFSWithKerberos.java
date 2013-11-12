@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.http.server;
 
-import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
@@ -40,6 +39,7 @@ import org.apache.hadoop.test.TestJettyHelper;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.webapp.WebAppContext;

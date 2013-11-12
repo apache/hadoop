@@ -102,6 +102,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5467. Remove tab characters in hdfs-default.xml.
     (Shinichi Yamashita via Andrew Wang)
 
+    HDFS-5495. Remove further JUnit3 usages from HDFS.
+    (Jarek Jarcec Cecho via Andrew Wang)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

@@ -26,8 +26,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentNavigableMap;
 
-import junit.framework.Assert;
-
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -49,6 +47,7 @@ import org.apache.hadoop.nfs.nfs3.response.CREATE3Response;
 import org.apache.hadoop.nfs.nfs3.response.READ3Response;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 

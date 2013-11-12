@@ -22,8 +22,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheTracker;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 

@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -34,12 +32,10 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceScanner;
 import static org.apache.hadoop.hdfs.server.datanode.DataBlockScanner.SLEEP_PERIOD_MS;
 import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.junit.Assert;
 import org.junit.Test;
-import org.junit.Ignore;
 import static org.junit.Assert.fail;
 
 
