@@ -108,8 +108,8 @@ public class LayoutVersion {
     EDITLOG_SUPPORT_RETRYCACHE(-47, "Record ClientId and CallId in editlog to " 
         + "enable rebuilding retry cache in case of HA failover"),
     CACHING(-48, "Support for cache pools and path-based caching"),
-    DATANODE_ID(-49, "UUID per Datanode and distinct StorageID per storage "
-        + "directory.");
+    ADD_DATANODE_AND_STORAGE_UUIDS(-49, "Replace StorageID with DatanodeUuid."
+        + " Use distinct StorageUuid per storage directory.");
 
     
     final int lv;

@@ -291,8 +291,8 @@ public class DataStorage extends Storage {
     props.setProperty("layoutVersion", String.valueOf(layoutVersion));
     props.setProperty("storageID", sd.getStorageUuid());
 
-    if (LayoutVersion.supports(Feature.DATANODE_ID, layoutVersion) &&
-        datanodeUuid != null) {
+    if (LayoutVersion.supports(Feature.ADD_DATANODE_AND_STORAGE_UUIDS,
+          layoutVersion) && datanodeUuid != null) {
       props.setProperty("datanodeUuid", datanodeUuid);
     }
 

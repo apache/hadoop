@@ -95,3 +95,5 @@ IMPROVEMENTS:
 
     HDFS-5486. Fix TestNameNodeMetrics for HDFS-2832. (Arpit Agarwal)
 
+    HDFS-5491. Update editsStored for HDFS-2832. (Arpit Agarwal)
+
