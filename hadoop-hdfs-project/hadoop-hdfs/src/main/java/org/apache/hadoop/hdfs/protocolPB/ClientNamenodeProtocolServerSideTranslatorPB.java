@@ -1104,21 +1104,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public AddCachePoolResponseProto addCachePool(RpcController controller,
       AddCachePoolRequestProto request) throws ServiceException {
     try {
-      CachePoolInfo info =
-          new CachePoolInfo(request.getPoolName());
-      if (request.hasOwnerName()) {
-        info.setOwnerName(request.getOwnerName());
-      }
-      if (request.hasGroupName()) {
-        info.setGroupName(request.getGroupName());
-      }
-      if (request.hasMode()) {
-        info.setMode(new FsPermission((short)request.getMode()));
-      }
-      if (request.hasWeight()) {
-        info.setWeight(request.getWeight());
-      }
-      server.addCachePool(info);
+      server.addCachePool(PBHelper.convert(request.getInfo()));
       return AddCachePoolResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1129,21 +1115,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public ModifyCachePoolResponseProto modifyCachePool(RpcController controller,
       ModifyCachePoolRequestProto request) throws ServiceException {
     try {
-      CachePoolInfo info =
-          new CachePoolInfo(request.getPoolName());
-      if (request.hasOwnerName()) {
-        info.setOwnerName(request.getOwnerName());
-      }
-      if (request.hasGroupName()) {
-        info.setGroupName(request.getGroupName());
-      }
-      if (request.hasMode()) {
-        info.setMode(new FsPermission((short)request.getMode()));
-      }
-      if (request.hasWeight()) {
-        info.setWeight(request.getWeight());
-      }
-      server.modifyCachePool(info);
+      server.modifyCachePool(PBHelper.convert(request.getInfo()));
       return ModifyCachePoolResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1174,19 +1146,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         CachePoolInfo pool = iter.next();
         ListCachePoolsResponseElementProto.Builder elemBuilder = 
             ListCachePoolsResponseElementProto.newBuilder();
-        elemBuilder.setPoolName(pool.getPoolName());
-        if (pool.getOwnerName() != null) {
-          elemBuilder.setOwnerName(pool.getOwnerName());
-        }
-        if (pool.getGroupName() != null) {
-          elemBuilder.setGroupName(pool.getGroupName());
-        }
-        if (pool.getMode() != null) {
-          elemBuilder.setMode(pool.getMode().toShort());
-        }
-        if (pool.getWeight() != null) {
-          elemBuilder.setWeight(pool.getWeight());
-        }
+        elemBuilder.setInfo(PBHelper.convert(pool));
         responseBuilder.addElements(elemBuilder.build());
         prevPoolName = pool.getPoolName();
       }

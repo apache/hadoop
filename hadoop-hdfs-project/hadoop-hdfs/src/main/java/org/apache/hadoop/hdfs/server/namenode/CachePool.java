@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.base.Preconditions;
@@ -162,7 +163,7 @@ public final class CachePool {
   }
   
   /**
-   * Get information about this cache pool.
+   * Get either full or partial information about this CachePool.
    *
    * @param fullInfo
    *          If true, only the name will be returned (i.e., what you 
@@ -170,7 +171,7 @@ public final class CachePool {
    * @return
    *          Cache pool information.
    */
-  public CachePoolInfo getInfo(boolean fullInfo) {
+  private CachePoolInfo getInfo(boolean fullInfo) {
     CachePoolInfo info = new CachePoolInfo(poolName);
     if (!fullInfo) {
       return info;
@@ -181,8 +182,25 @@ public final class CachePool {
         setWeight(weight);
   }
 
+  /**
+   * Returns a CachePoolInfo describing this CachePool based on the permissions
+   * of the calling user. Unprivileged users will see only minimal descriptive
+   * information about the pool.
+   * 
+   * @param pc Permission checker to be used to validate the user's permissions,
+   *          or null
+   * @return CachePoolInfo describing this CachePool
+   */
   public CachePoolInfo getInfo(FSPermissionChecker pc) {
-    return getInfo(pc.checkPermission(this, FsAction.READ)); 
+    boolean hasPermission = true;
+    if (pc != null) {
+      try {
+        pc.checkPermission(this, FsAction.READ);
+      } catch (AccessControlException e) {
+        hasPermission = false;
+      }
+    }
+    return getInfo(hasPermission);
   }
 
   public String toString() {

@@ -1109,19 +1109,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   public void addCachePool(CachePoolInfo info) throws IOException {
     AddCachePoolRequestProto.Builder builder = 
         AddCachePoolRequestProto.newBuilder();
-    builder.setPoolName(info.getPoolName());
-    if (info.getOwnerName() != null) {
-      builder.setOwnerName(info.getOwnerName());
-    }
-    if (info.getGroupName() != null) {
-      builder.setGroupName(info.getGroupName());
-    }
-    if (info.getMode() != null) {
-      builder.setMode(info.getMode().toShort());
-    }
-    if (info.getWeight() != null) {
-      builder.setWeight(info.getWeight());
-    }
+    builder.setInfo(PBHelper.convert(info));
     try {
       rpcProxy.addCachePool(null, builder.build());
     } catch (ServiceException e) {
@@ -1133,19 +1121,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   public void modifyCachePool(CachePoolInfo req) throws IOException {
     ModifyCachePoolRequestProto.Builder builder = 
         ModifyCachePoolRequestProto.newBuilder();
-    builder.setPoolName(req.getPoolName());
-    if (req.getOwnerName() != null) {
-      builder.setOwnerName(req.getOwnerName());
-    }
-    if (req.getGroupName() != null) {
-      builder.setGroupName(req.getGroupName());
-    }
-    if (req.getMode() != null) {
-      builder.setMode(req.getMode().toShort());
-    }
-    if (req.getWeight() != null) {
-      builder.setWeight(req.getWeight());
-    }
+    builder.setInfo(PBHelper.convert(req));
     try {
       rpcProxy.modifyCachePool(null, builder.build());
     } catch (ServiceException e) {
@@ -1175,11 +1151,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     @Override
     public CachePoolInfo get(int i) {
       ListCachePoolsResponseElementProto elem = proto.getElements(i);
-      return new CachePoolInfo(elem.getPoolName()).
-          setOwnerName(elem.getOwnerName()).
-          setGroupName(elem.getGroupName()).
-          setMode(new FsPermission((short)elem.getMode())).
-          setWeight(elem.getWeight());
+      return PBHelper.convert(elem.getInfo());
     }
 
     @Override

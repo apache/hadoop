@@ -406,23 +406,23 @@ message ListPathBasedCacheDirectivesResponseProto {
   required bool hasMore = 2;
 }
 
-message AddCachePoolRequestProto {
-  required string poolName = 1;
+message CachePoolInfoProto {
+  optional string poolName = 1;
   optional string ownerName = 2;
   optional string groupName = 3;
   optional int32 mode = 4;
   optional int32 weight = 5;
+}
+
+message AddCachePoolRequestProto {
+  required CachePoolInfoProto info = 1;
 }
 
 message AddCachePoolResponseProto { // void response
 }
 
 message ModifyCachePoolRequestProto {
-  required string poolName = 1;
-  optional string ownerName = 2;
-  optional string groupName = 3;
-  optional int32 mode = 4;
-  optional int32 weight = 5;
+  required CachePoolInfoProto info = 1;
 }
 
 message ModifyCachePoolResponseProto { // void response
@@ -445,11 +445,7 @@ message ListCachePoolsResponseProto {
 }
 
 message ListCachePoolsResponseElementProto {
-  required string poolName = 1;
-  required string ownerName = 2;
-  required string groupName = 3;
-  required int32 mode = 4;
-  required int32 weight = 5;
+  required CachePoolInfoProto info = 1;
 }
 
 message GetFileLinkInfoRequestProto {

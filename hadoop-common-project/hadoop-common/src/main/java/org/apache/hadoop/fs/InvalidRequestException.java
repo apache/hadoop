@@ -20,12 +20,13 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 
 /**
- * Exception corresponding to ID not found - EINVAL
+ * Thrown when the user makes a malformed request, for example missing required
+ * parameters or parameters that are not valid.
  */
-public class IdNotFoundException extends IOException {
+public class InvalidRequestException extends IOException {
   static final long serialVersionUID = 0L;
 
-  public IdNotFoundException(String str) {
+  public InvalidRequestException(String str) {
     super(str);
   }
 }

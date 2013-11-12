@@ -261,24 +261,27 @@ class FSPermissionChecker {
    *
    * @param pool CachePool being accessed
    * @param access type of action being performed on the cache pool
-   * @return if the pool can be accessed
+   * @throws AccessControlException if pool cannot be accessed
    */
-  public boolean checkPermission(CachePool pool, FsAction access) {
+  public void checkPermission(CachePool pool, FsAction access)
+      throws AccessControlException {
     FsPermission mode = pool.getMode();
     if (isSuperUser()) {
-      return true;
+      return;
     }
     if (user.equals(pool.getOwnerName())
         && mode.getUserAction().implies(access)) {
-      return true;
+      return;
     }
     if (groups.contains(pool.getGroupName())
         && mode.getGroupAction().implies(access)) {
-      return true;
+      return;
     }
     if (mode.getOtherAction().implies(access)) {
-      return true;
+      return;
     }
-    return false;
+    throw new AccessControlException("Permission denied while accessing pool "
+        + pool.getPoolName() + ": user " + user + " does not have "
+        + access.toString() + " permissions.");
   }
 }

@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -40,11 +42,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
-import org.apache.hadoop.fs.IdNotFoundException;
+import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -58,7 +61,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.GSet;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -186,15 +188,15 @@ public class TestPathBasedCacheRequests {
       fail("expected to get an exception when " +
           "removing a non-existent pool.");
     } catch (IOException ioe) {
-      GenericTestUtils.assertExceptionContains("can't remove " +
+      GenericTestUtils.assertExceptionContains("Cannot remove " +
           "non-existent cache pool", ioe);
     }
     try {
       dfs.removeCachePool(poolName);
-      Assert.fail("expected to get an exception when " +
+      fail("expected to get an exception when " +
           "removing a non-existent pool.");
     } catch (IOException ioe) {
-      GenericTestUtils.assertExceptionContains("can't remove " +
+      GenericTestUtils.assertExceptionContains("Cannot remove " +
           "non-existent cache pool", ioe);
     }
     try {
@@ -271,18 +273,18 @@ public class TestPathBasedCacheRequests {
 
     try {
       proto.removeCachePool("pool99");
-      Assert.fail("expected to get an exception when " +
+      fail("expected to get an exception when " +
           "removing a non-existent pool.");
     } catch (IOException ioe) {
-      GenericTestUtils.assertExceptionContains("can't remove non-existent",
+      GenericTestUtils.assertExceptionContains("Cannot remove non-existent",
           ioe);
     }
     try {
       proto.removeCachePool(poolName);
-      Assert.fail("expected to get an exception when " +
+      fail("expected to get an exception when " +
           "removing a non-existent pool.");
     } catch (IOException ioe) {
-      GenericTestUtils.assertExceptionContains("can't remove non-existent",
+      GenericTestUtils.assertExceptionContains("Cannot remove non-existent",
           ioe);
     }
 
@@ -350,8 +352,8 @@ public class TestPathBasedCacheRequests {
           setPool("no_such_pool").
           build());
       fail("expected an error when adding to a non-existent pool.");
-    } catch (IdNotFoundException ioe) {
-      GenericTestUtils.assertExceptionContains("no such pool as", ioe);
+    } catch (InvalidRequestException ioe) {
+      GenericTestUtils.assertExceptionContains("Unknown pool", ioe);
     }
 
     try {
@@ -363,7 +365,7 @@ public class TestPathBasedCacheRequests {
           "mode 0 (no permissions for anyone).");
     } catch (AccessControlException e) {
       GenericTestUtils.
-          assertExceptionContains("permission denied for pool", e);
+          assertExceptionContains("Permission denied while accessing pool", e);
     }
 
     try {
@@ -383,10 +385,10 @@ public class TestPathBasedCacheRequests {
           setReplication((short)1).
           setPool("").
           build());
-      Assert.fail("expected an error when adding a PathBasedCache " +
+      fail("expected an error when adding a PathBasedCache " +
           "directive with an empty pool name.");
-    } catch (IdNotFoundException e) {
-      GenericTestUtils.assertExceptionContains("pool name was empty", e);
+    } catch (InvalidRequestException e) {
+      GenericTestUtils.assertExceptionContains("Invalid empty pool name", e);
     }
 
     long deltaId = addAsUnprivileged(delta);
@@ -404,7 +406,7 @@ public class TestPathBasedCacheRequests {
     validateListAll(iter, alphaId, alphaId2, betaId, deltaId, relativeId );
     iter = dfs.listPathBasedCacheDirectives(
         new PathBasedCacheDirective.Builder().setPool("pool3").build());
-    Assert.assertFalse(iter.hasNext());
+    assertFalse(iter.hasNext());
     iter = dfs.listPathBasedCacheDirectives(
         new PathBasedCacheDirective.Builder().setPool("pool1").build());
     validateListAll(iter, alphaId, alphaId2, deltaId, relativeId );
@@ -415,27 +417,27 @@ public class TestPathBasedCacheRequests {
     dfs.removePathBasedCacheDirective(betaId);
     iter = dfs.listPathBasedCacheDirectives(
         new PathBasedCacheDirective.Builder().setPool("pool2").build());
-    Assert.assertFalse(iter.hasNext());
+    assertFalse(iter.hasNext());
 
     try {
       dfs.removePathBasedCacheDirective(betaId);
-      Assert.fail("expected an error when removing a non-existent ID");
-    } catch (IdNotFoundException e) {
-      GenericTestUtils.assertExceptionContains("id not found", e);
+      fail("expected an error when removing a non-existent ID");
+    } catch (InvalidRequestException e) {
+      GenericTestUtils.assertExceptionContains("No directive with ID", e);
     }
 
     try {
       proto.removePathBasedCacheDirective(-42l);
-      Assert.fail("expected an error when removing a negative ID");
-    } catch (IdNotFoundException e) {
+      fail("expected an error when removing a negative ID");
+    } catch (InvalidRequestException e) {
       GenericTestUtils.assertExceptionContains(
-          "invalid non-positive directive ID", e);
+          "Invalid negative ID", e);
     }
     try {
       proto.removePathBasedCacheDirective(43l);
-      Assert.fail("expected an error when removing a non-existent ID");
-    } catch (IdNotFoundException e) {
-      GenericTestUtils.assertExceptionContains("id not found", e);
+      fail("expected an error when removing a non-existent ID");
+    } catch (InvalidRequestException e) {
+      GenericTestUtils.assertExceptionContains("No directive with ID", e);
     }
 
     dfs.removePathBasedCacheDirective(alphaId);
@@ -744,4 +746,38 @@ public class TestPathBasedCacheRequests {
     }
   }
 
+  @Test(timeout=60000)
+  public void testListCachePoolPermissions() throws Exception {
+    final UserGroupInformation myUser = UserGroupInformation
+        .createRemoteUser("myuser");
+    final DistributedFileSystem myDfs = 
+        (DistributedFileSystem)DFSTestUtil.getFileSystemAs(myUser, conf);
+    final String poolName = "poolparty";
+    dfs.addCachePool(new CachePoolInfo(poolName)
+        .setMode(new FsPermission((short)0700)));
+    // Should only see partial info
+    RemoteIterator<CachePoolInfo> it = myDfs.listCachePools();
+    CachePoolInfo info = it.next();
+    assertFalse(it.hasNext());
+    assertEquals("Expected pool name", poolName, info.getPoolName());
+    assertNull("Unexpected owner name", info.getOwnerName());
+    assertNull("Unexpected group name", info.getGroupName());
+    assertNull("Unexpected mode", info.getMode());
+    assertNull("Unexpected weight", info.getWeight());
+    // Modify the pool so myuser is now the owner
+    dfs.modifyCachePool(new CachePoolInfo(poolName)
+        .setOwnerName(myUser.getShortUserName())
+        .setWeight(99));
+    // Should see full info
+    it = myDfs.listCachePools();
+    info = it.next();
+    assertFalse(it.hasNext());
+    assertEquals("Expected pool name", poolName, info.getPoolName());
+    assertEquals("Mismatched owner name", myUser.getShortUserName(),
+        info.getOwnerName());
+    assertNotNull("Expected group name", info.getGroupName());
+    assertEquals("Mismatched mode", (short) 0700,
+        info.getMode().toShort());
+    assertEquals("Mismatched weight", 99, (int)info.getWeight());
+  }
 }
