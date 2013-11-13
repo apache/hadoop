@@ -167,6 +167,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-1176. FixedLengthInputFormat and FixedLengthRecordReader
     (Mariappan Asokan and BitsOfInfo via Sandy Ryza)
 
+    MAPREDUCE-5613. DefaultSpeculator holds and checks hashmap that is always
+    empty (Gera Shegalov via Sandy Ryza)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
