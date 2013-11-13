@@ -1329,7 +1329,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     return new ContentSummary(summary[0], summary[1], summary[2]);
   }
 
-  final private static PathFilter DEFAULT_FILTER = new PathFilter() {
+  final protected static PathFilter DEFAULT_FILTER = new PathFilter() {
       public boolean accept(Path file) {
         return true;
       }     

@@ -697,6 +697,13 @@ public class HarFileSystem extends FilterFileSystem {
     throw new IOException("Har: delete not allowed");
   }
   
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
+  throws IOException {
+    // Use FileSystem's implementation
+    return listLocatedStatus(f, DEFAULT_FILTER);
+  }
+
   /**
    * liststatus returns the children of a directory 
    * after looking up the index files.

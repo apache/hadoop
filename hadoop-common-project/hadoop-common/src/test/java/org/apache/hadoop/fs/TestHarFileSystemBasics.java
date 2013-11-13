@@ -25,8 +25,12 @@ import static org.junit.Assert.assertFalse;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell;
 import org.junit.After;
@@ -219,6 +223,32 @@ public class TestHarFileSystemBasics {
     final HarFileSystem hfs = new HarFileSystem();
     final URI uri = new URI("har://" + harPath.toString());
     hfs.initialize(uri, new Configuration());
+  }
+
+ @Test
+  public void testListLocatedStatus() throws Exception {
+    String testHarPath = this.getClass().getResource("/test.har").getPath();
+    URI uri = new URI("har://" + testHarPath);
+    HarFileSystem hfs = new HarFileSystem(localFileSystem);
+    hfs.initialize(uri, new Configuration());
+
+    // test.har has the following contents:
+    //   dir1/1.txt
+    //   dir1/2.txt
+    Set<String> expectedFileNames = new HashSet<String>();
+    expectedFileNames.add("1.txt");
+    expectedFileNames.add("2.txt");
+
+    // List contents of dir, and ensure we find all expected files
+    Path path = new Path("dir1");
+    RemoteIterator<LocatedFileStatus> fileList = hfs.listLocatedStatus(path);
+    while (fileList.hasNext()) {
+      String fileName = fileList.next().getPath().getName();
+      assertTrue(fileName + " not in expected files list", expectedFileNames.contains(fileName));
+      expectedFileNames.remove(fileName);
+    }
+    assertEquals("Didn't find all of the expected file names: " + expectedFileNames,
+                 0, expectedFileNames.size());
   }
 
   // ========== Negative:

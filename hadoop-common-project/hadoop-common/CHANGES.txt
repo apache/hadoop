@@ -26,6 +26,9 @@ Release 0.23.10 - UNRELEASED
 
     HADOOP-9757. Har metadata cache can grow without limit (Cristina Abad via daryn)
 
+    HADOOP-10091. Job with a har archive as input fails on 0.23 (Jason Dere
+    and Jason Lowe via jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
