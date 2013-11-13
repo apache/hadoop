@@ -185,7 +185,7 @@ public class KerberosAuthenticator implements Authenticator {
       conn.setRequestMethod(AUTH_HTTP_METHOD);
       conn.connect();
       
-      if (conn.getRequestProperty(AUTHORIZATION) != null && conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+      if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
         LOG.debug("JDK performed authentication on our behalf.");
         // If the JDK already did the SPNEGO back-and-forth for
         // us, just pull out the token.
