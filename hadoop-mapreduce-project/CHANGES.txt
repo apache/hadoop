@@ -170,6 +170,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5613. DefaultSpeculator holds and checks hashmap that is always
     empty (Gera Shegalov via Sandy Ryza)
 
+    MAPREDUCE-5431. Missing pom dependency in MR-client (Timothy St. Clair
+    via stevel)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
