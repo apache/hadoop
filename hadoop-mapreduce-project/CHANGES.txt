@@ -70,6 +70,8 @@ Release 2.3.0 - UNRELEASED
     created by CombineFileInputFormat to fail (Robert Parker and Jason Lowe
     via jlowe)
 
+    MAPREDUCE-5610. TestSleepJob fails in jdk7 (Jonathan Eagles via jlowe)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

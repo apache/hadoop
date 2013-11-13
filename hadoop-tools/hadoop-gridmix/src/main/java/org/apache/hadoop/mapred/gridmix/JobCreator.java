@@ -63,8 +63,8 @@ public enum JobCreator {
       Configuration conf, long submissionMillis, JobStory jobdesc, Path outRoot,
       UserGroupInformation ugi, int seq) throws IOException {
       int numLocations = conf.getInt(SLEEPJOB_RANDOM_LOCATIONS, 0);
-      if (numLocations < 0) numLocations=0;
-      if ((numLocations > 0) && (hosts == null)) {
+      if (numLocations < 0) numLocations = 0;
+      if (hosts == null) {
         final JobClient client = new JobClient(new JobConf(conf));
         ClusterStatus stat = client.getClusterStatus(true);
         final int nTrackers = stat.getTaskTrackers();
