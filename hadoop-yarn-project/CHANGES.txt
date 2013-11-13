@@ -46,6 +46,9 @@ Release 0.23.10 - UNRELEASED
     YARN-1031. JQuery UI components reference external css in branch-23
     (Jonathan Eagles and Jason Lowe via jlowe)
 
+    YARN-1386. NodeManager mistakenly loses resources and relocalizes them
+    (Jason Lowe via jeagles)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
