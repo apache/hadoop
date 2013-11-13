@@ -1621,6 +1621,9 @@ Release 0.23.10 - UNRELEASED
     YARN-1176. RM web services ClusterMetricsInfo total nodes doesn't include 
     unhealthy nodes (Jonathan Eagles via tgraves)
 
+    YARN-1386. NodeManager mistakenly loses resources and relocalizes them
+    (Jason Lowe via jeagles)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
