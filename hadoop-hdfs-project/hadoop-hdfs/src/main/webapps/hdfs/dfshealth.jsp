@@ -70,6 +70,6 @@
 <hr/>
 <h3>Startup Progress</h3>
 <% healthjsp.generateStartupProgress(out, nn.getStartupProgress()); %>
-<%
-out.println(ServletUtil.htmlFooter());
-%>
+<hr/><p><a href="http://hadoop.apache.org/core">Hadoop</a>, 2013.&nbsp;<a href="dfshealth.html">New UI</a></p>
+</body>
+</html>
