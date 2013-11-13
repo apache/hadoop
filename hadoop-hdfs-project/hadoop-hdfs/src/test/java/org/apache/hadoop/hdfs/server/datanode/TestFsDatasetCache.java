@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetCache.PageRounder;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlock;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlock.Mlocker;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
@@ -87,6 +88,8 @@ public class TestFsDatasetCache {
   private static DatanodeProtocolClientSideTranslatorPB spyNN;
   private static PageRounder rounder = new PageRounder();
 
+  private Mlocker mlocker;
+
   @Before
   public void setUp() throws Exception {
     assumeTrue(!Path.WINDOWS);
@@ -110,6 +113,8 @@ public class TestFsDatasetCache {
     fsd = dn.getFSDataset();
 
     spyNN = DataNodeTestUtils.spyOnBposToNN(dn, nn);
+    // Save the current mlocker and replace it at the end of the test
+    mlocker = MappableBlock.mlocker;
   }
 
   @After
@@ -120,6 +125,8 @@ public class TestFsDatasetCache {
     if (cluster != null) {
       cluster.shutdown();
     }
+    // Restore the original mlocker
+    MappableBlock.mlocker = mlocker;
   }
 
   private static void setHeartbeatResponse(DatanodeCommand[] cmds)

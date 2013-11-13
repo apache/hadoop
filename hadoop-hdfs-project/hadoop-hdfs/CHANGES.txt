@@ -190,6 +190,8 @@ Trunk (Unreleased)
 
     HDFS-5326. add modifyDirective to cacheAdmin.  (cmccabe)
 
+    HDFS-5450. Better API for getting the cached blocks locations. (wang)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

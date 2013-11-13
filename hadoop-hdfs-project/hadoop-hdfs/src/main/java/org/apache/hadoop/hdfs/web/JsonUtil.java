@@ -393,6 +393,7 @@ public class JsonUtil {
     m.put("startOffset", locatedblock.getStartOffset());
     m.put("block", toJsonMap(locatedblock.getBlock()));
     m.put("locations", toJsonArray(locatedblock.getLocations()));
+    m.put("cachedLocations", toJsonArray(locatedblock.getCachedLocations()));
     return m;
   }
 
@@ -407,8 +408,11 @@ public class JsonUtil {
         (Object[])m.get("locations"));
     final long startOffset = (Long)m.get("startOffset");
     final boolean isCorrupt = (Boolean)m.get("isCorrupt");
+    final DatanodeInfo[] cachedLocations = toDatanodeInfoArray(
+        (Object[])m.get("cachedLocations"));
 
-    final LocatedBlock locatedblock = new LocatedBlock(b, locations, startOffset, isCorrupt);
+    final LocatedBlock locatedblock = new LocatedBlock(b, locations,
+        startOffset, isCorrupt, cachedLocations);
     locatedblock.setBlockToken(toBlockToken((Map<?, ?>)m.get("blockToken")));
     return locatedblock;
   }

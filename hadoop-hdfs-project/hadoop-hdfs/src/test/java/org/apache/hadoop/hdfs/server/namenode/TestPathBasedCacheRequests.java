@@ -31,6 +31,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.nio.MappedByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -40,6 +41,8 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.InvalidRequestException;
@@ -54,6 +57,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlock;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.security.AccessControlException;
@@ -77,6 +81,15 @@ public class TestPathBasedCacheRequests {
   static private MiniDFSCluster cluster;
   static private DistributedFileSystem dfs;
   static private NamenodeProtocols proto;
+
+  static {
+    MappableBlock.mlocker = new MappableBlock.Mlocker() {
+      @Override
+      public void mlock(MappedByteBuffer mmap, long length) throws IOException {
+        // Stubbed out for testing
+      }
+    };
+  }
 
   @Before
   public void setup() throws Exception {
@@ -530,6 +543,14 @@ public class TestPathBasedCacheRequests {
     assertFalse("Unexpected # of cache directives found", dit.hasNext());
   }
 
+  /**
+   * Wait for the NameNode to have an expected number of cached blocks
+   * and replicas.
+   * @param nn NameNode
+   * @param expectedCachedBlocks
+   * @param expectedCachedReplicas
+   * @throws Exception
+   */
   private static void waitForCachedBlocks(NameNode nn,
       final int expectedCachedBlocks, final int expectedCachedReplicas) 
           throws Exception {
@@ -568,6 +589,37 @@ public class TestPathBasedCacheRequests {
         }
       }
     }, 500, 60000);
+  }
+
+  private static void checkNumCachedReplicas(final DistributedFileSystem dfs,
+      final List<Path> paths, final int expectedBlocks,
+      final int expectedReplicas)
+      throws Exception {
+    int numCachedBlocks = 0;
+    int numCachedReplicas = 0;
+    for (Path p: paths) {
+      final FileStatus f = dfs.getFileStatus(p);
+      final long len = f.getLen();
+      final long blockSize = f.getBlockSize();
+      // round it up to full blocks
+      final long numBlocks = (len + blockSize - 1) / blockSize;
+      BlockLocation[] locs = dfs.getFileBlockLocations(p, 0, len);
+      assertEquals("Unexpected number of block locations for path " + p,
+          numBlocks, locs.length);
+      for (BlockLocation l: locs) {
+        if (l.getCachedHosts().length > 0) {
+          numCachedBlocks++;
+        }
+        numCachedReplicas += l.getCachedHosts().length;
+      }
+    }
+    LOG.info("Found " + numCachedBlocks + " of " + expectedBlocks + " blocks");
+    LOG.info("Found " + numCachedReplicas + " of " + expectedReplicas
+        + " replicas");
+    assertEquals("Unexpected number of cached blocks", expectedBlocks,
+        numCachedBlocks);
+    assertEquals("Unexpected number of cached replicas", expectedReplicas,
+        numCachedReplicas);
   }
 
   private static final long BLOCK_SIZE = 512;
@@ -741,6 +793,78 @@ public class TestPathBasedCacheRequests {
       // remove and watch numCached go to 0
       dfs.removePathBasedCacheDirective(id);
       waitForCachedBlocks(namenode, 0, 0);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Tests stepping the cache replication factor up and down, checking the
+   * number of cached replicas and blocks as well as the advertised locations.
+   * @throws Exception
+   */
+  @Test(timeout=120000)
+  public void testReplicationFactor() throws Exception {
+    Assume.assumeTrue(canTestDatanodeCaching());
+    HdfsConfiguration conf = createCachingConf();
+    MiniDFSCluster cluster =
+      new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
+
+    try {
+      cluster.waitActive();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      NameNode namenode = cluster.getNameNode();
+      // Create the pool
+      final String pool = "friendlyPool";
+      dfs.addCachePool(new CachePoolInfo(pool));
+      // Create some test files
+      final List<Path> paths = new LinkedList<Path>();
+      paths.add(new Path("/foo/bar"));
+      paths.add(new Path("/foo/baz"));
+      paths.add(new Path("/foo2/bar2"));
+      paths.add(new Path("/foo2/baz2"));
+      dfs.mkdir(new Path("/foo"), FsPermission.getDirDefault());
+      dfs.mkdir(new Path("/foo2"), FsPermission.getDirDefault());
+      final int numBlocksPerFile = 2;
+      for (Path path : paths) {
+        FileSystemTestHelper.createFile(dfs, path, numBlocksPerFile,
+            (int)BLOCK_SIZE, (short)3, false);
+      }
+      waitForCachedBlocks(namenode, 0, 0);
+      checkNumCachedReplicas(dfs, paths, 0, 0);
+      // cache directory
+      long id = dfs.addPathBasedCacheDirective(
+          new PathBasedCacheDirective.Builder().
+            setPath(new Path("/foo")).
+            setReplication((short)1).
+            setPool(pool).
+            build());
+      waitForCachedBlocks(namenode, 4, 4);
+      checkNumCachedReplicas(dfs, paths, 4, 4);
+      // step up the replication factor
+      for (int i=2; i<=3; i++) {
+        dfs.modifyPathBasedCacheDirective(
+            new PathBasedCacheDirective.Builder().
+            setId(id).
+            setReplication((short)i).
+            build());
+        waitForCachedBlocks(namenode, 4, 4*i);
+        checkNumCachedReplicas(dfs, paths, 4, 4*i);
+      }
+      // step it down
+      for (int i=2; i>=1; i--) {
+        dfs.modifyPathBasedCacheDirective(
+            new PathBasedCacheDirective.Builder().
+            setId(id).
+            setReplication((short)i).
+            build());
+        waitForCachedBlocks(namenode, 4, 4*i);
+        checkNumCachedReplicas(dfs, paths, 4, 4*i);
+      }
+      // remove and watch numCached go to 0
+      dfs.removePathBasedCacheDirective(id);
+      waitForCachedBlocks(namenode, 0, 0);
+      checkNumCachedReplicas(dfs, paths, 0, 0);
     } finally {
       cluster.shutdown();
     }
