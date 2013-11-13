@@ -85,6 +85,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10064. Upgrade to maven antrun plugin version 1.7 (Arpit Agarwal via
     jeagles)
 
+    HADOOP-9594. Update apache commons math dependency (Timothy St. Clair via
+    stevel)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
