@@ -101,3 +101,6 @@ IMPROVEMENTS:
 
     HDFS-5508. Fix compilation error after merge. (Contributed by szetszwo)
 
+    HDFS-5501. Fix pendingReceivedRequests tracking in BPServiceActor. (Arpit
+    Agarwal)
+

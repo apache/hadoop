@@ -280,13 +280,14 @@ class BPServiceActor implements Runnable {
            pendingIncrementalBRperStorage.entrySet()) {
         final String storageUuid = entry.getKey();
         final PerStoragePendingIncrementalBR perStorageMap = entry.getValue();
-        ReceivedDeletedBlockInfo[] receivedAndDeletedBlockArray = null;
 
         if (perStorageMap.getBlockInfoCount() > 0) {
           // Send newly-received and deleted blockids to namenode
-          receivedAndDeletedBlockArray = perStorageMap.dequeueBlockInfos();
-          pendingReceivedRequests -= receivedAndDeletedBlockArray.length;
-          blockArrays.put(storageUuid, receivedAndDeletedBlockArray);
+          ReceivedDeletedBlockInfo[] rdbi = perStorageMap.dequeueBlockInfos();
+          pendingReceivedRequests =
+              (pendingReceivedRequests > rdbi.length ?
+                  (pendingReceivedRequests - rdbi.length) : 0);
+          blockArrays.put(storageUuid, rdbi);
         }
       }
     }
@@ -312,8 +313,7 @@ class BPServiceActor implements Runnable {
             // didn't put something newer in the meantime.
             PerStoragePendingIncrementalBR perStorageMap =
                 pendingIncrementalBRperStorage.get(storageUuid);
-            perStorageMap.putMissingBlockInfos(rdbi);
-            pendingReceivedRequests += perStorageMap.getBlockInfoCount();
+            pendingReceivedRequests += perStorageMap.putMissingBlockInfos(rdbi);
           }
         }
       }
@@ -859,13 +859,17 @@ class BPServiceActor implements Runnable {
      * Add blocks from blockArray to pendingIncrementalBR, unless the
      * block already exists in pendingIncrementalBR.
      * @param blockArray list of blocks to add.
+     * @return the number of missing blocks that we added.
      */
-    void putMissingBlockInfos(ReceivedDeletedBlockInfo[] blockArray) {
+    int putMissingBlockInfos(ReceivedDeletedBlockInfo[] blockArray) {
+      int blocksPut = 0;
       for (ReceivedDeletedBlockInfo rdbi : blockArray) {
         if (!pendingIncrementalBR.containsKey(rdbi.getBlock().getBlockId())) {
           pendingIncrementalBR.put(rdbi.getBlock().getBlockId(), rdbi);
+          ++blocksPut;
         }
       }
+      return blocksPut;
     }
 
     /**
