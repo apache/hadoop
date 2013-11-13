@@ -30,7 +30,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -56,8 +55,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
+import org.apache.hadoop.hdfs.web.TokenAspect.DTSelecorByKind;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
@@ -96,8 +95,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.token.TokenRenewer;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.util.Progressable;
 import org.mortbay.util.ajax.JSON;
 
@@ -107,7 +104,7 @@ import com.google.common.collect.Lists;
 
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends FileSystem
-    implements DelegationTokenRenewer.Renewable {
+    implements DelegationTokenRenewer.Renewable, TokenAspect.TokenManagementDelegator {
   public static final Log LOG = LogFactory.getLog(WebHdfsFileSystem.class);
   /** File System URI: {SCHEME}://namenode:port/path/to/file */
   public static final String SCHEME = "webhdfs";
@@ -122,12 +119,17 @@ public class WebHdfsFileSystem extends FileSystem
   /** Delegation token kind */
   public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
   /** Token selector */
-  public static final WebHdfsDelegationTokenSelector DT_SELECTOR
-      = new WebHdfsDelegationTokenSelector();
+  public static final DTSelecorByKind DT_SELECTOR
+      = new DTSelecorByKind(TOKEN_KIND);
 
   private DelegationTokenRenewer dtRenewer = null;
   @VisibleForTesting
   DelegationTokenRenewer.RenewAction<?> action;
+
+  @Override
+  public URI getCanonicalUri() {
+    return super.getCanonicalUri();
+  }
 
   @VisibleForTesting
   protected synchronized void addRenewAction(final WebHdfsFileSystem webhdfs) {
@@ -142,7 +144,6 @@ public class WebHdfsFileSystem extends FileSystem
   public static boolean isEnabled(final Configuration conf, final Log log) {
     final boolean b = conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
         DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT);
-    log.info(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY + " = " + b);
     return b;
   }
 
@@ -986,7 +987,8 @@ public class WebHdfsFileSystem extends FileSystem
     }
   }
 
-  private synchronized long renewDelegationToken(final Token<?> token
+  @Override
+  public synchronized long renewDelegationToken(final Token<?> token
       ) throws IOException {
     final HttpOpParam.Op op = PutOpParam.Op.RENEWDELEGATIONTOKEN;
     TokenArgumentParam dtargParam = new TokenArgumentParam(
@@ -995,7 +997,8 @@ public class WebHdfsFileSystem extends FileSystem
     return (Long) m.get("long");
   }
 
-  private synchronized void cancelDelegationToken(final Token<?> token
+  @Override
+  public synchronized void cancelDelegationToken(final Token<?> token
       ) throws IOException {
     final HttpOpParam.Op op = PutOpParam.Op.CANCELDELEGATIONTOKEN;
     TokenArgumentParam dtargParam = new TokenArgumentParam(
@@ -1040,58 +1043,5 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = GetOpParam.Op.GETFILECHECKSUM;
     final Map<?, ?> m = run(op, p);
     return JsonUtil.toMD5MD5CRC32FileChecksum(m);
-  }
-
-  /** Delegation token renewer. */
-  public static class DtRenewer extends TokenRenewer {
-    @Override
-    public boolean handleKind(Text kind) {
-      return kind.equals(TOKEN_KIND);
-    }
-  
-    @Override
-    public boolean isManaged(Token<?> token) throws IOException {
-      return true;
-    }
-
-    private static WebHdfsFileSystem getWebHdfs(
-        final Token<?> token, final Configuration conf) throws IOException {
-      
-      final InetSocketAddress nnAddr = SecurityUtil.getTokenServiceAddr(token);
-      final URI uri = DFSUtil.createUri(WebHdfsFileSystem.SCHEME, nnAddr);
-      return (WebHdfsFileSystem)FileSystem.get(uri, conf);
-    }
-
-    @Override
-    public long renew(final Token<?> token, final Configuration conf
-        ) throws IOException, InterruptedException {
-      return getWebHdfs(token, conf).renewDelegationToken(token);
-    }
-  
-    @Override
-    public void cancel(final Token<?> token, final Configuration conf
-        ) throws IOException, InterruptedException {
-      getWebHdfs(token, conf).cancelDelegationToken(token);
-    }
-  }
-  
-  private static class WebHdfsDelegationTokenSelector
-  extends AbstractDelegationTokenSelector<DelegationTokenIdentifier> {
-    private static final DelegationTokenSelector hdfsTokenSelector =
-        new DelegationTokenSelector();
-    
-    public WebHdfsDelegationTokenSelector() {
-      super(TOKEN_KIND);
-    }
-    
-    Token<DelegationTokenIdentifier> selectToken(URI nnUri,
-        Collection<Token<?>> tokens, Configuration conf) {
-      Token<DelegationTokenIdentifier> token =
-          selectToken(SecurityUtil.buildTokenService(nnUri), tokens);
-      if (token == null) {
-        token = hdfsTokenSelector.selectToken(nnUri, tokens, conf); 
-      }
-      return token;
-    }
   }
 }
