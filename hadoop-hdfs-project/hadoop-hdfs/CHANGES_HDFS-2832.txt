@@ -99,3 +99,5 @@ IMPROVEMENTS:
 
     HDFS-5494. Fix findbugs warnings for HDFS-2832. (Arpit Agarwal)
 
+    HDFS-5508. Fix compilation error after merge. (Contributed by szetszwo)
+

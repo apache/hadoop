@@ -414,7 +414,7 @@ public class JsonUtil {
         (Object[])m.get("cachedLocations"));
 
     final LocatedBlock locatedblock = new LocatedBlock(b, locations,
-        startOffset, isCorrupt, cachedLocations);
+        null, null, startOffset, isCorrupt, cachedLocations);
     locatedblock.setBlockToken(toBlockToken((Map<?, ?>)m.get("blockToken")));
     return locatedblock;
   }
