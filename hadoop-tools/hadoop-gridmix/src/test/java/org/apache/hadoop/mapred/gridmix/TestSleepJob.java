@@ -58,17 +58,6 @@ public class TestSleepJob extends CommonJobTest {
   }
 
 
-  /*
-  * test RandomLocation
-  */
-  @Test
-  public void testRandomLocation() throws Exception {
-    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-
-    testRandomLocation(1, 10, ugi);
-    testRandomLocation(2, 10, ugi);
-  }
-
   @Test
   public void testMapTasksOnlySleepJobs() throws Exception {
     Configuration configuration = GridmixTestUtils.mrvl.getConfig();
@@ -88,6 +77,17 @@ public class TestSleepJob extends CommonJobTest {
     }
     jobProducer.close();
     assertEquals(6, seq);
+  }
+
+  /*
+  * test RandomLocation
+  */
+  @Test
+  public void testRandomLocation() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+
+    testRandomLocation(1, 10, ugi);
+    testRandomLocation(2, 10, ugi);
   }
 
   // test Serial submit
