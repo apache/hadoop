@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.lib.service.security;
 
-import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
 import org.apache.hadoop.lib.server.Server;
@@ -30,6 +29,7 @@ import org.apache.hadoop.test.HTestCase;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.InetAddress;
