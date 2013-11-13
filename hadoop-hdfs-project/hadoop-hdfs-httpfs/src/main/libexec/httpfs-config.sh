@@ -55,7 +55,7 @@ print "Setting HTTPFS_HOME:          ${HTTPFS_HOME}"
 #
 if [ -e "${HTTPFS_HOME}/bin/httpfs-env.sh" ]; then
   print "Sourcing:                    ${HTTPFS_HOME}/bin/httpfs-env.sh"
-  source ${HTTPFS_HOME}/bin/HTTPFS-env.sh
+  source ${HTTPFS_HOME}/bin/httpfs-env.sh
   grep "^ *export " ${HTTPFS_HOME}/bin/httpfs-env.sh | sed 's/ *export/  setting/'
 fi
 
