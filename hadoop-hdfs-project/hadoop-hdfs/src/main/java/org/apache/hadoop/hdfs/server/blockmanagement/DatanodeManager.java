@@ -149,7 +149,7 @@ public class DatanodeManager {
    * Whether we should tell datanodes what to cache in replies to
    * heartbeat messages.
    */
-  private boolean sendCachingCommands = false;
+  private boolean shouldSendCachingCommands = false;
 
   /**
    * The number of datanodes for each software version. This list should change
@@ -158,6 +158,16 @@ public class DatanodeManager {
    */
   private HashMap<String, Integer> datanodesSoftwareVersions =
     new HashMap<String, Integer>(4, 0.75f);
+  
+  /**
+   * The minimum time between resending caching directives to Datanodes,
+   * in milliseconds.
+   *
+   * Note that when a rescan happens, we will send the new directives
+   * as soon as possible.  This timeout only applies to resending 
+   * directives that we've already sent.
+   */
+  private final long timeBetweenResendingCachingDirectivesMs;
   
   DatanodeManager(final BlockManager blockManager, final Namesystem namesystem,
       final Configuration conf) throws IOException {
@@ -241,6 +251,9 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_KEY +
         " = '" + ratioUseStaleDataNodesForWrite + "' is invalid. " +
         "It should be a positive non-zero float value, not greater than 1.0f.");
+    this.timeBetweenResendingCachingDirectivesMs = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_RETRY_INTERVAL_MS,
+        DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_RETRY_INTERVAL_MS_DEFAULT);
   }
 
   private static long getStaleIntervalFromConf(Configuration conf,
@@ -1307,17 +1320,28 @@ public class DatanodeManager {
           cmds.add(new BlockCommand(DatanodeProtocol.DNA_INVALIDATE,
               blockPoolId, blks));
         }
-        DatanodeCommand pendingCacheCommand =
-            getCacheCommand(nodeinfo.getPendingCached(), nodeinfo,
-              DatanodeProtocol.DNA_CACHE, blockPoolId);
-        if (pendingCacheCommand != null) {
-          cmds.add(pendingCacheCommand);
-        }
-        DatanodeCommand pendingUncacheCommand =
-            getCacheCommand(nodeinfo.getPendingUncached(), nodeinfo,
-              DatanodeProtocol.DNA_UNCACHE, blockPoolId);
-        if (pendingUncacheCommand != null) {
-          cmds.add(pendingUncacheCommand);
+        boolean sendingCachingCommands = false;
+        long nowMs = Time.monotonicNow();
+        if (shouldSendCachingCommands && 
+            ((nowMs - nodeinfo.getLastCachingDirectiveSentTimeMs()) >=
+                timeBetweenResendingCachingDirectivesMs)) {
+          DatanodeCommand pendingCacheCommand =
+              getCacheCommand(nodeinfo.getPendingCached(), nodeinfo,
+                DatanodeProtocol.DNA_CACHE, blockPoolId);
+          if (pendingCacheCommand != null) {
+            cmds.add(pendingCacheCommand);
+            sendingCachingCommands = true;
+          }
+          DatanodeCommand pendingUncacheCommand =
+              getCacheCommand(nodeinfo.getPendingUncached(), nodeinfo,
+                DatanodeProtocol.DNA_UNCACHE, blockPoolId);
+          if (pendingUncacheCommand != null) {
+            cmds.add(pendingUncacheCommand);
+            sendingCachingCommands = true;
+          }
+          if (sendingCachingCommands) {
+            nodeinfo.setLastCachingDirectiveSentTimeMs(nowMs);
+          }
         }
 
         blockManager.addKeyUpdateCommand(cmds, nodeinfo);
@@ -1355,19 +1379,13 @@ public class DatanodeManager {
     if (length == 0) {
       return null;
     }
-    // Read and clear the existing cache commands.
+    // Read the existing cache commands.
     long[] blockIds = new long[length];
     int i = 0;
     for (Iterator<CachedBlock> iter = list.iterator();
             iter.hasNext(); ) {
       CachedBlock cachedBlock = iter.next();
       blockIds[i++] = cachedBlock.getBlockId();
-      iter.remove();
-    }
-    if (!sendCachingCommands) {
-      // Do not send caching commands unless the FSNamesystem told us we
-      // should.
-      return null;
     }
     return new BlockIdCommand(action, poolId, blockIds);
   }
@@ -1416,12 +1434,24 @@ public class DatanodeManager {
     }
   }
 
+  /**
+   * Reset the lastCachingDirectiveSentTimeMs field of all the DataNodes we
+   * know about.
+   */
+  public void resetLastCachingDirectiveSentTime() {
+    synchronized (datanodeMap) {
+      for (DatanodeDescriptor dn : datanodeMap.values()) {
+        dn.setLastCachingDirectiveSentTimeMs(0L);
+      }
+    }
+  }
+
   @Override
   public String toString() {
     return getClass().getSimpleName() + ": " + host2DatanodeMap;
   }
 
-  public void setSendCachingCommands(boolean sendCachingCommands) {
-    this.sendCachingCommands = sendCachingCommands;
+  public void setShouldSendCachingCommands(boolean shouldSendCachingCommands) {
+    this.shouldSendCachingCommands = shouldSendCachingCommands;
   }
 }

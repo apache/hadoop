@@ -194,6 +194,8 @@ Trunk (Unreleased)
 
     HDFS-5485. Add command-line support for modifyDirective. (cmccabe)
 
+    HDFS-5366. recaching improvements (cmccabe)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

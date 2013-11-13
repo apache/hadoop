@@ -204,6 +204,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
     namesystem.writeLock();
     try {
       rescanCachedBlockMap();
+      blockManager.getDatanodeManager().resetLastCachingDirectiveSentTime();
     } finally {
       namesystem.writeUnlock();
     }
@@ -316,17 +317,21 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       int numCached = cached.size();
       if (numCached >= neededCached) {
         // If we have enough replicas, drop all pending cached.
-        for (DatanodeDescriptor datanode : pendingCached) {
+        for (Iterator<DatanodeDescriptor> iter = pendingCached.iterator();
+            iter.hasNext(); ) {
+          DatanodeDescriptor datanode = iter.next();
           datanode.getPendingCached().remove(cblock);
+          iter.remove();
         }
-        pendingCached.clear();
       }
       if (numCached < neededCached) {
         // If we don't have enough replicas, drop all pending uncached.
-        for (DatanodeDescriptor datanode : pendingUncached) {
+        for (Iterator<DatanodeDescriptor> iter = pendingUncached.iterator();
+            iter.hasNext(); ) {
+          DatanodeDescriptor datanode = iter.next();
           datanode.getPendingUncached().remove(cblock);
+          iter.remove();
         }
-        pendingUncached.clear();
       }
       int neededUncached = numCached -
           (pendingUncached.size() + neededCached);

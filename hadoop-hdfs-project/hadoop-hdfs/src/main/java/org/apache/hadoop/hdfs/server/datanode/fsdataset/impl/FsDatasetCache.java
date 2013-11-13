@@ -289,6 +289,10 @@ public class FsDatasetCache {
     mappableBlockMap.put(key, new Value(null, State.CACHING));
     volumeExecutor.execute(
         new CachingTask(key, blockFileName, length, genstamp));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Initiating caching for Block with id " + blockId +
+          ", pool " + bpid);
+    }
   }
 
   synchronized void uncacheBlock(String bpid, long blockId) {
@@ -427,6 +431,10 @@ public class FsDatasetCache {
             mappableBlock.close();
           }
           numBlocksFailedToCache.incrementAndGet();
+
+          synchronized (FsDatasetCache.this) {
+            mappableBlockMap.remove(key);
+          }
         }
       }
     }

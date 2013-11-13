@@ -44,20 +44,6 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class MappableBlock implements Closeable {
-  public static interface Mlocker {
-    void mlock(MappedByteBuffer mmap, long length) throws IOException;
-  }
-  
-  private static class PosixMlocker implements Mlocker {
-    public void mlock(MappedByteBuffer mmap, long length)
-        throws IOException {
-      NativeIO.POSIX.mlock(mmap, length);
-    }
-  }
-
-  @VisibleForTesting
-  public static Mlocker mlocker = new PosixMlocker();
-
   private MappedByteBuffer mmap;
   private final long length;
 
@@ -96,7 +82,7 @@ public class MappableBlock implements Closeable {
         throw new IOException("Block InputStream has no FileChannel.");
       }
       mmap = blockChannel.map(MapMode.READ_ONLY, 0, length);
-      mlocker.mlock(mmap, length);
+      NativeIO.POSIX.cacheManipulator.mlock(blockFileName, mmap, length);
       verifyChecksum(length, metaIn, blockChannel, blockFileName);
       mappableBlock = new MappableBlock(mmap, length);
     } finally {

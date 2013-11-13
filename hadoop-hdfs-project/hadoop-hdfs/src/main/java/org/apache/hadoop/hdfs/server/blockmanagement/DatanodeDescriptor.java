@@ -34,7 +34,6 @@ import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 
 /**
  * This class extends the DatanodeInfo class with ephemeral information (eg
@@ -158,6 +157,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public CachedBlocksList getPendingUncached() {
     return pendingUncached;
   }
+
+  /**
+   * The time when the last batch of caching directives was sent, in
+   * monotonic milliseconds.
+   */
+  private long lastCachingDirectiveSentTimeMs;
 
   /**
    * Head of the list of blocks on the datanode
@@ -695,5 +700,21 @@ public class DatanodeDescriptor extends DatanodeInfo {
       sb.append(" ").append(recover).append(" blocks to be recovered;");
     }
     return sb.toString();
+  }
+
+  /**
+   * @return   The time at which we last sent caching directives to this 
+   *           DataNode, in monotonic milliseconds.
+   */
+  public long getLastCachingDirectiveSentTimeMs() {
+    return this.lastCachingDirectiveSentTimeMs;
+  }
+
+  /**
+   * @param time  The time at which we last sent caching directives to this 
+   *              DataNode, in monotonic milliseconds.
+   */
+  public void setLastCachingDirectiveSentTimeMs(long time) {
+    this.lastCachingDirectiveSentTimeMs = time;
   }
 }

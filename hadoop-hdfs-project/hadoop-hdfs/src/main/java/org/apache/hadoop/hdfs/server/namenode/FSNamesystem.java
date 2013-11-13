@@ -1014,7 +1014,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       nnEditLogRoller.start();
 
       cacheManager.activate();
-      blockManager.getDatanodeManager().setSendCachingCommands(true);
+      blockManager.getDatanodeManager().setShouldSendCachingCommands(true);
     } finally {
       writeUnlock();
       startingActiveService = false;
@@ -1065,7 +1065,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         dir.fsImage.updateLastAppliedTxIdFromWritten();
       }
       cacheManager.deactivate();
-      blockManager.getDatanodeManager().setSendCachingCommands(false);
+      blockManager.getDatanodeManager().setShouldSendCachingCommands(false);
     } finally {
       writeUnlock();
     }
