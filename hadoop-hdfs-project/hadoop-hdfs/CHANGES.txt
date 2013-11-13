@@ -105,6 +105,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5495. Remove further JUnit3 usages from HDFS.
     (Jarek Jarcec Cecho via Andrew Wang)
 
+    HDFS-5440. Extract the logic of handling delegation tokens in HftpFileSystem 
+    to the TokenAspect class. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
