@@ -83,6 +83,7 @@ public class TestContainerLocalizer {
   static final Log LOG = LogFactory.getLog(TestContainerLocalizer.class);
   static final Path basedir =
       new Path("target", TestContainerLocalizer.class.getName());
+  static final FsPermission CACHE_DIR_PERM = new FsPermission((short)0710);
 
   static final String appUser = "yak";
   static final String appId = "app_RM_0";
@@ -171,12 +172,12 @@ public class TestContainerLocalizer {
       Path base = new Path(new Path(p, ContainerLocalizer.USERCACHE), appUser);
       Path privcache = new Path(base, ContainerLocalizer.FILECACHE);
       // $x/usercache/$user/filecache
-      verify(spylfs).mkdir(eq(privcache), isA(FsPermission.class), eq(false));
+      verify(spylfs).mkdir(eq(privcache), eq(CACHE_DIR_PERM), eq(false));
       Path appDir =
         new Path(base, new Path(ContainerLocalizer.APPCACHE, appId));
       // $x/usercache/$user/appcache/$appId/filecache
       Path appcache = new Path(appDir, ContainerLocalizer.FILECACHE);
-      verify(spylfs).mkdir(eq(appcache), isA(FsPermission.class), eq(false));
+      verify(spylfs).mkdir(eq(appcache), eq(CACHE_DIR_PERM), eq(false));
     }
     // verify tokens read at expected location
     verify(spylfs).open(tokenPath);
