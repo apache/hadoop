@@ -180,15 +180,15 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>1   pool1  /foo</expected-output>
+          <expected-output>1   pool1  1            /foo</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>2   pool1  /bar</expected-output>
+          <expected-output>2   pool1  1            /bar</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>3   pool1  /baz</expected-output>
+          <expected-output>3   pool1  2            /baz</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -234,11 +234,11 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>8   pool2  /baz</expected-output>
+          <expected-output>8   pool2  1            /baz</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>9   pool2  /buz</expected-output>
+          <expected-output>9   pool2  1            /buz</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -265,11 +265,11 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>10  pool1  /foo</expected-output>
+          <expected-output>10  pool1  1            /foo</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>12  pool2  /foo</expected-output>
+          <expected-output>12  pool2  1            /foo</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -296,7 +296,7 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>16  pool2  /foo</expected-output>
+          <expected-output>16  pool2  1            /foo</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -320,7 +320,7 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>19  pool1  /bar</expected-output>
+          <expected-output>19  pool1  1            /bar</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -349,11 +349,37 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>22  pool1  /bar</expected-output>
+          <expected-output>22  pool1  1            /bar</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>24  pool2  /bar</expected-output>
+          <expected-output>24  pool2  1            /bar</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!--Tested -->
+      <description>Testing modifying directives</description>
+      <test-commands>
+        <cache-admin-command>-addPool pool1</cache-admin-command>
+        <cache-admin-command>-addPool pool2</cache-admin-command>
+        <cache-admin-command>-addDirective -path /foo -pool pool2</cache-admin-command>
+        <cache-admin-command>-modifyDirective -id 25 -path /bar2</cache-admin-command>
+        <cache-admin-command>-modifyDirective -id 25 -pool pool1 -path /bar3</cache-admin-command>
+        <cache-admin-command>-listDirectives -path /bar3</cache-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <cache-admin-command>-removePool pool1</cache-admin-command>
+        <cache-admin-command>-removePool pool2</cache-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Found 1 entry</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>25  pool1  1            /bar3</expected-output>
         </comparator>
       </comparators>
     </test>

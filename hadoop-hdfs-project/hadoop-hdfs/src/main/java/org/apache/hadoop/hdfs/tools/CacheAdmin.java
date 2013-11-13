@@ -248,6 +248,84 @@ public class CacheAdmin extends Configured implements Tool {
     }
   }
 
+  private static class ModifyPathBasedCacheDirectiveCommand implements Command {
+    @Override
+    public String getName() {
+      return "-modifyDirective";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() +
+          " -id <id> [-path <path>] [-replication <replication>] " +
+          "[-pool <pool-name>] ]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = getOptionDescriptionListing();
+      listing.addRow("<id>", "The ID of the directive to modify (required)");
+      listing.addRow("<path>", "A path to cache. The path can be " +
+          "a directory or a file. (optional)");
+      listing.addRow("<replication>", "The cache replication factor to use. " +
+          "(optional)");
+      listing.addRow("<pool-name>", "The pool to which the directive will be " +
+          "added. You must have write permission on the cache pool "
+          + "in order to move a directive into it. (optional)");
+      return getShortUsage() + "\n" +
+        "Modify a PathBasedCache directive.\n\n" +
+        listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      PathBasedCacheDirective.Builder builder =
+        new PathBasedCacheDirective.Builder();
+      boolean modified = false;
+      String idString = StringUtils.popOptionWithArgument("-id", args);
+      if (idString == null) {
+        System.err.println("You must specify a directive ID with -id.");
+        return 1;
+      }
+      builder.setId(Long.parseLong(idString));
+      String path = StringUtils.popOptionWithArgument("-path", args);
+      if (path != null) {
+        builder.setPath(new Path(path));
+        modified = true;
+      }
+      String replicationString =
+        StringUtils.popOptionWithArgument("-replication", args);
+      if (replicationString != null) {
+        builder.setReplication(Short.parseShort(replicationString));
+        modified = true;
+      }
+      String poolName =
+        StringUtils.popOptionWithArgument("-pool", args);
+      if (poolName != null) {
+        builder.setPool(poolName);
+        modified = true;
+      }
+      if (!args.isEmpty()) {
+        System.err.println("Can't understand argument: " + args.get(0));
+        System.err.println("Usage is " + getShortUsage());
+        return 1;
+      }
+      if (!modified) {
+        System.err.println("No modifications were specified.");
+        return 1;
+      }
+      DistributedFileSystem dfs = getDFS(conf);
+      try {
+        dfs.modifyPathBasedCacheDirective(builder.build());
+        System.out.println("Modified PathBasedCache entry " + idString);
+      } catch (IOException e) {
+        System.err.println(prettifyException(e));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
   private static class RemovePathBasedCacheDirectivesCommand implements Command {
     @Override
     public String getName() {
@@ -352,6 +430,7 @@ public class CacheAdmin extends Configured implements Tool {
       TableListing tableListing = new TableListing.Builder().
           addField("ID", Justification.LEFT).
           addField("POOL", Justification.LEFT).
+          addField("REPLICATION", Justification.LEFT).
           addField("PATH", Justification.LEFT).
           build();
       DistributedFileSystem dfs = getDFS(conf);
@@ -362,6 +441,7 @@ public class CacheAdmin extends Configured implements Tool {
         PathBasedCacheDirective directive = iter.next();
         String row[] = new String[] {
             "" + directive.getId(), directive.getPool(),
+            "" + directive.getReplication(),
             directive.getPath().toUri().getPath(),
         };
         tableListing.addRow(row);
@@ -744,9 +824,10 @@ public class CacheAdmin extends Configured implements Tool {
 
   private static Command[] COMMANDS = {
     new AddPathBasedCacheDirectiveCommand(),
+    new ModifyPathBasedCacheDirectiveCommand(),
+    new ListPathBasedCacheDirectiveCommand(),
     new RemovePathBasedCacheDirectiveCommand(),
     new RemovePathBasedCacheDirectivesCommand(),
-    new ListPathBasedCacheDirectiveCommand(),
     new AddCachePoolCommand(),
     new ModifyCachePoolCommand(),
     new RemoveCachePoolCommand(),
