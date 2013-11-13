@@ -188,6 +188,8 @@ Release 2.2.1 - UNRELEASED
     as [-Dkey, value] which breaks GenericsOptionParser.
     (Enis Soztutar via cnauroth)
 
+    HADOOP-10078. KerberosAuthenticator always does SPNEGO. (rkanter via tucu)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
