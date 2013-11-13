@@ -225,6 +225,7 @@ public abstract class Server {
   private int port;                               // port we listen on
   private int handlerCount;                       // number of handler threads
   private int readThreads;                        // number of read threads
+  private int readerPendingConnectionQueue;       // number of connections to queue per read thread
   private Class<? extends Writable> paramClass;   // class of call parameters
   private int maxIdleTime;                        // the maximum idle time after 
                                                   // which a client may be disconnected
@@ -410,12 +411,14 @@ public abstract class Server {
     }
     
     private class Reader extends Thread {
-      private volatile boolean adding = false;
+      final private BlockingQueue<Connection> pendingConnections;
       private final Selector readSelector;
 
       Reader(String name) throws IOException {
         super(name);
 
+        this.pendingConnections =
+            new LinkedBlockingQueue<Connection>(readerPendingConnectionQueue);
         this.readSelector = Selector.open();
       }
       
@@ -436,10 +439,14 @@ public abstract class Server {
         while (running) {
           SelectionKey key = null;
           try {
+            // consume as many connections as currently queued to avoid
+            // unbridled acceptance of connections that starves the select
+            int size = pendingConnections.size();
+            for (int i=size; i>0; i--) {
+              Connection conn = pendingConnections.take();
+              conn.channel.register(readSelector, SelectionKey.OP_READ, conn);
+            }
             readSelector.select();
-            while (adding) {
-              this.wait(1000);
-            }              
 
             Iterator<SelectionKey> iter = readSelector.selectedKeys().iterator();
             while (iter.hasNext()) {
@@ -463,25 +470,13 @@ public abstract class Server {
       }
 
       /**
-       * This gets reader into the state that waits for the new channel
-       * to be registered with readSelector. If it was waiting in select()
-       * the thread will be woken up, otherwise whenever select() is called
-       * it will return even if there is nothing to read and wait
-       * in while(adding) for finishAdd call
+       * Updating the readSelector while it's being used is not thread-safe,
+       * so the connection must be queued.  The reader will drain the queue
+       * and update its readSelector before performing the next select
        */
-      public void startAdd() {
-        adding = true;
+      public void addConnection(Connection conn) throws InterruptedException {
+        pendingConnections.put(conn);
         readSelector.wakeup();
-      }
-      
-      public synchronized SelectionKey registerChannel(SocketChannel channel)
-                                                          throws IOException {
-          return channel.register(readSelector, SelectionKey.OP_READ);
-      }
-
-      public synchronized void finishAdd() {
-        adding = false;
-        this.notify();        
       }
 
       void shutdown() {
@@ -621,20 +616,23 @@ public abstract class Server {
         
         Reader reader = getReader();
         try {
-          reader.startAdd();
-          SelectionKey readKey = reader.registerChannel(channel);
-          c = new Connection(readKey, channel, System.currentTimeMillis());
-          readKey.attach(c);
+          c = new Connection(channel, System.currentTimeMillis());
           synchronized (connectionList) {
             connectionList.add(numConnections, c);
             numConnections++;
           }
+          reader.addConnection(c);
           if (LOG.isDebugEnabled())
             LOG.debug("Server connection from " + c.toString() +
                 "; # active connections: " + numConnections +
                 "; # queued calls: " + callQueue.size());          
-        } finally {
-          reader.finishAdd(); 
+        } catch (InterruptedException ie) {
+          if (running) {
+            LOG.info(
+                getName() + ": disconnecting client " + c.getHostAddress() +
+                " due to unexpected interrupt");
+          }
+          closeConnection(c);
         }
       }
     }
@@ -1001,8 +999,7 @@ public abstract class Server {
     
     private boolean useWrap = false;
     
-    public Connection(SelectionKey key, SocketChannel channel, 
-                      long lastContact) {
+    public Connection(SocketChannel channel, long lastContact) {
       this.channel = channel;
       this.lastContact = lastContact;
       this.data = null;
@@ -1682,6 +1679,9 @@ public abstract class Server {
           CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
           CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
     }
+    this.readerPendingConnectionQueue = conf.getInt(
+        CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY,
+        CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT);
     this.callQueue  = new LinkedBlockingQueue<Call>(maxQueueSize); 
     this.maxIdleTime = 2 * conf.getInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,

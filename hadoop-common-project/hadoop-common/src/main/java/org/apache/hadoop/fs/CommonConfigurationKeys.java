@@ -67,6 +67,12 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
     "ipc.server.read.threadpool.size";
   /** Default value for IPC_SERVER_RPC_READ_THREADS_KEY */
   public static final int     IPC_SERVER_RPC_READ_THREADS_DEFAULT = 1;
+  /** Number of pending connections that may be queued per socket reader */
+  public static final String IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY =
+      "ipc.server.read.connection-queue.size";
+  /** Default value for IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE */
+  public static final int IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT =
+      100;
 
   /** How many calls per handler are allowed in the queue. */
   public static final String  IPC_SERVER_HANDLER_QUEUE_SIZE_KEY =

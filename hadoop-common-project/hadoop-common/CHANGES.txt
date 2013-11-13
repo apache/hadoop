@@ -20,6 +20,8 @@ Release 0.23.10 - UNRELEASED
     HADOOP-9476. Some test cases in TestUserGroupInformation fail if ran after
     testSetLoginUser. (Robert Parker via kihwal)
 
+    HADOOP-9956. RPC listener inefficiently assigns connections to readers (daryn)
+
   BUG FIXES
 
     HADOOP-9757. Har metadata cache can grow without limit (Cristina Abad via daryn)
