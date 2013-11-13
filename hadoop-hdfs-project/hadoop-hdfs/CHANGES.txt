@@ -166,6 +166,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5425. Renaming underconstruction file with snapshots can make NN failure on 
     restart. (jing9 and Vinay)
 
+    HDFS-5474. Deletesnapshot can make Namenode in safemode on NN restarts. 
+    (Sathish via jing9)
+
     HDFS-5075. httpfs-config.sh calls out incorrect env script name
     (Timothy St. Clair via stevel)
 
