@@ -88,6 +88,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9594. Update apache commons math dependency (Timothy St. Clair via
     stevel)
 
+    HADOOP-10095. In CodecPool, synchronize pool and codecList separately in
+    order to reduce lock contention.  (Nicolas Liochon via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
