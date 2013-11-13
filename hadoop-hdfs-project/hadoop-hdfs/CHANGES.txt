@@ -544,6 +544,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5474. Deletesnapshot can make Namenode in safemode on NN restarts. 
     (Sathish via jing9)
 
+    HDFS-5075. httpfs-config.sh calls out incorrect env script name
+    (Timothy St. Clair via stevel)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
