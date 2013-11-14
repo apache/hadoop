@@ -226,4 +226,10 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String  IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY = "ipc.client.fallback-to-simple-auth-allowed";
   public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
 
+  /** How often the server scans for idle connections */
+  public static final String IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_KEY =
+      "ipc.client.connection.idle-scan-interval.ms";
+  /** Default value for IPC_SERVER_CONNECTION_IDLE_SCAN_INTERVAL_KEY */
+  public static final int IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_DEFAULT =
+      10000;
 }
