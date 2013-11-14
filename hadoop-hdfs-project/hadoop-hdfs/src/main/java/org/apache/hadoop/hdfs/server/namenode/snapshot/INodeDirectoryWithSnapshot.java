@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.Content;
+import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -883,18 +884,27 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   @Override
-  public Content.Counts computeContentSummary(final Content.Counts counts) {
-    super.computeContentSummary(counts);
-    computeContentSummary4Snapshot(counts);
-    return counts;
+  public ContentSummaryComputationContext computeContentSummary(
+      final ContentSummaryComputationContext summary) {
+    // Snapshot summary calc won't be relinquishing locks in the middle.
+    // Do this first and handover to parent.
+    computeContentSummary4Snapshot(summary.getCounts());
+    super.computeContentSummary(summary);
+    return summary;
   }
 
   private void computeContentSummary4Snapshot(final Content.Counts counts) {
+    // Create a new blank summary context for blocking processing of subtree.
+    ContentSummaryComputationContext summary = 
+        new ContentSummaryComputationContext();
     for(DirectoryDiff d : diffs) {
       for(INode deleted : d.getChildrenDiff().getList(ListType.DELETED)) {
-        deleted.computeContentSummary(counts);
+        deleted.computeContentSummary(summary);
       }
     }
+    // Add the counts from deleted trees.
+    counts.add(summary.getCounts());
+    // Add the deleted directory count.
     counts.add(Content.DIRECTORY, diffs.asList().size());
   }
   

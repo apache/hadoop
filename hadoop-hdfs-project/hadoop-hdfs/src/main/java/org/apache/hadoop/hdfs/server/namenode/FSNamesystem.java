@@ -1272,6 +1272,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return hasReadLock() || hasWriteLock();
   }
 
+  public int getReadHoldCount() {
+    return this.fsLock.getReadHoldCount();
+  }
+
+  public int getWriteHoldCount() {
+    return this.fsLock.getWriteHoldCount();
+  }
+
   NamespaceInfo getNamespaceInfo() {
     readLock();
     try {
