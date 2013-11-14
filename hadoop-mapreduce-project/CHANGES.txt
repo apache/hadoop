@@ -80,6 +80,9 @@ Release 2.3.0 - UNRELEASED
 
     MAPREDUCE-5610. TestSleepJob fails in jdk7 (Jonathan Eagles via jlowe)
 
+    MAPREDUCE-5616. MR Client-AppMaster RPC max retries on socket timeout is too
+    high. (cnauroth)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
