@@ -57,6 +57,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Progressable;
@@ -231,7 +232,7 @@ public class HftpFileSystem extends FileSystem
           final String nnHttpUrl = nnUri.toString();
           Credentials c;
           try {
-            c = DelegationTokenFetcher.getDTfromRemote(nnHttpUrl, renewer);
+            c = DelegationTokenFetcher.getDTfromRemote(connectionFactory, nnUri, renewer);
           } catch (IOException e) {
             if (e.getCause() instanceof ConnectException) {
               LOG.warn("Couldn't connect to " + nnHttpUrl +
@@ -666,10 +667,13 @@ public class HftpFileSystem extends FileSystem
     // update the kerberos credentials, if they are coming from a keytab
     UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
     InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
-    return
-      DelegationTokenFetcher.renewDelegationToken
-      (DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr).toString(),
-       (Token<DelegationTokenIdentifier>) token);
+    try {
+      return DelegationTokenFetcher.renewDelegationToken(connectionFactory,
+          DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr),
+          (Token<DelegationTokenIdentifier>) token);
+    } catch (AuthenticationException e) {
+      throw new IOException(e);
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -678,8 +682,12 @@ public class HftpFileSystem extends FileSystem
     // update the kerberos credentials, if they are coming from a keytab
     UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
     InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
-    DelegationTokenFetcher.cancelDelegationToken
-      (DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr).toString(),
-       (Token<DelegationTokenIdentifier>) token);
+    try {
+      DelegationTokenFetcher.cancelDelegationToken(connectionFactory, DFSUtil
+          .createUri(getUnderlyingProtocol(), serviceAddr),
+          (Token<DelegationTokenIdentifier>) token);
+    } catch (AuthenticationException e) {
+      throw new IOException(e);
+    }
   }
 }
