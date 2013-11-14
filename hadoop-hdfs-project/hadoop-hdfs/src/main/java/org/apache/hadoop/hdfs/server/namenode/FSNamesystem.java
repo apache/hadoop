@@ -3316,6 +3316,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return;
     }
     
+    removeBlocksAndUpdateSafemodeTotal(blocks);
+  }
+
+  /**
+   * Removes the blocks from blocksmap and updates the safemode blocks total
+   * 
+   * @param blocks
+   *          An instance of {@link BlocksMapUpdateInfo} which contains a list
+   *          of blocks that need to be removed from blocksMap
+   */
+  void removeBlocksAndUpdateSafemodeTotal(BlocksMapUpdateInfo blocks) {
+    assert hasWriteLock();
     // In the case that we are a Standby tailing edits from the
     // active while in safe-mode, we need to track the total number
     // of blocks and safe blocks in the system.
@@ -3336,9 +3348,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     if (trackBlockCounts) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Adjusting safe-mode totals for deletion of " + src + ":" +
-            "decreasing safeBlocks by " + numRemovedSafe +
-            ", totalBlocks by " + numRemovedComplete);
+        LOG.debug("Adjusting safe-mode totals for deletion."
+            + "decreasing safeBlocks by " + numRemovedSafe
+            + ", totalBlocks by " + numRemovedComplete);
       }
       adjustSafeModeBlockTotals(-numRemovedSafe, -numRemovedComplete);
     }
