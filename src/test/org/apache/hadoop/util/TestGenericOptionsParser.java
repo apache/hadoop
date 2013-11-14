@@ -108,7 +108,7 @@ public class TestGenericOptionsParser extends TestCase {
     assertNotNull("files is null", files);
     assertEquals("files option does not match",
       localFs.makeQualified(tmpPath).toString(), files);
-    
+
     // pass file as uri
     Configuration conf1 = new Configuration();
     URI tmpURI = new URI(tmpFile.toURI().toString() + "#link");
@@ -117,9 +117,9 @@ public class TestGenericOptionsParser extends TestCase {
     new GenericOptionsParser(conf1, args);
     files = conf1.get("tmpfiles");
     assertNotNull("files is null", files);
-    assertEquals("files option does not match", 
+    assertEquals("files option does not match",
       localFs.makeQualified(new Path(tmpURI)).toString(), files);
-   
+
     // pass a file that does not exist.
     // GenericOptionParser should throw exception
     Configuration conf2 = new Configuration();
@@ -222,5 +222,13 @@ public class TestGenericOptionsParser extends TestCase {
     Assert.assertArrayEquals(
       Arrays.toString(remainingArgs) + Arrays.toString(expectedRemainingArgs),
       expectedRemainingArgs, remainingArgs);
+  }
+
+  /** Test passing null as args. Some classes still call
+   * Tool interface from java passing null.
+   */
+  public void testNullArgs() throws IOException {
+    GenericOptionsParser parser = new GenericOptionsParser(conf, null);
+    parser.getRemainingArgs();
   }
 }
