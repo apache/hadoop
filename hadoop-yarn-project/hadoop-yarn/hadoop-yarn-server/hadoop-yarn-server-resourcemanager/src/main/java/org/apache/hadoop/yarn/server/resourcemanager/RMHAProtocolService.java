@@ -67,7 +67,9 @@ public class RMHAProtocolService extends AbstractService implements
   protected HAServiceState haState = HAServiceState.INITIALIZING;
   private AccessControlList adminAcl;
   private Server haAdminServer;
-  private boolean haEnabled;
+
+  @InterfaceAudience.Private
+  boolean haEnabled;
 
   public RMHAProtocolService(ResourceManager resourceManager)  {
     super("RMHAProtocolService");
@@ -174,7 +176,8 @@ public class RMHAProtocolService extends AbstractService implements
     }
   }
 
-  private synchronized void transitionToActive() throws Exception {
+  @InterfaceAudience.Private
+  synchronized void transitionToActive() throws Exception {
     if (haState == HAServiceState.ACTIVE) {
       LOG.info("Already in active state");
       return;
@@ -205,7 +208,8 @@ public class RMHAProtocolService extends AbstractService implements
     }
   }
 
-  private synchronized void transitionToStandby(boolean initialize)
+  @InterfaceAudience.Private
+  synchronized void transitionToStandby(boolean initialize)
       throws Exception {
     if (haState == HAServiceState.STANDBY) {
       LOG.info("Already in standby state");
