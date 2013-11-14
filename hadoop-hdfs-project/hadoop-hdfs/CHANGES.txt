@@ -489,6 +489,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5487. Introduce unit test for TokenAspect. (Haohui Mai via jing9)
 
+    HDFS-4995. Make getContentSummary less expensive. (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

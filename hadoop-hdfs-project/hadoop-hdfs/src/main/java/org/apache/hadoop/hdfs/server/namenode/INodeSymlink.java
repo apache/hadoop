@@ -98,9 +98,10 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
 
   @Override
-  public Content.Counts computeContentSummary(final Content.Counts counts) {
-    counts.add(Content.SYMLINK, 1);
-    return counts;
+  public ContentSummaryComputationContext computeContentSummary(
+      final ContentSummaryComputationContext summary) {
+    summary.getCounts().add(Content.SYMLINK, 1);
+    return summary;
   }
 
   @Override
