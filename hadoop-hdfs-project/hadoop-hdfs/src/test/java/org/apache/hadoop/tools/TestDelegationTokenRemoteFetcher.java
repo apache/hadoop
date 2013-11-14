@@ -26,6 +26,8 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Map;
@@ -37,10 +39,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.hdfs.web.HftpFileSystem;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -59,6 +63,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -78,9 +83,10 @@ public class TestDelegationTokenRemoteFetcher {
 
   private static final String EXP_DATE = "124123512361236";
   private static final String tokenFile = "http.file.dta";
+  private static final URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
 
   private int httpPort;
-  private String serviceUrl;
+  private URI serviceUrl;
   private FileSystem fileSys;
   private Configuration conf;
   private ServerBootstrap bootstrap;
@@ -92,7 +98,7 @@ public class TestDelegationTokenRemoteFetcher {
     conf = new Configuration();
     fileSys = FileSystem.getLocal(conf);
     httpPort = NetUtils.getFreeSocketPort();
-    serviceUrl = "http://localhost:" + httpPort;
+    serviceUrl = new URI("http://localhost:" + httpPort);
     testToken = createToken(serviceUrl);
   }
 
@@ -121,9 +127,9 @@ public class TestDelegationTokenRemoteFetcher {
    * try to fetch token without http server with IOException
    */
   @Test
-  public void testTokenRenewFail() {
+  public void testTokenRenewFail() throws AuthenticationException {
     try {
-      DelegationTokenFetcher.renewDelegationToken(serviceUrl, testToken);
+      DelegationTokenFetcher.renewDelegationToken(connectionFactory, serviceUrl, testToken);
       fail("Token fetcher shouldn't be able to renew tokens in absense of NN");
     } catch (IOException ex) {
     } 
@@ -133,9 +139,9 @@ public class TestDelegationTokenRemoteFetcher {
    * try cancel token without http server with IOException
    */
   @Test
-  public void expectedTokenCancelFail() {
+  public void expectedTokenCancelFail() throws AuthenticationException {
     try {
-      DelegationTokenFetcher.cancelDelegationToken(serviceUrl, testToken);
+      DelegationTokenFetcher.cancelDelegationToken(connectionFactory, serviceUrl, testToken);
       fail("Token fetcher shouldn't be able to cancel tokens in absense of NN");
     } catch (IOException ex) {
     } 
@@ -145,11 +151,12 @@ public class TestDelegationTokenRemoteFetcher {
    * try fetch token and get http response with error
    */
   @Test  
-  public void expectedTokenRenewErrorHttpResponse() {
+  public void expectedTokenRenewErrorHttpResponse()
+      throws AuthenticationException, URISyntaxException {
     bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
     try {
-      DelegationTokenFetcher.renewDelegationToken(serviceUrl + "/exception", 
-          createToken(serviceUrl));
+      DelegationTokenFetcher.renewDelegationToken(connectionFactory, new URI(
+          serviceUrl.toString() + "/exception"), createToken(serviceUrl));
       fail("Token fetcher shouldn't be able to renew tokens using an invalid"
           + " NN URL");
     } catch (IOException ex) {
@@ -159,13 +166,14 @@ public class TestDelegationTokenRemoteFetcher {
   }
   
   /**
-   *   
    *
    */
   @Test
-  public void testCancelTokenFromHttp() throws IOException {
+  public void testCancelTokenFromHttp() throws IOException,
+      AuthenticationException {
     bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
-    DelegationTokenFetcher.cancelDelegationToken(serviceUrl, testToken);
+    DelegationTokenFetcher.cancelDelegationToken(connectionFactory, serviceUrl,
+        testToken);
     if (assertionError != null)
       throw assertionError;
   }
@@ -174,11 +182,12 @@ public class TestDelegationTokenRemoteFetcher {
    * Call renew token using http server return new expiration time
    */
   @Test
-  public void testRenewTokenFromHttp() throws IOException {
+  public void testRenewTokenFromHttp() throws IOException,
+      NumberFormatException, AuthenticationException {
     bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
     assertTrue("testRenewTokenFromHttp error",
         Long.valueOf(EXP_DATE) == DelegationTokenFetcher.renewDelegationToken(
-            serviceUrl, testToken));
+            connectionFactory, serviceUrl, testToken));
     if (assertionError != null)
       throw assertionError;
   }
@@ -204,11 +213,11 @@ public class TestDelegationTokenRemoteFetcher {
       throw assertionError;
   }
   
-  private static Token<DelegationTokenIdentifier> createToken(String serviceUri) {
+  private static Token<DelegationTokenIdentifier> createToken(URI serviceUri) {
     byte[] pw = "hadoop".getBytes();
     byte[] ident = new DelegationTokenIdentifier(new Text("owner"), new Text(
         "renewer"), new Text("realuser")).getBytes();
-    Text service = new Text(serviceUri);
+    Text service = new Text(serviceUri.toString());
     return new Token<DelegationTokenIdentifier>(ident, pw,
         HftpFileSystem.TOKEN_KIND, service);
   }
@@ -301,8 +310,15 @@ public class TestDelegationTokenRemoteFetcher {
     public void messageReceived(ChannelHandlerContext ctx, final MessageEvent e)
         throws Exception {
       HttpRequest request = (HttpRequest) e.getMessage();
-      if (request.getMethod() != GET) {
-        return;
+
+      if (request.getMethod() == HttpMethod.OPTIONS) {
+        // Mimic SPNEGO authentication
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1,
+            HttpResponseStatus.OK);
+        response.addHeader("Set-Cookie", "hadoop-auth=1234");
+        e.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
+      } else if (request.getMethod() != GET) {
+        e.getChannel().close();
       }
       UnmodifiableIterator<Map.Entry<String, Handler>> iter = routes.entrySet()
           .iterator();
@@ -338,7 +354,7 @@ public class TestDelegationTokenRemoteFetcher {
   }
 
   private ServerBootstrap startHttpServer(int port,
-      final Token<DelegationTokenIdentifier> token, final String url) {
+      final Token<DelegationTokenIdentifier> token, final URI url) {
     ServerBootstrap bootstrap = new ServerBootstrap(
         new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
             Executors.newCachedThreadPool()));
@@ -348,7 +364,7 @@ public class TestDelegationTokenRemoteFetcher {
       public ChannelPipeline getPipeline() throws Exception {
         return Channels.pipeline(new HttpRequestDecoder(),
             new HttpChunkAggregator(65536), new HttpResponseEncoder(),
-            new CredentialsLogicHandler(token, url));
+            new CredentialsLogicHandler(token, url.toString()));
       }
     });
     bootstrap.bind(new InetSocketAddress("localhost", port));

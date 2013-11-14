@@ -26,8 +26,8 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URL;
-import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.Date;
@@ -47,11 +47,14 @@ import org.apache.hadoop.hdfs.server.namenode.CancelDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.GetDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.RenewDelegationTokenServlet;
 import org.apache.hadoop.hdfs.web.HftpFileSystem;
+import org.apache.hadoop.hdfs.web.HsftpFileSystem;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -142,11 +145,11 @@ public class DelegationTokenFetcher {
     // default to using the local file system
     FileSystem local = FileSystem.getLocal(conf);
     final Path tokenFile = new Path(local.getWorkingDirectory(), remaining[0]);
+    final URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
 
     // Login the current user
     UserGroupInformation.getCurrentUser().doAs(
         new PrivilegedExceptionAction<Object>() {
-          @SuppressWarnings("unchecked")
           @Override
           public Object run() throws Exception {
             if (print) {
@@ -183,7 +186,8 @@ public class DelegationTokenFetcher {
             } else {
               // otherwise we are fetching
               if (webUrl != null) {
-                Credentials creds = getDTfromRemote(webUrl, renewer);
+                Credentials creds = getDTfromRemote(connectionFactory, new URI(webUrl),
+                    renewer);
                 creds.writeTokenStorageFile(tokenFile, conf);
                 for (Token<?> token : creds.getAllTokens()) {
                   System.out.println("Fetched token via " + webUrl + " for "
@@ -205,27 +209,31 @@ public class DelegationTokenFetcher {
         });
   }
   
-  static public Credentials getDTfromRemote(String nnAddr, 
-      String renewer) throws IOException {
+  static public Credentials getDTfromRemote(URLConnectionFactory factory,
+      URI nnUri, String renewer) throws IOException {
+    StringBuilder buf = new StringBuilder(nnUri.toString())
+        .append(GetDelegationTokenServlet.PATH_SPEC);
+    if (renewer != null) {
+      buf.append("?").append(GetDelegationTokenServlet.RENEWER).append("=")
+          .append(renewer);
+    }
+
+    HttpURLConnection conn = null;
     DataInputStream dis = null;
-    InetSocketAddress serviceAddr = NetUtils.createSocketAddr(nnAddr);
-    
+    InetSocketAddress serviceAddr = NetUtils.createSocketAddr(nnUri
+        .getAuthority());
+
     try {
-      StringBuffer url = new StringBuffer();
-      if (renewer != null) {
-        url.append(nnAddr).append(GetDelegationTokenServlet.PATH_SPEC)
-           .append("?").append(GetDelegationTokenServlet.RENEWER).append("=")
-           .append(renewer);
-      } else {
-        url.append(nnAddr).append(GetDelegationTokenServlet.PATH_SPEC);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Retrieving token from: " + buf);
       }
-      URL remoteURL = new URL(url.toString());
-      URLConnection connection = SecurityUtil.openSecureHttpConnection(remoteURL);
-      InputStream in = connection.getInputStream();
+
+      conn = run(factory, new URL(buf.toString()));
+      InputStream in = conn.getInputStream();
       Credentials ts = new Credentials();
       dis = new DataInputStream(in);
       ts.readFields(dis);
-      for(Token<?> token: ts.getAllTokens()) {
+      for (Token<?> token : ts.getAllTokens()) {
         token.setKind(HftpFileSystem.TOKEN_KIND);
         SecurityUtil.setTokenService(token, serviceAddr);
       }
@@ -233,8 +241,29 @@ public class DelegationTokenFetcher {
     } catch (Exception e) {
       throw new IOException("Unable to obtain remote token", e);
     } finally {
-      if(dis != null) dis.close();
+      IOUtils.cleanup(LOG, dis);
+      if (conn != null) {
+        conn.disconnect();
+      }
     }
+  }
+
+  /**
+   * Cancel a Delegation Token.
+   * @param nnAddr the NameNode's address
+   * @param tok the token to cancel
+   * @throws IOException
+   * @throws AuthenticationException
+   */
+  static public void cancelDelegationToken(URLConnectionFactory factory,
+      URI nnAddr, Token<DelegationTokenIdentifier> tok) throws IOException,
+      AuthenticationException {
+    StringBuilder buf = new StringBuilder(nnAddr.toString())
+        .append(CancelDelegationTokenServlet.PATH_SPEC).append("?")
+        .append(CancelDelegationTokenServlet.TOKEN).append("=")
+        .append(tok.encodeToUrlString());
+    HttpURLConnection conn = run(factory, new URL(buf.toString()));
+    conn.disconnect();
   }
 
   /**
@@ -243,43 +272,39 @@ public class DelegationTokenFetcher {
    * @param tok the token to renew
    * @return the Date that the token will expire next.
    * @throws IOException
+   * @throws AuthenticationException
    */
-  static public long renewDelegationToken(String nnAddr,
-      Token<DelegationTokenIdentifier> tok
-  ) throws IOException {
-    StringBuilder buf = new StringBuilder();
-    buf.append(nnAddr);
-    buf.append(RenewDelegationTokenServlet.PATH_SPEC);
-    buf.append("?");
-    buf.append(RenewDelegationTokenServlet.TOKEN);
-    buf.append("=");
-    buf.append(tok.encodeToUrlString());
-    BufferedReader in = null;
+  static public long renewDelegationToken(URLConnectionFactory factory,
+      URI nnAddr, Token<DelegationTokenIdentifier> tok) throws IOException,
+      AuthenticationException {
+    StringBuilder buf = new StringBuilder(nnAddr.toString())
+        .append(RenewDelegationTokenServlet.PATH_SPEC).append("?")
+        .append(RenewDelegationTokenServlet.TOKEN).append("=")
+        .append(tok.encodeToUrlString());
+
     HttpURLConnection connection = null;
-    
+    BufferedReader in = null;
     try {
-      URL url = new URL(buf.toString());
-      connection = (HttpURLConnection) SecurityUtil.openSecureHttpConnection(url);
-      if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-        throw new IOException("Error renewing token: " + 
-            connection.getResponseMessage());
-      }
-      in = new BufferedReader(
-          new InputStreamReader(connection.getInputStream(), Charsets.UTF_8));
+      connection = run(factory, new URL(buf.toString()));
+      in = new BufferedReader(new InputStreamReader(
+          connection.getInputStream(), Charsets.UTF_8));
       long result = Long.parseLong(in.readLine());
-      in.close();
       return result;
     } catch (IOException ie) {
       LOG.info("error in renew over HTTP", ie);
       IOException e = getExceptionFromResponse(connection);
 
-      IOUtils.cleanup(LOG, in);
-      if(e!=null) {
-        LOG.info("rethrowing exception from HTTP request: " + 
-                 e.getLocalizedMessage());
+      if (e != null) {
+        LOG.info("rethrowing exception from HTTP request: "
+            + e.getLocalizedMessage());
         throw e;
       }
       throw ie;
+    } finally {
+      IOUtils.cleanup(LOG, in);
+      if (connection != null) {
+        connection.disconnect();
+      }
     }
   }
 
@@ -331,43 +356,28 @@ public class DelegationTokenFetcher {
     return e;
   }
 
-  
-  /**
-   * Cancel a Delegation Token.
-   * @param nnAddr the NameNode's address
-   * @param tok the token to cancel
-   * @throws IOException
-   */
-  static public void cancelDelegationToken(String nnAddr,
-      Token<DelegationTokenIdentifier> tok
-  ) throws IOException {
-    StringBuilder buf = new StringBuilder();
-    buf.append(nnAddr);
-    buf.append(CancelDelegationTokenServlet.PATH_SPEC);
-    buf.append("?");
-    buf.append(CancelDelegationTokenServlet.TOKEN);
-    buf.append("=");
-    buf.append(tok.encodeToUrlString());
-    BufferedReader in = null;
-    HttpURLConnection connection=null;
+  private static HttpURLConnection run(URLConnectionFactory factory, URL url)
+      throws IOException, AuthenticationException {
+    HttpURLConnection conn = null;
+
     try {
-      URL url = new URL(buf.toString());
-      connection = (HttpURLConnection) SecurityUtil.openSecureHttpConnection(url);
-      if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-        throw new IOException("Error cancelling token: " + 
-            connection.getResponseMessage());
+      conn = (HttpURLConnection) factory.openConnection(url, true);
+      if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+        String msg = conn.getResponseMessage();
+
+        throw new IOException("Error when dealing remote token: " + msg);
       }
     } catch (IOException ie) {
-      LOG.info("error in cancel over HTTP", ie);
-      IOException e = getExceptionFromResponse(connection);
+      LOG.info("Error when dealing remote token:", ie);
+      IOException e = getExceptionFromResponse(conn);
 
-      IOUtils.cleanup(LOG, in);
-      if(e!=null) {
-        LOG.info("rethrowing exception from HTTP request: " + 
-                 e.getLocalizedMessage());
+      if (e != null) {
+        LOG.info("rethrowing exception from HTTP request: "
+            + e.getLocalizedMessage());
         throw e;
       }
       throw ie;
     }
+    return conn;
   }
 }

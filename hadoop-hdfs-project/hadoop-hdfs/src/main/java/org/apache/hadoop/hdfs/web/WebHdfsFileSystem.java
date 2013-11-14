@@ -492,7 +492,8 @@ public class WebHdfsFileSystem extends FileSystem
         throws IOException {
       final HttpURLConnection conn;
       try {
-        conn = (HttpURLConnection) connectionFactory.openConnection(op, url);
+        conn = (HttpURLConnection) connectionFactory.openConnection(url,
+            op.getRequireAuth());
       } catch (AuthenticationException e) {
         throw new IOException(e);
       }
