@@ -112,6 +112,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1400. yarn.cmd uses HADOOP_RESOURCEMANAGER_OPTS. Should be
     YARN_RESOURCEMANAGER_OPTS. (Raja Aluri via cnauroth)
 
+    YARN-1401. With zero sleep-delay-before-sigkill.ms, no signal is ever sent
+    (Gera Shegalov via Sandy Ryza)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

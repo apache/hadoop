@@ -97,7 +97,6 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     conf.setClass(
         YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
         LinuxResourceCalculatorPlugin.class, ResourceCalculatorPlugin.class);
-    conf.setLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS, 1000);
     super.setup();
   }
 
@@ -590,8 +589,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         AuxiliaryServiceHelper.getServiceDataFromEnv(serviceName, env));
   }
 
-  @Test
-  public void testDelayedKill() throws Exception {
+  private void internalKillTest(boolean delayed) throws Exception {
+    conf.setLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS,
+      delayed ? 1000 : 0);
     containerManager.start();
 
     // ////// Construct the Container-id
@@ -675,7 +675,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     BaseContainerManagerTest.waitForContainerState(containerManager, cId,
         ContainerState.COMPLETE);
 
-    // container stop sends a sigterm followed by a sigkill
+    // if delayed container stop sends a sigterm followed by a sigkill
+    // otherwise sigkill is sent immediately 
     GetContainerStatusesRequest gcsRequest =
         GetContainerStatusesRequest.newInstance(containerIds);
     
@@ -690,7 +691,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     // Windows, because the process is not notified when killed by winutils.
     // There is no way for the process to trap and respond.  Instead, we can
     // verify that the job object with ID matching container ID no longer exists.
-    if (Shell.WINDOWS) {
+    if (Shell.WINDOWS || !delayed) {
       Assert.assertFalse("Process is still alive!",
         DefaultContainerExecutor.containerIsAlive(cId.toString()));
     } else {
@@ -711,6 +712,16 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       Assert.assertTrue("Did not find sigterm message", foundSigTermMessage);
       reader.close();
     }
+  }
+
+  @Test
+  public void testDelayedKill() throws Exception {
+    internalKillTest(true);
+  }
+
+  @Test
+  public void testImmediateKill() throws Exception {
+    internalKillTest(false);
   }
 
   @SuppressWarnings("rawtypes")

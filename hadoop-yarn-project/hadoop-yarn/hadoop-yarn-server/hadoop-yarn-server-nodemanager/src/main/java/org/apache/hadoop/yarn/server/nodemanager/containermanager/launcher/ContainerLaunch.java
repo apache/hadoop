@@ -375,13 +375,19 @@ public class ContainerLaunch implements Callable<Integer> {
         LOG.debug("Sending signal to pid " + processId
             + " as user " + user
             + " for container " + containerIdStr);
+
+        final Signal signal = sleepDelayBeforeSigKill > 0
+          ? Signal.TERM
+          : Signal.KILL;
+
+        boolean result = exec.signalContainer(user, processId, signal);
+
+        LOG.debug("Sent signal " + signal + " to pid " + processId
+          + " as user " + user
+          + " for container " + containerIdStr
+          + ", result=" + (result? "success" : "failed"));
+
         if (sleepDelayBeforeSigKill > 0) {
-          boolean result = exec.signalContainer(user,
-              processId, Signal.TERM);
-          LOG.debug("Sent signal to pid " + processId
-              + " as user " + user
-              + " for container " + containerIdStr
-              + ", result=" + (result? "success" : "failed"));
           new DelayedProcessKiller(container, user,
               processId, sleepDelayBeforeSigKill, Signal.KILL, exec).start();
         }
