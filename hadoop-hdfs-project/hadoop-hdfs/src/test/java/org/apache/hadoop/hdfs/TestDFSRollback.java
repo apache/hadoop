@@ -25,11 +25,13 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.Assert.*;
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -169,6 +171,44 @@ public class TestDFSRollback extends TestCase {
       UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "previous");
       cluster.startDataNodes(conf, 1, false, StartupOption.ROLLBACK, null);
       checkResult(DATA_NODE, dataNodeDirs);
+      cluster.shutdown();
+      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      UpgradeUtilities.createEmptyDirs(dataNodeDirs);
+      
+      log("Normal BlockPool rollback", numDirs);
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+                                                .format(false)
+                                                .manageDataDfsDirs(false)
+                                                .manageNameDfsDirs(false)
+                                                .startupOption(StartupOption.ROLLBACK)
+                                                .build();
+      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
+      UpgradeUtilities.createBlockPoolStorageDirs(dataNodeDirs, "current",
+          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+      // Create a previous snapshot for the blockpool
+      UpgradeUtilities.createBlockPoolStorageDirs(dataNodeDirs, "previous",
+          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+      // Older LayoutVersion to make it rollback
+      storageInfo = new StorageInfo(
+          UpgradeUtilities.getCurrentLayoutVersion()+1,
+          UpgradeUtilities.getCurrentNamespaceID(cluster),
+          UpgradeUtilities.getCurrentClusterID(cluster),
+          UpgradeUtilities.getCurrentFsscTime(cluster));
+      // Create old VERSION file for each data dir
+      for (int i=0; i<dataNodeDirs.length; i++) {
+        Path bpPrevPath = new Path(dataNodeDirs[i] + "/current/"
+            + UpgradeUtilities.getCurrentBlockPoolID(cluster));
+        UpgradeUtilities.createBlockPoolVersionFile(
+            new File(bpPrevPath.toString()),
+            storageInfo,
+            UpgradeUtilities.getCurrentBlockPoolID(cluster));
+      }
+
+      cluster.startDataNodes(conf, 1, false, StartupOption.ROLLBACK, null);
+      assertTrue(cluster.isDataNodeUp());
+
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
